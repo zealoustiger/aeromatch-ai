@@ -3,6 +3,7 @@ import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipList from '@/components/PartnershipList'
 import SaveSearchButton from '@/components/SaveSearchButton'
+import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import Link from 'next/link'
 
 type SearchParams = Record<string, string | undefined>
@@ -14,10 +15,12 @@ export default async function PartnershipsPage({
 }) {
   const params = await searchParams
 
+  const activeFilterCount = Object.values(params).filter(Boolean).length
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       {/* Page header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
             <Users className="h-6 w-6 text-emerald-500" />
@@ -27,7 +30,12 @@ export default async function PartnershipsPage({
             Find co-ownership opportunities near your home airport.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+
+        {/* Action bar — filter button visible only on mobile */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="lg:hidden">
+            <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} />
+          </div>
           <Suspense>
             <SaveSearchButton />
           </Suspense>
@@ -41,8 +49,8 @@ export default async function PartnershipsPage({
       </div>
 
       <div className="flex flex-col gap-8 lg:flex-row">
-        {/* Filters sidebar */}
-        <aside className="w-full shrink-0 lg:w-64">
+        {/* Filters sidebar — desktop only */}
+        <aside className="hidden w-full shrink-0 lg:block lg:w-64">
           <div className="sticky top-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
               <SlidersHorizontal className="h-4 w-4" />
