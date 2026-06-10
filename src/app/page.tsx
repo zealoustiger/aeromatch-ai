@@ -91,14 +91,6 @@ export default function HomePage() {
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-4">
-              <Link
-                href="/aircraft"
-                className="inline-flex items-center gap-1.5 text-sm text-slate-400 underline-offset-2 hover:text-sky-400 hover:underline"
-              >
-                <Plane className="h-4 w-4" />
-                Browse aircraft for sale
-              </Link>
-              <span className="text-slate-700">·</span>
               <span className="text-sm text-slate-500">Free to search. Free to post.</span>
             </div>
           </div>

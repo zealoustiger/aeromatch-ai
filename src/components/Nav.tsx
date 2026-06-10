@@ -7,7 +7,6 @@ import { Plane } from 'lucide-react'
 
 const links = [
   { href: '/partnerships', label: 'Partnerships' },
-  { href: '/aircraft', label: 'Aircraft for Sale' },
   { href: '/about', label: 'About' },
 ]
 
