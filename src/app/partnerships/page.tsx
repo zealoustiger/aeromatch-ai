@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipList from '@/components/PartnershipList'
+import PartnershipTabs from '@/components/PartnershipTabs'
 import Link from 'next/link'
 
 type SearchParams = Record<string, string | undefined>
@@ -33,6 +34,8 @@ export default async function PartnershipsPage({
           + Post a Partnership
         </Link>
       </div>
+
+      <PartnershipTabs active="available" />
 
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar */}
