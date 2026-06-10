@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function createPartnership(formData: FormData) {
   const supabase = await createServerSupabaseClient()
@@ -55,9 +55,49 @@ export async function joinWaitlist(email: string, searchParams: string) {
 
   const { error } = await supabase
     .from('waitlist')
-    .upsert({ email: email.toLowerCase().trim(), search_params: searchParams, source: 'hero_search' }, { onConflict: 'email' })
+    .upsert(
+      { email: email.toLowerCase().trim(), search_params: searchParams, source: 'hero_search' },
+      { onConflict: 'email' }
+    )
 
   if (error) return { error: 'Something went wrong. Please try again.' }
 
+  return { ok: true }
+}
+
+export async function saveSearch(name: string, searchParams: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase.from('saved_searches').insert({
+    user_id: user.id,
+    name: name.trim(),
+    search_params: searchParams,
+  })
+
+  if (error) {
+    if (error.code === '23505') return { error: 'You already have a search with that name.' }
+    return { error: 'Failed to save search.' }
+  }
+
+  revalidatePath('/searches')
+  return { ok: true }
+}
+
+export async function deleteSavedSearch(id: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('saved_searches')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: 'Failed to delete search.' }
+
+  revalidatePath('/searches')
   return { ok: true }
 }

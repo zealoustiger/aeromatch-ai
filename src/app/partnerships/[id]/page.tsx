@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, DollarSign, Clock, Users, Calendar, ChevronLeft, Mail, Phone } from 'lucide-react'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'

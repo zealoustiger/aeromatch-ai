@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipList from '@/components/PartnershipList'
+import SaveSearchButton from '@/components/SaveSearchButton'
 import Link from 'next/link'
 
 type SearchParams = Record<string, string | undefined>
@@ -26,12 +27,17 @@ export default async function PartnershipsPage({
             Find co-ownership opportunities near your home airport.
           </p>
         </div>
-        <Link
-          href="/partnerships/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-        >
-          + Post a Partnership
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Suspense>
+            <SaveSearchButton />
+          </Suspense>
+          <Link
+            href="/partnerships/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+          >
+            + Post a Partnership
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-8 lg:flex-row">

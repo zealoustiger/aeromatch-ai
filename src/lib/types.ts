@@ -87,6 +87,14 @@ export interface Airport {
   type: string | null
 }
 
+export interface SavedSearch {
+  id: string
+  created_at: string
+  user_id: string
+  name: string
+  search_params: string
+}
+
 export interface PartnershipFilters {
   airport?: string
   radiusNm?: number

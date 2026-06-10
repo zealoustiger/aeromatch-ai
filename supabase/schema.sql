@@ -182,3 +182,41 @@ create index on aircraft_for_sale (asking_price);
 create index on airports (state);
 -- PostGIS-style radius search (if you enable the postgis extension):
 -- create index on partnerships using gist (ll_to_earth(lat, lng));
+
+-- ============================================================
+-- WAITLIST (email capture from hero search)
+-- ============================================================
+create table if not exists waitlist (
+  email         text primary key,
+  search_params text,
+  source        text,
+  created_at    timestamptz default now()
+);
+
+alter table waitlist enable row level security;
+
+create policy "waitlist_anyone_insert" on waitlist
+  for insert with check (true);
+
+create policy "waitlist_service_read" on waitlist
+  for select using (auth.role() = 'service_role');
+
+-- ============================================================
+-- SAVED SEARCHES
+-- ============================================================
+create table if not exists saved_searches (
+  id            uuid        default gen_random_uuid() primary key,
+  created_at    timestamptz default now(),
+  user_id       uuid        references auth.users(id) on delete cascade not null,
+  name          text        not null,
+  search_params text        not null,
+  unique(user_id, name)
+);
+
+alter table saved_searches enable row level security;
+
+create policy "saved_searches_owner_all" on saved_searches
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index on saved_searches (user_id);
