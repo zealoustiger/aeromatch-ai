@@ -35,7 +35,7 @@ export async function createPartnership(formData: FormData) {
     contact_method: (formData.get('contact_method') as string) || 'email',
     contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
-    poster_id: null,
+    poster_id: (await supabase.auth.getUser()).data.user?.id ?? null,
   }
 
   const { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()
@@ -82,6 +82,47 @@ export async function saveSearch(name: string, searchParams: string) {
   }
 
   revalidatePath('/searches')
+  return { ok: true }
+}
+
+export async function getOrCreateThread(partnershipId: string, ownerId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (user.id === ownerId) return { error: 'Cannot message your own listing' }
+
+  const { data: existing } = await supabase
+    .from('threads')
+    .select('id')
+    .eq('partnership_id', partnershipId)
+    .eq('inquirer_id', user.id)
+    .single()
+
+  if (existing) return { threadId: existing.id }
+
+  const { data, error } = await supabase
+    .from('threads')
+    .insert({ partnership_id: partnershipId, inquirer_id: user.id, owner_id: ownerId })
+    .select('id')
+    .single()
+
+  if (error) return { error: 'Failed to start conversation.' }
+  return { threadId: data.id }
+}
+
+export async function sendMessage(threadId: string, body: string) {
+  const trimmed = body.trim()
+  if (!trimmed || trimmed.length > 2000) return { error: 'Invalid message.' }
+
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('messages')
+    .insert({ thread_id: threadId, sender_id: user.id, body: trimmed })
+
+  if (error) return { error: 'Failed to send message.' }
   return { ok: true }
 }
 

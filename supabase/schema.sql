@@ -220,3 +220,65 @@ create policy "saved_searches_owner_all" on saved_searches
   with check (auth.uid() = user_id);
 
 create index on saved_searches (user_id);
+
+-- ============================================================
+-- FIX: allow anonymous partnership posts (poster_id = null)
+-- ============================================================
+drop policy if exists "partnerships_auth_insert" on partnerships;
+create policy "partnerships_insert" on partnerships
+  for insert with check (poster_id is null or auth.uid() = poster_id);
+
+-- ============================================================
+-- THREADS (one per listing + inquirer pair)
+-- ============================================================
+create table if not exists threads (
+  id             uuid        default gen_random_uuid() primary key,
+  created_at     timestamptz default now(),
+  partnership_id uuid        references partnerships(id) on delete cascade not null,
+  inquirer_id    uuid        references auth.users(id) on delete cascade not null,
+  owner_id       uuid        references auth.users(id) on delete cascade not null,
+  unique(partnership_id, inquirer_id)
+);
+
+alter table threads enable row level security;
+
+create policy "threads_participant_select" on threads
+  for select using (auth.uid() = inquirer_id or auth.uid() = owner_id);
+
+create policy "threads_inquirer_insert" on threads
+  for insert with check (auth.uid() = inquirer_id);
+
+-- ============================================================
+-- MESSAGES
+-- ============================================================
+create table if not exists messages (
+  id         uuid        default gen_random_uuid() primary key,
+  created_at timestamptz default now(),
+  thread_id  uuid        references threads(id) on delete cascade not null,
+  sender_id  uuid        references auth.users(id) on delete cascade not null,
+  body       text        not null check (char_length(body) <= 2000)
+);
+
+alter table messages enable row level security;
+
+create policy "messages_participant_select" on messages
+  for select using (
+    exists (
+      select 1 from threads t where t.id = thread_id
+      and (t.inquirer_id = auth.uid() or t.owner_id = auth.uid())
+    )
+  );
+
+create policy "messages_participant_insert" on messages
+  for insert with check (
+    auth.uid() = sender_id
+    and exists (
+      select 1 from threads t where t.id = thread_id
+      and (t.inquirer_id = auth.uid() or t.owner_id = auth.uid())
+    )
+  );
+
+create index on threads (inquirer_id);
+create index on threads (owner_id);
+create index on threads (partnership_id);
+create index on messages (thread_id, created_at);
