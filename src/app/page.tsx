@@ -4,7 +4,57 @@ import Image from 'next/image'
 import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react'
 import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
-import { STATE_NAMES, SEO_MAKES } from '@/lib/seo'
+import { STATE_NAMES, SEO_MAKES, SITE_URL } from '@/lib/seo'
+
+const faqItems = [
+  {
+    q: 'What is aircraft co-ownership?',
+    a: 'Aircraft co-ownership is when 2–4 pilots jointly purchase and operate an airplane, dividing the acquisition cost, fixed monthly expenses (hangar, insurance, annual inspection), and hourly operating costs (fuel, oil, reserves). It is the most cost-effective way for many GA pilots to have consistent, scheduled access to an aircraft without the full financial burden of sole ownership.',
+  },
+  {
+    q: 'How much does it cost to join an aircraft partnership?',
+    a: 'Costs depend on the aircraft and location. A 1/3 share in a Cessna 172 typically requires a $12,000–$25,000 buy-in, $250–$400/month in fixed costs, and a $75–$110/hour wet rate. A Cirrus SR22 partnership share may require a $45,000–$80,000 buy-in with $600–$900/month in fixed costs. Every listing on AeroMatch shows buy-in, monthly fixed, and wet rate upfront.',
+  },
+  {
+    q: 'What pilot requirements are typical for an aircraft partnership?',
+    a: 'Most single-engine piston partnerships require at least a Private Pilot License (PPL) with 150–250 total hours. Partnerships involving IFR-equipped aircraft like a Garmin G1000-equipped Cessna 172S or Cirrus SR22 often require an Instrument Rating. Each AeroMatch listing specifies the minimum hours and required ratings so you only see listings that fit your certificate.',
+  },
+  {
+    q: 'How do I find an aircraft partnership near my home airport?',
+    a: 'On AeroMatch, enter your home airport ICAO code (e.g., KAUS for Austin-Bergstrom, KPAO for Palo Alto, KADS for Addison) or search by city and radius. Filter by aircraft make and model, share type (1/2, 1/3, 1/4), monthly budget, and experience requirements to narrow results to listings that match your situation.',
+  },
+  {
+    q: "What's the difference between aircraft co-ownership and a flying club?",
+    a: 'Aircraft co-ownership involves 2–4 pilots who jointly own a specific aircraft and split all costs proportionally by share. A flying club is a larger membership organization (often 10–100+ members) that owns one or more aircraft and charges dues and hourly rates. Co-ownership offers more scheduling flexibility and direct equity ownership; flying clubs provide lower per-member costs and more available aircraft.',
+  },
+]
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'AeroMatch',
+  url: SITE_URL,
+  description:
+    'Free marketplace for general aviation pilots to find aircraft co-ownership partnerships and aircraft for sale.',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${SITE_URL}/partnerships?airport={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
+}
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqItems.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+}
 
 export const metadata: Metadata = {
   title: { absolute: 'AeroMatch — Aircraft Partnerships, Co-Ownership & Planes for Sale' },
@@ -217,6 +267,32 @@ export default function HomePage() {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="bg-slate-50 py-20" id="faq">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Common questions about aircraft co-ownership</h2>
+            <p className="mt-3 text-lg text-slate-500">Everything you need to know before you start searching.</p>
+          </div>
+          <dl className="space-y-6">
+            {faqItems.map(({ q, a }) => (
+              <div key={q} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <dt className="text-base font-semibold text-slate-900">{q}</dt>
+                <dd className="mt-2 text-sm leading-relaxed text-slate-600">{a}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 

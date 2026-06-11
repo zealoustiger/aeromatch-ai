@@ -1,5 +1,13 @@
+import type { Metadata } from 'next'
 import { Plane, Construction } from 'lucide-react'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Aircraft for Sale — Structured, Searchable GA Listings',
+  description:
+    'Coming soon: aggregated general aviation aircraft for sale with normalized specs — TTAF, SMOH, avionics, damage history, and FAA registry cross-reference.',
+  alternates: { canonical: '/aircraft' },
+}
 
 export default function AircraftPage() {
   return (

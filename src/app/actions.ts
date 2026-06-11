@@ -7,6 +7,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 export async function createPartnership(formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth?next=/partnerships/new')
+
   const ratingsRaw = formData.get('ratings_required') as string
   const ratings = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
 
@@ -35,7 +38,7 @@ export async function createPartnership(formData: FormData) {
     contact_method: (formData.get('contact_method') as string) || 'email',
     contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
-    poster_id: (await supabase.auth.getUser()).data.user?.id ?? null,
+    poster_id: user.id,
   }
 
   const { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()
@@ -78,6 +81,9 @@ export async function submitFeedback(input: {
 export async function createSeekerListing(formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth?next=/partnerships/seeking/new')
+
   const makesRaw = formData.get('preferred_makes') as string
   const preferred_makes = makesRaw ? makesRaw.split(',').map((m) => m.trim()).filter(Boolean) : null
 
@@ -117,7 +123,7 @@ export async function createSeekerListing(formData: FormData) {
     contact_method: (formData.get('contact_method') as string) || 'email',
     contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
-    poster_id: null,
+    poster_id: user.id,
   }
 
   const { data, error } = await supabase.from('partnership_seekers').insert(payload).select('id').single()

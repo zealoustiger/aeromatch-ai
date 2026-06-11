@@ -230,7 +230,7 @@ create policy "seekers_public_read" on partnership_seekers
 
 -- Seekers: authenticated users can insert/manage their own
 create policy "seekers_auth_insert" on partnership_seekers
-  for insert with check (auth.uid() = poster_id or poster_id is null);
+  for insert with check (auth.uid() = poster_id);
 
 create policy "seekers_owner_update" on partnership_seekers
   for update using (auth.uid() = poster_id);

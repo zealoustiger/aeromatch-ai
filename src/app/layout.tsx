@@ -22,12 +22,44 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
   },
+  keywords: [
+    'aircraft co-ownership',
+    'aircraft partnership',
+    'airplane co-ownership',
+    'aircraft share',
+    'GA aircraft partnership',
+    'pilot co-ownership',
+    'find aircraft partner',
+  ],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'AeroMatch',
+  url: SITE_URL,
+  description:
+    'AeroMatch is a free marketplace for general aviation pilots to find aircraft co-ownership partnerships and aircraft for sale.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-screen bg-slate-50">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         <PostHogProvider>
           <Nav />
           <main>{children}</main>

@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'Post an Aircraft Partnership — Free Listing',
   description:
     'List your aircraft partnership or co-ownership share for free. Reach pilots searching by home airport, budget, and aircraft type.',
+  robots: { index: false, follow: false },
 }
 
 export default function NewPartnershipPage() {
