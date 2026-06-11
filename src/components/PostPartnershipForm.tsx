@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { createPartnership } from '@/app/actions'
 import { cn } from '@/lib/utils'
+import { track } from '@/lib/analytics'
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex']
@@ -63,6 +64,11 @@ export default function PostPartnershipForm() {
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       try {
+        track('listing_submitted', {
+          make: formData.get('make'),
+          home_airport: formData.get('home_airport'),
+          share_type: formData.get('share_type'),
+        })
         await createPartnership(formData)
         return { ok: true }
       } catch (e: unknown) {

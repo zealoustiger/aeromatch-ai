@@ -182,3 +182,28 @@ create index on aircraft_for_sale (asking_price);
 create index on airports (state);
 -- PostGIS-style radius search (if you enable the postgis extension):
 -- create index on partnerships using gist (ll_to_earth(lat, lng));
+
+-- ============================================================
+-- FEEDBACK (user feedback, issues, requests, listing reports)
+-- ============================================================
+create table if not exists feedback (
+  id          uuid        default gen_random_uuid() primary key,
+  created_at  timestamptz default now(),
+  type        text        not null default 'feedback',  -- 'feedback' | 'issue' | 'request' | 'report'
+  message     text        not null,
+  email       text,
+  listing_id  uuid,        -- set when type = 'report'
+  page_path   text,
+  status      text        default 'new'  -- 'new' | 'reviewed' | 'resolved'
+);
+
+alter table feedback enable row level security;
+
+-- Anyone (including anonymous visitors) can submit feedback
+create policy "feedback_public_insert" on feedback
+  for insert with check (true);
+
+-- No public read — view submissions via Supabase dashboard / service role
+
+create index on feedback (status);
+create index on feedback (type);

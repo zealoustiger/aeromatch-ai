@@ -1,10 +1,15 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, DollarSign, Clock, Users, Calendar, ChevronLeft, Mail, Phone } from 'lucide-react'
+import { MapPin, DollarSign, Clock, Users, Calendar, ChevronLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { SITE_URL } from '@/lib/seo'
+import ContactButtons from '@/components/ContactButtons'
+import ListingViewTracker from '@/components/ListingViewTracker'
+import ReportListing from '@/components/ReportListing'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -19,6 +24,53 @@ async function getPartnership(id: string): Promise<Partnership | null> {
   return data
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const p = await getPartnership(id)
+  if (!p) return { title: 'Listing not found' }
+
+  const aircraft = aircraftLabel(p.make, p.model, p.year)
+  const location = [p.home_airport, p.city, p.state].filter(Boolean).join(', ')
+  const title = `${aircraft} ${formatShareType(p.share_type)} at ${p.home_airport}`
+  const description =
+    p.description?.slice(0, 155) ??
+    `${aircraft} aircraft partnership at ${location}.${p.buy_in_price ? ` Buy-in ${formatPrice(p.buy_in_price)}.` : ''}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `${SITE_URL}/partnerships/${p.id}` },
+    openGraph: {
+      title,
+      description,
+      images: p.images?.[0] ? [p.images[0]] : undefined,
+    },
+  }
+}
+
+function listingJsonLd(p: Partnership) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.title,
+    description: p.description ?? undefined,
+    image: p.images?.[0] ?? undefined,
+    offers: p.buy_in_price
+      ? {
+          '@type': 'Offer',
+          price: p.buy_in_price,
+          priceCurrency: 'USD',
+          availability: 'https://schema.org/InStock',
+          areaServed: [p.city, p.state].filter(Boolean).join(', ') || undefined,
+        }
+      : undefined,
+  }
+}
+
 export default async function PartnershipDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const p = await getPartnership(id)
@@ -28,6 +80,16 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listingJsonLd(p)) }}
+      />
+      <ListingViewTracker
+        listingId={p.id}
+        airport={p.home_airport}
+        make={p.make}
+        shareType={p.share_type}
+      />
       <Link
         href="/partnerships"
         className="mb-6 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
@@ -57,7 +119,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-4 w-4 text-slate-400" />
-                <strong className="font-semibold text-slate-700">{p.home_airport}</strong>
+                <Link
+                  href={`/airports/${p.home_airport.toLowerCase()}`}
+                  className="font-semibold text-slate-700 hover:text-sky-700"
+                >
+                  {p.home_airport}
+                </Link>
                 {p.city && ` · ${p.city}, ${p.state}`}
               </span>
               <span className="flex items-center gap-1.5">
@@ -169,24 +236,17 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
             {p.contact_name && (
               <p className="mb-3 text-sm text-sky-700">Contact {p.contact_name}</p>
             )}
-            <div className="space-y-2">
-              {(p.contact_method === 'email' || p.contact_method === 'both') && (
-                <a
-                  href={`mailto:${p.contact_email}?subject=Re: ${encodeURIComponent(p.title)}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-                >
-                  <Mail className="h-4 w-4" /> Send Email
-                </a>
-              )}
-              {(p.contact_method === 'phone' || p.contact_method === 'both') && p.contact_phone && (
-                <a
-                  href={`tel:${p.contact_phone}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
-                >
-                  <Phone className="h-4 w-4" /> {p.contact_phone}
-                </a>
-              )}
-            </div>
+            <ContactButtons
+              listingId={p.id}
+              title={p.title}
+              contactEmail={p.contact_email}
+              contactPhone={p.contact_phone}
+              contactMethod={p.contact_method}
+            />
+          </div>
+
+          <div className="text-center">
+            <ReportListing listingId={p.id} />
           </div>
         </div>
       </div>

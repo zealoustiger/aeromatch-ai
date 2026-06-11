@@ -3,6 +3,7 @@
 import { useState, useRef, KeyboardEvent } from 'react'
 import { Search, X, MapPin, ToggleLeft, ToggleRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { track } from '@/lib/analytics'
 import SignUpGate from './SignUpGate'
 
 const RADIUS_OPTIONS = [25, 50, 100, 150, 200]
@@ -60,6 +61,11 @@ export default function HeroSearch() {
       if (!code) return
       params = `airport=${code}&radius=${radiusMiles}`
     }
+    track('search_performed', {
+      mode,
+      airports: mode === 'airports' ? airports.join(',') : radiusAirport.trim().toUpperCase(),
+      radius_miles: mode === 'radius' ? radiusMiles : undefined,
+    })
     setPendingParams(params)
     setShowGate(true)
   }

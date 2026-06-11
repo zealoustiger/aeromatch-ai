@@ -6,6 +6,7 @@ import { MapPin, Clock, Users, ExternalLink } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { track } from '@/lib/analytics'
 
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -102,7 +103,12 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
             <span className="flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5" />
-              <strong className="font-semibold text-slate-700">{p.home_airport}</strong>
+              <Link
+                href={`/airports/${p.home_airport.toLowerCase()}`}
+                className="font-semibold text-slate-700 hover:text-sky-700"
+              >
+                {p.home_airport}
+              </Link>
               {p.city && ` · ${p.city}, ${p.state}`}
             </span>
             {p.min_hours && (
@@ -124,7 +130,10 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
                 href={p.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  track('source_link_clicked', { listing_id: p.id, source_url: p.source_url })
+                }}
                 className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-sky-600 ring-1 ring-sky-200 hover:bg-sky-50 transition-colors"
               >
                 View original post <ExternalLink className="h-3 w-3" />

@@ -46,6 +46,35 @@ export async function createPartnership(formData: FormData) {
   redirect(`/partnerships/${data.id}`)
 }
 
+export async function submitFeedback(input: {
+  type: 'feedback' | 'issue' | 'request' | 'report'
+  message: string
+  email?: string
+  listingId?: string
+  pagePath?: string
+}) {
+  const message = input.message?.trim()
+  if (!message || message.length < 3) {
+    return { error: 'Please enter a message.' }
+  }
+  if (message.length > 5000) {
+    return { error: 'Message is too long.' }
+  }
+
+  const supabase = await createServerSupabaseClient()
+
+  const { error } = await supabase.from('feedback').insert({
+    type: input.type,
+    message,
+    email: input.email?.trim().toLowerCase() || null,
+    listing_id: input.listingId || null,
+    page_path: input.pagePath || null,
+  })
+
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  return { ok: true }
+}
+
 export async function joinWaitlist(email: string, searchParams: string) {
   if (!email || !email.includes('@')) {
     return { error: 'Please enter a valid email address.' }

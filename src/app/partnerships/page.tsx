@@ -1,4 +1,11 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
+
+export const metadata: Metadata = {
+  title: 'Aircraft Partnerships & Co-Ownership Listings',
+  description:
+    'Browse aircraft co-ownership partnerships, leasebacks, and flying shares. Filter by home airport, radius, aircraft make, share type, and budget.',
+}
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipList from '@/components/PartnershipList'
