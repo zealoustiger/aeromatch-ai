@@ -1,9 +1,16 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipList from '@/components/PartnershipList'
 import PartnershipTabs from '@/components/PartnershipTabs'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Aircraft Partnerships & Co-Ownership Near You',
+  description:
+    'Search aircraft partnerships by home airport, state, make, and budget. Transparent buy-in, monthly, and hourly costs on every co-ownership listing.',
+}
 
 type SearchParams = Record<string, string | undefined>
 

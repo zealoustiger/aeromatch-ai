@@ -1,4 +1,11 @@
+import type { Metadata } from 'next'
 import PostPartnershipForm from '@/components/PostPartnershipForm'
+
+export const metadata: Metadata = {
+  title: 'Post an Aircraft Partnership — Free Listing',
+  description:
+    'List your aircraft partnership or co-ownership share for free. Reach pilots searching by home airport, budget, and aircraft type.',
+}
 
 export default function NewPartnershipPage() {
   return (

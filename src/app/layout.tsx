@@ -1,10 +1,20 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Nav from '@/components/Nav'
+import Footer from '@/components/Footer'
+import { SITE_URL } from '@/lib/seo'
 
 export const metadata: Metadata = {
-  title: 'AeroMatch — Find Aircraft Partnerships & Sales',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'AeroMatch — Find Aircraft Partnerships & Sales',
+    template: '%s | AeroMatch',
+  },
   description: 'The best place to find aircraft co-ownership partnerships and aircraft for sale. Search by airport, aircraft type, and budget.',
+  openGraph: {
+    siteName: 'AeroMatch',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -13,14 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-slate-50">
         <Nav />
         <main>{children}</main>
-        <footer className="mt-20 border-t border-slate-200 bg-white py-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-              <span className="text-sm font-semibold text-slate-900">AeroMatch</span>
-              <p className="text-sm text-slate-400">The modern marketplace for pilots.</p>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </body>
     </html>
   )

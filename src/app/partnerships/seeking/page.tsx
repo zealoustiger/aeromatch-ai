@@ -1,8 +1,15 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import SeekerList from '@/components/SeekerList'
 import PartnershipTabs from '@/components/PartnershipTabs'
+
+export const metadata: Metadata = {
+  title: 'Pilots Seeking Aircraft Partnerships',
+  description:
+    'Browse pilots actively looking for aircraft co-ownership shares — with budgets, ratings, and home airports listed. Find your next partner.',
+}
 
 type SearchParams = Record<string, string | undefined>
 

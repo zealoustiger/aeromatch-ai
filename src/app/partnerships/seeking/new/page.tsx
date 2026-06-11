@@ -1,4 +1,11 @@
+import type { Metadata } from 'next'
 import PostSeekerListingForm from '@/components/PostSeekerListingForm'
+
+export const metadata: Metadata = {
+  title: 'Post a Seeking Listing — Find an Aircraft Partnership',
+  description:
+    'Tell aircraft owners what you are looking for: aircraft type, budget, home airport, and ratings. Post a free seeking listing and let partnerships find you.',
+}
 
 export default function NewSeekerListingPage() {
   return (
