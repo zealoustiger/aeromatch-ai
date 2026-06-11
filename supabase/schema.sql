@@ -1,9 +1,9 @@
 -- AeroMatch AI — Database Schema
 -- Run this in the Supabase SQL editor to initialize your database.
 
--- ============================================================
+-- =====================================================
 -- AIRPORTS (seed from FAA data — used for ICAO search/radius)
--- ============================================================
+-- =====================================================
 create table if not exists airports (
   icao   text primary key,
   iata   text,
@@ -16,9 +16,9 @@ create table if not exists airports (
   type   text  -- 'large_airport' | 'medium_airport' | 'small_airport' | 'heliport'
 );
 
--- ============================================================
+-- =====================================================
 -- PARTNERSHIPS
--- ============================================================
+-- =====================================================
 create table if not exists partnerships (
   id            uuid        default gen_random_uuid() primary key,
   created_at    timestamptz default now(),
@@ -83,9 +83,9 @@ create trigger partnerships_updated_at
   before update on partnerships
   for each row execute function update_updated_at();
 
--- ============================================================
+-- =====================================================
 -- AIRCRAFT FOR SALE (aggregated + user-posted)
--- ============================================================
+-- =====================================================
 create table if not exists aircraft_for_sale (
   id            uuid        default gen_random_uuid() primary key,
   created_at    timestamptz default now(),
@@ -125,9 +125,9 @@ create table if not exists aircraft_for_sale (
   poster_id     uuid        references auth.users(id) on delete set null
 );
 
--- ============================================================
+-- =====================================================
 -- ROW LEVEL SECURITY
--- ============================================================
+-- =====================================================
 alter table partnerships     enable row level security;
 alter table aircraft_for_sale enable row level security;
 alter table airports          enable row level security;
@@ -166,9 +166,83 @@ create policy "aircraft_auth_insert" on aircraft_for_sale
 create policy "aircraft_owner_update" on aircraft_for_sale
   for update using (auth.uid() = poster_id);
 
--- ============================================================
+-- =====================================================
+-- PARTNERSHIP SEEKERS (pilots looking for a partnership)
+-- =====================================================
+create table if not exists partnership_seekers (
+  id            uuid        default gen_random_uuid() primary key,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now(),
+
+  -- Aircraft preferences
+  preferred_makes      text[],           -- e.g. ['Cessna', 'Cirrus']
+  preferred_models     text,             -- free text, e.g. '172, 182, SR22'
+  min_year             integer,
+  max_year             integer,
+  aircraft_category    text,             -- 'sel' | 'mel' | 'turboprop' | 'jet' | 'any'
+
+  -- Budget (whole USD)
+  max_buy_in           integer,
+  max_monthly          integer,
+  max_hourly           integer,
+
+  -- Location
+  home_airport         text        not null,   -- ICAO code, e.g. KAUS
+  airport_name         text,
+  city                 text,
+  state                text,
+  willing_to_travel_nm integer,                -- nautical miles willing to commute
+
+  -- Pilot profile
+  total_hours          integer,
+  ratings_held         text[],           -- e.g. ['PPL', 'IFR', 'CPL']
+
+  -- Partnership preferences
+  preferred_share_types text[],          -- e.g. ['1/2', '1/3']
+  preferred_scheduling  text,
+
+  -- Flying profile
+  intended_use         text[],           -- e.g. ['personal_travel', 'instrument_currency']
+  hours_per_month      integer,
+
+  -- Listing content
+  title                text        not null,
+  description          text,
+
+  -- Contact
+  contact_name         text,
+  contact_email        text        not null,
+  contact_method       text        default 'email',
+  contact_phone        text,
+
+  -- Status & auth
+  status               text        default 'active',
+  poster_id            uuid        references auth.users(id) on delete set null
+);
+
+create trigger partnership_seekers_updated_at
+  before update on partnership_seekers
+  for each row execute function update_updated_at();
+
+-- Seekers: public read active listings
+create policy "seekers_public_read" on partnership_seekers
+  for select using (status = 'active');
+
+-- Seekers: authenticated users can insert/manage their own
+create policy "seekers_auth_insert" on partnership_seekers
+  for insert with check (auth.uid() = poster_id or poster_id is null);
+
+create policy "seekers_owner_update" on partnership_seekers
+  for update using (auth.uid() = poster_id);
+
+create policy "seekers_owner_delete" on partnership_seekers
+  for delete using (auth.uid() = poster_id);
+
+alter table partnership_seekers enable row level security;
+
+-- =====================================================
 -- INDEXES
--- ============================================================
+-- =====================================================
 create index on partnerships (home_airport);
 create index on partnerships (status);
 create index on partnerships (make, model);
@@ -183,9 +257,9 @@ create index on airports (state);
 -- PostGIS-style radius search (if you enable the postgis extension):
 -- create index on partnerships using gist (ll_to_earth(lat, lng));
 
--- ============================================================
+-- =====================================================
 -- FEEDBACK (user feedback, issues, requests, listing reports)
--- ============================================================
+-- =====================================================
 create table if not exists feedback (
   id          uuid        default gen_random_uuid() primary key,
   created_at  timestamptz default now(),
@@ -208,9 +282,9 @@ create policy "feedback_public_insert" on feedback
 create index on feedback (status);
 create index on feedback (type);
 
--- ============================================================
+-- =====================================================
 -- WAITLIST (email capture from hero search)
--- ============================================================
+-- =====================================================
 create table if not exists waitlist (
   email         text primary key,
   search_params text,
@@ -226,9 +300,9 @@ create policy "waitlist_anyone_insert" on waitlist
 create policy "waitlist_service_read" on waitlist
   for select using (auth.role() = 'service_role');
 
--- ============================================================
+-- =====================================================
 -- SAVED SEARCHES
--- ============================================================
+-- =====================================================
 create table if not exists saved_searches (
   id            uuid        default gen_random_uuid() primary key,
   created_at    timestamptz default now(),
@@ -246,9 +320,9 @@ create policy "saved_searches_owner_all" on saved_searches
 
 create index on saved_searches (user_id);
 
--- ============================================================
+-- =====================================================
 -- THREADS (one per listing + inquirer pair)
--- ============================================================
+-- =====================================================
 create table if not exists threads (
   id             uuid        default gen_random_uuid() primary key,
   created_at     timestamptz default now(),
@@ -266,9 +340,9 @@ create policy "threads_participant_select" on threads
 create policy "threads_inquirer_insert" on threads
   for insert with check (auth.uid() = inquirer_id);
 
--- ============================================================
+-- =====================================================
 -- MESSAGES
--- ============================================================
+-- =====================================================
 create table if not exists messages (
   id         uuid        default gen_random_uuid() primary key,
   created_at timestamptz default now(),
@@ -300,3 +374,7 @@ create index on threads (inquirer_id);
 create index on threads (owner_id);
 create index on threads (partnership_id);
 create index on messages (thread_id, created_at);
+
+create index on partnership_seekers (home_airport);
+create index on partnership_seekers (status);
+create index on partnership_seekers (state);

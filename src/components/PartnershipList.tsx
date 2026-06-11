@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership } from '@/lib/types'
+import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
 import PartnershipCard from './PartnershipCard'
 
 interface Filters {
@@ -29,6 +30,22 @@ export default async function PartnershipList({ filters }: { filters: Filters })
     } else {
       airportList = [filters.airport.toUpperCase()]
     }
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+
+  if (!hasSupabase) {
+    listings = MOCK_PARTNERSHIPS.filter((p) => {
+      if (airportList.length > 0 && !airportList.includes(p.home_airport)) return false
+      if (filters.state && p.state !== filters.state) return false
+      if (filters.make && !p.make.toLowerCase().includes(filters.make.toLowerCase())) return false
+      if (filters.share_type && p.share_type !== filters.share_type) return false
+      if (filters.max_monthly && (p.monthly_fixed ?? 0) > parseInt(filters.max_monthly)) return false
+      if (filters.max_buyin && (p.buy_in_price ?? 0) > parseInt(filters.max_buyin)) return false
+      return true
+    })
+    return renderList(listings, filters, airportList)
   }
 
   try {
@@ -65,6 +82,10 @@ export default async function PartnershipList({ filters }: { filters: Filters })
     )
   }
 
+  return renderList(listings, filters, airportList)
+}
+
+function renderList(listings: Partnership[], filters: Filters, airportList: string[]) {
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">

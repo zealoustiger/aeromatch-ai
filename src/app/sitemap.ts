@@ -1,14 +1,27 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { SITE_URL } from '@/lib/seo'
+import { STATE_CODES, SEO_MAKES, SITE_URL } from '@/lib/seo'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: 'daily', priority: 1 },
     { url: `${SITE_URL}/partnerships`, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${SITE_URL}/aircraft`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/partnerships/seeking`, changeFrequency: 'hourly', priority: 0.8 },
+    { url: `${SITE_URL}/aircraft`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.3 },
   ]
+
+  const statePages: MetadataRoute.Sitemap = STATE_CODES.map((code) => ({
+    url: `${SITE_URL}/partnerships/state/${code.toLowerCase()}`,
+    changeFrequency: 'daily' as const,
+    priority: 0.7,
+  }))
+
+  const makePages: MetadataRoute.Sitemap = SEO_MAKES.map(({ slug }) => ({
+    url: `${SITE_URL}/partnerships/make/${slug}`,
+    changeFrequency: 'daily' as const,
+    priority: 0.7,
+  }))
 
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
@@ -39,5 +52,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Supabase unavailable at build time — ship static pages only
   }
 
-  return [...staticPages, ...airportPages, ...listingPages]
+  return [...staticPages, ...statePages, ...makePages, ...airportPages, ...listingPages]
 }

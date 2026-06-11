@@ -1,6 +1,7 @@
 export type ShareType = '1/2' | '1/3' | '1/4' | 'leaseback' | 'dry_lease' | 'other'
 export type ListingStatus = 'active' | 'pending' | 'closed'
 export type ContactMethod = 'email' | 'phone' | 'both'
+export type AircraftCategory = 'sel' | 'mel' | 'turboprop' | 'jet' | 'any'
 
 export interface Partnership {
   id: string
@@ -109,6 +110,48 @@ export interface SavedSearch {
   user_id: string
   name: string
   search_params: string
+}
+
+export interface PartnershipSeeker {
+  id: string
+  created_at: string
+  updated_at: string
+
+  preferred_makes: string[] | null
+  preferred_models: string | null
+  min_year: number | null
+  max_year: number | null
+  aircraft_category: AircraftCategory | null
+
+  max_buy_in: number | null
+  max_monthly: number | null
+  max_hourly: number | null
+
+  home_airport: string
+  airport_name: string | null
+  city: string | null
+  state: string | null
+  willing_to_travel_nm: number | null
+
+  total_hours: number | null
+  ratings_held: string[] | null
+
+  preferred_share_types: ShareType[] | null
+  preferred_scheduling: string | null
+
+  intended_use: string[] | null
+  hours_per_month: number | null
+
+  title: string
+  description: string | null
+
+  contact_name: string | null
+  contact_email: string
+  contact_method: ContactMethod
+  contact_phone: string | null
+
+  status: ListingStatus
+  poster_id: string | null
 }
 
 export interface PartnershipFilters {

@@ -1,17 +1,20 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 
-export const metadata: Metadata = {
-  title: 'Aircraft Partnerships & Co-Ownership Listings',
-  description:
-    'Browse aircraft co-ownership partnerships, leasebacks, and flying shares. Filter by home airport, radius, aircraft make, share type, and budget.',
-}
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipList from '@/components/PartnershipList'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
+
+import PartnershipTabs from '@/components/PartnershipTabs'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Aircraft Partnerships & Co-Ownership Near You',
+  description:
+    'Search aircraft partnerships by home airport, state, make, and budget. Transparent buy-in, monthly, and hourly costs on every co-ownership listing.',
+}
 
 type SearchParams = Record<string, string | undefined>
 
@@ -54,6 +57,8 @@ export default async function PartnershipsPage({
           </Link>
         </div>
       </div>
+
+      <PartnershipTabs active="available" />
 
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar — desktop only */}

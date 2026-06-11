@@ -1,52 +1,64 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Plane, Users, Search, ChevronRight, MapPin, DollarSign, Clock, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react'
+import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react'
 import HeroSearch from '@/components/HeroSearch'
+import FeaturedListings from '@/components/FeaturedListings'
+import { STATE_NAMES, SEO_MAKES } from '@/lib/seo'
 
-const problems = [
+export const metadata: Metadata = {
+  title: { absolute: 'AeroMatch — Aircraft Partnerships, Co-Ownership & Planes for Sale' },
+  description:
+    'Search aircraft partnerships and co-ownership opportunities by home airport. Browse planes for sale with real specs. Free to search, free to post.',
+}
+
+const benefits = [
   {
-    site: 'Barnstormers / Trade-A-Plane',
-    issue: 'Listings buried in unformatted walls of text. No structured specs. You\'re hunting for "SMOH" in a paragraph.',
+    icon: MapPin,
+    title: 'Search by home airport',
+    desc: 'Filter by ICAO code or radius — see only aircraft actually based near you, not 500 miles away.',
   },
   {
-    site: 'Reddit r/flying / r/TheHangar',
-    issue: 'Partnerships exist here, but they\'re unsearchable, expire from the feed, and there\'s no way to filter by home airport.',
+    icon: DollarSign,
+    title: 'Full cost transparency',
+    desc: 'Buy-in, monthly fixed, and hourly wet rate shown upfront on every partnership listing.',
   },
   {
-    site: 'Controller.com',
-    issue: 'Built for turbines and jets. Filtering for a $90k single-engine trainer is an afterthought.',
+    icon: ShieldCheck,
+    title: 'Structured, vetted listings',
+    desc: 'Share type, total partners, pilot requirements — standardized fields, not paragraph soup.',
+  },
+  {
+    icon: Users,
+    title: 'Free for the community',
+    desc: 'No broker fees, no paywalls. Posting and searching are free, built by a pilot for pilots.',
   },
 ]
 
-const partnershipFeatures = [
-  { icon: MapPin, label: 'Search by home airport', desc: 'Filter by ICAO code or radius — find what\'s actually based near you.' },
-  { icon: DollarSign, label: 'Full cost transparency', desc: 'Buy-in, monthly fixed, and wet rate shown upfront on every listing.' },
-  { icon: Clock, label: 'Experience requirements', desc: 'Filter by minimum hours and required ratings so you see only what fits.' },
-  { icon: Users, label: 'Structured deal terms', desc: 'Share type, total partners, scheduling system — all standardized.' },
-]
-
-const purchaseFeatures = [
-  { icon: Search, label: 'Parsed specs, not paragraphs', desc: 'TTAF, SMOH, annual due date, and damage history surfaced as filters.' },
-  { icon: Plane, label: 'Avionics stack', desc: 'G1000, Garmin 430W, ADS-B — searchable, not buried in descriptions.' },
-  { icon: CheckCircle, label: 'FAA registry cross-reference', desc: 'N-number lookup ties to real ownership history and accident records.' },
-  { icon: ChevronRight, label: 'Side-by-side comparison', desc: 'Compare two or three aircraft on specs and price — like cars, but for planes.' },
-]
-
-const howItWorks = [
+const exploreCards = [
   {
-    step: '01',
-    title: 'Describe what you\'re looking for',
-    desc: 'Home airport, aircraft type, budget, experience level. Real filters that match how pilots actually think.',
+    href: '/partnerships',
+    title: 'Find a partnership',
+    desc: 'Browse co-ownership shares with transparent costs near your home airport.',
+    img: 'https://images.unsplash.com/photo-1436891620584-47fd0e565afb?w=900&q=80',
+    alt: 'Small aircraft over a coastline',
+    cta: 'Browse partnerships',
   },
   {
-    step: '02',
-    title: 'Browse structured listings',
-    desc: 'Every listing shows the info that matters — costs, specs, requirements — not a wall of unformatted text.',
+    href: '/partnerships/seeking',
+    title: 'Pilots seeking shares',
+    desc: 'Own a plane? Find qualified, budget-matched pilots looking to buy in.',
+    img: 'https://images.unsplash.com/photo-1474302770737-173ee21bab63?w=900&q=80',
+    alt: 'Aircraft parked on a grass airfield at sunset',
+    cta: 'Meet seekers',
   },
   {
-    step: '03',
-    title: 'Connect directly',
-    desc: 'No middlemen, no broker fees. Email or call the owner directly from the listing.',
+    href: '/aircraft',
+    title: 'Aircraft for sale',
+    desc: 'Aggregated listings with parsed specs — TTAF, SMOH, and avionics as filters.',
+    img: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/Cirrus_SR-22_G3_GTS_AN1594917.jpg',
+    alt: 'Cirrus SR22 single-engine airplane',
+    cta: 'Search aircraft',
   },
 ]
 
@@ -54,174 +66,85 @@ export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
 
-      {/* ── HERO ── */}
-      <section className="relative min-h-[85vh] overflow-hidden bg-slate-900 flex items-center">
-        {/* Background image */}
+      {/* ── HERO — compact, centered search (Redfin-style) ── */}
+      <section className="relative overflow-hidden bg-slate-900">
         <div className="absolute inset-0">
           <Image
             src="https://images.unsplash.com/photo-1436891620584-47fd0e565afb?w=1800&q=80"
             alt="Aerial view from small aircraft cockpit"
             fill
-            className="object-cover opacity-30"
+            className="object-cover opacity-40"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/40 to-slate-900/70" />
         </div>
 
-        <div className="relative mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-sky-900/60 px-3 py-1.5 text-sm text-sky-300 ring-1 ring-sky-700/50">
-              <Plane className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Built by a pilot, for pilots
-            </div>
+        <div className="relative mx-auto w-full max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-24 lg:px-8">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+            Your next aircraft starts here.
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-lg text-slate-200">
+            Search partnerships and planes for sale by home airport — with real costs and real specs.
+          </p>
 
-            <h1 className="text-5xl font-bold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
-              Find your next<br />
-              <span className="text-sky-400">aircraft.</span>
-            </h1>
-
-            <p className="mt-5 text-xl leading-relaxed text-slate-300">
-              Search partnerships by home airport. Filter purchases by real specs.
-              No paragraph soup.
-            </p>
-
-            {/* ── Hero Search ── */}
-            <div className="mt-10">
-              <HeroSearch />
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center gap-4">
-              <span className="text-sm text-slate-500">Free to search. Free to post.</span>
-            </div>
+          <div className="mt-8 flex justify-center">
+            <HeroSearch />
           </div>
         </div>
       </section>
 
-      {/* ── THE PROBLEM ── */}
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-600 ring-1 ring-red-100">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              The current tools are broken
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-              You shouldn't need three tabs and a Reddit scroll to find a co-owner.
-            </h2>
-            <p className="mt-4 text-lg text-slate-500">
-              The aviation buying and partnership market is fragmented across sites that were built for a different era. None of them were designed around how you actually search.
-            </p>
-          </div>
+      {/* ── NEWEST LISTINGS — large photo cards ── */}
+      <FeaturedListings />
 
-          <div className="mt-14 grid gap-5 sm:grid-cols-3">
-            {problems.map(({ site, issue }) => (
-              <div key={site} className="rounded-xl border border-red-100 bg-red-50/50 p-6">
-                <p className="mb-2 text-sm font-semibold text-slate-700">{site}</p>
-                <p className="text-sm leading-relaxed text-slate-500">{issue}</p>
-              </div>
+      {/* ── EXPLORE — three big photo cards ── */}
+      <section className="bg-slate-50 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2 className="mb-8 text-2xl font-bold text-slate-900 sm:text-3xl">Three ways to fly more for less</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {exploreCards.map(({ href, title, desc, img, alt, cta }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className="relative h-44 overflow-hidden">
+                  <Image
+                    src={img}
+                    alt={alt}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                </div>
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-500">{desc}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-sky-600 group-hover:text-sky-700">
+                    {cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+              </Link>
             ))}
           </div>
-
-          <div className="mt-10 rounded-2xl bg-emerald-50 p-8 text-center ring-1 ring-emerald-100">
-            <CheckCircle className="mx-auto mb-3 h-8 w-8 text-emerald-500" />
-            <p className="text-lg font-semibold text-slate-900">AeroMatch fixes this.</p>
-            <p className="mt-1 text-slate-500">Structured data, real filters, and a search experience that matches how pilots actually think about aircraft.</p>
-          </div>
         </div>
       </section>
 
-      {/* ── TWO VERTICALS ── */}
-      <section className="bg-slate-50 py-20">
+      {/* ── BENEFITS — why AeroMatch ── */}
+      <section className="bg-white py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-14 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Two things done right.</h2>
-            <p className="mt-3 text-lg text-slate-500">Purpose-built for the two most common ways pilots acquire aircraft.</p>
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Why pilots use AeroMatch</h2>
+            <p className="mt-2 text-lg text-slate-500">
+              The aviation marketplace, rebuilt around how pilots actually search.
+            </p>
           </div>
-
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* Partnerships */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50">
-                  <Users className="h-6 w-6 text-emerald-600" />
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {benefits.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50">
+                  <Icon className="h-7 w-7 text-sky-600" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Partnerships & Co-Ownership</h3>
-                  <p className="text-sm text-slate-400">The only dedicated, searchable partnership board</p>
-                </div>
-              </div>
-              <ul className="space-y-4">
-                {partnershipFeatures.map(({ icon: Icon, label, desc }) => (
-                  <li key={label} className="flex gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
-                      <Icon className="h-4 w-4 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{label}</p>
-                      <p className="text-sm text-slate-500">{desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/partnerships"
-                className="mt-8 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
-              >
-                Join a Partnership <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {/* Aircraft for sale */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50">
-                  <Plane className="h-6 w-6 text-sky-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Aircraft for Sale</h3>
-                  <p className="text-sm text-slate-400">Aggregated, structured, actually searchable</p>
-                </div>
-              </div>
-              <ul className="space-y-4">
-                {purchaseFeatures.map(({ icon: Icon, label, desc }) => (
-                  <li key={label} className="flex gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-50">
-                      <Icon className="h-4 w-4 text-sky-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{label}</p>
-                      <p className="text-sm text-slate-500">{desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/aircraft"
-                className="mt-8 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
-              >
-                Search Aircraft <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-14 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Simple by design.</h2>
-            <p className="mt-3 text-lg text-slate-500">No account required to search. No fees to browse.</p>
-          </div>
-
-          <div className="relative grid gap-8 sm:grid-cols-3">
-            <div className="absolute left-0 right-0 top-8 hidden h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:block" />
-            {howItWorks.map(({ step, title, desc }) => (
-              <div key={step} className="relative text-center">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <span className="text-xl font-bold text-sky-600">{step}</span>
-                </div>
-                <h3 className="mb-2 text-base font-semibold text-slate-900">{title}</h3>
+                <h3 className="mb-1.5 text-base font-semibold text-slate-900">{title}</h3>
                 <p className="text-sm leading-relaxed text-slate-500">{desc}</p>
               </div>
             ))}
@@ -229,66 +152,84 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── COMMUNITY MISSION ── */}
-      <section className="relative overflow-hidden bg-slate-900 py-24">
-        <div
-          className="absolute inset-0 opacity-15"
-          style={{ backgroundImage: 'radial-gradient(ellipse at 30% 60%, #0ea5e9 0%, transparent 60%)' }}
-        />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-sky-400">Our mission</p>
-              <h2 className="text-3xl font-bold text-white sm:text-4xl">
-                Built for the community.<br />Free for the community.
-              </h2>
-              <p className="mt-6 text-lg leading-relaxed text-slate-300">
-                AeroMatch exists because the GA community deserves better tools. Every feature we build is driven by one question: what would make it genuinely easier for a pilot to find their next aircraft or their next partner?
-              </p>
-              <p className="mt-4 text-slate-400">
-                Posting a partnership listing is free. Searching is free. We hope to keep it that way for as long as possible.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href="/about"
-                  className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-500"
-                >
-                  Our story <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href="/partnerships/new"
-                  className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 transition-colors hover:bg-white/20"
-                >
-                  Post a listing
-                </Link>
-              </div>
-            </div>
+      {/* ── MISSION STRIP ── */}
+      <section className="bg-slate-900 py-14">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 text-center sm:px-6 lg:flex-row lg:justify-between lg:text-left lg:px-8">
+          <div>
+            <p className="mb-1 text-sm font-semibold uppercase tracking-widest text-sky-400">Built by a pilot, for pilots</p>
+            <h2 className="text-2xl font-bold text-white sm:text-3xl">Free to search. Free to post. For the GA community.</h2>
+          </div>
+          <div className="flex shrink-0 gap-3">
+            <Link
+              href="/about"
+              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 transition-colors hover:bg-white/20"
+            >
+              Our story
+            </Link>
+            <Link
+              href="/partnerships/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-500"
+            >
+              Post a listing <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
-            <div className="relative hidden lg:block">
-              <div className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
-                <Image
-                  src="https://images.unsplash.com/photo-1474302770737-173ee21bab63?w=800&q=80"
-                  alt="Small aircraft parked on a grass airfield at sunset"
-                  width={600}
-                  height={400}
-                  className="h-[360px] w-full object-cover opacity-80"
-                />
-              </div>
-            </div>
+      {/* ── SEO: BROWSE BY MAKE ── */}
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-slate-900">
+            <Plane className="h-5 w-5 text-sky-600" />
+            Browse partnerships by aircraft make
+          </h2>
+          <p className="mb-6 text-sm text-slate-500">Co-ownership opportunities for the most popular GA aircraft.</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+            {SEO_MAKES.map(({ slug, name }) => (
+              <Link
+                key={slug}
+                href={`/partnerships/make/${slug}`}
+                className="py-1 text-sm text-slate-600 transition-colors hover:text-sky-600 hover:underline"
+              >
+                {name} partnerships
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SEO: BROWSE BY STATE ── */}
+      <section className="border-t border-slate-100 bg-white py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-slate-900">
+            <Search className="h-5 w-5 text-sky-600" />
+            Find aircraft partnerships by state
+          </h2>
+          <p className="mb-6 text-sm text-slate-500">Browse co-ownership and flying club opportunities across the United States.</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
+            {Object.entries(STATE_NAMES).map(([code, name]) => (
+              <Link
+                key={code}
+                href={`/partnerships/state/${code.toLowerCase()}`}
+                className="py-1 text-sm text-slate-600 transition-colors hover:text-sky-600 hover:underline"
+              >
+                {name} partnerships
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── BOTTOM CTA ── */}
-      <section className="bg-sky-600 py-16">
+      <section className="bg-sky-600 py-14">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">Have a partnership to offer?</h2>
-          <p className="mt-3 text-lg text-sky-100">
-            Reach pilots actively searching near your home airport. It takes under five minutes and it's completely free.
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">Have a partnership to offer?</h2>
+          <p className="mt-2 text-lg text-sky-100">
+            Reach pilots actively searching near your home airport — in under five minutes, for free.
           </p>
           <Link
             href="/partnerships/new"
-            className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-7 py-3.5 text-base font-semibold text-sky-700 shadow-lg transition-all hover:bg-sky-50"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-7 py-3 text-base font-semibold text-sky-700 shadow-lg transition-all hover:bg-sky-50"
           >
             Post a Partnership <ArrowRight className="h-5 w-5" />
           </Link>

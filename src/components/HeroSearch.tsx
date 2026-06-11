@@ -79,7 +79,7 @@ export default function HeroSearch() {
     <>
       <div className="w-full max-w-2xl">
         {/* Mode toggle */}
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-4 flex items-center justify-center gap-3">
           <button
             onClick={() => setMode('airports')}
             className={cn(
@@ -175,7 +175,7 @@ export default function HeroSearch() {
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-center text-xs text-slate-300">
           {mode === 'airports'
             ? 'Press Enter or comma after each ICAO code to add multiple airports.'
             : 'Find all partnerships based within your chosen radius.'}

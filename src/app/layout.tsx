@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Nav from '@/components/Nav'
+import Footer from '@/components/Footer'
 import PostHogProvider from '@/components/PostHogProvider'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { SITE_URL, SITE_NAME } from '@/lib/seo'
@@ -30,20 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PostHogProvider>
           <Nav />
           <main>{children}</main>
-          <footer className="mt-20 border-t border-slate-200 bg-white py-10">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-                <span className="text-sm font-semibold text-slate-900">AeroMatch</span>
-                <p className="text-sm text-slate-400">The modern marketplace for pilots.</p>
-                <a
-                  href="mailto:feedback@aeromatch.ai"
-                  className="text-sm text-slate-400 hover:text-slate-600"
-                >
-                  Contact us
-                </a>
-              </div>
-            </div>
-          </footer>
+          <Footer />
           <FeedbackWidget />
         </PostHogProvider>
       </body>
