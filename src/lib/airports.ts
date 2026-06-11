@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from './supabase'
+import { createServerSupabaseClient } from './supabase-server'
 
 function haversineNm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3440.065 // Earth radius in nautical miles

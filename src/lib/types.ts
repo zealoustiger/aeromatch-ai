@@ -87,6 +87,30 @@ export interface Airport {
   type: string | null
 }
 
+export interface Thread {
+  id: string
+  created_at: string
+  partnership_id: string
+  inquirer_id: string
+  owner_id: string
+}
+
+export interface Message {
+  id: string
+  created_at: string
+  thread_id: string
+  sender_id: string
+  body: string
+}
+
+export interface SavedSearch {
+  id: string
+  created_at: string
+  user_id: string
+  name: string
+  search_params: string
+}
+
 export interface PartnershipFilters {
   airport?: string
   radiusNm?: number
