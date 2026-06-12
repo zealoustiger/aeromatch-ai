@@ -1,7 +1,7 @@
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
-export const SITE_NAME = 'AeroMatch'
+export const SITE_NAME = 'ClubHanger'
 
 /** Full state names keyed by USPS code — used for SEO landing pages. */
 export const STATE_NAMES: Record<string, string> = {

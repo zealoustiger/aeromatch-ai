@@ -44,7 +44,7 @@ export default function Nav() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 font-bold text-slate-900">
             <Plane className="h-5 w-5 text-sky-600" strokeWidth={2.5} />
-            <span className="text-lg">AeroMatch</span>
+            <span className="text-lg">ClubHanger</span>
           </Link>
 
           {/* Desktop nav */}

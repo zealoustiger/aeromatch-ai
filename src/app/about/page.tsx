@@ -4,8 +4,8 @@ import { Plane, Users, ArrowRight, Heart } from 'lucide-react'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'About — AeroMatch',
-  description: 'Why AeroMatch exists. A pilot\'s frustration turned into something useful for the whole community.',
+  title: 'About — ClubHanger',
+  description: 'Why ClubHanger exists. A pilot\'s frustration turned into something useful for the whole community.',
 }
 
 const frustrations = [
@@ -52,7 +52,7 @@ export default function AboutPage() {
             A pilot who got tired<br />of bad tools.
           </h1>
           <p className="mt-6 text-xl leading-relaxed text-slate-300">
-            AeroMatch started as a personal frustration and became something I hope is useful for the whole community.
+            ClubHanger started as a personal frustration and became something I hope is useful for the whole community.
           </p>
         </div>
       </section>
@@ -138,7 +138,7 @@ export default function AboutPage() {
 
           <div className="mt-8 space-y-5 text-lg leading-relaxed text-slate-600 text-left">
             <p>
-              AeroMatch isn't a startup play. It's a tool I wished existed when I was searching, so I built it — and I'm sharing it because every pilot going through that search deserves better than what's out there today.
+              ClubHanger isn't a startup play. It's a tool I wished existed when I was searching, so I built it — and I'm sharing it because every pilot going through that search deserves better than what's out there today.
             </p>
             <p>
               The goal is simple: if you're a pilot looking for a partner or a plane, this should be the first place you check. Not Reddit. Not three different sites with three different listing formats. Here.

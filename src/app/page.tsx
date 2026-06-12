@@ -13,15 +13,15 @@ const faqItems = [
   },
   {
     q: 'How much does it cost to join an aircraft partnership?',
-    a: 'Costs depend on the aircraft and location. A 1/3 share in a Cessna 172 typically requires a $12,000–$25,000 buy-in, $250–$400/month in fixed costs, and a $75–$110/hour wet rate. A Cirrus SR22 partnership share may require a $45,000–$80,000 buy-in with $600–$900/month in fixed costs. Every listing on AeroMatch shows buy-in, monthly fixed, and wet rate upfront.',
+    a: 'Costs depend on the aircraft and location. A 1/3 share in a Cessna 172 typically requires a $12,000–$25,000 buy-in, $250–$400/month in fixed costs, and a $75–$110/hour wet rate. A Cirrus SR22 partnership share may require a $45,000–$80,000 buy-in with $600–$900/month in fixed costs. Every listing on ClubHanger shows buy-in, monthly fixed, and wet rate upfront.',
   },
   {
     q: 'What pilot requirements are typical for an aircraft partnership?',
-    a: 'Most single-engine piston partnerships require at least a Private Pilot License (PPL) with 150–250 total hours. Partnerships involving IFR-equipped aircraft like a Garmin G1000-equipped Cessna 172S or Cirrus SR22 often require an Instrument Rating. Each AeroMatch listing specifies the minimum hours and required ratings so you only see listings that fit your certificate.',
+    a: 'Most single-engine piston partnerships require at least a Private Pilot License (PPL) with 150–250 total hours. Partnerships involving IFR-equipped aircraft like a Garmin G1000-equipped Cessna 172S or Cirrus SR22 often require an Instrument Rating. Each ClubHanger listing specifies the minimum hours and required ratings so you only see listings that fit your certificate.',
   },
   {
     q: 'How do I find an aircraft partnership near my home airport?',
-    a: 'On AeroMatch, enter your home airport ICAO code (e.g., KAUS for Austin-Bergstrom, KPAO for Palo Alto, KADS for Addison) or search by city and radius. Filter by aircraft make and model, share type (1/2, 1/3, 1/4), monthly budget, and experience requirements to narrow results to listings that match your situation.',
+    a: 'On ClubHanger, enter your home airport ICAO code (e.g., KAUS for Austin-Bergstrom, KPAO for Palo Alto, KADS for Addison) or search by city and radius. Filter by aircraft make and model, share type (1/2, 1/3, 1/4), monthly budget, and experience requirements to narrow results to listings that match your situation.',
   },
   {
     q: "What's the difference between aircraft co-ownership and a flying club?",
@@ -32,7 +32,7 @@ const faqItems = [
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'AeroMatch',
+  name: 'ClubHanger',
   url: SITE_URL,
   description:
     'Free marketplace for general aviation pilots to find aircraft co-ownership partnerships and aircraft for sale.',
@@ -57,7 +57,7 @@ const faqSchema = {
 }
 
 export const metadata: Metadata = {
-  title: { absolute: 'AeroMatch — Aircraft Partnerships, Co-Ownership & Planes for Sale' },
+  title: { absolute: 'ClubHanger — Aircraft Partnerships, Co-Ownership & Planes for Sale' },
   description:
     'Search aircraft partnerships and co-ownership opportunities by home airport. Browse planes for sale with real specs. Free to search, free to post.',
 }
@@ -179,11 +179,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── BENEFITS — why AeroMatch ── */}
+      {/* ── BENEFITS — why ClubHanger ── */}
       <section className="bg-white py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
-            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Why pilots use AeroMatch</h2>
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Why pilots use ClubHanger</h2>
             <p className="mt-2 text-lg text-slate-500">
               The aviation marketplace, rebuilt around how pilots actually search.
             </p>

@@ -64,7 +64,7 @@ function AuthForm() {
 
   return (
     <>
-      <h1 className="text-xl font-bold text-slate-900">Sign in to AeroMatch</h1>
+      <h1 className="text-xl font-bold text-slate-900">Sign in to ClubHanger</h1>
       <p className="mt-2 text-slate-500">
         We'll email you a magic link — no password needed.
       </p>
@@ -116,7 +116,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-2">
           <Plane className="h-5 w-5 text-sky-600" strokeWidth={2.5} />
-          <span className="font-bold text-slate-900">AeroMatch</span>
+          <span className="font-bold text-slate-900">ClubHanger</span>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">

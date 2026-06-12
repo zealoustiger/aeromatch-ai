@@ -9,8 +9,8 @@ import { SITE_URL, SITE_NAME } from '@/lib/seo'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'AeroMatch — Find Aircraft Partnerships & Sales',
-    template: '%s | AeroMatch',
+    default: 'ClubHanger — Find Aircraft Partnerships & Sales',
+    template: '%s | ClubHanger',
   },
   description:
     'The best place to find aircraft co-ownership partnerships and aircraft for sale. Search by airport, aircraft type, and budget.',
@@ -46,10 +46,10 @@ export const metadata: Metadata = {
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'AeroMatch',
+  name: 'ClubHanger',
   url: SITE_URL,
   description:
-    'AeroMatch is a free marketplace for general aviation pilots to find aircraft co-ownership partnerships and aircraft for sale.',
+    'ClubHanger is a free marketplace for general aviation pilots to find aircraft co-ownership partnerships and aircraft for sale.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -13,7 +13,7 @@ const exploreLinks = [
 ]
 
 const companyLinks = [
-  { href: '/about', label: 'About AeroMatch' },
+  { href: '/about', label: 'About ClubHanger' },
 ]
 
 export default function Footer() {
@@ -25,7 +25,7 @@ export default function Footer() {
           <div>
             <Link href="/" className="flex items-center gap-2 font-bold text-slate-900">
               <Plane className="h-5 w-5 text-sky-600" strokeWidth={2.5} />
-              <span className="text-lg">AeroMatch</span>
+              <span className="text-lg">ClubHanger</span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
               The modern marketplace for aircraft partnerships, co-ownership, and sales. Built by a pilot, for pilots.
@@ -88,7 +88,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col items-center gap-2 border-t border-slate-100 pt-6 sm:flex-row sm:justify-between">
-          <p className="text-sm text-slate-400">© {new Date().getFullYear()} AeroMatch. The modern marketplace for pilots.</p>
+          <p className="text-sm text-slate-400">© {new Date().getFullYear()} ClubHanger. The modern marketplace for pilots.</p>
           <p className="text-xs text-slate-300">Free to search. Free to post.</p>
         </div>
       </div>
