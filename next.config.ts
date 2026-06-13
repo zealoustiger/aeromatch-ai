@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'preview.redd.it' },
       { protocol: 'https', hostname: 'external-preview.redd.it' },
       { protocol: 'https', hostname: 'i.redd.it' },
+      { protocol: 'https', hostname: 'khypdoyfhwtdwaelzzle.supabase.co' },
     ],
   },
 }
