@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "ClubHanger Capture",
+  "version": "1.0",
+  "description": "Capture a Facebook group partnership post (text + photos) into ClubHanger.",
+  "action": {
+    "default_title": "Save to ClubHanger"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["scripting", "activeTab", "tabs"],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
