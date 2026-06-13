@@ -60,8 +60,16 @@ export function extractPrice(text: string): {
   const hourlyMatch = text.match(/\$(\d[\d,]+)\s*(?:\/hr|\/hour|per hour|an hour|wet)/i)
   const buyInMatch = text.match(/buy[- ]?in[^$]*\$(\d[\d,]+)/i)
   const num = (s: string | undefined) => (s ? parseInt(s.replace(/,/g, ''), 10) : null)
+
+  let buy_in = num(buyInMatch?.[1])
+  // Common shorthand in FB/classifieds posts: "price reduced to 40K", "$45k", "asking 38K"
+  if (buy_in == null) {
+    const kMatch = text.match(/(?:price|asking|share|reduced|sell|obo)[^$\d]{0,40}\$?(\d{1,3})\s*k\b/i)
+    if (kMatch) buy_in = parseInt(kMatch[1], 10) * 1000
+  }
+
   return {
-    buy_in: num(buyInMatch?.[1]),
+    buy_in,
     monthly: num(monthlyMatch?.[1]),
     hourly: num(hourlyMatch?.[1]),
   }
@@ -75,6 +83,8 @@ export function extractAircraft(text: string): {
   const lower = text.toLowerCase()
   let make = 'Unknown'
   let model = 'Unknown'
+
+  // Pass 1: explicit make name present ("Cessna 172", "Cirrus SR22")
   for (const [m, models] of Object.entries(MAKES)) {
     if (lower.includes(m.toLowerCase())) {
       make = m
@@ -87,6 +97,27 @@ export function extractAircraft(text: string): {
       break
     }
   }
+
+  // Pass 2: no brand name — infer make from a model token ("182S", "SR22", "Cherokee").
+  // Common in FB/classifieds posts that drop the manufacturer.
+  if (make === 'Unknown') {
+    for (const [m, models] of Object.entries(MAKES)) {
+      for (const mod of models) {
+        const isNumeric = /^\d+$/.test(mod)
+        const re = isNumeric
+          ? new RegExp(`\\b${mod}[a-z]?\\b`, 'i') // 182 → also matches "182S"
+          : new RegExp(`\\b${mod.replace(/-/g, '-?')}\\b`, 'i')
+        const match = text.match(re)
+        if (match) {
+          make = m
+          model = match[0].toUpperCase()
+          break
+        }
+      }
+      if (make !== 'Unknown') break
+    }
+  }
+
   const yearMatch = text.match(/\b(19[5-9]\d|20[0-2]\d)\b/)
   return { make, model, year: yearMatch ? parseInt(yearMatch[1], 10) : null }
 }
