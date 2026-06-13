@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { parseListing } from '@/lib/parseListing'
+import { llmParseListing } from '@/lib/llmParse'
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024 // 12 MB per image
 const MAX_IMAGES = 10
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { text?: string; imageUrls?: string[]; postUrl?: string }
+  let body: { text?: string; imageUrls?: string[]; postUrl?: string; author?: string }
   try {
     body = await request.json()
   } catch {
@@ -44,8 +45,30 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient()
 
+  // Parse: LLM (Claude Haiku) when ANTHROPIC_API_KEY is set, else heuristic.
+  const parsed = ((await llmParseListing(rawText)) ?? parseListing(rawText)) as unknown as Record<string, unknown>
+
+  // Prefer the FB author as the contact name when the post text didn't yield one.
+  if (!parsed.contact_name && typeof body.author === 'string' && body.author.trim()) {
+    parsed.contact_name = body.author.trim()
+  }
+
+  // Authoritative city/state from the airports table (never guess these).
+  const icao = (parsed.home_airport as string | null)?.toUpperCase()
+  if (icao) {
+    parsed.home_airport = icao
+    const { data: airport } = await supabase
+      .from('airports')
+      .select('city, state')
+      .eq('icao', icao)
+      .single()
+    if (airport) {
+      if (!parsed.city && airport.city) parsed.city = airport.city
+      if (airport.state) parsed.state = airport.state
+    }
+  }
+
   // Create the draft first so we have an ID for the storage path
-  const parsed = parseListing(rawText)
   const { data: draft, error: draftErr } = await supabase
     .from('listing_drafts')
     .insert({ source: 'facebook', source_url: sourceUrl, raw_text: rawText, parsed })

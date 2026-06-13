@@ -24,7 +24,7 @@ export default function CaptureClient() {
       return
     }
 
-    let payload: { text?: string; imageUrls?: string[]; postUrl?: string }
+    let payload: { text?: string; imageUrls?: string[]; postUrl?: string; author?: string }
     try {
       payload = JSON.parse(decodeURIComponent(hash))
     } catch {
