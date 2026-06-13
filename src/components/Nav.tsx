@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, MessageCircle, LogIn, LogOut, Menu, X } from 'lucide-react'
+import { Plane, Bookmark, MessageCircle, LogIn, LogOut, Menu, X, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -13,11 +13,18 @@ const links = [
   { href: '/about', label: 'About' },
 ]
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean)
+
 export default function Nav() {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
   useEffect(() => {
     const supabase = createClient()
@@ -90,6 +97,20 @@ export default function Nav() {
                   My Searches
                 </Link>
               </>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin/review"
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  pathname.startsWith('/admin')
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                )}
+              >
+                <Shield className="h-3.5 w-3.5" />
+                Admin
+              </Link>
             )}
           </nav>
 
@@ -190,6 +211,18 @@ export default function Nav() {
             >
               <Bookmark className="h-4 w-4" />
               My Searches
+            </Link>
+          )}
+          {isAdmin && (
+            <Link
+              href="/admin/review"
+              className={cn(
+                'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+                pathname.startsWith('/admin') ? 'text-amber-700' : 'text-slate-700'
+              )}
+            >
+              <Shield className="h-4 w-4" />
+              Admin
             </Link>
           )}
           <div className="py-4">
