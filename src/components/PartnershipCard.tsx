@@ -37,8 +37,8 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
             sizes="(max-width: 640px) 100vw, 208px"
           />
           {isPlaceholder && (
-            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-              Not actual plane photo
+            <span className="absolute bottom-2 left-2 rounded bg-black/35 px-1.5 py-0.5 text-[9px] font-medium text-white/80 backdrop-blur-sm">
+              Stock photo
             </span>
           )}
         </Link>

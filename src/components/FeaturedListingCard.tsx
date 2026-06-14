@@ -29,8 +29,8 @@ export default function FeaturedListingCard({ p }: { p: Partnership }) {
           {formatShareType(p.share_type)}
         </span>
         {isPlaceholder && (
-          <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-            Not actual plane photo
+          <span className="absolute bottom-2 right-2 rounded bg-black/35 px-1.5 py-0.5 text-[9px] font-medium text-white/80 backdrop-blur-sm">
+            Stock photo
           </span>
         )}
       </div>
