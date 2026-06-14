@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
       .eq('icao', icao)
       .single()
     if (airport) {
-      if (!parsed.city && airport.city) parsed.city = airport.city
+      // The home airport's city/state are authoritative — override any LLM guess.
+      if (airport.city) parsed.city = airport.city
       if (airport.state) parsed.state = airport.state
     }
   }
