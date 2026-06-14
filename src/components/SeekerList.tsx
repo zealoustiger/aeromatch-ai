@@ -27,9 +27,12 @@ export default async function SeekerList({ filters }: { filters: Record<string, 
   const seekers = await getSeekers(filters.state, filters.make)
 
   if (seekers.length === 0) {
+    const hasFilters = Object.values(filters).some(Boolean)
     return (
       <div className="rounded-xl border border-dashed border-slate-200 p-12 text-center">
-        <p className="text-slate-500">No seeking listings match your filters.</p>
+        <p className="text-slate-500">
+          {hasFilters ? 'No seeking listings match your filters.' : 'No seeking listings yet.'}
+        </p>
         <p className="mt-1 text-sm text-slate-400">Be the first — post a seeking listing!</p>
       </div>
     )
