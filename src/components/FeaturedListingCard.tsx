@@ -8,7 +8,7 @@ import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 /** Redfin-style photo-forward card: large image on top, price-first details below. */
 export default function FeaturedListingCard({ p }: { p: Partnership }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
-  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
+  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make, p.id)
   const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
 
   return (

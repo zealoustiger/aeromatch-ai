@@ -20,7 +20,7 @@ const shareColors: Record<string, string> = {
 export default function PartnershipCard({ p }: { p: Partnership }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
-  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
+  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make, p.id)
   const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
 
   return (
