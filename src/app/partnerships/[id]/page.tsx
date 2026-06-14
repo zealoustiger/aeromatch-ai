@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MapPin, Clock, Calendar, ChevronLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
+import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
 import { SITE_URL } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
@@ -80,6 +82,10 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  // Mirror the card behavior: show the listing photo, or a make-based placeholder
+  // with the honest "Not actual plane photo" badge when no real image exists.
+  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
+  const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
 
   return (
     <>
@@ -105,7 +111,25 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
           <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              {/* Photo */}
+              <div className="relative h-64 w-full sm:h-80">
+                <Image
+                  src={imageUrl}
+                  alt={aircraft}
+                  fill
+                  priority
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 768px"
+                />
+                {isPlaceholder && (
+                  <span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white/90 backdrop-blur-sm">
+                    Not actual plane photo
+                  </span>
+                )}
+              </div>
+
+              <div className="p-6">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
                 <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
@@ -144,6 +168,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                   <p className="whitespace-pre-line leading-relaxed text-slate-600">{p.description}</p>
                 </div>
               )}
+              </div>
             </div>
 
             {/* Requirements */}
