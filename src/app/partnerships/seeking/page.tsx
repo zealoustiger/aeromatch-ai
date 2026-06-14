@@ -50,11 +50,13 @@ export default async function SeekingPartnershipsPage({
 }
 
 function SeekerListSkeleton() {
+  // A single lightweight row instead of three full-height card skeletons, so a
+  // cold load with no results doesn't flash a heavy 3-card grid before
+  // collapsing to a one-line empty state.
   return (
-    <div className="space-y-4">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-40 animate-pulse rounded-xl bg-slate-100" />
-      ))}
+    <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-400" />
+      Loading seeking listings…
     </div>
   )
 }
