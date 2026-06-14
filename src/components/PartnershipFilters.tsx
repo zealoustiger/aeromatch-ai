@@ -146,6 +146,24 @@ export default function PartnershipFilters({ initialValues }: Props) {
         </div>
       </div>
 
+      {/* Max wet rate ($/hr) */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Max Wet Rate
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+          <input
+            type="number"
+            placeholder="e.g. 120"
+            defaultValue={initialValues.max_hourly ?? ''}
+            onChange={(e) => updateFilter('max_hourly', e.target.value)}
+            className="w-full rounded-md border border-slate-200 pl-7 pr-12 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">/hr</span>
+        </div>
+      </div>
+
       {hasFilters && (
         <button
           onClick={clearAll}
