@@ -5,6 +5,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
 import { formatPrice, formatShareType } from '@/lib/utils'
 import { MOCK_SEEKERS } from '@/lib/mockData'
+import AuthorIdentity from '@/components/AuthorIdentity'
+import ReviewsSection from '@/components/ReviewsSection'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -88,6 +90,10 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               </span>
             </div>
 
+            <div className="mt-4">
+              <AuthorIdentity posterId={s.poster_id} fallbackName={s.contact_name} />
+            </div>
+
             {s.description && (
               <div className="mt-6">
                 <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">About me</h2>
@@ -169,6 +175,9 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               </dl>
             </div>
           )}
+
+          {/* Reviews / social proof */}
+          <ReviewsSection targetType="seeker" targetId={s.id} ownerId={s.poster_id} />
         </div>
 
         {/* Sidebar */}

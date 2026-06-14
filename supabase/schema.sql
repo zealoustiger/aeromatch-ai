@@ -378,3 +378,77 @@ create index on messages (thread_id, created_at);
 create index on partnership_seekers (home_airport);
 create index on partnership_seekers (status);
 create index on partnership_seekers (state);
+
+-- =====================================================
+-- PROFILES + LISTING REVIEWS  (added by migration 0001_profiles_and_reviews.sql)
+-- Pilot identity behind listings + social proof. See migration for full notes.
+-- =====================================================
+create table if not exists profiles (
+  user_id          uuid        primary key references auth.users(id) on delete cascade,
+  display_name     text,
+  home_airport     text,
+  total_hours      integer,
+  ratings_held     text[],
+  mission          text,
+  bio              text,
+  avatar_url       text,
+  verified         boolean     not null default false,
+  verified_ratings text[]      not null default '{}',
+  created_at       timestamptz default now(),
+  updated_at       timestamptz default now()
+);
+
+create trigger profiles_updated_at
+  before update on profiles
+  for each row execute function update_updated_at();
+
+-- Verification is admin-only (frozen for non-service-role updates).
+create or replace function protect_profile_verification()
+returns trigger language plpgsql as $$
+begin
+  if coalesce(auth.role(), current_user) <> 'service_role' then
+    new.verified := old.verified;
+    new.verified_ratings := old.verified_ratings;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_protect_verification
+  before update on profiles
+  for each row execute function protect_profile_verification();
+
+alter table profiles enable row level security;
+
+create policy "profiles_public_read" on profiles
+  for select using (true);
+create policy "profiles_owner_insert" on profiles
+  for insert with check (auth.uid() = user_id);
+create policy "profiles_owner_update" on profiles
+  for update using (auth.uid() = user_id);
+
+create table if not exists listing_reviews (
+  id             uuid        default gen_random_uuid() primary key,
+  created_at     timestamptz default now(),
+  target_type    text        not null check (target_type in ('partnership','seeker')),
+  target_id      uuid        not null,
+  author_user_id uuid        not null references auth.users(id) on delete cascade,
+  rating         integer     check (rating between 1 and 5),
+  body           text        not null check (char_length(body) between 1 and 2000),
+  status         text        not null default 'visible' check (status in ('visible','hidden')),
+  unique (target_type, target_id, author_user_id)
+);
+
+alter table listing_reviews enable row level security;
+
+create policy "listing_reviews_public_read" on listing_reviews
+  for select using (status = 'visible');
+create policy "listing_reviews_author_insert" on listing_reviews
+  for insert with check (auth.uid() = author_user_id);
+create policy "listing_reviews_author_update" on listing_reviews
+  for update using (auth.uid() = author_user_id);
+create policy "listing_reviews_author_delete" on listing_reviews
+  for delete using (auth.uid() = author_user_id);
+
+create index on listing_reviews (target_type, target_id, status);
+create index on listing_reviews (author_user_id);

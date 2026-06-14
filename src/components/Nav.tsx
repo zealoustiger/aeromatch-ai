@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, MessageCircle, LogIn, LogOut, Menu, X, Shield } from 'lucide-react'
+import { Plane, Bookmark, MessageCircle, LogIn, LogOut, Menu, X, Shield, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -95,6 +95,18 @@ export default function Nav() {
                 >
                   <Bookmark className="h-3.5 w-3.5" />
                   My Searches
+                </Link>
+                <Link
+                  href="/profile"
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    pathname.startsWith('/profile')
+                      ? 'bg-sky-50 text-sky-700'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  )}
+                >
+                  <UserRound className="h-3.5 w-3.5" />
+                  Profile
                 </Link>
               </>
             )}
@@ -211,6 +223,18 @@ export default function Nav() {
             >
               <Bookmark className="h-4 w-4" />
               My Searches
+            </Link>
+          )}
+          {user && (
+            <Link
+              href="/profile"
+              className={cn(
+                'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+                pathname.startsWith('/profile') ? 'text-sky-700' : 'text-slate-700'
+              )}
+            >
+              <UserRound className="h-4 w-4" />
+              Profile
             </Link>
           )}
           {isAdmin && (
