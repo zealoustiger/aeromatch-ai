@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 import SeekerList from '@/components/SeekerList'
 import PartnershipTabs from '@/components/PartnershipTabs'
 
@@ -50,11 +50,12 @@ export default async function SeekingPartnershipsPage({
 }
 
 function SeekerListSkeleton() {
+  // A light loading indicator instead of three full skeleton cards, which
+  // misrepresented the result count and "bait-and-switched" to an empty state.
   return (
-    <div className="space-y-4">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-40 animate-pulse rounded-xl bg-slate-100" />
-      ))}
+    <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">
+      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      Loading seeking listings…
     </div>
   )
 }
