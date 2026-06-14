@@ -25,3 +25,20 @@ export function formatShareType(type: string): string {
 export function aircraftLabel(make: string, model: string, year?: number | null): string {
   return [year, make, model].filter(Boolean).join(' ')
 }
+
+/** Sentinel address stamped on Facebook/Craigslist-captured listings (admin/review/actions.ts). */
+export const CAPTURED_NOREPLY_EMAIL = 'facebook-noreply@clubhanger.com'
+
+/**
+ * Whether an email can actually receive mail. Captured listings carry the
+ * non-routable `facebook-noreply@clubhanger.com` sentinel (and any other
+ * "noreply" address is a dead end too), so a "Send Email" CTA pointed at one
+ * goes nowhere. Use this to decide whether to render the email CTA at all.
+ */
+export function isContactableEmail(email: string | null | undefined): boolean {
+  if (!email) return false
+  const e = email.trim().toLowerCase()
+  if (e === CAPTURED_NOREPLY_EMAIL) return false
+  if (/(^|[._-])no-?reply([._-]|@)/.test(e)) return false
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)
+}
