@@ -16,6 +16,11 @@ const companyLinks = [
   { href: '/about', label: 'About ClubHanger' },
 ]
 
+const toolLinks = [
+  { href: '/tools/cost-calculator', label: 'Cost calculator' },
+  { href: '/tools/earnings-calculator', label: 'Earnings calculator' },
+]
+
 export default function Footer() {
   return (
     <footer className="mt-20 border-t border-slate-200 bg-white">
@@ -73,6 +78,14 @@ export default function Footer() {
                   >
                     {name}
                   </Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Tools</h3>
+            <ul className="space-y-2">
+              {toolLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
                 </li>
               ))}
             </ul>
