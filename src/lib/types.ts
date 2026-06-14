@@ -155,6 +155,34 @@ export interface PartnershipSeeker {
   poster_id: string | null
 }
 
+export interface Profile {
+  user_id: string
+  display_name: string | null
+  home_airport: string | null
+  total_hours: number | null
+  ratings_held: string[] | null
+  mission: string | null
+  bio: string | null
+  avatar_url: string | null
+  verified: boolean
+  verified_ratings: string[] | null
+  created_at: string
+  updated_at: string
+}
+
+export type ReviewTargetType = 'partnership' | 'seeker'
+
+export interface ListingReview {
+  id: string
+  created_at: string
+  target_type: ReviewTargetType
+  target_id: string
+  author_user_id: string
+  rating: number | null
+  body: string
+  status: 'visible' | 'hidden'
+}
+
 export interface PartnershipFilters {
   airport?: string
   radiusNm?: number

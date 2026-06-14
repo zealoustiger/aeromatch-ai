@@ -11,6 +11,8 @@ import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
+import AuthorIdentity from '@/components/AuthorIdentity'
+import ReviewsSection from '@/components/ReviewsSection'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -138,6 +140,10 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 </span>
               </div>
 
+              <div className="mt-4">
+                <AuthorIdentity posterId={p.poster_id} fallbackName={p.contact_name} />
+              </div>
+
               {p.description && (
                 <div className="mt-6">
                   <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">About this listing</h2>
@@ -174,6 +180,9 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 </dl>
               </div>
             )}
+
+            {/* Reviews / social proof */}
+            <ReviewsSection targetType="partnership" targetId={p.id} ownerId={p.poster_id} />
           </div>
 
           {/* Sidebar */}

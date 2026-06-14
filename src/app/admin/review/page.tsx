@@ -44,12 +44,17 @@ export default async function ReviewPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Review captured listings</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {drafts?.length ?? 0} draft{(drafts?.length ?? 0) === 1 ? '' : 's'} waiting. Confirm the
-          parsed fields, then publish to go live.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Review captured listings</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {drafts?.length ?? 0} draft{(drafts?.length ?? 0) === 1 ? '' : 's'} waiting. Confirm the
+            parsed fields, then publish to go live.
+          </p>
+        </div>
+        <Link href="/admin/verify" className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          Verify pilots →
+        </Link>
       </div>
 
       {!drafts || drafts.length === 0 ? (
