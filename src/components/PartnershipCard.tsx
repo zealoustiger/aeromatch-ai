@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin, Clock, Users, ExternalLink } from 'lucide-react'
 import { Partnership } from '@/lib/types'
-import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
+import { formatPrice, formatShareType, aircraftLabel, cn, isCompleteListing } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 
@@ -22,9 +22,15 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
   const shareColor = shareColors[p.share_type] ?? shareColors.other
   const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
   const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
+  const incomplete = !isCompleteListing(p)
 
   return (
-    <article className="group rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md overflow-hidden">
+    <article
+      className={cn(
+        'group rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md overflow-hidden',
+        incomplete && 'opacity-70 hover:opacity-100',
+      )}
+    >
       <div className="flex flex-col sm:flex-row">
 
         {/* Photo */}
@@ -55,6 +61,11 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
                 {p.registration && (
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-medium text-slate-600 ring-1 ring-slate-200">
                     {p.registration}
+                  </span>
+                )}
+                {incomplete && (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                    Details pending
                   </span>
                 )}
               </div>

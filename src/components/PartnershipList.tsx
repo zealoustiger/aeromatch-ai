@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { rankByCompleteness } from '@/lib/utils'
 import PartnershipCard from './PartnershipCard'
 
 interface Filters {
@@ -112,7 +113,7 @@ function renderList(listings: Partnership[], filters: Filters, airportList: stri
         ) : null}
       </p>
       <div className="space-y-4">
-        {listings.map((p) => (
+        {rankByCompleteness(listings).map((p) => (
           <PartnershipCard key={p.id} p={p} />
         ))}
       </div>

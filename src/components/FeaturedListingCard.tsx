@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin } from 'lucide-react'
 import { Partnership } from '@/lib/types'
-import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
+import { formatPrice, formatShareType, aircraftLabel, cn, isCompleteListing } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 
 /** Redfin-style photo-forward card: large image on top, price-first details below. */
@@ -10,11 +10,15 @@ export default function FeaturedListingCard({ p }: { p: Partnership }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
   const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
+  const incomplete = !isCompleteListing(p)
 
   return (
     <Link
       href={`/partnerships/${p.id}`}
-      className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+      className={cn(
+        'group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg',
+        incomplete && 'opacity-70 hover:opacity-100',
+      )}
     >
       {/* Photo */}
       <div className="relative h-52 w-full overflow-hidden">
@@ -48,6 +52,12 @@ export default function FeaturedListingCard({ p }: { p: Partnership }) {
         </div>
 
         <p className="mt-1 truncate text-sm font-semibold text-slate-800">{aircraft}</p>
+
+        {incomplete && (
+          <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
+            Details pending
+          </span>
+        )}
 
         <p className="mt-1 flex items-center gap-1 truncate text-sm text-slate-500">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />

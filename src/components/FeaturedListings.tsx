@@ -3,13 +3,17 @@ import { ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { rankByCompleteness } from '@/lib/utils'
 import FeaturedListingCard from './FeaturedListingCard'
 
+// Pull a wider pool than we display so complete listings can lead even when the
+// newest few are incomplete captured drafts; rank, then slice to `limit`.
 async function getLatestPartnerships(limit: number): Promise<Partnership[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  const pool = Math.max(limit * 4, 24)
 
-  if (!hasSupabase) return MOCK_PARTNERSHIPS.slice(0, limit)
+  if (!hasSupabase) return rankByCompleteness(MOCK_PARTNERSHIPS.slice(0, pool)).slice(0, limit)
 
   try {
     const supabase = await createServerSupabaseClient()
@@ -18,8 +22,8 @@ async function getLatestPartnerships(limit: number): Promise<Partnership[]> {
       .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .limit(limit)
-    return data ?? []
+      .limit(pool)
+    return rankByCompleteness(data ?? []).slice(0, limit)
   } catch {
     return []
   }
