@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MapPin, Clock, Calendar, ChevronLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
+import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
 import { SITE_URL } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
@@ -80,6 +82,10 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  // Match the card behavior: real listing photo when present, otherwise a
+  // make-based placeholder flagged with the "Not actual plane photo" badge.
+  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
+  const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
 
   return (
     <>
@@ -105,6 +111,23 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Aircraft photo */}
+            <div className="relative h-64 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:h-80">
+              <Image
+                src={imageUrl}
+                alt={aircraft}
+                fill
+                priority
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 672px"
+              />
+              {isPlaceholder && (
+                <span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white/90 backdrop-blur-sm">
+                  Not actual plane photo
+                </span>
+              )}
+            </div>
+
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
