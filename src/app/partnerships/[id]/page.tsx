@@ -11,6 +11,8 @@ import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
+import PhotoGallery from '@/components/PhotoGallery'
+import SimilarListings from '@/components/SimilarListings'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -105,6 +107,14 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Photo gallery */}
+            <PhotoGallery
+              images={p.images}
+              make={p.make}
+              alt={aircraft}
+              imageIsPlaceholder={p.image_is_placeholder}
+            />
+
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
@@ -258,6 +268,11 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
               <ReportListing listingId={p.id} />
             </div>
           </div>
+        </div>
+
+        {/* Similar listings */}
+        <div className="mt-10">
+          <SimilarListings current={p} />
         </div>
       </div>
 

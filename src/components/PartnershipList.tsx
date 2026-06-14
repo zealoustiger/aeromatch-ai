@@ -12,6 +12,7 @@ interface Filters {
   make?: string
   max_monthly?: string
   max_buyin?: string
+  max_hourly?: string
   share_type?: string
 }
 
@@ -43,6 +44,7 @@ export default async function PartnershipList({ filters }: { filters: Filters })
       if (filters.share_type && p.share_type !== filters.share_type) return false
       if (filters.max_monthly && (p.monthly_fixed ?? 0) > parseInt(filters.max_monthly)) return false
       if (filters.max_buyin && (p.buy_in_price ?? 0) > parseInt(filters.max_buyin)) return false
+      if (filters.max_hourly && (p.hourly_wet ?? 0) > parseInt(filters.max_hourly)) return false
       return true
     })
     return renderList(listings, filters, airportList)
@@ -67,6 +69,7 @@ export default async function PartnershipList({ filters }: { filters: Filters })
     if (filters.share_type) query = query.eq('share_type', filters.share_type)
     if (filters.max_monthly) query = query.lte('monthly_fixed', parseInt(filters.max_monthly))
     if (filters.max_buyin) query = query.lte('buy_in_price', parseInt(filters.max_buyin))
+    if (filters.max_hourly) query = query.lte('hourly_wet', parseInt(filters.max_hourly))
 
     const { data, error: err } = await query.limit(50)
     if (err) { error = true } else { listings = data ?? [] }
