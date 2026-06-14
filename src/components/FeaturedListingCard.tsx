@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin } from 'lucide-react'
 import { Partnership } from '@/lib/types'
-import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
+import { formatPrice, formatShareType, aircraftLabel, cn, isCompleteListing } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 
 /** Redfin-style photo-forward card: large image on top, price-first details below. */
@@ -10,11 +10,15 @@ export default function FeaturedListingCard({ p }: { p: Partnership }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
   const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
+  const incomplete = !isCompleteListing(p)
 
   return (
     <Link
       href={`/partnerships/${p.id}`}
-      className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+      className={cn(
+        'group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg',
+        incomplete && 'opacity-70 hover:opacity-100',
+      )}
     >
       {/* Photo */}
       <div className="relative h-52 w-full overflow-hidden">
@@ -31,6 +35,11 @@ export default function FeaturedListingCard({ p }: { p: Partnership }) {
         {isPlaceholder && (
           <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
             Not actual plane photo
+          </span>
+        )}
+        {incomplete && (
+          <span className="absolute right-3 top-3 rounded-md bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm">
+            Details pending
           </span>
         )}
       </div>

@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { rankListings } from '@/lib/utils'
 import FeaturedListingCard from './FeaturedListingCard'
 
 async function getLatestPartnerships(limit: number): Promise<Partnership[]> {
@@ -26,7 +27,7 @@ async function getLatestPartnerships(limit: number): Promise<Partnership[]> {
 }
 
 export default async function FeaturedListings() {
-  const listings = await getLatestPartnerships(6)
+  const listings = rankListings(await getLatestPartnerships(6))
 
   if (listings.length === 0) return null
 

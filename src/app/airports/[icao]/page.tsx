@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
 import { SITE_URL } from '@/lib/seo'
+import { rankListings } from '@/lib/utils'
 import PartnershipCard from '@/components/PartnershipCard'
 
 export const revalidate = 3600 // refresh hourly
@@ -63,8 +64,8 @@ export default async function AirportPage({
 
   const nearbyIcaos = await getAirportsWithinRadius(airport.icao, 50)
   const allListings = await getListings(nearbyIcaos)
-  const atAirport = allListings.filter((l) => l.home_airport === airport.icao)
-  const nearby = allListings.filter((l) => l.home_airport !== airport.icao)
+  const atAirport = rankListings(allListings.filter((l) => l.home_airport === airport.icao))
+  const nearby = rankListings(allListings.filter((l) => l.home_airport !== airport.icao))
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">

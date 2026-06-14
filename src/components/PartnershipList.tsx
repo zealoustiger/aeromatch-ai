@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { rankListings } from '@/lib/utils'
 import PartnershipCard from './PartnershipCard'
 
 interface Filters {
@@ -85,7 +86,9 @@ export default async function PartnershipList({ filters }: { filters: Filters })
   return renderList(listings, filters, airportList)
 }
 
-function renderList(listings: Partnership[], filters: Filters, airportList: string[]) {
+function renderList(rawListings: Partnership[], filters: Filters, airportList: string[]) {
+  // Complete listings first, incomplete (captured/"Unknown") last; see rankListings.
+  const listings = rankListings(rawListings)
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
