@@ -37,6 +37,7 @@ export interface Partnership {
   images: string[] | null
   source_url: string | null
   image_is_placeholder: boolean | null
+  posted_at: string | null
 
   contact_name: string | null
   contact_email: string

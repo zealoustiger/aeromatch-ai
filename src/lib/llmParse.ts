@@ -27,12 +27,16 @@ const SCHEMA = {
     },
     contact_name: { type: ['string', 'null'] },
     contact_phone: { type: ['string', 'null'] },
+    posted_date: {
+      type: ['string', 'null'],
+      description: 'Date the post was published, as YYYY-MM-DD. Derived from the POST_DATE hint using TODAY for the year.',
+    },
     title: { type: 'string', description: 'Concise listing title, e.g. "1999 Mooney Screaming Eagle 1/3 Share at KPAO"' },
   },
   required: [
     'make', 'model', 'year', 'home_airport', 'city', 'state', 'share_type',
     'buy_in_price', 'monthly_fixed', 'hourly_wet', 'min_hours', 'ratings_required',
-    'contact_name', 'contact_phone', 'title',
+    'contact_name', 'contact_phone', 'posted_date', 'title',
   ],
 }
 
@@ -46,16 +50,26 @@ Rules:
 - model should include the variant/marketing name when present (e.g. "Screaming Eagle", "Turbo", "SP").
 - contact_name is the person to reach (often the poster). contact_phone is any phone number in the text.
 - share_type: pick the closest of 1/2, 1/3, 1/4, leaseback, dry_lease, other.
+- posted_date: normalize the POST_DATE hint to YYYY-MM-DD. The hint may be relative ("4h", "2d", "yesterday") or absolute without a year ("May 4", "June 11 at 10:10 AM"). Use the provided TODAY date to resolve it: a month/day with no year is the most recent such date on or before TODAY. Relative values count back from TODAY. If no hint is given, return null.
 - title: a concise, human listing title combining year, make, model, share type, and airport when known.`
 
 /**
  * LLM-based extraction via Claude Haiku. Returns null when no API key is set
  * or the call fails, so callers can fall back to the heuristic parser.
  */
-export async function llmParseListing(rawText: string): Promise<ParsedListing | null> {
+export async function llmParseListing(
+  rawText: string,
+  opts: { postedText?: string; today?: string } = {}
+): Promise<ParsedListing | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null
   const text = rawText.trim()
   if (text.length < 10) return null
+
+  const today = opts.today || new Date().toISOString().slice(0, 10)
+  const userContent =
+    `TODAY: ${today}\n` +
+    (opts.postedText ? `POST_DATE: ${opts.postedText}\n` : '') +
+    `\nPOST:\n${text}`
 
   try {
     const client = new Anthropic()
@@ -71,7 +85,7 @@ export async function llmParseListing(rawText: string): Promise<ParsedListing | 
         },
       ],
       tool_choice: { type: 'tool', name: 'record_listing' },
-      messages: [{ role: 'user', content: text }],
+      messages: [{ role: 'user', content: userContent }],
     })
 
     const block = res.content.find((b) => b.type === 'tool_use')
@@ -103,10 +117,12 @@ export async function llmParseListing(rawText: string): Promise<ParsedListing | 
       ...(f.min_hours != null ? { min_hours: f.min_hours as number } : {}),
       ...(f.ratings_required != null ? { ratings_required: f.ratings_required as string[] } : {}),
       ...(str(f.contact_phone) ? { contact_phone: str(f.contact_phone) } : {}),
+      ...(str(f.posted_date) ? { posted_at: str(f.posted_date) } : {}),
     } as ParsedListing & {
       min_hours?: number
       ratings_required?: string[]
       contact_phone?: string
+      posted_at?: string
     }
   } catch (e) {
     console.error('llmParseListing failed:', e)

@@ -35,6 +35,7 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     poster_id: null,
     source_url: null,
     image_is_placeholder: true,
+    posted_at: null,
   },
   {
     id: 'mock-2',
@@ -70,6 +71,7 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     poster_id: null,
     source_url: null,
     image_is_placeholder: true,
+    posted_at: null,
   },
   {
     id: 'mock-3',
@@ -105,6 +107,7 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     poster_id: null,
     source_url: null,
     image_is_placeholder: true,
+    posted_at: null,
   },
   {
     id: 'mock-4',
@@ -140,6 +143,7 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     poster_id: null,
     source_url: null,
     image_is_placeholder: true,
+    posted_at: null,
   },
 ]
 

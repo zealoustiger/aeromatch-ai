@@ -89,6 +89,19 @@ function extractPost() {
     }
   }
 
+  // ── POSTED DATE ── the post's timestamp text ("May 4", "June 11 at 10:10 AM",
+  // "4h"). FB formats vary, so grab the raw string + any absolute date in the
+  // link's aria-label/title; the server normalizes it to an ISO date.
+  let postedText = ''
+  const dateRe = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s*(h|hr|hrs|hour|m|min|mins|d|day|days|w|wk|wks|week|weeks|mo)\b|yesterday|just now|\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/i
+  for (const a of scope.querySelectorAll('a[role="link"], abbr, span')) {
+    if (inComment(a)) continue
+    const label = clean(a.getAttribute('aria-label')) || clean(a.getAttribute('title'))
+    const t = clean(a.textContent)
+    if (label && dateRe.test(label)) { postedText = label; break }
+    if (t && t.length <= 40 && dateRe.test(t)) { postedText = t; break }
+  }
+
   // ── IMAGES ── large fbcdn images, just not ones inside a comment
   let imgs = Array.from(scope.querySelectorAll('img'))
     .filter((i) => isBigImg(i) && !inComment(i))
@@ -101,6 +114,7 @@ function extractPost() {
     imageUrls: imgs,
     postUrl: location.href,
     author,
+    postedText,
     _debug: {
       dialogs: dialogs.length,
       scopeIsDialog: scope !== document.body && scope !== document,

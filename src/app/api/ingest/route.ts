@@ -28,7 +28,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { text?: string; imageUrls?: string[]; postUrl?: string; author?: string }
+  let body: {
+    text?: string
+    imageUrls?: string[]
+    postUrl?: string
+    author?: string
+    postedText?: string
+  }
   try {
     body = await request.json()
   } catch {
@@ -46,7 +52,8 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
   // Parse: LLM (Claude Haiku) when ANTHROPIC_API_KEY is set, else heuristic.
-  const parsed = ((await llmParseListing(rawText)) ?? parseListing(rawText)) as unknown as Record<string, unknown>
+  const parsed = ((await llmParseListing(rawText, { postedText: body.postedText })) ??
+    parseListing(rawText)) as unknown as Record<string, unknown>
 
   // Prefer the FB author as the contact name when the post text didn't yield one.
   if (!parsed.contact_name && typeof body.author === 'string' && body.author.trim()) {

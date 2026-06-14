@@ -78,6 +78,8 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   if (!p) notFound()
 
   const aircraft = aircraftLabel(p.make, p.model, p.year)
+  const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
+    .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
   return (
     <>
@@ -132,7 +134,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-slate-400" />
-                  Listed {new Date(p.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  Posted {postedLabel}
                 </span>
               </div>
 

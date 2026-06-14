@@ -33,6 +33,10 @@ export async function publishDraft(formData: FormData) {
     return v && v.trim() ? parseInt(v.replace(/[^\d]/g, ''), 10) : null
   }
 
+  // posted_at: accept a YYYY-MM-DD value, else null
+  const postedRaw = (formData.get('posted_at') as string)?.trim()
+  const posted_at = postedRaw && /^\d{4}-\d{2}-\d{2}$/.test(postedRaw) ? postedRaw : null
+
   const payload = {
     make: (formData.get('make') as string) || 'Unknown',
     model: (formData.get('model') as string) || 'Unknown',
@@ -53,6 +57,7 @@ export async function publishDraft(formData: FormData) {
     contact_name: (formData.get('contact_name') as string) || null,
     contact_email: 'facebook-noreply@clubhanger.com',
     contact_method: 'email' as const,
+    posted_at,
     status: 'active' as const,
     poster_id: null,
   }

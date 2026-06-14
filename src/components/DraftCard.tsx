@@ -127,6 +127,15 @@ export default function DraftCard({ draft }: { draft: Draft }) {
           <Field label="Monthly $" name="monthly_fixed" defaultValue={str('monthly_fixed')} />
           <Field label="Wet $/hr" name="hourly_wet" defaultValue={str('hourly_wet')} />
           <Field label="Contact name" name="contact_name" defaultValue={str('contact_name')} />
+          <label className="block">
+            <span className="mb-0.5 block text-xs font-medium text-slate-500">Posted</span>
+            <input
+              type="date"
+              name="posted_at"
+              defaultValue={str('posted_at')}
+              className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+            />
+          </label>
         </div>
 
         <label className="mt-3 block">
