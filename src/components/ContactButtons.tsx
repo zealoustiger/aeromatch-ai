@@ -1,7 +1,8 @@
 'use client'
 
-import { Mail, Phone } from 'lucide-react'
+import { Mail, Phone, ExternalLink } from 'lucide-react'
 import { track } from '@/lib/analytics'
+import { isRoutableContactEmail } from '@/lib/utils'
 
 export default function ContactButtons({
   listingId,
@@ -9,16 +10,33 @@ export default function ContactButtons({
   contactEmail,
   contactPhone,
   contactMethod,
+  sourceUrl,
 }: {
   listingId: string
   title: string
   contactEmail: string
   contactPhone: string | null
   contactMethod: string
+  sourceUrl?: string | null
 }) {
+  const showEmail =
+    (contactMethod === 'email' || contactMethod === 'both') && isRoutableContactEmail(contactEmail)
+  const showPhone = (contactMethod === 'phone' || contactMethod === 'both') && !!contactPhone
+  // Only fall back to the off-platform source link when there's no usable
+  // on-platform contact — never alongside a real email/phone.
+  const showSource = !showEmail && !showPhone && !!sourceUrl
+
+  if (!showEmail && !showPhone && !showSource) {
+    return (
+      <p className="text-sm text-sky-700">
+        Contact details aren&apos;t available for this listing yet.
+      </p>
+    )
+  }
+
   return (
     <div className="space-y-2">
-      {(contactMethod === 'email' || contactMethod === 'both') && (
+      {showEmail && (
         <a
           href={`mailto:${contactEmail}?subject=Re: ${encodeURIComponent(title)}`}
           onClick={() => track('contact_initiated', { listing_id: listingId, method: 'email' })}
@@ -27,13 +45,26 @@ export default function ContactButtons({
           <Mail className="h-4 w-4" /> Send Email
         </a>
       )}
-      {(contactMethod === 'phone' || contactMethod === 'both') && contactPhone && (
+      {showPhone && (
         <a
           href={`tel:${contactPhone}`}
           onClick={() => track('contact_initiated', { listing_id: listingId, method: 'phone' })}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
         >
           <Phone className="h-4 w-4" /> {contactPhone}
+        </a>
+      )}
+      {showSource && (
+        <a
+          href={sourceUrl!}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() =>
+            track('source_link_clicked', { listing_id: listingId, source_url: sourceUrl })
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+        >
+          <ExternalLink className="h-4 w-4" /> View original listing
         </a>
       )}
     </div>

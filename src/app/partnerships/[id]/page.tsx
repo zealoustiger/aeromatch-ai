@@ -251,6 +251,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 contactEmail={p.contact_email}
                 contactPhone={p.contact_phone}
                 contactMethod={p.contact_method}
+                sourceUrl={p.source_url}
               />
             </div>
 
@@ -270,6 +271,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         contactPhone={p.contact_phone}
         contactMethod={p.contact_method}
         contactName={p.contact_name}
+        sourceUrl={p.source_url}
       />
     </>
   )
