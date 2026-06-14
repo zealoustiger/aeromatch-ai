@@ -78,23 +78,31 @@ export async function llmParseListing(rawText: string): Promise<ParsedListing | 
     if (!block || block.type !== 'tool_use') return null
     const f = block.input as Record<string, unknown>
 
+    // Models sometimes emit a placeholder ("<UNKNOWN>", "N/A") instead of null.
+    const str = (v: unknown): string | null => {
+      if (typeof v !== 'string') return null
+      const t = v.trim()
+      if (!t || /^<?\s*(unknown|n\/?a|none|null|tbd|n\.a\.)\s*>?$/i.test(t)) return null
+      return t
+    }
+
     return {
-      make: (f.make as string) ?? 'Unknown',
-      model: (f.model as string) ?? 'Unknown',
+      make: str(f.make) ?? 'Unknown',
+      model: str(f.model) ?? 'Unknown',
       year: (f.year as number) ?? null,
-      home_airport: (f.home_airport as string) ?? null,
-      city: (f.city as string) ?? null,
-      state: (f.state as string) ?? null,
-      share_type: (f.share_type as string) ?? 'other',
+      home_airport: str(f.home_airport),
+      city: str(f.city),
+      state: str(f.state),
+      share_type: str(f.share_type) ?? 'other',
       buy_in_price: (f.buy_in_price as number) ?? null,
       monthly_fixed: (f.monthly_fixed as number) ?? null,
       hourly_wet: (f.hourly_wet as number) ?? null,
-      contact_name: (f.contact_name as string) ?? null,
-      title: (f.title as string)?.slice(0, 140) || text.split('\n')[0].slice(0, 140),
+      contact_name: str(f.contact_name),
+      title: str(f.title)?.slice(0, 140) || text.split('\n')[0].slice(0, 140),
       // extra fields the heuristic type doesn't carry — surfaced via the cast below
       ...(f.min_hours != null ? { min_hours: f.min_hours as number } : {}),
       ...(f.ratings_required != null ? { ratings_required: f.ratings_required as string[] } : {}),
-      ...(f.contact_phone != null ? { contact_phone: f.contact_phone as string } : {}),
+      ...(str(f.contact_phone) ? { contact_phone: str(f.contact_phone) } : {}),
     } as ParsedListing & {
       min_hours?: number
       ratings_required?: string[]
