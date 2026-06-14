@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react'
 import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
+import HomeMatchHook from '@/components/HomeMatchHook'
 import { STATE_NAMES, SEO_MAKES, SITE_URL } from '@/lib/seo'
 
 const faqItems = [
@@ -142,6 +143,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── LOGGED-IN HOOK — your matches ── */}
+      <HomeMatchHook />
 
       {/* ── NEWEST LISTINGS — large photo cards ── */}
       <FeaturedListings />

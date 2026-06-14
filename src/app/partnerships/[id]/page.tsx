@@ -11,6 +11,7 @@ import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
+import { OwnerSeekerMatches } from '@/components/ListingMatches'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -174,6 +175,9 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 </dl>
               </div>
             )}
+
+            {/* Owner-only: pilots who match this listing */}
+            <OwnerSeekerMatches partnership={p} />
           </div>
 
           {/* Sidebar */}

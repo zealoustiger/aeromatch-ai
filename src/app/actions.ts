@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { notifyNewPartnership, notifyNewSeeker } from '@/lib/match-alerts'
+import type { Partnership, PartnershipSeeker } from '@/lib/types'
 
 export async function createPartnership(formData: FormData) {
   const supabase = await createServerSupabaseClient()
@@ -44,6 +46,9 @@ export async function createPartnership(formData: FormData) {
   const { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()
 
   if (error) throw new Error(error.message)
+
+  // Detect & queue new-match alerts for existing seekers (no-op send for now).
+  await notifyNewPartnership({ ...payload, id: data.id } as Partnership)
 
   revalidatePath('/partnerships')
   redirect(`/partnerships/${data.id}`)
@@ -129,6 +134,9 @@ export async function createSeekerListing(formData: FormData) {
   const { data, error } = await supabase.from('partnership_seekers').insert(payload).select('id').single()
 
   if (error) throw new Error(error.message)
+
+  // Detect & queue new-match alerts for existing partnerships (no-op send for now).
+  await notifyNewSeeker({ ...payload, id: data.id } as PartnershipSeeker)
 
   revalidatePath('/partnerships/seeking')
   redirect(`/partnerships/seeking/${data.id}`)

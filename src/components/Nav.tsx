@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, MessageCircle, LogIn, LogOut, Menu, X, Shield } from 'lucide-react'
+import { Plane, Bookmark, MessageCircle, LogIn, LogOut, Menu, X, Shield, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -72,6 +72,18 @@ export default function Nav() {
             ))}
             {user && (
               <>
+                <Link
+                  href="/matches"
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    pathname.startsWith('/matches')
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  )}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Matches
+                </Link>
                 <Link
                   href="/messages"
                   className={cn(
@@ -189,6 +201,18 @@ export default function Nav() {
               {label}
             </Link>
           ))}
+          {user && (
+            <Link
+              href="/matches"
+              className={cn(
+                'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+                pathname.startsWith('/matches') ? 'text-emerald-700' : 'text-slate-700'
+              )}
+            >
+              <Sparkles className="h-4 w-4" />
+              Matches
+            </Link>
+          )}
           {user && (
             <Link
               href="/messages"

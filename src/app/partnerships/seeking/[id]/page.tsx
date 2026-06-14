@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
 import { formatPrice, formatShareType } from '@/lib/utils'
 import { MOCK_SEEKERS } from '@/lib/mockData'
+import { SeekerPartnershipMatches } from '@/components/ListingMatches'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -169,6 +170,9 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               </dl>
             </div>
           )}
+
+          {/* Owner-only: partnerships that match this profile */}
+          <SeekerPartnershipMatches seeker={s} />
         </div>
 
         {/* Sidebar */}
