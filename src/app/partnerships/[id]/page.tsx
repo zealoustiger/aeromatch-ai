@@ -11,6 +11,8 @@ import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
+import CostCalculator from '@/components/CostCalculator'
+import { shareFractionFromType } from '@/lib/calculators'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -238,6 +240,15 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 )}
               </dl>
             </div>
+
+            {/* Cost estimator — prefilled from this listing */}
+            <CostCalculator
+              variant="compact"
+              initialBuyIn={p.buy_in_price}
+              initialMonthlyFixed={p.monthly_fixed}
+              initialHourlyWet={p.hourly_wet}
+              shareFraction={shareFractionFromType(p.share_type)}
+            />
 
             {/* Contact card — desktop only (mobile uses sticky bar) */}
             <div className="hidden rounded-xl border border-sky-200 bg-sky-50 p-5 lg:block">
