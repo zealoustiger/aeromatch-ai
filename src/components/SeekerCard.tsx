@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { MapPin, Clock, Search } from 'lucide-react'
 import { PartnershipSeeker } from '@/lib/types'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatListedDate } from '@/lib/utils'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine',
@@ -83,7 +83,7 @@ export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
       </div>
 
       <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
-        Posted {new Date(seeker.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        Posted {formatListedDate(seeker.created_at, { month: 'short' })}
         {seeker.contact_name && ` · ${seeker.contact_name}`}
       </div>
     </Link>
