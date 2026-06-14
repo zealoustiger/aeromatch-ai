@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
-import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
+import { formatPrice, formatShareType, aircraftLabel, formatListedDate } from '@/lib/utils'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
 import { SITE_URL } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
@@ -78,8 +78,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   if (!p) notFound()
 
   const aircraft = aircraftLabel(p.make, p.model, p.year)
-  const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
-    .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const postedLabel = formatListedDate(p.posted_at ?? p.created_at)
 
   return (
     <>

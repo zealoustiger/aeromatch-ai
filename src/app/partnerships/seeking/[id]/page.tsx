@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft, Mail, Phone, Search } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
-import { formatPrice, formatShareType } from '@/lib/utils'
+import { formatPrice, formatShareType, formatListedDate } from '@/lib/utils'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -84,7 +84,7 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               </span>
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4 text-slate-400" />
-                Posted {new Date(s.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                Posted {formatListedDate(s.created_at)}
               </span>
             </div>
 
