@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Phone, MessageCircle } from 'lucide-react'
+import { Mail, Phone, MessageCircle, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateThread } from '@/app/actions'
+import { isRoutableContactEmail } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   contactPhone: string | null
   contactMethod: string
   contactName: string | null
+  sourceUrl?: string | null
 }
 
 export default function ContactBar({
@@ -25,6 +27,7 @@ export default function ContactBar({
   contactPhone,
   contactMethod,
   contactName,
+  sourceUrl,
 }: Props) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
@@ -53,9 +56,15 @@ export default function ContactBar({
     })
   }
 
-  const showEmail = contactMethod === 'email' || contactMethod === 'both'
-  const showPhone = (contactMethod === 'phone' || contactMethod === 'both') && contactPhone
+  const showEmail =
+    (contactMethod === 'email' || contactMethod === 'both') && isRoutableContactEmail(contactEmail)
+  const showPhone = (contactMethod === 'phone' || contactMethod === 'both') && !!contactPhone
   const showMessage = !!posterId && user?.id !== posterId
+  // Off-platform fallback only when there is no other actionable contact path.
+  const showSource = !showEmail && !showPhone && !showMessage && !!sourceUrl
+
+  // Nothing actionable → don't render an empty sticky bar.
+  if (!showEmail && !showPhone && !showMessage && !showSource) return null
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm lg:hidden">
@@ -92,6 +101,17 @@ export default function ContactBar({
             >
               <Phone className="h-4 w-4" />
               Call
+            </a>
+          )}
+          {showSource && (
+            <a
+              href={sourceUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View original
             </a>
           )}
         </div>
