@@ -27,6 +27,28 @@ const MAKE_PHOTOS: Record<string, string> = {
 const FALLBACK =
   'https://upload.wikimedia.org/wikipedia/commons/a/ae/Cessna_172S_Skyhawk_SP%2C_Private_JP6817606.jpg'
 
-export function getPlaceholderPhoto(make: string): string {
-  return MAKE_PHOTOS[make.toLowerCase()] ?? FALLBACK
+// Distinct real GA photos, used to vary the placeholder for listings whose make
+// we don't have a specific photo for (e.g. "Unknown"), so identical images don't
+// stack on a grid.
+const PHOTO_POOL = Array.from(new Set(Object.values(MAKE_PHOTOS)))
+
+function hashSeed(seed: string): number {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i)) | 0
+  }
+  return Math.abs(h)
+}
+
+/**
+ * Pick a placeholder photo for a listing. A known make gets its specific photo;
+ * otherwise we deterministically vary across a pool of real GA photos using an
+ * optional per-listing `seed` (e.g. the listing id) so a wall of "Unknown"
+ * listings doesn't repeat the same fallback image. Stable per seed.
+ */
+export function getPlaceholderPhoto(make: string, seed?: string): string {
+  const known = MAKE_PHOTOS[make.toLowerCase()]
+  if (known) return known
+  if (seed) return PHOTO_POOL[hashSeed(seed) % PHOTO_POOL.length]
+  return FALLBACK
 }
