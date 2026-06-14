@@ -63,15 +63,29 @@ function extractPost() {
     text = best
   }
 
-  // ── AUTHOR ── the poster's name. FB profile links use /user/ or ?id=; the
-  // author link sits above the comments and isn't a comment.
+  // ── AUTHOR ── the poster's name.
+  // Primary: the dialog title reads "<Name>'s Post" — most reliable.
+  // Fallback: first non-comment profile link that isn't the GROUP link
+  // (group links contain /groups/; the poster header link does not).
   let author = ''
-  for (const a of scope.querySelectorAll('a[role="link"], h2 a, h3 a, strong a, a strong')) {
-    if (inComment(a)) continue
-    const name = clean(a.textContent)
-    if (name && name.length >= 2 && name.length <= 60 && /[a-z]/i.test(name) && !/^https?:/.test(name)) {
-      author = name
+  const titleRe = /^(.{2,60}?)['‘’]s Post$/i
+  for (const el of scope.querySelectorAll('h1, h2, h3, span, div')) {
+    const m = clean(el.textContent).match(titleRe)
+    if (m) {
+      author = m[1].trim()
       break
+    }
+  }
+  if (!author) {
+    for (const a of scope.querySelectorAll('a[role="link"], h2 a, h3 a, strong a, a strong')) {
+      if (inComment(a)) continue
+      const href = a.getAttribute('href') || ''
+      if (/\/groups\//.test(href)) continue // skip the group, we want the person
+      const name = clean(a.textContent)
+      if (name && name.length >= 2 && name.length <= 60 && /[a-z]/i.test(name) && !/^https?:/.test(name)) {
+        author = name
+        break
+      }
     }
   }
 
