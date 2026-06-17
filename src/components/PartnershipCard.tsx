@@ -74,28 +74,30 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
             </div>
 
             {/* Cost summary */}
-            <div className="shrink-0 rounded-lg bg-slate-50 p-3 text-right ring-1 ring-slate-100 sm:min-w-[148px]">
-              {p.buy_in_price ? (
-                <div>
-                  <p className="text-xs text-slate-400">Buy-in</p>
-                  <p className="text-lg font-bold text-slate-900">{formatPrice(p.buy_in_price)}</p>
-                </div>
-              ) : null}
-              {p.monthly_fixed ? (
-                <div className="mt-1">
-                  <p className="text-xs text-slate-400">Monthly fixed</p>
-                  <p className="text-sm font-semibold text-slate-700">{formatPrice(p.monthly_fixed)}/mo</p>
-                </div>
-              ) : null}
-              {p.hourly_wet ? (
-                <div className="mt-1">
-                  <p className="text-xs text-slate-400">Wet rate</p>
-                  <p className="text-sm font-semibold text-slate-700">{formatPrice(p.hourly_wet)}/hr</p>
-                </div>
-              ) : null}
-              {!p.buy_in_price && !p.monthly_fixed && (
-                <p className="text-sm text-slate-400">Contact for pricing</p>
-              )}
+            <div className="shrink-0 rounded-lg bg-slate-50 p-3 ring-1 ring-slate-100 sm:min-w-[148px] sm:text-right">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 sm:block">
+                {p.buy_in_price ? (
+                  <div className="sm:block">
+                    <p className="text-xs text-slate-400">Buy-in</p>
+                    <p className="text-lg font-bold text-slate-900">{formatPrice(p.buy_in_price)}</p>
+                  </div>
+                ) : null}
+                {p.monthly_fixed ? (
+                  <div className="sm:mt-1">
+                    <p className="text-xs text-slate-400">Monthly</p>
+                    <p className="text-sm font-semibold text-slate-700">{formatPrice(p.monthly_fixed)}/mo</p>
+                  </div>
+                ) : null}
+                {p.hourly_wet ? (
+                  <div className="sm:mt-1">
+                    <p className="text-xs text-slate-400">Wet rate</p>
+                    <p className="text-sm font-semibold text-slate-700">{formatPrice(p.hourly_wet)}/hr</p>
+                  </div>
+                ) : null}
+                {!p.buy_in_price && !p.monthly_fixed && (
+                  <p className="text-sm text-slate-400">Contact for pricing</p>
+                )}
+              </div>
             </div>
           </div>
 

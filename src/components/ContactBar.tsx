@@ -58,7 +58,7 @@ export default function ContactBar({
   const showMessage = !!posterId && user?.id !== posterId
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-safe shadow-lg backdrop-blur-sm lg:hidden">
       <div className="mx-auto flex max-w-lg items-center gap-2">
         {contactName && (
           <p className="min-w-0 shrink truncate text-xs text-slate-500 sm:block hidden">

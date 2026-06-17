@@ -5,22 +5,22 @@ import { cn } from '@/lib/utils'
 
 export default function PartnershipTabs({ active }: { active: 'available' | 'seeking' }) {
   return (
-    <div className="mb-6 flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 w-fit">
+    <div className="mb-6 flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 w-full sm:w-fit">
       <Link
         href="/partnerships"
         className={cn(
-          'rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
+          'flex-1 rounded-md px-4 py-2 text-center text-sm font-medium transition-colors sm:flex-none sm:py-1.5',
           active === 'available'
             ? 'bg-white text-slate-900 shadow-sm'
             : 'text-slate-500 hover:text-slate-700'
         )}
       >
-        Available Partnerships
+        Available
       </Link>
       <Link
         href="/partnerships/seeking"
         className={cn(
-          'rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
+          'flex-1 rounded-md px-4 py-2 text-center text-sm font-medium transition-colors sm:flex-none sm:py-1.5',
           active === 'seeking'
             ? 'bg-white text-slate-900 shadow-sm'
             : 'text-slate-500 hover:text-slate-700'

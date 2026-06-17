@@ -80,10 +80,10 @@ export default async function SearchesPage() {
                   Saved {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
                 <Link
                   href={`/partnerships?${s.search_params}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
+                  className="flex items-center justify-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   View

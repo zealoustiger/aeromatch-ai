@@ -102,7 +102,7 @@ export default function DraftCard({ draft }: { draft: Draft }) {
         <input type="hidden" name="source_url" value={draft.source_url ?? ''} />
 
         <Field label="Title" name="title" defaultValue={str('title')} />
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Make" name="make" defaultValue={str('make')} />
           <Field label="Model" name="model" defaultValue={str('model')} />
           <Field label="Year" name="year" defaultValue={str('year')} placeholder="e.g. 2008" />
@@ -148,11 +148,11 @@ export default function DraftCard({ draft }: { draft: Draft }) {
           />
         </label>
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="submit"
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 sm:w-auto sm:py-2"
           >
             <Check className="h-4 w-4" /> Publish
           </button>
@@ -160,7 +160,7 @@ export default function DraftCard({ draft }: { draft: Draft }) {
             type="submit"
             formAction={dismissDraft}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 sm:w-auto sm:py-2"
           >
             <Trash2 className="h-4 w-4" /> Dismiss
           </button>

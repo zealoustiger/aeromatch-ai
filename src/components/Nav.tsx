@@ -176,7 +176,7 @@ export default function Nav() {
           menuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'
         )}
       >
-        <nav className="mx-auto max-w-7xl divide-y divide-slate-100 px-4">
+        <nav className="mx-auto max-w-7xl divide-y divide-slate-100 px-4 pb-safe">
           {links.map(({ href, label }) => (
             <Link
               key={href}

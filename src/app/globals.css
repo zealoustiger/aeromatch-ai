@@ -36,3 +36,12 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* iPhone safe-area helpers (used by sticky bars at the bottom of the screen) */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.pb-safe-lg {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}

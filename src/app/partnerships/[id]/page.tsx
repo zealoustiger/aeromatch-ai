@@ -104,7 +104,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className="space-y-6 lg:col-span-2 lg:order-first">
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
@@ -176,8 +176,8 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
+          {/* Sidebar — costs shown first on mobile, beside content on desktop */}
+          <div className="space-y-4 order-first lg:order-last">
             {/* Cost card */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Costs</h2>

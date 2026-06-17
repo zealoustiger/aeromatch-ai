@@ -42,7 +42,7 @@ export default async function PartnershipsPage({
         </div>
 
         {/* Action bar — filter button visible only on mobile */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="lg:hidden">
             <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} />
           </div>
@@ -51,9 +51,10 @@ export default async function PartnershipsPage({
           </Suspense>
           <Link
             href="/partnerships/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 sm:px-4"
           >
-            + Post a Partnership
+            <span className="sm:hidden">+ Post</span>
+            <span className="hidden sm:inline">+ Post a Partnership</span>
           </Link>
         </div>
       </div>

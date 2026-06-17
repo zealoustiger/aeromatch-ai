@@ -1,10 +1,16 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import PostHogProvider from '@/components/PostHogProvider'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import { SITE_URL, SITE_NAME } from '@/lib/seo'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
