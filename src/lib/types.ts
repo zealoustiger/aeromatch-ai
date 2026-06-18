@@ -74,7 +74,15 @@ export interface AircraftForSale {
 
   location: string | null
   state: string | null
-  status: ListingStatus
+  status: ListingStatus | 'sold'
+
+  // Freshness + price history (Phase 2 ingestion)
+  first_seen_at: string | null
+  last_seen_at: string | null
+  content_hash: string | null
+  previous_price: number | null
+  price_changed_at: string | null
+  removed_at: string | null
 }
 
 export interface Airport {
@@ -165,4 +173,12 @@ export interface PartnershipFilters {
   shareType?: ShareType
   state?: string
   minHours?: number
+}
+
+export interface AircraftForSaleFilters {
+  q?: string
+  make?: string
+  state?: string
+  maxPrice?: number
+  minYear?: number
 }

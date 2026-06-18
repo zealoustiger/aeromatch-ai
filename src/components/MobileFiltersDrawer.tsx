@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PartnershipFilters from './PartnershipFilters'
+import AircraftSaleFilters from './AircraftSaleFilters'
 
 interface Props {
   initialValues: Record<string, string | undefined>
   activeCount: number
+  variant?: 'partnership' | 'sale'
 }
 
-export default function MobileFiltersDrawer({ initialValues, activeCount }: Props) {
+export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership' }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -63,7 +65,11 @@ export default function MobileFiltersDrawer({ initialValues, activeCount }: Prop
 
         {/* Scrollable filters */}
         <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
-          <PartnershipFilters initialValues={initialValues} />
+          {variant === 'sale' ? (
+            <AircraftSaleFilters initialValues={initialValues} />
+          ) : (
+            <PartnershipFilters initialValues={initialValues} />
+          )}
         </div>
 
         {/* Done button */}

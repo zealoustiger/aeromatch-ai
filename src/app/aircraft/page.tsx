@@ -1,59 +1,86 @@
 import type { Metadata } from 'next'
-import { Plane, Construction } from 'lucide-react'
-import Link from 'next/link'
+import { Suspense } from 'react'
+
+import { Plane, SlidersHorizontal } from 'lucide-react'
+import AircraftSaleFilters from '@/components/AircraftSaleFilters'
+import AircraftSaleList from '@/components/AircraftSaleList'
+import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 
 export const metadata: Metadata = {
-  title: 'Aircraft for Sale — Structured, Searchable GA Listings',
+  title: 'Aircraft for Sale — Search GA Listings From Across the Web',
   description:
-    'Coming soon: aggregated general aviation aircraft for sale with normalized specs — TTAF, SMOH, avionics, damage history, and FAA registry cross-reference.',
+    'Search general aviation aircraft for sale aggregated from Barnstormers and more. Filter by make, year, price, and location — every listing links back to the source.',
   alternates: { canonical: '/aircraft' },
 }
 
-export default function AircraftPage() {
+type SearchParams = Record<string, string | undefined>
+
+export default async function AircraftPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
+  const activeFilterCount = Object.values(params).filter(Boolean).length
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-lg text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-100">
-          <Plane className="h-8 w-8 text-sky-600" />
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      {/* Page header */}
+      <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
+            <Plane className="h-6 w-6 text-sky-500" />
+            Planes for Sale
+          </h1>
+          <p className="mt-1 text-slate-500">
+            Aircraft for sale aggregated from across the web — search them all in one place.
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-slate-900">Aircraft for Sale</h1>
-        <p className="mt-4 text-lg text-slate-500">
-          Coming soon. We're building a structured aircraft purchase search with normalized specs,
-          damage history flags, avionics details, and aggregated listings from Barnstormers,
-          Trade-A-Plane, and more.
-        </p>
-        <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">What's coming</h2>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Aggregated listings from major sites, structured + normalized
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Parsed specs: TTAF, SMOH, annual due date, damage history
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              FAA registry cross-reference by N-number
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Side-by-side comparison
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Saved searches with email alerts
-            </li>
-          </ul>
+
+        {/* Action bar — filter button visible only on mobile */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="lg:hidden">
+            <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} variant="sale" />
+          </div>
         </div>
-        <Link
-          href="/partnerships"
-          className="mt-8 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-        >
-          Browse Partnerships in the meantime →
-        </Link>
       </div>
+
+      <div className="flex flex-col gap-8 lg:flex-row">
+        {/* Filters sidebar — desktop only */}
+        <aside className="hidden w-full shrink-0 lg:block lg:w-64">
+          <div className="sticky top-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <SlidersHorizontal className="h-4 w-4" />
+              Filter Results
+            </div>
+            <AircraftSaleFilters initialValues={params} />
+          </div>
+        </aside>
+
+        {/* Listings */}
+        <div className="flex-1">
+          <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
+            <AircraftSaleList filters={params} />
+          </Suspense>
+
+          {/* Aggregation disclosure */}
+          <p className="mt-6 text-xs text-slate-400">
+            Listings are aggregated from third-party sites and link back to the original source.
+            ClubHanger is not the seller. Listing data may be out of date — confirm details on the
+            source listing.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AircraftListSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-48 animate-pulse rounded-xl bg-slate-100" />
+      ))}
     </div>
   )
 }
