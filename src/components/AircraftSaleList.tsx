@@ -8,6 +8,8 @@ interface Filters {
   state?: string
   max_price?: string
   min_year?: string
+  sort?: string
+  drops?: string
 }
 
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
@@ -27,7 +29,6 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
       .from('aircraft_for_sale')
       .select('*')
       .eq('status', 'active')
-      .order('created_at', { ascending: false })
 
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
     if (filters.state) query = query.eq('state', filters.state)
@@ -37,9 +38,36 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
       const term = filters.q.replace(/[%,()]/g, ' ').trim()
       if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`)
     }
+    // "Price drops only" — narrowed precisely in JS below (column-to-column
+    // comparison isn't expressible in PostgREST).
+    if (filters.drops) query = query.not('price_changed_at', 'is', null)
+
+    switch (filters.sort) {
+      case 'price_asc':
+        query = query.order('asking_price', { ascending: true, nullsFirst: false })
+        break
+      case 'price_desc':
+        query = query.order('asking_price', { ascending: false, nullsFirst: false })
+        break
+      case 'reduced':
+        query = query.order('price_changed_at', { ascending: false, nullsFirst: false })
+        break
+      default:
+        query = query.order('created_at', { ascending: false })
+    }
 
     const { data, error: err } = await query.limit(60)
-    if (err) { error = true } else { listings = data ?? [] }
+    if (err) {
+      error = true
+    } else {
+      listings = data ?? []
+      // Keep only genuine drops (asking < previous), not price rises.
+      if (filters.drops) {
+        listings = listings.filter(
+          (p) => p.previous_price != null && p.asking_price != null && p.asking_price < p.previous_price
+        )
+      }
+    }
   } catch {
     error = true
   }

@@ -121,8 +121,16 @@ create table if not exists aircraft_for_sale (
   state         text,
 
   -- Status & auth
-  status        text        default 'active',
-  poster_id     uuid        references auth.users(id) on delete set null
+  status        text        default 'active',  -- 'active' | 'sold' | 'pending' | 'closed'
+  poster_id     uuid        references auth.users(id) on delete set null,
+
+  -- Freshness + price history (Phase 2 ingestion: scraper/lib/ingest-core.mjs)
+  first_seen_at    timestamptz default now(),
+  last_seen_at     timestamptz default now(),  -- updated every ingest run; stale ⇒ marked sold
+  content_hash     text,                       -- sha1 of listing fields; detects any change
+  previous_price   integer,                    -- prior asking_price when a change was detected
+  price_changed_at timestamptz,
+  removed_at       timestamptz                 -- set when a listing vanishes from its source
 );
 
 -- =====================================================
@@ -252,6 +260,8 @@ create index on aircraft_for_sale (make, model);
 create index on aircraft_for_sale (status);
 create index on aircraft_for_sale (state);
 create index on aircraft_for_sale (asking_price);
+create index on aircraft_for_sale (source, last_seen_at);
+create index on aircraft_for_sale (price_changed_at) where price_changed_at is not null;
 
 create index on airports (state);
 -- PostGIS-style radius search (if you enable the postgis extension):

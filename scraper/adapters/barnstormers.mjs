@@ -90,7 +90,7 @@ function parseCategory(html, make) {
     rows.push({
       source_id: sourceId,
       source_url: sourceUrl,
-      make: make === 'Experimental' || /[A-Z]/.test(make[0]) === false ? make : make,
+      make,
       model,
       year,
       title,

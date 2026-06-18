@@ -43,6 +43,34 @@ export default function AircraftSaleFilters({ initialValues }: Props) {
 
   return (
     <div className="space-y-5">
+      {/* Sort */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Sort by
+        </label>
+        <select
+          defaultValue={initialValues.sort ?? ''}
+          onChange={(e) => updateFilter('sort', e.target.value)}
+          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        >
+          <option value="">Newest</option>
+          <option value="reduced">Recently price-dropped</option>
+          <option value="price_asc">Price: low to high</option>
+          <option value="price_desc">Price: high to low</option>
+        </select>
+      </div>
+
+      {/* Price drops only */}
+      <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+        <input
+          type="checkbox"
+          defaultChecked={!!initialValues.drops}
+          onChange={(e) => updateFilter('drops', e.target.checked ? '1' : '')}
+          className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-200"
+        />
+        Price drops only
+      </label>
+
       {/* Keyword search */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">

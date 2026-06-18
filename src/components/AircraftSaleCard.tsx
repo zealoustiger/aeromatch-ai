@@ -1,11 +1,27 @@
 'use client'
 
 import Image from 'next/image'
-import { MapPin, ExternalLink, Gauge, Wrench } from 'lucide-react'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
+
+const DAY_MS = 86_400_000
+
+// A listing is "new" if first seen within the last week.
+function isNew(firstSeenAt: string | null): boolean {
+  if (!firstSeenAt) return false
+  return Date.now() - new Date(firstSeenAt).getTime() < 7 * DAY_MS
+}
+
+// Confirmed price drop: we recorded a higher previous price.
+function priceDrop(p: AircraftForSale): number | null {
+  if (p.previous_price != null && p.asking_price != null && p.asking_price < p.previous_price) {
+    return p.previous_price - p.asking_price
+  }
+  return null
+}
 
 // Human-friendly labels for known aggregation sources.
 const SOURCE_LABELS: Record<string, string> = {
@@ -29,6 +45,8 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
   const imageUrl = getPlaceholderPhoto(p.make ?? '')
   const isExternal = p.source !== 'user'
   const source = sourceLabel(p.source)
+  const drop = priceDrop(p)
+  const fresh = isNew(p.first_seen_at)
 
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
@@ -61,6 +79,18 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                 <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                   {source}
                 </span>
+                {drop != null && (
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    <TrendingDown className="h-3 w-3" />
+                    Price drop {formatPrice(drop)}
+                  </span>
+                )}
+                {fresh && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                    <Sparkles className="h-3 w-3" />
+                    New
+                  </span>
+                )}
                 {p.registration && (
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-mono text-xs font-medium text-slate-600 ring-1 ring-slate-200">
                     {p.registration}
@@ -92,6 +122,9 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                 <div>
                   <p className="text-xs text-slate-400">Asking</p>
                   <p className="text-lg font-bold text-slate-900">{formatPrice(p.asking_price)}</p>
+                  {drop != null && (
+                    <p className="text-xs text-slate-400 line-through">{formatPrice(p.previous_price)}</p>
+                  )}
                 </div>
               ) : p.price_text ? (
                 <div>
