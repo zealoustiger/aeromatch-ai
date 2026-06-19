@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
+import { ChevronDown } from 'lucide-react'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
 
 const US_STATES = [
@@ -60,6 +61,13 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
   }
 
   const hasFilters = Object.values(initialValues).some(Boolean)
+
+  // Secondary, Controller-style dimensions live behind a progressive-disclosure
+  // toggle so the panel leads cleanly with Make → Model. Auto-open when any of
+  // them is already active, so an active filter is never hidden.
+  const SECONDARY_KEYS = ['state', 'max_price', 'min_year', 'max_tt'] as const
+  const secondaryActive = SECONDARY_KEYS.some((k) => initialValues[k])
+  const [showMore, setShowMore] = useState(secondaryActive)
 
   const makes = facets?.makes ?? []
   const selectedMake = initialValues.make ?? ''
@@ -158,50 +166,85 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
         />
       </div>
 
-      {/* State */}
+      <div className="border-t border-slate-100" />
+
+      {/* More filters — progressive disclosure for the secondary dimensions */}
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          State
-        </label>
-        <select
-          defaultValue={initialValues.state ?? ''}
-          onChange={(e) => updateFilter('state', e.target.value)}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        <button
+          type="button"
+          onClick={() => setShowMore((v) => !v)}
+          aria-expanded={showMore}
+          className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 transition-colors hover:text-slate-700"
         >
-          <option value="">All states</option>
-          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-
-      {/* Max price */}
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Max Price
-        </label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-          <input
-            type="number"
-            placeholder="e.g. 150000"
-            defaultValue={initialValues.max_price ?? ''}
-            onChange={(e) => updateFilter('max_price', e.target.value)}
-            className="w-full rounded-md border border-slate-200 py-2 pl-7 pr-3 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          More filters
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${showMore ? 'rotate-180' : ''}`}
           />
-        </div>
-      </div>
+        </button>
 
-      {/* Min year */}
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Year (min)
-        </label>
-        <input
-          type="number"
-          placeholder="e.g. 2000"
-          defaultValue={initialValues.min_year ?? ''}
-          onChange={(e) => updateFilter('min_year', e.target.value)}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-        />
+        {showMore && (
+          <div className="mt-4 space-y-5">
+            {/* State */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                State
+              </label>
+              <select
+                defaultValue={initialValues.state ?? ''}
+                onChange={(e) => updateFilter('state', e.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              >
+                <option value="">All states</option>
+                {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            {/* Max price */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Max Price
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                <input
+                  type="number"
+                  placeholder="e.g. 150000"
+                  defaultValue={initialValues.max_price ?? ''}
+                  onChange={(e) => updateFilter('max_price', e.target.value)}
+                  className="w-full rounded-md border border-slate-200 py-2 pl-7 pr-3 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+              </div>
+            </div>
+
+            {/* Min year */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Year (min)
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 2000"
+                defaultValue={initialValues.min_year ?? ''}
+                onChange={(e) => updateFilter('min_year', e.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+            </div>
+
+            {/* Max total time (airframe hours) */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Max Total Time (hrs)
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 2000"
+                defaultValue={initialValues.max_tt ?? ''}
+                onChange={(e) => updateFilter('max_tt', e.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {hasFilters && (
