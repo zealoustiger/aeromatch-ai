@@ -119,6 +119,8 @@ export interface SavedSearch {
   user_id: string
   name: string
   search_params: string
+  /** Marketplace the search belongs to, e.g. '/partnerships' or '/aircraft'. */
+  path: string
 }
 
 export interface PartnershipSeeker {

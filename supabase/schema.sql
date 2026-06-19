@@ -319,8 +319,13 @@ create table if not exists saved_searches (
   user_id       uuid        references auth.users(id) on delete cascade not null,
   name          text        not null,
   search_params text        not null,
+  path          text        not null default '/partnerships',
   unique(user_id, name)
 );
+
+-- Marketplace the saved search belongs to (e.g. '/partnerships' or '/aircraft'), so it
+-- replays against the correct page. Added 2026-06-19; idempotent for existing databases.
+alter table saved_searches add column if not exists path text not null default '/partnerships';
 
 alter table saved_searches enable row level security;
 

@@ -153,15 +153,23 @@ export async function joinWaitlist(email: string, searchParams: string) {
   return { ok: true }
 }
 
-export async function saveSearch(name: string, searchParams: string) {
+// Marketplaces a search can be saved from. Anything else falls back to partnerships.
+const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft'] as const
+
+export async function saveSearch(name: string, searchParams: string, path = '/partnerships') {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
+
+  const safePath = SAVED_SEARCH_PATHS.includes(path as (typeof SAVED_SEARCH_PATHS)[number])
+    ? path
+    : '/partnerships'
 
   const { error } = await supabase.from('saved_searches').insert({
     user_id: user.id,
     name: name.trim(),
     search_params: searchParams,
+    path: safePath,
   })
 
   if (error) {

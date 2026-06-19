@@ -5,10 +5,35 @@ import Link from 'next/link'
 import DeleteSearchButton from '@/components/DeleteSearchButton'
 import type { SavedSearch } from '@/lib/types'
 
-function describeSearch(params: string): string {
-  const p = new URLSearchParams(params)
-  const parts: string[] = []
+// Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
+function marketplaceLabel(path: string): string {
+  return path === '/aircraft' ? 'Planes for Sale' : 'Partnerships'
+}
 
+function describeAircraftSearch(p: URLSearchParams): string {
+  const parts: string[] = []
+  const make = p.get('make')
+  const model = p.get('model')
+  const state = p.get('state')
+  const minYear = p.get('min_year')
+  const maxPrice = p.get('max_price')
+  const maxTt = p.get('max_tt')
+  const q = p.get('q')
+
+  if (make) parts.push(`Make: ${make}`)
+  if (model) parts.push(`Model: ${model}`)
+  if (state) parts.push(`State: ${state}`)
+  if (minYear) parts.push(`Year ≥ ${minYear}`)
+  if (maxPrice) parts.push(`≤$${Number(maxPrice).toLocaleString()}`)
+  if (maxTt) parts.push(`≤ ${Number(maxTt).toLocaleString()} hrs total`)
+  if (p.get('drops') === '1') parts.push('Price drops')
+  if (q) parts.push(`“${q}”`)
+
+  return parts.length > 0 ? parts.join(' · ') : 'All aircraft for sale'
+}
+
+function describePartnershipSearch(p: URLSearchParams): string {
+  const parts: string[] = []
   const airports = p.get('airports')
   const airport = p.get('airport')
   const radius = p.get('radius')
@@ -28,6 +53,11 @@ function describeSearch(params: string): string {
   if (maxBuyIn) parts.push(`Buy-in ≤$${Number(maxBuyIn).toLocaleString()}`)
 
   return parts.length > 0 ? parts.join(' · ') : 'All partnerships'
+}
+
+function describeSearch(params: string, path: string): string {
+  const p = new URLSearchParams(params)
+  return path === '/aircraft' ? describeAircraftSearch(p) : describePartnershipSearch(p)
 }
 
 export default async function SearchesPage() {
@@ -58,9 +88,13 @@ export default async function SearchesPage() {
           <Search className="mx-auto mb-3 h-8 w-8 text-slate-300" />
           <p className="font-medium text-slate-600">No saved searches yet</p>
           <p className="mt-1 text-sm text-slate-400">
-            Head to the{' '}
+            Head to{' '}
             <Link href="/partnerships" className="text-sky-600 hover:underline underline-offset-2">
-              partnerships page
+              partnerships
+            </Link>{' '}
+            or{' '}
+            <Link href="/aircraft" className="text-sky-600 hover:underline underline-offset-2">
+              planes for sale
             </Link>
             , set your filters, and click{' '}
             <strong className="text-slate-600">Save this search</strong>.
@@ -74,15 +108,20 @@ export default async function SearchesPage() {
               className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-slate-900">{s.name}</p>
-                <p className="mt-0.5 truncate text-sm text-slate-500">{describeSearch(s.search_params)}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-slate-900">{s.name}</p>
+                  <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                    {marketplaceLabel(s.path)}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-sm text-slate-500">{describeSearch(s.search_params, s.path)}</p>
                 <p className="mt-1 text-xs text-slate-400">
                   Saved {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
                 <Link
-                  href={`/partnerships?${s.search_params}`}
+                  href={`${s.path || '/partnerships'}?${s.search_params}`}
                   className="flex items-center justify-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
