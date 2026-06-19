@@ -48,6 +48,8 @@ export default async function PartnershipList({ filters }: { filters: Filters })
     return renderList(listings, filters, airportList)
   }
 
+  let savedIds = new Set<string>()
+
   try {
     const supabase = await createServerSupabaseClient()
     let query = supabase
@@ -70,6 +72,20 @@ export default async function PartnershipList({ filters }: { filters: Filters })
 
     const { data, error: err } = await query.limit(50)
     if (err) { error = true } else { listings = data ?? [] }
+
+    // Hydrate the current user's favorited listings so cards render filled hearts.
+    if (!error && listings.length > 0) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: saved } = await supabase
+          .from('saved_listings')
+          .select('listing_id')
+          .eq('user_id', user.id)
+          .eq('listing_type', 'partnership')
+          .in('listing_id', listings.map((l) => l.id))
+        savedIds = new Set((saved ?? []).map((s) => s.listing_id as string))
+      }
+    }
   } catch {
     error = true
   }
@@ -82,10 +98,10 @@ export default async function PartnershipList({ filters }: { filters: Filters })
     )
   }
 
-  return renderList(listings, filters, airportList)
+  return renderList(listings, filters, airportList, savedIds)
 }
 
-function renderList(listings: Partnership[], filters: Filters, airportList: string[]) {
+function renderList(listings: Partnership[], filters: Filters, airportList: string[], savedIds: Set<string> = new Set()) {
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
@@ -113,7 +129,7 @@ function renderList(listings: Partnership[], filters: Filters, airportList: stri
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
-          <PartnershipCard key={p.id} p={p} />
+          <PartnershipCard key={p.id} p={p} saved={savedIds.has(p.id)} />
         ))}
       </div>
     </div>

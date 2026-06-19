@@ -181,6 +181,51 @@ export async function saveSearch(name: string, searchParams: string, path = '/pa
   return { ok: true }
 }
 
+// Marketplaces a listing can be favorited from. Anything else is rejected.
+const SAVED_LISTING_TYPES = ['partnership', 'aircraft'] as const
+
+// Toggle a favorited listing for the current user. Inserts if absent, removes if
+// present. Owner-scoped via RLS; returns the resulting saved state.
+export async function toggleSavedListing(
+  listingId: string,
+  listingType = 'partnership',
+) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const safeType = SAVED_LISTING_TYPES.includes(listingType as (typeof SAVED_LISTING_TYPES)[number])
+    ? listingType
+    : 'partnership'
+
+  const { data: existing } = await supabase
+    .from('saved_listings')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('listing_id', listingId)
+    .eq('listing_type', safeType)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('saved_listings')
+      .delete()
+      .eq('id', existing.id)
+      .eq('user_id', user.id)
+    if (error) return { error: 'Failed to update saved listing.' }
+    revalidatePath('/saved')
+    return { ok: true, saved: false }
+  }
+
+  const { error } = await supabase
+    .from('saved_listings')
+    .insert({ user_id: user.id, listing_id: listingId, listing_type: safeType })
+  // Unique-violation = a concurrent save already exists; treat as saved.
+  if (error && error.code !== '23505') return { error: 'Failed to save listing.' }
+  revalidatePath('/saved')
+  return { ok: true, saved: true }
+}
+
 export async function getOrCreateThread(partnershipId: string, ownerId: string) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()

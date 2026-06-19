@@ -336,6 +336,29 @@ create policy "saved_searches_owner_all" on saved_searches
 create index on saved_searches (user_id);
 
 -- =====================================================
+-- SAVED LISTINGS (per-user favorited listings)
+-- =====================================================
+-- A user "hearts" a specific listing. listing_type distinguishes marketplaces
+-- ('partnership' today; 'aircraft' later) so the same table serves both.
+-- Added 2026-06-19; additive + owner-scoped, mirrors saved_searches.
+create table if not exists saved_listings (
+  id            uuid        default gen_random_uuid() primary key,
+  created_at    timestamptz default now(),
+  user_id       uuid        references auth.users(id) on delete cascade not null,
+  listing_id    uuid        not null,
+  listing_type  text        not null default 'partnership',
+  unique(user_id, listing_id, listing_type)
+);
+
+alter table saved_listings enable row level security;
+
+create policy "saved_listings_owner_all" on saved_listings
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index if not exists saved_listings_user_id_idx on saved_listings (user_id);
+
+-- =====================================================
 -- THREADS (one per listing + inquirer pair)
 -- =====================================================
 create table if not exists threads (
