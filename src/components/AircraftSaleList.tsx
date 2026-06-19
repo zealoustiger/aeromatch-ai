@@ -14,22 +14,27 @@ interface Filters {
   drops?: string
 }
 
+const PAGE_SIZE = 60
+
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
   let listings: AircraftForSale[] = []
+  // Total number of listings matching the active filters (may exceed the rows
+  // shown). null = unknown/not applicable, fall back to the displayed length.
+  let totalCount: number | null = null
   let error = false
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
   if (!hasSupabase) {
-    return renderList([], filters)
+    return renderList([], filters, null)
   }
 
   try {
     const supabase = await createServerSupabaseClient()
     let query = supabase
       .from('aircraft_for_sale')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('status', 'active')
 
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
@@ -60,7 +65,7 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
         query = query.order('created_at', { ascending: false })
     }
 
-    const { data, error: err } = await query.limit(60)
+    const { data, error: err, count } = await query.limit(PAGE_SIZE)
     if (err) {
       error = true
     } else {
@@ -70,6 +75,11 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
         listings = listings.filter(
           (p) => p.previous_price != null && p.asking_price != null && p.asking_price < p.previous_price
         )
+        // The genuine-drops narrowing is column-to-column and can't be expressed
+        // in the count query, so fall back to the JS-narrowed length below.
+        totalCount = null
+      } else {
+        totalCount = count ?? null
       }
     }
   } catch {
@@ -84,10 +94,10 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     )
   }
 
-  return renderList(listings, filters)
+  return renderList(listings, filters, totalCount)
 }
 
-function renderList(listings: AircraftForSale[], filters: Filters) {
+function renderList(listings: AircraftForSale[], filters: Filters, totalCount: number | null) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some(Boolean)
     return (
@@ -102,11 +112,20 @@ function renderList(listings: AircraftForSale[], filters: Filters) {
     )
   }
 
+  // Prefer the exact total when we have it; otherwise fall back to the displayed
+  // length with a "+" when it pins to the page size (e.g. the price-drops path).
+  const exact = totalCount != null
+  const shown = exact ? (totalCount as number) : listings.length
+  const approx = !exact && listings.length === PAGE_SIZE
+  const moreThanShown = exact && (totalCount as number) > listings.length
+
   return (
     <div>
       <p className="mb-4 text-sm text-slate-500">
-        {listings.length} aircraft for sale
-        {listings.length === 60 ? '+' : ''} found
+        {shown.toLocaleString()} aircraft for sale{approx ? '+' : ''} found
+        {moreThanShown && (
+          <span className="text-slate-400"> — showing first {listings.length}</span>
+        )}
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
