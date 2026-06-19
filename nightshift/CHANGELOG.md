@@ -14,6 +14,21 @@ Newest first. One entry per cycle. The loop appends here; you read it over coffe
 
 -->
 
+## 2026-06-19T09:02Z — PASS — aircraft-pagination
+- What: `/aircraft` now paginates the full filtered result set instead of pinning to the first 60 rows. Replaced the fixed `.limit(60)` with `.range(from, to)` keyed off a new `?page=N` param, and added a Prev/Next control under the listings. The results header changed from "1,856 … — showing first 60" to a true window: "**Showing 61–120 of 1,856** aircraft for sale". Directly executes the prior cycle's flagged "Next" (count advertised 1,856 but only 60 rendered).
+- Spec: nightshift/specs/2026-06-19T0902Z-aircraft-pagination.md
+- Verdict: PASS. `npx next build` green (compile + typecheck). QA via /browse against the live DB (1,856 active listings → 31 pages):
+  - Page 1: header "Showing 1–60 of 1,856", pager "← Previous (disabled) | Page 1 of 31 | Next →".
+  - `?page=2`: header "Showing 61–120 of 1,856", listings differ from page 1 (page 2 starts "Cirrus Sf50 G2 Plus" vs page 1 "Hangar Airport Boulevard…"), Previous href = `/aircraft` (drops page param), Next href = `/aircraft?page=3`.
+  - Filter preservation: `?max_tt=2000&page=2` → header "Showing 61–120 of 418", prev/next hrefs carry `max_tt=2000` (`/aircraft?max_tt=2000`, `/aircraft?max_tt=2000&page=3`).
+  - Out-of-range `?page=9999`: graceful "No more aircraft on this page." + "← Back to the first page" link (→ `/aircraft`), NO red error box and no crash. (Caught a bug during QA: PostgREST returns a 416 "range not satisfiable" when the offset is past the end, which the old single `error` flag rendered as the generic "Failed to load… try again" box. Fixed: an error on page > 1 is treated as out-of-range, only page 1 — offset 0, always satisfiable — keeps the genuine error box.)
+  - 375px mobile (`?page=2`): no horizontal overflow (scrollWidth = clientWidth = 375), pager wraps cleanly.
+  - Console: only the pre-existing Wikimedia LCP image warnings (warnings, not errors) — no new errors.
+- Screenshots: nightshift/screenshots/aircraft-pagination/ (01-desktop-page1, 02-desktop-page2, 03-desktop-filter-page2, 04-desktop-out-of-range, 05-mobile-375-page2, 06-desktop-pager-closeup)
+- Staging: pushed to origin/staging (e2f85d2..4225226) — Vercel auto-deploys clubhanger-staging.vercel.app/aircraft
+- Notes: One-file change (`AircraftSaleList.tsx`). Same uncommitted human scraper WIP still in the tree (scraper/ingest.mjs, scraper/lib/ingest-core.mjs, scraper/adapters/{hangar67,aircraftforsale}.mjs, src/components/AircraftSaleCard.tsx) — left untouched; committed only my one file by explicit path, same as the prior three cycles. Price-drops path (`?drops=1`) is unchanged: its count is JS-narrowed (totalCount = null) so it stays single-window with no pager, as specced.
+- Next: Pagination is Prev/Next only — a small enhancement would be numbered page buttons (1 2 3 … 31) or a jump-to-page input for the 31-page default set. Otherwise the filter overhaul P1 is now functionally complete except the two blocked slices (avionics + SMOH filters; missing real photos) which both wait on the in-flight human scraper work. Good next pick when that lands, or "Save / favorite listings" slice 1 (heart-button UI + logged-out registration gate, no DB write yet).
+
 ## 2026-06-19T08:03Z — PASS — aircraft-true-match-count
 - What: `/aircraft` results header now shows the **true total match count** instead of capping at "60+". `AircraftSaleList` fetched with `.limit(60)` and printed `listings.length`, so any result set ≥60 read "60 aircraft for sale+ found" — making Make/Model/Max-Total-Time filtering look broken above 60 matches (the default page has 1856 active listings). Added `{ count: 'exact' }` to the same Supabase select to get the real filtered total, displayed exactly (no "+") with a subtle "— showing first 60" clarifier when the total exceeds the 60-row display window. Directly executes the "Next" idea from the prior cycle.
 - Spec: nightshift/specs/2026-06-19T0803Z-aircraft-true-match-count.md
