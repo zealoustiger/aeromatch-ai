@@ -38,6 +38,23 @@ function pageHref(filters: Filters, targetPage: number): string {
   return qs ? `/aircraft?${qs}` : '/aircraft'
 }
 
+// Compact, windowed list of page numbers to show in the pager. Always includes
+// page 1, the last page, and the current page with its immediate neighbors;
+// gaps collapse into a 'gap' ellipsis marker. e.g. (7, 31) -> [1,'gap',6,7,8,'gap',31].
+// For small totals (<= 7 pages) this just lists every page with no gaps.
+function pageWindow(current: number, total: number): (number | 'gap')[] {
+  const shown = new Set<number>([1, total, current, current - 1, current + 1])
+  const sorted = [...shown].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b)
+  const out: (number | 'gap')[] = []
+  let prev = 0
+  for (const n of sorted) {
+    if (prev && n - prev > 1) out.push('gap')
+    out.push(n)
+    prev = n
+  }
+  return out
+}
+
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
   let listings: AircraftForSale[] = []
   // Total number of listings matching the active filters (may exceed the rows
@@ -217,8 +234,38 @@ function renderList(
             </span>
           )}
 
-          <span className="text-sm text-slate-500">
+          <span className="sr-only">
             Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+          </span>
+          <span className="flex flex-wrap items-center justify-center gap-1.5" aria-hidden="false">
+            {pageWindow(page, totalPages).map((entry, i) =>
+              entry === 'gap' ? (
+                <span
+                  key={`gap-${i}`}
+                  className="px-1 text-sm text-slate-400 select-none"
+                  aria-hidden="true"
+                >
+                  …
+                </span>
+              ) : entry === page ? (
+                <span
+                  key={entry}
+                  aria-current="page"
+                  className="inline-flex min-w-[2.25rem] items-center justify-center rounded-lg border border-sky-500 bg-sky-500 px-3 py-2 text-sm font-semibold text-white shadow-sm"
+                >
+                  {entry.toLocaleString()}
+                </span>
+              ) : (
+                <Link
+                  key={entry}
+                  href={pageHref(filters, entry)}
+                  aria-label={`Page ${entry}`}
+                  className="inline-flex min-w-[2.25rem] items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-600"
+                >
+                  {entry.toLocaleString()}
+                </Link>
+              )
+            )}
           </span>
 
           {hasNext ? (
