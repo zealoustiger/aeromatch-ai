@@ -15,14 +15,16 @@
 
 import { loadEnvLocal, runIngest } from './lib/ingest-core.mjs'
 import * as barnstormers from './adapters/barnstormers.mjs'
+import * as hangar67 from './adapters/hangar67.mjs'
+import * as aircraftforsale from './adapters/aircraftforsale.mjs'
 // globalplanesearch is written and works, but DISABLED by default: its static
 // browse feed is airliner/ACMI-heavy and its make/category filters only apply
 // via JS, so it's a poor GA fit until we add a headless/unblocker fetch layer.
 // Enable explicitly with --source=globalplanesearch if you want to experiment.
 import * as globalplanesearch from './adapters/globalplanesearch.mjs'
 
-const DEFAULT_ADAPTERS = [barnstormers]
-const ALL_ADAPTERS = [barnstormers, globalplanesearch]
+const DEFAULT_ADAPTERS = [barnstormers, hangar67, aircraftforsale]
+const ALL_ADAPTERS = [barnstormers, hangar67, aircraftforsale, globalplanesearch]
 
 async function main() {
   loadEnvLocal()

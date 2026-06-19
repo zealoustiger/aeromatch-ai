@@ -26,6 +26,9 @@ function priceDrop(p: AircraftForSale): number | null {
 // Human-friendly labels for known aggregation sources.
 const SOURCE_LABELS: Record<string, string> = {
   barnstormers: 'Barnstormers',
+  hangar67: 'Hangar67',
+  aircraftforsale: 'AircraftForSale',
+  globalplanesearch: 'GlobalPlaneSearch',
   'trade-a-plane': 'Trade-A-Plane',
   controller: 'Controller',
   user: 'Listed here',

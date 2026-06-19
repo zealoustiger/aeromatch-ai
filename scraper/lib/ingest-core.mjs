@@ -67,6 +67,34 @@ export async function fetchHtml(url, { retries = 2 } = {}) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+export async function fetchJson(url, opts) {
+  const text = await fetchHtml(url, opts)
+  return JSON.parse(text)
+}
+
+// Run an async fn over items with bounded concurrency; preserves order.
+export async function mapPool(items, concurrency, fn) {
+  const results = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      try {
+        results[i] = await fn(items[i], i)
+      } catch {
+        results[i] = null
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
+  return results
+}
+
+// Pull all <loc> URLs out of a sitemap XML string.
+export function parseSitemapLocs(xml) {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim())
+}
+
 export function decode(s) {
   return s
     .replace(/&amp;/g, '&')
@@ -137,6 +165,18 @@ export function stateCodeFromName(name) {
   return STATE_CODES[key] ?? null
 }
 
+// Scan free text (e.g. a location slug "milton-delaware-united-states") for a US
+// state name and return its code. Prefers multi-word names and later matches.
+const STATE_NAME_ENTRIES = Object.entries(STATE_CODES).sort((a, b) => b[0].length - a[0].length)
+export function findStateInText(text) {
+  if (!text) return null
+  const hay = ` ${text.toLowerCase().replace(/[^a-z]+/g, ' ')} `
+  for (const [name, code] of STATE_NAME_ENTRIES) {
+    if (hay.includes(` ${name} `)) return code
+  }
+  return null
+}
+
 // "Located in CITY, ST" (aircraft) preferred; fall back to broker "located City, ST".
 export function extractLocation(text) {
   let m = text.match(/Located in\s+([A-Za-z .'-]+),\s*([A-Z]{2})\b/)
@@ -174,9 +214,14 @@ function adminClient() {
  * Upsert a source's rows, track price history, and mark vanished listings sold.
  * Returns stats. Pass dryRun to skip all writes.
  */
-export async function runIngest({ source, rows, dryRun = false }) {
+export async function runIngest({ source, rows, dryRun = false, graceDays = 7 }) {
   const nowIso = new Date().toISOString()
-  const runStart = nowIso
+  // Sold-detection grace window: a listing is only marked sold once it hasn't
+  // been seen for `graceDays`. This tolerates partial runs and sources (e.g.
+  // Barnstormers) whose result pages reorder between runs, which would
+  // otherwise cause false "sold" for listings that simply scrolled off our
+  // scrape depth on a given day.
+  const soldCutoff = new Date(Date.parse(nowIso) - graceDays * 86_400_000).toISOString()
 
   // De-dup within this batch (last write wins).
   const byId = new Map()
@@ -240,7 +285,7 @@ export async function runIngest({ source, rows, dryRun = false }) {
     .update({ status: 'sold', removed_at: nowIso })
     .eq('source', source)
     .eq('status', 'active')
-    .lt('last_seen_at', runStart)
+    .lt('last_seen_at', soldCutoff)
     .select('source_id')
   if (soldErr) throw new Error(`sold-detection failed: ${soldErr.message}`)
   stats.markedSold = sold?.length ?? 0
