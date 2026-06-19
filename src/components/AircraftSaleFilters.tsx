@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useTransition } from 'react'
+import type { AircraftFacets } from '@/lib/aircraft-facets'
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -12,27 +13,46 @@ const US_STATES = [
 
 interface Props {
   initialValues: Record<string, string | undefined>
+  facets?: AircraftFacets
 }
 
-export default function AircraftSaleFilters({ initialValues }: Props) {
+export default function AircraftSaleFilters({ initialValues, facets }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
-  const updateFilter = useCallback(
-    (key: string, value: string) => {
+  const pushParams = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
-      }
+      mutate(params)
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`)
       })
     },
     [router, pathname, searchParams]
+  )
+
+  const updateFilter = useCallback(
+    (key: string, value: string) => {
+      pushParams((params) => {
+        if (value) params.set(key, value)
+        else params.delete(key)
+      })
+    },
+    [pushParams]
+  )
+
+  // Changing make also clears any model from a different make.
+  const updateMake = useCallback(
+    (value: string) => {
+      pushParams((params) => {
+        if (value) params.set('make', value)
+        else params.delete('make')
+        params.delete('model')
+      })
+    },
+    [pushParams]
   )
 
   const clearAll = () => {
@@ -41,8 +61,61 @@ export default function AircraftSaleFilters({ initialValues }: Props) {
 
   const hasFilters = Object.values(initialValues).some(Boolean)
 
+  const makes = facets?.makes ?? []
+  const selectedMake = initialValues.make ?? ''
+  const modelOptions =
+    selectedMake && facets?.modelsByMake[selectedMake]
+      ? facets.modelsByMake[selectedMake]
+      : []
+
   return (
     <div className="space-y-5">
+      {/* Make — primary search path */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Make
+        </label>
+        {makes.length > 0 ? (
+          <select
+            value={selectedMake}
+            onChange={(e) => updateMake(e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          >
+            <option value="">All makes</option>
+            {makes.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        ) : (
+          // Fallback when facets are unavailable: keep search working via free text.
+          <input
+            type="text"
+            placeholder="e.g. Cessna, Cirrus"
+            defaultValue={selectedMake}
+            onChange={(e) => updateMake(e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+        )}
+      </div>
+
+      {/* Model — depends on selected make */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Model
+        </label>
+        <select
+          value={initialValues.model ?? ''}
+          onChange={(e) => updateFilter('model', e.target.value)}
+          disabled={modelOptions.length === 0}
+          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+        >
+          <option value="">
+            {selectedMake ? 'All models' : 'Select a make first'}
+          </option>
+          {modelOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+
+      <div className="border-t border-slate-100" />
+
       {/* Sort */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -81,20 +154,6 @@ export default function AircraftSaleFilters({ initialValues }: Props) {
           placeholder="e.g. G1000, low time, IFR"
           defaultValue={initialValues.q ?? ''}
           onChange={(e) => updateFilter('q', e.target.value)}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-        />
-      </div>
-
-      {/* Make */}
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Aircraft Make
-        </label>
-        <input
-          type="text"
-          placeholder="e.g. Cessna, Cirrus"
-          defaultValue={initialValues.make ?? ''}
-          onChange={(e) => updateFilter('make', e.target.value)}
           className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
         />
       </div>

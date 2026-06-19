@@ -5,6 +5,7 @@ import { Plane, SlidersHorizontal } from 'lucide-react'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
+import { getAircraftFacets } from '@/lib/aircraft-facets'
 
 export const metadata: Metadata = {
   title: 'Aircraft for Sale — Search GA Listings From Across the Web',
@@ -22,6 +23,7 @@ export default async function AircraftPage({
 }) {
   const params = await searchParams
   const activeFilterCount = Object.values(params).filter(Boolean).length
+  const facets = await getAircraftFacets()
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -40,7 +42,7 @@ export default async function AircraftPage({
         {/* Action bar — filter button visible only on mobile */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="lg:hidden">
-            <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} variant="sale" />
+            <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} variant="sale" facets={facets} />
           </div>
         </div>
       </div>
@@ -53,7 +55,7 @@ export default async function AircraftPage({
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
             </div>
-            <AircraftSaleFilters initialValues={params} />
+            <AircraftSaleFilters initialValues={params} facets={facets} />
           </div>
         </aside>
 
