@@ -11,6 +11,7 @@ import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
+import SaveListingButton from '@/components/SaveListingButton'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -23,6 +24,25 @@ async function getPartnership(id: string): Promise<Partnership | null> {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase.from('partnerships').select('*').eq('id', id).single()
   return data
+}
+
+async function isListingSaved(id: string): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return false
+
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data } = await supabase
+    .from('saved_listings')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('listing_id', id)
+    .eq('listing_type', 'partnership')
+    .maybeSingle()
+  return !!data
 }
 
 export async function generateMetadata({
@@ -77,6 +97,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const p = await getPartnership(id)
   if (!p) notFound()
 
+  const saved = await isListingSaved(p.id)
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -95,12 +116,15 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
           make={p.make}
           shareType={p.share_type}
         />
-        <Link
-          href="/partnerships"
-          className="mb-6 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
-        >
-          <ChevronLeft className="h-4 w-4" /> Back to Partnerships
-        </Link>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <Link
+            href="/partnerships"
+            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+          >
+            <ChevronLeft className="h-4 w-4" /> Back to Partnerships
+          </Link>
+          <SaveListingButton listingId={p.id} initialSaved={saved} variant="full" />
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}

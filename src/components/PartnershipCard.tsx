@@ -7,6 +7,7 @@ import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
+import SaveListingButton from './SaveListingButton'
 
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -17,7 +18,7 @@ const shareColors: Record<string, string> = {
   other: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
 
-export default function PartnershipCard({ p }: { p: Partnership }) {
+export default function PartnershipCard({ p, saved = false }: { p: Partnership; saved?: boolean }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
   const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
@@ -28,20 +29,26 @@ export default function PartnershipCard({ p }: { p: Partnership }) {
       <div className="flex flex-col sm:flex-row">
 
         {/* Photo */}
-        <Link href={`/partnerships/${p.id}`} className="relative sm:w-52 sm:shrink-0 h-44 sm:h-auto block">
-          <Image
-            src={imageUrl}
-            alt={aircraft}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 208px"
-          />
-          {isPlaceholder && (
-            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-              Not actual plane photo
-            </span>
-          )}
-        </Link>
+        <div className="relative sm:w-52 sm:shrink-0">
+          <Link href={`/partnerships/${p.id}`} className="relative block h-44 sm:h-full">
+            <Image
+              src={imageUrl}
+              alt={aircraft}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 208px"
+            />
+            {isPlaceholder && (
+              <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                Not actual plane photo
+              </span>
+            )}
+          </Link>
+          {/* Favorite — sibling of the Link (not nested) for valid markup */}
+          <div className="absolute right-2 top-2 z-10">
+            <SaveListingButton listingId={p.id} initialSaved={saved} variant="icon" />
+          </div>
+        </div>
 
         {/* Content */}
         <div className="flex flex-1 flex-col p-5">
