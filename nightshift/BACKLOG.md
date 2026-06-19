@@ -68,3 +68,5 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Done
 <!-- The loop appends shipped items here with a date + staging link. -->
+- 2026-06-19 — Filter overhaul **slice 2**: Max Total Time filter + progressive-disclosure "More filters" on /aircraft (staging). Avionics/SMOH filters deferred — those columns are 0% populated in the DB (ingest gap). See CHANGELOG 2026-06-19T07:03Z.
+- 2026-06-19 — Filter overhaul **slice 1**: Make + Model dependent dropdowns on /aircraft (staging). See CHANGELOG 2026-06-19T06:04Z.
