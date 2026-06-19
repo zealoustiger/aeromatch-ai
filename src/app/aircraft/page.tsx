@@ -5,6 +5,7 @@ import { Plane, SlidersHorizontal } from 'lucide-react'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
+import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
 
 export const metadata: Metadata = {
@@ -44,6 +45,9 @@ export default async function AircraftPage({
           <div className="lg:hidden">
             <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} variant="sale" facets={facets} />
           </div>
+          <Suspense>
+            <SaveSearchButton basePath="/aircraft" />
+          </Suspense>
         </div>
       </div>
 

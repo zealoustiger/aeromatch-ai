@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase'
 import { saveSearch } from '@/app/actions'
 import type { User } from '@supabase/supabase-js'
 
-export default function SaveSearchButton() {
+export default function SaveSearchButton({ basePath = '/partnerships' }: { basePath?: string }) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
@@ -31,7 +31,7 @@ export default function SaveSearchButton() {
 
   function handleSaveClick() {
     if (!user) {
-      router.push(`/auth?next=${encodeURIComponent('/partnerships?' + paramsStr)}`)
+      router.push(`/auth?next=${encodeURIComponent(basePath + '?' + paramsStr)}`)
       return
     }
     setShowForm(true)
@@ -44,7 +44,7 @@ export default function SaveSearchButton() {
     if (!name.trim()) return
     setErrorMsg('')
     startTransition(async () => {
-      const result = await saveSearch(name, paramsStr)
+      const result = await saveSearch(name, paramsStr, basePath)
       if (result.error) {
         setErrorMsg(result.error)
       } else {
