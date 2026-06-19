@@ -14,6 +14,21 @@ Newest first. One entry per cycle. The loop appends here; you read it over coffe
 
 -->
 
+## 2026-06-19T10:03Z — PASS — aircraft-numbered-pagination
+- What: Added windowed **numbered page buttons** (1 2 … current±1 … 31) to the `/aircraft` pager, executing the prior cycle's flagged "Next". The center "Page N of M" text in the pagination `<nav>` is replaced by a compact set of page-number `<Link>`s — always page 1, the last page, and the current page with its immediate neighbors; gaps collapse to a `…` ellipsis. The active page renders as a highlighted (sky-accent) non-link with `aria-current="page"`; an `sr-only` "Page N of M" keeps the screen-reader text. Pure server-rendered links via the existing `pageHref()` helper — no client JS. Prev/Next, the "Showing X–Y of N" header, the price-drops single-window path, and the empty/out-of-range/error states are untouched.
+- Spec: nightshift/specs/2026-06-19T1003Z-aircraft-numbered-pagination.md
+- Verdict: PASS. `npx next build` green (compile + typecheck). QA via /browse against the live DB (1,856 active → 31 pages):
+  - Default `/aircraft`: pager shows `← Previous` (disabled span) | **1** (highlighted, `aria-current=page`, not a link) | 2 | … | 31 | `Next →`. Links: `2 → /aircraft?page=2`, `31 → /aircraft?page=31`, `Next → /aircraft?page=2`. Ellipsis present.
+  - `?page=3`: header "Showing 121–180 of 1,856", current=3 highlighted, window = 1 2 **3** 4 … 31; links `1 → /aircraft` (clean, no page param), `2 → ?page=2`, `4 → ?page=4`, `31 → ?page=31`, Prev → `?page=2`, Next → `?page=4`.
+  - Filter preservation `?max_tt=2000&page=2` (418 matches → 7 pages): header "Showing 61–120 of 418"; every number/Prev/Next href carries `max_tt=2000` (`1 → /aircraft?max_tt=2000`, `3 → ?max_tt=2000&page=3`, `7 → ?max_tt=2000&page=7`).
+  - Price-drops `?drops=1` (totalCount=null): **no pager rendered** (correct — unchanged single-window behavior).
+  - 375px mobile (`?page=3`): no horizontal overflow (scrollWidth = clientWidth = 375); Previous wraps to its own row, number buttons + Next wrap cleanly below.
+  - Console: only the pre-existing Wikimedia LCP image warning (a warning, not an error) — no new errors.
+- Screenshots: nightshift/screenshots/aircraft-numbered-pagination/ (01-desktop-page1-pager, 02-mobile-375-page3-pager, 03-desktop-page1-full)
+- Staging: pushed to origin/staging (0d58fc6..ba524da) — Vercel auto-deploys clubhanger-staging.vercel.app/aircraft
+- Notes: One-file change (`AircraftSaleList.tsx`): added a pure `pageWindow(current, total)` helper + the numbered-button render. Same uncommitted human scraper WIP still in the tree (scraper/ingest.mjs, scraper/lib/ingest-core.mjs, scraper/adapters/{hangar67,aircraftforsale}.mjs, src/components/AircraftSaleCard.tsx) — left untouched; committed only my one file by explicit path, same as the prior four cycles.
+- Next: The [P1] filter overhaul is now functionally complete (Make+Model → Max-TT/More-filters → true count → Prev/Next → numbered pages). The two remaining filter slices (avionics + SMOH filters) and the missing-real-photos [P1] both stay **blocked on the in-flight human scraper work** (avionics/SMOH columns 0% populated; AircraftSaleCard.tsx is human WIP). Best unblocked next pick: **"Save / favorite listings" slice 1** (heart-button UI on cards + logged-out registration gate, no DB write yet). A jump-to-page numeric input on /aircraft would be a small client-component follow-up if numbered buttons aren't enough for 31 pages.
+
 ## 2026-06-19T09:02Z — PASS — aircraft-pagination
 - What: `/aircraft` now paginates the full filtered result set instead of pinning to the first 60 rows. Replaced the fixed `.limit(60)` with `.range(from, to)` keyed off a new `?page=N` param, and added a Prev/Next control under the listings. The results header changed from "1,856 … — showing first 60" to a true window: "**Showing 61–120 of 1,856** aircraft for sale". Directly executes the prior cycle's flagged "Next" (count advertised 1,856 but only 60 rendered).
 - Spec: nightshift/specs/2026-06-19T0902Z-aircraft-pagination.md
