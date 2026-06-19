@@ -9,6 +9,7 @@ interface Filters {
   state?: string
   max_price?: string
   min_year?: string
+  max_tt?: string
   sort?: string
   drops?: string
 }
@@ -36,6 +37,7 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))
     if (filters.min_year) query = query.gte('year', parseInt(filters.min_year))
+    if (filters.max_tt) query = query.lte('ttaf', parseInt(filters.max_tt))
     if (filters.q) {
       const term = filters.q.replace(/[%,()]/g, ' ').trim()
       if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`)
