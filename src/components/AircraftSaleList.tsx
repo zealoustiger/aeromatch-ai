@@ -5,6 +5,7 @@ import AircraftSaleCard from './AircraftSaleCard'
 interface Filters {
   q?: string
   make?: string
+  model?: string
   state?: string
   max_price?: string
   min_year?: string
@@ -31,6 +32,7 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
       .eq('status', 'active')
 
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
+    if (filters.model) query = query.eq('model', filters.model)
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))
     if (filters.min_year) query = query.gte('year', parseInt(filters.min_year))

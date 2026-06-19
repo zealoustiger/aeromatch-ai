@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { AircraftFacets } from '@/lib/aircraft-facets'
 import PartnershipFilters from './PartnershipFilters'
 import AircraftSaleFilters from './AircraftSaleFilters'
 
@@ -10,9 +11,10 @@ interface Props {
   initialValues: Record<string, string | undefined>
   activeCount: number
   variant?: 'partnership' | 'sale'
+  facets?: AircraftFacets
 }
 
-export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership' }: Props) {
+export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -66,7 +68,7 @@ export default function MobileFiltersDrawer({ initialValues, activeCount, varian
         {/* Scrollable filters */}
         <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
           {variant === 'sale' ? (
-            <AircraftSaleFilters initialValues={initialValues} />
+            <AircraftSaleFilters initialValues={initialValues} facets={facets} />
           ) : (
             <PartnershipFilters initialValues={initialValues} />
           )}
