@@ -4,6 +4,11 @@ This is the steering wheel. The overnight loop reads this file every cycle and
 picks the highest-value unblocked item. Keep it current — what's here is what
 gets built while you sleep.
 
+**North star: `nightshift/GOAL.md` — maximize pageviews (lever: SEO).** The PM now
+picks by expected pageview impact and may *invent* SEO experiments (tagged
+`[agent]`) when they beat the backlog, so this list never runs dry. Items below are
+still built — they make pages worth visiting — but the goal breaks ties.
+
 ## How to add an idea
 - Drop it under **Ideas** with a one-line description.
 - For design/UX work, add an **Inspiration** entry: a URL + 2-3 bullets of

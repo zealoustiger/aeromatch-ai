@@ -30,14 +30,19 @@ Work like a tight PM → Eng → QA → PM loop, all in this single run.
 
 ### 1. Orient
 - `git fetch`, check out `staging`, `git pull`.
-- Read `nightshift/BACKLOG.md` (the human's ideas + inspiration), `nightshift/CHANGELOG.md` (recent cycles), `nightshift/FREEZE.md`.
+- Read `nightshift/GOAL.md` (the north-star metric + guardrails), `nightshift/BACKLOG.md` (the human's ideas + inspiration), `nightshift/CHANGELOG.md` (recent cycles), `nightshift/FREEZE.md`.
+- **Read the scoreboard:** run `node nightshift/bin/scoreboard.mjs` and note the current pageview number + which pages get traffic. This is the goal you're moving.
 - If the most recent CHANGELOG entry was a **QA failure**, your task this cycle is to fix it — do not start something new.
 
-### 2. PM — pick & spec
-Pick exactly ONE task, in this priority order:
+### 2. PM — pick & spec (goal-driven)
+The north star is **GOAL.md: maximize pageviews**, primary lever SEO. Pick exactly ONE task by **highest expected pageview impact per cycle**, in this priority order:
 1. Fix the last cycle's failure (if any).
-2. The highest-value unblocked item in BACKLOG.md, biased toward what the human marked as inspiration/"what I like."
-3. If the backlog is thin: a high-confidence bug fix, dead-link/console-error cleanup, an SEO/content page, or a small design-polish pass on an existing page.
+2. **The highest goal-impact move available** — whichever is best, a backlog item OR an SEO experiment you invent:
+   - A `BACKLOG.md` item (biased toward what the human marked as inspiration). Features/fixes count: they make pages worth visiting, sharing, and linking to.
+   - **An SEO experiment you generate yourself** toward the goal: a new quality indexable page family (make+model, model, city, airport pages), better titles/meta/schema/canonical, internal linking, sitemap freshness, page-speed, or genuinely useful content. When you invent one, first append it to `BACKLOG.md` under Ideas with an `[agent]` tag + a one-line "why this grows pageviews," then build the smallest valuable slice.
+3. If nothing else is clearly higher-value, **default to the goal**: ship one more quality indexable page or make an existing high-traffic page rank/convert better.
+
+**Obey GOAL.md's guardrails** — no doorway/thin/duplicate pages, no keyword stuffing, no analytics gaming, never regress Core Web Vitals/mobile. A page-count win that breaks these is a LOSS. Remember the honesty rule: SEO lift lags weeks, so judge this cycle by leading indicators (new quality indexable page live + in sitemap, valid unique metadata, internal links, speed), not tonight's pageview delta.
 
 Write a short spec to `nightshift/specs/<UTC-timestamp>-<slug>.md` with:
 - **Goal** (one sentence)
@@ -66,6 +71,7 @@ Append one entry to `nightshift/CHANGELOG.md` (newest first). **The `Pages` line
 ## <UTC timestamp> — <PASS|FAIL> — <slug>
 - Pages: </route>, </route>   ← user-facing routes affected (required)
 - What: <one plain-language line a non-engineer can read>
+- Goal: <lever pulled toward GOAL.md (e.g. "SEO breadth: new model pages" / "perf" / "feature depth") + the pageview number from the scoreboard at orient>
 - Spec: nightshift/specs/<file>
 - Verdict: <why pass/fail; QA notes>
 - Screenshots: nightshift/screenshots/<slug>/
