@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
 import AircraftSaleList, { countMakeModel } from '@/components/AircraftSaleList'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { SEO_MAKE_MODELS, getMakeModel, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 
@@ -59,13 +60,13 @@ export default async function MakeModelForSalePage({ params }: Props) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-slate-400">
-        <Link href="/" className="hover:text-slate-600">Home</Link>
-        <span className="mx-2">/</span>
-        <Link href="/aircraft" className="hover:text-slate-600">Aircraft for Sale</Link>
-        <span className="mx-2">/</span>
-        <span className="text-slate-600">{label}</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Aircraft for Sale', href: '/aircraft' },
+          { label: `${label} for sale` },
+        ]}
+      />
 
       {/* Header with photo */}
       <div className="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
