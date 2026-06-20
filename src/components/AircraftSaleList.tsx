@@ -114,6 +114,39 @@ export async function countMakeModel(
   }
 }
 
+// Live count of active listings for a make + model family LOCATED in a given
+// state (USPS code). The intersection of `countMakeModel`'s family filter and
+// `countForSaleState`'s state filter — used by the `/aircraft/[make]/[model]/[state]`
+// intersection SEO pages so the title/H1 N is always accurate, and as the single
+// source of truth for that route's thin-page (count < threshold → 404) guard.
+// Returns 0 on any failure (the page treats that as a 404-worthy thin combo).
+export async function countMakeModelState(
+  make: string,
+  modelPattern: string,
+  notModelPattern: string | undefined,
+  code: string
+): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .eq('state', code)
+    if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
+    const { count, error } = await query
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
 // Live count of active for-sale listings located in a given state (USPS code).
 // Used by the `/aircraft/for-sale/[state]` SEO pages for an accurate title/H1 N
 // and by the sitemap as the single source of truth for the count>0 gate.
