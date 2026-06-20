@@ -10,6 +10,7 @@ import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { resolveMakeModelFamily } from '@/lib/seo'
 import CompareToggle from './CompareToggle'
+import SaveListingButton from './SaveListingButton'
 
 const DAY_MS = 86_400_000
 
@@ -47,7 +48,7 @@ function aircraftTitle(p: AircraftForSale): string {
   return parts.length ? parts.join(' ') : 'Aircraft'
 }
 
-export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
+export default function AircraftSaleCard({ p, saved = false }: { p: AircraftForSale; saved?: boolean }) {
   const label = aircraftTitle(p)
   const imageUrl = getPlaceholderPhoto(p.make ?? '')
   const isExternal = p.source !== 'user'
@@ -64,23 +65,30 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
-        <a
-          href={p.source_url ?? '#'}
-          target={isExternal ? '_blank' : undefined}
-          rel={isExternal ? 'noopener noreferrer' : undefined}
-          className="relative block h-44 sm:h-auto sm:w-52 sm:shrink-0"
-        >
-          <Image
-            src={imageUrl}
-            alt={label}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 208px"
-          />
-          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-            Not actual plane photo
-          </span>
-        </a>
+        <div className="relative h-44 sm:h-auto sm:w-52 sm:shrink-0">
+          <a
+            href={p.source_url ?? '#'}
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener noreferrer' : undefined}
+            className="relative block h-full w-full"
+          >
+            <Image
+              src={imageUrl}
+              alt={label}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 208px"
+            />
+            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+              Not actual plane photo
+            </span>
+          </a>
+          {/* Favorite — sibling of the photo link (not nested) for valid markup;
+              mirrors the partnership card's heart. */}
+          <div className="absolute right-2 top-2 z-10">
+            <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={saved} variant="icon" />
+          </div>
+        </div>
 
         {/* Content */}
         <div className="flex flex-1 flex-col p-5">
