@@ -8,6 +8,11 @@ interface Filters {
   q?: string
   make?: string
   model?: string
+  /** family-level model match (ilike); used by the make+model SEO pages where
+   *  the exact `model` strings are too messy/inconsistent for `.eq`. */
+  modelPattern?: string
+  /** optional ilike pattern to exclude (e.g. keep SR22 distinct from SR22T). */
+  notModelPattern?: string
   state?: string
   max_price?: string
   min_year?: string
@@ -16,6 +21,9 @@ interface Filters {
   sort?: string
   drops?: string
   page?: string
+  /** route the pager links live under (default /aircraft). Used by the
+   *  make+model SEO pages so paging stays on `/aircraft/[make]/[model]`. */
+  basePath?: string
 }
 
 const PAGE_SIZE = 60
@@ -40,17 +48,23 @@ function parsePage(raw: string | undefined): number {
   return Number.isFinite(n) && n > 1 ? n : 1
 }
 
-// Build an /aircraft href for a target page that preserves the active filters.
-// page 1 drops the param to keep the canonical URL clean.
+// Filter keys that are internal query shaping, not user-facing URL params —
+// they must never leak into pager hrefs.
+const NON_URL_FILTER_KEYS = new Set(['page', 'modelPattern', 'notModelPattern', 'basePath'])
+
+// Build a paginated href for a target page that preserves the active filters.
+// page 1 drops the param to keep the canonical URL clean. `basePath` lets the
+// make+model SEO pages page within their own route instead of /aircraft.
 function pageHref(filters: Filters, targetPage: number): string {
+  const base = filters.basePath ?? '/aircraft'
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(filters)) {
-    if (key === 'page' || !value) continue
+    if (NON_URL_FILTER_KEYS.has(key) || !value) continue
     params.set(key, value)
   }
   if (targetPage > 1) params.set('page', String(targetPage))
   const qs = params.toString()
-  return qs ? `/aircraft?${qs}` : '/aircraft'
+  return qs ? `${base}?${qs}` : base
 }
 
 // Compact, windowed list of page numbers to show in the pager. Always includes
@@ -68,6 +82,34 @@ function pageWindow(current: number, total: number): (number | 'gap')[] {
     prev = n
   }
   return out
+}
+
+// Live count of active listings for a make + model family. Used by the
+// `/aircraft/[make]/[model]` SEO pages so the title/H1 N is always accurate.
+// Returns 0 on any failure (the page treats 0 as a 404-worthy thin combo).
+export async function countMakeModel(
+  make: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+    if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
+    const { count, error } = await query
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
 }
 
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
@@ -97,6 +139,8 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
 
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
     if (filters.model) query = query.eq('model', filters.model)
+    if (filters.modelPattern) query = query.ilike('model', filters.modelPattern)
+    if (filters.notModelPattern) query = query.not('model', 'ilike', filters.notModelPattern)
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))
     if (filters.min_year) query = query.gte('year', parseInt(filters.min_year))
