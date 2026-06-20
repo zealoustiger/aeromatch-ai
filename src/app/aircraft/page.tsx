@@ -45,6 +45,9 @@ export default async function AircraftPage({
 
   return (
     <CompareProvider>
+    {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 1).
+        Full-bleed cream behind the reference surface, reversible + scoped here. */}
+    <div className="ch-surface min-h-screen">
     {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
     <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-10 lg:px-8">
       {/* Breadcrumb */}
@@ -58,11 +61,11 @@ export default async function AircraftPage({
       {/* Page header */}
       <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Plane className="h-6 w-6 text-sky-500" />
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-slate-900">
+            <Plane className="h-7 w-7 text-sky-500" />
             Planes for Sale
           </h1>
-          <p className="mt-1 text-slate-500">
+          <p className="mt-1 text-slate-600">
             Aircraft for sale aggregated from across the web — search them all in one place.
           </p>
         </div>
@@ -81,7 +84,7 @@ export default async function AircraftPage({
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar — desktop only */}
         <aside className="hidden w-full shrink-0 lg:block lg:w-64">
-          <div className="sticky top-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="ch-panel sticky top-24 p-5">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
@@ -108,7 +111,7 @@ export default async function AircraftPage({
           <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
 
           {/* Browse by state — crawlable internal links to the per-state for-sale pages */}
-          <div className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="ch-panel mt-10 p-6">
             <h2 className="mb-3 text-base font-semibold text-slate-900">Aircraft for sale by state</h2>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {STATE_CODES.map((c) => (
@@ -129,6 +132,7 @@ export default async function AircraftPage({
         </div>
       </div>
     </div>
+    </div>
     <CompareTray />
     </CompareProvider>
   )
@@ -138,7 +142,7 @@ function AircraftListSkeleton() {
   return (
     <div className="space-y-4">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="h-48 animate-pulse rounded-xl bg-slate-100" />
+        <div key={i} className="h-48 animate-pulse rounded-2xl bg-slate-100" />
       ))}
     </div>
   )

@@ -30,6 +30,54 @@
   --foreground: #0f172a;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   ClubHanger design tokens — Etsy × Airbnb visual language (slice 1)
+   Warm, polished consumer-marketplace feel. Use these for new/refreshed
+   surfaces; later slices roll them across the rest of the site.
+   - --ch-surface / --ch-surface-2: warm cream page surfaces (vs cold slate/white)
+   - --ch-radius-card: the shared card corner radius (Airbnb-style rounded-2xl)
+   - --ch-shadow-card / --ch-shadow-hover: soft resting shadow + hover-lift shadow
+   Apply with the .ch-card utility (radius + soft shadow + hover-lift) and the
+   .ch-surface helper (warm cream background).
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --ch-surface: #faf7f2;      /* warm cream page background */
+  --ch-surface-2: #f4efe7;    /* slightly deeper cream for nested fills */
+  --ch-border: #ece6dc;       /* warm hairline border */
+  --ch-radius-card: 1rem;     /* rounded-2xl */
+  --ch-shadow-card: 0 1px 2px rgba(31, 24, 12, 0.04), 0 4px 12px rgba(31, 24, 12, 0.06);
+  --ch-shadow-hover: 0 6px 16px rgba(31, 24, 12, 0.08), 0 12px 28px rgba(31, 24, 12, 0.10);
+}
+
+/* Warm cream marketplace surface (page background helper). */
+.ch-surface {
+  background: var(--ch-surface);
+}
+
+/* Shared card: rounded-2xl, soft resting shadow, gentle hover-lift. Photo-forward
+   Airbnb-style — minimal border, the shadow does the separation. */
+.ch-card {
+  border-radius: var(--ch-radius-card);
+  box-shadow: var(--ch-shadow-card);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.ch-card:hover {
+  box-shadow: var(--ch-shadow-hover);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ch-card { transition: box-shadow 0.2s ease; }
+  .ch-card:hover { transform: none; }
+}
+
+/* Soft warm panel (filters, info blocks) — same family, no hover-lift. */
+.ch-panel {
+  border-radius: var(--ch-radius-card);
+  background: #ffffff;
+  box-shadow: var(--ch-shadow-card);
+  border: 1px solid var(--ch-border);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
