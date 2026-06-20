@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-20T23:30Z — DRAIN SUMMARY (manual afternoon run)
+- Cycles this run: 5 (PASS 5 / FAIL 0 / ABORT 0)
+- Slugs: aircraft-visual-tokens, seeking-seo-metadata, hero-search-skip-gate-when-authed, listing-card-redesign, homepage-canonical-og
+- Lanes: [want], [goal], [bug], [want], [goal] — alternation held, blocker cleared
+- Stopped because: manual ~1-hour time box (human nap), not backlog-drained
+- Note: human-triggered while away; all landed clean on staging.
+
 ## 2026-06-20T23:26Z — PASS — homepage-canonical-og
 - Pages: /
 - What: **Gave the homepage (priority page #1) the same search-engine treatment the make pages already have, closing the two verified audit gaps.** The homepage now tells Google its own canonical web address (`https://clubhanger.com/`) — it previously had NO canonical at all — and carries a complete set of social-share (OpenGraph + Twitter) tags so a shared link unfurls with a real title, description, and the branded card image. The site-wide `og:url` was previously empty on every page; the homepage now sets it. The homepage's WebSite structured-data also gained a `logo`. Nothing a visitor sees changed — this is metadata only; the hero, listings, FAQ, and footer all render exactly as before at desktop and on phones.
