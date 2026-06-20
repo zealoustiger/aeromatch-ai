@@ -65,8 +65,8 @@ reviews post-cycle, so try things; just keep each cycle cohesive and reversible.
 Highest-priority steering. Bugs first, then alternate want/goal per the allocation policy.
 
 **Bugs (do first):**
-- **[P1][bug] Save-listing sign-in redirects to homepage, not back.** Clicking the heart while logged out signs you in but lands on `/` instead of returning to the listing. Fix the post-auth `next` redirect to return to the originating page.
-- **[P1][bug] Homepage search re-prompts signup when already signed in.** A logged-in user clicking Search still hits the SignUpGate. If authed, skip the gate → straight to `/partnerships?…` results.
+- ~~**[P1][bug] Save-listing sign-in redirects to homepage, not back.**~~ ✅ Re-verified 2026-06-20 against current staging — **already fixed**: heart-while-logged-out routes to `/auth?next=<listing>` and the callback returns to that listing (no homepage fallback in the chain). No code change needed. See CHANGELOG 2026-06-20T23:15Z.
+- ~~**[P1][bug] Homepage search re-prompts signup when already signed in.**~~ ✅ FIXED 2026-06-20 — `HeroSearch` now reads auth state and, when signed in, navigates straight to `/partnerships?…` instead of opening the SignUpGate (logged-out behavior unchanged). See CHANGELOG 2026-06-20T23:15Z.
 
 **Filters & search (extends the [P1] Filter UI overhaul):**
 - **[P1][want] Marketplace filters: multi-select + ranges.** Model multi-select (SR20 + SR22 together) and Listing-Quality multi-select (any combo of A/B/C). Price, Year, Total Time become **min/max ranges**. 375px-first.
