@@ -6,20 +6,24 @@ import { useCompareOptional, MAX_COMPARE } from './CompareProvider'
 
 /**
  * Fixed bottom bar that appears once the user has selected listings to compare
- * on /partnerships. Shows the chosen listings (chips with remove), a clear-all
- * control, and a "Compare (N)" button linking to /compare?ids=...
+ * on /partnerships or /aircraft. Shows the chosen listings (chips with remove),
+ * a clear-all control, and a "Compare (N)" button linking to
+ * /compare?type=<type>&ids=...
  *
  * Hidden until at least one listing is selected (and until client-ready, to
  * avoid an SSR/hydration flash). Needs ≥2 to actually compare; with exactly 1 it
- * still shows so the user sees their selection + a hint to pick one more.
+ * still shows so the user sees their selection + a hint to pick one more. The
+ * tray is implicitly scoped to a single listing type (the provider enforces it).
  */
 export default function CompareTray() {
   const compare = useCompareOptional()
   if (!compare || !compare.ready || compare.count === 0) return null
 
-  const { items, count, remove, clear } = compare
+  const { items, count, type, remove, clear } = compare
   const canCompare = count >= 2
-  const href = `/compare?ids=${items.map((it) => encodeURIComponent(it.id)).join(',')}`
+  const href = `/compare?type=${type ?? 'partnership'}&ids=${items
+    .map((it) => encodeURIComponent(it.id))
+    .join(',')}`
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.10)]">

@@ -10,6 +10,8 @@ import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { STATE_CODES, STATE_NAMES, stateSlug } from '@/lib/seo'
+import { CompareProvider } from '@/components/CompareProvider'
+import CompareTray from '@/components/CompareTray'
 
 export const metadata: Metadata = {
   title: 'Aircraft for Sale — Search GA Listings From Across the Web',
@@ -30,7 +32,9 @@ export default async function AircraftPage({
   const facets = await getAircraftFacets()
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <CompareProvider>
+    {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-10 lg:px-8">
       {/* Breadcrumb */}
       <Breadcrumbs
         items={[
@@ -105,6 +109,8 @@ export default async function AircraftPage({
         </div>
       </div>
     </div>
+    <CompareTray />
+    </CompareProvider>
   )
 }
 
