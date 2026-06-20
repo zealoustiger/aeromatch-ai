@@ -101,10 +101,10 @@ export default function AircraftSaleCard({
   const family = resolveMakeModelFamily(p.make, p.model)
 
   return (
-    <article className="ch-card group overflow-hidden border border-slate-100 bg-white">
+    <article className="ch-card group overflow-hidden bg-white">
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
-        <div className="relative h-44 sm:h-auto sm:w-52 sm:shrink-0">
+        <div className="relative h-52 sm:h-auto sm:w-56 sm:shrink-0">
           <a
             href={p.source_url ?? '#'}
             target={isExternal ? '_blank' : undefined}
@@ -200,11 +200,11 @@ export default function AircraftSaleCard({
             </div>
 
             {/* Price */}
-            <div className="shrink-0 rounded-lg bg-slate-50 p-3 text-right ring-1 ring-slate-100 sm:min-w-[148px]">
+            <div className="shrink-0 rounded-xl bg-slate-50 p-3 text-right ring-1 ring-slate-100 sm:min-w-[148px]">
               {p.asking_price ? (
                 <div>
                   <p className="text-xs text-slate-400">Asking</p>
-                  <p className="text-lg font-bold text-slate-900">{formatPrice(p.asking_price)}</p>
+                  <p className="text-2xl font-extrabold tracking-tight text-slate-900">{formatPrice(p.asking_price)}</p>
                   {drop != null && (
                     <p className="text-xs text-slate-400 line-through">{formatPrice(p.previous_price)}</p>
                   )}
