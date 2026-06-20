@@ -7,6 +7,8 @@ import { Plane, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import { SEO_MAKES, getMakeBySlug, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPartnershipListings } from '@/lib/partnershipsQuery'
+import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 
 type Props = { params: Promise<{ make: string }> }
 
@@ -37,8 +39,23 @@ export default async function MakePartnershipsPage({ params }: Props) {
 
   const otherMakes = SEO_MAKES.filter((m) => m.slug !== entry.slug)
 
+  // ItemList JSON-LD built from the SAME shared query PartnershipList renders, so
+  // the markup matches the visible cards 1:1 (each item links to a real
+  // /partnerships/[id]). Real data only — no fabricated rating/review.
+  const { listings } = await getPartnershipListings({ make: entry.filter })
+  const itemListJsonLd = buildPartnershipItemListJsonLd(listings, {
+    name: `${entry.name} aircraft partnerships`,
+    url: `${SITE_URL}/partnerships/make/${entry.slug}`,
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
       {/* Breadcrumb */}
       <nav className="mb-6 text-sm text-slate-400">
         <Link href="/" className="hover:text-slate-600">Home</Link>

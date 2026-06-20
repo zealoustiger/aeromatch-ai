@@ -2,12 +2,19 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
 import { minScoreForGrade, type Grade } from '@/lib/listingQuality'
+import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
+import { buildFamilyPriceMap, compVsMarket, priceStats, type PriceStats } from '@/lib/aircraftComps'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
   q?: string
   make?: string
   model?: string
+  /** family-level model match (ilike); used by the make+model SEO pages where
+   *  the exact `model` strings are too messy/inconsistent for `.eq`. */
+  modelPattern?: string
+  /** optional ilike pattern to exclude (e.g. keep SR22 distinct from SR22T). */
+  notModelPattern?: string
   state?: string
   max_price?: string
   min_year?: string
@@ -16,6 +23,9 @@ interface Filters {
   sort?: string
   drops?: string
   page?: string
+  /** route the pager links live under (default /aircraft). Used by the
+   *  make+model SEO pages so paging stays on `/aircraft/[make]/[model]`. */
+  basePath?: string
 }
 
 const PAGE_SIZE = 60
@@ -40,17 +50,23 @@ function parsePage(raw: string | undefined): number {
   return Number.isFinite(n) && n > 1 ? n : 1
 }
 
-// Build an /aircraft href for a target page that preserves the active filters.
-// page 1 drops the param to keep the canonical URL clean.
+// Filter keys that are internal query shaping, not user-facing URL params —
+// they must never leak into pager hrefs.
+const NON_URL_FILTER_KEYS = new Set(['page', 'modelPattern', 'notModelPattern', 'basePath'])
+
+// Build a paginated href for a target page that preserves the active filters.
+// page 1 drops the param to keep the canonical URL clean. `basePath` lets the
+// make+model SEO pages page within their own route instead of /aircraft.
 function pageHref(filters: Filters, targetPage: number): string {
+  const base = filters.basePath ?? '/aircraft'
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(filters)) {
-    if (key === 'page' || !value) continue
+    if (NON_URL_FILTER_KEYS.has(key) || !value) continue
     params.set(key, value)
   }
   if (targetPage > 1) params.set('page', String(targetPage))
   const qs = params.toString()
-  return qs ? `/aircraft?${qs}` : '/aircraft'
+  return qs ? `${base}?${qs}` : base
 }
 
 // Compact, windowed list of page numbers to show in the pager. Always includes
@@ -70,7 +86,240 @@ function pageWindow(current: number, total: number): (number | 'gap')[] {
   return out
 }
 
-export default async function AircraftSaleList({ filters }: { filters: Filters }) {
+// Live count of active listings for a make + model family. Used by the
+// `/aircraft/[make]/[model]` SEO pages so the title/H1 N is always accurate.
+// Returns 0 on any failure (the page treats 0 as a 404-worthy thin combo).
+export async function countMakeModel(
+  make: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+    if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
+    const { count, error } = await query
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+// Live count of active listings for a make + model family LOCATED in a given
+// state (USPS code). The intersection of `countMakeModel`'s family filter and
+// `countForSaleState`'s state filter — used by the `/aircraft/[make]/[model]/[state]`
+// intersection SEO pages so the title/H1 N is always accurate, and as the single
+// source of truth for that route's thin-page (count < threshold → 404) guard.
+// Returns 0 on any failure (the page treats that as a 404-worthy thin combo).
+export async function countMakeModelState(
+  make: string,
+  modelPattern: string,
+  notModelPattern: string | undefined,
+  code: string
+): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .eq('state', code)
+    if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
+    const { count, error } = await query
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+// Live count of active for-sale listings located in a given state (USPS code).
+// Used by the `/aircraft/for-sale/[state]` SEO pages for an accurate title/H1 N
+// and by the sitemap as the single source of truth for the count>0 gate.
+// Returns 0 on any failure (the page treats 0 as a 404-worthy thin state).
+export async function countForSaleState(code: string): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { count, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .eq('state', code)
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * The states (USPS code) with the most active listings of a make+model family,
+ * for the make+model page's "Browse {Model} by state" rail. Every returned state
+ * has >= 1 active listing of this family, so its `/aircraft/for-sale/[state]` page
+ * resolves (count > 0) — the rail can never link to a 404/thin state page.
+ * Reads the same `aircraft_for_sale` rows the page already queries; returns [] on
+ * any failure (the caller then simply omits the rail).
+ */
+export async function topStatesForMakeModel(
+  make: string,
+  modelPattern: string,
+  notModelPattern: string | undefined,
+  limit = 8
+): Promise<{ code: string; n: number }[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const base = supabase
+      .from('aircraft_for_sale')
+      .select('state')
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .not('state', 'is', null)
+      .limit(5000)
+    const { data, error } = await (notModelPattern
+      ? base.not('model', 'ilike', notModelPattern)
+      : base)
+    if (error || !data) return []
+    const counts = new Map<string, number>()
+    for (const row of data) {
+      const code = (row.state ?? '').trim().toUpperCase()
+      if (code.length !== 2) continue
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([code, n]) => ({ code, n }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, limit)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * The most-listed make+model FAMILIES in a state, for the state page's "Popular
+ * aircraft for sale in {State}" rail. Each active listing's messy raw make/model
+ * is resolved through `resolveMakeModelFamily` (the single source of truth that
+ * decides which combos have a real `/aircraft/[make]/[model]` page), then
+ * aggregated. Listings that don't resolve to an existing combo (null model,
+ * non-manufacturer make) are skipped — so every returned combo has a live page
+ * and the rail can never link to a 404. Returns [] on any failure.
+ */
+export async function topMakeModelsForState(
+  code: string,
+  limit = 8
+): Promise<{ entry: SeoMakeModel; n: number }[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('make, model')
+      .eq('status', 'active')
+      .eq('state', code)
+      .not('make', 'is', null)
+      .not('model', 'is', null)
+      .limit(5000)
+    if (error || !data) return []
+    const counts = new Map<string, { entry: SeoMakeModel; n: number }>()
+    for (const row of data) {
+      const entry = resolveMakeModelFamily(row.make, row.model)
+      if (!entry) continue
+      const key = `${entry.makeSlug}/${entry.modelSlug}`
+      const existing = counts.get(key)
+      if (existing) existing.n += 1
+      else counts.set(key, { entry, n: 1 })
+    }
+    return [...counts.values()].sort((a, b) => b.n - a.n).slice(0, limit)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Aggregate market stats (median / range / count) for ONE make+model family, for
+ * the make+model page's "Market snapshot" block. Reads exactly the same
+ * `aircraft_for_sale` rows the page already queries (same `status='active'` +
+ * `make`/`modelPattern`/`notModelPattern` filters as `countMakeModel` /
+ * `topStatesForMakeModel` / the rendered list) — just the `asking_price` column,
+ * narrowed to real priced listings. Returns null when the family has fewer than
+ * MIN_SNAPSHOT_LISTINGS priced listings (sparse → no snapshot) or on any failure.
+ * Read-only, no schema change.
+ */
+export async function priceStatsForMakeModel(
+  make: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<PriceStats | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return null
+  try {
+    const supabase = await createServerSupabaseClient()
+    const base = supabase
+      .from('aircraft_for_sale')
+      .select('asking_price')
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .not('asking_price', 'is', null)
+      .gt('asking_price', 0)
+      .limit(5000)
+    const { data, error } = await (notModelPattern
+      ? base.not('model', 'ilike', notModelPattern)
+      : base)
+    if (error || !data) return null
+    const prices = data
+      .map((r) => r.asking_price as number | null)
+      .filter((p): p is number => p != null)
+    return priceStats(prices)
+  } catch {
+    return null
+  }
+}
+
+/** Result of one page-fetch of for-sale listings for the active filters. */
+export interface AircraftPage {
+  /** The listings shown on this page (already filtered/sorted/narrowed). */
+  listings: AircraftForSale[]
+  /** Exact total matching the filters when known; null when not computable. */
+  totalCount: number | null
+  /** 1-based page number that was fetched. */
+  page: number
+  /** True when the underlying query errored on page 1 (genuine failure). */
+  error: boolean
+}
+
+/**
+ * Fetch one page of active for-sale listings for the given filters, applying the
+ * exact same query, ordering, quality floor and price-drop narrowing the
+ * `AircraftSaleList` component renders. Extracted so other server components
+ * (e.g. the SEO pages' JSON-LD) can mark up *exactly* the listings the user sees
+ * without duplicating the query. The component itself now calls this — single
+ * source of truth, no behavior change.
+ */
+export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage> {
   let listings: AircraftForSale[] = []
   // Total number of listings matching the active filters (may exceed the rows
   // shown). null = unknown/not applicable, fall back to the displayed length.
@@ -85,7 +334,7 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
   if (!hasSupabase) {
-    return renderList([], filters, null, page)
+    return { listings: [], totalCount: null, page, error: false }
   }
 
   try {
@@ -97,6 +346,8 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
 
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
     if (filters.model) query = query.eq('model', filters.model)
+    if (filters.modelPattern) query = query.ilike('model', filters.modelPattern)
+    if (filters.notModelPattern) query = query.not('model', 'ilike', filters.notModelPattern)
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))
     if (filters.min_year) query = query.gte('year', parseInt(filters.min_year))
@@ -146,6 +397,62 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     error = true
   }
 
+  return { listings, totalCount, page, error }
+}
+
+// Hydrate the signed-in viewer's saved aircraft ids so cards render filled
+// hearts. UI-only read, mirrors PartnershipList; non-fatal on any failure.
+async function fetchSavedAircraftIds(listings: AircraftForSale[]): Promise<Set<string>> {
+  const savedIds = new Set<string>()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase || listings.length === 0) return savedIds
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: saved } = await supabase
+        .from('saved_listings')
+        .select('listing_id')
+        .eq('user_id', user.id)
+        .eq('listing_type', 'aircraft')
+        .in('listing_id', listings.map((l) => l.id))
+      for (const s of saved ?? []) savedIds.add(s.listing_id as string)
+    }
+  } catch {
+    // Non-fatal: just render without filled hearts.
+  }
+  return savedIds
+}
+
+// Build a make+model FAMILY -> sorted asking-prices map across ALL active priced
+// listings, so each visible card can compare its price to the family median (the
+// "vs market" pill). One lightweight read (make, model, asking_price only),
+// capped like the other rail queries; non-fatal — on any failure we just render
+// no pills. Read-only, no schema change.
+async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return new Map()
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('make, model, asking_price')
+      .eq('status', 'active')
+      .not('asking_price', 'is', null)
+      .gt('asking_price', 0)
+      .limit(5000)
+    if (error || !data) return new Map()
+    return buildFamilyPriceMap(data)
+  } catch {
+    return new Map()
+  }
+}
+
+export default async function AircraftSaleList({ filters }: { filters: Filters }) {
+  const { listings, totalCount, page, error } = await fetchAircraftPage(filters)
+
   // An offset past the end of the result set makes PostgREST return a
   // "range not satisfiable" error. Page 1 (offset 0) is always satisfiable,
   // so an error there is genuine; an error on page > 1 just means the page is
@@ -158,14 +465,21 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     )
   }
 
-  return renderList(listings, filters, totalCount, page)
+  const [savedIds, familyPriceMap] = await Promise.all([
+    fetchSavedAircraftIds(listings),
+    fetchFamilyPriceMap(),
+  ])
+
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap)
 }
 
 function renderList(
   listings: AircraftForSale[],
   filters: Filters,
   totalCount: number | null,
-  page: number
+  page: number,
+  savedIds: Set<string> = new Set(),
+  familyPriceMap: Map<string, number[]> = new Map()
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -228,7 +542,12 @@ function renderList(
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
-          <AircraftSaleCard key={p.id} p={p} />
+          <AircraftSaleCard
+            key={p.id}
+            p={p}
+            saved={savedIds.has(p.id)}
+            comp={compVsMarket(p, familyPriceMap)}
+          />
         ))}
       </div>
 

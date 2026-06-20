@@ -63,7 +63,7 @@ export default function CaptureClient() {
 
       {state.phase === 'done' && (
         <div className="flex flex-col items-center gap-3">
-          <Check className="h-10 w-10 text-emerald-500" />
+          <Check className="h-10 w-10 text-sky-500" />
           <h1 className="text-xl font-bold text-slate-900">Captured ✓</h1>
           <p className="text-sm text-slate-500">
             Saved {state.rehosted} of {state.attempted} image{state.attempted === 1 ? '' : 's'}.

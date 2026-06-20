@@ -1,0 +1,847 @@
+=== /aircraft/cessna/172 — served JSON-LD (ItemList + AggregateOffer) ===
+
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Cessna 172 for sale",
+  "url": "http://localhost:3000/aircraft/cessna/172",
+  "numberOfItems": 40,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172m Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 164900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/97801-pendleton-oregon-united-states/cessna-172m-skyhawk-for-sale-601641"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/97801-pendleton-oregon-united-states/cessna-172m-skyhawk-for-sale-601641"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172h Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 174900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172h-skyhawk/muscle-shoals-alabama-united-states/cessna-172h-skyhawk-for-sale-601487"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172h-skyhawk/muscle-shoals-alabama-united-states/cessna-172h-skyhawk-for-sale-601487"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172rg Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 149950,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172rg-skyhawk/livermore-ca-usa/cessna-172rg-skyhawk-for-sale-501150"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172rg-skyhawk/livermore-ca-usa/cessna-172rg-skyhawk-for-sale-501150"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 4,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172m Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 174500,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/mount-vernon-washington-united-states/cessna-172m-skyhawk-for-sale-601528"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/mount-vernon-washington-united-states/cessna-172m-skyhawk-for-sale-601528"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 5,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172h Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 75000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172h-skyhawk/saint-lina-ab-t0a-2k0-canada/cessna-172h-skyhawk-for-sale-501377"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172h-skyhawk/saint-lina-ab-t0a-2k0-canada/cessna-172h-skyhawk-for-sale-501377"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 6,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172s Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 325000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172s-skyhawk/united-states/cessna-172s-skyhawk-for-sale-601561"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172s-skyhawk/united-states/cessna-172s-skyhawk-for-sale-601561"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 7,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172n Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 169000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172n-skyhawk/pitt-meadows-bc-canada/cessna-172n-skyhawk-for-sale-501177"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172n-skyhawk/pitt-meadows-bc-canada/cessna-172n-skyhawk-for-sale-501177"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 8,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172rg Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 119950,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172rg-skyhawk/livermore-ca-usa/cessna-172rg-skyhawk-for-sale-501148"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172rg-skyhawk/livermore-ca-usa/cessna-172rg-skyhawk-for-sale-501148"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 9,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172n Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 169000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172n-skyhawk/89423-minden-nevada-united-states/cessna-172n-skyhawk-for-sale-601022"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172n-skyhawk/89423-minden-nevada-united-states/cessna-172n-skyhawk-for-sale-601022"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 10,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172rg Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 189000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172rg-skyhawk/mcallen-texas-united-states/cessna-172rg-skyhawk-for-sale-601175"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172rg-skyhawk/mcallen-texas-united-states/cessna-172rg-skyhawk-for-sale-601175"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 11,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172n Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 179000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172n-skyhawk/85027-phoenix-arizona-united-states/cessna-172n-skyhawk-for-sale-601491"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172n-skyhawk/85027-phoenix-arizona-united-states/cessna-172n-skyhawk-for-sale-601491"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 12,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172m Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 104000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/fort-smith-nt-x0e-canada/cessna-172m-skyhawk-for-sale-500642"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/fort-smith-nt-x0e-canada/cessna-172m-skyhawk-for-sale-500642"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 13,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172m Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 125000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/san-diego-ca-usa/cessna-172m-skyhawk-for-sale-501038"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/san-diego-ca-usa/cessna-172m-skyhawk-for-sale-501038"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 14,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172c Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 299000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172c-skyhawk/cherry-capital-airport-tvc-727-fly-dont-dr-traverse-city-mi-49686-usa/cessna-172c-skyhawk-for-sale-501678"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172c-skyhawk/cherry-capital-airport-tvc-727-fly-dont-dr-traverse-city-mi-49686-usa/cessna-172c-skyhawk-for-sale-501678"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 15,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172 Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 64900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172-skyhawk/texas-united-states/cessna-172-skyhawk-for-sale-601566"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172-skyhawk/texas-united-states/cessna-172-skyhawk-for-sale-601566"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 16,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172k Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 129950,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172k-skyhawk/livermore-municipal-airport-lvk-680-terminal-cir-livermore-ca-94551-usa/cessna-172k-skyhawk-for-sale-501161"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172k-skyhawk/livermore-municipal-airport-lvk-680-terminal-cir-livermore-ca-94551-usa/cessna-172k-skyhawk-for-sale-501161"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 17,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172d Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 99999,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172d-skyhawk/texas-usa/cessna-172d-skyhawk-for-sale-501794"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172d-skyhawk/texas-usa/cessna-172d-skyhawk-for-sale-501794"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 18,
+      "item": {
+        "@type": "Product",
+        "name": "1967 Cessna 172H",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 65000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1967-cessna-172h/36845"
+        },
+        "url": "https://www.hangar67.com/aircraft/1967-cessna-172h/36845"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 19,
+      "item": {
+        "@type": "Product",
+        "name": "1976 Cessna 172M",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 120000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1976-cessna-172m/35324"
+        },
+        "url": "https://www.hangar67.com/aircraft/1976-cessna-172m/35324"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 20,
+      "item": {
+        "@type": "Product",
+        "name": "1956 Cessna 172",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 87000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1956-cessna-172/37504"
+        },
+        "url": "https://www.hangar67.com/aircraft/1956-cessna-172/37504"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 21,
+      "item": {
+        "@type": "Product",
+        "name": "1979 Cessna 172N",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 118000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1979-cessna-172n/37137"
+        },
+        "url": "https://www.hangar67.com/aircraft/1979-cessna-172n/37137"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 22,
+      "item": {
+        "@type": "Product",
+        "name": "1981 Cessna 172RG",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 119000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1981-cessna-172rg/37509"
+        },
+        "url": "https://www.hangar67.com/aircraft/1981-cessna-172rg/37509"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 23,
+      "item": {
+        "@type": "Product",
+        "name": "1977 Cessna 172N",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 119900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1977-cessna-172n/40127"
+        },
+        "url": "https://www.hangar67.com/aircraft/1977-cessna-172n/40127"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 24,
+      "item": {
+        "@type": "Product",
+        "name": "2001 Cessna 172S Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 279900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/2001-cessna-172s-skyhawk/40270"
+        },
+        "url": "https://www.hangar67.com/aircraft/2001-cessna-172s-skyhawk/40270"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 25,
+      "item": {
+        "@type": "Product",
+        "name": "1965 Cessna 172G",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 104900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1965-cessna-172g/40228"
+        },
+        "url": "https://www.hangar67.com/aircraft/1965-cessna-172g/40228"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 26,
+      "item": {
+        "@type": "Product",
+        "name": "1973 Cessna 172M",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 159900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1973-cessna-172m/40217"
+        },
+        "url": "https://www.hangar67.com/aircraft/1973-cessna-172m/40217"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 27,
+      "item": {
+        "@type": "Product",
+        "name": "1975 Cessna 172M",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 165000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.hangar67.com/aircraft/1975-cessna-172m/40189"
+        },
+        "url": "https://www.hangar67.com/aircraft/1975-cessna-172m/40189"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 28,
+      "item": {
+        "@type": "Product",
+        "name": "CESSNA 172G",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 55000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2027733-Cessna-172G.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2027733-Cessna-172G.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 29,
+      "item": {
+        "@type": "Product",
+        "name": "CESSNA 172RG CUTLASS",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 149900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2054718-Cessna-172RG-Cutlass.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2054718-Cessna-172RG-Cutlass.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 30,
+      "item": {
+        "@type": "Product",
+        "name": "1978 CESSNA 172 180 HP",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1978 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 155000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2055342-1978-CESSNA-172-180-HP.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2055342-1978-CESSNA-172-180-HP.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 31,
+      "item": {
+        "@type": "Product",
+        "name": "172 R&S MANUALS",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "Cessna 172 aircraft for sale.",
+        "url": "https://www.barnstormers.com/classified-2055276-172-rands-manuals.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 32,
+      "item": {
+        "@type": "Product",
+        "name": "1961 CESSNA 172B",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1961 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 72500,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2048481-1961-Cessna-172B.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2048481-1961-Cessna-172B.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 33,
+      "item": {
+        "@type": "Product",
+        "name": "1984 CESSNA 172Q-180HP",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1984 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 225000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2055317-1984-CESSNA-172Q-180HP.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2055317-1984-CESSNA-172Q-180HP.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 34,
+      "item": {
+        "@type": "Product",
+        "name": "1980 C172RG FOR SALE",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1980 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 90000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2055062-1980-C172RG-FOR-SALE.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2055062-1980-C172RG-FOR-SALE.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 35,
+      "item": {
+        "@type": "Product",
+        "name": "PARTNERSHIP - 1967 C172H - N03",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1967 Cessna 172 aircraft for sale.",
+        "url": "https://www.barnstormers.com/classified-1800724-Partnership---1967-C172H---N03.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 36,
+      "item": {
+        "@type": "Product",
+        "name": "1964 CESSNA 172 E FLOAT PLANE",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1964 Cessna 172 aircraft for sale.",
+        "url": "https://www.barnstormers.com/classified-2055141-1964-Cessna-172-E-float-plane.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 37,
+      "item": {
+        "@type": "Product",
+        "name": "1980 CESSNA 172RG CUTLASS",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1980 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 89995,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2050441-1980-Cessna-172RG-Cutlass.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2050441-1980-Cessna-172RG-Cutlass.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 38,
+      "item": {
+        "@type": "Product",
+        "name": "2004 CESSNA 172SP",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "2004 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 295000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2055007-2004-Cessna-172SP.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2055007-2004-Cessna-172SP.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 39,
+      "item": {
+        "@type": "Product",
+        "name": "BUYER FOR CESSNA 172 N OR P",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "Cessna 172 aircraft for sale.",
+        "url": "https://www.barnstormers.com/classified-2032566-Buyer-for-Cessna-172-N-or-P.html?catid=17352"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 40,
+      "item": {
+        "@type": "Product",
+        "name": "1969 CESSNA 172K FOR SALE",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "description": "1969 Cessna 172 aircraft for sale.",
+        "offers": {
+          "@type": "Offer",
+          "price": 125000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://www.barnstormers.com/classified-2055166-1969-Cessna-172K-For-Sale.html?catid=17352"
+        },
+        "url": "https://www.barnstormers.com/classified-2055166-1969-Cessna-172K-For-Sale.html?catid=17352"
+      }
+    }
+  ]
+}
+
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Cessna 172 for sale",
+  "url": "http://localhost:3000/aircraft/cessna/172",
+  "offers": {
+    "@type": "AggregateOffer",
+    "priceCurrency": "USD",
+    "lowPrice": 55000,
+    "highPrice": 325000,
+    "offerCount": 36,
+    "availability": "https://schema.org/InStock"
+  }
+}

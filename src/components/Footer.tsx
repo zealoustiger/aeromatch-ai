@@ -12,6 +12,23 @@ const exploreLinks = [
   { href: '/partnerships/seeking/new', label: 'Post a seeking listing' },
 ]
 
+const toolLinks = [
+  { href: '/tools', label: 'All tools' },
+  { href: '/tools/cost-calculator', label: 'Cost calculator' },
+  { href: '/tools/earnings-calculator', label: 'Earnings calculator' },
+]
+
+const guideLinks = [
+  { href: '/guides', label: 'All guides' },
+  { href: '/guides/aircraft-co-ownership', label: 'How co-ownership works' },
+  { href: '/guides/cost-of-aircraft-co-ownership', label: 'Cost of co-ownership' },
+  { href: '/guides/aircraft-partnership-agreement', label: 'Partnership agreement' },
+  { href: '/guides/leaseback-vs-co-ownership', label: 'Leaseback vs. co-ownership' },
+  { href: '/guides/how-to-find-aircraft-partners', label: 'How to find partners' },
+  { href: '/guides/aircraft-pre-purchase-inspection', label: 'Pre-purchase inspection' },
+  { href: '/guides/aircraft-title-escrow-and-closing', label: 'Title, escrow & closing' },
+]
+
 const companyLinks = [
   { href: '/about', label: 'About ClubHanger' },
 ]
@@ -37,6 +54,22 @@ export default function Footer() {
             <h3 className="mb-3 text-sm font-semibold text-slate-900">Explore</h3>
             <ul className="space-y-2">
               {exploreLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Tools</h3>
+            <ul className="space-y-2">
+              {toolLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Guides</h3>
+            <ul className="space-y-2">
+              {guideLinks.map(({ href, label }) => (
                 <li key={href}>
                   <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
                 </li>

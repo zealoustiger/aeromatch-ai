@@ -3,14 +3,17 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield } from 'lucide-react'
+import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
-const links = [
+const links: { href: string; label: string; icon?: LucideIcon }[] = [
   { href: '/partnerships', label: 'Partnerships' },
   { href: '/aircraft', label: 'Planes for Sale' },
+  { href: '/tools', label: 'Tools', icon: Calculator },
+  { href: '/guides', label: 'Guides' },
   { href: '/about', label: 'About' },
 ]
 
@@ -57,17 +60,18 @@ export default function Nav() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 sm:flex">
-            {links.map(({ href, label }) => (
+            {links.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}
                 className={cn(
-                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   pathname.startsWith(href)
                     ? 'bg-sky-50 text-sky-700'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 )}
               >
+                {Icon && <Icon className="h-3.5 w-3.5" />}
                 {label}
               </Link>
             ))}
@@ -190,15 +194,16 @@ export default function Nav() {
         )}
       >
         <nav className="mx-auto max-w-7xl divide-y divide-slate-100 px-4 pb-safe">
-          {links.map(({ href, label }) => (
+          {links.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className={cn(
-                'flex items-center py-4 text-base font-medium transition-colors',
+                'flex items-center gap-2 py-4 text-base font-medium transition-colors',
                 pathname.startsWith(href) ? 'text-sky-700' : 'text-slate-700'
               )}
             >
+              {Icon && <Icon className="h-4 w-4" />}
               {label}
             </Link>
           ))}

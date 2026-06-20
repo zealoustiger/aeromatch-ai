@@ -1,80 +1,33 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership } from '@/lib/types'
-import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { getPartnershipListings, type PartnershipFilters } from '@/lib/partnershipsQuery'
 import PartnershipCard from './PartnershipCard'
 
-interface Filters {
-  airport?: string
-  airports?: string
-  radius?: string
-  state?: string
-  make?: string
-  max_monthly?: string
-  max_buyin?: string
-  share_type?: string
-}
+/**
+ * Partnership list surface. The fetch + trust-sort now live in the shared
+ * `getPartnershipListings` helper (so the state/make pages can build ItemList
+ * JSON-LD from the exact same result set this renders — no cloaking). This
+ * component additionally hydrates the signed-in viewer's saved listings so cards
+ * render filled hearts; that read is UI-only and stays here.
+ */
+export default async function PartnershipList({ filters }: { filters: PartnershipFilters }) {
+  const { listings, airportList, error } = await getPartnershipListings(filters)
 
-export default async function PartnershipList({ filters }: { filters: Filters }) {
-  let listings: Partnership[] = []
-  let error = false
-
-  // Resolve airport list: multi-airport input OR single airport (with optional radius)
-  let airportList: string[] = []
-  if (filters.airports) {
-    airportList = filters.airports.split(',').map((a) => a.trim().toUpperCase()).filter(Boolean)
-  } else if (filters.airport) {
-    const radiusMiles = filters.radius ? parseInt(filters.radius) : 0
-    if (radiusMiles > 0) {
-      airportList = await getAirportsWithinRadius(filters.airport, radiusMiles)
-    } else {
-      airportList = [filters.airport.toUpperCase()]
-    }
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-
-  if (!hasSupabase) {
-    listings = MOCK_PARTNERSHIPS.filter((p) => {
-      if (airportList.length > 0 && !airportList.includes(p.home_airport)) return false
-      if (filters.state && p.state !== filters.state) return false
-      if (filters.make && !p.make.toLowerCase().includes(filters.make.toLowerCase())) return false
-      if (filters.share_type && p.share_type !== filters.share_type) return false
-      if (filters.max_monthly && (p.monthly_fixed ?? 0) > parseInt(filters.max_monthly)) return false
-      if (filters.max_buyin && (p.buy_in_price ?? 0) > parseInt(filters.max_buyin)) return false
-      return true
-    })
-    return renderList(listings, filters, airportList)
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-100 bg-red-50 p-8 text-center text-sm text-red-600">
+        Failed to load listings. Please try again.
+      </div>
+    )
   }
 
   let savedIds = new Set<string>()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
-  try {
-    const supabase = await createServerSupabaseClient()
-    let query = supabase
-      .from('partnerships')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-
-    if (airportList.length > 1) {
-      query = query.in('home_airport', airportList)
-    } else if (airportList.length === 1) {
-      query = query.ilike('home_airport', `%${airportList[0]}%`)
-    }
-
-    if (filters.state) query = query.eq('state', filters.state)
-    if (filters.make) query = query.ilike('make', `%${filters.make}%`)
-    if (filters.share_type) query = query.eq('share_type', filters.share_type)
-    if (filters.max_monthly) query = query.lte('monthly_fixed', parseInt(filters.max_monthly))
-    if (filters.max_buyin) query = query.lte('buy_in_price', parseInt(filters.max_buyin))
-
-    const { data, error: err } = await query.limit(50)
-    if (err) { error = true } else { listings = data ?? [] }
-
-    // Hydrate the current user's favorited listings so cards render filled hearts.
-    if (!error && listings.length > 0) {
+  if (hasSupabase && listings.length > 0) {
+    try {
+      const supabase = await createServerSupabaseClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: saved } = await supabase
@@ -85,23 +38,15 @@ export default async function PartnershipList({ filters }: { filters: Filters })
           .in('listing_id', listings.map((l) => l.id))
         savedIds = new Set((saved ?? []).map((s) => s.listing_id as string))
       }
+    } catch {
+      // Non-fatal: just render without filled hearts.
     }
-  } catch {
-    error = true
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-100 bg-red-50 p-8 text-center text-sm text-red-600">
-        Failed to load listings. Please try again.
-      </div>
-    )
   }
 
   return renderList(listings, filters, airportList, savedIds)
 }
 
-function renderList(listings: Partnership[], filters: Filters, airportList: string[], savedIds: Set<string> = new Set()) {
+function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set()) {
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">

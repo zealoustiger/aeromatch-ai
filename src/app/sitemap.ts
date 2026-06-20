@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { STATE_CODES, SEO_MAKES, SITE_URL } from '@/lib/seo'
+import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInventoryMakeModelStates, SITE_URL, stateSlug } from '@/lib/seo'
+import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
+import { getNearAirportSitemapIcaos } from '@/lib/nearbyPartnerships'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
@@ -8,6 +10,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/partnerships`, changeFrequency: 'hourly', priority: 0.9 },
     { url: `${SITE_URL}/partnerships/seeking`, changeFrequency: 'hourly', priority: 0.8 },
     { url: `${SITE_URL}/aircraft`, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${SITE_URL}/tools`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/tools/cost-calculator`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/tools/earnings-calculator`, changeFrequency: 'monthly', priority: 0.6 },
+    // Guides (content / informational-intent pillar pages)
+    { url: `${SITE_URL}/guides`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/cost-of-aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-partnership-agreement`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/leaseback-vs-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/how-to-find-aircraft-partners`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-pre-purchase-inspection`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-title-escrow-and-closing`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.3 },
   ]
 
@@ -25,6 +39,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
+  let nearAirportPages: MetadataRoute.Sitemap = []
+  let makePages2: MetadataRoute.Sitemap = []
+  let makeModelPages: MetadataRoute.Sitemap = []
+  let makeModelStatePages: MetadataRoute.Sitemap = []
+  let forSaleStatePages: MetadataRoute.Sitemap = []
 
   try {
     const supabase = await createServerSupabaseClient()
@@ -48,9 +67,101 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
+
+    // Geo "partnerships near [airport]" pages (`/partnerships/near/[icao]`).
+    // Emit ONLY airports with real nearby partnership inventory (>= MIN_NEARBY
+    // within NEAR_RADIUS_NM). The page route 404s below that threshold (see
+    // near/[icao]/page.tsx), so this helper is the single source of truth — a
+    // thin airport must never appear in the sitemap (it would be a soft-404).
+    const nearIcaos = await getNearAirportSitemapIcaos()
+    nearAirportPages = nearIcaos.map((icao) => ({
+      url: `${SITE_URL}/partnerships/near/${icao}`,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
+    // Make+model for-sale pages — emit ONLY combos that have real live inventory.
+    // The page route 404s when its live count is 0 (see page.tsx + countMakeModel),
+    // so reuse the same count here as the single source of truth: a combo with no
+    // listings must never appear in the sitemap (it would be a soft-404). The
+    // combo list is the SAME inventory-backed set `generateStaticParams` builds,
+    // so the sitemap and the generated pages can't drift.
+    const comboList = await getInventoryMakeModels()
+    const counts = await Promise.all(
+      comboList.map((e) =>
+        countMakeModel(e.make, e.modelPattern, e.notModelPattern)
+      )
+    )
+    makeModelPages = comboList.flatMap((e, i) =>
+      counts[i] > 0
+        ? [{
+            url: `${SITE_URL}/aircraft/${e.makeSlug}/${e.modelSlug}`,
+            changeFrequency: 'daily' as const,
+            priority: 0.8,
+          }]
+        : []
+    )
+
+    // Make-only for-sale aggregation pages (`/aircraft/[make]`). Emit ONLY makes
+    // with real live inventory: reuse the same per-combo `counts` above as the
+    // single source of truth — a make is live iff ≥1 of its model combos has a
+    // live count > 0. The page route 404s a make with no live models (see
+    // [make]/page.tsx), so this gate keeps the sitemap free of soft-404s and the
+    // make pages can't drift from the model pages.
+    const liveMakeSlugs = new Set<string>()
+    comboList.forEach((e, i) => {
+      if (counts[i] > 0) liveMakeSlugs.add(e.makeSlug)
+    })
+    makePages2 = [...liveMakeSlugs].map((makeSlug) => ({
+      url: `${SITE_URL}/aircraft/${makeSlug}`,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
+    // Model × state intersection pages (`/aircraft/[make]/[model]/[state]`) —
+    // emit ONLY inventory-backed combos (>= threshold live listings). Reuse the
+    // SAME `getInventoryMakeModelStates` helper the route's generateStaticParams
+    // uses as the single source of truth, so the sitemap and the generated pages
+    // can never drift and no sub-threshold combo (a soft-404) ever appears here.
+    // The set is small (~tens of combos), so no cap is applied.
+    const intersections = await getInventoryMakeModelStates()
+    makeModelStatePages = intersections.map(({ entry, stateSlug: slug }) => ({
+      url: `${SITE_URL}/aircraft/${entry.makeSlug}/${entry.modelSlug}/${slug}`,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
+    // State-level aircraft-for-sale pages — emit ONLY states with real live
+    // inventory. The page route 404s when its live count is 0 (see the
+    // for-sale/[state] page + countForSaleState), so reuse the same count here as
+    // the single source of truth: a state with no listings must never appear in
+    // the sitemap (it would be a soft-404).
+    const stateCounts = await Promise.all(
+      STATE_CODES.map((code) => countForSaleState(code))
+    )
+    forSaleStatePages = STATE_CODES.flatMap((code, i) =>
+      stateCounts[i] > 0
+        ? [{
+            url: `${SITE_URL}/aircraft/for-sale/${stateSlug(STATE_NAMES[code])}`,
+            changeFrequency: 'daily' as const,
+            priority: 0.8,
+          }]
+        : []
+    )
   } catch {
     // Supabase unavailable at build time — ship static pages only
   }
 
-  return [...staticPages, ...statePages, ...makePages, ...airportPages, ...listingPages]
+  return [
+    ...staticPages,
+    ...statePages,
+    ...makePages,
+    ...makePages2,
+    ...makeModelPages,
+    ...makeModelStatePages,
+    ...forSaleStatePages,
+    ...airportPages,
+    ...nearAirportPages,
+    ...listingPages,
+  ]
 }

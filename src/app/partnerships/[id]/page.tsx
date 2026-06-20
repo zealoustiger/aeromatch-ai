@@ -5,25 +5,42 @@ import { MapPin, Clock, Calendar, ChevronLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
-import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
-import { SITE_URL } from '@/lib/seo'
+import { getPartnershipById } from '@/lib/partnerships'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import SaveListingButton from '@/components/SaveListingButton'
+import TrustBadge from '@/components/TrustBadge'
+import ListingOwnerNudge from '@/components/ListingOwnerNudge'
+import PhotoGallery from '@/components/PhotoGallery'
+import SimilarListings from '@/components/SimilarListings'
+import CostCalculator from '@/components/CostCalculator'
+import ShareListingButton from '@/components/ShareListingButton'
+import { shareFractionFromType } from '@/lib/calculators'
 
-async function getPartnership(id: string): Promise<Partnership | null> {
+// Single-listing fetch reuses the shared `getPartnershipById` helper (the
+// `/compare` view uses the same source of truth — no duplicated query).
+const getPartnership = getPartnershipById
+
+/**
+ * Whether the signed-in viewer is this listing's owner.
+ *
+ * Owner = the member whose id matches the listing's `poster_id` (set to the
+ * poster's `user.id` at create time). Returns false for logged-out visitors,
+ * non-owners, and scraped listings (poster_id null). Read-only use of the frozen
+ * supabase-server client. Gates the owner-only "Improve your listing" nudge.
+ */
+async function isListingOwner(posterId: string | null): Promise<boolean> {
+  if (!posterId) return false
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-
-  if (!hasSupabase) {
-    return MOCK_PARTNERSHIPS.find((p) => p.id === id) ?? null
-  }
+  if (!hasSupabase) return false
 
   const supabase = await createServerSupabaseClient()
-  const { data } = await supabase.from('partnerships').select('*').eq('id', id).single()
-  return data
+  const { data: { user } } = await supabase.auth.getUser()
+  return !!user && user.id === posterId
 }
 
 async function isListingSaved(id: string): Promise<boolean> {
@@ -61,14 +78,30 @@ export async function generateMetadata({
     p.description?.slice(0, 155) ??
     `${aircraft} aircraft partnership at ${location}.${p.buy_in_price ? ` Buy-in ${formatPrice(p.buy_in_price)}.` : ''}`
 
+  const url = `${SITE_URL}/partnerships/${p.id}`
+  // Use the listing's REAL photo when it has one (not the generic make
+  // placeholder); otherwise fall back to the site default OG image so a shared
+  // link always unfurls into a real card, never a broken/empty image.
+  const hasRealPhoto = !!p.images?.[0] && p.image_is_placeholder !== true
+  const ogImage = hasRealPhoto ? p.images![0] : DEFAULT_OG_IMAGE
+
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/partnerships/${p.id}` },
+    alternates: { canonical: url },
     openGraph: {
       title,
       description,
-      images: p.images?.[0] ? [p.images[0]] : undefined,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: ogImage, alt: `${aircraft} at ${p.home_airport}` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
     },
   }
 }
@@ -98,6 +131,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   if (!p) notFound()
 
   const saved = await isListingSaved(p.id)
+  const isOwner = await isListingOwner(p.poster_id)
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -123,12 +157,24 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
           >
             <ChevronLeft className="h-4 w-4" /> Back to Partnerships
           </Link>
-          <SaveListingButton listingId={p.id} initialSaved={saved} variant="full" />
+          <div className="flex items-center gap-2">
+            <ShareListingButton url={`${SITE_URL}/partnerships/${p.id}`} />
+            <SaveListingButton listingId={p.id} initialSaved={saved} variant="full" />
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
           <div className="space-y-6 lg:col-span-2 lg:order-first">
+            {/* Photo gallery — multi-photo with thumbnails + lightbox, degrades
+                to a single image / make placeholder ("Not actual plane photo"). */}
+            <PhotoGallery
+              images={p.images}
+              make={p.make}
+              alt={`${aircraft} at ${p.home_airport}`}
+              imageIsPlaceholder={p.image_is_placeholder}
+            />
+
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
@@ -234,6 +280,18 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
               </dl>
             </div>
 
+            {/* Compact cost estimator — pre-filled from this listing's real
+                numbers where available; degrades to sensible defaults when a
+                field is missing (the component handles the nulls). Lets a buyer
+                see their true monthly / per-hour cost right on the listing. */}
+            <CostCalculator
+              variant="compact"
+              initialBuyIn={p.buy_in_price}
+              initialMonthlyFixed={p.monthly_fixed}
+              initialHourlyWet={p.hourly_wet}
+              shareFraction={shareFractionFromType(p.share_type)}
+            />
+
             {/* Structure card */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Structure</h2>
@@ -263,6 +321,15 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
               </dl>
             </div>
 
+            {/* Owner-only "Improve your listing" nudge — slice 3. Renders only
+                for the listing's owner and only when signals are missing. No
+                existing per-listing edit route yet, so it links to the post
+                flow (the only listing-management surface). */}
+            {isOwner && <ListingOwnerNudge p={p} editHref="/partnerships/new" />}
+
+            {/* Trust / completeness — slice 1 of the listing trust layer */}
+            <TrustBadge p={p} variant="checklist" />
+
             {/* Contact card — desktop only (mobile uses sticky bar) */}
             <div className="hidden rounded-xl border border-sky-200 bg-sky-50 p-5 lg:block">
               <h2 className="mb-1 text-sm font-semibold text-sky-800">Interested?</h2>
@@ -282,6 +349,13 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
               <ReportListing listingId={p.id} />
             </div>
           </div>
+        </div>
+
+        {/* Similar partnerships — real other listings (same make / state /
+            airport), excludes this one, crawlable <Link> cards. Renders nothing
+            when there are no sensible matches. */}
+        <div className="mt-10">
+          <SimilarListings current={p} />
         </div>
       </div>
 

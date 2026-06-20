@@ -1,29 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { Partnership } from '@/lib/types'
-import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { getLatestPartnerships } from '@/lib/partnerships'
 import FeaturedListingCard from './FeaturedListingCard'
-
-async function getLatestPartnerships(limit: number): Promise<Partnership[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-
-  if (!hasSupabase) return MOCK_PARTNERSHIPS.slice(0, limit)
-
-  try {
-    const supabase = await createServerSupabaseClient()
-    const { data } = await supabase
-      .from('partnerships')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(limit)
-    return data ?? []
-  } catch {
-    return []
-  }
-}
 
 export default async function FeaturedListings() {
   const listings = await getLatestPartnerships(6)

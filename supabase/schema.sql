@@ -373,6 +373,34 @@ create policy "saved_listings_owner_all" on saved_listings
 create index if not exists saved_listings_user_id_idx on saved_listings (user_id);
 
 -- =====================================================
+-- ALERTS (email capture for new-listing alerts)
+-- =====================================================
+-- Visitors opt into alerts for a make/model or state from the programmatic
+-- for-sale pages — NO account required. status='pending' is the seam for a
+-- future double-opt-in confirmation (slice 2). Added 2026-06-20; strictly
+-- additive + PII-protected: anon can INSERT but there is NO public SELECT
+-- (mirrors the `waitlist` table — read submissions via service role / dashboard).
+create table if not exists alerts (
+  id          uuid        default gen_random_uuid() primary key,
+  email       text        not null,
+  context     text,
+  source_path text,
+  status      text        not null default 'pending',
+  created_at  timestamptz default now(),
+  unique(email, source_path)
+);
+
+alter table alerts enable row level security;
+
+create policy "alerts_anyone_insert" on alerts
+  for insert with check (true);
+
+create policy "alerts_service_read" on alerts
+  for select using (auth.role() = 'service_role');
+
+create index if not exists alerts_status_idx on alerts (status);
+
+-- =====================================================
 -- THREADS (one per listing + inquirer pair)
 -- =====================================================
 create table if not exists threads (
@@ -431,13 +459,14 @@ create index on partnership_seekers (home_airport);
 create index on partnership_seekers (status);
 create index on partnership_seekers (state);
 
--- Admin daily-report feedback (Submit feedback action → Claude reads to make backlog). Service-role only.
+-- Admin daily-report feedback (written by the admin "Submit feedback" action,
+-- read by Claude to generate backlog items). Service-role only.
 create table if not exists report_feedback (
   id          uuid        default gen_random_uuid() primary key,
   created_at  timestamptz default now(),
   body        text        not null,
   source      text        default 'daily_report',
-  status      text        default 'new',
-  response    text
+  status      text        default 'new',   -- 'new' | 'processed'
+  response    text                          -- Claude's reply / what was done
 );
 alter table report_feedback enable row level security;

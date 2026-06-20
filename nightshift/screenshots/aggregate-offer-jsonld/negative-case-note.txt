@@ -1,0 +1,17 @@
+NEGATIVE CASE (<2 priced listings → NO AggregateOffer):
+
+Contract: buildAircraftAggregateOfferJsonLd returns null when fewer than 2
+listings have a numeric asking_price > 0. The page then emits NO AggregateOffer
+script (the `{aggregateOfferJsonLd && (...)}` guard renders nothing).
+
+Proven by unit test "AggregateOffer: returns null with fewer than 2 priced
+listings (no fabrication)" (src/lib/aircraftJsonLd.test.ts) — covers 1-priced,
+0-priced, and empty-set cases, all assert null. 10/10 tests pass.
+
+Served-HTML verification: a full scan of live make+model+state combos
+(11 states x 9 models) under `next start` found NO served page with <2 priced
+listings — current real inventory is well-priced, so the guard never fires on a
+healthy page. The "count reflects only priced" path IS observed live on
+/aircraft/cessna/172: ItemList numberOfItems=40 but offerCount=36 (4 unpriced
+"Make offer"/no-price listings correctly excluded), lowPrice=55000,
+highPrice=325000 — exactly matching the real ItemList offer min/max/count.

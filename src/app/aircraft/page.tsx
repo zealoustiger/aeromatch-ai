@@ -2,11 +2,18 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 
 import { Plane, SlidersHorizontal } from 'lucide-react'
+import Link from 'next/link'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
+import AlertSignup from '@/components/AlertSignup'
+import Breadcrumbs from '@/components/Breadcrumbs'
+import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
+import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug } from '@/lib/seo'
+import { CompareProvider } from '@/components/CompareProvider'
+import CompareTray from '@/components/CompareTray'
 
 export const metadata: Metadata = {
   title: 'Aircraft for Sale — Search GA Listings From Across the Web',
@@ -26,8 +33,28 @@ export default async function AircraftPage({
   const activeFilterCount = Object.values(params).filter(Boolean).length
   const facets = await getAircraftFacets()
 
+  // Filter-aware email-alert context + reproducible source path. The route-based
+  // for-sale pages carry their scope in the URL path; `/aircraft` carries it in
+  // the query string, so we preserve the active query on the source path and
+  // describe the filters in the alert context (e.g. "Cessna 172 in California").
+  const alertContext = describeAircraftFilters(params)
+  const alertQuery = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]
+  ).toString()
+  const alertSourcePath = alertQuery ? `/aircraft?${alertQuery}` : '/aircraft'
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <CompareProvider>
+    {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-10 lg:px-8">
+      {/* Breadcrumb */}
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Aircraft for Sale' },
+        ]}
+      />
+
       {/* Page header */}
       <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -75,9 +102,35 @@ export default async function AircraftPage({
             ClubHanger is not the seller. Listing data may be out of date — confirm details on the
             source listing.
           </p>
+
+          {/* Email-alerts capture — inline, no account required. Filter-aware:
+              the context describes the active search so the alert is useful. */}
+          <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
+
+          {/* Browse by state — crawlable internal links to the per-state for-sale pages */}
+          <div className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-3 text-base font-semibold text-slate-900">Aircraft for sale by state</h2>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {STATE_CODES.map((c) => (
+                <Link
+                  key={c}
+                  href={`/aircraft/for-sale/${stateSlug(STATE_NAMES[c])}`}
+                  className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                >
+                  {STATE_NAMES[c]}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Buying a plane? — related-guides cross-link block (internal linking
+              toward the buyer-guide cluster). Additive; no new page. */}
+          <ForSaleGuideLinks className="mt-4" />
         </div>
       </div>
     </div>
+    <CompareTray />
+    </CompareProvider>
   )
 }
 

@@ -1,12 +1,18 @@
 'use client'
 
 import Image from 'next/image'
-import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
+import { resolveMakeModelFamily } from '@/lib/seo'
+import type { CompResult } from '@/lib/aircraftComps'
+import CompareToggle from './CompareToggle'
+import SaveListingButton from './SaveListingButton'
+import AircraftTrustBadge from './AircraftTrustBadge'
 
 const DAY_MS = 86_400_000
 
@@ -44,7 +50,44 @@ function aircraftTitle(p: AircraftForSale): string {
   return parts.length ? parts.join(' ') : 'Aircraft'
 }
 
-export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
+// Small, honest "vs market" comp pill. Below-average is good for a buyer, so it
+// gets a subtle positive (emerald) treatment; above/near average is neutral
+// (slate) — informational, no dark pattern. Renders nothing when comp is null
+// (sparse family or no price), so the badge is never fake/empty.
+function CompPill({ comp }: { comp: CompResult }) {
+  if (comp.kind === 'near') {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+        <LineChart className="h-3 w-3" />
+        Near average
+      </span>
+    )
+  }
+  if (comp.kind === 'below') {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+        <LineChart className="h-3 w-3" />
+        ~{comp.pct}% below average
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+      <LineChart className="h-3 w-3" />
+      ~{comp.pct}% above average
+    </span>
+  )
+}
+
+export default function AircraftSaleCard({
+  p,
+  saved = false,
+  comp = null,
+}: {
+  p: AircraftForSale
+  saved?: boolean
+  comp?: CompResult | null
+}) {
   const label = aircraftTitle(p)
   const imageUrl = getPlaceholderPhoto(p.make ?? '')
   const isExternal = p.source !== 'user'
@@ -53,28 +96,38 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
   const fresh = isNew(p.first_seen_at)
   const grade = gradeFromScore(p.quality_score)
   const gm = gradeMeta(grade)
+  // Internal link to the make+model for-sale family page — only when a real page
+  // exists for this listing's make+model (reuses SEO_MAKE_MODELS, never 404s).
+  const family = resolveMakeModelFamily(p.make, p.model)
 
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
-        <a
-          href={p.source_url ?? '#'}
-          target={isExternal ? '_blank' : undefined}
-          rel={isExternal ? 'noopener noreferrer' : undefined}
-          className="relative block h-44 sm:h-auto sm:w-52 sm:shrink-0"
-        >
-          <Image
-            src={imageUrl}
-            alt={label}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 208px"
-          />
-          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-            Not actual plane photo
-          </span>
-        </a>
+        <div className="relative h-44 sm:h-auto sm:w-52 sm:shrink-0">
+          <a
+            href={p.source_url ?? '#'}
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener noreferrer' : undefined}
+            className="relative block h-full w-full"
+          >
+            <Image
+              src={imageUrl}
+              alt={label}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 208px"
+            />
+            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+              Not actual plane photo
+            </span>
+          </a>
+          {/* Favorite — sibling of the photo link (not nested) for valid markup;
+              mirrors the partnership card's heart. */}
+          <div className="absolute right-2 top-2 z-10">
+            <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={saved} variant="icon" />
+          </div>
+        </div>
 
         {/* Content */}
         <div className="flex flex-1 flex-col p-5">
@@ -85,6 +138,9 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                 <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                   {source}
                 </span>
+                {/* Trust / completeness chip — slice 1, makes trust VISIBLE.
+                    Pure read of existing columns; no ranking effect. */}
+                <AircraftTrustBadge p={p} />
                 <span
                   title={gm.blurb}
                   className={cn('rounded-full px-2 py-0.5 text-xs font-bold ring-1', gm.chip)}
@@ -97,6 +153,7 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                     Price drop {formatPrice(drop)}
                   </span>
                 )}
+                {comp && <CompPill comp={comp} />}
                 {fresh && (
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
@@ -108,6 +165,9 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                     {p.registration}
                   </span>
                 )}
+                {/* Compare toggle — only renders inside a CompareProvider (i.e.
+                    on /aircraft); a no-op everywhere else. */}
+                <CompareToggle listingId={p.id} label={p.title} type="aircraft" />
               </div>
 
               {/* Title */}
@@ -121,6 +181,17 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                 </h2>
               </a>
               <p className="mt-0.5 text-sm font-medium text-slate-500">{label}</p>
+
+              {/* Internal link to the make+model for-sale family page */}
+              {family && (
+                <Link
+                  href={`/aircraft/${family.makeSlug}/${family.modelSlug}`}
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline"
+                >
+                  <Plane className="h-3 w-3" />
+                  See all {family.make} {family.model} for sale
+                </Link>
+              )}
 
               {/* Description preview */}
               {p.description && (

@@ -25,7 +25,7 @@ export default async function SeekingPartnershipsPage({
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Search className="h-6 w-6 text-emerald-500" />
+            <Search className="h-6 w-6 text-sky-500" />
             Pilots Seeking Partnerships
           </h1>
           <p className="mt-1 text-slate-500">
@@ -34,7 +34,7 @@ export default async function SeekingPartnershipsPage({
         </div>
         <Link
           href="/partnerships/seeking/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
         >
           + Post Seeking Listing
         </Link>
