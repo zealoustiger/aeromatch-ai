@@ -5,7 +5,7 @@ import { MapPin, Clock, Calendar, ChevronLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
-import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
@@ -17,18 +17,9 @@ import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
 
-async function getPartnership(id: string): Promise<Partnership | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-
-  if (!hasSupabase) {
-    return MOCK_PARTNERSHIPS.find((p) => p.id === id) ?? null
-  }
-
-  const supabase = await createServerSupabaseClient()
-  const { data } = await supabase.from('partnerships').select('*').eq('id', id).single()
-  return data
-}
+// Single-listing fetch reuses the shared `getPartnershipById` helper (the
+// `/compare` view uses the same source of truth — no duplicated query).
+const getPartnership = getPartnershipById
 
 /**
  * Whether the signed-in viewer is this listing's owner.

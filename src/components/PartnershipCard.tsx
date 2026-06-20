@@ -9,6 +9,7 @@ import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
+import CompareToggle from './CompareToggle'
 
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -66,6 +67,9 @@ export default function PartnershipCard({ p, saved = false }: { p: Partnership; 
                   </span>
                 )}
                 <TrustBadge p={p} variant="compact" />
+                {/* Compare toggle — only renders inside a CompareProvider (i.e.
+                    on /partnerships); a no-op everywhere else. */}
+                <CompareToggle listingId={p.id} label={p.title} />
               </div>
 
               {/* Title */}
