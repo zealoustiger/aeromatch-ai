@@ -349,7 +349,11 @@ export default function CostGuidePage() {
             <Link href="/guides/aircraft-co-ownership" className="font-medium text-sky-700 hover:underline">
               How Aircraft Co-Ownership &amp; Partnerships Work
             </Link>{' '}
-            for the structures, share types, and how to find the right partner.
+            for the structures, share types, and how to find the right partner. When you are ready to put
+            terms on paper, see{' '}
+            <Link href="/guides/aircraft-partnership-agreement" className="font-medium text-sky-700 hover:underline">
+              What to Put in an Aircraft Partnership Agreement
+            </Link>.
           </p>
         </div>
 
