@@ -323,7 +323,11 @@ export default function CostGuidePage() {
           <Link href="/tools/earnings-calculator" className="font-medium text-sky-700 hover:underline">
             earnings calculator
           </Link>{' '}
-          models how rental revenue changes the picture.
+          models how rental revenue changes the picture — and the guide on{' '}
+          <Link href="/guides/leaseback-vs-co-ownership" className="font-medium text-sky-700 hover:underline">
+            leaseback vs. co-ownership
+          </Link>{' '}
+          walks through which model fits.
         </p>
 
         {/* FAQ */}
