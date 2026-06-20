@@ -8,6 +8,7 @@ import {
   Scale,
   Search,
   ClipboardCheck,
+  Landmark,
   ArrowRight,
   Calculator,
 } from 'lucide-react'
@@ -82,6 +83,13 @@ const GUIDES: {
     description:
       'Buying a used airplane? What a pre-purchase (pre-buy) inspection covers and why it matters — logbooks and AD compliance, engine, airframe and corrosion, avionics, title and liens, and damage history — plus how to choose an independent inspector, how to think about scope and cost, and the red flags to watch for.',
     icon: ClipboardCheck,
+  },
+  {
+    path: '/guides/aircraft-title-escrow-and-closing',
+    title: 'Aircraft Title, Escrow & Closing: How Buying a Plane Actually Closes',
+    description:
+      'The legal and financial side of buying a plane: the title and lien search, what an escrow agent does, the bill of sale and FAA registration (your N-number), releasing existing liens, the typical closing steps, and how sales and use tax can come into play.',
+    icon: Landmark,
   },
 ]
 

@@ -329,6 +329,12 @@ export default function PrePurchaseInspectionGuidePage() {
           </h2>
           <ul className="mt-2 space-y-1 text-sm leading-relaxed text-slate-600">
             <li>
+              <Link href="/guides/aircraft-title-escrow-and-closing" className="font-medium text-sky-700 hover:underline">
+                Aircraft Title, Escrow &amp; Closing
+              </Link>{' '}
+              — the other half of due diligence: how ownership and money safely change hands when you close.
+            </li>
+            <li>
               <Link href="/guides/cost-of-aircraft-co-ownership" className="font-medium text-sky-700 hover:underline">
                 How Much Does It Cost to Co-Own an Aircraft?
               </Link>{' '}
