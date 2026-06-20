@@ -14,6 +14,8 @@ import ReportListing from '@/components/ReportListing'
 import SaveListingButton from '@/components/SaveListingButton'
 import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
+import PhotoGallery from '@/components/PhotoGallery'
+import SimilarListings from '@/components/SimilarListings'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -151,6 +153,15 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
           <div className="space-y-6 lg:col-span-2 lg:order-first">
+            {/* Photo gallery — multi-photo with thumbnails + lightbox, degrades
+                to a single image / make placeholder ("Not actual plane photo"). */}
+            <PhotoGallery
+              images={p.images}
+              make={p.make}
+              alt={`${aircraft} at ${p.home_airport}`}
+              imageIsPlaceholder={p.image_is_placeholder}
+            />
+
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
@@ -313,6 +324,13 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
               <ReportListing listingId={p.id} />
             </div>
           </div>
+        </div>
+
+        {/* Similar partnerships — real other listings (same make / state /
+            airport), excludes this one, crawlable <Link> cards. Renders nothing
+            when there are no sensible matches. */}
+        <div className="mt-10">
+          <SimilarListings current={p} />
         </div>
       </div>
 
