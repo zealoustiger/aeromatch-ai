@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import EarningsCalculator from '@/components/EarningsCalculator'
 
 export const metadata: Metadata = {
@@ -37,6 +38,13 @@ export default function EarningsCalculatorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
+      />
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Tools', href: '/tools' },
+          { label: 'Earnings calculator' },
+        ]}
       />
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 sm:text-3xl">
