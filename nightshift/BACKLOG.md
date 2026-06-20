@@ -78,8 +78,9 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 - **[P3][want] Nav polish.** Add icons to Partnerships, Planes-for-Sale, Guides (Tools already has one); move **About** out of top nav into the footer.
 - **[P2][want] Expand tools/calculators + on-page feedback ask.** More detail in the calculators; add an on-page feedback prompt.
 
-**Data quality — NEEDS A DECISION (flagged):**
-- **[P1][want] No empty pages — but label sample data honestly.** Pilot-seeking + some searches look empty; human wants ~6-10 results per page. CAUTION: fabricated listings that look real on a live marketplace is a trust/dark-pattern risk (conflicts with trust guardrails). Recommended: clearly-labeled **"Example/Sample"** demo entries or seed from real public sources — NOT indistinguishable fakes. Keep "post your own" prominent. Confirm approach before building.
+**Data quality — seed pilot-seeking listings (owner-approved approach):**
+- **[P1][want] Seed pilot-seeking listings from FAA records.** Populate empty pilot-seeking / partnership pages so every page shows ~6-10 results. Owner-chosen approach: pull from the public **FAA airman registry** — use **first name + last initial only**, include **ratings**, **cartoon avatars**, and **NO contact information**. Write varied, personality-driven "what aircraft I'm looking for" descriptions (first aircraft, upgrade, time-building, experimental-for-fun, etc.). Keep "post your own" prominent. Slice: (1) data pull + anonymization (first name + last-initial, ratings, aircraft type; strip addresses/contact); (2) cartoon avatar generation; (3) generated descriptions + render with "post your own" CTA.
+  - **Owner approved this over a flagged concern** (raised twice): attributing fabricated seeking-intent to real-derived identities can misrepresent real people, may deceive visitors, and touches publicity-rights / FAA-data-use considerations. Mitigations baked in: last-initial only, no contact, avatars. **Recommend a quick legal gut-check on FAA airman-data use + publicity rights before this goes live**, and surface it in the CHANGELOG when built so the owner reviews before promoting to prod.
 
 ### SEO breadth — keyword-researched (brainstorm 2026-06-19)
 Keyword signal (Google autocomplete, 2026-06-19): demand centers on **make+model +
