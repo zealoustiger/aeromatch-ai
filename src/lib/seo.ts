@@ -19,6 +19,23 @@ export const STATE_NAMES: Record<string, string> = {
 
 export const STATE_CODES = Object.keys(STATE_NAMES)
 
+/** URL slug for a state full name, e.g. "New York" -> "new-york". Used by the
+ *  geo for-sale pages at `/aircraft/for-sale/[state]` (slug = full state name,
+ *  the form people actually search: "aircraft for sale california"). */
+export function stateSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+/** Reverse map: state slug (e.g. "california", "new-york") -> USPS code, or null. */
+const SLUG_TO_CODE: Record<string, string> = Object.fromEntries(
+  STATE_CODES.map((code) => [stateSlug(STATE_NAMES[code]), code])
+)
+
+export function getStateBySlug(slug: string): { code: string; name: string } | null {
+  const code = SLUG_TO_CODE[slug.toLowerCase()]
+  return code ? { code, name: STATE_NAMES[code] } : null
+}
+
 /** Aircraft makes with SEO landing pages. Slug → display name + filter value. */
 export const SEO_MAKES: { slug: string; name: string; filter: string; blurb: string }[] = [
   { slug: 'cessna', name: 'Cessna', filter: 'Cessna', blurb: 'From the 152 trainer to the 182 and 206, Cessna singles are the most commonly co-owned aircraft in America — parts are everywhere and every A&P knows them.' },

@@ -2,12 +2,14 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 
 import { Plane, SlidersHorizontal } from 'lucide-react'
+import Link from 'next/link'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
+import { STATE_CODES, STATE_NAMES, stateSlug } from '@/lib/seo'
 
 export const metadata: Metadata = {
   title: 'Aircraft for Sale — Search GA Listings From Across the Web',
@@ -84,6 +86,22 @@ export default async function AircraftPage({
             ClubHanger is not the seller. Listing data may be out of date — confirm details on the
             source listing.
           </p>
+
+          {/* Browse by state — crawlable internal links to the per-state for-sale pages */}
+          <div className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-3 text-base font-semibold text-slate-900">Aircraft for sale by state</h2>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {STATE_CODES.map((c) => (
+                <Link
+                  key={c}
+                  href={`/aircraft/for-sale/${stateSlug(STATE_NAMES[c])}`}
+                  className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                >
+                  {STATE_NAMES[c]}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
