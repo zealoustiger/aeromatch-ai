@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-20T23:03Z — PASS — aircraft-visual-tokens
+- Pages: /aircraft
+- What: The Planes-for-Sale page got a warmer, Etsy×Airbnb consumer-marketplace look — a soft cream background instead of cold gray, listing cards with big rounded corners and a gentle "lift" shadow on hover, and a bigger friendlier page heading. Everything still works exactly as before (filters, save heart, prices, badges, compare).
+- Goal: [want] — Etsy×Airbnb visual refresh **slice 1: design tokens + reference surface** (P1, branding now open for experimentation). Pulled the [want] lane (last non-bug cycle was [goal] forsale-cost-calc-crosslink → owed [want]). Touches a priority page (/aircraft #2). Scoreboard at orient: STAGE=INDEXING, GSC indexed 0/1086, pageviews 89/7d.
+- Spec: nightshift/specs/20260620T230337Z-aircraft-visual-tokens.md
+- Verdict: PASS. `next build` + TypeScript green. Established reusable tokens once in globals.css (`--ch-surface` cream, `--ch-radius-card` rounded-2xl, soft + hover-lift shadows; `.ch-card`/`.ch-panel`/`.ch-surface` utilities, reduced-motion respected) and applied ONLY to the /aircraft reference surface — `AircraftSaleCard` → `.ch-card`, filters + by-state panels → `.ch-panel`, cream `.ch-surface` wrapper, larger H1. QA against the production build (`next start`) at desktop + 375px: cream surface verified (`rgb(250,247,242)`), card radius 16px + shadow present, NO horizontal overflow at 375px, zero console errors, all card content/links/heart/compare intact. Confirmed no other page changed (homepage body still white — no global body edit). 3 source files, +59/-7.
+- Screenshots: nightshift/screenshots/aircraft-visual-tokens/
+- Next: slice 2 = roll these tokens into the full `AircraftSaleCard` + `PartnershipCard` content redesign (larger photo, bold price, heart top-right, trust/grade badges, minimal borders), 375px-first. Then slice 3 = Airbnb-style category chip bar on /aircraft.
+
 ## 2026-06-20T13:37Z — DRAIN SUMMARY
 - Cycles this run: 3 (PASS 3 / FAIL 0 / ABORT 0)
 - Lane mix: **1 [want] / 2 [goal]** — opened with the owed [want] slice, then fell through to [goal] (the [want] lane's remaining items are all blocked: email-alerts slices 2/3 need transactional-email infra; trust-layer slice 2 is a ranking change = thrash-risky for a night-tail cycle; matching / listing-depth are larger PR rebases; pilot-profiles needs a human-applied DB migration).
