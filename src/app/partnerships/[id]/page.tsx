@@ -13,6 +13,7 @@ import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import SaveListingButton from '@/components/SaveListingButton'
 import TrustBadge from '@/components/TrustBadge'
+import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -25,6 +26,25 @@ async function getPartnership(id: string): Promise<Partnership | null> {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase.from('partnerships').select('*').eq('id', id).single()
   return data
+}
+
+/**
+ * Whether the signed-in viewer is this listing's owner.
+ *
+ * Owner = the member whose id matches the listing's `poster_id` (set to the
+ * poster's `user.id` at create time). Returns false for logged-out visitors,
+ * non-owners, and scraped listings (poster_id null). Read-only use of the frozen
+ * supabase-server client. Gates the owner-only "Improve your listing" nudge.
+ */
+async function isListingOwner(posterId: string | null): Promise<boolean> {
+  if (!posterId) return false
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return false
+
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return !!user && user.id === posterId
 }
 
 async function isListingSaved(id: string): Promise<boolean> {
@@ -99,6 +119,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   if (!p) notFound()
 
   const saved = await isListingSaved(p.id)
+  const isOwner = await isListingOwner(p.poster_id)
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -263,6 +284,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 )}
               </dl>
             </div>
+
+            {/* Owner-only "Improve your listing" nudge — slice 3. Renders only
+                for the listing's owner and only when signals are missing. No
+                existing per-listing edit route yet, so it links to the post
+                flow (the only listing-management surface). */}
+            {isOwner && <ListingOwnerNudge p={p} editHref="/partnerships/new" />}
 
             {/* Trust / completeness — slice 1 of the listing trust layer */}
             <TrustBadge p={p} variant="checklist" />
