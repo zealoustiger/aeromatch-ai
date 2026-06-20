@@ -3,9 +3,10 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { Plane, MapPin, ArrowRight } from 'lucide-react'
-import AircraftSaleList, { countForSaleState } from '@/components/AircraftSaleList'
+import AircraftSaleList, { countForSaleState, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL } from '@/lib/seo'
+import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ state: string }> }
 
@@ -50,9 +51,25 @@ export default async function StateAircraftForSalePage({ params }: Props) {
   if (n === 0) notFound()
 
   const otherStates = STATE_CODES.filter((c) => c !== entry.code).slice(0, 14)
+  const path = `/aircraft/for-sale/${stateSlug(entry.name)}`
+
+  // ItemList JSON-LD for rich results — marks up exactly the first page of
+  // listings the visitor sees (same state filter/order as the rendered list),
+  // each as a Product/Offer with real data only. See src/lib/aircraftJsonLd.ts.
+  const { listings } = await fetchAircraftPage({ state: entry.code })
+  const itemListJsonLd = buildAircraftItemListJsonLd(listings, {
+    name: `${entry.name} aircraft for sale`,
+    url: `${SITE_URL}${path}`,
+  })
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
       {/* Breadcrumb */}
       <Breadcrumbs
         items={[
