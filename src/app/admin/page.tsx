@@ -1,8 +1,7 @@
-import { promises as fs } from 'fs'
-import path from 'path'
 import { getAdminDoc } from '@/lib/adminDocs'
 import AdminMarkdown from '@/components/AdminMarkdown'
 import ReportFeedback from '@/components/ReportFeedback'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export const metadata = { title: 'Daily Report', robots: { index: false } }
 export const dynamic = 'force-dynamic'
@@ -13,12 +12,14 @@ export default async function DailyReportTab() {
     ? new Date(report.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
     : '—'
 
-  let feedbackLog = ''
-  try {
-    feedbackLog = await fs.readFile(path.join(process.cwd(), 'nightshift', 'FEEDBACK.md'), 'utf8')
-  } catch {
-    // no feedback file yet — fine
-  }
+  const admin = createAdminClient()
+  const { data: feedback } = await admin
+    .from('report_feedback')
+    .select('created_at, body, response, status')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const stagingUrl = process.env.NEXT_PUBLIC_STAGING_URL || ''
 
   return (
     <>
@@ -34,7 +35,7 @@ export default async function DailyReportTab() {
         )}
       </section>
 
-      <ReportFeedback log={feedbackLog} />
+      <ReportFeedback entries={feedback ?? []} stagingUrl={stagingUrl} />
     </>
   )
 }

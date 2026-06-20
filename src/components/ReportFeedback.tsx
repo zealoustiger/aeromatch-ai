@@ -1,10 +1,23 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MessageSquare, Rocket, CheckCircle, AlertTriangle } from 'lucide-react'
+import { MessageSquare, Rocket, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react'
 import { submitReportFeedback, promoteToProduction } from '@/app/admin/feedback-actions'
 
-export default function ReportFeedback({ log }: { log: string }) {
+type FeedbackEntry = {
+  created_at: string
+  body: string
+  response: string | null
+  status: string
+}
+
+export default function ReportFeedback({
+  entries,
+  stagingUrl,
+}: {
+  entries: FeedbackEntry[]
+  stagingUrl: string
+}) {
   const [submitted, setSubmitted] = useState(false)
   const [promo, setPromo] = useState<{ ok: boolean; message: string } | null>(null)
   const [pending, startTransition] = useTransition()
@@ -17,9 +30,21 @@ export default function ReportFeedback({ log }: { log: string }) {
 
   return (
     <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
-        <MessageSquare className="h-5 w-5 text-sky-500" /> Your feedback on this report
-      </h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <MessageSquare className="h-5 w-5 text-sky-500" /> Your feedback on this report
+        </h2>
+        {stagingUrl && (
+          <a
+            href={stagingUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Review on staging <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Reactions, notes, what to prioritize or kill. Claude turns these into backlog items for tonight.
       </p>
@@ -48,7 +73,7 @@ export default function ReportFeedback({ log }: { log: string }) {
 
       {submitted && (
         <p className="mt-3 flex items-center gap-1.5 text-sm text-emerald-600">
-          <CheckCircle className="h-4 w-4" /> Saved to the feedback log. Claude will turn it into backlog items.
+          <CheckCircle className="h-4 w-4" /> Saved. Claude will turn it into backlog items.
         </p>
       )}
 
@@ -72,14 +97,33 @@ export default function ReportFeedback({ log }: { log: string }) {
         )}
       </div>
 
-      {log.trim() && (
-        <details className="mt-6 border-t border-slate-100 pt-4">
+      {entries.length > 0 && (
+        <details className="mt-6 border-t border-slate-100 pt-4" open>
           <summary className="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-900">
-            Feedback log
+            Feedback log ({entries.length})
           </summary>
-          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-            {log}
-          </pre>
+          <ul className="mt-3 space-y-3">
+            {entries.map((e, i) => (
+              <li key={i} className="rounded-lg bg-slate-50 p-3 text-sm">
+                <div className="mb-1 flex items-center gap-2 text-xs text-slate-400">
+                  <span>{new Date(e.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      e.status === 'processed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {e.status === 'processed' ? 'processed' : 'new'}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-slate-800">{e.body}</p>
+                {e.response && (
+                  <p className="mt-2 border-l-2 border-sky-200 pl-2 text-slate-600">
+                    <span className="font-medium text-sky-700">Claude:</span> {e.response}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
         </details>
       )}
     </section>
