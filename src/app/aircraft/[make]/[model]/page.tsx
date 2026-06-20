@@ -6,14 +6,18 @@ import { Suspense } from 'react'
 import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
-import { SEO_MAKE_MODELS, getMakeModel, SITE_URL } from '@/lib/seo'
+import { getInventoryMakeModels, resolveMakeModel, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ make: string; model: string }> }
 
-export function generateStaticParams() {
-  return SEO_MAKE_MODELS.map(({ makeSlug, modelSlug }) => ({
+// Prebuild every inventory-backed combo (curated + dynamically discovered). Any
+// valid-but-not-prebuilt combo still renders on demand (dynamicParams stays the
+// default `true`); the live count===0 guard below 404s thin/garbage combos.
+export async function generateStaticParams() {
+  const combos = await getInventoryMakeModels()
+  return combos.map(({ makeSlug, modelSlug }) => ({
     make: makeSlug,
     model: modelSlug,
   }))
@@ -21,7 +25,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { make, model } = await params
-  const entry = getMakeModel(make, model)
+  const entry = await resolveMakeModel(make, model)
   if (!entry) return {}
 
   const n = await countMakeModel(entry.make, entry.modelPattern, entry.notModelPattern)
@@ -45,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MakeModelForSalePage({ params }: Props) {
   const { make, model } = await params
-  const entry = getMakeModel(make, model)
+  const entry = await resolveMakeModel(make, model)
   if (!entry) notFound()
 
   const n = await countMakeModel(entry.make, entry.modelPattern, entry.notModelPattern)
@@ -55,9 +59,13 @@ export default async function MakeModelForSalePage({ params }: Props) {
 
   const label = `${entry.make} ${entry.model}`
   const path = `/aircraft/${entry.makeSlug}/${entry.modelSlug}`
-  const otherCombos = SEO_MAKE_MODELS.filter(
-    (e) => e.makeSlug !== entry.makeSlug || e.modelSlug !== entry.modelSlug
-  ).slice(0, 12)
+  // Related-combos rail — draw from the full inventory-backed set, excluding the
+  // current combo. Curated families lead (they have hand-tuned copy + the most
+  // inventory); capped to 12.
+  const allCombos = await getInventoryMakeModels()
+  const otherCombos = allCombos
+    .filter((e) => e.makeSlug !== entry.makeSlug || e.modelSlug !== entry.modelSlug)
+    .slice(0, 12)
 
   // ItemList JSON-LD for rich results — marks up exactly the first page of
   // listings the visitor sees (same filters/order as the rendered list), each as
