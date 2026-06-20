@@ -324,6 +324,31 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
   return { listings, totalCount, page, error }
 }
 
+// Hydrate the signed-in viewer's saved aircraft ids so cards render filled
+// hearts. UI-only read, mirrors PartnershipList; non-fatal on any failure.
+async function fetchSavedAircraftIds(listings: AircraftForSale[]): Promise<Set<string>> {
+  const savedIds = new Set<string>()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase || listings.length === 0) return savedIds
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: saved } = await supabase
+        .from('saved_listings')
+        .select('listing_id')
+        .eq('user_id', user.id)
+        .eq('listing_type', 'aircraft')
+        .in('listing_id', listings.map((l) => l.id))
+      for (const s of saved ?? []) savedIds.add(s.listing_id as string)
+    }
+  } catch {
+    // Non-fatal: just render without filled hearts.
+  }
+  return savedIds
+}
+
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
   const { listings, totalCount, page, error } = await fetchAircraftPage(filters)
 
@@ -339,14 +364,17 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     )
   }
 
-  return renderList(listings, filters, totalCount, page)
+  const savedIds = await fetchSavedAircraftIds(listings)
+
+  return renderList(listings, filters, totalCount, page, savedIds)
 }
 
 function renderList(
   listings: AircraftForSale[],
   filters: Filters,
   totalCount: number | null,
-  page: number
+  page: number,
+  savedIds: Set<string> = new Set()
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -409,7 +437,7 @@ function renderList(
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
-          <AircraftSaleCard key={p.id} p={p} />
+          <AircraftSaleCard key={p.id} p={p} saved={savedIds.has(p.id)} />
         ))}
       </div>
 
