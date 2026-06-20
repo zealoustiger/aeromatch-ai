@@ -6,6 +6,7 @@ import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countForSaleState, fetchAircraftPage, topMakeModelsForState } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -184,6 +185,11 @@ export default async function StateAircraftForSalePage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Buying a plane? — related-guides cross-link block (internal linking
+          toward the buyer-guide cluster). Additive; no new page. Mirrors the
+          same block on /aircraft and /aircraft/[make]/[model]. */}
+      <ForSaleGuideLinks className="mt-4" />
     </div>
   )
 }
