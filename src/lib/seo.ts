@@ -34,3 +34,159 @@ export const SEO_MAKES: { slug: string; name: string; filter: string; blurb: str
 export function getMakeBySlug(slug: string) {
   return SEO_MAKES.find((m) => m.slug === slug.toLowerCase()) ?? null
 }
+
+/**
+ * Curated make+model combos with their own programmatic for-sale landing page at
+ * `/aircraft/[makeSlug]/[modelSlug]` (e.g. /aircraft/cessna/172).
+ *
+ * SLICE 1: the top ~20 combos by *real* active inventory (queried 2026-06-20).
+ * Every entry below has ≥6 live listings — no thin/doorway pages (GOAL.md).
+ *
+ * Model strings in the DB are messy/inconsistent (e.g. "SR22", "Sr22 G6",
+ * "SR22-G6 Turbo"), so each combo carries an `ilike` `modelPattern` (plus an
+ * optional `notModelPattern`) that captures the whole family — the page computes
+ * the *live* match count at request time, so the title's N is always accurate.
+ */
+export type SeoMakeModel = {
+  makeSlug: string
+  modelSlug: string
+  make: string // exact DB make value (matched case-insensitively)
+  model: string // display model name
+  /** ilike pattern matched against the DB `model` column (family-level). */
+  modelPattern: string
+  /** optional ilike pattern to EXCLUDE (e.g. keep SR22 distinct from SR22T). */
+  notModelPattern?: string
+  /** one-line spec summary shown on the page. */
+  specs: string
+  /** short, honest cost-to-own blurb (no keyword stuffing). */
+  costToOwn: string
+}
+
+export const SEO_MAKE_MODELS: SeoMakeModel[] = [
+  {
+    makeSlug: 'cirrus', modelSlug: 'sr22', make: 'Cirrus', model: 'SR22',
+    modelPattern: 'sr22%', notModelPattern: 'sr22t%',
+    specs: 'Four-seat composite single, ~310 hp, 180+ kt cruise, CAPS whole-airframe parachute, glass panel.',
+    costToOwn: 'A flagship piston single — co-ownership is how most pilots make an SR22 pencil out. Budget roughly $250–400/hr all-in; partnerships split the fixed costs (hangar, insurance, the chute repack) across the group.',
+  },
+  {
+    makeSlug: 'cirrus', modelSlug: 'sr22t', make: 'Cirrus', model: 'SR22T',
+    modelPattern: 'sr22t%',
+    specs: 'Turbo-normalized SR22, ~315 hp, high-altitude cruise into the 200 kt range, CAPS, oxygen, glass panel.',
+    costToOwn: 'The turbo SR22 trades a higher fuel and overhaul bill for altitude and speed. Shared ownership softens the turbo overhaul reserve and insurance — most flying clubs split it 3–4 ways.',
+  },
+  {
+    makeSlug: 'mooney', modelSlug: 'm20', make: 'Mooney', model: 'M20',
+    modelPattern: 'm20%',
+    specs: 'Sleek four-seat retractable single; the M20 series delivers the best speed-per-dollar in piston aviation.',
+    costToOwn: 'Mooneys are famously efficient — low fuel burn for the speed. The retractable gear adds an annual and insurance premium, which a partnership spreads across owners.',
+  },
+  {
+    makeSlug: 'beechcraft', modelSlug: 'bonanza', make: 'Beechcraft', model: 'Bonanza',
+    modelPattern: '%bonanza%',
+    specs: 'The classic high-performance single — V-tail and straight-tail variants, roomy cabin, 170+ kt cruise.',
+    costToOwn: 'A Bonanza is a serious traveling machine with traveling-machine costs. Co-ownership is the traditional way to fly one affordably; budget for the higher fuel burn and a healthy engine reserve.',
+  },
+  {
+    makeSlug: 'cessna', modelSlug: '182', make: 'Cessna', model: '182',
+    modelPattern: '182%',
+    specs: 'Four-seat high-wing Skylane; more useful load and power than a 172, ~145 kt cruise, fixed gear.',
+    costToOwn: 'The 182 is a do-everything family hauler. Operating costs sit between a 172 and a complex single — a partnership keeps the hangar and insurance manageable while you split real flying hours.',
+  },
+  {
+    makeSlug: 'cirrus', modelSlug: 'sr20', make: 'Cirrus', model: 'SR20',
+    modelPattern: 'sr20%',
+    specs: 'Entry Cirrus single, ~215 hp, four seats, CAPS parachute, modern glass panel — a popular trainer and step-up.',
+    costToOwn: 'The most attainable way into a Cirrus. Lower fuel and overhaul cost than the SR22; partnerships make the glass-panel ownership experience genuinely affordable.',
+  },
+  {
+    makeSlug: 'cessna', modelSlug: '172', make: 'Cessna', model: '172',
+    modelPattern: '172%',
+    specs: 'The Skyhawk — the most-produced aircraft ever. Four seats, high wing, ~120 kt cruise, famously forgiving.',
+    costToOwn: 'The default first airplane and the most commonly co-owned single in America. Parts are everywhere and every A&P knows it, so a 172 partnership is about as low-drama as ownership gets.',
+  },
+  {
+    makeSlug: 'piper', modelSlug: 'cherokee', make: 'Piper', model: 'Cherokee',
+    modelPattern: '%cherokee%',
+    specs: 'Low-wing four-seat single (PA-28 family), simple systems, forgiving handling, ~115–130 kt cruise.',
+    costToOwn: 'One of the most economical singles to share. Fixed gear, a simple system, and a huge parts supply keep maintenance predictable — ideal for a first partnership.',
+  },
+  {
+    makeSlug: 'beechcraft', modelSlug: 'baron', make: 'Beechcraft', model: 'Baron',
+    modelPattern: '%baron%',
+    specs: 'Twin-engine six-seat traveler, 190+ kt cruise, the cabin-class step into piston twins.',
+    costToOwn: 'A twin doubles the engines and the maintenance — exactly why Barons are so often co-owned. A group of partners makes the two overhaul reserves and the higher insurance realistic.',
+  },
+  {
+    makeSlug: 'piper', modelSlug: 'arrow', make: 'Piper', model: 'Arrow',
+    modelPattern: '%arrow%',
+    specs: 'Retractable-gear PA-28R, four seats, ~135 kt cruise — a popular complex trainer and step-up.',
+    costToOwn: 'The natural complex-time step-up from a Cherokee. Retractable gear adds a modest insurance and annual premium; a partnership keeps it economical while you build complex hours.',
+  },
+  {
+    makeSlug: 'piper', modelSlug: 'comanche', make: 'Piper', model: 'Comanche',
+    modelPattern: '%comanche%',
+    specs: 'Fast low-wing retractable single (PA-24), 160+ kt cruise, big tanks — a true long-legged traveler.',
+    costToOwn: 'A lot of airplane for the money, beloved for range and speed. Parts take a little more hunting than a Cherokee, so a partnership with a shared maintenance kitty works well.',
+  },
+  {
+    makeSlug: 'bellanca', modelSlug: 'citabria', make: 'Bellanca', model: 'Citabria',
+    modelPattern: '%citabria%',
+    specs: 'Two-seat tandem taildragger, aerobatic-capable, fabric covered — pure stick-and-rudder fun.',
+    costToOwn: 'Cheap to fly and a blast to own. The main cost is fabric and a tailwheel-rated insurance policy; partnerships are common among tailwheel and aerobatic pilots sharing the fun.',
+  },
+  {
+    makeSlug: 'vans', modelSlug: 'rv', make: 'Vans', model: 'RV',
+    modelPattern: 'rv%',
+    specs: 'Van’s RV series experimentals — unmatched performance-per-dollar, sporty handling, two to four seats.',
+    costToOwn: 'Experimentals offer the best performance per dollar in aviation and owner-performed maintenance keeps costs low. Partnerships are common among builders and sport pilots alike.',
+  },
+  {
+    makeSlug: 'cessna', modelSlug: '150', make: 'Cessna', model: '150',
+    modelPattern: '150%',
+    specs: 'Two-seat high-wing trainer; cheap to run, simple, and forgiving — a classic first airplane.',
+    costToOwn: 'About the lowest-cost way to own an airplane. Two seats and a small engine mean small bills; a partnership splits an already-modest hangar and annual.',
+  },
+  {
+    makeSlug: 'piper', modelSlug: 'cub', make: 'Piper', model: 'Cub',
+    modelPattern: '%cub%',
+    specs: 'The iconic yellow taildragger — fabric, tandem seating, slow, simple, and endlessly charming.',
+    costToOwn: 'A Cub is bought with the heart, but it’s genuinely cheap to fly. Fabric and a tailwheel insurance policy are the main costs; shared ownership keeps a classic in the air.',
+  },
+  {
+    makeSlug: 'cessna', modelSlug: '180', make: 'Cessna', model: '180',
+    modelPattern: '180%',
+    specs: 'Tailwheel high-wing hauler; rugged backcountry and float-capable, strong useful load.',
+    costToOwn: 'A backcountry favorite that holds its value. Tailwheel insurance and big tundra tires aside, it’s a durable airframe — partnerships split the hangar and the adventures.',
+  },
+  {
+    makeSlug: 'piper', modelSlug: 'saratoga', make: 'Piper', model: 'Saratoga',
+    modelPattern: '%saratoga%',
+    specs: 'Six-seat PA-32 family single, big cabin and useful load, fixed- and retractable-gear variants.',
+    costToOwn: 'A genuine six-seat family/IFR machine. Fuel burn matches the cabin size, so co-ownership across a few families is the classic way to keep a Saratoga affordable.',
+  },
+  {
+    makeSlug: 'grumman', modelSlug: 'aa-1', make: 'Grumman', model: 'AA-1',
+    modelPattern: 'aa1%',
+    specs: 'Two-seat low-wing single with a sliding canopy and sporty, responsive handling.',
+    costToOwn: 'Sporty and simple to maintain — the sliding canopy and bonded airframe keep things light. Low operating costs make it an easy partnership aircraft.',
+  },
+  {
+    makeSlug: 'grumman', modelSlug: 'aa-5', make: 'Grumman', model: 'AA-5',
+    modelPattern: 'aa5%',
+    specs: 'Four-seat Traveler/Tiger/Cheetah family, sliding canopy, ~130 kt cruise, low-drag airframe.',
+    costToOwn: 'The four-seat Grummans are quick for their fuel burn and famously low-drag. Simple systems keep shared maintenance costs down — a popular first partnership single.',
+  },
+  {
+    makeSlug: 'robinson', modelSlug: 'r44', make: 'Robinson', model: 'R44',
+    modelPattern: 'r44%',
+    specs: 'Four-seat piston helicopter, ~110 kt cruise — the world’s most popular civil helicopter.',
+    costToOwn: 'Rotary ownership runs on a scheduled overhaul clock, which makes a partnership almost essential. Splitting the 2,200-hr overhaul reserve and insurance across owners is how most R44s are flown.',
+  },
+]
+
+export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel | null {
+  const m = makeSlug.toLowerCase()
+  const md = modelSlug.toLowerCase()
+  return SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md) ?? null
+}
