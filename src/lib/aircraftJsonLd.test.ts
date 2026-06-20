@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildAircraftItemListJsonLd } from './aircraftJsonLd.ts'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from './aircraftJsonLd.ts'
 import type { AircraftForSale } from './types.ts'
 
 function listing(overrides: Partial<AircraftForSale> = {}): AircraftForSale {
@@ -99,4 +99,64 @@ test('skips listings with no title rather than emitting a blank Product', () => 
     { name: 'x', url: 'u' }
   )!
   assert.equal(out.numberOfItems, 1)
+})
+
+// ---- buildAircraftAggregateOfferJsonLd ----
+
+test('AggregateOffer: correct low/high/count from priced listings', () => {
+  const out = buildAircraftAggregateOfferJsonLd(
+    [
+      listing({ id: 'a', asking_price: 250000 }),
+      listing({ id: 'b', asking_price: 180000 }),
+      listing({ id: 'c', asking_price: 420000 }),
+    ],
+    { name: 'Cessna 172 for sale', url: 'https://clubhanger.com/aircraft/cessna/172' }
+  )!
+  assert.equal(out['@context'], 'https://schema.org')
+  assert.equal(out['@type'], 'Product')
+  assert.equal(out.name, 'Cessna 172 for sale')
+  assert.equal(out.url, 'https://clubhanger.com/aircraft/cessna/172')
+  const offer = out.offers as Record<string, unknown>
+  assert.equal(offer['@type'], 'AggregateOffer')
+  assert.equal(offer.priceCurrency, 'USD')
+  assert.equal(offer.lowPrice, 180000)
+  assert.equal(offer.highPrice, 420000)
+  assert.equal(offer.offerCount, 3)
+})
+
+test('AggregateOffer: count + range reflect only the priced listings', () => {
+  const out = buildAircraftAggregateOfferJsonLd(
+    [
+      listing({ id: 'a', asking_price: 300000 }),
+      listing({ id: 'b', asking_price: null, price_text: 'Make offer' }),
+      listing({ id: 'c', asking_price: 100000 }),
+      listing({ id: 'd', asking_price: 0 }),
+    ],
+    { name: 'x', url: 'u' }
+  )!
+  const offer = out.offers as Record<string, unknown>
+  assert.equal(offer.offerCount, 2)
+  assert.equal(offer.lowPrice, 100000)
+  assert.equal(offer.highPrice, 300000)
+})
+
+test('AggregateOffer: returns null with fewer than 2 priced listings (no fabrication)', () => {
+  // one priced listing → null
+  assert.equal(
+    buildAircraftAggregateOfferJsonLd(
+      [listing({ asking_price: 250000 }), listing({ id: 'np', asking_price: null })],
+      { name: 'x', url: 'u' }
+    ),
+    null
+  )
+  // zero priced listings → null
+  assert.equal(
+    buildAircraftAggregateOfferJsonLd(
+      [listing({ asking_price: null, price_text: 'Call' })],
+      { name: 'x', url: 'u' }
+    ),
+    null
+  )
+  // empty set → null
+  assert.equal(buildAircraftAggregateOfferJsonLd([], { name: 'x', url: 'u' }), null)
 })

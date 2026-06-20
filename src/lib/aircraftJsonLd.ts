@@ -101,3 +101,44 @@ export function buildAircraftItemListJsonLd(
     itemListElement: items,
   }
 }
+
+/**
+ * Build a page-level `Product` node whose `offers` is an `AggregateOffer`
+ * (price-range) summarizing the for-sale listings on an aggregation page. This
+ * makes the make / make+model / make+model+state pages eligible for Google's
+ * price-range rich results.
+ *
+ * HONESTY RULES (GOAL.md anti-slop / anti-cloaking):
+ * - Derived ONLY from listings that carry a genuine numeric `asking_price > 0`.
+ *   Listings priced "Make offer" / "Call" (no number) are ignored, never guessed.
+ * - Returns `null` when fewer than 2 priced listings exist on the page — we never
+ *   fabricate a range or emit a degenerate one-price "range".
+ * - `name`/`url` are passed in by the page and MUST be the same family label/url
+ *   it already uses for the visible page + the ItemList markup (no cloaking).
+ */
+export function buildAircraftAggregateOfferJsonLd(
+  listings: AircraftForSale[],
+  opts: { name: string; url: string }
+): Record<string, unknown> | null {
+  const prices = listings
+    .map((p) => p.asking_price)
+    .filter((v): v is number => typeof v === 'number' && v > 0)
+
+  // Real data only: need at least two priced listings to claim a price range.
+  if (prices.length < 2) return null
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: opts.name,
+    url: opts.url,
+    offers: {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'USD',
+      lowPrice: Math.min(...prices),
+      highPrice: Math.max(...prices),
+      offerCount: prices.length,
+      availability: 'https://schema.org/InStock',
+    },
+  }
+}
