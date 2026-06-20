@@ -6,6 +6,7 @@ import {
   Wallet,
   FileText,
   Scale,
+  Search,
   ArrowRight,
   Calculator,
 } from 'lucide-react'
@@ -66,6 +67,13 @@ const GUIDES: {
     description:
       'The decision guide: leaseback (rent your plane to a flight school for income) versus co-ownership (share the plane and costs with partners) — who each is for, control, wear, tax and insurance, and how to choose.',
     icon: Scale,
+  },
+  {
+    path: '/guides/how-to-find-aircraft-partners',
+    title: 'How to Find Aircraft Co-Owners & Partners',
+    description:
+      'The sourcing playbook: where to look for partners (flying clubs, FBOs, EAA chapters, type clubs, airport boards, and online), how to vet a candidate, the red flags to avoid, how many partners makes sense, and how to go from a match to a signed agreement.',
+    icon: Search,
   },
 ]
 
