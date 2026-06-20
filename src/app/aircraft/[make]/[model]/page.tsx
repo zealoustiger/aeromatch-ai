@@ -10,6 +10,8 @@ import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import { CompareProvider } from '@/components/CompareProvider'
+import CompareTray from '@/components/CompareTray'
 
 type Props = { params: Promise<{ make: string; model: string }> }
 
@@ -99,7 +101,9 @@ export default async function MakeModelForSalePage({ params }: Props) {
   })
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <CompareProvider>
+    {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-10 lg:px-8">
       {itemListJsonLd && (
         <script
           type="application/ld+json"
@@ -261,6 +265,8 @@ export default async function MakeModelForSalePage({ params }: Props) {
         </div>
       </div>
     </div>
+    <CompareTray />
+    </CompareProvider>
   )
 }
 
