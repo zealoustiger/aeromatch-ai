@@ -82,12 +82,10 @@ export default function PartnershipAgreementGuidePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* "Guides" has no hub page yet, so it renders as plain text (no broken
-          crawlable link); when a /guides index ships, give it an href. */}
       <Breadcrumbs
         items={[
           { label: 'Home', href: '/' },
-          { label: 'Guides' },
+          { label: 'Guides', href: '/guides' },
           { label: TITLE },
         ]}
       />

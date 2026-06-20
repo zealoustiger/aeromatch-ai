@@ -18,6 +18,7 @@ const toolLinks = [
 ]
 
 const guideLinks = [
+  { href: '/guides', label: 'All guides' },
   { href: '/guides/aircraft-co-ownership', label: 'How co-ownership works' },
   { href: '/guides/cost-of-aircraft-co-ownership', label: 'Cost of co-ownership' },
   { href: '/guides/aircraft-partnership-agreement', label: 'Partnership agreement' },

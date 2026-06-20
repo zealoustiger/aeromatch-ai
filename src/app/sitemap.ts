@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/tools/cost-calculator`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/tools/earnings-calculator`, changeFrequency: 'monthly', priority: 0.6 },
     // Guides (content / informational-intent pillar pages)
+    { url: `${SITE_URL}/guides`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/cost-of-aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/aircraft-partnership-agreement`, changeFrequency: 'monthly', priority: 0.6 },
