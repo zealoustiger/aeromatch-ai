@@ -17,11 +17,17 @@ Stable staging base URL (always serves the latest `staging` commit):
    - `git log --oneline main..staging`
    - Read the matching `nightshift/CHANGELOG.md` entries (the cycles since the last promote). Each has a `Pages:` line and a `What:` line.
    - If `main..staging` is empty, write a REVIEW.md that says "Nothing new to review since the last promote" and stop.
-3. **Group by page.** Build a map of `route → [changes]` from the cycles' `Pages` + `What` lines. One cycle can touch several pages (list it under each). Sort pages by how many changes they got (most-changed first). Keep a "Site-wide / other" bucket for nav, layout, SEO, infra.
-4. Write `nightshift/REVIEW.md`:
+3. **Pull the traffic numbers.** Run `node nightshift/bin/traffic-report.mjs` and capture its markdown output. This becomes the **first section** of the report (traffic is the headline the founder cares about most). It fails soft — if it prints an "unavailable" notice, include that as-is.
+4. **Group by page.** Build a map of `route → [changes]` from the cycles' `Pages` + `What` lines. One cycle can touch several pages (list it under each). Sort pages by how many changes they got (most-changed first). Keep a "Site-wide / other" bucket for nav, layout, SEO, infra.
+5. Write `nightshift/REVIEW.md` — **lead with the Traffic block from step 3**, then the by-page build summary:
 
    ```
    # Overnight review — <local date>
+
+   <-- paste the Traffic markdown block from `node nightshift/bin/traffic-report.mjs` here -->
+
+   ---
+
 
    <N> changes landed on staging across <M> pages last night. Review the live
    staging site (you must be logged into Vercel), then tell Claude which pages
@@ -57,9 +63,9 @@ Stable staging base URL (always serves the latest `staging` commit):
    - Use the real stable base URL above for every `[open ↗]` link, with the page's route appended. For dynamic routes (e.g. a listing detail), link to a representative real URL if you can find one, else the index page.
    - Keep bullets plain-language and user-facing — the reader is the founder, not an engineer.
    - Pull risks/schema notes from the cycles' `Verdict`/`Next` lines into "needs your attention."
-5. `git add nightshift/REVIEW.md && git commit -m "nightshift: morning review digest" && git push origin staging`.
-6. **Sync the on-site admin dashboard:** run `node scripts/sync-admin-docs.mjs`. This upserts the current `nightshift/BACKLOG.md` and `nightshift/REVIEW.md` into the shared `admin_content` table so the production admin page (`/admin`) shows today's report + backlog. (Prod and staging share one DB, so this is how the report reaches the live dashboard without promoting to main.)
-7. Stop.
+6. `git add nightshift/REVIEW.md && git commit -m "nightshift: morning review digest" && git push origin staging`.
+7. **Sync the on-site admin dashboard:** run `node scripts/sync-admin-docs.mjs`. This upserts the current `nightshift/BACKLOG.md` and `nightshift/REVIEW.md` into the shared `admin_content` table so the production admin page (`/admin`) shows today's report + backlog. (Prod and staging share one DB, so this is how the report reaches the live dashboard without promoting to main.)
+8. Stop.
 
 ## Rules
 - Build nothing, change no app code, run no migrations. This is a read-and-summarize job only.

@@ -1,5 +1,38 @@
 # Overnight review — June 20
 
+## 📊 Traffic (PostHog) — as of 2026-06-20
+
+- **Visitors:** 7 all-time · 7 in the last 7 days
+- **Pageviews:** 68 all-time · 68 in the last 7 days
+- **Not from Oakland:** 5 visitors _(early on, most non-local hits are crawlers/bots, not real users)_
+
+**By city**
+
+| City | Visitors | Pageviews |
+|---|--:|--:|
+| Oakland | 2 | 63 |
+| Monte Vista | 2 | 2 |
+| Wuhan | 1 | 1 |
+| (unknown) | 1 | 1 |
+| Council Bluffs | 1 | 1 |
+
+**Top pages**
+
+| Page | Pageviews |
+|---|--:|
+| /aircraft | 18 |
+| / | 17 |
+| /admin | 9 |
+| /partnerships | 8 |
+| /admin/review | 3 |
+| /partnerships/seeking | 3 |
+| /partnerships/07c2245d-6df3-4eeb-b14b-9a45ad618718 | 2 |
+| /admin/backlog | 2 |
+| /admin/listings | 2 |
+| /auth | 2 |
+
+---
+
 **48 build cycles ran overnight, all passed**, across roughly **15 page areas** of the
 site. This is a big batch — several nights' worth of SEO and feature work has piled
 up on `staging` and is **not yet live** on clubhanger.com. Review the live staging
