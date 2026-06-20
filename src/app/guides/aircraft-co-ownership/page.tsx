@@ -162,7 +162,11 @@ export default function CoOwnershipGuidePage() {
             <Link href="/tools/earnings-calculator" className="font-medium text-sky-700 hover:underline">
               earnings calculator
             </Link>{' '}
-            to model it.
+            to model it, and{' '}
+            <Link href="/guides/leaseback-vs-co-ownership" className="font-medium text-sky-700 hover:underline">
+              leaseback vs. co-ownership
+            </Link>{' '}
+            to weigh it against sharing the plane.
           </li>
           <li className="leading-relaxed">
             <strong className="text-slate-900">Flying club.</strong> A non-equity membership: you pay dues

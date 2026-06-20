@@ -5,6 +5,7 @@ import {
   Users,
   Wallet,
   FileText,
+  Scale,
   ArrowRight,
   Calculator,
 } from 'lucide-react'
@@ -58,6 +59,13 @@ const GUIDES: {
     description:
       'A plain-English checklist of what a good agreement should cover: shares and buy-out, scheduling, cost-sharing, maintenance, insurance, disputes, and exit.',
     icon: FileText,
+  },
+  {
+    path: '/guides/leaseback-vs-co-ownership',
+    title: 'Aircraft Leaseback vs. Co-Ownership',
+    description:
+      'The decision guide: leaseback (rent your plane to a flight school for income) versus co-ownership (share the plane and costs with partners) — who each is for, control, wear, tax and insurance, and how to choose.',
+    icon: Scale,
   },
 ]
 
