@@ -8,6 +8,7 @@ import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import SaveListingButton from './SaveListingButton'
+import TrustBadge from './TrustBadge'
 
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -64,6 +65,7 @@ export default function PartnershipCard({ p, saved = false }: { p: Partnership; 
                     {p.registration}
                   </span>
                 )}
+                <TrustBadge p={p} variant="compact" />
               </div>
 
               {/* Title */}
