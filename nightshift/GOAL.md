@@ -7,8 +7,11 @@ the funnel does.)
 
 **Read the current score every cycle:**
 ```bash
-node nightshift/bin/scoreboard.mjs
+node nightshift/bin/scoreboard.mjs   # on-site pageviews (PostHog)
+node nightshift/bin/gsc.mjs          # real Google search: clicks, impressions, indexed-count, top queries
 ```
+GSC is the truer SEO signal once configured (see `GSC_SETUP.md`): indexed-count →
+impressions → clicks is the real funnel. Both fail soft if unconfigured.
 It prints pageviews (last 7d vs prior), all-time totals, and the top pages by traffic.
 
 ## Allocation policy — how cycles are split across work types
