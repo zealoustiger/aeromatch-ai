@@ -153,6 +153,46 @@ export async function joinWaitlist(email: string, searchParams: string) {
   return { ok: true }
 }
 
+// Basic email-format check (intentionally lenient — server-side guard, not RFC-perfect).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Email-alerts capture (slice 1). Visitors opt into alerts for a make/model or
+// state from the programmatic for-sale pages — NO account required. Anon insert
+// is allowed by the `alerts` table RLS; rows land status='pending' (the seam for
+// a future double-opt-in confirmation). Idempotent on (email, source_path): the
+// same email+context twice is a no-op success, never an error.
+export async function subscribeToAlerts(
+  email: string,
+  context: string,
+  sourcePath: string
+) {
+  const clean = (email || '').toLowerCase().trim()
+  if (!clean || !EMAIL_RE.test(clean)) {
+    return { error: 'Please enter a valid email address.' }
+  }
+
+  const supabase = await createServerSupabaseClient()
+
+  // Plain INSERT (not upsert): the `alerts` table is insert-only for anon (no
+  // public SELECT, to protect PII), and PostgREST upsert needs SELECT to detect
+  // conflicts — so we insert and treat a unique-violation (same email+context)
+  // as an idempotent success rather than an error. Dedupe is graceful: signing
+  // up twice for the same alert is a no-op "you're on the list", not an error.
+  const { error } = await supabase.from('alerts').insert({
+    email: clean,
+    context: context || null,
+    source_path: sourcePath || null,
+    status: 'pending',
+  })
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed. Idempotent.
+  if (error && error.code !== '23505') {
+    return { error: 'Something went wrong. Please try again.' }
+  }
+
+  return { ok: true }
+}
+
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
 const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft'] as const
 

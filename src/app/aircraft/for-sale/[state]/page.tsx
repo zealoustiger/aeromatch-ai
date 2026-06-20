@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countForSaleState, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
 import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL } from '@/lib/seo'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -96,6 +97,9 @@ export default async function StateAircraftForSalePage({ params }: Props) {
           .
         </p>
       </div>
+
+      {/* Email-alerts capture (slice 1) — inline, no account required. */}
+      <AlertSignup context={entry.name} sourcePath={path} />
 
       {/* Listings */}
       <Suspense fallback={<ListSkeleton />}>
