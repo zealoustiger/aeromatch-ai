@@ -83,6 +83,9 @@ export interface AircraftForSale {
   previous_price: number | null
   price_changed_at: string | null
   removed_at: string | null
+
+  // Quality (generated column; 0-100). Grade derived in src/lib/listingQuality.ts
+  quality_score: number | null
 }
 
 export interface Airport {

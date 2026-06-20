@@ -130,7 +130,20 @@ create table if not exists aircraft_for_sale (
   content_hash     text,                       -- sha1 of listing fields; detects any change
   previous_price   integer,                    -- prior asking_price when a change was detected
   price_changed_at timestamptz,
-  removed_at       timestamptz                 -- set when a listing vanishes from its source
+  removed_at       timestamptz,                -- set when a listing vanishes from its source
+
+  -- Quality score 0-100 (auto-maintained). Grade cutoffs (A>=78,B>=50,C<50) live
+  -- in src/lib/listingQuality.ts; keep scoreRow() in sync with this expression.
+  quality_score smallint generated always as (
+      (case when asking_price is not null then 30 else 0 end)
+    + (case when year is not null then 12 else 0 end)
+    + (case when nullif(btrim(make), '') is not null and lower(btrim(make)) <> 'unknown' then 12 else 0 end)
+    + (case when nullif(btrim(model), '') is not null and lower(btrim(model)) <> 'unknown' then 12 else 0 end)
+    + (case when state is not null then 12 else 0 end)
+    + (case when nullif(btrim(registration), '') is not null then 10 else 0 end)
+    + (case when ttaf is not null then 7 else 0 end)
+    + (case when description is not null and length(description) >= 80 then 5 else 0 end)
+  ) stored
 );
 
 -- =====================================================
@@ -262,6 +275,7 @@ create index on aircraft_for_sale (state);
 create index on aircraft_for_sale (asking_price);
 create index on aircraft_for_sale (source, last_seen_at);
 create index on aircraft_for_sale (price_changed_at) where price_changed_at is not null;
+create index on aircraft_for_sale (quality_score);
 
 create index on airports (state);
 -- PostGIS-style radius search (if you enable the postgis extension):

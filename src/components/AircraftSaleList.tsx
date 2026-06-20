@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
+import { minScoreForGrade, type Grade } from '@/lib/listingQuality'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -11,12 +12,26 @@ interface Filters {
   max_price?: string
   min_year?: string
   max_tt?: string
+  min_grade?: string
   sort?: string
   drops?: string
   page?: string
 }
 
 const PAGE_SIZE = 60
+
+// Site-wide quality floor: the lowest grade the public site will ever show,
+// regardless of the user's filter. Set LISTING_GRADE_FLOOR=B (or A) to hide
+// weaker listings everywhere. Defaults to 'C' (show everything).
+const FLOOR_GRADE = ((process.env.LISTING_GRADE_FLOOR ?? 'C').toUpperCase().charAt(0) || 'C') as Grade
+
+// Effective minimum score = the stricter of the site floor and the user's pick.
+function effectiveMinScore(userGrade: string | undefined): number {
+  const floor = minScoreForGrade(['A', 'B', 'C'].includes(FLOOR_GRADE) ? FLOOR_GRADE : 'C')
+  const user =
+    userGrade === 'A' || userGrade === 'B' ? minScoreForGrade(userGrade as Grade) : 0
+  return Math.max(floor, user)
+}
 
 // Parse ?page into a 1-based page number, clamped to >= 1. Anything missing or
 // junk falls back to page 1.
@@ -86,6 +101,8 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))
     if (filters.min_year) query = query.gte('year', parseInt(filters.min_year))
     if (filters.max_tt) query = query.lte('ttaf', parseInt(filters.max_tt))
+    const minScore = effectiveMinScore(filters.min_grade)
+    if (minScore > 0) query = query.gte('quality_score', minScore)
     if (filters.q) {
       const term = filters.q.replace(/[%,()]/g, ' ').trim()
       if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`)

@@ -6,6 +6,7 @@ import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
+import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 
 const DAY_MS = 86_400_000
 
@@ -50,6 +51,8 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
   const source = sourceLabel(p.source)
   const drop = priceDrop(p)
   const fresh = isNew(p.first_seen_at)
+  const grade = gradeFromScore(p.quality_score)
+  const gm = gradeMeta(grade)
 
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
@@ -81,6 +84,12 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                   {source}
+                </span>
+                <span
+                  title={gm.blurb}
+                  className={cn('rounded-full px-2 py-0.5 text-xs font-bold ring-1', gm.chip)}
+                >
+                  {gm.short}
                 </span>
                 {drop != null && (
                   <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">

@@ -141,6 +141,22 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
         </select>
       </div>
 
+      {/* Listing quality */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Listing quality
+        </label>
+        <select
+          defaultValue={initialValues.min_grade ?? ''}
+          onChange={(e) => updateFilter('min_grade', e.target.value)}
+          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        >
+          <option value="">All listings</option>
+          <option value="B">Grade B &amp; up (hide sparse)</option>
+          <option value="A">Grade A only (most complete)</option>
+        </select>
+      </div>
+
       {/* Price drops only */}
       <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
         <input
