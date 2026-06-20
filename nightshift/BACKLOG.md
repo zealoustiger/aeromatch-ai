@@ -43,6 +43,44 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
+### From report feedback — 2026-06-20 (human review of first run)
+Highest-priority steering. Bugs first, then alternate want/goal per the allocation policy.
+
+**Bugs (do first):**
+- **[P1][bug] Save-listing sign-in redirects to homepage, not back.** Clicking the heart while logged out signs you in but lands on `/` instead of returning to the listing. Fix the post-auth `next` redirect to return to the originating page.
+- **[P1][bug] Homepage search re-prompts signup when already signed in.** A logged-in user clicking Search still hits the SignUpGate. If authed, skip the gate → straight to `/partnerships?…` results.
+
+**Filters & search (extends the [P1] Filter UI overhaul):**
+- **[P1][want] Marketplace filters: multi-select + ranges.** Model multi-select (SR20 + SR22 together) and Listing-Quality multi-select (any combo of A/B/C). Price, Year, Total Time become **min/max ranges**. 375px-first.
+- **[P1][goal] Search-by-mission presets + SEO landing pages.** Mission chips that auto-set filters: "cross-country with family", "time building", "experimental for fun", "first aircraft / training", "fuel efficiency". Each also becomes an SEO page (`/aircraft/mission/[mission]`). Slice: (1) chips on `/aircraft`; (2) per-mission landing pages + sitemap.
+- **[P2][want] Homepage free-text / AI search box.** NL box ("Cirrus SR-22s near me under $400/mo") that auto-populates results; show 2-3 example queries inline to teach phrasing. Extends the AI-search item; this slice = put it on the homepage beside the airport search.
+
+**Search results UX:**
+- **[P2][want] Blend result types + cross-sell.** Instead of hard tabs, blend partnerships / planes-for-sale / pilots; when viewing one, surface a prominent side panel upselling the other two with relevant results.
+- **[P2][want] Make "Save this search" prominent in results** for both for-sale and partnerships (saving a listing is discoverable; saving a search isn't).
+
+**Identity & account:**
+- **[P2][want] Signed-in indicator + profile menu.** Upper-right avatar + name when signed in; dropdown consolidating Account, Admin, Saved listings, Saved searches. Generate default **pilot-themed cartoon avatars** for users without a photo.
+- **[P2][want] Email notification settings page.** Start a settings page for notification preferences (don't send yet — human tests email later). Pairs with the `alerts` table.
+
+**Trust signals (extends the trust-layer item):**
+- **[P2][want] Explain the trust/quality badges.** The bare "B" badge is unclear — hover tooltips per badge + a "what do these mean?" legend page linked from listings.
+
+**Content / guides:**
+- **[P2][goal] Guides: less text-heavy + broaden + engage.** Break up text with images/tables/charts; add general aircraft-ownership guidance (not just co-ownership); embed relevant top YouTube videos; add a small "request a guide" feedback link to invite interaction.
+
+**Airports (human "really likes" these — community angle):**
+- **[P1][want] Airport pages as community hubs.** Keep the planes/partnerships focus, but add FBOs + ratings, flight clubs + ratings, "pilots who fly out of here," and let pilots set a home airport. Slice: (1) FBO + flight-club sections (seed from public data); (2) ratings; (3) pilots-by-home-airport (needs profile base-airport below).
+- **[P2][want] Profile: base + favorite airports.** Let pilots set base airport(s) + favorite/frequently-visited airports (feeds the airport "pilots here" section).
+
+**Polish & tools:**
+- **[P2][want] Model pages: richer specs + per-model differentiators.** Fill out specs + a short "what's different about this model" blurb (Wikipedia is fine). Improves the make+model SEO pages.
+- **[P3][want] Nav polish.** Add icons to Partnerships, Planes-for-Sale, Guides (Tools already has one); move **About** out of top nav into the footer.
+- **[P2][want] Expand tools/calculators + on-page feedback ask.** More detail in the calculators; add an on-page feedback prompt.
+
+**Data quality — NEEDS A DECISION (flagged):**
+- **[P1][want] No empty pages — but label sample data honestly.** Pilot-seeking + some searches look empty; human wants ~6-10 results per page. CAUTION: fabricated listings that look real on a live marketplace is a trust/dark-pattern risk (conflicts with trust guardrails). Recommended: clearly-labeled **"Example/Sample"** demo entries or seed from real public sources — NOT indistinguishable fakes. Keep "post your own" prominent. Confirm approach before building.
+
 ### SEO breadth — keyword-researched (brainstorm 2026-06-19)
 Keyword signal (Google autocomplete, 2026-06-19): demand centers on **make+model +
 "for sale"** (`cessna 172 for sale` → `+california` / `+near me` / `+under $50,000` /
