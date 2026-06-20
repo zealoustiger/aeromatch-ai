@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
 import { SITE_URL } from '@/lib/seo'
+import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
 
 export const revalidate = 3600 // refresh hourly
@@ -66,8 +67,28 @@ export default async function AirportPage({
   const atAirport = allListings.filter((l) => l.home_airport === airport.icao)
   const nearby = allListings.filter((l) => l.home_airport !== airport.icao)
 
+  // Schema.org: an Airport Place node (real codes/coords/region only) + an
+  // ItemList of the partnerships shown on the page (in render order: at-airport
+  // first, then nearby), each linking to its real /partnerships/[id]. Real data
+  // only — no fabricated ratings/reviews. See src/lib/partnershipJsonLd.ts.
+  const airportJsonLd = buildAirportJsonLd(airport)
+  const listingItemList = buildPartnershipItemListJsonLd([...atAirport, ...nearby], {
+    name: `Aircraft partnerships at ${airport.name} (${airport.icao})`,
+    url: `${SITE_URL}/airports/${airport.icao.toLowerCase()}`,
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(airportJsonLd) }}
+      />
+      {listingItemList && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(listingItemList) }}
+        />
+      )}
       <nav className="mb-6 text-sm text-slate-400">
         <Link href="/partnerships" className="hover:text-slate-600">
           Partnerships

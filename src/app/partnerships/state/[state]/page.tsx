@@ -5,6 +5,8 @@ import { Suspense } from 'react'
 import { MapPin, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import { STATE_NAMES, STATE_CODES, SITE_URL } from '@/lib/seo'
+import { getPartnershipListings } from '@/lib/partnershipsQuery'
+import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 
 type Props = { params: Promise<{ state: string }> }
 
@@ -37,8 +39,23 @@ export default async function StatePartnershipsPage({ params }: Props) {
 
   const otherStates = STATE_CODES.filter((c) => c !== code).slice(0, 12)
 
+  // ItemList JSON-LD built from the SAME shared query PartnershipList renders, so
+  // the markup matches the visible cards 1:1 (each item links to a real
+  // /partnerships/[id]). Real data only — no fabricated rating/review.
+  const { listings } = await getPartnershipListings({ state: code })
+  const itemListJsonLd = buildPartnershipItemListJsonLd(listings, {
+    name: `Aircraft partnerships in ${name}`,
+    url: `${SITE_URL}/partnerships/state/${state.toLowerCase()}`,
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
       {/* Breadcrumb */}
       <nav className="mb-6 text-sm text-slate-400">
         <Link href="/" className="hover:text-slate-600">Home</Link>
