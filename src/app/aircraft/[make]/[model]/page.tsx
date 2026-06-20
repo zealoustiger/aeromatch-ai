@@ -214,6 +214,18 @@ export default async function MakeModelForSalePage({ params }: Props) {
             </Link>
             .
           </p>
+          {/* Internal-linking lever: high-intent contextual CTA from this
+              cost-to-own card to the cost calculator. Reuses the same inline
+              sky-blue link styling as the partnerships link above. Single,
+              contextual link — make+model surface only. */}
+          <p className="mt-1 text-sm text-slate-400">
+            <Link
+              href="/tools/cost-calculator"
+              className="font-medium text-sky-600 hover:underline"
+            >
+              Estimate your cost to own a {label} →
+            </Link>
+          </p>
         </div>
       </div>
 
