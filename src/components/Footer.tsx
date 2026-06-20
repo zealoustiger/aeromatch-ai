@@ -12,6 +12,11 @@ const exploreLinks = [
   { href: '/partnerships/seeking/new', label: 'Post a seeking listing' },
 ]
 
+const toolLinks = [
+  { href: '/tools/cost-calculator', label: 'Cost calculator' },
+  { href: '/tools/earnings-calculator', label: 'Earnings calculator' },
+]
+
 const companyLinks = [
   { href: '/about', label: 'About ClubHanger' },
 ]
@@ -37,6 +42,14 @@ export default function Footer() {
             <h3 className="mb-3 text-sm font-semibold text-slate-900">Explore</h3>
             <ul className="space-y-2">
               {exploreLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Tools</h3>
+            <ul className="space-y-2">
+              {toolLinks.map(({ href, label }) => (
                 <li key={href}>
                   <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
                 </li>
