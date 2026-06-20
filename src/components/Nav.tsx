@@ -12,6 +12,7 @@ const links = [
   { href: '/partnerships', label: 'Partnerships' },
   { href: '/aircraft', label: 'Planes for Sale' },
   { href: '/tools/cost-calculator', label: 'Tools' },
+  { href: '/guides', label: 'Guides' },
   { href: '/about', label: 'About' },
 ]
 
