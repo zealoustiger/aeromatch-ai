@@ -1,5 +1,7 @@
 import { getAdminDoc } from '@/lib/adminDocs'
 import AdminMarkdown from '@/components/AdminMarkdown'
+import ReportFeedback from '@/components/ReportFeedback'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export const metadata = { title: 'Daily Report', robots: { index: false } }
 export const dynamic = 'force-dynamic'
@@ -10,17 +12,30 @@ export default async function DailyReportTab() {
     ? new Date(report.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
     : '—'
 
+  const admin = createAdminClient()
+  const { data: feedback } = await admin
+    .from('report_feedback')
+    .select('created_at, body, response, status')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const stagingUrl = process.env.NEXT_PUBLIC_STAGING_URL || ''
+
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-        <h2 className="text-lg font-semibold text-slate-900">Daily Report</h2>
-        <span className="text-xs text-slate-400">updated {updated}</span>
-      </div>
-      {report?.content ? (
-        <AdminMarkdown markdown={report.content} />
-      ) : (
-        <p className="text-sm text-slate-500">No report yet — the overnight digest runs at 7am.</p>
-      )}
-    </section>
+    <>
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Daily Report</h2>
+          <span className="text-xs text-slate-400">updated {updated}</span>
+        </div>
+        {report?.content ? (
+          <AdminMarkdown markdown={report.content} />
+        ) : (
+          <p className="text-sm text-slate-500">No report yet — the overnight digest runs at 7am.</p>
+        )}
+      </section>
+
+      <ReportFeedback entries={feedback ?? []} stagingUrl={stagingUrl} />
+    </>
   )
 }

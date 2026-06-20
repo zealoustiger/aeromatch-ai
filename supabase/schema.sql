@@ -430,3 +430,14 @@ create index on messages (thread_id, created_at);
 create index on partnership_seekers (home_airport);
 create index on partnership_seekers (status);
 create index on partnership_seekers (state);
+
+-- Admin daily-report feedback (Submit feedback action → Claude reads to make backlog). Service-role only.
+create table if not exists report_feedback (
+  id          uuid        default gen_random_uuid() primary key,
+  created_at  timestamptz default now(),
+  body        text        not null,
+  source      text        default 'daily_report',
+  status      text        default 'new',
+  response    text
+);
+alter table report_feedback enable row level security;
