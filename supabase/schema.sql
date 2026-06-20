@@ -373,6 +373,34 @@ create policy "saved_listings_owner_all" on saved_listings
 create index if not exists saved_listings_user_id_idx on saved_listings (user_id);
 
 -- =====================================================
+-- ALERTS (email capture for new-listing alerts)
+-- =====================================================
+-- Visitors opt into alerts for a make/model or state from the programmatic
+-- for-sale pages — NO account required. status='pending' is the seam for a
+-- future double-opt-in confirmation (slice 2). Added 2026-06-20; strictly
+-- additive + PII-protected: anon can INSERT but there is NO public SELECT
+-- (mirrors the `waitlist` table — read submissions via service role / dashboard).
+create table if not exists alerts (
+  id          uuid        default gen_random_uuid() primary key,
+  email       text        not null,
+  context     text,
+  source_path text,
+  status      text        not null default 'pending',
+  created_at  timestamptz default now(),
+  unique(email, source_path)
+);
+
+alter table alerts enable row level security;
+
+create policy "alerts_anyone_insert" on alerts
+  for insert with check (true);
+
+create policy "alerts_service_read" on alerts
+  for select using (auth.role() = 'service_role');
+
+create index if not exists alerts_status_idx on alerts (status);
+
+-- =====================================================
 -- THREADS (one per listing + inquirer pair)
 -- =====================================================
 create table if not exists threads (

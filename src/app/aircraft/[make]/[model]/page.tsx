@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
@@ -149,6 +150,9 @@ export default async function MakeModelForSalePage({ params }: Props) {
           </p>
         </div>
       </div>
+
+      {/* Email-alerts capture (slice 1) — inline, no account required. */}
+      <AlertSignup context={label} sourcePath={path} />
 
       {/* Listings */}
       <h2 className="mb-4 text-lg font-semibold text-slate-900">
