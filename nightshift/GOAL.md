@@ -11,6 +11,32 @@ node nightshift/bin/scoreboard.mjs
 ```
 It prints pageviews (last 7d vs prior), all-time totals, and the top pages by traffic.
 
+## Allocation policy — how cycles are split across work types
+The pageview metric is the **tiebreaker and the default, not the dictator.** Bug
+fixes and human-wanted features carry value the metric can't see (a working site;
+product bets that pay off later). So allocate by lane, don't greedily chase pageviews.
+
+**Every backlog item carries an intent tag** (set by the human, or inferred):
+- `[bug]` — broken behavior, regression, console error, perf/mobile/CWV regression.
+- `[want]` — the human wants it for product reasons, regardless of pageview impact.
+- `[goal]` — expected to grow pageviews (SEO/content/speed). Default for agent-invented work.
+- *Untagged defaults:* an item under an SEO/content heading → `[goal]`; an item that
+  says BUG/broken/regression → `[bug]`; any other feature/idea → `[want]`.
+
+**Lane order, every cycle:**
+1. **Blockers first, uncapped.** If the last cycle FAILED, or there's a known
+   broken page / console error / CWV regression, fix it before anything else.
+2. **Then alternate `[want]` ↔ `[goal]` ~1:1.** Look at the most recent *non-bug*
+   cycle in `CHANGELOG.md`: if it pulled the `[want]` lane, do `[goal]` this cycle;
+   if it pulled `[goal]`, do `[want]`. Pick the highest-value item in that lane
+   (P1 first; `[P1][want]` always preempts). This is the knob:
+   **`roadmap:goal ratio = 1:1`** — change this line to retune (e.g. `1:3` = goal-heavy).
+3. **If the chosen lane is empty, fall through to the other**; if both human lanes
+   are empty, **default to `[goal]`** and invent an SEO experiment. The night never idles.
+
+The CHANGELOG `Goal:` line records which lane each cycle pulled, so the 1:1 is
+self-tracking and the human can see the actual mix each morning and retune the ratio.
+
 ## Primary lever: SEO breadth + quality
 This is a niche marketplace with programmatic landing pages already in place
 (`/partnerships/state/[state]`, `/partnerships/make/[make]`, `/airports/[icao]`).
