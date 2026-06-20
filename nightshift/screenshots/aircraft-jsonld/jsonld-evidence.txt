@@ -1,0 +1,126 @@
+
+===== http://localhost:3000/aircraft/cessna/172 =====
+ld+json blocks found: 3
+  parsed OK, @type=Organization
+  parsed OK, @type=ItemList
+  parsed OK, @type=BreadcrumbList
+  ItemList @context=https://schema.org
+  ItemList name="Cessna 172 for sale"
+  numberOfItems=40, itemListElement.length=40
+  contains aggregateRating? false
+  contains "review"? false
+  contains "image"? false
+  [pos 1] @type=Product name="Cessna 172m Skyhawk"
+       url=https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/97801-pendleton-oregon-united-states/cessna-172m-skyhawk-for-sale-601641
+       offer: price=164900 USD avail=https://schema.org/InStock cond=https://schema.org/UsedCondition url=https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/97801-pendleton-oregon-united-states/cessna-172m-skyhawk-for-sale-601641
+  [pos 2] @type=Product name="Cessna 172h Skyhawk"
+       url=https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172h-skyhawk/muscle-shoals-alabama-united-states/cessna-172h-skyhawk-for-sale-601487
+       offer: price=174900 USD avail=https://schema.org/InStock cond=https://schema.org/UsedCondition url=https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172h-skyhawk/muscle-shoals-alabama-united-states/cessna-172h-skyhawk-for-sale-601487
+  item names visible on page: 40/40
+  items with Offer (numeric price): 36/40
+
+===== http://localhost:3000/aircraft/for-sale/california =====
+ld+json blocks found: 3
+  parsed OK, @type=Organization
+  parsed OK, @type=ItemList
+  parsed OK, @type=BreadcrumbList
+  ItemList @context=https://schema.org
+  ItemList name="California aircraft for sale"
+  numberOfItems=60, itemListElement.length=60
+  contains aggregateRating? false
+  contains "review"? false
+  contains "image"? false
+  [pos 1] @type=Product name="Cirrus Sr22t G6"
+       url=https://aircraftforsale.com/aircraft/single-engine-piston/cirrus/sr22t-g6/riverside-california-united-states/cirrus-sr22t-g6-for-sale-601536
+       offer: price=839000 USD avail=https://schema.org/InStock cond=https://schema.org/UsedCondition url=https://aircraftforsale.com/aircraft/single-engine-piston/cirrus/sr22t-g6/riverside-california-united-states/cirrus-sr22t-g6-for-sale-601536
+  [pos 2] @type=Product name="Beechcraft B36tc Bonanza"
+       url=https://aircraftforsale.com/aircraft/single-engine-piston/beechcraft/b36tc-bonanza/california-united-states/beechcraft-b36tc-bonanza-for-sale-601624
+       offer: price=513000 USD avail=https://schema.org/InStock cond=https://schema.org/UsedCondition url=https://aircraftforsale.com/aircraft/single-engine-piston/beechcraft/b36tc-bonanza/california-united-states/beechcraft-b36tc-bonanza-for-sale-601624
+  item names visible on page: 60/60
+  items with Offer (numeric price): 58/60
+### http://localhost:3000/aircraft/cessna/172
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Cessna 172 for sale",
+  "url": "http://localhost:3000/aircraft/cessna/172",
+  "numberOfItems": 40,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172m Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 164900,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/97801-pendleton-oregon-united-states/cessna-172m-skyhawk-for-sale-601641"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cessna/172m-skyhawk/97801-pendleton-oregon-united-states/cessna-172m-skyhawk-for-sale-601641"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "Product",
+        "name": "Cessna 172h Skyhawk",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cessna"
+        },
+        "offers": {
+          "@type": "Offer",
+... (truncated)
+
+### http://localhost:3000/aircraft/for-sale/california
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "California aircraft for sale",
+  "url": "http://localhost:3000/aircraft/for-sale/california",
+  "numberOfItems": 60,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "Product",
+        "name": "Cirrus Sr22t G6",
+        "brand": {
+          "@type": "Brand",
+          "name": "Cirrus"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": 839000,
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/UsedCondition",
+          "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cirrus/sr22t-g6/riverside-california-united-states/cirrus-sr22t-g6-for-sale-601536"
+        },
+        "url": "https://aircraftforsale.com/aircraft/single-engine-piston/cirrus/sr22t-g6/riverside-california-united-states/cirrus-sr22t-g6-for-sale-601536"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "Product",
+        "name": "Beechcraft B36tc Bonanza",
+        "brand": {
+          "@type": "Brand",
+          "name": "Beechcraft"
+        },
+        "offers": {
+          "@type": "Offer",
+... (truncated)
+
