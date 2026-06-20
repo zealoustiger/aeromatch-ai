@@ -38,10 +38,27 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 - **Controller.com filters** — https://www.controller.com/listings/for-sale/piston-single-aircraft/6
   - Take the *filter taxonomy*, leave the clutter — the human finds Controller "a little busy."
   - Borrow the dimensions (make, model, year, price, total time, engine time, avionics, condition, location); present far fewer at once with progressive disclosure.
+- **Etsy × Airbnb — overall visual aesthetic** — https://www.etsy.com/ + https://www.airbnb.com/ — the human wants ClubHanger to feel like a warm, polished consumer marketplace blending these two.
+  - **Airbnb:** photo-forward cards with big rounded corners (~`rounded-2xl`), soft hover-lift shadow, minimal/no hard borders; a horizontally-scrolling **category chip bar with small icons** at the top of browse pages; clean type hierarchy + generous whitespace; heart-favorite in the card's top-right.
+  - **Etsy:** warm, editorial feel — slightly warm off-white/cream surfaces (not cold slate-gray), friendlier headline type, and curated **collection "rails"** on the homepage (e.g. "Time-builders under $100k", "Glass-panel singles", "Project planes", "Near you").
+  - **KEEP (do not change without a human):** the ClubHanger name/logo, the single sky-blue accent, the nav structure, and the "cleaner than Controller" restraint. This is cards / type / spacing / homepage rails / a category chip bar — **NOT a rebrand**. Anything touching logo, brand, or nav identity → ask the human (FREEZE.md).
 
 ---
 
 ## Ideas
+
+### Design & aesthetic — 2026-06-20 (fresh human request)
+The human likes the look/feel of **Etsy + Airbnb** and wants ClubHanger to adopt a
+combination of the two (see the Etsy × Airbnb entry under **Inspiration** for the
+exact likes + the hard KEEP list). A wholesale reskin is too big for one cycle, so
+this is **sliced — ONE slice per cycle**, each shippable on its own, **375px-first**,
+**sky-blue accent only**, and **no logo / brand / nav-identity change** (FREEZE).
+
+- **[P1][want] Etsy × Airbnb visual refresh — slice 1: design tokens + reference surface.** Establish the shared visual language once (Tailwind theme / CSS vars): a warmer neutral background (subtle cream/off-white vs pure white/cold slate), a consistent card radius (`rounded-2xl`), a soft shadow + hover-lift scale, a refined spacing + type scale, and a friendlier heading treatment. Apply it to ONE reference surface — the `/aircraft` listing cards + page chrome — and leave the tokens documented for later slices. QA desktop + 375px; no regressions elsewhere.
+- **[P2][want] slice 2: listing-card redesign (Airbnb-style).** Roll the tokens into `AircraftSaleCard` + `PartnershipCard` — larger photo, bold price, heart top-right, grade/trust badges + location, soft hover-lift, minimal borders. 375px-first.
+- **[P2][want] slice 3: category chip bar (Airbnb-style).** A horizontally-scrolling row of small icon "chips" at the top of `/aircraft` (then partnerships) that set existing filters — by make, price band, mission, "near me." Reuses current filter params; no new backend.
+- **[P2][want] slice 4: homepage curated rails (Etsy-style).** Add horizontally-scrolling "collection" rails of real listings on the homepage ("Time-builders under $100k", "Glass-panel singles", "Near you", "New this week"), each linking to the matching filtered search / SEO page.
+- **[P3][want] slice 5: token sweep.** Apply the design tokens to the remaining pages (listing detail, guides, tools, airport, partnerships) for consistency. One page-family per cycle.
 
 ### From report feedback — 2026-06-20 (human review of first run)
 Highest-priority steering. Bugs first, then alternate want/goal per the allocation policy.
