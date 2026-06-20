@@ -101,7 +101,7 @@ export default function AircraftSaleCard({
   const family = resolveMakeModelFamily(p.make, p.model)
 
   return (
-    <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
+    <article className="ch-card group overflow-hidden border border-slate-100 bg-white">
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
         <div className="relative h-44 sm:h-auto sm:w-52 sm:shrink-0">
