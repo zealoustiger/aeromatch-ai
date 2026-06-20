@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
 import { minScoreForGrade, type Grade } from '@/lib/listingQuality'
+import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -131,6 +132,94 @@ export async function countForSaleState(code: string): Promise<number> {
     return count ?? 0
   } catch {
     return 0
+  }
+}
+
+/**
+ * The states (USPS code) with the most active listings of a make+model family,
+ * for the make+model page's "Browse {Model} by state" rail. Every returned state
+ * has >= 1 active listing of this family, so its `/aircraft/for-sale/[state]` page
+ * resolves (count > 0) — the rail can never link to a 404/thin state page.
+ * Reads the same `aircraft_for_sale` rows the page already queries; returns [] on
+ * any failure (the caller then simply omits the rail).
+ */
+export async function topStatesForMakeModel(
+  make: string,
+  modelPattern: string,
+  notModelPattern: string | undefined,
+  limit = 8
+): Promise<{ code: string; n: number }[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const base = supabase
+      .from('aircraft_for_sale')
+      .select('state')
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .not('state', 'is', null)
+      .limit(5000)
+    const { data, error } = await (notModelPattern
+      ? base.not('model', 'ilike', notModelPattern)
+      : base)
+    if (error || !data) return []
+    const counts = new Map<string, number>()
+    for (const row of data) {
+      const code = (row.state ?? '').trim().toUpperCase()
+      if (code.length !== 2) continue
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([code, n]) => ({ code, n }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, limit)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * The most-listed make+model FAMILIES in a state, for the state page's "Popular
+ * aircraft for sale in {State}" rail. Each active listing's messy raw make/model
+ * is resolved through `resolveMakeModelFamily` (the single source of truth that
+ * decides which combos have a real `/aircraft/[make]/[model]` page), then
+ * aggregated. Listings that don't resolve to an existing combo (null model,
+ * non-manufacturer make) are skipped — so every returned combo has a live page
+ * and the rail can never link to a 404. Returns [] on any failure.
+ */
+export async function topMakeModelsForState(
+  code: string,
+  limit = 8
+): Promise<{ entry: SeoMakeModel; n: number }[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('make, model')
+      .eq('status', 'active')
+      .eq('state', code)
+      .not('make', 'is', null)
+      .not('model', 'is', null)
+      .limit(5000)
+    if (error || !data) return []
+    const counts = new Map<string, { entry: SeoMakeModel; n: number }>()
+    for (const row of data) {
+      const entry = resolveMakeModelFamily(row.make, row.model)
+      if (!entry) continue
+      const key = `${entry.makeSlug}/${entry.modelSlug}`
+      const existing = counts.get(key)
+      if (existing) existing.n += 1
+      else counts.set(key, { entry, n: 1 })
+    }
+    return [...counts.values()].sort((a, b) => b.n - a.n).slice(0, limit)
+  } catch {
+    return []
   }
 }
 

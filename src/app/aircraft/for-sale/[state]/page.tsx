@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { Plane, MapPin, ArrowRight } from 'lucide-react'
-import AircraftSaleList, { countForSaleState, fetchAircraftPage } from '@/components/AircraftSaleList'
+import AircraftSaleList, { countForSaleState, fetchAircraftPage, topMakeModelsForState } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL } from '@/lib/seo'
@@ -53,6 +53,11 @@ export default async function StateAircraftForSalePage({ params }: Props) {
 
   const otherStates = STATE_CODES.filter((c) => c !== entry.code).slice(0, 14)
   const path = `/aircraft/for-sale/${stateSlug(entry.name)}`
+
+  // FAMILY→FAMILY rail (slice 2): the most-listed make+model families in THIS
+  // state that have a real /aircraft/[make]/[model] page. Each is resolved
+  // through the shared resolveMakeModelFamily, so no link can 404.
+  const popularModels = await topMakeModelsForState(entry.code, 8)
 
   // ItemList JSON-LD for rich results — marks up exactly the first page of
   // listings the visitor sees (same state filter/order as the rendered list),
@@ -118,8 +123,29 @@ export default async function StateAircraftForSalePage({ params }: Props) {
         source listing.
       </p>
 
+      {/* Popular make+model families in this state (slice 2 family→family rail) */}
+      {popularModels.length > 0 && (
+        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Plane className="h-4 w-4 text-sky-500" />
+            Popular aircraft for sale in {entry.name}
+          </h2>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {popularModels.map(({ entry: e }) => (
+              <Link
+                key={`${e.makeSlug}/${e.modelSlug}`}
+                href={`/aircraft/${e.makeSlug}/${e.modelSlug}`}
+                className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+              >
+                {e.make} {e.model} for sale
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Cross-links */}
-      <div className="mt-12 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-base font-semibold text-slate-900">Aircraft for sale in other states</h2>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
           {otherStates.map((c) => (

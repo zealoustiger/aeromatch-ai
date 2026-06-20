@@ -4,10 +4,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
 import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
-import AircraftSaleList, { countMakeModel, fetchAircraftPage } from '@/components/AircraftSaleList'
+import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
-import { getInventoryMakeModels, resolveMakeModel, SITE_URL } from '@/lib/seo'
+import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -67,6 +67,23 @@ export default async function MakeModelForSalePage({ params }: Props) {
   const otherCombos = allCombos
     .filter((e) => e.makeSlug !== entry.makeSlug || e.modelSlug !== entry.modelSlug)
     .slice(0, 12)
+
+  // FAMILY→FAMILY rails (slice 2). All targets are inventory-backed pages that
+  // exist, so no rail link can 404.
+  //   (a) Other models of the SAME make that have a page (e.g. "More Cessna
+  //       models for sale") — keeps crawl equity inside the make family.
+  const sameMakeModels = allCombos
+    .filter((e) => e.makeSlug === entry.makeSlug && e.modelSlug !== entry.modelSlug)
+    .slice(0, 8)
+  //   (b) The states with the most listings of THIS family — each has >= 1
+  //       active listing, so its /aircraft/for-sale/[state] page resolves 200.
+  const topStates = (
+    await topStatesForMakeModel(entry.make, entry.modelPattern, entry.notModelPattern, 10)
+  )
+    // Only known USPS states have a /aircraft/for-sale/[state] page; drop any
+    // stray/territory code so the rail never builds a link to a missing page.
+    .filter((s) => STATE_NAMES[s.code])
+    .slice(0, 8)
 
   // ItemList JSON-LD for rich results — marks up exactly the first page of
   // listings the visitor sees (same filters/order as the rendered list), each as
@@ -176,8 +193,52 @@ export default async function MakeModelForSalePage({ params }: Props) {
         source listing.
       </p>
 
+      {/* Family→family rails (slice 2) */}
+      {(sameMakeModels.length > 0 || topStates.length > 0) && (
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+          {sameMakeModels.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
+                <Plane className="h-4 w-4 text-sky-500" />
+                More {entry.make} models for sale
+              </h2>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {sameMakeModels.map((e) => (
+                  <Link
+                    key={`${e.makeSlug}/${e.modelSlug}`}
+                    href={`/aircraft/${e.makeSlug}/${e.modelSlug}`}
+                    className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                  >
+                    {e.make} {e.model}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {topStates.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
+                <ArrowRight className="h-4 w-4 text-sky-500" />
+                Browse {label} by state
+              </h2>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {topStates.map((s) => (
+                  <Link
+                    key={s.code}
+                    href={`/aircraft/for-sale/${stateSlug(STATE_NAMES[s.code])}`}
+                    className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                  >
+                    {STATE_NAMES[s.code]}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Cross-links */}
-      <div className="mt-12 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-base font-semibold text-slate-900">Browse other aircraft for sale</h2>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
           {otherCombos.map((e) => (
