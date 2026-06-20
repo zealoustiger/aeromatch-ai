@@ -190,3 +190,49 @@ export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel 
   const md = modelSlug.toLowerCase()
   return SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md) ?? null
 }
+
+// Translate a Postgres `ilike` pattern into a case-insensitive anchored regex so
+// we can test it in JS with the SAME semantics the DB query uses (`%` = any run,
+// `_` = single char). Used to decide, client-side, whether a listing belongs to
+// a curated make+model family — mirroring `countMakeModel`'s server-side filter.
+function ilikeToRegExp(pattern: string): RegExp {
+  let out = '^'
+  for (const ch of pattern) {
+    if (ch === '%') out += '[\\s\\S]*'
+    else if (ch === '_') out += '[\\s\\S]'
+    else out += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }
+  return new RegExp(out + '$', 'i')
+}
+
+/**
+ * Resolve a listing's raw `make`/`model` strings to the curated make+model family
+ * that has a real `/aircraft/[makeSlug]/[modelSlug]` page — or `null` if none.
+ *
+ * This reuses `SEO_MAKE_MODELS` (the single source of truth that drives
+ * `generateStaticParams`, the sitemap, and the route's `getMakeModel`) and the
+ * exact same match semantics as `countMakeModel`: make matched
+ * case-insensitively as a substring (`ilike '%make%'`), model matched against
+ * the family's `modelPattern` and excluded by `notModelPattern` (both `ilike`).
+ *
+ * Callers use this to emit a "See all {Make} {Model} for sale" link ONLY when a
+ * page exists — so links never point at a missing/404 combo page. (A combo only
+ * resolves for a listing that exists, so the resolved page always has ≥1 active
+ * listing and can't trip the route's count-0 thin-page guardrail.)
+ */
+export function resolveMakeModelFamily(
+  make: string | null | undefined,
+  model: string | null | undefined
+): SeoMakeModel | null {
+  if (!make || !model) return null
+  const makeLc = make.toLowerCase()
+  for (const e of SEO_MAKE_MODELS) {
+    // make: listing make must contain the family's exact DB make value.
+    if (!makeLc.includes(e.make.toLowerCase())) continue
+    // model: must match the family pattern and not the exclusion pattern.
+    if (!ilikeToRegExp(e.modelPattern).test(model)) continue
+    if (e.notModelPattern && ilikeToRegExp(e.notModelPattern).test(model)) continue
+    return e
+  }
+  return null
+}

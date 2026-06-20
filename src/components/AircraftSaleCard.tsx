@@ -1,12 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
+import { resolveMakeModelFamily } from '@/lib/seo'
 
 const DAY_MS = 86_400_000
 
@@ -53,6 +55,9 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
   const fresh = isNew(p.first_seen_at)
   const grade = gradeFromScore(p.quality_score)
   const gm = gradeMeta(grade)
+  // Internal link to the make+model for-sale family page — only when a real page
+  // exists for this listing's make+model (reuses SEO_MAKE_MODELS, never 404s).
+  const family = resolveMakeModelFamily(p.make, p.model)
 
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md">
@@ -121,6 +126,17 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                 </h2>
               </a>
               <p className="mt-0.5 text-sm font-medium text-slate-500">{label}</p>
+
+              {/* Internal link to the make+model for-sale family page */}
+              {family && (
+                <Link
+                  href={`/aircraft/${family.makeSlug}/${family.modelSlug}`}
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline"
+                >
+                  <Plane className="h-3 w-3" />
+                  See all {family.make} {family.model} for sale
+                </Link>
+              )}
 
               {/* Description preview */}
               {p.description && (
