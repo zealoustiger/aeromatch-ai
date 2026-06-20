@@ -10,7 +10,7 @@ import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
-import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -130,6 +130,11 @@ export default async function MakeModelForSalePage({ params }: Props) {
     name: `${label} for sale`,
     url: `${SITE_URL}${path}`,
   })
+  // Page-level price-range AggregateOffer (real data only; null when <2 priced).
+  const aggregateOfferJsonLd = buildAircraftAggregateOfferJsonLd(listings, {
+    name: `${label} for sale`,
+    url: `${SITE_URL}${path}`,
+  })
 
   return (
     <CompareProvider>
@@ -139,6 +144,12 @@ export default async function MakeModelForSalePage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {aggregateOfferJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
         />
       )}
       {/* Breadcrumb */}

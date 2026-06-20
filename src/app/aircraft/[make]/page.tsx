@@ -10,7 +10,7 @@ import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakes, resolveMake, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, type SeoMakeModel } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
-import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ make: string }> }
 
@@ -126,6 +126,11 @@ export default async function MakeForSalePage({ params }: Props) {
     name: `${entry.make} aircraft for sale`,
     url: `${SITE_URL}${path}`,
   })
+  // Page-level price-range AggregateOffer (real data only; null when <2 priced).
+  const aggregateOfferJsonLd = buildAircraftAggregateOfferJsonLd(listings, {
+    name: `${entry.make} aircraft for sale`,
+    url: `${SITE_URL}${path}`,
+  })
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -137,6 +142,12 @@ export default async function MakeForSalePage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {aggregateOfferJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
         />
       )}
       {/* Breadcrumb */}

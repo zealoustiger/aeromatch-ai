@@ -17,7 +17,7 @@ import {
   SITE_NAME,
   DEFAULT_OG_IMAGE,
 } from '@/lib/seo'
-import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -121,6 +121,11 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
     name: `${label} for sale in ${st.name}`,
     url: `${SITE_URL}${path}`,
   })
+  // Page-level price-range AggregateOffer (real data only; null when <2 priced).
+  const aggregateOfferJsonLd = buildAircraftAggregateOfferJsonLd(listings, {
+    name: `${label} for sale in ${st.name}`,
+    url: `${SITE_URL}${path}`,
+  })
 
   return (
     <CompareProvider>
@@ -130,6 +135,12 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {aggregateOfferJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
         />
       )}
       {/* Breadcrumb: Home → Aircraft for Sale → {Make} {Model} → {State} */}
