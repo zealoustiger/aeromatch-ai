@@ -225,7 +225,10 @@ export default function CoOwnershipGuidePage() {
             Cessna 172
           </Link>{' '}
           is one of the most commonly co-owned types in the U.S., which makes it a good baseline for cost
-          comparisons.
+          comparisons. For a full cost breakdown with a worked example, see{' '}
+          <Link href="/guides/cost-of-aircraft-co-ownership" className="font-medium text-sky-700 hover:underline">
+            how much it costs to co-own an aircraft
+          </Link>.
         </p>
 
         <SectionHeading><span id="splitting-costs" />How to split costs fairly</SectionHeading>
