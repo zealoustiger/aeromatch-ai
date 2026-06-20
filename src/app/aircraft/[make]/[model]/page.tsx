@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { Plane, ArrowRight, Gauge, Wallet, LineChart } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel, priceStatsForMakeModel } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
@@ -330,6 +331,10 @@ export default async function MakeModelForSalePage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Buying a plane? — related-guides cross-link block (internal linking
+          toward the buyer-guide cluster). Additive; no new page. */}
+      <ForSaleGuideLinks className="mt-4" />
     </div>
     <CompareTray />
     </CompareProvider>
