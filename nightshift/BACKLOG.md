@@ -41,7 +41,7 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 - **Etsy × Airbnb — overall visual aesthetic** — https://www.etsy.com/ + https://www.airbnb.com/ — the human wants ClubHanger to feel like a warm, polished consumer marketplace blending these two.
   - **Airbnb:** photo-forward cards with big rounded corners (~`rounded-2xl`), soft hover-lift shadow, minimal/no hard borders; a horizontally-scrolling **category chip bar with small icons** at the top of browse pages; clean type hierarchy + generous whitespace; heart-favorite in the card's top-right.
   - **Etsy:** warm, editorial feel — slightly warm off-white/cream surfaces (not cold slate-gray), friendlier headline type, and curated **collection "rails"** on the homepage (e.g. "Time-builders under $100k", "Glass-panel singles", "Project planes", "Near you").
-  - **KEEP (do not change without a human):** the ClubHanger name/logo, the single sky-blue accent, the nav structure, and the "cleaner than Controller" restraint. This is cards / type / spacing / homepage rails / a category chip bar — **NOT a rebrand**. Anything touching logo, brand, or nav identity → ask the human (FREEZE.md).
+  - **Branding is OPEN for experimentation** — logo, name treatment, accent color(s), typography, overall look are all fair game; the human will give feedback after the cycle. Try things, but keep each cycle cohesive and reversible (don't thrash the whole brand at once), and keep the "cleaner than Controller" restraint. (Major nav/IA *reordering* still asks a human — see FREEZE.)
 
 ---
 
@@ -50,9 +50,10 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 ### Design & aesthetic — 2026-06-20 (fresh human request)
 The human likes the look/feel of **Etsy + Airbnb** and wants ClubHanger to adopt a
 combination of the two (see the Etsy × Airbnb entry under **Inspiration** for the
-exact likes + the hard KEEP list). A wholesale reskin is too big for one cycle, so
-this is **sliced — ONE slice per cycle**, each shippable on its own, **375px-first**,
-**sky-blue accent only**, and **no logo / brand / nav-identity change** (FREEZE).
+exact likes). A wholesale reskin is too big for one cycle, so this is **sliced — ONE
+slice per cycle**, each shippable on its own and **375px-first**. **Branding is now
+open for experimentation** (logo, accent color, typography, overall look) — the human
+reviews post-cycle, so try things; just keep each cycle cohesive and reversible.
 
 - **[P1][want] Etsy × Airbnb visual refresh — slice 1: design tokens + reference surface.** Establish the shared visual language once (Tailwind theme / CSS vars): a warmer neutral background (subtle cream/off-white vs pure white/cold slate), a consistent card radius (`rounded-2xl`), a soft shadow + hover-lift scale, a refined spacing + type scale, and a friendlier heading treatment. Apply it to ONE reference surface — the `/aircraft` listing cards + page chrome — and leave the tokens documented for later slices. QA desktop + 375px; no regressions elsewhere.
 - **[P2][want] slice 2: listing-card redesign (Airbnb-style).** Roll the tokens into `AircraftSaleCard` + `PartnershipCard` — larger photo, bold price, heart top-right, grade/trust badges + location, soft hover-lift, minimal borders. 375px-first.
@@ -166,11 +167,11 @@ These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now 
 ---
 
 ## Constraints / taste notes
-- Keep the **sky-blue accent**; one accent color, no new palettes.
+- **Brand/palette is open for experimentation** (logo, accent color, typography, overall look) — the human reviews post-cycle. Keep each cycle to ONE cohesive palette and make it reversible; don't scatter unrelated colors or thrash the whole brand at once.
 - **Mobile-first** — every change must look right at 375px before desktop.
 - **Cleaner than Controller** — the human finds dense filter walls busy. Few filters visible, progressive disclosure for the rest.
 - No dark patterns, no fake urgency, no autoplay.
-- Monetization, pricing, removing features, brand/logo/nav-identity changes = **ask a human** (FREEZE.md).
+- Monetization, pricing, removing features = **ask a human** (FREEZE.md).
 
 ---
 
