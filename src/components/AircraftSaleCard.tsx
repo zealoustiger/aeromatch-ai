@@ -9,6 +9,7 @@ import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { resolveMakeModelFamily } from '@/lib/seo'
+import CompareToggle from './CompareToggle'
 
 const DAY_MS = 86_400_000
 
@@ -113,6 +114,9 @@ export default function AircraftSaleCard({ p }: { p: AircraftForSale }) {
                     {p.registration}
                   </span>
                 )}
+                {/* Compare toggle — only renders inside a CompareProvider (i.e.
+                    on /aircraft); a no-op everywhere else. */}
+                <CompareToggle listingId={p.id} label={p.title} type="aircraft" />
               </div>
 
               {/* Title */}

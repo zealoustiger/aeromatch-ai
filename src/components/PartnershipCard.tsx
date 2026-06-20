@@ -69,7 +69,7 @@ export default function PartnershipCard({ p, saved = false }: { p: Partnership; 
                 <TrustBadge p={p} variant="compact" />
                 {/* Compare toggle — only renders inside a CompareProvider (i.e.
                     on /partnerships); a no-op everywhere else. */}
-                <CompareToggle listingId={p.id} label={p.title} />
+                <CompareToggle listingId={p.id} label={p.title} type="partnership" />
               </div>
 
               {/* Title */}
