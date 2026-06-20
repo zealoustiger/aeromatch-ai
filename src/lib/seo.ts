@@ -440,6 +440,110 @@ export async function getInventoryMakeModels(): Promise<SeoMakeModel[]> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// MODEL × STATE intersection — the page family at
+// `/aircraft/[make]/[model]/[state]` (e.g. /aircraft/cessna/172/california:
+// "Cessna 172 for sale in California"). The #1 autocomplete intent.
+//
+// A combo earns a page iff it has >= INTERSECTION_MIN_COUNT active listings of
+// that make+model family located in that state. We derive the full set in ONE
+// pass over `aircraft_for_sale`, matching each row to an inventory-backed combo
+// (so a state page can only exist where its parent /aircraft/[make]/[model] page
+// also exists). This is the SINGLE source of truth shared by the route's
+// `generateStaticParams` and the sitemap, so they can never drift. Threshold
+// mirrors DYNAMIC_MIN_COUNT — no thin/near-empty intersection pages (GOAL.md).
+// ---------------------------------------------------------------------------
+
+/** Min active listings a (make, model, state) combo needs to earn a page. */
+const INTERSECTION_MIN_COUNT = 3
+
+export type SeoMakeModelState = {
+  entry: SeoMakeModel
+  /** USPS code, e.g. "CA". */
+  code: string
+  /** full state name, e.g. "California". */
+  stateName: string
+  /** state URL slug, e.g. "california". */
+  stateSlug: string
+  /** approx active-listing count for this combo (from the param-time scan; the
+   *  page recomputes its own live count for the title/guard). */
+  count: number
+}
+
+let _intersectionCache: SeoMakeModelState[] | null = null
+
+/**
+ * Every inventory-backed (make, model, state) combo with >= INTERSECTION_MIN_COUNT
+ * active listings. Pages through ALL active rows (PostgREST caps a single read at
+ * 1000, so we `.range()` to see the full table), maps each row to the curated
+ * make+model family it belongs to (`resolveMakeModelFamily` — the same matcher the
+ * state page's rail uses), aggregates by (combo, USPS state), and keeps combos at
+ * or above the threshold. Returns [] on any failure (build never crashes; the
+ * route/sitemap simply emit nothing extra).
+ */
+export async function getInventoryMakeModelStates(): Promise<SeoMakeModelState[]> {
+  if (_intersectionCache) return _intersectionCache
+
+  const supabase = await createAnonReadClient()
+  if (!supabase) return []
+
+  try {
+    // Page through the whole active table (1000-row PostgREST cap per request).
+    const PAGE = 1000
+    const rows: { make: string | null; model: string | null; state: string | null }[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('aircraft_for_sale')
+        .select('make, model, state')
+        .eq('status', 'active')
+        .not('make', 'is', null)
+        .not('model', 'is', null)
+        .not('state', 'is', null)
+        .range(from, from + PAGE - 1)
+      if (error || !data) break
+      rows.push(...data)
+      if (data.length < PAGE) break
+    }
+
+    // Aggregate active-listing counts per (combo key, USPS state code). Only rows
+    // that resolve to a real inventory-backed make+model family are counted, so an
+    // intersection page can never exist without its parent model page.
+    type Agg = { entry: SeoMakeModel; code: string; count: number }
+    const agg = new Map<string, Agg>()
+    for (const row of rows) {
+      const code = (row.state ?? '').trim().toUpperCase()
+      if (code.length !== 2 || !STATE_NAMES[code]) continue
+      const entry = resolveMakeModelFamily(row.make, row.model)
+      if (!entry) continue
+      const key = `${entry.makeSlug}/${entry.modelSlug}/${code}`
+      const existing = agg.get(key)
+      if (existing) existing.count += 1
+      else agg.set(key, { entry, code, count: 1 })
+    }
+
+    const out: SeoMakeModelState[] = [...agg.values()]
+      .filter((a) => a.count >= INTERSECTION_MIN_COUNT)
+      .map((a) => ({
+        entry: a.entry,
+        code: a.code,
+        stateName: STATE_NAMES[a.code],
+        stateSlug: stateSlug(STATE_NAMES[a.code]),
+        count: a.count,
+      }))
+      .sort((a, b) =>
+        b.count - a.count ||
+        a.entry.makeSlug.localeCompare(b.entry.makeSlug) ||
+        a.entry.modelSlug.localeCompare(b.entry.modelSlug) ||
+        a.code.localeCompare(b.code)
+      )
+
+    _intersectionCache = out
+    return out
+  } catch {
+    return []
+  }
+}
+
 /**
  * Resolve a make+model slug pair to its `SeoMakeModel`, checking the curated list
  * first (fast, sync) and then the full inventory-backed set. Returns null for an

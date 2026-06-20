@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, SITE_URL, stateSlug } from '@/lib/seo'
+import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInventoryMakeModelStates, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 import { getNearAirportSitemapIcaos } from '@/lib/nearbyPartnerships'
 
@@ -41,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let nearAirportPages: MetadataRoute.Sitemap = []
   let makePages2: MetadataRoute.Sitemap = []
   let makeModelPages: MetadataRoute.Sitemap = []
+  let makeModelStatePages: MetadataRoute.Sitemap = []
   let forSaleStatePages: MetadataRoute.Sitemap = []
 
   try {
@@ -116,6 +117,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }))
 
+    // Model × state intersection pages (`/aircraft/[make]/[model]/[state]`) —
+    // emit ONLY inventory-backed combos (>= threshold live listings). Reuse the
+    // SAME `getInventoryMakeModelStates` helper the route's generateStaticParams
+    // uses as the single source of truth, so the sitemap and the generated pages
+    // can never drift and no sub-threshold combo (a soft-404) ever appears here.
+    // The set is small (~tens of combos), so no cap is applied.
+    const intersections = await getInventoryMakeModelStates()
+    makeModelStatePages = intersections.map(({ entry, stateSlug: slug }) => ({
+      url: `${SITE_URL}/aircraft/${entry.makeSlug}/${entry.modelSlug}/${slug}`,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
     // State-level aircraft-for-sale pages — emit ONLY states with real live
     // inventory. The page route 404s when its live count is 0 (see the
     // for-sale/[state] page + countForSaleState), so reuse the same count here as
@@ -143,6 +157,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...makePages,
     ...makePages2,
     ...makeModelPages,
+    ...makeModelStatePages,
     ...forSaleStatePages,
     ...airportPages,
     ...nearAirportPages,

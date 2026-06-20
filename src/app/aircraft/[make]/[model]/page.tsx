@@ -95,14 +95,17 @@ export default async function MakeModelForSalePage({ params }: Props) {
   const sameMakeModels = allCombos
     .filter((e) => e.makeSlug === entry.makeSlug && e.modelSlug !== entry.modelSlug)
     .slice(0, 8)
-  //   (b) The states with the most listings of THIS family — each has >= 1
-  //       active listing, so its /aircraft/for-sale/[state] page resolves 200.
+  //   (b) The states with the most listings of THIS family — link DOWN to the
+  //       model×state intersection page (/aircraft/[make]/[model]/[state],
+  //       "Cessna 172 for sale in California"). That route 404s a combo below the
+  //       inventory threshold, so we keep only states at/above the SAME threshold
+  //       (>= 3) — the rail can never link to a thin/404 intersection page.
+  const INTERSECTION_MIN = 3
   const topStates = (
-    await topStatesForMakeModel(entry.make, entry.modelPattern, entry.notModelPattern, 10)
+    await topStatesForMakeModel(entry.make, entry.modelPattern, entry.notModelPattern, 12)
   )
-    // Only known USPS states have a /aircraft/for-sale/[state] page; drop any
-    // stray/territory code so the rail never builds a link to a missing page.
-    .filter((s) => STATE_NAMES[s.code])
+    // Only known USPS states have a page; drop any stray/territory code.
+    .filter((s) => STATE_NAMES[s.code] && s.n >= INTERSECTION_MIN)
     .slice(0, 8)
 
   // Aggregate "Market snapshot" stats for THIS family (median / range / count),
@@ -299,10 +302,10 @@ export default async function MakeModelForSalePage({ params }: Props) {
                 {topStates.map((s) => (
                   <Link
                     key={s.code}
-                    href={`/aircraft/for-sale/${stateSlug(STATE_NAMES[s.code])}`}
+                    href={`/aircraft/${entry.makeSlug}/${entry.modelSlug}/${stateSlug(STATE_NAMES[s.code])}`}
                     className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
                   >
-                    {STATE_NAMES[s.code]}
+                    {label} in {STATE_NAMES[s.code]}
                   </Link>
                 ))}
               </div>
