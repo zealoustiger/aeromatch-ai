@@ -8,6 +8,8 @@ import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 
 import PartnershipTabs from '@/components/PartnershipTabs'
+import { CompareProvider } from '@/components/CompareProvider'
+import CompareTray from '@/components/CompareTray'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
@@ -28,7 +30,9 @@ export default async function PartnershipsPage({
   const activeFilterCount = Object.values(params).filter(Boolean).length
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <CompareProvider>
+    {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-10 lg:px-8">
       {/* Page header */}
       <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -81,6 +85,8 @@ export default async function PartnershipsPage({
         </div>
       </div>
     </div>
+    <CompareTray />
+    </CompareProvider>
   )
 }
 
