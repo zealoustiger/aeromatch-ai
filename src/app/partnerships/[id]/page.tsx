@@ -16,6 +16,8 @@ import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
+import CostCalculator from '@/components/CostCalculator'
+import { shareFractionFromType } from '@/lib/calculators'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
 // `/compare` view uses the same source of truth — no duplicated query).
@@ -257,6 +259,18 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 )}
               </dl>
             </div>
+
+            {/* Compact cost estimator — pre-filled from this listing's real
+                numbers where available; degrades to sensible defaults when a
+                field is missing (the component handles the nulls). Lets a buyer
+                see their true monthly / per-hour cost right on the listing. */}
+            <CostCalculator
+              variant="compact"
+              initialBuyIn={p.buy_in_price}
+              initialMonthlyFixed={p.monthly_fixed}
+              initialHourlyWet={p.hourly_wet}
+              shareFraction={shareFractionFromType(p.share_type)}
+            />
 
             {/* Structure card */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
