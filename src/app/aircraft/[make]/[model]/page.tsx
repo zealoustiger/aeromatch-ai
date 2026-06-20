@@ -7,7 +7,7 @@ import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
-import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL } from '@/lib/seo'
+import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
@@ -35,6 +35,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const label = `${entry.make} ${entry.model}`
   const count = n.toLocaleString()
   const path = `/aircraft/${entry.makeSlug}/${entry.modelSlug}`
+  const url = `${SITE_URL}${path}`
+  // Page-specific OG/Twitter copy reflecting THIS make+model (mirrors the
+  // per-page card pattern shipped on /partnerships/[id]). No per-aircraft image
+  // — fall back to the SAME site default OG card so a shared link always unfurls
+  // into a real card, never a broken/empty image.
+  const ogTitle = `${label} for sale — ${count} aircraft`
+  const ogDescription = `${label} aircraft for sale, with specs and cost-to-own guidance from ClubHanger.`
 
   return {
     // Title pattern per spec: "{Make} {Model} for sale — {N} aircraft | ClubHanger".
@@ -42,10 +49,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // " | ClubHanger" isn't doubled.
     title: { absolute: `${label} for sale — ${count} aircraft | ClubHanger` },
     description: `Browse ${count} ${label} aircraft for sale, aggregated from across the web. ${entry.specs} See specs and typical cost to own.`,
-    alternates: { canonical: `${SITE_URL}${path}` },
+    alternates: { canonical: url },
     openGraph: {
-      title: `${label} for sale — ${count} aircraft`,
-      description: `${label} aircraft for sale, with specs and cost-to-own guidance from ClubHanger.`,
+      title: ogTitle,
+      description: ogDescription,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: DEFAULT_OG_IMAGE, alt: `${label} aircraft for sale on ClubHanger` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }
