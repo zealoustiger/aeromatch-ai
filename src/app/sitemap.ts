@@ -10,6 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/partnerships`, changeFrequency: 'hourly', priority: 0.9 },
     { url: `${SITE_URL}/partnerships/seeking`, changeFrequency: 'hourly', priority: 0.8 },
     { url: `${SITE_URL}/aircraft`, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${SITE_URL}/tools`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/tools/cost-calculator`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/tools/earnings-calculator`, changeFrequency: 'monthly', priority: 0.6 },
     // Guides (content / informational-intent pillar pages)
