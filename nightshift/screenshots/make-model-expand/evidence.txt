@@ -1,0 +1,34 @@
+QA evidence — make-model-expand (SLICE 2)
+Server: production build via `npm run start` (next start), http://localhost:3000
+
+PAGE COUNT (before vs after)
+- Before (slice 1): hardcoded SEO_MAKE_MODELS = 20 curated combos.
+- After: dynamic inventory-backed set = 42 distinct make+model pages in /sitemap.xml
+  (20 curated + 22 dynamically-discovered families with >= 3 active listings).
+- generateStaticParams emits the full inventory-backed set; dynamicParams=true so
+  any valid-but-not-prebuilt combo still renders on demand, and the live
+  count===0 guard 404s thin/garbage combos.
+
+(a) NEW combos (not in original 20) resolve 200 with real listings + unique title/H1:
+  /aircraft/cessna/citation  -> 200  title "Cessna Citation for sale — 19 aircraft | ClubHanger"  H1 "Cessna Citation for sale"  57 real listing links
+  /aircraft/cessna/210       -> 200  title "Cessna 210 for sale — 11 aircraft | ClubHanger"       H1 "Cessna 210 for sale"
+  /aircraft/piper/navajo     -> 200  title "Piper Navajo for sale — 6 aircraft | ClubHanger"      H1 "Piper Navajo for sale"
+  /aircraft/diamond/da40     -> 200  title "Diamond DA40 for sale — 9 aircraft | ClubHanger"      H1 "Diamond DA40 for sale"
+  /aircraft/grumman/tiger    -> 200
+  Each has self-referential <link rel=canonical>, breadcrumbs, ItemList/Product + BreadcrumbList JSON-LD (slice-1 features preserved).
+
+(b) Zero-inventory / garbage combos do NOT have a live thin page (404):
+  /aircraft/cessna/9999 -> 404, /aircraft/boeing/747 -> 404, /aircraft/hangar/airport -> 404,
+  /aircraft/piper/zzz -> 404, /aircraft/nonsense/foobar -> 404, /aircraft/piper/pa28 -> 404
+  (pa28 prebuilt by token-grouping but live count('pa28%')=0 -> notFound; also absent from sitemap = consistent, no soft-404.)
+
+(c) /sitemap.xml lists the expanded set (HTTP 200); 42 make+model URLs; sampled NEW url resolves 200:
+  /aircraft/cessna/citation present in sitemap AND resolves 200.
+
+(d) No console errors / no hydration warnings (desktop 1280 + mobile 375) on citation, da40, 210; curated cessna/172 unchanged, no errors.
+
+(e) 375px: zero horizontal overflow:
+  citation: scrollW=375 clientW=375 overflow=false
+  da40:     scrollW=375 clientW=375 overflow=false
+
+Related-combos rail still renders 12 crawlable /aircraft/[make]/[model] links on a new (da40) page.
