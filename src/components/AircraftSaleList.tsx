@@ -112,6 +112,28 @@ export async function countMakeModel(
   }
 }
 
+// Live count of active for-sale listings located in a given state (USPS code).
+// Used by the `/aircraft/for-sale/[state]` SEO pages for an accurate title/H1 N
+// and by the sitemap as the single source of truth for the count>0 gate.
+// Returns 0 on any failure (the page treats 0 as a 404-worthy thin state).
+export async function countForSaleState(code: string): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { count, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .eq('state', code)
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
   let listings: AircraftForSale[] = []
   // Total number of listings matching the active filters (may exceed the rows

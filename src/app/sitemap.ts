@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { STATE_CODES, SEO_MAKES, SEO_MAKE_MODELS, SITE_URL } from '@/lib/seo'
-import { countMakeModel } from '@/components/AircraftSaleList'
+import { STATE_CODES, STATE_NAMES, SEO_MAKES, SEO_MAKE_MODELS, SITE_URL, stateSlug } from '@/lib/seo'
+import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
@@ -29,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
   let makeModelPages: MetadataRoute.Sitemap = []
+  let forSaleStatePages: MetadataRoute.Sitemap = []
 
   try {
     const supabase = await createServerSupabaseClient()
@@ -71,6 +72,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           }]
         : []
     )
+
+    // State-level aircraft-for-sale pages — emit ONLY states with real live
+    // inventory. The page route 404s when its live count is 0 (see the
+    // for-sale/[state] page + countForSaleState), so reuse the same count here as
+    // the single source of truth: a state with no listings must never appear in
+    // the sitemap (it would be a soft-404).
+    const stateCounts = await Promise.all(
+      STATE_CODES.map((code) => countForSaleState(code))
+    )
+    forSaleStatePages = STATE_CODES.flatMap((code, i) =>
+      stateCounts[i] > 0
+        ? [{
+            url: `${SITE_URL}/aircraft/for-sale/${stateSlug(STATE_NAMES[code])}`,
+            changeFrequency: 'daily' as const,
+            priority: 0.8,
+          }]
+        : []
+    )
   } catch {
     // Supabase unavailable at build time — ship static pages only
   }
@@ -80,6 +99,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...statePages,
     ...makePages,
     ...makeModelPages,
+    ...forSaleStatePages,
     ...airportPages,
     ...listingPages,
   ]
