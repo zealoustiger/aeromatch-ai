@@ -15,9 +15,29 @@ export const metadata: Metadata = {
   },
 }
 
+const appJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Aircraft Partnership Earnings Calculator',
+  description:
+    'Free calculator that models how much offering partnership shares in your aircraft could offset your fixed costs — monthly dues income, flying margin, buy-ins, and break-even.',
+  applicationCategory: 'FinanceApplication',
+  operatingSystem: 'Web browser',
+  url: `${SITE_URL}/tools/earnings-calculator`,
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+}
+
 export default function EarningsCalculatorPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
+      />
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 sm:text-3xl">
           <TrendingUp className="h-7 w-7 text-sky-600" />

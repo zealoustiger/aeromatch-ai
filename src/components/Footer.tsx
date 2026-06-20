@@ -13,6 +13,7 @@ const exploreLinks = [
 ]
 
 const toolLinks = [
+  { href: '/tools', label: 'All tools' },
   { href: '/tools/cost-calculator', label: 'Cost calculator' },
   { href: '/tools/earnings-calculator', label: 'Earnings calculator' },
 ]

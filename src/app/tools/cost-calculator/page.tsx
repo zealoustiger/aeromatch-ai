@@ -15,9 +15,29 @@ export const metadata: Metadata = {
   },
 }
 
+const appJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Aircraft Partnership Cost Calculator',
+  description:
+    'Free calculator for the true all-in monthly and per-hour cost of an aircraft partnership share, compared against renting and full ownership.',
+  applicationCategory: 'FinanceApplication',
+  operatingSystem: 'Web browser',
+  url: `${SITE_URL}/tools/cost-calculator`,
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+}
+
 export default function CostCalculatorPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
+      />
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 sm:text-3xl">
           <Calculator className="h-7 w-7 text-sky-600" />
