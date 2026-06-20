@@ -458,6 +458,55 @@ export async function resolveMakeModel(
   return all.find((e) => e.makeSlug === m && e.modelSlug === md) ?? null
 }
 
+// ---------------------------------------------------------------------------
+// MAKE-only level — the aggregation page at `/aircraft/[make]` (e.g. /aircraft/cessna)
+//
+// Sits structurally between `/aircraft` and `/aircraft/[make]/[model]`. A make is
+// "real" iff it has at least one inventory-backed model FAMILY (i.e. it appears in
+// `getInventoryMakeModels()`), so we derive makes by grouping that SAME single
+// source of truth — no extra query, and a make can never claim a model page that
+// doesn't exist. `make`/`makeSlug` come straight from the model entries, so the
+// display name matches the model pages exactly (curated names win there already).
+// ---------------------------------------------------------------------------
+
+export type SeoMake = {
+  makeSlug: string
+  /** display make name, taken from the model entries (curated names win). */
+  make: string
+  /** the make's inventory-backed model families, in the order they appear in
+   *  `getInventoryMakeModels()` (curated families first). */
+  models: SeoMakeModel[]
+}
+
+/**
+ * Every make that has ≥1 inventory-backed model family, with its models grouped
+ * under it. Built purely from `getInventoryMakeModels()` so the make pages, the
+ * model pages, the sitemap, and the rails all share ONE source of truth and can
+ * never drift. A make absent from the inventory simply isn't returned (→ the
+ * route 404s it; the sitemap omits it).
+ */
+export async function getInventoryMakes(): Promise<SeoMake[]> {
+  const combos = await getInventoryMakeModels()
+  const byMake = new Map<string, SeoMake>()
+  for (const e of combos) {
+    const existing = byMake.get(e.makeSlug)
+    if (existing) existing.models.push(e)
+    else byMake.set(e.makeSlug, { makeSlug: e.makeSlug, make: e.make, models: [e] })
+  }
+  return [...byMake.values()].sort((a, b) => a.makeSlug.localeCompare(b.makeSlug))
+}
+
+/**
+ * Resolve a make slug to its `SeoMake` (display name + its model families), or
+ * null when the make has no inventory-backed models. Used by the route + metadata
+ * so any make with real inventory resolves and thin makes 404.
+ */
+export async function resolveMake(makeSlug: string): Promise<SeoMake | null> {
+  const slug = makeSlug.toLowerCase()
+  const makes = await getInventoryMakes()
+  return makes.find((m) => m.makeSlug === slug) ?? null
+}
+
 // Translate a Postgres `ilike` pattern into a case-insensitive anchored regex so
 // we can test it in JS with the SAME semantics the DB query uses (`%` = any run,
 // `_` = single char). Used to decide, client-side, whether a listing belongs to

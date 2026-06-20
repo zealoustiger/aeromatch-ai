@@ -143,6 +143,9 @@ export default async function MakeModelForSalePage({ params }: Props) {
         items={[
           { label: 'Home', href: '/' },
           { label: 'Aircraft for Sale', href: '/aircraft' },
+          // Up-link to the make-level page (internal linking lever) — it's
+          // inventory-backed (this combo's make has ≥1 live model), so it resolves.
+          { label: `${entry.make} for sale`, href: `/aircraft/${entry.makeSlug}` },
           { label: `${label} for sale` },
         ]}
       />
