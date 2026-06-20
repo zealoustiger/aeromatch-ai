@@ -208,6 +208,248 @@ export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel 
   return SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md) ?? null
 }
 
+// ---------------------------------------------------------------------------
+// SLICE 2 — dynamic, inventory-backed make+model combos
+//
+// Slice 1 capped the for-sale make+model pages to the curated ~20 above. Slice 2
+// expands coverage to EVERY make+model FAMILY that has real active inventory
+// (count > 0), derived dynamically from the `aircraft_for_sale` table so route +
+// sitemap + rails share ONE source of truth and never drift. Curated entries
+// always win (their hand-tuned slug/specs/copy); dynamically-discovered families
+// get generic-but-honest copy. We deliberately operate at the *family* level
+// (172, sr22, bonanza) — never per-variant micro pages (172m, sr22-g6) — to
+// avoid the near-duplicate/thin pages GOAL.md forbids.
+// ---------------------------------------------------------------------------
+
+/** Min active listings a dynamically-discovered family needs to earn a page.
+ *  Keeps generated pages substantive (no thin/singleton/near-dup pages). */
+const DYNAMIC_MIN_COUNT = 3
+
+/** Non-manufacturer "make" values in the scraped data — categories, junk, and
+ *  uninformative buckets that must never become a make slug. Lowercased. */
+const MAKE_DENYLIST = new Set<string>([
+  'experimental', 'biplane', 'amphibian', 'antique-classic', 'float plane',
+  'hangar', 'land', 'single family', 'other', 'piston helicopter',
+  'turbine helicopter', 'custom-built',
+])
+
+/** Junk family tokens that survive normalization but aren't real model families. */
+const FAMILY_TOKEN_DENYLIST = new Set<string>([
+  'na', 'tbd', 'unknown', 'other', 'airport', 'baseleg', 'king', 'pa',
+])
+
+/** Slugify a make to the same lowercase, hyphen-collapsed form the curated
+ *  `makeSlug`s use (e.g. "Cessna" -> "cessna", "Brm Aero" -> "brm-aero"). */
+function makeToSlug(make: string): string {
+  return make.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+/**
+ * Reduce a messy DB `model` string to a clean FAMILY token + a matching `ilike`
+ * pattern, mirroring how the curated combos collapse variants. Returns null when
+ * the model can't be reduced to a sensible family.
+ *
+ * Rules (conservative, family-level):
+ *  - take the first whitespace-delimited token, strip non-alphanumerics
+ *  - Cirrus SR families: sr22t* -> sr22t, sr22* -> sr22, sr20* -> sr20
+ *  - number+trailing-letters (182p, 172m, a185f) -> strip trailing letters
+ *  - require an alphanumeric token of length >= 2, not in the junk denylist
+ */
+function modelToFamily(model: string): { slug: string; pattern: string } | null {
+  const first = model.trim().split(/\s+/)[0] ?? ''
+  const tok = first.toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (!tok) return null
+
+  let family: string
+  if (tok.startsWith('sr22t')) family = 'sr22t'
+  else if (tok.startsWith('sr22')) family = 'sr22'
+  else if (tok.startsWith('sr20')) family = 'sr20'
+  else if (/^[0-9]+[a-z]+$/.test(tok)) family = tok.replace(/[a-z]+$/, '')
+  else family = tok
+
+  if (family.length < 2) return null
+  if (!/^[a-z0-9]+$/.test(family)) return null
+  if (FAMILY_TOKEN_DENYLIST.has(family)) return null
+
+  // The pattern the route/sitemap/list all use to match this family. `{family}%`
+  // captures the family and its variants (e.g. 172% matches "172", "172m
+  // Skyhawk"); the Cirrus families keep their slice-1 distinct patterns.
+  let pattern: string
+  if (family === 'sr22t') pattern = 'sr22t%'
+  else if (family === 'sr22') pattern = 'sr22%'
+  else if (family === 'sr20') pattern = 'sr20%'
+  else pattern = `${family}%`
+
+  return { slug: family, pattern }
+}
+
+/** Title-case a make slug for display when there's no curated name
+ *  (e.g. "brm-aero" -> "Brm Aero", "cubcrafters" -> "Cubcrafters"). */
+function displayMakeFromSlug(slug: string): string {
+  return slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+/** Display the family model for a dynamic combo: number families stay as-is
+ *  (uppercased letters: "sr22t" -> "SR22T", "172" -> "172", "da40" -> "DA40"),
+ *  word families get title-cased ("cherokee" -> "Cherokee"). */
+function displayModelFromSlug(slug: string): string {
+  if (/[0-9]/.test(slug)) return slug.toUpperCase()
+  return slug.charAt(0).toUpperCase() + slug.slice(1)
+}
+
+/**
+ * Build a cookieless, anon read-only Supabase client safe to use at build time
+ * (inside `generateStaticParams`/`sitemap`, where there is no request and
+ * `cookies()` would throw). Reads public `aircraft_for_sale` rows via RLS, the
+ * same data `getAircraftFacets` already reads. Returns null when unconfigured.
+ */
+async function createAnonReadClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || url === 'https://placeholder.supabase.co' || !key) return null
+  const { createClient } = await import('@supabase/supabase-js')
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+let _inventoryCache: SeoMakeModel[] | null = null
+
+/**
+ * The full set of inventory-backed make+model combos that should have a page:
+ * the curated `SEO_MAKE_MODELS` MERGED with every additional family discovered
+ * to have >= DYNAMIC_MIN_COUNT active listings in `aircraft_for_sale`. Curated
+ * entries always win on slug collisions (keeping their hand-tuned copy). This is
+ * the SINGLE source of truth shared by `generateStaticParams`, the sitemap, and
+ * `resolveMakeModel`, so they can never drift.
+ *
+ * On any DB failure it falls back to the static curated list — the build never
+ * crashes for want of Supabase.
+ */
+export async function getInventoryMakeModels(): Promise<SeoMakeModel[]> {
+  if (_inventoryCache) return _inventoryCache
+
+  const supabase = await createAnonReadClient()
+  if (!supabase) return SEO_MAKE_MODELS
+
+  try {
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('make, model')
+      .eq('status', 'active')
+      .not('make', 'is', null)
+      .limit(10000)
+    if (error || !data) return SEO_MAKE_MODELS
+
+    // Aggregate counts per (makeSlug, familySlug), remembering display values.
+    type Agg = { makeSlug: string; modelSlug: string; make: string; model: string; pattern: string; count: number }
+    const agg = new Map<string, Agg>()
+
+    for (const row of data) {
+      const rawMake = (row.make ?? '').trim()
+      const rawModel = (row.model ?? '').trim()
+      if (!rawMake || !rawModel) continue
+      if (MAKE_DENYLIST.has(rawMake.toLowerCase())) continue
+
+      const makeSlug = makeToSlug(rawMake)
+      if (!makeSlug) continue
+      const fam = modelToFamily(rawModel)
+      if (!fam) continue
+
+      const key = `${makeSlug}/${fam.slug}`
+      const existing = agg.get(key)
+      if (existing) {
+        existing.count += 1
+      } else {
+        agg.set(key, {
+          makeSlug,
+          modelSlug: fam.slug,
+          make: displayMakeFromSlug(makeSlug),
+          model: displayModelFromSlug(fam.slug),
+          pattern: fam.pattern,
+          count: 1,
+        })
+      }
+    }
+
+    // Keep only substantive families, then drop any family whose slug is a strict
+    // prefix-subset of another kept family for the same make (e.g. drop m20j when
+    // m20 is present) — those would be near-duplicate pages.
+    const kept = [...agg.values()].filter((a) => a.count >= DYNAMIC_MIN_COUNT)
+    const byMake = new Map<string, Agg[]>()
+    for (const a of kept) {
+      if (!byMake.has(a.makeSlug)) byMake.set(a.makeSlug, [])
+      byMake.get(a.makeSlug)!.push(a)
+    }
+    const deduped: Agg[] = []
+    for (const list of byMake.values()) {
+      for (const a of list) {
+        const isSubset = list.some(
+          (b) => b !== a && a.modelSlug.startsWith(b.modelSlug) && a.modelSlug !== b.modelSlug
+        )
+        if (!isSubset) deduped.push(a)
+      }
+    }
+
+    // Merge: curated entries win on slug collision; dynamic-only families get
+    // generic, honest copy (no fabricated specifics). Exclude a dynamic family
+    // when it duplicates a curated one — either by the same slug, OR by matching
+    // the SAME inventory under the same make (same make + same modelPattern,
+    // e.g. curated grumman/aa-1 vs dynamic grumman/aa1 both match `aa1%`). That
+    // prevents two different URLs serving identical listings (a near-dup page).
+    const curatedKeys = new Set(SEO_MAKE_MODELS.map((e) => `${e.makeSlug}/${e.modelSlug}`))
+    const curatedPatternKeys = new Set(
+      SEO_MAKE_MODELS.map((e) => `${e.makeSlug}|${e.modelPattern.toLowerCase()}`)
+    )
+    const dynamicEntries: SeoMakeModel[] = deduped
+      .filter(
+        (a) =>
+          !curatedKeys.has(`${a.makeSlug}/${a.modelSlug}`) &&
+          !curatedPatternKeys.has(`${a.makeSlug}|${a.pattern.toLowerCase()}`)
+      )
+      .map((a) => {
+        const label = `${a.make} ${a.model}`
+        return {
+          makeSlug: a.makeSlug,
+          modelSlug: a.modelSlug,
+          make: a.make,
+          model: a.model,
+          modelPattern: a.pattern,
+          specs: `${label} aircraft currently listed for sale, aggregated from across the web into one searchable place.`,
+          costToOwn: `Co-ownership is how a lot of pilots make a ${label} pencil out — splitting the hangar, insurance, and maintenance reserve across a small group keeps the fixed costs manageable.`,
+        }
+      })
+      .sort((a, b) =>
+        a.makeSlug === b.makeSlug
+          ? a.modelSlug.localeCompare(b.modelSlug)
+          : a.makeSlug.localeCompare(b.makeSlug)
+      )
+
+    _inventoryCache = [...SEO_MAKE_MODELS, ...dynamicEntries]
+    return _inventoryCache
+  } catch {
+    return SEO_MAKE_MODELS
+  }
+}
+
+/**
+ * Resolve a make+model slug pair to its `SeoMakeModel`, checking the curated list
+ * first (fast, sync) and then the full inventory-backed set. Returns null for an
+ * unknown combo. Used by the route + metadata so any inventory-backed combo
+ * resolves, not just the hardcoded ~20.
+ */
+export async function resolveMakeModel(
+  makeSlug: string,
+  modelSlug: string
+): Promise<SeoMakeModel | null> {
+  const curated = getMakeModel(makeSlug, modelSlug)
+  if (curated) return curated
+  const m = makeSlug.toLowerCase()
+  const md = modelSlug.toLowerCase()
+  const all = await getInventoryMakeModels()
+  return all.find((e) => e.makeSlug === m && e.modelSlug === md) ?? null
+}
+
 // Translate a Postgres `ilike` pattern into a case-insensitive anchored regex so
 // we can test it in JS with the SAME semantics the DB query uses (`%` = any run,
 // `_` = single char). Used to decide, client-side, whether a listing belongs to

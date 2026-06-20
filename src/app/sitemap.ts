@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { STATE_CODES, STATE_NAMES, SEO_MAKES, SEO_MAKE_MODELS, SITE_URL, stateSlug } from '@/lib/seo'
+import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -57,13 +57,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Make+model for-sale pages — emit ONLY combos that have real live inventory.
     // The page route 404s when its live count is 0 (see page.tsx + countMakeModel),
     // so reuse the same count here as the single source of truth: a combo with no
-    // listings must never appear in the sitemap (it would be a soft-404).
+    // listings must never appear in the sitemap (it would be a soft-404). The
+    // combo list is the SAME inventory-backed set `generateStaticParams` builds,
+    // so the sitemap and the generated pages can't drift.
+    const comboList = await getInventoryMakeModels()
     const counts = await Promise.all(
-      SEO_MAKE_MODELS.map((e) =>
+      comboList.map((e) =>
         countMakeModel(e.make, e.modelPattern, e.notModelPattern)
       )
     )
-    makeModelPages = SEO_MAKE_MODELS.flatMap((e, i) =>
+    makeModelPages = comboList.flatMap((e, i) =>
       counts[i] > 0
         ? [{
             url: `${SITE_URL}/aircraft/${e.makeSlug}/${e.modelSlug}`,
