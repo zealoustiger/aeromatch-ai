@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { STATE_CODES, SEO_MAKES, SITE_URL } from '@/lib/seo'
+import { STATE_CODES, SEO_MAKES, SEO_MAKE_MODELS, SITE_URL } from '@/lib/seo'
+import { countMakeModel } from '@/components/AircraftSaleList'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
@@ -8,6 +9,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/partnerships`, changeFrequency: 'hourly', priority: 0.9 },
     { url: `${SITE_URL}/partnerships/seeking`, changeFrequency: 'hourly', priority: 0.8 },
     { url: `${SITE_URL}/aircraft`, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${SITE_URL}/tools/cost-calculator`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/tools/earnings-calculator`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.3 },
   ]
 
@@ -25,6 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
+  let makeModelPages: MetadataRoute.Sitemap = []
 
   try {
     const supabase = await createServerSupabaseClient()
@@ -48,9 +52,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
+
+    // Make+model for-sale pages — emit ONLY combos that have real live inventory.
+    // The page route 404s when its live count is 0 (see page.tsx + countMakeModel),
+    // so reuse the same count here as the single source of truth: a combo with no
+    // listings must never appear in the sitemap (it would be a soft-404).
+    const counts = await Promise.all(
+      SEO_MAKE_MODELS.map((e) =>
+        countMakeModel(e.make, e.modelPattern, e.notModelPattern)
+      )
+    )
+    makeModelPages = SEO_MAKE_MODELS.flatMap((e, i) =>
+      counts[i] > 0
+        ? [{
+            url: `${SITE_URL}/aircraft/${e.makeSlug}/${e.modelSlug}`,
+            changeFrequency: 'daily' as const,
+            priority: 0.8,
+          }]
+        : []
+    )
   } catch {
     // Supabase unavailable at build time — ship static pages only
   }
 
-  return [...staticPages, ...statePages, ...makePages, ...airportPages, ...listingPages]
+  return [
+    ...staticPages,
+    ...statePages,
+    ...makePages,
+    ...makeModelPages,
+    ...airportPages,
+    ...listingPages,
+  ]
 }
