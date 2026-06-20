@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
@@ -17,6 +17,7 @@ import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
 import CostCalculator from '@/components/CostCalculator'
+import ShareListingButton from '@/components/ShareListingButton'
 import { shareFractionFromType } from '@/lib/calculators'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
@@ -77,14 +78,30 @@ export async function generateMetadata({
     p.description?.slice(0, 155) ??
     `${aircraft} aircraft partnership at ${location}.${p.buy_in_price ? ` Buy-in ${formatPrice(p.buy_in_price)}.` : ''}`
 
+  const url = `${SITE_URL}/partnerships/${p.id}`
+  // Use the listing's REAL photo when it has one (not the generic make
+  // placeholder); otherwise fall back to the site default OG image so a shared
+  // link always unfurls into a real card, never a broken/empty image.
+  const hasRealPhoto = !!p.images?.[0] && p.image_is_placeholder !== true
+  const ogImage = hasRealPhoto ? p.images![0] : DEFAULT_OG_IMAGE
+
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/partnerships/${p.id}` },
+    alternates: { canonical: url },
     openGraph: {
       title,
       description,
-      images: p.images?.[0] ? [p.images[0]] : undefined,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: ogImage, alt: `${aircraft} at ${p.home_airport}` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
     },
   }
 }
@@ -140,7 +157,10 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
           >
             <ChevronLeft className="h-4 w-4" /> Back to Partnerships
           </Link>
-          <SaveListingButton listingId={p.id} initialSaved={saved} variant="full" />
+          <div className="flex items-center gap-2">
+            <ShareListingButton url={`${SITE_URL}/partnerships/${p.id}`} />
+            <SaveListingButton listingId={p.id} initialSaved={saved} variant="full" />
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">

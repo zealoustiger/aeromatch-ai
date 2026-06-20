@@ -3,6 +3,14 @@ export const SITE_URL =
 
 export const SITE_NAME = 'ClubHanger'
 
+/**
+ * Site-wide default Open Graph / Twitter card image (a real 1200×630 branded
+ * raster at `public/og-default.png`). Used as the graceful fallback whenever a
+ * page (or a listing without a real photo) has no more specific image — so a
+ * shared link always unfurls into a real card, never a broken/empty image.
+ */
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`
+
 /** Full state names keyed by USPS code — used for SEO landing pages. */
 export const STATE_NAMES: Record<string, string> = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
