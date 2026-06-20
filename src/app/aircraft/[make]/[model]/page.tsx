@@ -4,10 +4,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
 import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
-import AircraftSaleList, { countMakeModel } from '@/components/AircraftSaleList'
+import AircraftSaleList, { countMakeModel, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { SEO_MAKE_MODELS, getMakeModel, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ make: string; model: string }> }
 
@@ -53,12 +54,32 @@ export default async function MakeModelForSalePage({ params }: Props) {
   if (n === 0) notFound()
 
   const label = `${entry.make} ${entry.model}`
+  const path = `/aircraft/${entry.makeSlug}/${entry.modelSlug}`
   const otherCombos = SEO_MAKE_MODELS.filter(
     (e) => e.makeSlug !== entry.makeSlug || e.modelSlug !== entry.modelSlug
   ).slice(0, 12)
 
+  // ItemList JSON-LD for rich results — marks up exactly the first page of
+  // listings the visitor sees (same filters/order as the rendered list), each as
+  // a Product/Offer with real data only. See src/lib/aircraftJsonLd.ts.
+  const { listings } = await fetchAircraftPage({
+    make: entry.make,
+    modelPattern: entry.modelPattern,
+    notModelPattern: entry.notModelPattern,
+  })
+  const itemListJsonLd = buildAircraftItemListJsonLd(listings, {
+    name: `${label} for sale`,
+    url: `${SITE_URL}${path}`,
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
       {/* Breadcrumb */}
       <Breadcrumbs
         items={[

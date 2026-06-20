@@ -134,7 +134,27 @@ export async function countForSaleState(code: string): Promise<number> {
   }
 }
 
-export default async function AircraftSaleList({ filters }: { filters: Filters }) {
+/** Result of one page-fetch of for-sale listings for the active filters. */
+export interface AircraftPage {
+  /** The listings shown on this page (already filtered/sorted/narrowed). */
+  listings: AircraftForSale[]
+  /** Exact total matching the filters when known; null when not computable. */
+  totalCount: number | null
+  /** 1-based page number that was fetched. */
+  page: number
+  /** True when the underlying query errored on page 1 (genuine failure). */
+  error: boolean
+}
+
+/**
+ * Fetch one page of active for-sale listings for the given filters, applying the
+ * exact same query, ordering, quality floor and price-drop narrowing the
+ * `AircraftSaleList` component renders. Extracted so other server components
+ * (e.g. the SEO pages' JSON-LD) can mark up *exactly* the listings the user sees
+ * without duplicating the query. The component itself now calls this — single
+ * source of truth, no behavior change.
+ */
+export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage> {
   let listings: AircraftForSale[] = []
   // Total number of listings matching the active filters (may exceed the rows
   // shown). null = unknown/not applicable, fall back to the displayed length.
@@ -149,7 +169,7 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
   if (!hasSupabase) {
-    return renderList([], filters, null, page)
+    return { listings: [], totalCount: null, page, error: false }
   }
 
   try {
@@ -211,6 +231,12 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
   } catch {
     error = true
   }
+
+  return { listings, totalCount, page, error }
+}
+
+export default async function AircraftSaleList({ filters }: { filters: Filters }) {
+  const { listings, totalCount, page, error } = await fetchAircraftPage(filters)
 
   // An offset past the end of the result set makes PostgREST return a
   // "range not satisfiable" error. Page 1 (offset 0) is always satisfiable,
