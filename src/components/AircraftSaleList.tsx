@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
 import { minScoreForGrade, type Grade } from '@/lib/listingQuality'
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
+import { buildFamilyPriceMap, compVsMarket } from '@/lib/aircraftComps'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -349,6 +350,31 @@ async function fetchSavedAircraftIds(listings: AircraftForSale[]): Promise<Set<s
   return savedIds
 }
 
+// Build a make+model FAMILY -> sorted asking-prices map across ALL active priced
+// listings, so each visible card can compare its price to the family median (the
+// "vs market" pill). One lightweight read (make, model, asking_price only),
+// capped like the other rail queries; non-fatal — on any failure we just render
+// no pills. Read-only, no schema change.
+async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return new Map()
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('make, model, asking_price')
+      .eq('status', 'active')
+      .not('asking_price', 'is', null)
+      .gt('asking_price', 0)
+      .limit(5000)
+    if (error || !data) return new Map()
+    return buildFamilyPriceMap(data)
+  } catch {
+    return new Map()
+  }
+}
+
 export default async function AircraftSaleList({ filters }: { filters: Filters }) {
   const { listings, totalCount, page, error } = await fetchAircraftPage(filters)
 
@@ -364,9 +390,12 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     )
   }
 
-  const savedIds = await fetchSavedAircraftIds(listings)
+  const [savedIds, familyPriceMap] = await Promise.all([
+    fetchSavedAircraftIds(listings),
+    fetchFamilyPriceMap(),
+  ])
 
-  return renderList(listings, filters, totalCount, page, savedIds)
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap)
 }
 
 function renderList(
@@ -374,7 +403,8 @@ function renderList(
   filters: Filters,
   totalCount: number | null,
   page: number,
-  savedIds: Set<string> = new Set()
+  savedIds: Set<string> = new Set(),
+  familyPriceMap: Map<string, number[]> = new Map()
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -437,7 +467,12 @@ function renderList(
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
-          <AircraftSaleCard key={p.id} p={p} saved={savedIds.has(p.id)} />
+          <AircraftSaleCard
+            key={p.id}
+            p={p}
+            saved={savedIds.has(p.id)}
+            comp={compVsMarket(p, familyPriceMap)}
+          />
         ))}
       </div>
 
