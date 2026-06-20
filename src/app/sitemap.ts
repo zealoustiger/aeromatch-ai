@@ -19,6 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/guides/leaseback-vs-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/how-to-find-aircraft-partners`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/aircraft-pre-purchase-inspection`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-title-escrow-and-closing`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.3 },
   ]
 
