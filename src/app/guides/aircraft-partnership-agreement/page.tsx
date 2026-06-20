@@ -147,6 +147,10 @@ export default function PartnershipAgreementGuidePage() {
           <Link href="/guides/cost-of-aircraft-co-ownership" className="font-medium text-sky-700 hover:underline">
             how much it costs to co-own an aircraft
           </Link>
+          . Still looking for people to share with? See{' '}
+          <Link href="/guides/how-to-find-aircraft-partners" className="font-medium text-sky-700 hover:underline">
+            how to find aircraft co-owners &amp; partners
+          </Link>
           . This guide picks up where those leave off: once you have found partners and understand the
           costs, here is what to actually write down.
         </p>
@@ -373,6 +377,12 @@ export default function PartnershipAgreementGuidePage() {
                 How Much Does It Cost to Co-Own an Aircraft?
               </Link>{' '}
               — a full cost breakdown with a worked Cessna 172 example.
+            </li>
+            <li>
+              <Link href="/guides/how-to-find-aircraft-partners" className="font-medium text-sky-700 hover:underline">
+                How to Find Aircraft Co-Owners &amp; Partners
+              </Link>{' '}
+              — where to look and how to vet a partner before you sign.
             </li>
           </ul>
         </div>

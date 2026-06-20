@@ -23,6 +23,7 @@ const guideLinks = [
   { href: '/guides/cost-of-aircraft-co-ownership', label: 'Cost of co-ownership' },
   { href: '/guides/aircraft-partnership-agreement', label: 'Partnership agreement' },
   { href: '/guides/leaseback-vs-co-ownership', label: 'Leaseback vs. co-ownership' },
+  { href: '/guides/how-to-find-aircraft-partners', label: 'How to find partners' },
 ]
 
 const companyLinks = [

@@ -269,7 +269,11 @@ export default function CoOwnershipGuidePage() {
             browse available aircraft partnerships
           </Link>{' '}
           to see how real shares are structured and to connect with pilots already looking to share a
-          plane near you.
+          plane near you. For a full walkthrough of where to look and how to vet someone, see{' '}
+          <Link href="/guides/how-to-find-aircraft-partners" className="font-medium text-sky-700 hover:underline">
+            how to find aircraft co-owners &amp; partners
+          </Link>
+          .
         </p>
 
         <SectionHeading><span id="pros-cons" />Pros and cons of co-ownership</SectionHeading>
