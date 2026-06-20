@@ -331,7 +331,7 @@ export default function PostSeekerListingForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-emerald-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-60"
+        className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
         {pending ? 'Submitting…' : 'Post Seeking Listing'}
       </button>

@@ -62,7 +62,7 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
             {/* Badges */}
             <div className="mb-4 flex flex-wrap gap-2">
               {s.total_hours && (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                   {s.total_hours} total hours
                 </span>
               )}
@@ -202,16 +202,16 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
           </div>
 
           {/* Contact card */}
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-            <h2 className="mb-1 text-sm font-semibold text-emerald-800">Have a plane that fits?</h2>
+          <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
+            <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
             {s.contact_name && (
-              <p className="mb-3 text-sm text-emerald-700">Reach out to {s.contact_name}</p>
+              <p className="mb-3 text-sm text-sky-700">Reach out to {s.contact_name}</p>
             )}
             <div className="space-y-2">
               {(s.contact_method === 'email' || s.contact_method === 'both') && (
                 <a
                   href={`mailto:${s.contact_email}?subject=Re: ${encodeURIComponent(s.title)}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
                 >
                   <Mail className="h-4 w-4" /> Send Email
                 </a>
@@ -219,7 +219,7 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               {(s.contact_method === 'phone' || s.contact_method === 'both') && s.contact_phone && (
                 <a
                   href={`tel:${s.contact_phone}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
                 >
                   <Phone className="h-4 w-4" /> {s.contact_phone}
                 </a>

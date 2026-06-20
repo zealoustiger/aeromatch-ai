@@ -31,7 +31,7 @@ export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
           {/* Badges */}
           <div className="mb-2 flex flex-wrap gap-1.5">
             {seeker.total_hours && (
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+              <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                 {seeker.total_hours} hrs
               </span>
             )}
