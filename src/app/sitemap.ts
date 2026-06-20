@@ -37,6 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
+  let makePages2: MetadataRoute.Sitemap = []
   let makeModelPages: MetadataRoute.Sitemap = []
   let forSaleStatePages: MetadataRoute.Sitemap = []
 
@@ -85,6 +86,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         : []
     )
 
+    // Make-only for-sale aggregation pages (`/aircraft/[make]`). Emit ONLY makes
+    // with real live inventory: reuse the same per-combo `counts` above as the
+    // single source of truth — a make is live iff ≥1 of its model combos has a
+    // live count > 0. The page route 404s a make with no live models (see
+    // [make]/page.tsx), so this gate keeps the sitemap free of soft-404s and the
+    // make pages can't drift from the model pages.
+    const liveMakeSlugs = new Set<string>()
+    comboList.forEach((e, i) => {
+      if (counts[i] > 0) liveMakeSlugs.add(e.makeSlug)
+    })
+    makePages2 = [...liveMakeSlugs].map((makeSlug) => ({
+      url: `${SITE_URL}/aircraft/${makeSlug}`,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
     // State-level aircraft-for-sale pages — emit ONLY states with real live
     // inventory. The page route 404s when its live count is 0 (see the
     // for-sale/[state] page + countForSaleState), so reuse the same count here as
@@ -110,6 +127,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticPages,
     ...statePages,
     ...makePages,
+    ...makePages2,
     ...makeModelPages,
     ...forSaleStatePages,
     ...airportPages,
