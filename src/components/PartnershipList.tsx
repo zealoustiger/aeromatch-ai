@@ -2,7 +2,25 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { evaluateTrust } from '@/lib/partnershipTrust'
 import PartnershipCard from './PartnershipCard'
+
+/**
+ * Slice 2 of the trust layer: float higher-trust listings up.
+ *
+ * Additive, reversible secondary sort. The DB query (and the mock array) already
+ * hand us listings in the default recency order (created_at DESC). We re-sort by
+ * the SAME trust score the badge shows (`evaluateTrust`) DESC, and — because
+ * Array.prototype.sort is stable — equal-trust listings keep that recency order.
+ * Filters/search are applied BEFORE this, so relevance and the result set are
+ * untouched: nothing is dropped or added, only reordered. No schema change.
+ */
+function sortByTrust(listings: Partnership[]): Partnership[] {
+  return listings
+    .map((p, i) => ({ p, i, score: evaluateTrust(p).score }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.p)
+}
 
 interface Filters {
   airport?: string
@@ -45,7 +63,7 @@ export default async function PartnershipList({ filters }: { filters: Filters })
       if (filters.max_buyin && (p.buy_in_price ?? 0) > parseInt(filters.max_buyin)) return false
       return true
     })
-    return renderList(listings, filters, airportList)
+    return renderList(sortByTrust(listings), filters, airportList)
   }
 
   let savedIds = new Set<string>()
@@ -98,7 +116,7 @@ export default async function PartnershipList({ filters }: { filters: Filters })
     )
   }
 
-  return renderList(listings, filters, airportList, savedIds)
+  return renderList(sortByTrust(listings), filters, airportList, savedIds)
 }
 
 function renderList(listings: Partnership[], filters: Filters, airportList: string[], savedIds: Set<string> = new Set()) {

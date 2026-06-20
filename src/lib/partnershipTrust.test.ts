@@ -94,3 +94,33 @@ test('a short description does NOT clear complete specs', () => {
   )
   assert.equal(r.signals.find((s) => s.key === 'complete_specs')?.met, false)
 })
+
+test('slice 2 ranking: trust score sort floats complete listings above thin ones, stable on ties', () => {
+  // Mirrors PartnershipList.sortByTrust: trust score DESC, stable tie-break on input order.
+  const thin = makePartnership({ id: 'thin', source_url: 'https://x.com/a' }) // 0/4
+  const onPlatformOnly = makePartnership({ id: 'on', source_url: null }) // 1/4
+  const complete = makePartnership({
+    id: 'complete',
+    images: ['https://cdn/real.jpg'],
+    image_is_placeholder: false,
+    year: 2004,
+    registration: 'N12345',
+    buy_in_price: 18000,
+    description: 'x'.repeat(120),
+    source_url: null,
+    poster_id: 'user-1',
+  }) // 4/4
+  const onPlatformOnly2 = makePartnership({ id: 'on2', source_url: null }) // 1/4, same score as `on`
+
+  const input = [thin, onPlatformOnly, complete, onPlatformOnly2]
+  const sorted = input
+    .map((p, i) => ({ p, i, score: evaluateTrust(p).score }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.p)
+
+  // complete (4) first, the two on-platform (1) keep their input order, thin (0) last.
+  assert.deepEqual(
+    sorted.map((p) => (p as unknown as { id: string }).id),
+    ['complete', 'on', 'on2', 'thin'],
+  )
+})
