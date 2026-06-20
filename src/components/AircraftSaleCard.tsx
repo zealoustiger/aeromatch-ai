@@ -12,6 +12,7 @@ import { resolveMakeModelFamily } from '@/lib/seo'
 import type { CompResult } from '@/lib/aircraftComps'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
+import AircraftTrustBadge from './AircraftTrustBadge'
 
 const DAY_MS = 86_400_000
 
@@ -137,6 +138,9 @@ export default function AircraftSaleCard({
                 <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                   {source}
                 </span>
+                {/* Trust / completeness chip — slice 1, makes trust VISIBLE.
+                    Pure read of existing columns; no ranking effect. */}
+                <AircraftTrustBadge p={p} />
                 <span
                   title={gm.blurb}
                   className={cn('rounded-full px-2 py-0.5 text-xs font-bold ring-1', gm.chip)}
