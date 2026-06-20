@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, Plane } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { PartnershipSeeker } from '@/lib/types'
+import { Partnership, PartnershipSeeker } from '@/lib/types'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import SeekerCard from './SeekerCard'
@@ -27,11 +27,28 @@ async function getSeekers(state?: string, make?: string): Promise<PartnershipSee
   return (data as PartnershipSeeker[]) ?? []
 }
 
-export default async function SeekerList({ filters }: { filters: Record<string, string | undefined> }) {
+export default async function SeekerList({
+  filters,
+  fallbackPartnerships,
+}: {
+  filters: Record<string, string | undefined>
+  /**
+   * Available partnerships to surface in the empty state. The page fetches these
+   * once and passes them down so the same rows back both the ItemList JSON-LD and
+   * the rendered rail (no duplicate query, markup matches cards 1:1). Optional —
+   * falls back to fetching its own when not provided.
+   */
+  fallbackPartnerships?: Partnership[]
+}) {
   const seekers = await getSeekers(filters.state, filters.make)
 
   if (seekers.length === 0) {
-    return <SeekerEmptyState filtered={Boolean(filters.state || filters.make)} />
+    return (
+      <SeekerEmptyState
+        filtered={Boolean(filters.state || filters.make)}
+        partnerships={fallbackPartnerships}
+      />
+    )
   }
 
   return (
@@ -54,8 +71,14 @@ export default async function SeekerList({ filters }: { filters: Record<string, 
  * PartnershipCard the /partnerships page renders. Each card links to a real
  * /partnerships/[id].
  */
-async function SeekerEmptyState({ filtered }: { filtered: boolean }) {
-  const partnerships = await getLatestPartnerships(3)
+async function SeekerEmptyState({
+  filtered,
+  partnerships: provided,
+}: {
+  filtered: boolean
+  partnerships?: Partnership[]
+}) {
+  const partnerships = provided ?? (await getLatestPartnerships(3))
 
   return (
     <div className="space-y-8">
