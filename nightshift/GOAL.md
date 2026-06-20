@@ -24,6 +24,29 @@ The scoreboard computes a **STAGE** that tells you what to prioritize *right now
 Always mine the scoreboard's **top queries** for page ideas (queries you almost rank for → new pages).
 GSC + PostHog both fail soft if unconfigured (see `GSC_SETUP.md`).
 
+## Priority pages — get THESE indexed first (human-set, 2026-06-20)
+We're in the **INDEXING** stage, so concentrate indexing / quality / internal-linking /
+metadata effort on this specific seed set before building more. Get each one genuinely
+complete, uniquely titled (title / H1 / meta / canonical / OG / JSON-LD), richly
+internally linked, in the sitemap, and request-indexed:
+
+1. `/` — homepage
+2. `/aircraft`
+3. `/partnerships`
+4. `/partnerships/seeking`  ← currently thin/blank; needs real content to be index-worthy
+5. `/partnerships/make/cessna`
+6. `/partnerships/make/cirrus`
+7. `/partnerships/make/piper`
+8. `/partnerships/state/ca`
+9. `/partnerships/state/tx`
+10. `/partnerships/state/fl`
+11. `/tools/cost-calculator`
+12. `/guides/aircraft-co-ownership`
+
+These are the hub/seed set — nailing their quality, metadata, and internal links first
+bootstraps crawl of everything else. New programmatic pages are still welcome, but never
+at the expense of getting these 12 right. Treat work on them as the top `[goal]` priority.
+
 ## Allocation policy — how cycles are split across work types
 The pageview metric is the **tiebreaker and the default, not the dictator.** Bug
 fixes and human-wanted features carry value the metric can't see (a working site;
@@ -84,8 +107,8 @@ A change that grows the page count but violates these is a **LOSS**, not a win:
 - **Don't count admin/internal routes** (`/admin/*`, `/api/*`) toward the goal.
 - **Never regress Core Web Vitals / mobile.** A page-speed or 375px regression is a loss.
 - **Canonicalize** to avoid duplicate-content sprawl across the programmatic pages.
-- Stay inside `FREEZE.md` and the taste notes in `BACKLOG.md` (sky-blue accent,
-  mobile-first, cleaner-than-Controller).
+- Stay inside `FREEZE.md` and the taste notes in `BACKLOG.md` (mobile-first,
+  cleaner-than-Controller; branding/palette is open for experimentation — human reviews post-cycle).
 
 ## How the PM uses this
 Each cycle: read the scoreboard, then pick the work with the **highest expected
