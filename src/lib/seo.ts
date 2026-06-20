@@ -552,3 +552,47 @@ export function resolveMakeModelFamily(
   }
   return null
 }
+
+/**
+ * Turn the active for-sale searchParams on `/aircraft` into a human-readable
+ * phrase for the email-alert context, e.g. "Cessna 172 in California under
+ * $50,000" or "Cirrus". Returns a generic fallback when no meaningful filter is
+ * set, so the captured alert is always sensible. The phrase is a bare qualifier
+ * (no "new"/"listings"/"aircraft") because AlertSignup wraps it in three frames —
+ * "new {ctx} listings", "a new {ctx} aircraft is listed", "new {ctx} listings
+ * appear" — so the generic fallback is "general aviation" (→ "new general
+ * aviation listings"), matching the make/state convention the live for-sale
+ * pages already use (e.g. context "California", "Cessna"). Pure + read-only —
+ * mirrors the same filter keys the for-sale list reads
+ * (make/model/state/max_price/min_year/max_tt/q).
+ */
+export function describeAircraftFilters(
+  params: Record<string, string | undefined>
+): string {
+  const make = params.make?.trim()
+  const model = params.model?.trim()
+  const stateName = params.state ? STATE_NAMES[params.state.toUpperCase()] : undefined
+  const maxPrice = params.max_price ? parseInt(params.max_price, 10) : NaN
+  const minYear = params.min_year ? parseInt(params.min_year, 10) : NaN
+  const maxTt = params.max_tt ? parseInt(params.max_tt, 10) : NaN
+  const keyword = params.q?.trim()
+
+  // Lead with make/model; if neither, lead with the generic noun.
+  const lead = make ? [make, model].filter(Boolean).join(' ') : 'aircraft'
+
+  const clauses: string[] = []
+  if (stateName) clauses.push(`in ${stateName}`)
+  if (Number.isFinite(maxPrice) && maxPrice > 0) {
+    clauses.push(`under $${maxPrice.toLocaleString('en-US')}`)
+  }
+  if (Number.isFinite(minYear) && minYear > 0) clauses.push(`from ${minYear} or newer`)
+  if (Number.isFinite(maxTt) && maxTt > 0) {
+    clauses.push(`under ${maxTt.toLocaleString('en-US')} hours`)
+  }
+  if (keyword) clauses.push(`matching "${keyword}"`)
+
+  const hasMakeOrModel = Boolean(make || model)
+  if (!hasMakeOrModel && clauses.length === 0) return 'general aviation'
+
+  return [lead, ...clauses].join(' ')
+}

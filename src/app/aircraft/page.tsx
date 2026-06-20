@@ -5,12 +5,13 @@ import { Plane, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
+import AlertSignup from '@/components/AlertSignup'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
-import { STATE_CODES, STATE_NAMES, stateSlug } from '@/lib/seo'
+import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug } from '@/lib/seo'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -31,6 +32,16 @@ export default async function AircraftPage({
   const params = await searchParams
   const activeFilterCount = Object.values(params).filter(Boolean).length
   const facets = await getAircraftFacets()
+
+  // Filter-aware email-alert context + reproducible source path. The route-based
+  // for-sale pages carry their scope in the URL path; `/aircraft` carries it in
+  // the query string, so we preserve the active query on the source path and
+  // describe the filters in the alert context (e.g. "Cessna 172 in California").
+  const alertContext = describeAircraftFilters(params)
+  const alertQuery = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]
+  ).toString()
+  const alertSourcePath = alertQuery ? `/aircraft?${alertQuery}` : '/aircraft'
 
   return (
     <CompareProvider>
@@ -91,6 +102,10 @@ export default async function AircraftPage({
             ClubHanger is not the seller. Listing data may be out of date — confirm details on the
             source listing.
           </p>
+
+          {/* Email-alerts capture — inline, no account required. Filter-aware:
+              the context describes the active search so the alert is useful. */}
+          <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
 
           {/* Browse by state — crawlable internal links to the per-state for-sale pages */}
           <div className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
