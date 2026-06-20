@@ -12,6 +12,7 @@ import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import SaveListingButton from '@/components/SaveListingButton'
+import TrustBadge from '@/components/TrustBadge'
 
 async function getPartnership(id: string): Promise<Partnership | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -262,6 +263,9 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 )}
               </dl>
             </div>
+
+            {/* Trust / completeness — slice 1 of the listing trust layer */}
+            <TrustBadge p={p} variant="checklist" />
 
             {/* Contact card — desktop only (mobile uses sticky bar) */}
             <div className="hidden rounded-xl border border-sky-200 bg-sky-50 p-5 lg:block">
