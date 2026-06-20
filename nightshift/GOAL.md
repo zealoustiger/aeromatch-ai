@@ -1,18 +1,28 @@
 # Night Shift — North-Star Goal
 
-**Goal: maximize total pageviews.** The loop optimizes for more people landing on
-more pages of ClubHanger. (We're optimizing views, not signups, on purpose:
-at ~25 views/day traffic is the bottleneck — signups can't grow until the top of
-the funnel does.)
+**Goal: maximize organic search traffic — clicks from Google.** The real metric is
+the **Google Search Console funnel: indexed → impressions → clicks**, each gating the
+next (a page can't get impressions until it's indexed, or clicks until it has
+impressions). On-site pageviews (PostHog) are a *secondary* signal — they include you,
+the team, and direct visits, so they don't tell you if SEO is working. (We optimize
+search traffic, not signups, on purpose: signups can't grow until the top of the funnel does.)
 
 **Read the current score every cycle:**
 ```bash
-node nightshift/bin/scoreboard.mjs   # on-site pageviews (PostHog)
-node nightshift/bin/gsc.mjs          # real Google search: clicks, impressions, indexed-count, top queries
+node nightshift/bin/scoreboard.mjs   # leads with the GSC funnel + STAGE, then on-site pageviews
 ```
-GSC is the truer SEO signal once configured (see `GSC_SETUP.md`): indexed-count →
-impressions → clicks is the real funnel. Both fail soft if unconfigured.
-It prints pageviews (last 7d vs prior), all-time totals, and the top pages by traffic.
+The scoreboard computes a **STAGE** that tells you what to prioritize *right now*:
+- **INDEXING** (indexed ≈ 0 — where we are): get pages *indexed* — indexability, internal
+  linking, sitemap freshness, page quality, request-indexing. Do NOT just build more pages
+  Google can't index yet. (Backlinks — a human lever — accelerate indexing the most.)
+- **VISIBILITY** (indexing, few impressions): build more quality pages targeting real
+  queries; improve titles/H1s/internal links on families already showing up.
+- **CTR** (impressions but few clicks): improve titles/meta/structured data on
+  high-impression / low-click pages to win the click.
+- **SCALING**: scale what works; push almost-ranking pages (position 5-15) to page one.
+
+Always mine the scoreboard's **top queries** for page ideas (queries you almost rank for → new pages).
+GSC + PostHog both fail soft if unconfigured (see `GSC_SETUP.md`).
 
 ## Allocation policy — how cycles are split across work types
 The pageview metric is the **tiebreaker and the default, not the dictator.** Bug

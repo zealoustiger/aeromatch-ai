@@ -31,7 +31,7 @@ Work like a tight PM → Eng → QA → PM loop, all in this single run.
 ### 1. Orient
 - `git fetch`, check out `staging`, `git pull`.
 - Read `nightshift/GOAL.md` (the north-star metric + guardrails), `nightshift/BACKLOG.md` (the human's ideas + inspiration), `nightshift/CHANGELOG.md` (recent cycles), `nightshift/FREEZE.md`.
-- **Read the scoreboard:** run `node nightshift/bin/scoreboard.mjs` (on-site pageviews) and `node nightshift/bin/gsc.mjs` (real Google Search Console: clicks, impressions, indexed-count, top queries). GSC is the truer SEO signal — note pages with high impressions but low clicks (improve them) and queries you almost rank for (make a page). Both fail soft if unconfigured.
+- **Read the scoreboard:** run `node nightshift/bin/scoreboard.mjs`. It leads with the **Google Search funnel (indexed → impressions → clicks)** and a computed **STAGE** that tells you what to prioritize this cycle (see GOAL.md) — pageviews are shown below as a secondary on-site signal. Act on the STAGE: e.g. STAGE=INDEXING → focus on indexability/internal-links/sitemap, not just new pages. Mine the top queries for page ideas.
 - **Read `nightshift/FEEDBACK.md`** — the human's reactions to the morning report. Treat it as top steering: honor any "kill / deprioritize / fix-this-first" directives even if they aren't in the backlog yet. (Claude normally converts feedback into tagged BACKLOG items; if fresh feedback isn't reflected there, follow the feedback.)
 - If the most recent CHANGELOG entry was a **QA failure**, your task this cycle is to fix it — do not start something new.
 
