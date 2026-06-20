@@ -32,6 +32,7 @@ Work like a tight PM → Eng → QA → PM loop, all in this single run.
 - `git fetch`, check out `staging`, `git pull`.
 - Read `nightshift/GOAL.md` (the north-star metric + guardrails), `nightshift/BACKLOG.md` (the human's ideas + inspiration), `nightshift/CHANGELOG.md` (recent cycles), `nightshift/FREEZE.md`.
 - **Read the scoreboard:** run `node nightshift/bin/scoreboard.mjs` and note the current pageview number + which pages get traffic. This is the goal you're moving.
+- **Read `nightshift/FEEDBACK.md`** — the human's reactions to the morning report. Treat it as top steering: honor any "kill / deprioritize / fix-this-first" directives even if they aren't in the backlog yet. (Claude normally converts feedback into tagged BACKLOG items; if fresh feedback isn't reflected there, follow the feedback.)
 - If the most recent CHANGELOG entry was a **QA failure**, your task this cycle is to fix it — do not start something new.
 
 ### 2. PM — pick & spec (goal-driven)
