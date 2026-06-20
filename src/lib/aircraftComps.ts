@@ -78,6 +78,58 @@ function medianOfSorted(sorted: number[]): number {
 }
 
 /**
+ * Minimum number of priced listings in a family before we publish an aggregate
+ * "Market snapshot" (median + range + average). This is the same honesty
+ * philosophy as slice 1's per-card pill (MIN_OTHER_COMPS), but a notch STRICTER:
+ * a per-card pill only claims one listing is "below/above" its peers, whereas the
+ * snapshot publishes a public median AND a low–high range — a price RANGE is far
+ * more sensitive to a single outlier than a single relative claim. With only ~5
+ * priced listings one mis-priced/project airframe (e.g. a $105k R44 against a
+ * $650–860k field) drags the range and skews the median; 8 keeps the median and
+ * range trustworthy. Below this, the family shows NO snapshot rather than publish
+ * a noisy/misleading aggregate. Empirically this cleanly separates the dense
+ * families (Cessna 172=36, Cherokee=23, Bonanza=58, …) from sparse ones
+ * (Robinson R44=5 → suppressed).
+ */
+export const MIN_SNAPSHOT_LISTINGS = 8
+
+/** Aggregate market stats for ONE make+model family, all in whole dollars. */
+export interface PriceStats {
+  /** Number of priced listings the stats were computed from. */
+  count: number
+  /** Median asking price (whole dollars). */
+  median: number
+  /** Lowest asking price (whole dollars). */
+  low: number
+  /** Highest asking price (whole dollars). */
+  high: number
+  /** Mean asking price (whole dollars). */
+  average: number
+}
+
+/**
+ * Compute aggregate price stats for a family's priced listings. Returns null when
+ * there are fewer than MIN_SNAPSHOT_LISTINGS real priced listings — the caller
+ * then renders nothing (honesty guardrail: no snapshot on sparse data).
+ *
+ * Pass the raw asking prices of ALL active priced listings in the family; only
+ * positive finite values are counted. Pure — no DB, no React.
+ */
+export function priceStats(prices: number[]): PriceStats | null {
+  const valid = prices.filter((p) => Number.isFinite(p) && p > 0)
+  if (valid.length < MIN_SNAPSHOT_LISTINGS) return null
+  const sorted = [...valid].sort((a, b) => a - b)
+  const sum = sorted.reduce((a, b) => a + b, 0)
+  return {
+    count: sorted.length,
+    median: Math.round(medianOfSorted(sorted)),
+    low: sorted[0],
+    high: sorted[sorted.length - 1],
+    average: Math.round(sum / sorted.length),
+  }
+}
+
+/**
  * Compare one listing's asking price to the median of OTHER same-family priced
  * listings. Returns null (→ no pill) when:
  *  - the listing has no real asking price,

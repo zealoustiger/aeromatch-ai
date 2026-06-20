@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { Plane, ArrowRight, Gauge, Wallet } from 'lucide-react'
-import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel } from '@/components/AircraftSaleList'
+import { Plane, ArrowRight, Gauge, Wallet, LineChart } from 'lucide-react'
+import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel, priceStatsForMakeModel } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
@@ -104,6 +104,16 @@ export default async function MakeModelForSalePage({ params }: Props) {
     .filter((s) => STATE_NAMES[s.code])
     .slice(0, 8)
 
+  // Aggregate "Market snapshot" stats for THIS family (median / range / count),
+  // computed from the same active priced `aircraft_for_sale` rows the page already
+  // queries. Returns null for sparse families (< 5 priced listings) — we then
+  // render no snapshot rather than publish noisy/misleading aggregates.
+  const snapshot = await priceStatsForMakeModel(
+    entry.make,
+    entry.modelPattern,
+    entry.notModelPattern
+  )
+
   // ItemList JSON-LD for rich results — marks up exactly the first page of
   // listings the visitor sees (same filters/order as the rendered list), each as
   // a Product/Offer with real data only. See src/lib/aircraftJsonLd.ts.
@@ -188,6 +198,45 @@ export default async function MakeModelForSalePage({ params }: Props) {
           </p>
         </div>
       </div>
+
+      {/* Market snapshot — real aggregate price stats for THIS family, computed
+          from the active priced inventory. Renders ONLY when the family has
+          enough priced listings (>= 5); sparse families show nothing (honesty
+          guardrail — no fake/empty aggregates, no false precision). */}
+      {snapshot && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <LineChart className="h-4 w-4 text-sky-500" />
+            {label} market snapshot
+          </h2>
+          <p className="mb-4 text-sm text-slate-500">
+            From <span className="font-semibold text-slate-700">{snapshot.count.toLocaleString()}</span>{' '}
+            priced {label} {snapshot.count === 1 ? 'listing' : 'listings'} on the market right now.
+          </p>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+              <dt className="text-xs font-medium text-slate-500">Median asking price</dt>
+              <dd className="mt-1 text-lg font-bold text-sky-700 sm:text-xl">{fmtUsd(snapshot.median)}</dd>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+              <dt className="text-xs font-medium text-slate-500">Average asking price</dt>
+              <dd className="mt-1 text-lg font-bold text-slate-800 sm:text-xl">{fmtUsd(snapshot.average)}</dd>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+              <dt className="text-xs font-medium text-slate-500">Lowest asking price</dt>
+              <dd className="mt-1 text-lg font-bold text-slate-800 sm:text-xl">{fmtUsd(snapshot.low)}</dd>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+              <dt className="text-xs font-medium text-slate-500">Highest asking price</dt>
+              <dd className="mt-1 text-lg font-bold text-slate-800 sm:text-xl">{fmtUsd(snapshot.high)}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs text-slate-400">
+            Based on asking prices of active {label} listings aggregated from across the web — not sale
+            prices. Listings without a stated price are excluded.
+          </p>
+        </section>
+      )}
 
       {/* Email-alerts capture (slice 1) — inline, no account required. */}
       <AlertSignup context={label} sourcePath={path} />
@@ -285,6 +334,17 @@ export default async function MakeModelForSalePage({ params }: Props) {
     <CompareTray />
     </CompareProvider>
   )
+}
+
+// Whole-dollar USD, no cents — e.g. 287500 -> "$287,500". Prices are already
+// rounded to whole dollars in `priceStats`; this just formats them honestly
+// (no fake precision, no "k" rounding that would hide the real listing figure).
+function fmtUsd(n: number): string {
+  return n.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  })
 }
 
 function ListSkeleton() {
