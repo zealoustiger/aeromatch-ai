@@ -33,7 +33,7 @@ export default async function PartnershipsPage({
       <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Users className="h-6 w-6 text-emerald-500" />
+            <Users className="h-6 w-6 text-sky-500" />
             Aircraft Partnerships
           </h1>
           <p className="mt-1 text-slate-500">
