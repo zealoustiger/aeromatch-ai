@@ -246,7 +246,11 @@ export default function CoOwnershipGuidePage() {
           reserves continuously (a set amount per flight hour) so the inevitable engine overhaul and annual
           inspection are already paid for when they arrive, instead of triggering a large unexpected
           assessment. Write the exact split, the wet rate, and how reserves are funded into your partnership
-          agreement.
+          agreement — see{' '}
+          <Link href="/guides/aircraft-partnership-agreement" className="font-medium text-sky-700 hover:underline">
+            what to put in an aircraft partnership agreement
+          </Link>{' '}
+          for the full checklist.
         </p>
 
         <SectionHeading><span id="finding-a-partner" />How to find the right partner</SectionHeading>
