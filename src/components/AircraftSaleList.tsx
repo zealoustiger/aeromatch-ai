@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
 import { minScoreForGrade, type Grade } from '@/lib/listingQuality'
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
-import { buildFamilyPriceMap, compVsMarket } from '@/lib/aircraftComps'
+import { buildFamilyPriceMap, compVsMarket, priceStats, type PriceStats } from '@/lib/aircraftComps'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -221,6 +221,48 @@ export async function topMakeModelsForState(
     return [...counts.values()].sort((a, b) => b.n - a.n).slice(0, limit)
   } catch {
     return []
+  }
+}
+
+/**
+ * Aggregate market stats (median / range / count) for ONE make+model family, for
+ * the make+model page's "Market snapshot" block. Reads exactly the same
+ * `aircraft_for_sale` rows the page already queries (same `status='active'` +
+ * `make`/`modelPattern`/`notModelPattern` filters as `countMakeModel` /
+ * `topStatesForMakeModel` / the rendered list) — just the `asking_price` column,
+ * narrowed to real priced listings. Returns null when the family has fewer than
+ * MIN_SNAPSHOT_LISTINGS priced listings (sparse → no snapshot) or on any failure.
+ * Read-only, no schema change.
+ */
+export async function priceStatsForMakeModel(
+  make: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<PriceStats | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return null
+  try {
+    const supabase = await createServerSupabaseClient()
+    const base = supabase
+      .from('aircraft_for_sale')
+      .select('asking_price')
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .not('asking_price', 'is', null)
+      .gt('asking_price', 0)
+      .limit(5000)
+    const { data, error } = await (notModelPattern
+      ? base.not('model', 'ilike', notModelPattern)
+      : base)
+    if (error || !data) return null
+    const prices = data
+      .map((r) => r.asking_price as number | null)
+      .filter((p): p is number => p != null)
+    return priceStats(prices)
+  } catch {
+    return null
   }
 }
 
