@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Calculator } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import CostCalculator from '@/components/CostCalculator'
 
 export const metadata: Metadata = {
@@ -37,6 +38,13 @@ export default function CostCalculatorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
+      />
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Tools', href: '/tools' },
+          { label: 'Cost calculator' },
+        ]}
       />
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 sm:text-3xl">
