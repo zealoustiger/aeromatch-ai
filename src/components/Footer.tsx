@@ -17,6 +17,10 @@ const toolLinks = [
   { href: '/tools/earnings-calculator', label: 'Earnings calculator' },
 ]
 
+const guideLinks = [
+  { href: '/guides/aircraft-co-ownership', label: 'How co-ownership works' },
+]
+
 const companyLinks = [
   { href: '/about', label: 'About ClubHanger' },
 ]
@@ -50,6 +54,14 @@ export default function Footer() {
             <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Tools</h3>
             <ul className="space-y-2">
               {toolLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Guides</h3>
+            <ul className="space-y-2">
+              {guideLinks.map(({ href, label }) => (
                 <li key={href}>
                   <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
                 </li>
