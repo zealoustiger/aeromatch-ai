@@ -6,7 +6,7 @@ import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countForSaleState, fetchAircraftPage, topMakeModelsForState } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
-import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL } from '@/lib/seo'
+import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ state: string }> }
@@ -26,6 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const count = n.toLocaleString()
   const slug = stateSlug(entry.name)
   const path = `/aircraft/for-sale/${slug}`
+  const url = `${SITE_URL}${path}`
+  // Page-specific OG/Twitter copy reflecting THIS state (mirrors the per-page
+  // card pattern shipped on /partnerships/[id]). No per-aircraft image — fall
+  // back to the SAME site default OG card so a shared link always unfurls into a
+  // real card, never a broken/empty image.
+  const ogTitle = `Aircraft for sale in ${entry.name} — ${count} aircraft`
+  const ogDescription = `General aviation aircraft for sale located in ${entry.name}, searchable in one place on ClubHanger.`
 
   return {
     // Title pattern per spec: "Aircraft for sale in {State} — {N} aircraft | ClubHanger".
@@ -33,10 +40,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // " | ClubHanger" isn't doubled.
     title: { absolute: `Aircraft for sale in ${entry.name} — ${count} aircraft | ClubHanger` },
     description: `Browse ${count} aircraft for sale in ${entry.name}, aggregated from across the web. Filter by make, year, and price — every listing links back to its source. Free to search.`,
-    alternates: { canonical: `${SITE_URL}${path}` },
+    alternates: { canonical: url },
     openGraph: {
-      title: `Aircraft for sale in ${entry.name} — ${count} aircraft`,
-      description: `General aviation aircraft for sale located in ${entry.name}, searchable in one place on ClubHanger.`,
+      title: ogTitle,
+      description: ogDescription,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: DEFAULT_OG_IMAGE, alt: `Aircraft for sale in ${entry.name} on ClubHanger` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }
