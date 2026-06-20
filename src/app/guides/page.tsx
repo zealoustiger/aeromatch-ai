@@ -7,6 +7,7 @@ import {
   FileText,
   Scale,
   Search,
+  ClipboardCheck,
   ArrowRight,
   Calculator,
 } from 'lucide-react'
@@ -74,6 +75,13 @@ const GUIDES: {
     description:
       'The sourcing playbook: where to look for partners (flying clubs, FBOs, EAA chapters, type clubs, airport boards, and online), how to vet a candidate, the red flags to avoid, how many partners makes sense, and how to go from a match to a signed agreement.',
     icon: Search,
+  },
+  {
+    path: '/guides/aircraft-pre-purchase-inspection',
+    title: 'Aircraft Pre-Purchase Inspection: A Buyer’s Checklist',
+    description:
+      'Buying a used airplane? What a pre-purchase (pre-buy) inspection covers and why it matters — logbooks and AD compliance, engine, airframe and corrosion, avionics, title and liens, and damage history — plus how to choose an independent inspector, how to think about scope and cost, and the red flags to watch for.',
+    icon: ClipboardCheck,
   },
 ]
 
