@@ -6,6 +6,7 @@ import Link from 'next/link'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
@@ -106,6 +107,10 @@ export default async function AircraftPage({
               ))}
             </div>
           </div>
+
+          {/* Buying a plane? — related-guides cross-link block (internal linking
+              toward the buyer-guide cluster). Additive; no new page. */}
+          <ForSaleGuideLinks className="mt-4" />
         </div>
       </div>
     </div>
