@@ -24,6 +24,7 @@ const guideLinks = [
   { href: '/guides/aircraft-partnership-agreement', label: 'Partnership agreement' },
   { href: '/guides/leaseback-vs-co-ownership', label: 'Leaseback vs. co-ownership' },
   { href: '/guides/how-to-find-aircraft-partners', label: 'How to find partners' },
+  { href: '/guides/aircraft-pre-purchase-inspection', label: 'Pre-purchase inspection' },
 ]
 
 const companyLinks = [

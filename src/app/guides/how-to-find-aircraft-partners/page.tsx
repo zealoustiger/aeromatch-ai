@@ -374,6 +374,12 @@ export default function FindAircraftPartnersGuidePage() {
               </Link>{' '}
               — the plain-English checklist for once you&apos;ve found your partners.
             </li>
+            <li>
+              <Link href="/guides/aircraft-pre-purchase-inspection" className="font-medium text-sky-700 hover:underline">
+                Aircraft Pre-Purchase Inspection: A Buyer&apos;s Checklist
+              </Link>{' '}
+              — buying the plane to share? Get an independent pre-buy before you make an offer.
+            </li>
           </ul>
         </div>
 
