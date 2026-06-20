@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
+import { getNearAirportSitemapIcaos } from '@/lib/nearbyPartnerships'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
@@ -37,6 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
+  let nearAirportPages: MetadataRoute.Sitemap = []
   let makePages2: MetadataRoute.Sitemap = []
   let makeModelPages: MetadataRoute.Sitemap = []
   let forSaleStatePages: MetadataRoute.Sitemap = []
@@ -60,6 +62,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     airportPages = (airports ?? []).map((a) => ({
       url: `${SITE_URL}/airports/${(a.icao as string).toLowerCase()}`,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
+    // Geo "partnerships near [airport]" pages (`/partnerships/near/[icao]`).
+    // Emit ONLY airports with real nearby partnership inventory (>= MIN_NEARBY
+    // within NEAR_RADIUS_NM). The page route 404s below that threshold (see
+    // near/[icao]/page.tsx), so this helper is the single source of truth — a
+    // thin airport must never appear in the sitemap (it would be a soft-404).
+    const nearIcaos = await getNearAirportSitemapIcaos()
+    nearAirportPages = nearIcaos.map((icao) => ({
+      url: `${SITE_URL}/partnerships/near/${icao}`,
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
@@ -131,6 +145,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...makeModelPages,
     ...forSaleStatePages,
     ...airportPages,
+    ...nearAirportPages,
     ...listingPages,
   ]
 }
