@@ -113,7 +113,7 @@ export default function Nav() {
             )}
             {isAdmin && (
               <Link
-                href="/admin/review"
+                href="/admin"
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   pathname.startsWith('/admin')
@@ -240,7 +240,7 @@ export default function Nav() {
           )}
           {isAdmin && (
             <Link
-              href="/admin/review"
+              href="/admin"
               className={cn(
                 'flex items-center gap-2 py-4 text-base font-medium transition-colors',
                 pathname.startsWith('/admin') ? 'text-amber-700' : 'text-slate-700'

@@ -58,7 +58,8 @@ Stable staging base URL (always serves the latest `staging` commit):
    - Keep bullets plain-language and user-facing — the reader is the founder, not an engineer.
    - Pull risks/schema notes from the cycles' `Verdict`/`Next` lines into "needs your attention."
 5. `git add nightshift/REVIEW.md && git commit -m "nightshift: morning review digest" && git push origin staging`.
-6. Stop.
+6. **Sync the on-site admin dashboard:** run `node scripts/sync-admin-docs.mjs`. This upserts the current `nightshift/BACKLOG.md` and `nightshift/REVIEW.md` into the shared `admin_content` table so the production admin page (`/admin`) shows today's report + backlog. (Prod and staging share one DB, so this is how the report reaches the live dashboard without promoting to main.)
+7. Stop.
 
 ## Rules
 - Build nothing, change no app code, run no migrations. This is a read-and-summarize job only.

@@ -45,3 +45,21 @@ body {
 .pb-safe-lg {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
+
+/* Rendered markdown in the admin dashboard (backlog + daily report) */
+.admin-md { color: #334155; font-size: 0.875rem; line-height: 1.65; }
+.admin-md h1 { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 1.25rem 0 0.5rem; }
+.admin-md h2 { font-size: 1.05rem; font-weight: 600; color: #0f172a; margin: 1.25rem 0 0.4rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9; }
+.admin-md h3 { font-size: 0.95rem; font-weight: 600; color: #1e293b; margin: 1rem 0 0.3rem; }
+.admin-md p { margin: 0.5rem 0; }
+.admin-md ul, .admin-md ol { margin: 0.5rem 0; padding-left: 1.25rem; }
+.admin-md ul { list-style: disc; }
+.admin-md ol { list-style: decimal; }
+.admin-md li { margin: 0.2rem 0; }
+.admin-md a { color: #0284c7; text-decoration: underline; text-underline-offset: 2px; }
+.admin-md a:hover { color: #0369a1; }
+.admin-md strong { font-weight: 600; color: #0f172a; }
+.admin-md code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.8rem; font-family: ui-monospace, monospace; }
+.admin-md hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1.25rem 0; }
+.admin-md blockquote { border-left: 3px solid #e2e8f0; padding-left: 0.75rem; color: #64748b; margin: 0.5rem 0; }
+.admin-md h1:first-child, .admin-md h2:first-child { margin-top: 0; border-top: 0; padding-top: 0; }
