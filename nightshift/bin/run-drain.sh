@@ -35,13 +35,28 @@ git pull --quiet --ff-only 2>/dev/null || true
 # Mark "running" so the status reader / alerter can see liveness.
 printf '{"state":"running","run_id":"%s","started":"%s"}\n' "$RUN_ID" "$RUN_TS" > "$STATUS"
 
+# Build the prompt. NS_FORCE=1 = authorized manual run OUTSIDE the night window
+# (e.g. a daytime test): prepend an override that ignores the "night's end" stop and
+# time-boxes the run. NS_FORCE_MINUTES (default 70) sets the soft wrap target.
+PROMPT="$(cat "$APP/nightshift/DRAIN_TASK.md")"
+if [ "${NS_FORCE:-0}" = "1" ]; then
+  PROMPT="MANUAL RUN — AUTHORIZED, OUTSIDE THE NIGHT WINDOW. Override the task below:
+- IGNORE Section 3's \"Night's end\" (06:50) stop condition entirely; proceed as if inside the night window.
+- TIME BOX: stop cleanly after ~${NS_FORCE_MINUTES:-70} minutes of wall-clock — let the current worker finish, then write the DRAIN SUMMARY and push, so the tree is clean.
+- SAFETY CAP: at most ${NS_FORCE_WORKERS:-6} workers this run.
+- Everything else applies verbatim: lock, blockers-first, lane alternation, QA via nightshift/bin/qa-smoke.mjs, land-on-clean-PASS-only, CHANGELOG entry, push to staging.
+
+--- TASK ---
+${PROMPT}"
+fi
+
 # --dangerously-skip-permissions is REQUIRED for unattended ops and acceptable ONLY
 # because this container is isolated (no other apps' secrets share it).
 set +e
 timeout --signal=INT "$RUN_TIMEOUT" \
   claude --dangerously-skip-permissions \
          --output-format json \
-         -p "$(cat "$APP/nightshift/DRAIN_TASK.md")" \
+         -p "$PROMPT" \
   > "$OUT" 2> "$ERRLOG"
 rc=$?
 set -e
