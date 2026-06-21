@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 
 import { Plane, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
+import AircraftChipBar from '@/components/AircraftChipBar'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
 import AlertSignup from '@/components/AlertSignup'
@@ -80,6 +81,11 @@ export default async function AircraftPage({
           </Suspense>
         </div>
       </div>
+
+      {/* Airbnb-style quick-filter chip bar (Etsy×Airbnb refresh — slice 3).
+          Horizontally-scrolling chips that set existing filter URL params
+          (make / price band / mission). Reuses the slice-1 .ch-* tokens. */}
+      <AircraftChipBar facets={facets} />
 
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar — desktop only */}
