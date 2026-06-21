@@ -16,8 +16,11 @@ interface Filters {
   /** optional ilike pattern to exclude (e.g. keep SR22 distinct from SR22T). */
   notModelPattern?: string
   state?: string
+  min_price?: string
   max_price?: string
   min_year?: string
+  max_year?: string
+  min_tt?: string
   max_tt?: string
   min_grade?: string
   sort?: string
@@ -349,8 +352,11 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
     if (filters.modelPattern) query = query.ilike('model', filters.modelPattern)
     if (filters.notModelPattern) query = query.not('model', 'ilike', filters.notModelPattern)
     if (filters.state) query = query.eq('state', filters.state)
+    if (filters.min_price) query = query.gte('asking_price', parseInt(filters.min_price))
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))
     if (filters.min_year) query = query.gte('year', parseInt(filters.min_year))
+    if (filters.max_year) query = query.lte('year', parseInt(filters.max_year))
+    if (filters.min_tt) query = query.gte('ttaf', parseInt(filters.min_tt))
     if (filters.max_tt) query = query.lte('ttaf', parseInt(filters.max_tt))
     const minScore = effectiveMinScore(filters.min_grade)
     if (minScore > 0) query = query.gte('quality_score', minScore)
