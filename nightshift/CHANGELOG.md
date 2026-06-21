@@ -2,6 +2,21 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-21T06:03Z — PASS — aircraft-chip-bar
+- Pages: /aircraft
+- What: **Etsy × Airbnb visual refresh, slice 3 — an Airbnb-style quick-filter chip bar at the top of the Planes-for-Sale page.** A single horizontally-scrolling row of small pill "chips" now sits just under the page heading: tap a make (Cessna / Piper / Cirrus / Beechcraft / Biplane), a price band (Under $100k / $250k / $500k), or a mission keyword (IFR / Glass cockpit / Tailwheel / Low time) and the listings instantly filter to match. Each chip just sets one of the filters the page already had (it reads the same URL the sidebar filters use), the picked chip lights up blue, and tapping it again clears it. On a phone the chip row scrolls sideways on its own without making the whole page scroll sideways. Everything else on the page is untouched — the filter sidebar, save heart, compare, badges, prices, and pagination all work exactly as before. ("Near me" was intentionally left out this cycle — it needs phone geolocation, which is heavier and riskier; make + price + mission already give the full Airbnb-strip feel.)
+- Goal: [want] — Etsy × Airbnb visual refresh **slice 3: category chip bar** (P2, branding open for experimentation). Pulled the [want] lane: the last non-bug cycle was [goal] (homepage-canonical-og), so [want] was owed. Touches priority page /aircraft (#2). Pure presentation/UX polish reusing existing filter params — no SEO/pageview lever; judged on cohesion + reversibility + zero regression, not tonight's pageview delta. Scoreboard at orient: STAGE=INDEXING, GSC indexed 0/1086, impressions 7 (28d), pageviews 103/7d.
+- Spec: nightshift/specs/20260621T060333Z-aircraft-chip-bar.md
+- Verdict: PASS. One new client component (`src/components/AircraftChipBar.tsx`) + one wiring edit (`src/app/aircraft/page.tsx` — import + render `<AircraftChipBar facets={facets} />` under the header). Each chip is a Next `<Link>` that toggles a single EXISTING param against the current URL (preserving other active filters, clearing `model` when make changes, resetting `page`) — reuses the same `make`/`max_price`/`q` params `AircraftSaleList` already reads, so NO query-logic change, NO globals.css/token change, NO new dependency, NO schema/DB/SQL. `npx next build` green ("✓ Compiled successfully in 2.6s"); `tsc --noEmit` clean (only the pre-existing `.test.ts` baseline errors, none in the touched files). QA against the PRODUCTION build (`npx next build` + `npm run start`, NOT `next dev`) via gstack /browse at desktop 1280 + 375px:
+  - **(1) Chip bar renders** above the filters/listings row with all 12 chips (5 make + 3 price + 4 mission), styled cohesively on the cream surface. ✓
+  - **(2) Chips set params + listings update:** "Under $250k" → `/aircraft?max_price=250000`; "Cessna" → `/aircraft?make=Cessna` (count narrowed to 303). Clicking the active chip clears it (URL back to `/aircraft`). ✓
+  - **(3) Active highlight matches URL:** exactly the matching chip carries `aria-pressed="true"` + the blue fill. ✓
+  - **(4) 375px:** page horizontal overflow = 0 (`documentElement.scrollWidth−clientWidth=0` AND `body.scrollWidth−innerWidth=0`); the chip ROW scrolls horizontally (scrollWidth 1478 > clientWidth 375). ✓
+  - **(5) Build + typecheck green** (no new errors vs baseline). ✓
+  - **(6) No console errors / hydration warnings** at desktop or 375px; existing affordances intact (60 `.ch-card` listings, 60 save hearts, filter sidebar present). ✓
+- Screenshots: nightshift/screenshots/aircraft-chip-bar/ (after-desktop-1280.png, after-desktop-active-1280.png [Under $250k highlighted], after-mobile-375.png)
+- Next: slice 4 = Etsy-style homepage curated rails; OR extend the same chip bar to /partnerships (the queued slice-3 follow-on). A later [want] could add the "near me" chip via geolocation → `?state=` once a geo approach is approved.
+
 ## 2026-06-20T23:30Z — DRAIN SUMMARY (manual afternoon run)
 - Cycles this run: 5 (PASS 5 / FAIL 0 / ABORT 0)
 - Slugs: aircraft-visual-tokens, seeking-seo-metadata, hero-search-skip-gate-when-authed, listing-card-redesign, homepage-canonical-og
