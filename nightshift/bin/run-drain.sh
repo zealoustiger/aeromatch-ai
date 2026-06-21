@@ -63,7 +63,7 @@ outcome="ok"
 
 # Append one ledger line — single jq pass over the result JSON, SINGLE-LINE filter
 # (the source of truth for Forge's token monitoring).
-jq -c --arg ts "$RUN_TS" --arg end "$END_TS" --arg rid "$RUN_ID" --argjson exit "${rc:-1}" --arg outcome "$outcome" '{ts:$ts,end:$end,run_id:$rid,exit:$exit,outcome:$outcome,api_error_status:(.api_error_status//""),input_tokens:(.usage.input_tokens//0),output_tokens:(.usage.output_tokens//0),cache_read_tokens:(.usage.cache_read_input_tokens//0),cache_creation_tokens:(.usage.cache_creation_input_tokens//0),total_cost_usd:(.total_cost_usd//0),duration_ms:(.duration_ms//0)}' "$OUT" >> "$LEDGER" 2>>"$ERRLOG" || printf '{"ts":"%s","exit":%s,"outcome":"%s","parse":"failed"}\n' "$RUN_TS" "${rc:-1}" "$outcome" >> "$LEDGER"
+jq -c --arg ts "$RUN_TS" --arg end "$END_TS" --arg rid "$RUN_ID" --argjson exit "${rc:-1}" --arg outcome "$outcome" '{"ts":$ts,"end":$end,"run_id":$rid,"exit":$exit,"outcome":$outcome,"api_error_status":(.api_error_status//""),"input_tokens":(.usage.input_tokens//0),"output_tokens":(.usage.output_tokens//0),"cache_read_tokens":(.usage.cache_read_input_tokens//0),"cache_creation_tokens":(.usage.cache_creation_input_tokens//0),"total_cost_usd":(.total_cost_usd//0),"duration_ms":(.duration_ms//0)}' "$OUT" >> "$LEDGER" 2>>"$ERRLOG" || printf '{"ts":"%s","exit":%s,"outcome":"%s","parse":"failed"}\n' "$RUN_TS" "${rc:-1}" "$outcome" >> "$LEDGER"
 
 # Final status (idle + last outcome) for the reader / alerter.
 printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_exit":%s,"last_outcome":"%s","last_api_error":"%s","input_tokens":%s,"output_tokens":%s}\n' \
