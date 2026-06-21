@@ -47,18 +47,12 @@ rc=$?
 set -e
 END_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-# Pull usage out of the JSON result (best-effort; jq is in the image).
-vals=$(jq -r '[ (.usage.input_tokens // 0),
-                (.usage.output_tokens // 0),
-                (.usage.cache_read_input_tokens // 0),
-                (.usage.cache_creation_input_tokens // 0),
-                (.total_cost_usd // 0),
-                (.duration_ms // 0),
-                (.is_error // false),
-                (.api_error_status // "") ] | @tsv' "$OUT" 2>/dev/null)
-IFS=$'\t' read -r in_t out_t cr_t cc_t cost durms iserr apierr <<<"${vals:-}"
+# Pull usage from the result JSON. SINGLE-LINE jq filter on purpose — a multi-line
+# filter reached jq as only its first line in this exec path and failed the compile.
+vals=$(jq -r '[(.usage.input_tokens//0),(.usage.output_tokens//0),(.usage.cache_read_input_tokens//0),(.usage.cache_creation_input_tokens//0),(.total_cost_usd//0),(.duration_ms//0),(.api_error_status//"")]|@tsv' "$OUT" 2>/dev/null)
+IFS=$'\t' read -r in_t out_t cr_t cc_t cost durms apierr <<<"${vals:-}"
 in_t=${in_t:-0}; out_t=${out_t:-0}; cr_t=${cr_t:-0}; cc_t=${cc_t:-0}
-cost=${cost:-0}; durms=${durms:-0}; iserr=${iserr:-true}; apierr=${apierr:-}
+cost=${cost:-0}; durms=${durms:-0}; apierr=${apierr:-}
 
 # Classify outcome for the alerter.
 outcome="ok"
@@ -67,22 +61,9 @@ outcome="ok"
 [ "${apierr}" = "401" ] && outcome="auth_expired" # token logged out
 [ "${apierr}" = "429" ] && outcome="rate_limited"
 
-# Append one ledger line (the source of truth for token monitoring). Read the token /
-# cost fields DIRECTLY from the result JSON in a single jq pass — no fragile shell
-# round-trip (a malformed --argjson value previously failed the whole write).
-jq -c \
-  --arg ts "$RUN_TS" --arg end "$END_TS" --arg rid "$RUN_ID" \
-  --argjson exit "${rc:-1}" --arg outcome "$outcome" \
-  '{ts:$ts,end:$end,run_id:$rid,exit:$exit,outcome:$outcome,
-    api_error_status:(.api_error_status // ""),
-    input_tokens:(.usage.input_tokens // 0),
-    output_tokens:(.usage.output_tokens // 0),
-    cache_read_tokens:(.usage.cache_read_input_tokens // 0),
-    cache_creation_tokens:(.usage.cache_creation_input_tokens // 0),
-    total_cost_usd:(.total_cost_usd // 0),
-    duration_ms:(.duration_ms // 0)}' \
-  "$OUT" >> "$LEDGER" 2>>"$ERRLOG" \
-  || printf '{"ts":"%s","exit":%s,"outcome":"%s","parse":"failed"}\n' "$RUN_TS" "${rc:-1}" "$outcome" >> "$LEDGER"
+# Append one ledger line — single jq pass over the result JSON, SINGLE-LINE filter
+# (the source of truth for Forge's token monitoring).
+jq -c --arg ts "$RUN_TS" --arg end "$END_TS" --arg rid "$RUN_ID" --argjson exit "${rc:-1}" --arg outcome "$outcome" '{ts:$ts,end:$end,run_id:$rid,exit:$exit,outcome:$outcome,api_error_status:(.api_error_status//""),input_tokens:(.usage.input_tokens//0),output_tokens:(.usage.output_tokens//0),cache_read_tokens:(.usage.cache_read_input_tokens//0),cache_creation_tokens:(.usage.cache_creation_input_tokens//0),total_cost_usd:(.total_cost_usd//0),duration_ms:(.duration_ms//0)}' "$OUT" >> "$LEDGER" 2>>"$ERRLOG" || printf '{"ts":"%s","exit":%s,"outcome":"%s","parse":"failed"}\n' "$RUN_TS" "${rc:-1}" "$outcome" >> "$LEDGER"
 
 # Final status (idle + last outcome) for the reader / alerter.
 printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_exit":%s,"last_outcome":"%s","last_api_error":"%s","input_tokens":%s,"output_tokens":%s}\n' \
