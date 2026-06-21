@@ -65,7 +65,9 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
   // Secondary, Controller-style dimensions live behind a progressive-disclosure
   // toggle so the panel leads cleanly with Make → Model. Auto-open when any of
   // them is already active, so an active filter is never hidden.
-  const SECONDARY_KEYS = ['state', 'max_price', 'min_year', 'max_tt'] as const
+  const SECONDARY_KEYS = [
+    'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt',
+  ] as const
   const secondaryActive = SECONDARY_KEYS.some((k) => initialValues[k])
   const [showMore, setShowMore] = useState(secondaryActive)
 
@@ -215,49 +217,82 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
               </select>
             </div>
 
-            {/* Max price */}
+            {/* Price range */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Max Price
+                Price ($)
               </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+              <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  placeholder="e.g. 150000"
+                  aria-label="Minimum price"
+                  placeholder="Min"
+                  defaultValue={initialValues.min_price ?? ''}
+                  onChange={(e) => updateFilter('min_price', e.target.value)}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+                <span className="text-sm text-slate-400">–</span>
+                <input
+                  type="number"
+                  aria-label="Maximum price"
+                  placeholder="Max"
                   defaultValue={initialValues.max_price ?? ''}
                   onChange={(e) => updateFilter('max_price', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 py-2 pl-7 pr-3 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                 />
               </div>
             </div>
 
-            {/* Min year */}
+            {/* Year range */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Year (min)
+                Year
               </label>
-              <input
-                type="number"
-                placeholder="e.g. 2000"
-                defaultValue={initialValues.min_year ?? ''}
-                onChange={(e) => updateFilter('min_year', e.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  aria-label="Earliest year"
+                  placeholder="Min"
+                  defaultValue={initialValues.min_year ?? ''}
+                  onChange={(e) => updateFilter('min_year', e.target.value)}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+                <span className="text-sm text-slate-400">–</span>
+                <input
+                  type="number"
+                  aria-label="Latest year"
+                  placeholder="Max"
+                  defaultValue={initialValues.max_year ?? ''}
+                  onChange={(e) => updateFilter('max_year', e.target.value)}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+              </div>
             </div>
 
-            {/* Max total time (airframe hours) */}
+            {/* Total time range (airframe hours) */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Max Total Time (hrs)
+                Total Time (hrs)
               </label>
-              <input
-                type="number"
-                placeholder="e.g. 2000"
-                defaultValue={initialValues.max_tt ?? ''}
-                onChange={(e) => updateFilter('max_tt', e.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  aria-label="Minimum total time"
+                  placeholder="Min"
+                  defaultValue={initialValues.min_tt ?? ''}
+                  onChange={(e) => updateFilter('min_tt', e.target.value)}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+                <span className="text-sm text-slate-400">–</span>
+                <input
+                  type="number"
+                  aria-label="Maximum total time"
+                  placeholder="Max"
+                  defaultValue={initialValues.max_tt ?? ''}
+                  onChange={(e) => updateFilter('max_tt', e.target.value)}
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                />
+              </div>
             </div>
           </div>
         )}

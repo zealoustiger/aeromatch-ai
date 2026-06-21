@@ -676,23 +676,40 @@ export function describeAircraftFilters(
   const make = params.make?.trim()
   const model = params.model?.trim()
   const stateName = params.state ? STATE_NAMES[params.state.toUpperCase()] : undefined
-  const maxPrice = params.max_price ? parseInt(params.max_price, 10) : NaN
-  const minYear = params.min_year ? parseInt(params.min_year, 10) : NaN
-  const maxTt = params.max_tt ? parseInt(params.max_tt, 10) : NaN
+  // A range bound is meaningful only when it parses to a positive number.
+  const num = (raw: string | undefined): number | null => {
+    if (!raw) return null
+    const n = parseInt(raw, 10)
+    return Number.isFinite(n) && n > 0 ? n : null
+  }
+  const minPrice = num(params.min_price)
+  const maxPrice = num(params.max_price)
+  const minYear = num(params.min_year)
+  const maxYear = num(params.max_year)
+  const minTt = num(params.min_tt)
+  const maxTt = num(params.max_tt)
   const keyword = params.q?.trim()
+
+  const dollars = (n: number) => `$${n.toLocaleString('en-US')}`
+  const hours = (n: number) => `${n.toLocaleString('en-US')} hours`
 
   // Lead with make/model; if neither, lead with the generic noun.
   const lead = make ? [make, model].filter(Boolean).join(' ') : 'aircraft'
 
   const clauses: string[] = []
   if (stateName) clauses.push(`in ${stateName}`)
-  if (Number.isFinite(maxPrice) && maxPrice > 0) {
-    clauses.push(`under $${maxPrice.toLocaleString('en-US')}`)
-  }
-  if (Number.isFinite(minYear) && minYear > 0) clauses.push(`from ${minYear} or newer`)
-  if (Number.isFinite(maxTt) && maxTt > 0) {
-    clauses.push(`under ${maxTt.toLocaleString('en-US')} hours`)
-  }
+  // Price: render whichever bound(s) are set as a range/over/under clause.
+  if (minPrice && maxPrice) clauses.push(`${dollars(minPrice)}–${dollars(maxPrice)}`)
+  else if (maxPrice) clauses.push(`under ${dollars(maxPrice)}`)
+  else if (minPrice) clauses.push(`over ${dollars(minPrice)}`)
+  // Year range.
+  if (minYear && maxYear) clauses.push(`${minYear}–${maxYear}`)
+  else if (minYear) clauses.push(`from ${minYear} or newer`)
+  else if (maxYear) clauses.push(`up to ${maxYear}`)
+  // Total time (airframe hours).
+  if (minTt && maxTt) clauses.push(`${minTt.toLocaleString('en-US')}–${hours(maxTt)}`)
+  else if (maxTt) clauses.push(`under ${hours(maxTt)}`)
+  else if (minTt) clauses.push(`over ${hours(minTt)}`)
   if (keyword) clauses.push(`matching "${keyword}"`)
 
   const hasMakeOrModel = Boolean(make || model)
