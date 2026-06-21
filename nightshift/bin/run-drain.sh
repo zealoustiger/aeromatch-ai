@@ -55,16 +55,18 @@ fi
 set +e
 timeout --signal=INT "$RUN_TIMEOUT" \
   claude --dangerously-skip-permissions \
-         --output-format json \
+         --output-format stream-json --verbose \
          -p "$PROMPT" \
   > "$OUT" 2> "$ERRLOG"
 rc=$?
 set -e
 END_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-# Pull usage from the result JSON. SINGLE-LINE jq filter on purpose — a multi-line
-# filter reached jq as only its first line in this exec path and failed the compile.
-vals=$(jq -r '[(.usage.input_tokens//0),(.usage.output_tokens//0),(.usage.cache_read_input_tokens//0),(.usage.cache_creation_input_tokens//0),(.total_cost_usd//0),(.duration_ms//0),(.api_error_status//"")]|@tsv' "$OUT" 2>/dev/null)
+# With stream-json, $OUT is JSONL; the final {"type":"result"} event carries usage/cost.
+# Pull just that line, then extract with the SINGLE-LINE @tsv jq (multi-line filters
+# reach jq as only their first line in this exec path and fail to compile).
+RESULT_LINE=$(grep -E '"type"[[:space:]]*:[[:space:]]*"result"' "$OUT" 2>/dev/null | tail -1)
+vals=$(printf '%s' "$RESULT_LINE" | jq -r '[(.usage.input_tokens//0),(.usage.output_tokens//0),(.usage.cache_read_input_tokens//0),(.usage.cache_creation_input_tokens//0),(.total_cost_usd//0),(.duration_ms//0),(.api_error_status//"")]|@tsv' 2>/dev/null)
 IFS=$'\t' read -r in_t out_t cr_t cc_t cost durms apierr <<<"${vals:-}"
 in_t=${in_t:-0}; out_t=${out_t:-0}; cr_t=${cr_t:-0}; cc_t=${cc_t:-0}
 cost=${cost:-0}; durms=${durms:-0}; apierr=${apierr:-}

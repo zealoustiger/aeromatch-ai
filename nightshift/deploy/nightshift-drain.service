@@ -13,7 +13,7 @@ TimeoutStartSec=4300
 # If the OOM cap kills builds, raise it / size up the box rather than lowering it.
 ExecStart=/usr/bin/docker run --rm \
   --name clubhanger-nightshift \
-  --memory=4g --memory-swap=5g --cpus=2 \
+  --memory=4g --memory-swap=5g --cpus=1.5 \
   -e NS_STATE_DIR=/home/night/state \
   -e TZ=America/Los_Angeles \
   -v /opt/nightshift/repo:/app \
