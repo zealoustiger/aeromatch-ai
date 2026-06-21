@@ -18,6 +18,16 @@ OUT="$STATE/runs/$RUN_ID.json"
 ERRLOG="$STATE/runs/$RUN_ID.stderr"
 
 cd "$APP" || { echo "no app dir $APP" >&2; exit 1; }
+
+# GitHub access for the in-container git pull/push (deploy key mounted at ~/.ssh).
+# Exported so the worker subagents' git push (on PASS) use it too.
+if [ -f /home/night/.ssh/nightshift_ed25519 ]; then
+  export GIT_SSH_COMMAND="ssh -i /home/night/.ssh/nightshift_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/night/.ssh/known_hosts -o StrictHostKeyChecking=yes"
+fi
+git config --global --add safe.directory "$APP" 2>/dev/null || true
+git config --global user.email "nightshift@clubhanger.local" 2>/dev/null || true
+git config --global user.name  "ClubHanger Night Shift" 2>/dev/null || true
+
 git fetch --quiet origin 2>/dev/null || true
 git checkout staging --quiet 2>/dev/null || true
 git pull --quiet --ff-only 2>/dev/null || true
