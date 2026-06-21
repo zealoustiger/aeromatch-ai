@@ -67,19 +67,22 @@ outcome="ok"
 [ "${apierr}" = "401" ] && outcome="auth_expired" # token logged out
 [ "${apierr}" = "429" ] && outcome="rate_limited"
 
-# Append one ledger line (the source of truth for token monitoring).
-jq -nc \
+# Append one ledger line (the source of truth for token monitoring). Read the token /
+# cost fields DIRECTLY from the result JSON in a single jq pass — no fragile shell
+# round-trip (a malformed --argjson value previously failed the whole write).
+jq -c \
   --arg ts "$RUN_TS" --arg end "$END_TS" --arg rid "$RUN_ID" \
-  --argjson exit "${rc}" \
-  --argjson in "${in_t}" --argjson out "${out_t}" \
-  --argjson cr "${cr_t}" --argjson cc "${cc_t}" \
-  --argjson cost "${cost}" --argjson durms "${durms}" \
-  --arg outcome "$outcome" --arg apierr "$apierr" \
-  '{ts:$ts,end:$end,run_id:$rid,exit:$exit,outcome:$outcome,api_error_status:$apierr,
-    input_tokens:$in,output_tokens:$out,cache_read_tokens:$cr,
-    cache_creation_tokens:$cc,total_cost_usd:$cost,duration_ms:$durms}' \
-  >> "$LEDGER" 2>/dev/null \
-  || echo "{\"ts\":\"$RUN_TS\",\"exit\":$rc,\"outcome\":\"$outcome\",\"parse\":\"failed\"}" >> "$LEDGER"
+  --argjson exit "${rc:-1}" --arg outcome "$outcome" \
+  '{ts:$ts,end:$end,run_id:$rid,exit:$exit,outcome:$outcome,
+    api_error_status:(.api_error_status // ""),
+    input_tokens:(.usage.input_tokens // 0),
+    output_tokens:(.usage.output_tokens // 0),
+    cache_read_tokens:(.usage.cache_read_input_tokens // 0),
+    cache_creation_tokens:(.usage.cache_creation_input_tokens // 0),
+    total_cost_usd:(.total_cost_usd // 0),
+    duration_ms:(.duration_ms // 0)}' \
+  "$OUT" >> "$LEDGER" 2>>"$ERRLOG" \
+  || printf '{"ts":"%s","exit":%s,"outcome":"%s","parse":"failed"}\n' "$RUN_TS" "${rc:-1}" "$outcome" >> "$LEDGER"
 
 # Final status (idle + last outcome) for the reader / alerter.
 printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_exit":%s,"last_outcome":"%s","last_api_error":"%s","input_tokens":%s,"output_tokens":%s}\n' \
