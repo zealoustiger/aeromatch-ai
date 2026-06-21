@@ -1,12 +1,15 @@
 # /etc/systemd/system/nightshift-drain.timer
-# Fires the drain hourly. Host TZ must be local: `timedatectl set-timezone America/Los_Angeles`.
+# Fires the drain hourly during the night window, in Pacific time via the systemd
+# per-timer TZ suffix (needs systemd v252+) — so the host can stay on UTC and we don't
+# touch the box's system timezone (Juno/hermes share it). The container itself is also
+# given TZ=America/Los_Angeles in the .service so the drain's own 06:50 check matches.
 [Unit]
 Description=Fire ClubHanger Night Shift drain on a schedule
 
 [Timer]
-# DEFAULT: night-only, hourly 23:00–06:00 local (preserves current behavior; the drain
-# also self-stops at 06:50 and yields the tree to the 07:00 digest).
-OnCalendar=*-*-* 23,00,01,02,03,04,05,06:00:00
+# Night-only, hourly 23:00–06:00 Pacific (the drain also self-stops at 06:50 and yields
+# the tree to the 07:00 digest).
+OnCalendar=*-*-* 23,00,01,02,03,04,05,06:00:00 America/Los_Angeles
 
 # 24/7 ALTERNATIVE — to run all day, comment the line above and use:
 #   OnCalendar=hourly
