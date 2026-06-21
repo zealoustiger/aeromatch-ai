@@ -82,9 +82,11 @@ Repeat until a stop condition (section 3) fires:
    > and `nightshift/FREEZE.md` and follow them EXACTLY. Execute exactly ONE cycle
    > for this task: **«item title + any detail from BACKLOG»**.
    > Do the full PM→Eng→QA→Land: write the spec, branch `night/<slug>` off
-   > `staging`, implement, `npx next build` + typecheck must pass, QA the affected
-   > page(s) with the gstack `/browse` tooling at desktop + 375px with before/after
-   > screenshots, and **only on a clean PASS** merge `night/<slug>` into `staging`
+   > `staging`, implement, `npx next build` + typecheck must pass, then QA: serve the
+   > production build (`next start`) and run `node nightshift/bin/qa-smoke.mjs --slug
+   > <slug> <affected paths>` (gates on HTTP 200 / no console errors / no overflow at
+   > desktop+375px) AND visually inspect the screenshots it saves. **Only on a clean PASS**
+   > (smoke test exit 0 + screenshots look right) merge `night/<slug>` into `staging`
    > and `git push origin staging`. Append the CHANGELOG entry (PASS/FAIL) and
    > commit logs to staging. Obey every hard guardrail (staging only, never main /
    > prod, never `.env`/secrets, additive SQL only).

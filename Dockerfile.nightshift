@@ -13,13 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Claude Code CLI (subscription auth, NOT an API key)
 RUN npm install -g @anthropic-ai/claude-code
 
-# Playwright Chromium for the gstack /browse QA step
-RUN npx -y playwright@latest install --with-deps chromium
-
-# TODO (confirm on the box): install gstack the SAME way it's installed on the Mac /
-# Juno's container so the `/browse` skill is available. The Part 6 smoke test must
-# prove `/browse` drives headless Chromium against http://localhost:3000 before
-# this is trusted overnight. See the /gstack-upgrade skill for the mechanism.
+# Playwright (global, importable via NODE_PATH) + Chromium for the QA smoke test
+# (nightshift/bin/qa-smoke.mjs). Browsers install to a world-readable path so the
+# non-root `night` user can launch them.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV NODE_PATH=/usr/local/lib/node_modules
+RUN npm install -g playwright \
+    && playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright
 
 RUN useradd -m -u 10001 night
 WORKDIR /app

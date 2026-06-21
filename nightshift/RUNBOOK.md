@@ -60,7 +60,16 @@ Write a short spec to `nightshift/specs/<UTC-timestamp>-<slug>.md` with:
 ### 4. QA — judge
 - **Serve the PRODUCTION build, never `next dev`.** Use the `next build` from step 3, then `npm run start` (i.e. `next start`) and drive `http://localhost:3000`. Stop the server when done.
   - *Why this is mandatory:* `next dev` runs Fast Refresh, which watches the project tree and reloads the page when files change. Capturing screenshots (written under `nightshift/screenshots/`) then de-hydrates the page **mid-interaction**, so working features look broken (false FAIL) and real hydration bugs get masked by the clean reload (false PASS). `next start` doesn't watch files, so none of that happens — and it's what real users actually get (minified, optimized, SSG/SSR as shipped).
-- Drive the affected page(s) with the gstack `/browse` tooling at **both** desktop and 375px mobile. Capture before/after screenshots into `nightshift/screenshots/<slug>/` (safe under `next start` — no file watcher).
+- Run the headless QA smoke test against the running production server:
+  `node nightshift/bin/qa-smoke.mjs --slug <slug> <path> [<path>...]` (the affected page paths).
+  It checks each page at **desktop 1280 + mobile 375** for: HTTP 200, **zero** app-origin
+  console errors, and **zero** horizontal overflow — and exits non-zero if any fail. This is
+  the hard gate: a non-zero exit means **do NOT merge**.
+- It also saves one "after" screenshot per page/viewport to `nightshift/screenshots/<slug>/`.
+  **Read those screenshots and visually confirm the page looks right** (catches "renders but
+  looks wrong" — overlap, broken layout — that the assertions miss). PASS requires BOTH the
+  smoke test exit 0 AND the screenshots looking correct. The screenshots are kept as an audit
+  trail (not for human review — the human reviews the staging site itself).
 - Check console for errors (including **hydration mismatch** warnings — these only surface reliably on a production build), check the page renders, check each acceptance criterion.
 - **Reproduce before you believe it:** any apparent bug must repro on a fresh page load before you act on it — don't trust a single flaky observation. Prefer real clicks over JS `.click()`.
 - Verdict: **PASS** only if the build is green AND every acceptance criterion is met AND no new console errors. Otherwise **FAIL**.
