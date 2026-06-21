@@ -61,9 +61,13 @@ outcome="ok"
 [ "${apierr}" = "401" ] && outcome="auth_expired" # token logged out
 [ "${apierr}" = "429" ] && outcome="rate_limited"
 
-# Append one ledger line — single jq pass over the result JSON, SINGLE-LINE filter
-# (the source of truth for Forge's token monitoring).
-jq -c --arg ts "$RUN_TS" --arg end "$END_TS" --arg rid "$RUN_ID" --argjson exit "${rc:-1}" --arg outcome "$outcome" '{"ts":$ts,"end":$end,"run_id":$rid,"exit":$exit,"outcome":$outcome,"api_error_status":(.api_error_status//""),"input_tokens":(.usage.input_tokens//0),"output_tokens":(.usage.output_tokens//0),"cache_read_tokens":(.usage.cache_read_input_tokens//0),"cache_creation_tokens":(.usage.cache_creation_input_tokens//0),"total_cost_usd":(.total_cost_usd//0),"duration_ms":(.duration_ms//0)}' "$OUT" >> "$LEDGER" 2>>"$ERRLOG" || printf '{"ts":"%s","exit":%s,"outcome":"%s","parse":"failed"}\n' "$RUN_TS" "${rc:-1}" "$outcome" >> "$LEDGER"
+# Append one ledger line via printf from the extracted values (source of truth for
+# Forge's token monitoring). The @tsv jq above works on the box, but jq OBJECT
+# construction does not in this exec path — so build the line with printf, exactly like
+# the status.json write below (proven to work). All values are pre-defaulted, so the
+# output is always valid JSON.
+printf '{"ts":"%s","end":"%s","run_id":"%s","exit":%s,"outcome":"%s","api_error_status":"%s","input_tokens":%s,"output_tokens":%s,"cache_read_tokens":%s,"cache_creation_tokens":%s,"total_cost_usd":%s,"duration_ms":%s}\n' \
+  "$RUN_TS" "$END_TS" "$RUN_ID" "${rc:-1}" "$outcome" "$apierr" "${in_t:-0}" "${out_t:-0}" "${cr_t:-0}" "${cc_t:-0}" "${cost:-0}" "${durms:-0}" >> "$LEDGER"
 
 # Final status (idle + last outcome) for the reader / alerter.
 printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_exit":%s,"last_outcome":"%s","last_api_error":"%s","input_tokens":%s,"output_tokens":%s}\n' \
