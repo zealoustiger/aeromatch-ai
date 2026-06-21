@@ -12,15 +12,33 @@ import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
-import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug } from '@/lib/seo'
+import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
+const aircraftTitle = 'Aircraft for Sale — Search GA Listings From Across the Web'
+const aircraftDescription =
+  'Search general aviation aircraft for sale aggregated from Barnstormers and more. Filter by make, year, price, and location — every listing links back to the source.'
+
 export const metadata: Metadata = {
-  title: 'Aircraft for Sale — Search GA Listings From Across the Web',
-  description:
-    'Search general aviation aircraft for sale aggregated from Barnstormers and more. Filter by make, year, price, and location — every listing links back to the source.',
+  title: aircraftTitle,
+  description: aircraftDescription,
   alternates: { canonical: '/aircraft' },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: SITE_NAME,
+    url: '/aircraft',
+    title: aircraftTitle,
+    description: aircraftDescription,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: aircraftTitle,
+    description: aircraftDescription,
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 type SearchParams = Record<string, string | undefined>

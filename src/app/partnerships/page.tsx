@@ -11,11 +11,31 @@ import PartnershipTabs from '@/components/PartnershipTabs'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 import Link from 'next/link'
+import { SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+
+const partnershipsTitle = 'Aircraft Partnerships & Co-Ownership Near You'
+const partnershipsDescription =
+  'Search aircraft partnerships by home airport, state, make, and budget. Transparent buy-in, monthly, and hourly costs on every co-ownership listing.'
 
 export const metadata: Metadata = {
-  title: 'Aircraft Partnerships & Co-Ownership Near You',
-  description:
-    'Search aircraft partnerships by home airport, state, make, and budget. Transparent buy-in, monthly, and hourly costs on every co-ownership listing.',
+  title: partnershipsTitle,
+  description: partnershipsDescription,
+  alternates: { canonical: '/partnerships' },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: SITE_NAME,
+    url: '/partnerships',
+    title: partnershipsTitle,
+    description: partnershipsDescription,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: partnershipsTitle,
+    description: partnershipsDescription,
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 type SearchParams = Record<string, string | undefined>
