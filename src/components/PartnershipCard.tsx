@@ -27,12 +27,12 @@ export default function PartnershipCard({ p, saved = false }: { p: Partnership; 
   const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
 
   return (
-    <article className="group rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-sky-300 hover:shadow-md overflow-hidden">
+    <article className="ch-card group overflow-hidden bg-white">
       <div className="flex flex-col sm:flex-row">
 
         {/* Photo */}
-        <div className="relative sm:w-52 sm:shrink-0">
-          <Link href={`/partnerships/${p.id}`} className="relative block h-44 sm:h-full">
+        <div className="relative sm:w-56 sm:shrink-0">
+          <Link href={`/partnerships/${p.id}`} className="relative block h-52 sm:h-full">
             <Image
               src={imageUrl}
               alt={aircraft}
@@ -87,12 +87,12 @@ export default function PartnershipCard({ p, saved = false }: { p: Partnership; 
             </div>
 
             {/* Cost summary */}
-            <div className="shrink-0 rounded-lg bg-slate-50 p-3 ring-1 ring-slate-100 sm:min-w-[148px] sm:text-right">
+            <div className="shrink-0 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:min-w-[148px] sm:text-right">
               <div className="flex flex-wrap gap-x-4 gap-y-1 sm:block">
                 {p.buy_in_price ? (
                   <div className="sm:block">
                     <p className="text-xs text-slate-400">Buy-in</p>
-                    <p className="text-lg font-bold text-slate-900">{formatPrice(p.buy_in_price)}</p>
+                    <p className="text-2xl font-extrabold tracking-tight text-slate-900">{formatPrice(p.buy_in_price)}</p>
                   </div>
                 ) : null}
                 {p.monthly_fixed ? (

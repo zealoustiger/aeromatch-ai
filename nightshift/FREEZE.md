@@ -23,4 +23,6 @@ human-only decisions, or the harness itself.
 - Pricing, monetization, or anything that charges users
 - Removing existing features or pages
 - Major IA / navigation restruct:contentReference changes (a new top-level nav item is fine; reordering everything is not)
-- Brand identity changes (logo, name, primary accent color)
+
+## Open for experimentation (human reviews post-cycle)
+- **Brand identity is fair game** — logo, name treatment, accent color(s), typography, overall look. The human explicitly wants you to experiment and will give feedback after the cycle. Keep each cycle cohesive and reversible; don't thrash the whole brand in one cycle.

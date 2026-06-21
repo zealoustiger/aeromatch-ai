@@ -1,15 +1,30 @@
 'use client'
 
-import { useState, useRef, KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, KeyboardEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, X, MapPin, ToggleLeft, ToggleRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
+import { createClient } from '@/lib/supabase'
+import type { User } from '@supabase/supabase-js'
 import SignUpGate from './SignUpGate'
 
 const RADIUS_OPTIONS = [25, 50, 100, 150, 200]
 
 export default function HeroSearch() {
+  const router = useRouter()
   const [mode, setMode] = useState<'airports' | 'radius'>('airports')
+
+  // Auth state — read-only, mirrors SaveListingButton. Signed-in users skip the gate.
+  const [user, setUser] = useState<User | null>(null)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Multi-airport mode
   const [airports, setAirports] = useState<string[]>([])
@@ -66,6 +81,11 @@ export default function HeroSearch() {
       airports: mode === 'airports' ? airports.join(',') : radiusAirport.trim().toUpperCase(),
       radius_miles: mode === 'radius' ? radiusMiles : undefined,
     })
+    // Already signed in → skip the sign-up gate, go straight to results.
+    if (user) {
+      router.push(`/partnerships?${params}`)
+      return
+    }
     setPendingParams(params)
     setShowGate(true)
   }

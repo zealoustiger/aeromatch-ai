@@ -11,6 +11,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { getGscSummary, gscStage } from './gsc.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -37,7 +38,31 @@ function softExit(msg) {
   process.exit(0)
 }
 
-if (!KEY || !PROJECT) softExit('POSTHOG_API_KEY or POSTHOG_PROJECT_ID not set in env/.env.local')
+// ── THE GOAL: Google Search funnel (indexed → impressions → clicks) ──
+// Printed first and always, even if PostHog isn't configured. This is the number
+// the loop optimizes; PostHog pageviews below are a secondary on-site signal.
+console.log('=== NIGHT SHIFT SCOREBOARD ===\n')
+const g = await getGscSummary()
+const st = gscStage(g)
+if (g.ok) {
+  console.log('GOAL — Google Search Console (last 28d):')
+  console.log(`  Clicks ${g.clicks} · Impressions ${g.impressions} · CTR ${(g.ctr * 100).toFixed(1)}% · Avg position ${g.position.toFixed(1)}`)
+  if (g.indexed != null) console.log(`  Indexed: ${g.indexed} / ${g.submitted} submitted`)
+  console.log(`  ►► STAGE: ${st.stage}\n     ${st.focus}`)
+  if (g.queries?.length) {
+    console.log('  Top queries (clicks/impr):')
+    for (const qq of g.queries.slice(0, 8)) console.log(`    ${String(qq.keys[0]).slice(0, 42).padEnd(42)} ${qq.clicks}/${qq.impressions}`)
+  }
+} else {
+  console.log(`GOAL — Google Search Console: not configured (${g.reason}).`)
+  console.log('  Wire it up via nightshift/GSC_SETUP.md. Until then, use pageviews below + SEO leading indicators.')
+}
+console.log('')
+
+if (!KEY || !PROJECT) {
+  console.log('On-site (PostHog): not configured. That is fine — GSC above is the goal.')
+  process.exit(0)
+}
 
 async function q(hogql) {
   const res = await fetch(`${HOST}/api/projects/${PROJECT}/query/`, {
@@ -67,10 +92,10 @@ try {
     SELECT count() AS total, count(DISTINCT properties.$pathname) AS paths
     FROM events WHERE event = '$pageview'`)
 
-  console.log('=== NIGHT SHIFT SCOREBOARD (goal: maximize pageviews) ===')
-  console.log(`Pageviews last 7d: ${last7}  (prior 7d: ${prior7}, ${pct(last7, prior7)})`)
-  console.log(`All-time: ${totalViews} pageviews across ${distinctPaths} distinct paths indexed by traffic`)
-  console.log('\nTop pages (7d)        views / visitors')
+  console.log('On-site (PostHog, secondary — includes you/team/direct, not just search):')
+  console.log(`  Pageviews last 7d: ${last7}  (prior 7d: ${prior7}, ${pct(last7, prior7)})`)
+  console.log(`  All-time: ${totalViews} pageviews across ${distinctPaths} distinct paths`)
+  console.log('\n  Top pages (7d)       views / visitors')
   if (top.length === 0) console.log('  (no pageviews in the last 7 days)')
   for (const [path, views, visitors] of top) {
     console.log(`  ${String(path || '(unknown)').padEnd(36)} ${String(views).padStart(4)} / ${visitors}`)

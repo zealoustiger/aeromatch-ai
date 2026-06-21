@@ -1,15 +1,51 @@
 # Night Shift — North-Star Goal
 
-**Goal: maximize total pageviews.** The loop optimizes for more people landing on
-more pages of ClubHanger. (We're optimizing views, not signups, on purpose:
-at ~25 views/day traffic is the bottleneck — signups can't grow until the top of
-the funnel does.)
+**Goal: maximize organic search traffic — clicks from Google.** The real metric is
+the **Google Search Console funnel: indexed → impressions → clicks**, each gating the
+next (a page can't get impressions until it's indexed, or clicks until it has
+impressions). On-site pageviews (PostHog) are a *secondary* signal — they include you,
+the team, and direct visits, so they don't tell you if SEO is working. (We optimize
+search traffic, not signups, on purpose: signups can't grow until the top of the funnel does.)
 
 **Read the current score every cycle:**
 ```bash
-node nightshift/bin/scoreboard.mjs
+node nightshift/bin/scoreboard.mjs   # leads with the GSC funnel + STAGE, then on-site pageviews
 ```
-It prints pageviews (last 7d vs prior), all-time totals, and the top pages by traffic.
+The scoreboard computes a **STAGE** that tells you what to prioritize *right now*:
+- **INDEXING** (indexed ≈ 0 — where we are): get pages *indexed* — indexability, internal
+  linking, sitemap freshness, page quality, request-indexing. Do NOT just build more pages
+  Google can't index yet. (Backlinks — a human lever — accelerate indexing the most.)
+- **VISIBILITY** (indexing, few impressions): build more quality pages targeting real
+  queries; improve titles/H1s/internal links on families already showing up.
+- **CTR** (impressions but few clicks): improve titles/meta/structured data on
+  high-impression / low-click pages to win the click.
+- **SCALING**: scale what works; push almost-ranking pages (position 5-15) to page one.
+
+Always mine the scoreboard's **top queries** for page ideas (queries you almost rank for → new pages).
+GSC + PostHog both fail soft if unconfigured (see `GSC_SETUP.md`).
+
+## Priority pages — get THESE indexed first (human-set, 2026-06-20)
+We're in the **INDEXING** stage, so concentrate indexing / quality / internal-linking /
+metadata effort on this specific seed set before building more. Get each one genuinely
+complete, uniquely titled (title / H1 / meta / canonical / OG / JSON-LD), richly
+internally linked, in the sitemap, and request-indexed:
+
+1. `/` — homepage
+2. `/aircraft`
+3. `/partnerships`
+4. `/partnerships/seeking`  ← currently thin/blank; needs real content to be index-worthy
+5. `/partnerships/make/cessna`
+6. `/partnerships/make/cirrus`
+7. `/partnerships/make/piper`
+8. `/partnerships/state/ca`
+9. `/partnerships/state/tx`
+10. `/partnerships/state/fl`
+11. `/tools/cost-calculator`
+12. `/guides/aircraft-co-ownership`
+
+These are the hub/seed set — nailing their quality, metadata, and internal links first
+bootstraps crawl of everything else. New programmatic pages are still welcome, but never
+at the expense of getting these 12 right. Treat work on them as the top `[goal]` priority.
 
 ## Allocation policy — how cycles are split across work types
 The pageview metric is the **tiebreaker and the default, not the dictator.** Bug
@@ -71,8 +107,8 @@ A change that grows the page count but violates these is a **LOSS**, not a win:
 - **Don't count admin/internal routes** (`/admin/*`, `/api/*`) toward the goal.
 - **Never regress Core Web Vitals / mobile.** A page-speed or 375px regression is a loss.
 - **Canonicalize** to avoid duplicate-content sprawl across the programmatic pages.
-- Stay inside `FREEZE.md` and the taste notes in `BACKLOG.md` (sky-blue accent,
-  mobile-first, cleaner-than-Controller).
+- Stay inside `FREEZE.md` and the taste notes in `BACKLOG.md` (mobile-first,
+  cleaner-than-Controller; branding/palette is open for experimentation — human reviews post-cycle).
 
 ## How the PM uses this
 Each cycle: read the scoreboard, then pick the work with the **highest expected

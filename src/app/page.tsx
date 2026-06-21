@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react'
 import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
-import { STATE_NAMES, SEO_MAKES, SITE_URL } from '@/lib/seo'
+import { STATE_NAMES, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 const faqItems = [
   {
@@ -34,6 +34,7 @@ const websiteSchema = {
   '@type': 'WebSite',
   name: 'ClubHanger',
   url: SITE_URL,
+  logo: `${SITE_URL}/og-default.png`,
   description:
     'Free marketplace for general aviation pilots to find aircraft co-ownership partnerships and aircraft for sale.',
   potentialAction: {
@@ -56,10 +57,29 @@ const faqSchema = {
   })),
 }
 
+const homeTitle = 'ClubHanger — Aircraft Partnerships, Co-Ownership & Planes for Sale'
+const homeDescription =
+  'Search aircraft partnerships and co-ownership opportunities by home airport. Browse planes for sale with real specs. Free to search, free to post.'
+
 export const metadata: Metadata = {
-  title: { absolute: 'ClubHanger — Aircraft Partnerships, Co-Ownership & Planes for Sale' },
-  description:
-    'Search aircraft partnerships and co-ownership opportunities by home airport. Browse planes for sale with real specs. Free to search, free to post.',
+  title: { absolute: homeTitle },
+  description: homeDescription,
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: SITE_NAME,
+    url: '/',
+    title: homeTitle,
+    description: homeDescription,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: homeTitle,
+    description: homeDescription,
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 const benefits = [
