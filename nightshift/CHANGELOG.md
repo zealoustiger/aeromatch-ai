@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-21T23:40:17Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 1 / FAIL 0 / ABORT 0)
+- Stopped because: safety cap (1)
+- Run: 20260621T233356Z (manual NS_FORCE)
+
 ## 2026-06-21T23:35Z — PASS — aircraft-filter-ranges
 - Pages: /aircraft
 - What: **The Planes-for-Sale filters now let you set a price, year, and total-time _range_ (a low AND a high), instead of just one end.** Before, you could only say "under $150k", "2000 or newer", or "under 2,000 hrs" — a single bound each. Now each of those three filters shows a **Min** and a **Max** box side by side, so a pilot can search exactly the band they want — e.g. "$80,000–$150,000, built 2000–2010, 500–3,000 airframe hours" — and the listings narrow to just that band. The boxes live under "More filters" and pop open automatically whenever a range is already set, on both the desktop sidebar and the mobile filter drawer. The "Save this search" / email-alert text was taught to read ranges too, so a saved search now describes itself as "$80,000–$150,000 2000–2010 500–3,000 hours" rather than dropping one end. Everything else on the page — make/model dropdowns, sort, quality, keyword, chip bar, save hearts, compare, pagination — works exactly as before.
