@@ -26,7 +26,18 @@ export default async function DailyReportTab() {
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
           <h2 className="text-lg font-semibold text-slate-900">Daily Report</h2>
-          <span className="text-xs text-slate-400">updated {updated}</span>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://juno.zealoustiger.com/?agent=forge"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Build-loop health, token usage & alerts (Forge · CTO)"
+              className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-100"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-500" /> Engineering health ↗
+            </a>
+            <span className="text-xs text-slate-400">updated {updated}</span>
+          </div>
         </div>
         {report?.content ? (
           <AdminMarkdown markdown={report.content} />

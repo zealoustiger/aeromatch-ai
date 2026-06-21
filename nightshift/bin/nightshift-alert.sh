@@ -4,7 +4,7 @@
 # landed in too long — this is the piece that catches the exact failure that hid the
 # 2026-06-20 stall until it was checked by hand. See nightshift/VPS_RUNBOOK.md (Part 8).
 set -uo pipefail
-STATE="${NS_STATE_DIR:-/srv/nightshift/state}"
+STATE="${NS_STATE_DIR:-/opt/nightshift/state}"
 LEDGER="$STATE/usage.jsonl"
 HOOK="${NS_ALERT_WEBHOOK:-}"               # ntfy topic URL, Slack/Discord webhook, etc.
 MAX_SILENCE_H="${NS_MAX_SILENCE_HOURS:-3}" # alert if no drain in this many hours

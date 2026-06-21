@@ -119,19 +119,19 @@ docker build -f Dockerfile.nightshift -t clubhanger-nightshift:latest .
 Lay these out on the host once:
 
 ```bash
-sudo mkdir -p /srv/nightshift/{repo,claude,state}
+sudo mkdir -p /opt/nightshift/{repo,claude,state}
 # 1) The repo (clone once; persists branches, node_modules, screenshots)
-git clone git@github.com:zealoustiger/aeromatch-ai.git /srv/nightshift/repo
-cd /srv/nightshift/repo && git checkout staging && npm ci
+git clone git@github.com:zealoustiger/aeromatch-ai.git /opt/nightshift/repo
+cd /opt/nightshift/repo && git checkout staging && npm ci
 
 # 2) Claude credentials — reuse the SAME Max login token Juno uses.
-#    Either copy Juno's ~/.claude creds dir into /srv/nightshift/claude,
+#    Either copy Juno's ~/.claude creds dir into /opt/nightshift/claude,
 #    or do the one-time login in Part 3 to populate it.
 
 # 3) .env (Supabase etc.) — required for `next build` + to fetch real listings in QA.
 #    Get it onto the box securely (scp / secrets manager), 600 perms, NEVER in the image.
-cp /secure/path/aeromatch.env /srv/nightshift/repo/.env
-chmod 600 /srv/nightshift/repo/.env
+cp /secure/path/aeromatch.env /opt/nightshift/repo/.env
+chmod 600 /opt/nightshift/repo/.env
 
 # 4) GitHub push creds — a deploy key OR fine-grained PAT scoped to push `staging`
 #    on aeromatch-ai ONLY. Configure the repo remote to use it.
@@ -149,10 +149,10 @@ persisting into the mounted creds volume:
 
 ```bash
 docker run --rm -it \
-  -v /srv/nightshift/claude:/home/night/.claude \
+  -v /opt/nightshift/claude:/home/night/.claude \
   --entrypoint claude clubhanger-nightshift:latest
 #   -> follow the OAuth/login flow (do the browser step from your laptop, paste back).
-#   Credentials persist in /srv/nightshift/claude and auto-refresh while valid.
+#   Credentials persist in /opt/nightshift/claude and auto-refresh while valid.
 ```
 
 **Operational risk to monitor:** if Claude ever logs out, the loop dies silently
@@ -199,9 +199,9 @@ TimeoutStartSec=3600
 ExecStart=/usr/bin/docker run --rm \
   --name clubhanger-nightshift \
   --memory=5g --memory-swap=6g \
-  -v /srv/nightshift/repo:/app \
-  -v /srv/nightshift/claude:/home/night/.claude \
-  -v /srv/nightshift/state:/home/night/state \
+  -v /opt/nightshift/repo:/app \
+  -v /opt/nightshift/claude:/home/night/.claude \
+  -v /opt/nightshift/state:/home/night/state \
   clubhanger-nightshift:latest
 ```
 
@@ -270,7 +270,7 @@ everything else reads it. Don't build a new standalone UI, and don't make Night 
 
 **Layer 1 — canonical ledger (already wired in `run-drain.sh`).** Every drain runs
 `claude -p ... --output-format json`, then appends one line to
-`/srv/nightshift/state/usage.jsonl` with `input_tokens`, `output_tokens`,
+`/opt/nightshift/state/usage.jsonl` with `input_tokens`, `output_tokens`,
 `cache_read_tokens`, `total_cost_usd`, `duration_ms`, `exit`, and `outcome`
 (`ok | error | timeout | auth_expired | rate_limited`). It also writes
 `status.json` (running/idle + last outcome). These fields come straight from the
@@ -282,16 +282,16 @@ populated even though it doesn't bill; treat it as a usage proxy).
 panel — today's tokens/cost, last outcome, next fire. Reuses the cockpit you already
 check daily; no second URL to maintain. Quick CLI in the meantime:
 ```bash
-NS_STATE_DIR=/srv/nightshift/state nightshift/bin/nightshift-status.sh
+NS_STATE_DIR=/opt/nightshift/state nightshift/bin/nightshift-status.sh
 ```
 
 **The alert (highest value — catches the exact 2026-06-20 silent death).** Cron the
 alerter on the host so you don't have to *look* to learn it's stuck:
 ```cron
 # every 30 min during the active window; pings on failure or >3h with no drain
-*/30 23,0-7 * * *  NS_STATE_DIR=/srv/nightshift/state \
+*/30 23,0-7 * * *  NS_STATE_DIR=/opt/nightshift/state \
   NS_ALERT_WEBHOOK="https://ntfy.sh/clubhanger-nightshift" \
-  /srv/nightshift/repo/nightshift/bin/nightshift-alert.sh
+  /opt/nightshift/repo/nightshift/bin/nightshift-alert.sh
 ```
 `ntfy.sh` is the zero-setup option (subscribe on your phone); a Slack/Discord webhook
 works the same way. Use your phone for this — **not** Claude Desktop, which isn't always

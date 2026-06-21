@@ -3,7 +3,7 @@
 # today's token + cost totals / recent runs. Source of truth = the JSONL ledger that
 # run-drain.sh appends. See nightshift/VPS_RUNBOOK.md (Part 8).
 set -uo pipefail
-STATE="${NS_STATE_DIR:-/srv/nightshift/state}"
+STATE="${NS_STATE_DIR:-/opt/nightshift/state}"
 LEDGER="$STATE/usage.jsonl"
 STATUS="$STATE/status.json"
 today=$(date -u +%Y-%m-%d)
