@@ -166,6 +166,34 @@ These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now 
 
 ---
 
+### Brainstorm 2026-06-20 (evening) — indexing-stage quality + engagement
+
+**Context:** STAGE=INDEXING (0/1,086 indexed; pages ARE live on prod, sitemap submitted).
+Backlinks deferred by human. So: (A) make existing pages genuinely index-worthy, and
+(B) UX so users save listings + post themselves as seeking. Do A and B both; alternate.
+
+#### A. Page quality / crawl-efficiency (get the 1,252 live pages indexed)
+- **[P1][goal] Self-crawl audit.** Script fetches every URL in the live sitemap and flags any that 404, redirect, are `noindex`, or have a duplicate/missing `<title>`/canonical. Output a report to `nightshift/`. Diagnostic — catches what's silently blocking indexing. *(1 cycle)*
+- **[P1][goal] Thin-page pruning.** make/model/state/airport pages with fewer than ~3 real listings get `noindex,follow` + a canonical to their parent, so Google's crawl budget concentrates on the ~200 pages worth indexing instead of being diluted across ~1,000 thin ones. Slice: (1) aircraft make/model/state families; (2) partnership/airport families. *(2 cycles)*
+- **[P1][goal] Unique content depth on programmatic pages.** Each make/model/state page gets genuinely unique prose (model history, what it's good for, typical price range in words) so it isn't templated boilerplate Google skips. No fabricated stats. Slice by family. *(3 cycles)*
+- **[P1][goal] HTML "browse all" hub pages.** `/aircraft/browse` (+ partnerships) linking every make/model/state/airport page — a crawl path to all 1,252 URLs (internal links = #2 indexing lever after backlinks). *(2 cycles)*
+- **[P2][goal] Per-model FAQ blocks + FAQPage JSON-LD.** 3-4 real Q&As per model ("Is a Cessna 172 a good first airplane?"). Unique content + rich-result eligibility. *(2 cycles)*
+- **[P2][goal] Sitemap `lastmod` + crawler ping.** Real `lastmod` dates per page + ping Google/Bing sitemap endpoints on deploy so changed pages get re-crawled. *(1 cycle)*
+- **[P2][goal/want] Freshness: "New this week" + sold removal.** Surface recently-added listings; ensure sold/closed listings drop off. Fresh-content signal + reason to re-crawl. *(1 cycle)*
+- _(Also: prioritize the existing **[P1][bug] real aircraft photos missing** — pages with no real photo are less index-worthy and less impressive to users. Top of the bug lane.)_
+
+#### B. Engagement — impress → save → sign up
+- **[P2][want] "Great Deals" view + homepage rail.** Surface listings priced well below market (reuse the price-vs-market comps) with real photos — "this Cessna 172 is ~30% under market." A concrete reason to save now. Slice: (1) deals rail on homepage; (2) a `/aircraft/deals` view. *(2 cycles)*
+- **[P1][want] Soft-save: push account, allow local fallback.** Logged-out heart-tap → first prompt pushes "Create a free account to save this + get alerts," but offers **"Skip — save on this device"** which stores locally with a clear notice: *"Saved on this device only. Without an account these aren't synced and you may lose them."* After a couple local saves, re-prompt to create an account to keep them. Tasteful, honest, strong nudge. Slice: (1) local-save + notice + account prompt; (2) merge local saves into the account on signup. *(2 cycles)*
+- **[P2][want] Real social proof (no fabrication).** "Saved by N pilots" / "New today" / "Rare find — only N like this" chips, shown **only when genuinely true** from real saves/views/inventory. NEVER fabricate or inflate counts (FREEZE: no dark patterns; trust is the differentiator). Seed real engagement instead (team saves, FAA-seeded seekers). *(1 cycle)*
+- **[P1][want] Post-signup onboarding: "What are you looking for?"** One screen right after signup — aircraft type / home airport / budget → instantly creates a saved search + turns on alerts, and offers "Also post yourself as looking for a share?" Converts a signup into ongoing engagement + seeds the seeking side. *(2 cycles)*
+
+#### C. Engagement — get pilots to post as "seeking a share"
+- **[P1][want] Dead-simple "Looking for a share" post flow.** Prominent CTA ("Want to join a partnership? Tell pilots what you're looking for →") → a ~30-second form: home airport, aircraft/mission, budget, ratings, one sentence. Mobile-first, minimal fields. The biggest lever for seeking-side supply. *(2 cycles)*
+- **[P1][want] Anonymous-by-default seeker posts.** Show seeker as "First L." with NO contact info; owners reach out **through on-platform messaging** only. Removes the "I don't want my info public" barrier. *(1 cycle)*
+- **[P1][want] Instant payoff when posting a seeking.** The moment a pilot posts, show available partnerships that already match (matching engine) + enable alerts for new matches. Posting feels valuable, not into-the-void. *(1 cycle; pairs with the matching engine item)*
+- **[P2][want] Show demand exists.** "3 pilots near KPAO are looking for a Cessna share" on airport + partnership pages — validates seekers and motivates owners to list. Real counts only. *(1 cycle)*
+
 ## Constraints / taste notes
 - **Brand/palette is open for experimentation** (logo, accent color, typography, overall look) — the human reviews post-cycle. Keep each cycle to ONE cohesive palette and make it reversible; don't scatter unrelated colors or thrash the whole brand at once.
 - **Mobile-first** — every change must look right at 375px before desktop.
