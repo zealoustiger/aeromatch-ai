@@ -1,93 +1,126 @@
 #!/usr/bin/env bash
-# Night Shift drain entrypoint (VPS / Docker).
-# Runs ONE drain headlessly via `claude -p`, records token usage + status to the
-# mounted state volume, then exits. A host systemd timer fires this hourly; systemd's
-# oneshot semantics guarantee two drains never overlap. See nightshift/VPS_RUNBOOK.md.
+# Night Shift drain (VPS / Docker) — bash-controlled loop.
+#
+# Each cycle is its OWN `claude -p` process running nightshift/CYCLE_TASK.md (pick one
+# item + PM→Eng→QA→Land). The loop, time box, and stop conditions live HERE in bash —
+# NOT in a long-lived orchestrator using the Agent tool (that reliably broke in headless
+# containers). Each cycle writes its own stream file so Forge can tail the active worker.
+# See nightshift/VPS_RUNBOOK.md.
 set -uo pipefail
 
 APP="${NS_APP_DIR:-/app}"
 STATE="${NS_STATE_DIR:-/home/night/state}"
-RUN_TIMEOUT="${NS_RUN_TIMEOUT:-4200}"     # 70 min hard cap (matches the lock staleness window)
-mkdir -p "$STATE/runs"
+RUN_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+RUN_ID=$(date -u +%Y%m%dT%H%M%SZ)
+RUNDIR="$STATE/runs/$RUN_ID"
+mkdir -p "$RUNDIR"
 LEDGER="$STATE/usage.jsonl"
 STATUS="$STATE/status.json"
 
-RUN_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-RUN_ID=$(date -u +%Y%m%dT%H%M%SZ)
-OUT="$STATE/runs/$RUN_ID.json"
-ERRLOG="$STATE/runs/$RUN_ID.stderr"
+# Bounds. NS_FORCE=1 = authorized manual run, ignores the night window + uses a time box.
+PER_CYCLE_TIMEOUT="${NS_CYCLE_TIMEOUT:-1200}"     # 20 min hard cap per cycle
+if [ "${NS_FORCE:-0}" = "1" ]; then
+  MAX_CYCLES="${NS_FORCE_WORKERS:-6}"
+  DEADLINE=$(( $(date +%s) + 60 * ${NS_FORCE_MINUTES:-55} ))
+else
+  MAX_CYCLES="${NS_MAX_CYCLES:-25}"
+  DEADLINE=$(( $(date +%s) + 60 * 480 ))           # 8h overall safety
+fi
+
+# Night window check (container TZ is America/Los_Angeles): 23:00–06:50 PT.
+in_window() { local hm; hm=$(date +%H%M); [ "$hm" -ge 2300 ] || [ "$hm" -lt 0650 ]; }
 
 cd "$APP" || { echo "no app dir $APP" >&2; exit 1; }
 
-# GitHub access for the in-container git pull/push (deploy key mounted at ~/.ssh).
-# Exported so the worker subagents' git push (on PASS) use it too.
+# GitHub access for in-container git pull/push (deploy key mounted at ~/.ssh). Exported so
+# each cycle's `claude -p` (and its git push on PASS) inherit it.
 if [ -f /home/night/.ssh/nightshift_ed25519 ]; then
   export GIT_SSH_COMMAND="ssh -i /home/night/.ssh/nightshift_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/night/.ssh/known_hosts -o StrictHostKeyChecking=yes"
 fi
 git config --global --add safe.directory "$APP" 2>/dev/null || true
 git config --global user.email "nightshift@clubhanger.local" 2>/dev/null || true
 git config --global user.name  "ClubHanger Night Shift" 2>/dev/null || true
-
 git fetch --quiet origin 2>/dev/null || true
 git checkout staging --quiet 2>/dev/null || true
 git pull --quiet --ff-only 2>/dev/null || true
 
-# Mark "running" so the status reader / alerter can see liveness.
-printf '{"state":"running","run_id":"%s","started":"%s"}\n' "$RUN_ID" "$RUN_TS" > "$STATUS"
-
-# Build the prompt. NS_FORCE=1 = authorized manual run OUTSIDE the night window
-# (e.g. a daytime test): prepend an override that ignores the "night's end" stop and
-# time-boxes the run. NS_FORCE_MINUTES (default 70) sets the soft wrap target.
-PROMPT="$(cat "$APP/nightshift/DRAIN_TASK.md")"
-if [ "${NS_FORCE:-0}" = "1" ]; then
-  PROMPT="MANUAL RUN — AUTHORIZED, OUTSIDE THE NIGHT WINDOW. Override the task below:
-- IGNORE Section 3's \"Night's end\" (06:50) stop condition entirely; proceed as if inside the night window.
-- TIME BOX: stop cleanly after ~${NS_FORCE_MINUTES:-70} minutes of wall-clock — let the current worker finish, then write the DRAIN SUMMARY and push, so the tree is clean.
-- SAFETY CAP: at most ${NS_FORCE_WORKERS:-6} workers this run.
-- Everything else applies verbatim: lock, blockers-first, lane alternation, QA via nightshift/bin/qa-smoke.mjs, land-on-clean-PASS-only, CHANGELOG entry, push to staging.
-
---- TASK ---
-${PROMPT}"
+# Scheduled run outside the night window → clean no-op.
+if [ "${NS_FORCE:-0}" != "1" ] && ! in_window; then
+  printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_outcome":"ok","note":"outside night window — no-op"}\n' \
+    "$RUN_ID" "$RUN_TS" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATUS"
+  echo "outside night window — no-op"; exit 0
 fi
 
-# --dangerously-skip-permissions is REQUIRED for unattended ops and acceptable ONLY
-# because this container is isolated (no other apps' secrets share it).
-set +e
-timeout --signal=INT "$RUN_TIMEOUT" \
-  claude --dangerously-skip-permissions \
-         --output-format stream-json --verbose \
-         -p "$PROMPT" \
-  > "$OUT" 2> "$ERRLOG"
-rc=$?
-set -e
+n=0; pass=0; fail=0; abort=0; stop_reason="safety cap"; CYCLE_PROMPT="$(cat "$APP/nightshift/CYCLE_TASK.md")"
+
+while : ; do
+  [ "$n" -ge "$MAX_CYCLES" ] && { stop_reason="safety cap ($MAX_CYCLES)"; break; }
+  if [ "${NS_FORCE:-0}" = "1" ]; then
+    [ "$(date +%s)" -ge "$DEADLINE" ] && { stop_reason="time box"; break; }
+  else
+    in_window || { stop_reason="night ended"; break; }
+    [ "$(date +%s)" -ge "$DEADLINE" ] && { stop_reason="8h safety"; break; }
+  fi
+
+  n=$((n+1))
+  CYCLE_OUT="$RUNDIR/cycle-$n.jsonl"
+  CYCLE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  # Mark this cycle as the active worker so Forge tails its stream.
+  printf '{"state":"running","run_id":"%s","started":"%s","active_worker":"runs/%s/cycle-%s.jsonl","cycle":%s}\n' \
+    "$RUN_ID" "$RUN_TS" "$RUN_ID" "$n" "$n" > "$STATUS"
+
+  set +e
+  timeout --signal=INT "$PER_CYCLE_TIMEOUT" \
+    claude --dangerously-skip-permissions --output-format stream-json --verbose \
+           -p "$CYCLE_PROMPT" \
+    > "$CYCLE_OUT" 2> "$RUNDIR/cycle-$n.stderr"
+  crc=$?
+  set -e
+  CYCLE_END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  # Extract usage + the one-line verdict from the final result event.
+  RL=$(grep -E '"type"[[:space:]]*:[[:space:]]*"result"' "$CYCLE_OUT" 2>/dev/null | tail -1)
+  vals=$(printf '%s' "$RL" | jq -r '[(.usage.input_tokens//0),(.usage.output_tokens//0),(.usage.cache_read_input_tokens//0),(.usage.cache_creation_input_tokens//0),(.total_cost_usd//0),(.api_error_status//"")]|@tsv' 2>/dev/null)
+  IFS=$'\t' read -r in_t out_t cr_t cc_t cost apierr <<<"${vals:-}"
+  in_t=${in_t:-0}; out_t=${out_t:-0}; cr_t=${cr_t:-0}; cc_t=${cc_t:-0}; cost=${cost:-0}; apierr=${apierr:-}
+  rline=$(printf '%s' "$RL" | jq -r '.result // ""' 2>/dev/null | grep -oE '(PASS|FAIL|ABORT)[^|]*' | tail -1)
+  rsafe=$(printf '%s' "$rline" | tr -d '"\\' | tr '\n' ' ' | head -c 180)
+  case "$rline" in
+    PASS*)  verdict=PASS;  pass=$((pass+1));;
+    FAIL*)  verdict=FAIL;  fail=$((fail+1));;
+    ABORT*) verdict=ABORT; abort=$((abort+1));;
+    *)      verdict=ERROR; fail=$((fail+1)); rsafe="cycle produced no verdict (exit $crc)";;
+  esac
+
+  printf '{"ts":"%s","end":"%s","run_id":"%s","cycle":%s,"verdict":"%s","result":"%s","exit":%s,"api_error_status":"%s","input_tokens":%s,"output_tokens":%s,"cache_read_tokens":%s,"cache_creation_tokens":%s,"total_cost_usd":%s}\n' \
+    "$CYCLE_TS" "$CYCLE_END" "$RUN_ID" "$n" "$verdict" "$rsafe" "${crc:-1}" "$apierr" "$in_t" "$out_t" "$cr_t" "$cc_t" "$cost" >> "$LEDGER"
+  echo "cycle $n: $verdict — $rsafe"
+
+  # Stop conditions surfaced by the cycle.
+  case "$rline" in ABORT*none*|ABORT*nothing*) stop_reason="backlog drained"; break;; esac
+  [ "$apierr" = "429" ] && { stop_reason="rate limited"; break; }
+  [ "$apierr" = "401" ] && { stop_reason="auth expired"; break; }
+done
+
+# ── Wrap: DRAIN SUMMARY to the CHANGELOG (logs only, safe) ──────────────────────
 END_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+CL="$APP/nightshift/CHANGELOG.md"
+if [ -f "$CL" ] && [ "$n" -gt 0 ]; then
+  git checkout staging --quiet 2>/dev/null || true
+  git pull --quiet --ff-only 2>/dev/null || true
+  SUMMARY="## ${END_TS} — DRAIN SUMMARY
+- Cycles this run: ${n} (PASS ${pass} / FAIL ${fail} / ABORT ${abort})
+- Stopped because: ${stop_reason}
+- Run: ${RUN_ID}$( [ "${NS_FORCE:-0}" = "1" ] && echo ' (manual NS_FORCE)' )
+"
+  { head -4 "$CL"; echo "$SUMMARY"; tail -n +5 "$CL"; } > "$CL.tmp" && mv "$CL.tmp" "$CL"
+  git add "$CL" 2>/dev/null && git commit -q -m "nightshift: drain summary ($n cycles, PASS $pass/FAIL $fail)" 2>/dev/null
+  git push origin staging 2>/dev/null || true
+fi
 
-# With stream-json, $OUT is JSONL; the final {"type":"result"} event carries usage/cost.
-# Pull just that line, then extract with the SINGLE-LINE @tsv jq (multi-line filters
-# reach jq as only their first line in this exec path and fail to compile).
-RESULT_LINE=$(grep -E '"type"[[:space:]]*:[[:space:]]*"result"' "$OUT" 2>/dev/null | tail -1)
-vals=$(printf '%s' "$RESULT_LINE" | jq -r '[(.usage.input_tokens//0),(.usage.output_tokens//0),(.usage.cache_read_input_tokens//0),(.usage.cache_creation_input_tokens//0),(.total_cost_usd//0),(.duration_ms//0),(.api_error_status//"")]|@tsv' 2>/dev/null)
-IFS=$'\t' read -r in_t out_t cr_t cc_t cost durms apierr <<<"${vals:-}"
-in_t=${in_t:-0}; out_t=${out_t:-0}; cr_t=${cr_t:-0}; cc_t=${cc_t:-0}
-cost=${cost:-0}; durms=${durms:-0}; apierr=${apierr:-}
-
-# Classify outcome for the alerter.
-outcome="ok"
-[ "${rc}" -ne 0 ] && outcome="error"
-[ "${rc}" = "124" ] && outcome="timeout"          # `timeout` kill
-[ "${apierr}" = "401" ] && outcome="auth_expired" # token logged out
-[ "${apierr}" = "429" ] && outcome="rate_limited"
-
-# Append one ledger line via printf from the extracted values (source of truth for
-# Forge's token monitoring). The @tsv jq above works on the box, but jq OBJECT
-# construction does not in this exec path — so build the line with printf, exactly like
-# the status.json write below (proven to work). All values are pre-defaulted, so the
-# output is always valid JSON.
-printf '{"ts":"%s","end":"%s","run_id":"%s","exit":%s,"outcome":"%s","api_error_status":"%s","input_tokens":%s,"output_tokens":%s,"cache_read_tokens":%s,"cache_creation_tokens":%s,"total_cost_usd":%s,"duration_ms":%s}\n' \
-  "$RUN_TS" "$END_TS" "$RUN_ID" "${rc:-1}" "$outcome" "$apierr" "${in_t:-0}" "${out_t:-0}" "${cr_t:-0}" "${cc_t:-0}" "${cost:-0}" "${durms:-0}" >> "$LEDGER"
-
-# Final status (idle + last outcome) for the reader / alerter.
-printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_exit":%s,"last_outcome":"%s","last_api_error":"%s","input_tokens":%s,"output_tokens":%s}\n' \
-  "$RUN_ID" "$RUN_TS" "$END_TS" "$rc" "$outcome" "$apierr" "$in_t" "$out_t" > "$STATUS"
-
-exit "$rc"
+# Final status.
+overall="ok"; [ "$fail" -gt 0 ] && [ "$pass" -eq 0 ] && overall="error"
+printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_outcome":"%s","cycles":%s,"pass":%s,"fail":%s,"abort":%s,"stop_reason":"%s"}\n' \
+  "$RUN_ID" "$RUN_TS" "$END_TS" "$overall" "$n" "$pass" "$fail" "$abort" "$stop_reason" > "$STATUS"
+echo "DONE: $n cycles (PASS $pass / FAIL $fail / ABORT $abort) — $stop_reason"
+exit 0
