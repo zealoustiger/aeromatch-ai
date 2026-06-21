@@ -142,3 +142,30 @@ export function buildAircraftAggregateOfferJsonLd(
     },
   }
 }
+
+/**
+ * Build a `FAQPage` JSON-LD object from a list of model Q&As (see MODEL_FAQS in
+ * `@/lib/seo`). The questions/answers passed in are the SAME ones rendered
+ * visibly on the page — Google requires the structured data to match the visible
+ * content exactly, and these come from one source so they can't drift.
+ *
+ * Returns null when there are no Q&As (caller emits nothing rather than an empty
+ * FAQPage). `url` anchors the page; answer text is plain prose only (no markup).
+ */
+export function buildFaqPageJsonLd(
+  faqs: { q: string; a: string }[] | undefined,
+  opts: { url: string }
+): Record<string, unknown> | null {
+  if (!faqs || faqs.length === 0) return null
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    url: opts.url,
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  }
+}
