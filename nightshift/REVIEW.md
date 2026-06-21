@@ -1,3 +1,18 @@
+# 🌤️ Afternoon run — June 20 (manual, ~1 hour) — 5 cycles, all ✅ PASS
+
+A short human-triggered Night Shift drain — 5 back-to-back cycles, all landed clean on `staging`. Review below, then drop notes in the **feedback box at the bottom of this page**; Claude reads them and turns them into backlog items.
+
+**By page**
+
+- **`/aircraft` + `/partnerships` — new look (Etsy × Airbnb).** Visual refresh slices 1 & 2: warm cream background, rounded cards, soft hover-lift, friendlier headings; both listing cards (planes-for-sale + partnerships) redesigned to the Airbnb photo-forward style — bold price, heart top-right, minimal borders. · [open /aircraft ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/aircraft) · [open /partnerships ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/partnerships) · screenshots: `aircraft-visual-tokens/`, `listing-card-redesign/`
+  - 👉 **This is the branding experiment to react to** — does the cream / rounded / Airbnb-card direction feel right? Your notes steer slices 3–5 (category chip bar, homepage rails, token sweep).
+- **`/partnerships/seeking` — search-engine ready (priority page #4).** Added canonical + social-share tags + breadcrumb & listing structured data + cross-links from the make hubs, bringing it up to the make-page SEO bar. · [open ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/partnerships/seeking) · screenshots: `seeking-seo-metadata/`
+- **`/` homepage — two changes.** SEO (priority page #1): added the homepage's own canonical address + complete social-share tags (were missing/empty) + a logo in its structured data — no visual change. Bug fix: signed-in users clicking the homepage Search no longer get re-prompted to sign up; they go straight to results. · [open ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/) · screenshots: `homepage-canonical-og/`
+
+**Lanes:** 2 design · 2 indexing (priority pages #1 + #4) · 1 bug fix. SEO impact lags weeks — judged on the metadata being live now, not today's traffic. Full per-cycle detail in `nightshift/CHANGELOG.md`.
+
+---
+
 # Overnight review — June 20
 
 ## 📊 Traffic (PostHog) — as of 2026-06-20
