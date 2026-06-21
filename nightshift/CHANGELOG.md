@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-21T15:21:15Z — ORCHESTRATOR NOTE (no-op fire)
+- Hourly fire at 08:20 local — **past night's end (06:50)**, so no cycles dispatched (correct no-op).
+- Cleaned a STALE run lock left by the prior drain (lock stamped 2026-06-21T06:01:19Z / 23:01 local, ~8.9h old). That drain landed its final cycle (`aircraft-browse-hub` PASS, commit e76baf1) and committed the log, but stalled before the wrap step — never wrote a DRAIN SUMMARY or removed the lock (classic usage/session-limit cutoff at the tail).
+- State at this fire: working tree clean, on `staging`, last good cycle = aircraft-browse-hub @ 06:21Z. Nothing in flight. Lock now removed; system clean for tonight's 23:00 window.
+
 ## 2026-06-21T06:21Z — PASS — aircraft-browse-hub
 - Pages: /aircraft/browse, /aircraft
 - What: **New "Browse all aircraft for sale" hub page at `/aircraft/browse` — a single human-readable HTML index that links to every for-sale page on the site.** It has three clearly-labelled sections: **By make** (every aircraft make with listings, e.g. "Cessna for sale"), **By make & model** (each make's model families grouped in columns with a live for-sale count next to each, e.g. "Cessna 172 — 60"), and **By state** (every US state with inventory, with its count). Every link goes to a real page that actually has listings — nothing points at an empty or missing page. The page reads cleanly for a person and gives Google a crawlable HTML path to all the programmatic for-sale pages. A new "Browse all makes, models & states →" link was added next to the "Aircraft for sale by state" heading on the main `/aircraft` page so the hub is discoverable, and the hub is now listed in the sitemap. Nothing else on `/aircraft` changed.
