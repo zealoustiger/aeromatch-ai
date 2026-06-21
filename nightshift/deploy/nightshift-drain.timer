@@ -1,0 +1,20 @@
+# /etc/systemd/system/nightshift-drain.timer
+# Fires the drain hourly. Host TZ must be local: `timedatectl set-timezone America/Los_Angeles`.
+[Unit]
+Description=Fire ClubHanger Night Shift drain on a schedule
+
+[Timer]
+# DEFAULT: night-only, hourly 23:00–06:00 local (preserves current behavior; the drain
+# also self-stops at 06:50 and yields the tree to the 07:00 digest).
+OnCalendar=*-*-* 23,00,01,02,03,04,05,06:00:00
+
+# 24/7 ALTERNATIVE — to run all day, comment the line above and use:
+#   OnCalendar=hourly
+# ...AND remove the "06:50 night's end" stop condition in nightshift/DRAIN_TASK.md,
+# else daytime fires bail immediately. Read Part 9 of VPS_RUNBOOK.md first — running
+# all day shares your Max rate-limit budget with Juno and your own interactive use.
+
+Persistent=false
+
+[Install]
+WantedBy=timers.target

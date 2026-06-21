@@ -1,0 +1,24 @@
+# /etc/systemd/system/nightshift-drain.service
+# Runs ONE Night Shift drain in a fresh, isolated container, then exits.
+# Type=oneshot => systemd will not start a second run while one is active (no overlap).
+[Unit]
+Description=ClubHanger Night Shift drain (one cycle batch)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=4300
+# --memory caps the build spike (measured ~2.3GB for `next build`; ~3GB with Chrome QA).
+# If the OOM cap kills builds, raise it / size up the box rather than lowering it.
+ExecStart=/usr/bin/docker run --rm \
+  --name clubhanger-nightshift \
+  --memory=4g --memory-swap=5g --cpus=2 \
+  -e NS_STATE_DIR=/home/night/state \
+  -v /srv/nightshift/repo:/app \
+  -v /srv/nightshift/claude:/home/night/.claude \
+  -v /srv/nightshift/state:/home/night/state \
+  clubhanger-nightshift:latest
+
+[Install]
+WantedBy=multi-user.target
