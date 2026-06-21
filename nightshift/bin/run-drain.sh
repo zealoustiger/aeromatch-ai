@@ -69,13 +69,12 @@ while : ; do
   printf '{"state":"running","run_id":"%s","started":"%s","active_worker":"runs/%s/cycle-%s.jsonl","cycle":%s}\n' \
     "$RUN_ID" "$RUN_TS" "$RUN_ID" "$n" "$n" > "$STATUS"
 
-  set +e
-  timeout --signal=INT "$PER_CYCLE_TIMEOUT" \
-    claude --dangerously-skip-permissions --output-format stream-json --verbose \
-           -p "$CYCLE_PROMPT" \
+  # Feed the prompt via STDIN, not as a -p arg: the prompt begins with "---" (frontmatter)
+  # and claude's CLI would treat a -p value starting with "--" as an unknown option.
+  printf '%s' "$CYCLE_PROMPT" | timeout --signal=INT "$PER_CYCLE_TIMEOUT" \
+    claude --dangerously-skip-permissions --output-format stream-json --verbose -p \
     > "$CYCLE_OUT" 2> "$RUNDIR/cycle-$n.stderr"
-  crc=$?
-  set -e
+  crc=${PIPESTATUS[1]}
   CYCLE_END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
   # Extract usage + the one-line verdict from the final result event.
