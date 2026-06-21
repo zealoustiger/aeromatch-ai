@@ -85,6 +85,13 @@ export type SeoMakeModel = {
   specs: string
   /** short, honest cost-to-own blurb (no keyword stuffing). */
   costToOwn: string
+  /**
+   * 3 genuine, evergreen Q&As shown on the page + emitted as FAQPage JSON-LD.
+   * Authored from the real specs/costToOwn above + general GA knowledge — no
+   * fabricated stats, no live counts (so the text never goes stale). Curated
+   * combos only; dynamically-discovered combos have none. See MODEL_FAQS.
+   */
+  faqs?: { q: string; a: string }[]
 }
 
 export const SEO_MAKE_MODELS: SeoMakeModel[] = [
@@ -210,10 +217,125 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
   },
 ]
 
+// ---------------------------------------------------------------------------
+// Per-model FAQs — genuine, evergreen Q&As attached to each curated make+model
+// page (rendered visibly AND emitted as FAQPage JSON-LD; the visible text must
+// match the structured data 1:1). Keyed by `${makeSlug}/${modelSlug}`. Answers
+// are drawn from the curated specs/costToOwn prose above + well-known general-
+// aviation facts — NO fabricated statistics and NO live listing counts, so the
+// copy stays accurate and never goes stale.
+// ---------------------------------------------------------------------------
+const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
+  'cirrus/sr22': [
+    { q: 'What makes the Cirrus SR22 special?', a: 'It is a four-seat composite single putting out about 310 hp with a 180+ kt cruise, a full glass panel, and the CAPS whole-airframe parachute that defines the brand. Those features have made it one of the best-selling piston singles in the world.' },
+    { q: 'How much does it cost to own a Cirrus SR22?', a: 'Plan on roughly $250–400 per hour all-in once you add fuel, reserves, insurance, and fixed costs. The fixed costs — hangar, insurance, and the periodic CAPS parachute repack — are why so many SR22 owners share the airplane in a partnership.' },
+    { q: 'Is the SR22 a good aircraft to co-own?', a: 'Yes — it is one of the most commonly co-owned high-performance singles. Splitting the hangar, insurance, and chute repack across three or four partners turns a flagship single into a realistic monthly number while everyone still gets plenty of flying.' },
+  ],
+  'cirrus/sr22t': [
+    { q: 'How is the SR22T different from the SR22?', a: 'The "T" is turbo-normalized — about 315 hp, with the turbo letting it cruise comfortably into the flight levels and the 200 kt range, with oxygen aboard. You trade a higher fuel and overhaul bill for altitude and speed.' },
+    { q: 'What does an SR22T cost to operate?', a: 'More than the normally-aspirated SR22, mainly from higher fuel burn at altitude and a larger turbo overhaul reserve. Most owners split it three to four ways in a flying club or partnership to keep the reserves and insurance manageable.' },
+    { q: 'Is the turbo worth it?', a: 'If you regularly fly long cross-countries, over high terrain, or want to top weather, the turbo earns its keep. If most of your flying is local and low, the standard SR22 is cheaper to run.' },
+  ],
+  'mooney/m20': [
+    { q: 'Why are Mooneys so efficient?', a: 'The M20 series is a sleek, low-drag retractable that delivers the best speed-per-dollar in piston aviation — it goes fast on remarkably little fuel, which is its whole reputation.' },
+    { q: 'What does it cost to own a Mooney M20?', a: 'Fuel costs are low for the speed, but the retractable gear adds an annual inspection and an insurance premium. Sharing the airplane in a partnership spreads those fixed costs across owners.' },
+    { q: 'Is the Mooney a good first airplane?', a: 'It is a capable traveler rather than a trainer — the cabin is snug and the retractable gear means more systems to manage. Many owners step up to a Mooney after some time in fixed-gear singles.' },
+  ],
+  'beechcraft/bonanza': [
+    { q: 'What is the Beechcraft Bonanza known for?', a: 'It is the classic high-performance single — built in V-tail and straight-tail variants, with a roomy cabin and a 170+ kt cruise. It has been in production longer than almost any aircraft and is prized as a serious traveling machine.' },
+    { q: 'How much does a Bonanza cost to own?', a: 'It is a traveling machine with traveling-machine costs — higher fuel burn and a healthy engine reserve. Co-ownership is the traditional way to fly one affordably, splitting the hangar, insurance, and reserves.' },
+    { q: 'V-tail or straight-tail Bonanza?', a: 'Both fly beautifully; the V-tail is iconic, but some buyers prefer the conventional tail for simpler maintenance and insurance. Either way, a pre-purchase inspection by a Bonanza-savvy mechanic is essential.' },
+  ],
+  'cessna/182': [
+    { q: 'What is the Cessna 182 good for?', a: 'The Skylane is a do-everything four-seat high-wing hauler — more useful load and power than a 172, a ~145 kt cruise, and fixed gear that keeps it simple. It is a favorite family airplane.' },
+    { q: 'How much does it cost to own a Cessna 182?', a: 'Operating costs sit between a 172 and a complex single. A partnership keeps the hangar and insurance manageable while partners split real flying hours.' },
+    { q: 'Is the 182 better than a 172?', a: 'It is not "better," it is bigger — more power, more load, and faster, which makes it the better choice if you regularly fly four people or out of high or short fields. The 172 is cheaper to run and easier for a brand-new pilot.' },
+  ],
+  'cirrus/sr20': [
+    { q: 'Is the SR20 a good entry into Cirrus ownership?', a: 'Yes — it is the most attainable Cirrus, with about 215 hp, four seats, the CAPS parachute, and a modern glass panel. It has lower fuel and overhaul costs than the SR22 while giving the same cockpit experience.' },
+    { q: 'What does an SR20 cost to own?', a: 'Less than an SR22 to fuel and overhaul, which is the point. Partnerships make the glass-panel ownership experience genuinely affordable by splitting the fixed costs.' },
+    { q: 'SR20 or SR22?', a: 'The SR20 is cheaper to buy and run and is plenty for training and regional trips; the SR22 carries more, climbs better, and flies faster. Pick the SR20 if budget and economy matter most.' },
+  ],
+  'cessna/172': [
+    { q: 'Is the Cessna 172 a good first airplane?', a: 'It is the default first airplane for good reason — four seats, a high wing, a forgiving stall, and famously docile handling make it ideal for training and early ownership. It is the most-produced aircraft ever built.' },
+    { q: 'How much does it cost to own a Cessna 172?', a: 'It is about as low-drama as ownership gets — parts are everywhere and every A&P knows the airplane, so maintenance is predictable. It is the most commonly co-owned single in America, which keeps each partner’s share modest.' },
+    { q: 'Why co-own a Cessna 172?', a: 'Because most owners cannot fly enough hours to justify the fixed costs alone. Splitting the hangar, insurance, and annual across a few partners makes a 172 genuinely cheap per person while keeping it available.' },
+  ],
+  'piper/cherokee': [
+    { q: 'Is the Piper Cherokee a good airplane to own?', a: 'Very — the low-wing PA-28 family has simple systems, forgiving handling, and a ~115–130 kt cruise. Fixed gear and a huge parts supply make it one of the most economical singles to own and share.' },
+    { q: 'How much does a Cherokee cost to own?', a: 'Among the lowest of any four-seat single. Fixed gear and simple systems keep maintenance predictable, which makes it an ideal first partnership airplane.' },
+    { q: 'Cherokee or Cessna 172?', a: 'They are close rivals — the Cherokee is low-wing, the 172 high-wing. Both are forgiving, cheap to run, and well-supported; the choice usually comes down to which you trained in and which you prefer to climb into.' },
+  ],
+  'beechcraft/baron': [
+    { q: 'What is the Beechcraft Baron?', a: 'A twin-engine, six-seat cabin-class traveler cruising at 190+ kt — the natural step into piston twins for pilots who want engine redundancy and range.' },
+    { q: 'Why are Barons so often co-owned?', a: 'A twin doubles the engines and the maintenance — two overhaul reserves plus higher insurance. A group of partners is what makes those costs realistic, which is why shared ownership is the norm.' },
+    { q: 'Is a Baron expensive to own?', a: 'Yes, relative to a single — plan for two engine reserves, twin insurance, and higher fuel burn. That is exactly why partnerships are so common; spread across owners, a Baron becomes attainable.' },
+  ],
+  'piper/arrow': [
+    { q: 'What is the Piper Arrow good for?', a: 'The retractable-gear PA-28R is a popular complex trainer and step-up — four seats, a ~135 kt cruise, and the retractable gear and constant-speed prop pilots need for complex and commercial time.' },
+    { q: 'How much does an Arrow cost to own?', a: 'A bit more than a fixed-gear Cherokee — the retractable gear adds a modest insurance and annual premium. A partnership keeps it economical while you build complex time.' },
+    { q: 'Is the Arrow a good complex-time builder?', a: 'Yes — it is one of the most common airplanes for earning complex and commercial hours, with predictable systems and strong parts availability.' },
+  ],
+  'piper/comanche': [
+    { q: 'What makes the Piper Comanche special?', a: 'The PA-24 is a fast low-wing retractable single — a 160+ kt cruise with big tanks, making it a genuine long-legged traveler that punches above its fuel burn.' },
+    { q: 'How much does a Comanche cost to own?', a: 'A lot of airplane for the money, beloved for range and speed. Parts take a little more hunting than a Cherokee, so many owners run a partnership with a shared maintenance kitty.' },
+    { q: 'Is the Comanche hard to maintain?', a: 'It is a sound airframe, but production ended decades ago, so some parts are sourced through type clubs and specialists. A knowledgeable mechanic and a shared parts fund make it very manageable.' },
+  ],
+  'bellanca/citabria': [
+    { q: 'What is a Citabria like to fly?', a: 'It is a two-seat tandem taildragger — fabric-covered, aerobatic-capable, and pure stick-and-rudder fun. The name "Citabria" is "airbatic" spelled backward.' },
+    { q: 'Is a Citabria cheap to own?', a: 'Yes — it is cheap to fly and a blast to own. The main costs are fabric upkeep and a tailwheel-rated insurance policy; partnerships are common among tailwheel and aerobatic pilots sharing the fun.' },
+    { q: 'Do I need a tailwheel endorsement?', a: 'Yes — like any taildragger, the Citabria requires a tailwheel endorsement, and insurers will want some dual instruction. It is also a wonderful airplane to earn that endorsement in.' },
+  ],
+  'vans/rv': [
+    { q: 'What are Van’s RV aircraft?', a: 'The RV series are experimental amateur-built airplanes offering unmatched performance per dollar — sporty handling, two to four seats, and a huge, active builder community.' },
+    { q: 'Are experimentals cheaper to own?', a: 'Often yes — owner-performed maintenance is allowed on experimentals, which keeps costs low, and the performance per dollar is the best in aviation. Partnerships are common among builders and sport pilots.' },
+    { q: 'Can you partner on an experimental?', a: 'Absolutely — many RVs are co-owned. Just confirm the operating limitations and insurance work for multiple owners, and that everyone is comfortable with the builder-maintained nature of the airplane.' },
+  ],
+  'cessna/150': [
+    { q: 'Is the Cessna 150 a good first airplane?', a: 'It is a classic first airplane — a two-seat high-wing trainer that is cheap to run, simple, and forgiving. Generations of pilots learned in one.' },
+    { q: 'How cheap is a Cessna 150 to own?', a: 'About the lowest-cost way to own an airplane. Two seats and a small engine mean small bills, and a partnership splits an already-modest hangar and annual.' },
+    { q: 'Cessna 150 or 152?', a: 'They are nearly identical two-seat trainers; the 152 has a slightly larger engine and minor refinements. Either is among the most affordable airplanes you can own.' },
+  ],
+  'piper/cub': [
+    { q: 'Why is the Piper Cub so iconic?', a: 'The yellow taildragger — fabric, tandem seating, slow, simple, and endlessly charming — is the airplane most people picture when they imagine light aviation. It is bought with the heart.' },
+    { q: 'Is a Cub expensive to own?', a: 'It is genuinely cheap to fly. Fabric upkeep and a tailwheel insurance policy are the main costs, and shared ownership is a great way to keep a classic in the air.' },
+    { q: 'Do you need a tailwheel endorsement to fly a Cub?', a: 'Yes — it is a taildragger, so a tailwheel endorsement and some dual time are required. It is also one of the most rewarding airplanes to learn stick-and-rudder skills in.' },
+  ],
+  'cessna/180': [
+    { q: 'What is the Cessna 180 used for?', a: 'It is a rugged tailwheel high-wing hauler — backcountry- and float-capable with a strong useful load. It is a favorite for bush flying and adventure.' },
+    { q: 'Does the Cessna 180 hold its value?', a: 'It is a backcountry favorite that holds its value well. Tailwheel insurance and big tundra tires aside, it is a durable airframe — partnerships split the hangar and the adventures.' },
+    { q: 'Is the 180 hard to fly?', a: 'It is a taildragger with real performance, so it demands tailwheel proficiency and respect for crosswinds. With a tailwheel endorsement and some dual, it rewards a careful pilot.' },
+  ],
+  'piper/saratoga': [
+    { q: 'What is the Piper Saratoga good for?', a: 'It is a six-seat PA-32 family single with a big cabin and useful load, in both fixed- and retractable-gear variants — a genuine family and IFR traveling machine.' },
+    { q: 'How much does a Saratoga cost to own?', a: 'Fuel burn matches the big cabin, so it is not the cheapest single to run. Co-ownership across a few families is the classic way to keep a Saratoga affordable.' },
+    { q: 'Fixed or retractable Saratoga?', a: 'The retractable is faster; the fixed-gear version is simpler and a bit cheaper to insure and maintain. Both carry six and haul a real load.' },
+  ],
+  'grumman/aa-1': [
+    { q: 'What is the Grumman AA-1?', a: 'A two-seat low-wing single with a sliding canopy and sporty, responsive handling — a fun, simple airplane that stands out from the typical trainer.' },
+    { q: 'Is the AA-1 cheap to own?', a: 'Yes — the sliding canopy and bonded airframe keep things light, and low operating costs make it an easy partnership aircraft.' },
+    { q: 'Is the AA-1 a good trainer?', a: 'It is sportier and a bit quicker on the controls than a 150, so many pilots love it as a step beyond basic trainers. Get a checkout from someone who knows the type.' },
+  ],
+  'grumman/aa-5': [
+    { q: 'What is the Grumman AA-5 family?', a: 'The four-seat Traveler, Tiger, and Cheetah — sliding-canopy singles with a low-drag airframe and a ~130 kt cruise that is quick for the fuel burn.' },
+    { q: 'How much does an AA-5 cost to own?', a: 'Low — simple systems and a slippery airframe keep both fuel and shared maintenance costs down, which makes it a popular first partnership single.' },
+    { q: 'Grumman Tiger or Cheetah?', a: 'The Tiger has more power and is the faster, better climber; the Cheetah is a bit more economical. Both share the same fun sliding-canopy character.' },
+  ],
+  'robinson/r44': [
+    { q: 'What is the Robinson R44?', a: 'A four-seat piston helicopter cruising around 110 kt — the world’s most popular civil helicopter, widely used for training, personal travel, and utility work.' },
+    { q: 'Why co-own an R44?', a: 'Helicopter ownership runs on a scheduled overhaul clock — the airframe and major components have a 2,200-hour/12-year overhaul. Splitting that reserve and the insurance across owners is how most R44s are flown.' },
+    { q: 'Is an R44 expensive to own?', a: 'The big number is the scheduled overhaul reserve, plus insurance that reflects rotary operations. Budgeting per-hour for the overhaul from the start — and sharing it in a partnership — is what makes R44 ownership work.' },
+  ],
+}
+
 export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel | null {
   const m = makeSlug.toLowerCase()
   const md = modelSlug.toLowerCase()
-  return SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md) ?? null
+  const entry = SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md)
+  if (!entry) return null
+  // Attach the curated FAQs (if any) without mutating the source array.
+  const faqs = MODEL_FAQS[`${entry.makeSlug}/${entry.modelSlug}`]
+  return faqs ? { ...entry, faqs } : entry
 }
 
 // ---------------------------------------------------------------------------
