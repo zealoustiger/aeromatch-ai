@@ -136,7 +136,15 @@ export default async function AircraftPage({
 
           {/* Browse by state — crawlable internal links to the per-state for-sale pages */}
           <div className="ch-panel mt-10 p-6">
-            <h2 className="mb-3 text-base font-semibold text-slate-900">Aircraft for sale by state</h2>
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-semibold text-slate-900">Aircraft for sale by state</h2>
+              <Link
+                href="/aircraft/browse"
+                className="text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+              >
+                Browse all makes, models &amp; states →
+              </Link>
+            </div>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {STATE_CODES.map((c) => (
                 <Link
