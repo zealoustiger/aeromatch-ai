@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react'
 import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
+import HomeRails from '@/components/HomeRails'
 import { STATE_NAMES, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 const faqItems = [
@@ -165,6 +166,9 @@ export default function HomePage() {
 
       {/* ── NEWEST LISTINGS — large photo cards ── */}
       <FeaturedListings />
+
+      {/* ── CURATED RAILS — Etsy-style horizontal collections of real for-sale aircraft ── */}
+      <HomeRails />
 
       {/* ── EXPLORE — three big photo cards ── */}
       <section className="bg-slate-50 py-16">
