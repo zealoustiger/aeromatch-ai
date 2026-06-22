@@ -122,6 +122,56 @@ export function getPartnershipMakeFaqs(slug: string): { q: string; a: string }[]
 }
 
 /**
+ * Per-state co-ownership FAQs for `/partnerships/state/[state]`, keyed by lowercase
+ * USPS code (the route's slug). Curated high-GA-activity states only — the priority
+ * index pages (ca/tx/fl) plus a few genuinely distinctive GA states. Non-curated
+ * states render no FAQ (like a thin make), so we never ship templated boilerplate
+ * across all 50 states (GOAL.md guardrail). Answers are evergreen, partnership-
+ * focused, and use only well-known, durable facts — no fabricated stats, no live counts.
+ */
+const PARTNERSHIP_STATE_FAQS: Record<string, { q: string; a: string }[]> = {
+  ca: [
+    { q: 'Why is California a good place to co-own an aircraft?', a: 'California has one of the largest general-aviation communities in the country and mild, fly-almost-year-round weather across much of the state, so a shared airplane gets used instead of sitting. Hangar space is scarce and expensive near the coast, which is exactly why splitting those fixed costs across a partnership makes ownership pencil out for many California pilots.' },
+    { q: 'Where are aircraft partnerships concentrated in California?', a: 'Around the major GA hubs: the Bay Area (Palo Alto, San Carlos, Hayward, Reid-Hillview, Livermore), the Los Angeles basin (Van Nuys — one of the busiest GA airports in the world — plus Santa Monica, Long Beach, and Camarillo), and San Diego (Montgomery-Gibbs, Gillespie). Searching partnerships by your home airport is the fastest way to find a share you can actually fly from.' },
+    { q: 'What affects co-ownership costs in California?', a: 'Hangar and tie-down rates near the coastal metros are among the highest in the nation and waitlists are long, so the monthly fixed share is usually the biggest line item. The flip side is heavy utilization — good weather means the airplane flies often — and sharing the hangar, insurance, and annual across partners is what keeps each owner’s number reasonable.' },
+  ],
+  tx: [
+    { q: 'Why co-own an aircraft in Texas?', a: 'Texas is big, flat, and full of airports, with long VFR-friendly flying seasons and wide-open airspace once you leave the major Class B areas — ideal for cross-country flying and time-building. With distances between cities that make light aircraft genuinely useful, a co-ownership share spreads the cost of a capable traveling airplane across several pilots.' },
+    { q: 'Where are aircraft partnerships concentrated in Texas?', a: 'The big metros: the Dallas–Fort Worth area (Addison, Arlington, Denton, Fort Worth Meacham), greater Houston (Sugar Land, Hooks/David Wayne Hooks, Pearland, La Porte), Austin (Georgetown, San Marcos), and San Antonio. Hangars are generally more available and more affordable than on the coasts, so groups have more options on where to base.' },
+    { q: 'What affects co-ownership costs in Texas?', a: 'Hangar costs are typically lower than in California or the Northeast, and Texas has no state income tax — though sales/use tax can apply to an aircraft purchase, so it is worth checking with a tax professional before you buy into a share. Hot summers make a hangar (rather than a tie-down) worthwhile to protect avionics and paint, a cost the partnership splits.' },
+  ],
+  fl: [
+    { q: 'Why is Florida popular for aircraft co-ownership?', a: 'Florida has year-round VFR weather, flat terrain, and one of the densest concentrations of general-aviation activity and flight training in the country, so airplanes here fly a lot. High utilization plus a deep pool of pilots and mechanics makes Florida a natural place to share an airplane and keep it busy.' },
+    { q: 'Where are aircraft partnerships concentrated in Florida?', a: 'Across the big GA areas: South Florida (Fort Lauderdale Executive, Pompano Beach, Boca Raton, Opa-locka), the Orlando area (Orlando Executive, Kissimmee, Sanford), Tampa Bay (St. Petersburg–Clearwater, Tampa Executive), and Jacksonville. Searching by your home airport surfaces the partnerships you could realistically fly from.' },
+    { q: 'What should Florida co-owners plan for?', a: 'Two things shape the budget: summer thunderstorms and heat, which make a hangar valuable to protect the airplane, and the coastal salt-air environment, which is hard on airframes and avionics and rewards diligent maintenance. Both are easier to absorb as a shared cost — a partnership covers the hangar and upkeep across several owners.' },
+  ],
+  az: [
+    { q: 'Why co-own an aircraft in Arizona?', a: 'Arizona offers some of the most reliable VFR flying weather anywhere — clear skies the large majority of the year — which is why so much flight training and recreational flying is based here. A shared airplane in Arizona rarely sits weathered-in, so the partnership gets real use out of it.' },
+    { q: 'What do Arizona co-owners need to know about density altitude?', a: 'Summer heat and elevation push density altitude high, which hurts takeoff and climb performance — so groups often favor airplanes with more horsepower or accept density-altitude limits in the hotter months. It is a key consideration when a partnership chooses which aircraft to buy and how to operate it safely from higher or shorter strips.' },
+    { q: 'Where are aircraft partnerships concentrated in Arizona?', a: 'Mainly around Phoenix (Deer Valley — one of the busiest GA airports in the country — Scottsdale, Falcon Field/Mesa, Chandler, Glendale) and Tucson (Ryan Field, Tucson International GA). Hangars are more available than on the coasts, which gives partnerships flexibility on where to base.' },
+  ],
+  co: [
+    { q: 'Why co-own an aircraft in Colorado?', a: 'Colorado has a strong general-aviation community and spectacular flying, and an airplane opens up the mountains and the wide distances of the Front Range and Western Slope. Because capable, well-equipped airplanes suit Colorado flying, co-ownership is a common way for pilots to share the cost of an aircraft up to the mission.' },
+    { q: 'What makes mountain flying important for Colorado co-owners?', a: 'High terrain and high density altitude make performance and pilot proficiency genuinely matter — groups often choose airplanes with adequate horsepower and agree on mountain-flying currency and weather minimums. Setting those expectations among partners up front is part of safely sharing an airplane in the Rockies.' },
+    { q: 'Where are aircraft partnerships concentrated in Colorado?', a: 'Largely along the Front Range: the Denver area (Centennial — among the busiest GA airports in the nation — Rocky Mountain Metro, Front Range), Boulder, Colorado Springs, and Fort Collins–Loveland, with mountain-town fields like Eagle and Aspen serving recreational flying. Searching by home airport finds the shares you can fly from.' },
+  ],
+  wa: [
+    { q: 'Why co-own an aircraft in Washington?', a: 'Washington has a deep aviation culture and a busy general-aviation scene, and an airplane is genuinely useful for reaching the San Juan Islands, the coast, and destinations east of the Cascades. Sharing the airplane spreads the cost of a well-equipped aircraft that can handle the region’s varied flying.' },
+    { q: 'How does Pacific Northwest weather shape co-ownership here?', a: 'Marine-layer clouds, rain, and shorter winter days make IFR capability and instrument proficiency valuable, and a hangar helps protect the airplane from persistent moisture. Groups often favor a well-equipped airplane and agree on instrument currency — costs and standards a partnership shares.' },
+    { q: 'Where are aircraft partnerships concentrated in Washington?', a: 'Mostly around Puget Sound: the Seattle area (Boeing Field, Renton, Paine Field/Everett, Auburn), Tacoma (Thun Field/Pierce County), and Olympia, plus Spokane and the Bellingham area near the islands. Searching partnerships by your home airport surfaces the ones you could realistically join.' },
+  ],
+}
+
+/**
+ * Resolve a partnership state code (lowercase USPS, the route slug) to its 3 curated
+ * co-ownership FAQs, or null when the state isn't curated (→ no FAQ). Mirrors
+ * `getPartnershipMakeFaqs`.
+ */
+export function getPartnershipStateFaqs(code: string): { q: string; a: string }[] | null {
+  return PARTNERSHIP_STATE_FAQS[code.toLowerCase()] ?? null
+}
+
+/**
  * Curated make+model combos with their own programmatic for-sale landing page at
  * `/aircraft/[makeSlug]/[modelSlug]` (e.g. /aircraft/cessna/172).
  *
