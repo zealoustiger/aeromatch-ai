@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T02:59:00Z — DRAIN SUMMARY
+- Cycles this run: 6 (PASS 5 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260622T022154Z (manual NS_FORCE)
+
 ## 2026-06-22T02:51Z — PASS — forsale-state-faq
 - Pages: /aircraft/for-sale/california, /aircraft/for-sale/texas, /aircraft/for-sale/florida, /aircraft/for-sale/arizona, /aircraft/for-sale/colorado, /aircraft/for-sale/washington
 - What: **Each of six "aircraft for sale in {state}" pages now ends with a real "Frequently asked questions" section** — three plain-English, *buying*-focused Q&As written specifically for shopping for an airplane in that state (e.g. for California: is it a good place to buy, where the inventory clusters — Bay Area / LA basin / San Diego — and what to check before buying including the sales/use-tax angle; for Texas: why buy there, the DFW/Houston/Austin/San Antonio hubs, and no state income tax but possible use tax; for Florida: deep fast-moving market, the South-Florida/Orlando/Tampa hubs, and watching for salt-air corrosion on the pre-buy; plus Arizona dry-climate/density-altitude, Colorado mountain-flying, and Washington PNW-weather/IFR angles). Each question is a tap-to-expand accordion that reads well on a phone and works without JavaScript, and each page also emits **FAQPage structured data** (the machine-readable version Google reads) whose answers match the visible text word-for-word. The content is evergreen and uses only durable, well-known facts (GA hubs, climate, what to inspect, tax) — no made-up numbers, no live counts, so it never goes stale. States not in the curated set (e.g. Ohio, Georgia, New York, Illinois) are completely unchanged — they show no FAQ. The accordion sits below the listings and the "other states" cross-links, above the buyer-guide links; nothing else on the pages changed.
