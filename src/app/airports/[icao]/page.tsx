@@ -100,6 +100,7 @@ export default async function AirportPage({
   })
 
   return (
+    <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <script
         type="application/ld+json"
@@ -120,11 +121,11 @@ export default async function AirportPage({
       </nav>
 
       <div className="mb-8">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-          <Plane className="h-6 w-6 text-sky-500" />
+        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-slate-900">
+          <Plane className="h-7 w-7 text-sky-500" />
           Aircraft Partnerships at {airport.name}
         </h1>
-        <p className="mt-2 max-w-3xl text-slate-500">
+        <p className="mt-2 max-w-3xl text-slate-600">
           {airport.name} ({airport.icao}
           {airport.iata ? ` / ${airport.iata}` : ''}) is located in {airport.city},{' '}
           {airport.state}
@@ -149,7 +150,7 @@ export default async function AirportPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
+          <div className="ch-panel p-10 text-center">
             <p className="text-slate-500">No active partnerships based at {airport.icao} yet.</p>
             <Link
               href="/partnerships/new"
@@ -177,7 +178,7 @@ export default async function AirportPage({
       {nearCount > 0 && (
         <Link
           href={`/partnerships/near/${airport.icao.toLowerCase()}`}
-          className="mt-10 flex items-center justify-between gap-4 rounded-xl border border-sky-200 bg-sky-50 p-5 transition-colors hover:border-sky-300 hover:bg-sky-100"
+          className="mt-10 flex items-center justify-between gap-4 rounded-2xl border border-sky-200 bg-sky-50 p-5 transition-colors hover:border-sky-300 hover:bg-sky-100"
         >
           <div>
             <h2 className="text-base font-semibold text-slate-900">
@@ -205,6 +206,7 @@ export default async function AirportPage({
           Search with filters →
         </Link>
       </p>
+    </div>
     </div>
   )
 }
