@@ -182,6 +182,35 @@ export async function countPartnershipsByState(code: string): Promise<number> {
 }
 
 /**
+ * Count active partnerships, optionally narrowed to a make (case-insensitive
+ * substring, like the make hub page). Used by the `/aircraft` cross-sell card to
+ * show how many partnerships exist the other way (make-aware when a make filter is
+ * active). Mirrors `countPartnershipsByMake`; returns 0 on any failure. Mock-data
+ * fallback when Supabase is unconfigured.
+ */
+export async function countActivePartnerships(make?: string): Promise<number> {
+  const m = make?.trim()
+  if (!hasSupabase()) {
+    return MOCK_PARTNERSHIPS.filter(
+      (p) => !m || p.make.toLowerCase().includes(m.toLowerCase())
+    ).length
+  }
+  try {
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('partnerships')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+    if (m) query = query.ilike('make', `%${m}%`)
+    const { count, error } = await query
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
  * Distinct aircraft makes that have active partnerships, ordered by listing count
  * (most-listed first). Read-time aggregation over the existing `make` column — no
  * schema, no extra tables — mirroring `getAircraftFacets`'s make logic. Used by the

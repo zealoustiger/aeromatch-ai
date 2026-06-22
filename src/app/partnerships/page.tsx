@@ -7,6 +7,7 @@ import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterCh
 import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
 import { getPartnershipMakes } from '@/lib/partnershipsQuery'
+import { countForSale } from '@/components/AircraftSaleList'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 
@@ -126,7 +127,12 @@ export default async function PartnershipsPage({
 
           {/* Cross-sell to the other marketplace type (planes for sale).
               Make-aware: carries the active make filter through. */}
-          <MarketplaceCrossSell from="partnerships" make={params.make} className="mt-10" />
+          <MarketplaceCrossSell
+            from="partnerships"
+            make={params.make}
+            count={await countForSale(params.make)}
+            className="mt-10"
+          />
         </div>
       </div>
     </div>

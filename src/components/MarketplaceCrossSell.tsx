@@ -7,25 +7,32 @@ import { Plane, Users, ArrowRight } from 'lucide-react'
  * results page so a visitor who actually wants the *other* ownership model finds
  * it — and so crawlers get one more internal link between the two biggest hubs.
  *
- * Slice 1 of "Blend result types + cross-sell": a static, contextual card (no
- * live counts / blended results yet). Real links only — when a `make` filter is
- * active it's carried through so the suggestion stays on-topic
+ * Slice 2 of "Blend result types + cross-sell": a contextual card with a REAL,
+ * make-aware live count of the other marketplace (e.g. "Browse 412 Cirrus aircraft
+ * for sale"). Real links + real counts only — the `count` is omitted from the copy
+ * when it's 0 or unavailable (never "0 …"); when a `make` filter is active it's
+ * carried through so the suggestion stays on-topic
  * (e.g. /partnerships?make=Cirrus → /aircraft?make=Cirrus).
  */
 export default function MarketplaceCrossSell({
   from,
   make,
+  count,
   className = '',
 }: {
   /** Which marketplace the visitor is on now; the card promotes the OTHER one. */
   from: 'partnerships' | 'aircraft'
   /** Active make filter, if any — carried into the cross-link + the copy. */
   make?: string
+  /** Live count of the OTHER marketplace's matching listings; shown only when > 0. */
+  count?: number
   className?: string
 }) {
   const m = make?.trim()
   const makeLabel = m ? `${m} ` : ''
   const makeQuery = m ? `?make=${encodeURIComponent(m)}` : ''
+  // Only surface a real, positive count — fall back to the countless copy otherwise.
+  const countLabel = count && count > 0 ? `${count.toLocaleString()} ` : ''
 
   const content =
     from === 'partnerships'
@@ -33,14 +40,14 @@ export default function MarketplaceCrossSell({
           href: `/aircraft${makeQuery}`,
           Icon: Plane,
           heading: 'Prefer to own outright?',
-          body: `Browse ${makeLabel}aircraft for sale aggregated from across the web — the same planes, owned solo instead of shared.`,
+          body: `Browse ${countLabel}${makeLabel}aircraft for sale aggregated from across the web — the same planes, owned solo instead of shared.`,
           cta: `Browse ${makeLabel}planes for sale`,
         }
       : {
           href: `/partnerships${makeQuery}`,
           Icon: Users,
           heading: 'Want to split the cost?',
-          body: `See ${makeLabel}co-ownership partnerships — transparent buy-in, monthly, and hourly costs on every listing.`,
+          body: `See ${countLabel}${makeLabel}co-ownership partnerships — transparent buy-in, monthly, and hourly costs on every listing.`,
           cta: `Browse ${makeLabel}partnerships`,
         }
 
