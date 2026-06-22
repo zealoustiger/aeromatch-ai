@@ -121,6 +121,61 @@ export function getPartnershipMakeFaqs(slug: string): { q: string; a: string }[]
   return PARTNERSHIP_MAKE_FAQS[slug.toLowerCase()] ?? null
 }
 
+// Per-MAKE "About co-owning a {Make}" overview prose — 2 genuine, evergreen narrative
+// paragraphs per curated make, rendered as editorial body copy on the partnership hub
+// page (`/partnerships/make/[make]`). This is the partnership-side counterpart to the
+// for-sale `MAKE_OVERVIEWS`: unique content depth to lift these hubs above templated,
+// count-only boilerplate in the INDEXING stage. Deliberately distinct from BOTH the
+// co-ownership Q&A `PARTNERSHIP_MAKE_FAQS` on the same page (narrative, not questions)
+// AND the brand-history `MAKE_OVERVIEWS` on the for-sale hubs (this copy leads with the
+// sharing/cost-splitting angle, not lineage). Keyed by SEO_MAKES slug. Drawn from the
+// SEO_MAKES blurbs + well-known general-aviation facts — NO fabricated statistics and
+// NO live listing counts, so the copy never goes stale. Curated makes only; a make
+// absent here renders no About section (graceful).
+const PARTNERSHIP_MAKE_OVERVIEWS: Record<string, string[]> = {
+  cessna: [
+    'A Cessna single is the airplane most partnerships start with, and for good reason. The high-wing 150/152, 172 Skyhawk, 182 Skylane, and 206 are the best-supported light aircraft in the world — parts sit on shelves everywhere and nearly every mechanic has worked on them — so the maintenance surprises that can sour a co-ownership are rare. A group can put a Cessna on a tie-down or in a hangar and expect predictable, drama-free upkeep year after year.',
+    'That predictability is exactly what makes the cost-split work. With low, well-understood fixed costs, dividing the hangar, insurance, and annual across two to four partners brings each owner’s monthly share down to a comfortable number, and deep resale demand means the group can exit cleanly when someone moves on. It is no accident that Cessnas are the most commonly co-owned airplanes in America — they remove most of the friction that makes shared ownership hard.',
+  ],
+  piper: [
+    'Piper’s low-wing PA-28 Cherokee family — the Cherokee, Warrior, Archer, and retractable Arrow — is a natural fit for a partnership. The fixed-gear models pair forgiving, stable handling with simple systems and one of the largest parts-and-maintenance networks in aviation, so a group of newer pilots can share one without worrying about exotic upkeep. When a partnership wants to grow into complex or retractable time, the Arrow is the same airframe with the gear that folds; the six-seat Saratoga steps up when members fly with families.',
+    'The economics are what keep the arrangement easy. A shared Warrior or Archer is among the least expensive four-seat singles to operate, so the monthly-per-partner figure stays modest even after the hangar and insurance are split. Because the PA-28 is such a common trainer and first airplane, demand stays strong and a partnership can add or replace a member without much trouble — the airplane is as liquid as it is affordable.',
+  ],
+  cirrus: [
+    'Co-ownership is how most pilots actually fly a Cirrus. The SR20 and SR22 are modern composite singles built around a full glass panel and the CAPS whole-airframe parachute, and that capability carries a purchase price and insurance bill that are a stretch for one owner but very manageable split across a group. A partnership lets two to four pilots share a fast, advanced traveling airplane that none of them would buy alone — and keeps it flown often enough that everyone stays current and proficient.',
+    'The line gives a group room to match the airplane to its budget: the lighter SR20 is the more attainable entry for training and regional trips, while the SR22 adds the power, payload, and speed for serious cross-country travel — both with the same panel and parachute. Beyond the usual hangar and insurance, the periodic CAPS parachute repack is the one big-ticket item unique to a Cirrus, and it is precisely the kind of scheduled cost that splits cleanly and painlessly across partners.',
+  ],
+  beechcraft: [
+    'Beechcraft’s Bonanza and Baron are some of the most capable traveling airplanes in piston aviation, and they are classic partnership machines because of it. The single-engine Bonanza is fast, roomy, and built to a premium standard; the twin Baron adds a second engine for redundancy and range. Both reward a group that wants a genuine cross-country airplane and is happy to share the responsibility of owning one to a higher standard than a typical trainer.',
+    'They also carry traveling-machine costs — more fuel, healthy engine reserves, and, on a Baron, two engines to maintain — which is exactly why co-ownership suits them so well. Spreading those fixed costs across partners turns a serious airplane into a realistic monthly figure, and because Beechcraft owners tend to keep their aircraft meticulously, a well-run partnership protects a strong long-term asset. Choose the Bonanza unless the group specifically wants twin redundancy and the maintenance that comes with it.',
+  ],
+  mooney: [
+    'For a partnership that values speed and efficiency over cabin space, a Mooney is hard to beat. The low-drag M20 series delivers the best speed-per-dollar in piston aviation, cruising faster on far less fuel than airplanes that look quicker on paper. A group of cross-country pilots gets a genuine traveler whose low fuel burn keeps the per-hour cost — the part each partner pays as they fly — pleasantly low.',
+    'A Mooney is a traveler rather than a trainer: the cabin is snug, the gear retracts, and there are more systems to manage, so partnerships tend to form among pilots who already have some fixed-gear time. The retractable gear adds an annual inspection and an insurance line, but those are fixed costs a group spreads comfortably. Match the partners to the airplane — pilots who want to go places efficiently rather than build primary time — and a shared Mooney is one of the most economical fast singles to own.',
+  ],
+  diamond: [
+    'Diamond’s DA40 single and DA42 twin were practically designed for shared ownership. The bonded composite airframes are durable, the bubble canopies and modern panels feel a generation ahead of older trainers, and many examples run fuel-efficient Austro Jet-A diesels — a combination that, together with an outstanding safety record, has made Diamonds favorites of flight schools and co-ownership groups alike. A partnership gets a new-feeling, economical airplane that members are glad to fly often.',
+    'The economics fit a group neatly: the diesels sip Jet-A and the airframes hold up well, keeping running costs low, while the higher purchase price and the engine and gearbox reserves are exactly the kind of fixed costs that divide cleanly across partners. The result is a modern glass-panel airplane for a sensible monthly share — and a partnership structure that lets a group enjoy current avionics and diesel economy without any one member carrying the whole bill.',
+  ],
+  vans: [
+    'Van’s RV series shows up in partnerships more than almost any other experimental. These sporty two- and four-seat kit airplanes offer performance per dollar that certified singles can’t touch, and they come backed by one of the largest, most active builder communities in aviation — so there is always knowledge, parts, and help close at hand. Sharing a finished RV lets a group of sport pilots fly something that climbs, cruises, and rolls far beyond its modest fuel burn for a fraction of the per-person cost.',
+    'The experimental nature is the real cost advantage: owners can perform much of their own maintenance, which keeps a shared RV remarkably inexpensive to run. The trade-off a partnership should square away up front is the paperwork — confirm the operating limitations and that insurance works cleanly for multiple owners and, where relevant, the builder. Settle that, and an RV is one of the most rewarding and affordable airplanes a small group can own together.',
+  ],
+  grumman: [
+    'Grumman’s light singles make excellent first partnerships. The four-seat AA-5 line — the Traveler, Cheetah, and Tiger — pairs sliding-canopy character and sporty, responsive handling with bonded aluminum airframes and genuinely simple systems. There is little to go wrong and little that is expensive to fix, which is exactly what a group of newer co-owners wants in a shared airplane they can learn on and travel in.',
+    'Simplicity drives the cost story: clean, slippery airframes and uncomplicated systems keep both fuel and shared maintenance bills low, so the monthly-per-partner figure stays small even after hangar and insurance are split. Within the line, the Tiger is the faster, stronger climber and the Cheetah the more economical — either way a partnership gets the same open-canopy fun at one of the lowest costs of entry in four-seat ownership.',
+  ],
+}
+
+/**
+ * Resolve a partnership make slug to its 2-paragraph "About co-owning a {Make}" overview
+ * prose, or null when the make isn't curated (→ no About section). Mirrors
+ * `getPartnershipMakeFaqs`.
+ */
+export function getPartnershipMakeOverview(slug: string): string[] | null {
+  return PARTNERSHIP_MAKE_OVERVIEWS[slug.toLowerCase()] ?? null
+}
+
 /**
  * Per-state co-ownership FAQs for `/partnerships/state/[state]`, keyed by lowercase
  * USPS code (the route's slug). Curated high-GA-activity states only — the priority

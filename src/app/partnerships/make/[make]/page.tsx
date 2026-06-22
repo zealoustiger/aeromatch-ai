@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 import { Plane, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
-import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, SITE_URL } from '@/lib/seo'
+import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
@@ -56,6 +56,11 @@ export default async function MakePartnershipsPage({ params }: Props) {
   const faqJsonLd = buildFaqPageJsonLd(faqs ?? undefined, {
     url: `${SITE_URL}/partnerships/make/${entry.slug}`,
   })
+
+  // Curated "About co-owning a {Make}" prose (8 makes) — unique editorial content
+  // depth for the INDEXING stage. Distinct in wording from the FAQs above. Non-
+  // curated makes get null → render nothing.
+  const overview = getPartnershipMakeOverview(entry.slug)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -108,6 +113,22 @@ export default async function MakePartnershipsPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* About co-owning a {Make} — unique, evergreen editorial prose (content depth
+          for the INDEXING stage). Curated makes only; absent → nothing renders.
+          Distinct in wording from the co-ownership FAQ below. */}
+      {overview && overview.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            About co-owning a {entry.name}
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+            {overview.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
 
       <Suspense fallback={<ListSkeleton />}>
         <PartnershipList filters={{ make: entry.filter }} />
