@@ -138,8 +138,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
 
   return (
     <>
-      {/* Extra bottom padding on mobile so sticky bar doesn't overlap content */}
-      <div className="mx-auto max-w-4xl px-4 py-10 pb-24 sm:px-6 lg:px-8 lg:pb-10">
+      {/* Warm cream page surface (Etsy × Airbnb token sweep, slice 5). The sticky
+          mobile ContactBar stays OUTSIDE this wrap, exactly as /aircraft keeps its
+          CompareTray outside the ch-surface wrap. */}
+      <div className="ch-surface min-h-screen">
+        {/* Extra bottom padding on mobile so sticky bar doesn't overlap content */}
+        <div className="mx-auto max-w-4xl px-4 py-10 pb-24 sm:px-6 lg:px-8 lg:pb-10">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(listingJsonLd(p)) }}
@@ -175,7 +179,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
               imageIsPlaceholder={p.image_is_placeholder}
             />
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="ch-panel p-6">
               {/* Badges */}
               <div className="mb-4 flex flex-wrap gap-2">
                 <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
@@ -218,7 +222,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
 
             {/* Requirements */}
             {(p.min_hours || (p.ratings_required && p.ratings_required.length > 0)) && (
-              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="ch-panel p-6">
                 <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Pilot Requirements</h2>
                 <dl className="grid gap-3 sm:grid-cols-2">
                   {p.min_hours && (
@@ -249,7 +253,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
           {/* Sidebar — costs shown first on mobile, beside content on desktop */}
           <div className="space-y-4 order-first lg:order-last">
             {/* Cost card */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="ch-panel p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Costs</h2>
               <dl className="space-y-3">
                 {p.buy_in_price && (
@@ -293,7 +297,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
             />
 
             {/* Structure card */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="ch-panel p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Structure</h2>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -331,7 +335,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
             <TrustBadge p={p} variant="checklist" />
 
             {/* Contact card — desktop only (mobile uses sticky bar) */}
-            <div className="hidden rounded-xl border border-sky-200 bg-sky-50 p-5 lg:block">
+            <div className="hidden rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm lg:block">
               <h2 className="mb-1 text-sm font-semibold text-sky-800">Interested?</h2>
               {p.contact_name && (
                 <p className="mb-3 text-sm text-sky-700">Contact {p.contact_name}</p>
@@ -356,6 +360,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
             when there are no sensible matches. */}
         <div className="mt-10">
           <SimilarListings current={p} />
+        </div>
         </div>
       </div>
 
