@@ -8,7 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
-import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, getForSaleStateFaqs, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, getForSaleStateFaqs, getForSaleStateOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAircraftItemListJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ state: string }> }
@@ -94,6 +94,11 @@ export default async function StateAircraftForSalePage({ params }: Props) {
   const faqs = getForSaleStateFaqs(entry.code)
   const faqJsonLd = buildFaqPageJsonLd(faqs ?? undefined, { url: `${SITE_URL}${path}` })
 
+  // Per-state "Buying an aircraft in {State}" overview prose (curated high-GA states
+  // only) — unique editorial content depth for the INDEXING stage, distinct in wording
+  // from the buying FAQs below. Non-curated states get null → no overview section.
+  const overview = getForSaleStateOverview(entry.code)
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       {itemListJsonLd && (
@@ -134,6 +139,22 @@ export default async function StateAircraftForSalePage({ params }: Props) {
           .
         </p>
       </div>
+
+      {/* Buying an aircraft in {State} — unique, evergreen editorial prose (content
+          depth for the INDEXING stage). Curated high-GA states only; absent → nothing
+          renders. Distinct in wording from the buying FAQs near the page bottom. */}
+      {overview && overview.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            Buying an aircraft in {entry.name}
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+            {overview.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Email-alerts capture (slice 1) — inline, no account required. */}
       <AlertSignup context={entry.name} sourcePath={path} />
