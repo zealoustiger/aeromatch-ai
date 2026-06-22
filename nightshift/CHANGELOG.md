@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T00:39:19Z — DRAIN SUMMARY
+- Cycles this run: 6 (PASS 5 / FAIL 1 / ABORT 0)
+- Stopped because: safety cap (6)
+- Run: 20260621T234658Z (manual NS_FORCE)
+
 ## 2026-06-22T00:30Z — PASS — partnership-make-faq
 - Pages: /partnerships/make/cessna, /partnerships/make/cirrus, /partnerships/make/piper, /partnerships/make/beechcraft, /partnerships/make/mooney, /partnerships/make/diamond, /partnerships/make/vans, /partnerships/make/grumman
 - What: **Each of the 8 make hub pages under Partnerships now has a "Frequently asked questions" section** — three plain-English questions and answers about co-owning that make (why it suits a partnership, which model fits a group, and how the costs split). The answers are written specifically about *sharing* the airplane (distinct from the buying-focused FAQs on the for-sale make pages), drawn from facts about each make — no made-up numbers and no live counts, so they never go stale. The visible answers also feed a hidden FAQPage data block that makes the pages eligible for Google's rich "FAQ" search results. The accordion sits below the listings and above the "Browse other makes" links; everything else on the page is unchanged.
