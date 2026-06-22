@@ -1,3 +1,13 @@
+## 2026-06-22T02:59:00Z — Night Shift run: 6 cycles (PASS 5 / FAIL 1) — rate limited · manual
+
+- PASS — fix-visitor-webhook-204 — visitor-radar beacon returned an invalid body-on-204 and 500'd on every page load (Slack env unset); now returns a clean empty 204, clearing th
+- PASS — aircraft-filter-chips — removable active-filter chips on the /aircraft results header (one per active filter, × removes just that one, Clear all at ≥2)
+- PASS — partnership-state-faq — added genuine, state-specific co-ownership FAQ accordions + FAQPage structured data to the CA/TX/FL (priority) + AZ/CO/WA partnership state pages
+- PASS — partnerships-filter-chips — Added removable active-filter chips (make, state, share type, airport, max monthly, max buy-in) above the Partnerships results, each one-tap 
+- PASS — forsale-state-faq — Added per-state buying FAQ + FAQPage JSON-LD to six /aircraft/for-sale/[state] pages (ca/tx/fl/az/co/wa)
+- cycle produced no verdict (exit 1)
+
+
 # Overnight review — 2026-06-21 (evening drain)
 
 **6 cycles · 5 shipped / 1 failed.** A focused double-shift: half the night deepened our Google footing (real FAQ sections on the make, model, and partnership pages), and the other half finished the planes-for-sale search filters so buyers can finally pin down exactly the plane they want.
