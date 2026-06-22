@@ -69,3 +69,15 @@ export function removeLocalSave(id: string, type: LocalSaveType): void {
   const next = saves.filter((s) => !(s.id === id && s.type === type))
   if (next.length !== saves.length) write(next)
 }
+
+/** Wipe every device-only save. Used by slice 2 after the set has been merged
+ *  into the signed-in user's real account, so it isn't merged again. */
+export function clearLocalSaves(): void {
+  if (!hasWindow()) return
+  try {
+    window.localStorage.removeItem(STORAGE_KEY)
+    window.dispatchEvent(new Event(LOCAL_SAVES_EVENT))
+  } catch {
+    /* disabled storage — fail soft */
+  }
+}

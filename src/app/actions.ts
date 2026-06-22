@@ -266,6 +266,64 @@ export async function toggleSavedListing(
   return { ok: true, saved: true }
 }
 
+/**
+ * Slice 2 of soft-save: merge a logged-out visitor's device-only saves (held in
+ * localStorage) into their real account once they sign in/up. Idempotent and
+ * defensive — the payload comes straight from a client localStorage that could be
+ * tampered with, so we sanitize, dedupe, cap, and skip rows already on the account.
+ */
+export async function mergeDeviceSaves(
+  saves: { id: string; type: string }[],
+) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (!Array.isArray(saves) || saves.length === 0) return { ok: true, merged: 0 }
+
+  // Sanitize: valid types only, well-formed ids, deduped, count-capped.
+  const seen = new Set<string>()
+  const rows = saves
+    .filter(
+      (s): s is { id: string; type: (typeof SAVED_LISTING_TYPES)[number] } =>
+        !!s &&
+        typeof s.id === 'string' &&
+        s.id.length > 0 &&
+        s.id.length <= 100 &&
+        SAVED_LISTING_TYPES.includes(s.type as (typeof SAVED_LISTING_TYPES)[number]),
+    )
+    .filter((s) => {
+      const key = `${s.type}:${s.id}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 200)
+
+  if (rows.length === 0) return { ok: true, merged: 0 }
+
+  // Skip rows already on the account so we never duplicate (no reliance on the
+  // unique-constraint name) and the count we report is the true new-save count.
+  const { data: existing } = await supabase
+    .from('saved_listings')
+    .select('listing_id, listing_type')
+    .eq('user_id', user.id)
+  const existingKeys = new Set(
+    (existing ?? []).map((r) => `${r.listing_type}:${r.listing_id}`),
+  )
+
+  const toInsert = rows
+    .filter((s) => !existingKeys.has(`${s.type}:${s.id}`))
+    .map((s) => ({ user_id: user.id, listing_id: s.id, listing_type: s.type }))
+
+  if (toInsert.length === 0) return { ok: true, merged: 0 }
+
+  const { error } = await supabase.from('saved_listings').insert(toInsert)
+  // 23505 = a concurrent insert beat us to a row; treat the merge as succeeded.
+  if (error && error.code !== '23505') return { error: 'Failed to merge device saves.' }
+  revalidatePath('/saved')
+  return { ok: true, merged: toInsert.length }
+}
+
 export async function getOrCreateThread(partnershipId: string, ownerId: string) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
