@@ -7,10 +7,11 @@ import { Plane, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
+import ModelFaq from '@/components/ModelFaq'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakes, resolveMake, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, type SeoMakeModel } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
-import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ make: string }> }
 
@@ -131,6 +132,10 @@ export default async function MakeForSalePage({ params }: Props) {
     name: `${entry.make} aircraft for sale`,
     url: `${SITE_URL}${path}`,
   })
+  // FAQPage JSON-LD — curated makes carry genuine evergreen make-level Q&As
+  // (entry.faqs); non-curated makes have none, so this is null and nothing
+  // renders. The visible <ModelFaq> below renders the exact same Q&As (parity).
+  const faqJsonLd = buildFaqPageJsonLd(entry.faqs, { url: `${SITE_URL}${path}` })
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -148,6 +153,12 @@ export default async function MakeForSalePage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
       {/* Breadcrumb */}
@@ -270,6 +281,13 @@ export default async function MakeForSalePage({ params }: Props) {
             </Link>
           </div>
         </div>
+      )}
+
+      {/* Per-make FAQ — genuine evergreen make-level Q&As (curated makes only).
+          Unique content depth + FAQPage structured data; mirrors the JSON-LD
+          above 1:1. Reuses the same accordion component as the model pages. */}
+      {entry.faqs && entry.faqs.length > 0 && (
+        <ModelFaq label={entry.make} faqs={entry.faqs} className="mt-4" />
       )}
 
       {/* Buying a plane? — related-guides cross-link block. Additive; no new page.
