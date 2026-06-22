@@ -10,6 +10,7 @@ import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partne
 import PartnershipCard from '@/components/PartnershipCard'
 import {
   getNearbyPartnerships,
+  isAirportIndexable,
   NEAR_RADIUS_NM,
   MIN_NEARBY,
 } from '@/lib/nearbyPartnerships'
@@ -50,11 +51,18 @@ export async function generateMetadata({
   const title = `Aircraft Partnerships at ${airport.name} (${airport.icao})`
   const description = `Find aircraft co-ownership partnerships, leasebacks, and flying shares based at ${airport.name} in ${airport.city}, ${airport.state} — and at nearby airports.`
 
+  // Thin-page guard (GOAL.md INDEXING / no thin pages): only ~9 of the ~17k
+  // airports have a partnership based there; the rest render a thin "no
+  // partnerships based here yet" page. Keep those crawlable (follow) but out of
+  // the index. Same rule the sitemap gates on (getIndexableAirportIcaos).
+  const indexable = await isAirportIndexable(airport.icao)
+
   return {
     title,
     description,
     alternates: { canonical: `${SITE_URL}/airports/${airport.icao.toLowerCase()}` },
     openGraph: { title, description },
+    ...(indexable ? {} : { robots: { index: false, follow: true } }),
   }
 }
 

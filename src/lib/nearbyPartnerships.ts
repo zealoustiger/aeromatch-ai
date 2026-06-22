@@ -206,3 +206,64 @@ export async function getNearAirportSitemapIcaos(): Promise<string[]> {
 export async function getNearAirportHubs(): Promise<NearAirportHub[]> {
   return computeNearAirportHubs()
 }
+
+/**
+ * Indexability rule for the `/airports/[icao]` hub family (one rule, two callers
+ * below). An airport page only carries real content — its "Based at {ICAO}"
+ * section — when >= 1 ACTIVE partnership is based at that airport
+ * (`home_airport === icao`). The `airports` table holds ~17k rows; the vast
+ * majority have no based-here inventory and render a thin "no partnerships based
+ * here yet" page, which is a near-duplicate of every other empty airport. So those
+ * are kept OUT of the sitemap and marked noindex,follow — concentrating crawl
+ * budget on the handful of airport pages with content (GOAL.md INDEXING stage;
+ * no thin/doorway/near-duplicate pages). Airports that show only *nearby* listings
+ * are near-duplicates of the home-airport page; their canonical geo page is the
+ * separately-gated `/partnerships/near/[icao]`. This mirrors the inventory gating
+ * already applied to the make / model / state / near families.
+ */
+
+/**
+ * Sitemap source of truth for `/airports/[icao]`: the lowercase ICAOs of airports
+ * that have >= 1 active partnership based there (and exist in the `airports`
+ * table, so the page resolves 200). Sorted ascending.
+ */
+export async function getIndexableAirportIcaos(): Promise<string[]> {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: parts } = await supabase
+    .from('partnerships')
+    .select('home_airport')
+    .eq('status', 'active')
+  if (!parts || parts.length === 0) return []
+
+  const homeCodes = new Set<string>()
+  for (const p of parts) {
+    if (p.home_airport) homeCodes.add((p.home_airport as string).toUpperCase())
+  }
+  if (homeCodes.size === 0) return []
+
+  // Validate against the airports table — a junk/unknown home_airport would
+  // notFound() on the page, so it must never enter the sitemap (soft-404).
+  const { data: airports } = await supabase
+    .from('airports')
+    .select('icao')
+    .in('icao', [...homeCodes])
+
+  return (airports ?? [])
+    .map((a) => (a.icao as string).toLowerCase())
+    .sort((x, y) => x.localeCompare(y))
+}
+
+/**
+ * Per-page check (same rule as `getIndexableAirportIcaos`): is this airport
+ * index-worthy? True iff >= 1 active partnership is based at it.
+ */
+export async function isAirportIndexable(icao: string): Promise<boolean> {
+  const supabase = await createServerSupabaseClient()
+  const { count } = await supabase
+    .from('partnerships')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .eq('home_airport', icao.toUpperCase())
+  return (count ?? 0) > 0
+}
