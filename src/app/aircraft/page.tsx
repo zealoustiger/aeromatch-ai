@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 
 import { Plane, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
+import ActiveFilterChips from '@/components/ActiveFilterChips'
 import AircraftChipBar from '@/components/AircraftChipBar'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
@@ -119,6 +120,8 @@ export default async function AircraftPage({
 
         {/* Listings */}
         <div className="flex-1">
+          {/* Active-filter chips — removable, one per active filter. */}
+          <ActiveFilterChips params={params} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
             <AircraftSaleList filters={params} />
           </Suspense>
