@@ -316,6 +316,14 @@ export type SeoMakeModel = {
    * combos only; dynamically-discovered combos have none. See MODEL_FAQS.
    */
   faqs?: { q: string; a: string }[]
+  /**
+   * 2 genuine, evergreen narrative paragraphs (model history + lineup positioning
+   * + why it's commonly co-owned), rendered as editorial body copy on the
+   * make+model page. Unique content depth for the INDEXING stage — deliberately
+   * distinct from `specs`/`costToOwn` and the Q&A `faqs`. Curated combos only;
+   * dynamically-discovered combos have none. See MODEL_OVERVIEWS.
+   */
+  overview?: string[]
 }
 
 export const SEO_MAKE_MODELS: SeoMakeModel[] = [
@@ -552,14 +560,114 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
   ],
 }
 
+// ---------------------------------------------------------------------------
+// Per-model "About the {Make} {Model}" overview prose — 2 genuine, evergreen
+// narrative paragraphs per curated make+model, rendered as editorial body copy on
+// the make+model page (`/aircraft/[make]/[model]`). Unique content depth (model
+// history + lineup positioning + the co-ownership angle) to lift these pages above
+// templated, count-only boilerplate in the INDEXING stage — deliberately distinct
+// from the one-line `specs`/`costToOwn` blurbs and the Q&A `MODEL_FAQS`. Keyed by
+// `${makeSlug}/${modelSlug}`. Drawn from the curated copy above + well-known
+// general-aviation history — NO fabricated statistics and NO live listing counts,
+// so the copy never goes stale. Curated combos only; dynamically-discovered combos
+// render no About section (graceful, like the make pages absent from MAKE_OVERVIEWS).
+// ---------------------------------------------------------------------------
+const MODEL_OVERVIEWS: Record<string, string[]> = {
+  'cirrus/sr22': [
+    'The Cirrus SR22 is the airplane that redefined the modern piston single. A four-seat composite cruiser of roughly 310 hp, it pairs a full glass panel with the CAPS whole-airframe parachute — a safety system no rival offered when it arrived — and for years has ranked among the best-selling piston airplanes in the world. Side-yoke controls, big screens, and a genuinely fast cross-country cruise made it the airplane the rest of the industry chased.',
+    'All that capability is expensive to own alone, which is precisely why the SR22 is one of the most commonly co-owned high-performance singles. Splitting the hangar, the higher insurance, and the periodic CAPS parachute repack across three or four partners turns a flagship traveler into a realistic monthly number — and keeps it flown often enough that everyone stays current.',
+  ],
+  'cirrus/sr22t': [
+    'The SR22T is the turbo-normalized member of the Cirrus line — the same composite airframe and CAPS parachute as the SR22, with a turbocharger and oxygen that let it cruise comfortably into the flight levels and the 200-kt range. For pilots who routinely cross high terrain, fly long legs, or want the option to top weather, the turbo transforms what the airframe can do.',
+    'That altitude and speed come with a higher fuel burn and a larger turbo overhaul reserve, so the SR22T rewards owners who actually use its capability. Most are flown by flying clubs and partnerships that split the reserves and insurance three or four ways — the standard way to keep an advanced turbo single both affordable and current.',
+  ],
+  'mooney/m20': [
+    'The Mooney M20 series built its reputation on one idea: speed per dollar. The low, tightly cowled airframe with its signature forward-swept tail slips through the air with far less drag than its peers, posting cruise numbers that embarrass airplanes burning much more fuel. Across decades of refinement — from the early wood-wing models to the long-body Ovation and Acclaim — the M20 has stayed the efficiency benchmark of piston aviation.',
+    'A Mooney is a traveler rather than a trainer: the cabin is snug, the gear retracts, and there are more systems to manage, so many owners arrive after time in fixed-gear singles. The low fuel burn keeps variable costs down, while the retractable gear adds an annual inspection and an insurance line — exactly the kind of fixed cost a partnership spreads comfortably across owners.',
+  ],
+  'beechcraft/bonanza': [
+    'The Beechcraft Bonanza is one of the longest continuously produced airplanes in history, first as the iconic V-tail and later in the conventional straight-tail form. It has always sat at the premium end of the piston single market — fast, refined, and roomy, built to a heavier standard that owners describe as feeling a class above typical trainers. Generations of pilots have regarded it as the benchmark high-performance single.',
+    'That refinement brings traveling-machine running costs: a healthy fuel burn and a serious engine reserve. Co-ownership is the traditional answer, and a Bonanza partnership spreads the hangar, insurance, and reserves so a group can enjoy a genuine cross-country machine without carrying it alone. A pre-purchase inspection by a Bonanza-savvy mechanic is considered essential whichever tail you choose.',
+  ],
+  'cessna/182': [
+    'The Cessna 182 Skylane is the do-everything member of the high-wing Cessna family — more power, more useful load, and more speed than the 172 it resembles, while keeping the same forgiving high-wing manners and fixed gear. With a constant-speed prop and a strong climb, it comfortably carries four people and real baggage out of shorter or higher fields, which has made it a perennial favorite for families and traveling pilots.',
+    'Operating costs sit between a 172 and a complex retractable single, so the 182 is meaningfully more airplane without stepping into twin-class budgets. A partnership keeps the hangar, insurance, and annual manageable while partners split genuine flying hours — and because the type is so widely supported, maintenance stays predictable and resale demand stays deep.',
+  ],
+  'cirrus/sr20': [
+    'The Cirrus SR20 is the entry point to Cirrus ownership — the same composite airframe, CAPS parachute, and modern glass cockpit as the SR22, with a roughly 215-hp engine in place of the bigger six. It was the airplane that launched the Cirrus revolution, and it remains a popular trainer and step-up for pilots who want the full Cirrus experience at a lower running cost.',
+    'Lower fuel burn and a smaller overhaul reserve than the SR22 are the whole point of the SR20, and they make shared ownership especially attractive: a partnership splits the fixed costs so the glass-panel, parachute-equipped ownership experience becomes genuinely affordable. For groups doing training and regional trips rather than high-altitude long hauls, the SR20 is often all the airplane they need.',
+  ],
+  'cessna/172': [
+    'The Cessna 172 Skyhawk is the most-produced airplane ever built and the default first airplane for good reason: a four-seat high wing with docile, forgiving handling, excellent visibility, and a maintenance and parts network unmatched by anything else in aviation. More pilots have learned to fly in a 172 than in any other type, and that familiarity follows the airplane into ownership.',
+    'It is also the most commonly co-owned single in America. Because parts are everywhere and every A&P knows the airplane, a 172 partnership is about as low-drama as ownership gets — splitting the hangar, insurance, and annual across a few partners makes it genuinely cheap per person while keeping a reliable, always-available airplane on the field.',
+  ],
+  'piper/cherokee': [
+    'The Piper Cherokee is the low-wing counterpart to the Cessna 172 — the airplane that anchors Piper’s huge PA-28 family, which also includes the Warrior, Archer, and retractable Arrow. Stable, simple, and forgiving, the Cherokee has been a fixture of flight schools and first-time owners for generations, with one of the largest parts and maintenance networks in general aviation behind it.',
+    'Fixed gear, uncomplicated systems, and deep parts availability make the Cherokee one of the most economical four-seat singles to own and share. It is a frequent choice for a first partnership precisely because maintenance is so predictable — a group can split the hangar and annual on an airplane that rarely surprises anyone with a big bill.',
+  ],
+  'beechcraft/baron': [
+    'The Beechcraft Baron is the twin-engine sibling of the Bonanza — a cabin-class, six-seat traveler cruising north of 190 kt, and the natural step into piston twins for pilots who want a second engine for redundancy and range. Built to the same premium Beechcraft standard, it has been the aspirational light twin for decades, prized for its handling and its genuinely capable cross-country performance.',
+    'A twin doubles the engines and the maintenance — two overhaul reserves plus higher insurance — which is exactly why Barons are so often co-owned. A group of partners is what makes those costs realistic, spreading the two reserves and the twin-rated insurance so a serious all-weather traveler becomes attainable for pilots who could never justify it alone.',
+  ],
+  'piper/arrow': [
+    'The Piper Arrow is the retractable-gear member of the PA-28 family — a Cherokee airframe with a constant-speed prop and folding gear, making it one of the most common complex trainers in the world. Countless pilots have earned their complex and commercial time in an Arrow, and its predictable systems and strong parts supply have kept it a staple of flight schools and step-up owners alike.',
+    'It is the logical next airplane for a pilot who learned in a fixed-gear single and wants to build complex experience without leaping to a high-performance traveler. The retractable gear adds a modest insurance and annual premium over a Cherokee, which a partnership keeps economical while members log the complex hours that move a license forward.',
+  ],
+  'piper/comanche': [
+    'The Piper Comanche is the PA-24 — a fast, low-wing retractable single from the era before the Cherokee, with a 160+ kt cruise and big tanks that make it a genuine long-legged traveler. Pilots who fly Comanches tend to love them fiercely: they punch well above their fuel burn and cover distance with a refinement that belies their modest operating cost.',
+    'Production ended decades ago, so some parts are sourced through active type clubs and specialists rather than off the shelf — which is why so many Comanches are flown in partnerships with a shared maintenance kitty. A knowledgeable mechanic and a pooled parts fund make the airframe very manageable, and the group gets a remarkable amount of airplane for the money.',
+  ],
+  'bellanca/citabria': [
+    'The Bellanca Citabria is a two-seat tandem taildragger — fabric-covered, aerobatic-capable, and pure stick-and-rudder joy. Its name is famously "airbatic" spelled backward, a nod to the mild aerobatics it was built to perform. Light, simple, and endlessly charming, it has introduced generations of pilots to tailwheel flying and gentle aerobatics alike.',
+    'It is cheap to fly and a blast to own — the main costs are fabric upkeep and a tailwheel-rated insurance policy. Partnerships are common among tailwheel and aerobatic pilots who share the fun and the upkeep, and the Citabria is itself a wonderful airplane in which to earn the tailwheel endorsement that flying it requires.',
+  ],
+  'vans/rv': [
+    'Van’s Aircraft RV series sits at the heart of the experimental amateur-built movement. Sold as kits and built by their owners, the sporty two- and four-seat RVs deliver performance per dollar that certified airplanes simply cannot match, backed by one of the largest and most active builder communities in aviation. An RV grin at a fly-in is a genuine cultural fixture.',
+    'Because they are experimental, owners can perform much of their own maintenance, which keeps costs low and knowledge high. Partnerships are common among builders and sport pilots — sharing a finished RV spreads the cost while the group enjoys an airplane that climbs, cruises, and rolls far beyond its modest fuel burn. Just confirm the operating limitations and insurance work for multiple owners.',
+  ],
+  'cessna/150': [
+    'The Cessna 150 is the classic two-seat high-wing trainer — cheap to run, simple to maintain, and famously forgiving. Together with its near-identical successor the 152, it taught generations of pilots to fly, and its small engine and light airframe keep the running costs about as low as airplane ownership gets.',
+    'For a budget-minded owner it is one of the most attainable ways into the air, and a partnership splits an already-modest hangar and annual even further. Two seats and a small engine mean small bills across the board — an ideal first airplane to own with a friend or two while you build hours.',
+  ],
+  'piper/cub': [
+    'The Piper Cub is the yellow taildragger most people picture when they imagine light aviation — fabric, tandem seating, slow, simple, and endlessly charming. It is bought with the heart as much as the head, a piece of aviation history that is still genuinely delightful to fly low and slow on a calm evening.',
+    'Despite its iconic status, a Cub is genuinely cheap to fly; fabric upkeep and a tailwheel insurance policy are the main costs. Shared ownership is a natural fit — it keeps a classic in the air and in regular use — and the Cub is one of the most rewarding airplanes in which to learn the stick-and-rudder skills its tailwheel endorsement requires.',
+  ],
+  'cessna/180': [
+    'The Cessna 180 is the tailwheel high-wing hauler that built Cessna’s backcountry reputation — rugged, float-capable, and blessed with a strong useful load. Long before purpose-built bush planes were fashionable, the 180 (and its 185 sibling) was the airplane that flew people and gear into places paved runways never reached, and it remains a favorite for adventure and utility flying.',
+    'It is a backcountry favorite that holds its value well — a durable airframe that, tailwheel insurance and big tundra tires aside, rewards an owner for years. Partnerships split the hangar and the adventures, and because the type demands real tailwheel proficiency, a group that flies it regularly stays sharp on an airplane worth staying sharp for.',
+  ],
+  'piper/saratoga': [
+    'The Piper Saratoga is the six-seat flagship of the PA-32 family — a big-cabin, big-useful-load single built in both fixed- and retractable-gear forms. With a genuine third row and the load to fill it, the Saratoga is a true family and IFR traveling machine, the airplane Piper owners step up to when four seats are no longer enough.',
+    'Fuel burn matches the big cabin, so a Saratoga is not the cheapest single to run — which is exactly why co-ownership across a few families is the classic way to keep one affordable. A partnership spreads the fixed costs of a genuine six-seater so each family flies a capable traveler for a sensible monthly share.',
+  ],
+  'grumman/aa-1': [
+    'The Grumman AA-1 is a two-seat low-wing single with a sliding canopy and a sporty, responsive feel — the little sports car of the trainer ramp. Light and quick on the controls thanks to its bonded aluminum airframe, it stands apart from the typical two-seat trainer and has earned a devoted following among pilots who want something with a bit more character.',
+    'Ownership is simple and economical: the bonded airframe and uncomplicated systems keep weight and maintenance costs low, which makes the AA-1 an easy airplane to share. Many owners enjoy it as a step beyond basic trainers — just get a checkout from someone who knows the type, since it flies a little more crisply than a 150.',
+  ],
+  'grumman/aa-5': [
+    'The Grumman AA-5 family — the Traveler, Cheetah, and Tiger — brings the brand’s sliding-canopy character to a four-seat airframe. Low-drag and quick for the fuel burn, with a roughly 130-kt cruise, these airplanes developed a loyal following for being light, fast, and simply fun to fly, with the open-canopy taxi that defines a Grumman.',
+    'Simplicity is the ownership story: clean, slippery airframes and uncomplicated systems keep both fuel and shared maintenance costs low, which makes an AA-5 an excellent first-partnership single. Within the line the Tiger is the faster, stronger climber and the Cheetah the more economical — both delivering the same sporty character that owners fall for.',
+  ],
+  'robinson/r44': [
+    'The Robinson R44 is the world’s most popular civil helicopter — a four-seat piston machine cruising around 110 kt, widely used for training, personal travel, and utility work. Affordable to buy relative to turbine helicopters and supported by a vast global network, the R44 is the airplane-equivalent default for pilots entering rotary ownership.',
+    'Helicopter ownership runs on a scheduled overhaul clock — the airframe and major components carry a 2,200-hour/12-year overhaul — which makes a partnership almost essential. Splitting that overhaul reserve and the insurance across owners, and budgeting per-hour for it from the start, is how most R44s are flown and what keeps rotary ownership realistic.',
+  ],
+}
+
 export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel | null {
   const m = makeSlug.toLowerCase()
   const md = modelSlug.toLowerCase()
   const entry = SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md)
   if (!entry) return null
-  // Attach the curated FAQs (if any) without mutating the source array.
-  const faqs = MODEL_FAQS[`${entry.makeSlug}/${entry.modelSlug}`]
-  return faqs ? { ...entry, faqs } : entry
+  // Attach the curated FAQs + "About" overview prose (if any) without mutating the
+  // source array. Mirrors how resolveMake attaches MAKE_FAQS + MAKE_OVERVIEWS.
+  const key = `${entry.makeSlug}/${entry.modelSlug}`
+  const faqs = MODEL_FAQS[key]
+  const overview = MODEL_OVERVIEWS[key]
+  return faqs || overview
+    ? { ...entry, ...(faqs && { faqs }), ...(overview && { overview }) }
+    : entry
 }
 
 // ---------------------------------------------------------------------------
