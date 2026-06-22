@@ -11,6 +11,7 @@ import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 
 import PartnershipTabs from '@/components/PartnershipTabs'
+import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 import Link from 'next/link'
@@ -122,6 +123,10 @@ export default async function PartnershipsPage({
           <Suspense fallback={<PartnershipListSkeleton />}>
             <PartnershipList filters={params} />
           </Suspense>
+
+          {/* Cross-sell to the other marketplace type (planes for sale).
+              Make-aware: carries the active make filter through. */}
+          <MarketplaceCrossSell from="partnerships" make={params.make} className="mt-10" />
         </div>
       </div>
     </div>
