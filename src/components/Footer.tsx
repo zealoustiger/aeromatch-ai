@@ -27,6 +27,7 @@ const guideLinks = [
   { href: '/guides/how-to-find-aircraft-partners', label: 'How to find partners' },
   { href: '/guides/aircraft-pre-purchase-inspection', label: 'Pre-purchase inspection' },
   { href: '/guides/aircraft-title-escrow-and-closing', label: 'Title, escrow & closing' },
+  { href: '/listing-quality', label: 'What the badges mean' },
 ]
 
 const companyLinks = [
