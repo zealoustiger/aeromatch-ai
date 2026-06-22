@@ -74,7 +74,7 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 - **[P2][want] Homepage free-text / AI search box.** NL box ("Cirrus SR-22s near me under $400/mo") that auto-populates results; show 2-3 example queries inline to teach phrasing. Extends the AI-search item; this slice = put it on the homepage beside the airport search.
 
 **Search results UX:**
-- **[P2][want] Blend result types + cross-sell.** Instead of hard tabs, blend partnerships / planes-for-sale / pilots; when viewing one, surface a prominent side panel upselling the other two with relevant results.
+- **[P2][want] Blend result types + cross-sell.** Instead of hard tabs, blend partnerships / planes-for-sale / pilots; when viewing one, surface a prominent side panel upselling the other two with relevant results. — **slice 1 ✅ SHIPPED 2026-06-22T11:09Z** (make-aware cross-sell card at the bottom of /partnerships + /aircraft). — **slice 2 ✅ SHIPPED 2026-06-22T11:26Z** (real, make-aware live count on the card — "Browse 251 Cirrus aircraft for sale" / "See 6 Cessna co-ownership partnerships"; hidden when 0; `countForSale`/`countActivePartnerships`). **Next slice: a sticky side panel surfacing 2-3 actual sample listings from the other marketplace; eventually blend the optional third "pilots" type.**
 - **[P2][want] Make "Save this search" prominent in results** for both for-sale and partnerships (saving a listing is discoverable; saving a search isn't).
 
 **Identity & account:**
