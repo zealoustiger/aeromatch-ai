@@ -15,8 +15,14 @@ git config --global --add safe.directory "$APP" 2>/dev/null || true
 git config --global user.email "nightshift@clubhanger.local" 2>/dev/null || true
 git config --global user.name  "ClubHanger Night Shift" 2>/dev/null || true
 
-timeout --signal=INT "${NS_DIGEST_TIMEOUT:-600}" \
-  claude --dangerously-skip-permissions --output-format json \
-         -p "$(cat "$APP/nightshift/DIGEST_TASK.md")" \
-  > /tmp/digest.out 2> /tmp/digest.err
-echo "digest exit $?"
+# Feed the prompt via STDIN (with `-p` and no arg): the prompt begins with `---`
+# frontmatter, which breaks claude when passed as a -p argument (it exits 1 with no
+# output). Same fix the per-cycle drain uses. Persist output to the state dir.
+STATE="${NS_STATE_DIR:-/home/night/state}"
+printf '%s' "$(cat "$APP/nightshift/DIGEST_TASK.md")" | \
+  timeout --signal=INT "${NS_DIGEST_TIMEOUT:-600}" \
+    claude --dangerously-skip-permissions --output-format json -p \
+    > "$STATE/digest.out" 2> "$STATE/digest.err"
+rc=${PIPESTATUS[1]}
+echo "digest exit $rc"
+exit "$rc"
