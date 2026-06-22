@@ -5,9 +5,51 @@ import { Search, ArrowRight } from 'lucide-react'
 import SeekerList from '@/components/SeekerList'
 import PartnershipTabs from '@/components/PartnershipTabs'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import ModelFaq from '@/components/ModelFaq'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
+import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
+
+// Unique, evergreen content depth for this priority seed page (STAGE=INDEXING).
+// The seeker side of the marketplace is frequently empty (few/no pilots have
+// posted a "seeking" listing yet), which left the page thin and not index-worthy.
+// This editorial prose explains what the seeking side IS so the page carries real,
+// substantively-unique value regardless of how many seeker rows exist. NO fabricated
+// statistics and NO live counts, so the copy stays accurate and never goes stale.
+// Intentionally distinct in wording from SEEKING_FAQS below.
+const SEEKING_OVERVIEW: string[] = [
+  'Most aircraft-partnership searches start from the owner side: someone already has a plane and wants to fill an empty seat in the ownership group. A "seeking" listing flips that around. Instead of waiting for exactly the right available share to appear, a pilot posts what they are after — the kind of aircraft they want to fly, their mission, their budget, and the airport they want to base out of — so owners forming a group can come to them.',
+  'Posting a seeking listing means you get found rather than constantly refreshing the search. Co-ownership groups often come together before an aircraft is even bought, and owners with an open share regularly look here for a qualified partner who fits their mission and home field. A strong listing makes that match easy: say what ratings and roughly how many hours you hold, the makes and models you are interested in, your monthly or buy-in budget, and how far you are willing to travel from home base.',
+  'The seeking side works best alongside the available partnerships — browse the open shares to see what co-ownership looks like in your area, then post your own listing so the right owner can reach you. ClubHanger is free to search and free to post, and contact happens on-platform, so you can talk to a prospective partner without handing out your personal details up front.',
+]
+
+// Curated, evergreen FAQ for the seeking page — genuine Q&As a prospective co-owner
+// actually asks. Rendered as a visible accordion AND emitted as FAQPage JSON-LD, so
+// the visible text must match the structured data 1:1 (ModelFaq + buildFaqPageJsonLd
+// share this same array). No fabricated stats / live counts → never goes stale.
+const SEEKING_FAQS: { q: string; a: string }[] = [
+  {
+    q: 'What is a "seeking" listing on ClubHanger?',
+    a: 'It is a post by a pilot who is looking to join or form an aircraft co-ownership group, rather than an owner advertising an existing share. You describe the aircraft you want, your mission, your budget, and your home airport, and owners forming a partnership can reach out to you.',
+  },
+  {
+    q: 'Who should post a seeking listing?',
+    a: 'Any pilot who wants to share the cost of an aircraft but does not yet have a partnership lined up — whether you are buying your first plane, stepping up to something faster, building time, or just want to fly more for less. It is also useful if you have an aircraft in mind and want partners before you buy.',
+  },
+  {
+    q: 'What should I include to attract a good partnership?',
+    a: 'The listings that get the best responses are specific: the makes or models you would consider, your ratings and roughly how many hours you hold, your monthly or buy-in budget, your home or preferred base airport, and how far you are willing to travel. A short note on how you intend to use the aircraft helps owners judge whether you fit their group.',
+  },
+  {
+    q: 'How is this different from browsing available partnerships?',
+    a: 'Available partnerships are open shares posted by owners who already have an aircraft. A seeking listing is the reverse — it advertises you to those owners. Many pilots do both: browse the available shares for a direct fit, and post a seeking listing so the right owner can find them when a new share opens up.',
+  },
+  {
+    q: 'Is it free to post a seeking listing?',
+    a: 'Yes. ClubHanger is free to search and free to post. Contact between pilots happens on-platform, so you can start a conversation with a prospective partner without publishing your personal contact details.',
+  },
+]
 
 export const metadata: Metadata = {
   title: 'Pilots Seeking Aircraft Partnerships',
@@ -42,6 +84,11 @@ export default async function SeekingPartnershipsPage({
     url: `${SITE_URL}/partnerships/seeking`,
   })
 
+  // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
+  const faqJsonLd = buildFaqPageJsonLd(SEEKING_FAQS, {
+    url: `${SITE_URL}/partnerships/seeking`,
+  })
+
   // The make hubs this page should reach so it isn't an internal dead-end.
   const makeLinks = SEO_MAKES.slice(0, 3)
 
@@ -51,6 +98,12 @@ export default async function SeekingPartnershipsPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
 
@@ -82,9 +135,29 @@ export default async function SeekingPartnershipsPage({
 
       <PartnershipTabs active="seeking" />
 
+      {/* About — unique, evergreen editorial prose (content depth for the INDEXING
+          stage). Distinct in wording from the FAQ below. */}
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="mb-3 text-base font-semibold text-slate-900">
+          About pilots seeking aircraft partnerships
+        </h2>
+        <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+          {SEEKING_OVERVIEW.map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
+        </div>
+      </section>
+
       <Suspense fallback={<SeekerListSkeleton />}>
         <SeekerList filters={params} fallbackPartnerships={railPartnerships} />
       </Suspense>
+
+      {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+      <ModelFaq
+        label="Pilots seeking partnerships"
+        faqs={SEEKING_FAQS}
+        className="mt-12"
+      />
 
       {/* Cross-links so crawlers (and pilots) reach the partnership hub families
           from here — this page used to be an internal dead-end. */}
