@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react'
+import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight, Calculator, BookOpen, FileText, TrendingUp } from 'lucide-react'
 import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
 import HomeRails from '@/components/HomeRails'
@@ -133,6 +133,55 @@ const exploreCards = [
   },
 ]
 
+// Free guides & tools — in-content internal links from the homepage (highest-authority
+// page) to the priority content seed pages and the rest of the guides/tools families.
+// Footer already links these, but in-content links from the homepage carry more crawl
+// weight (STAGE=INDEXING). Copy mirrors each page's real description — no fabricated claims.
+const resources = [
+  {
+    href: '/tools/cost-calculator',
+    icon: Calculator,
+    tag: 'Tool',
+    title: 'Cost calculator',
+    desc: 'See the true monthly and per-hour cost of a co-ownership share vs. renting or owning outright.',
+  },
+  {
+    href: '/guides/aircraft-co-ownership',
+    icon: BookOpen,
+    tag: 'Guide',
+    title: 'How co-ownership works',
+    desc: 'A plain-English walkthrough of how 2–4 pilots jointly buy, schedule, and split the cost of an aircraft.',
+  },
+  {
+    href: '/guides/cost-of-aircraft-co-ownership',
+    icon: DollarSign,
+    tag: 'Guide',
+    title: 'What it really costs',
+    desc: 'Buy-in, fixed, and hourly costs broken down — with a worked Cessna 172 example and honest estimate ranges.',
+  },
+  {
+    href: '/guides/how-to-find-aircraft-partners',
+    icon: Users,
+    tag: 'Guide',
+    title: 'How to find partners',
+    desc: 'Where to look and how to vet co-owners so you end up with a partnership that actually works.',
+  },
+  {
+    href: '/guides/aircraft-partnership-agreement',
+    icon: FileText,
+    tag: 'Guide',
+    title: 'Partnership agreements',
+    desc: 'What to put in writing — scheduling, expenses, buy-outs — before you share a plane.',
+  },
+  {
+    href: '/tools/earnings-calculator',
+    icon: TrendingUp,
+    tag: 'Tool',
+    title: 'Earnings calculator',
+    desc: 'Model the monthly offset and break-even of offering shares in your aircraft.',
+  },
+]
+
 export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
@@ -221,6 +270,46 @@ export default function HomePage() {
                 <h3 className="mb-1.5 text-base font-semibold text-slate-900">{title}</h3>
                 <p className="text-sm leading-relaxed text-slate-500">{desc}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── GUIDES & TOOLS — in-content internal links to the content seed pages ── */}
+      <section className="border-t border-slate-100 bg-slate-50 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Free guides &amp; tools</h2>
+              <p className="mt-2 text-base text-slate-500">
+                Everything you need to plan a partnership — what it costs, how to find partners, and what to put in writing.
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-4 text-sm font-semibold">
+              <Link href="/guides" className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-700">
+                All guides <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/tools" className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-700">
+                All tools <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {resources.map(({ href, icon: Icon, tag, title, desc }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50">
+                    <Icon className="h-5 w-5 text-sky-600" />
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{tag}</span>
+                </div>
+                <h3 className="text-base font-semibold text-slate-900 group-hover:text-sky-700">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500">{desc}</p>
+              </Link>
             ))}
           </div>
         </div>
