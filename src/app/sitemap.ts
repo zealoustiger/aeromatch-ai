@@ -4,40 +4,25 @@ import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInvento
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 import { getNearAirportSitemapIcaos, getIndexableAirportIcaos } from '@/lib/nearbyPartnerships'
 
+// Largest valid Date from a set of ISO/date strings, ignoring null/undefined/unparseable
+// values. Used to derive an honest, data-derived `lastmod` for the aggregation pages
+// (a make/state/airport page's content IS its current listing set, so "when the data last
+// changed" is its real last-modified date). Returns undefined when nothing is parseable, so
+// the caller omits `lastModified` rather than faking a build-time "now".
+function maxDate(...vals: (string | null | undefined)[]): Date | undefined {
+  const times = vals
+    .filter((v): v is string => !!v)
+    .map((v) => new Date(v).getTime())
+    .filter((t) => !Number.isNaN(t))
+  return times.length ? new Date(Math.max(...times)) : undefined
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticPages: MetadataRoute.Sitemap = [
-    { url: SITE_URL, changeFrequency: 'daily', priority: 1 },
-    { url: `${SITE_URL}/partnerships`, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${SITE_URL}/partnerships/seeking`, changeFrequency: 'hourly', priority: 0.8 },
-    { url: `${SITE_URL}/partnerships/browse`, changeFrequency: 'daily', priority: 0.6 },
-    { url: `${SITE_URL}/aircraft`, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${SITE_URL}/aircraft/browse`, changeFrequency: 'daily', priority: 0.6 },
-    { url: `${SITE_URL}/tools`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/tools/cost-calculator`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/tools/earnings-calculator`, changeFrequency: 'monthly', priority: 0.6 },
-    // Guides (content / informational-intent pillar pages)
-    { url: `${SITE_URL}/guides`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/cost-of-aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/aircraft-partnership-agreement`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/leaseback-vs-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/how-to-find-aircraft-partners`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/aircraft-pre-purchase-inspection`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/guides/aircraft-title-escrow-and-closing`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.3 },
-  ]
-
-  const statePages: MetadataRoute.Sitemap = STATE_CODES.map((code) => ({
-    url: `${SITE_URL}/partnerships/state/${code.toLowerCase()}`,
-    changeFrequency: 'daily' as const,
-    priority: 0.7,
-  }))
-
-  const makePages: MetadataRoute.Sitemap = SEO_MAKES.map(({ slug }) => ({
-    url: `${SITE_URL}/partnerships/make/${slug}`,
-    changeFrequency: 'daily' as const,
-    priority: 0.7,
-  }))
+  // Data-derived "last changed" timestamps (set inside the try below). These reflect when
+  // the underlying marketplace data last changed — NOT the deploy time — so they stay stable
+  // across builds with no data change (honest, non-gameable freshness; not per-deploy churn).
+  let partnershipsLastMod: Date | undefined
+  let aircraftLastMod: Date | undefined
 
   let listingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
@@ -54,6 +39,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from('partnerships')
       .select('id, updated_at')
       .eq('status', 'active')
+
+    // Partnership-family freshness = newest active-partnership `updated_at` (computed from
+    // the rows we already fetch here — no extra query).
+    partnershipsLastMod = maxDate(...(listings ?? []).map((l) => l.updated_at))
+
+    // Aircraft-family freshness = newest active for-sale row. `aircraft_for_sale` has no
+    // `updated_at`, so use the later of max(`last_seen_at`) (ingest re-saw the listing) and
+    // max(`created_at`) (newly ingested). Two tiny `limit 1` queries — cheap at build.
+    const [{ data: acSeen }, { data: acCreated }] = await Promise.all([
+      supabase
+        .from('aircraft_for_sale')
+        .select('last_seen_at')
+        .eq('status', 'active')
+        .not('last_seen_at', 'is', null)
+        .order('last_seen_at', { ascending: false })
+        .limit(1),
+      supabase
+        .from('aircraft_for_sale')
+        .select('created_at')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1),
+    ])
+    aircraftLastMod = maxDate(acSeen?.[0]?.last_seen_at, acCreated?.[0]?.created_at)
 
     listingPages = (listings ?? []).map((l) => ({
       url: `${SITE_URL}/partnerships/${l.id}`,
@@ -73,6 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const airportIcaos = await getIndexableAirportIcaos()
     airportPages = airportIcaos.map((icao) => ({
       url: `${SITE_URL}/airports/${icao}`,
+      lastModified: partnershipsLastMod,
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
@@ -85,6 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const nearIcaos = await getNearAirportSitemapIcaos()
     nearAirportPages = nearIcaos.map((icao) => ({
       url: `${SITE_URL}/partnerships/near/${icao}`,
+      lastModified: partnershipsLastMod,
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
@@ -105,6 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       counts[i] > 0
         ? [{
             url: `${SITE_URL}/aircraft/${e.makeSlug}/${e.modelSlug}`,
+            lastModified: aircraftLastMod,
             changeFrequency: 'daily' as const,
             priority: 0.8,
           }]
@@ -123,6 +135,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
     makePages2 = [...liveMakeSlugs].map((makeSlug) => ({
       url: `${SITE_URL}/aircraft/${makeSlug}`,
+      lastModified: aircraftLastMod,
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
@@ -136,6 +149,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const intersections = await getInventoryMakeModelStates()
     makeModelStatePages = intersections.map(({ entry, stateSlug: slug }) => ({
       url: `${SITE_URL}/aircraft/${entry.makeSlug}/${entry.modelSlug}/${slug}`,
+      lastModified: aircraftLastMod,
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
@@ -152,14 +166,60 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       stateCounts[i] > 0
         ? [{
             url: `${SITE_URL}/aircraft/for-sale/${stateSlug(STATE_NAMES[code])}`,
+            lastModified: aircraftLastMod,
             changeFrequency: 'daily' as const,
             priority: 0.8,
           }]
         : []
     )
   } catch {
-    // Supabase unavailable at build time — ship static pages only
+    // Supabase unavailable at build time — ship the static + constant-list pages below
+    // (without the data-derived `lastModified`). No URLs are dropped vs a successful build.
   }
+
+  // The homepage surfaces both marketplaces, so its freshness = the later of the two.
+  const siteLastMod = maxDate(
+    partnershipsLastMod?.toISOString(),
+    aircraftLastMod?.toISOString()
+  )
+
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: SITE_URL, lastModified: siteLastMod, changeFrequency: 'daily', priority: 1 },
+    { url: `${SITE_URL}/partnerships`, lastModified: partnershipsLastMod, changeFrequency: 'hourly', priority: 0.9 },
+    { url: `${SITE_URL}/partnerships/seeking`, lastModified: partnershipsLastMod, changeFrequency: 'hourly', priority: 0.8 },
+    { url: `${SITE_URL}/partnerships/browse`, lastModified: partnershipsLastMod, changeFrequency: 'daily', priority: 0.6 },
+    { url: `${SITE_URL}/aircraft`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${SITE_URL}/aircraft/browse`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
+    // Static content pages (tools/guides/about) carry no data-derived date — leaving
+    // `lastModified` unset is more honest than stamping a build-time "now" on unchanged copy.
+    { url: `${SITE_URL}/tools`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/tools/cost-calculator`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/tools/earnings-calculator`, changeFrequency: 'monthly', priority: 0.6 },
+    // Guides (content / informational-intent pillar pages)
+    { url: `${SITE_URL}/guides`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/cost-of-aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-partnership-agreement`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/leaseback-vs-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/how-to-find-aircraft-partners`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-pre-purchase-inspection`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/aircraft-title-escrow-and-closing`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.3 },
+  ]
+
+  const statePages: MetadataRoute.Sitemap = STATE_CODES.map((code) => ({
+    url: `${SITE_URL}/partnerships/state/${code.toLowerCase()}`,
+    lastModified: partnershipsLastMod,
+    changeFrequency: 'daily' as const,
+    priority: 0.7,
+  }))
+
+  const makePages: MetadataRoute.Sitemap = SEO_MAKES.map(({ slug }) => ({
+    url: `${SITE_URL}/partnerships/make/${slug}`,
+    lastModified: partnershipsLastMod,
+    changeFrequency: 'daily' as const,
+    priority: 0.7,
+  }))
 
   return [
     ...staticPages,
