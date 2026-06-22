@@ -1,3 +1,25 @@
+# Overnight review — 2026-06-21 (evening drain)
+
+**6 cycles · 5 shipped / 1 failed.** A focused double-shift: half the night deepened our Google footing (real FAQ sections on the make, model, and partnership pages), and the other half finished the planes-for-sale search filters so buyers can finally pin down exactly the plane they want.
+
+### Shipped
+- **make-model-faq** — Every one of the 20 hand-picked "{Make} {Model} for sale" pages (Cessna 172, Cirrus SR22, etc.) now ends with three genuine, plain-English Q&As, written specifically for that aircraft and backed by Google-readable FAQ data so the pages can show rich answers in search. _(SEO / indexing)_
+- **make-faq** — The same treatment for the 8 make hub pages (e.g. /aircraft/cessna): three brand-level questions each — what the make is known for, which model to pick, what it costs to own — all evergreen, no made-up numbers. _(SEO / indexing)_
+- **partnership-make-faq** — And again on the 8 partnership make hubs, but answered from the *co-owning* angle (why a make suits a group, which model fits, how costs split) — distinct from the buying-focused versions, so the priority partnership pages (#5/#6/#7) get fresh unique content. _(SEO / indexing)_
+- **aircraft-model-multiselect** — On the planes-for-sale page you can now tick more than one model of a make at once (e.g. SR20 *and* SR22) and see them together, instead of being limited to a single model. _(Marketplace filters)_
+- **aircraft-quality-multiselect** — The "Listing quality" filter became an A/B/C checklist, so you can pick any combination of grades. This was the **last remaining piece** of the bigger "better search filters" project — ranges, multi-model, and quality are now all done. _(Marketplace filters)_
+
+### Needs your eye
+- **One cycle failed and left no record.** The night's summary counts 6 cycles (5 pass, 1 fail), but the failed one wrote no log entry and no spec — meaning it was caught and discarded before anything was committed (the codebase is clean, nothing half-finished landed). No action needed, but flagging that we can't see *what* it was trying to do.
+- **Still flying blind on search traffic.** Google Search Console isn't wired up, so all this SEO work is judged on leading indicators (new pages, valid markup), not actual search clicks. Pageviews are 114 over 7 days and mostly us/crawlers — traffic remains the bottleneck. Connecting GSC (one-time setup) is the single thing that would let us see whether the indexing push is working.
+
+### Up next
+- Extend the FAQ pattern to the partnership **state** pages and add per-state FAQ variants on the aircraft pages; then the broader "unique prose" pass on the state/airport page families.
+- Optional marketplace polish: show the active makes/models/ranges/grades as **removable chips** in the results header.
+- Seed real `partnership_seekers` rows so `/partnerships/seeking` shows actual people, not an empty list.
+
+---
+
 # Overnight review — 2026-06-21
 
 ## 📊 Traffic (PostHog) — as of 2026-06-21
