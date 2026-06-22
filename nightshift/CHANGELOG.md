@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T08:56:19Z — DRAIN SUMMARY
+- Cycles this run: 8 (PASS 7 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260622T080003Z
+
 ## 2026-06-22T08:49Z — PASS — partnership-detail-token-sweep
 - Pages: /partnerships/[id]
 - What: **Brought the individual partnership listing page onto the warm "cream + rounded card" look** the rest of the site already uses (Etsy × Airbnb refresh, slice 5). The page now sits on the same soft cream background as `/aircraft` and the `/partnerships` search page, and its four info cards — the main listing card, Pilot Requirements, Costs, and Structure — became rounded, softly-shadowed warm panels instead of the old cold white-with-grey-border boxes. The desktop "Interested?" contact box keeps its light-blue tint but matches the new rounded corners. Nothing else changed: the photo gallery, Save/Share buttons, the cost estimator, the trust checklist, the owner "improve your listing" nudge, the contact buttons, the sticky mobile contact bar, and the "Similar partnerships" rail all look and work exactly as before, at desktop and on phones.
