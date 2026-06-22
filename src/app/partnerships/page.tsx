@@ -7,7 +7,7 @@ import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterCh
 import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
 import { getPartnershipMakes } from '@/lib/partnershipsQuery'
-import { countForSale } from '@/components/AircraftSaleList'
+import { countForSale, fetchAircraftPage } from '@/components/AircraftSaleList'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 
@@ -118,8 +118,10 @@ export default async function PartnershipsPage({
           </div>
         </aside>
 
-        {/* Listings */}
-        <div className="flex-1">
+        {/* Listings — min-w-0 lets the column shrink to fit so inner
+            overflow-x-auto rails (cross-sell samples) scroll instead of
+            widening the page at desktop. */}
+        <div className="min-w-0 flex-1">
           <PartnershipActiveFilterChips params={params} />
           <Suspense fallback={<PartnershipListSkeleton />}>
             <PartnershipList filters={params} />
@@ -131,6 +133,7 @@ export default async function PartnershipsPage({
             from="partnerships"
             make={params.make}
             count={await countForSale(params.make)}
+            samples={(await fetchAircraftPage({ make: params.make })).listings}
             className="mt-10"
           />
         </div>
