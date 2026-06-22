@@ -224,6 +224,53 @@ export function getForSaleStateFaqs(code: string): { q: string; a: string }[] | 
 }
 
 /**
+ * Per-STATE "Buying an aircraft in {State}" overview prose — 2 genuine, evergreen
+ * narrative paragraphs per curated state, rendered as editorial body copy near the
+ * top of the for-sale state page (`/aircraft/for-sale/[state]`). This is unique
+ * content depth (the character/size of the state's used-aircraft market + its basing
+ * and climate realities) to lift these pages above templated, count-only boilerplate
+ * in the INDEXING stage — deliberately distinct in wording from the Q&A
+ * `FORSALE_STATE_FAQS` on the same page (narrative market overview, not questions).
+ * Keyed by lowercase USPS code; same curated high-GA set as the FAQs. Drawn from
+ * well-known general-aviation facts — NO fabricated statistics and NO live listing
+ * counts, so the copy never goes stale. Non-curated states render no overview.
+ */
+const FORSALE_STATE_OVERVIEWS: Record<string, string[]> = {
+  ca: [
+    'California is one of the largest and most active general-aviation markets in the country. Decades of flight training, a long flying season, and a dense population of pilots keep the used market deep and fast-moving — from former trainers and economical four-seaters to high-performance singles and twins. Whatever mission you have in mind, you can usually compare several airplanes here rather than chasing the only candidate within ferry range.',
+    'Keeping an airplane in California is the part that takes planning. Covered storage near the big coastal airports is in short supply and commands premium rates, and insurance and labor track the state’s high cost of living. That math is a big reason shared ownership has such a following here — spreading the hangar, insurance, and annual across a partnership turns a capable airplane into a realistic monthly figure. You can browse California partnerships right alongside these for-sale listings.',
+  ],
+  tx: [
+    'Texas backs up its size with one of the busiest general-aviation scenes in the country. The long distances between cities make a personal airplane genuinely useful, and a long VFR season keeps the fleet flying and well exercised. The result is a deep, steady supply of traveling singles and light twins for sale — from simple trainers to fast cross-country machines — usually at friendlier basing costs than the coasts.',
+    'Ownership economics are part of the appeal. Hangars are generally more available and more affordable than in California, and Texas levies no state income tax (though sales or use tax can still apply to a purchase). Summer heat and the occasional hailstorm are the main hazards, so most owners budget for covered storage to protect paint and avionics. For pilots who would rather split the cost, Texas has an active partnership market you can explore next to these listings.',
+  ],
+  fl: [
+    'Florida packs in some of the densest flight-training and general-aviation activity in the United States, which keeps the used market deep and quick to turn over. Year-round VFR weather means airplanes here fly a lot, so you will find everything from well-used trainers and four-seaters to project planes — and no shortage of shops and mechanics to handle a pre-buy inspection.',
+    'The Florida environment is the thing to plan around. Salt air along the coasts is hard on airframes and avionics, so hangared airplanes hold up far better than those left on a tie-down, and summer storms and heat make covered storage worthwhile. Insurance and hangar space near the busy metros can add up, which is one reason many Florida pilots co-own — you can compare partnerships beside these for-sale listings.',
+  ],
+  az: [
+    'Arizona’s dry desert climate is famously kind to airplanes, so the state has a reputation for airframes that wear well — sun-faded paint is common, but the metal underneath is often far cleaner than on coastal aircraft. Heavy recreational and training activity around the Phoenix and Tucson areas keeps a steady supply of well-flown singles on the market.',
+    'The desert does shape what makes sense to own. High summer temperatures and field elevation push density altitude up, so performance and adequate horsepower matter more here than in cooler, lower country. Hangars are easier to come by than on the coasts, which keeps fixed costs reasonable — and for pilots who want to share those costs, Arizona has a healthy partnership scene alongside these for-sale listings.',
+  ],
+  co: [
+    'Colorado has a strong, mountain-savvy general-aviation community, and that shows up in the kind of airplanes that come up for sale: many are already well-equipped for the high-altitude, long-distance flying the state demands. The used market along the Front Range is active, so a buyer can often find a capable, IFR-ready single rather than starting from a bare-bones airframe.',
+    'High terrain and high density altitude make performance genuinely matter in Colorado, so matching an airplane’s horsepower and equipment to your missions is the central decision here. Hangar space and the cost of keeping a capable airplane lead a lot of Colorado pilots toward partnerships — sharing a well-equipped mountain airplane spreads the cost, and you can browse those partnerships next to these for-sale listings.',
+  ],
+  wa: [
+    'Washington has a deep aviation culture and a varied flying environment — the islands and coast on one side, the high country east of the Cascades on the other — which is reflected in a used market well stocked with capable, IFR-equipped singles. The Pacific Northwest weather rewards instrument capability, so airplanes here often come better equipped than their counterparts in sunnier states.',
+    'Persistent moisture is the main thing Northwest owners plan around: corrosion and water intrusion are worth a close look, and hangared airplanes fare much better than those left outside. Marine-layer weather also makes a solid avionics panel valuable. Between the equipment and the basing costs, co-ownership is common here — you can compare Washington partnerships alongside these for-sale listings.',
+  ],
+}
+
+/**
+ * Resolve a for-sale state code (USPS) to its 2-paragraph overview prose, or null
+ * when the state isn't curated (→ no overview section). Mirrors `getForSaleStateFaqs`.
+ */
+export function getForSaleStateOverview(code: string): string[] | null {
+  return FORSALE_STATE_OVERVIEWS[code.toLowerCase()] ?? null
+}
+
+/**
  * Make+model+STATE intersection FAQs for `/aircraft/[makeSlug]/[modelSlug]/[state]`,
  * keyed by `makeSlug/modelSlug/stateCode` (lowercase USPS). This is the most specific
  * for-sale family — the #1 autocomplete pattern is "{make} {model} for sale {state}"
