@@ -115,11 +115,25 @@ export async function getNearbyPartnerships(icao: string): Promise<NearbyResult 
 }
 
 /**
- * Sitemap source of truth: the lowercase ICAOs that have >= MIN_NEARBY real
- * nearby partnerships and therefore render a non-thin page. Computed once over
- * the full partnership set + airport coord map (no per-airport DB round-trips).
+/** A near-airport hub (>= MIN_NEARBY nearby partnerships) for the browse index. */
+export interface NearAirportHub {
+  /** lowercase ICAO, e.g. "khwd" — matches the /partnerships/near/[icao] route. */
+  icao: string
+  name: string
+  city: string | null
+  state: string | null
+  /** nearby active partnerships within NEAR_RADIUS_NM. */
+  count: number
+}
+
+/**
+ * Shared source of truth: the airport hubs that have >= MIN_NEARBY real nearby
+ * partnerships and therefore render a non-thin `/partnerships/near/[icao]` page.
+ * Computed once over the full partnership set + airport coord map (no per-airport
+ * DB round-trips). Both the sitemap (ICAOs only) and the browse hub (full details)
+ * read from this, so they can never drift. Sorted by ICAO ascending.
  */
-export async function getNearAirportSitemapIcaos(): Promise<string[]> {
+async function computeNearAirportHubs(): Promise<NearAirportHub[]> {
   const supabase = await createServerSupabaseClient()
 
   const { data: parts } = await supabase
@@ -155,7 +169,7 @@ export async function getNearAirportSitemapIcaos(): Promise<string[]> {
     if (p.home_airport) homeCodes.add((p.home_airport as string).toUpperCase())
   }
 
-  const out: string[] = []
+  const out: NearAirportHub[] = []
   for (const code of homeCodes) {
     const a = coords.get(code)
     if (!a) continue
@@ -163,7 +177,32 @@ export async function getNearAirportSitemapIcaos(): Promise<string[]> {
     for (const pt of points) {
       if (haversineNm(a.lat, a.lng, pt.lat, pt.lng) <= NEAR_RADIUS_NM) n++
     }
-    if (n >= MIN_NEARBY) out.push(code.toLowerCase())
+    if (n >= MIN_NEARBY) {
+      out.push({
+        icao: code.toLowerCase(),
+        name: a.name,
+        city: a.city ?? null,
+        state: a.state ?? null,
+        count: n,
+      })
+    }
   }
-  return out.sort()
+  return out.sort((x, y) => x.icao.localeCompare(y.icao))
+}
+
+/**
+ * Sitemap source of truth: the lowercase ICAOs that have >= MIN_NEARBY real
+ * nearby partnerships and therefore render a non-thin page. Delegates to
+ * `computeNearAirportHubs` so the sitemap and the browse hub stay in lockstep.
+ */
+export async function getNearAirportSitemapIcaos(): Promise<string[]> {
+  return (await computeNearAirportHubs()).map((h) => h.icao)
+}
+
+/**
+ * Full near-airport hub details (icao + name + place + nearby count) for the
+ * `/partnerships/browse` "Near an airport" section. Same gated set as the sitemap.
+ */
+export async function getNearAirportHubs(): Promise<NearAirportHub[]> {
+  return computeNearAirportHubs()
 }

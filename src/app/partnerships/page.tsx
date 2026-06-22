@@ -64,6 +64,12 @@ export default async function PartnershipsPage({
           <p className="mt-1 text-slate-500">
             Find co-ownership opportunities near your home airport.
           </p>
+          <Link
+            href="/partnerships/browse"
+            className="mt-1 inline-block text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+          >
+            Browse all makes, states &amp; airports →
+          </Link>
         </div>
 
         {/* Action bar — filter button visible only on mobile */}

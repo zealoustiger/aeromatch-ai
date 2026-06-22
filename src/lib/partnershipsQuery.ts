@@ -124,3 +124,59 @@ export async function getPartnershipListings(
     return { listings: [], airportList, error: true }
   }
 }
+
+function hasSupabase(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  return Boolean(url && url !== 'https://placeholder.supabase.co')
+}
+
+/**
+ * Count active partnerships for a make filter (the SEO_MAKES `filter` string, e.g.
+ * "Cessna"), matched case-insensitively like the make hub page. Used by
+ * `/partnerships/browse` to gate + label each make link so it never points at an
+ * empty family. Mirrors `countForSaleState`; returns 0 on any failure. Mock-data
+ * fallback when Supabase is unconfigured.
+ */
+export async function countPartnershipsByMake(filter: string): Promise<number> {
+  if (!hasSupabase()) {
+    return MOCK_PARTNERSHIPS.filter((p) =>
+      p.make.toLowerCase().includes(filter.toLowerCase())
+    ).length
+  }
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { count, error } = await supabase
+      .from('partnerships')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .ilike('make', `%${filter}%`)
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Count active partnerships in a US state (USPS code, e.g. "CA"). Used by
+ * `/partnerships/browse` to gate + label each state link. Mirrors
+ * `countForSaleState`; returns 0 on any failure. Mock-data fallback when Supabase
+ * is unconfigured.
+ */
+export async function countPartnershipsByState(code: string): Promise<number> {
+  if (!hasSupabase()) {
+    return MOCK_PARTNERSHIPS.filter((p) => p.state === code).length
+  }
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { count, error } = await supabase
+      .from('partnerships')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .eq('state', code)
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
