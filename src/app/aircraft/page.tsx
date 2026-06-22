@@ -7,7 +7,7 @@ import ActiveFilterChips from '@/components/ActiveFilterChips'
 import AircraftChipBar from '@/components/AircraftChipBar'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
-import { countActivePartnerships } from '@/lib/partnershipsQuery'
+import { countActivePartnerships, getPartnershipListings } from '@/lib/partnershipsQuery'
 import AlertSignup from '@/components/AlertSignup'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
@@ -120,8 +120,10 @@ export default async function AircraftPage({
           </div>
         </aside>
 
-        {/* Listings */}
-        <div className="flex-1">
+        {/* Listings — min-w-0 lets the column shrink to fit so inner
+            overflow-x-auto rails (cross-sell samples) scroll instead of
+            widening the page at desktop. */}
+        <div className="min-w-0 flex-1">
           {/* Active-filter chips — removable, one per active filter. */}
           <ActiveFilterChips params={params} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
@@ -169,6 +171,7 @@ export default async function AircraftPage({
             from="aircraft"
             make={params.make}
             count={await countActivePartnerships(params.make)}
+            samples={(await getPartnershipListings({ make: params.make })).listings}
             className="mt-10"
           />
 
