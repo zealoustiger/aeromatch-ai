@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 import { Plane, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
-import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL } from '@/lib/seo'
+import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
@@ -23,13 +23,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const entry = getMakeBySlug(make)
   if (!entry) return {}
 
+  const url = `${SITE_URL}/partnerships/make/${entry.slug}`
+  const ogTitle = `${entry.name} Aircraft Partnerships`
+  const ogDescription = `Co-ownership shares in ${entry.name} aircraft, searchable by home airport.`
+
   return {
     title: `${entry.name} Partnerships & Co-Ownership Shares`,
     description: `Find ${entry.name} aircraft partnerships and co-ownership shares near your home airport. Transparent buy-in, monthly, and hourly costs on every listing. Free to search and post.`,
-    alternates: { canonical: `${SITE_URL}/partnerships/make/${entry.slug}` },
+    alternates: { canonical: url },
     openGraph: {
-      title: `${entry.name} Aircraft Partnerships`,
-      description: `Co-ownership shares in ${entry.name} aircraft, searchable by home airport.`,
+      title: ogTitle,
+      description: ogDescription,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: DEFAULT_OG_IMAGE, alt: `${entry.name} aircraft partnerships on ClubHanger` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }

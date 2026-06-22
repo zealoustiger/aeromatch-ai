@@ -5,7 +5,7 @@ import { Suspense } from 'react'
 import { MapPin, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
-import { STATE_NAMES, STATE_CODES, SITE_URL, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
+import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -22,13 +22,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = STATE_NAMES[code]
   if (!name) return {}
 
+  const url = `${SITE_URL}/partnerships/state/${state.toLowerCase()}`
+  const ogTitle = `Aircraft Partnerships in ${name}`
+  const ogDescription = `Co-ownership shares and flying partnerships across ${name}, searchable by home airport.`
+
   return {
     title: `Aircraft Partnerships in ${name} (${code}) — Co-Ownership Shares`,
     description: `Find aircraft partnerships and co-ownership opportunities in ${name}. Browse shares in Cessna, Piper, Cirrus and more — with transparent buy-in, monthly, and hourly costs. Free to search.`,
-    alternates: { canonical: `${SITE_URL}/partnerships/state/${state.toLowerCase()}` },
+    alternates: { canonical: url },
     openGraph: {
-      title: `Aircraft Partnerships in ${name}`,
-      description: `Co-ownership shares and flying partnerships across ${name}, searchable by home airport.`,
+      title: ogTitle,
+      description: ogDescription,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: DEFAULT_OG_IMAGE, alt: `Aircraft partnerships in ${name} on ClubHanger` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }
