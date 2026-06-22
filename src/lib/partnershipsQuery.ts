@@ -180,3 +180,46 @@ export async function countPartnershipsByState(code: string): Promise<number> {
     return 0
   }
 }
+
+/**
+ * Distinct aircraft makes that have active partnerships, ordered by listing count
+ * (most-listed first). Read-time aggregation over the existing `make` column — no
+ * schema, no extra tables — mirroring `getAircraftFacets`'s make logic. Used by the
+ * `/partnerships` quick-filter chip bar so make chips only ever surface makes that
+ * actually have listings (no empty-result chips). Mock-data fallback when Supabase
+ * is unconfigured; returns [] on any failure.
+ */
+export async function getPartnershipMakes(): Promise<string[]> {
+  // Skip placeholder/junk make values so the chip bar never surfaces a chip like
+  // "Unknown" — they're real listings but not a useful quick filter.
+  const JUNK_MAKES = new Set(['unknown', 'other', 'n/a', 'na', '-'])
+  const rank = (rows: { make: string | null }[]): string[] => {
+    const counts = new Map<string, number>()
+    for (const row of rows) {
+      const make = (row.make ?? '').trim()
+      if (!make || JUNK_MAKES.has(make.toLowerCase())) continue
+      counts.set(make, (counts.get(make) ?? 0) + 1)
+    }
+    return [...counts.keys()].sort((a, b) => {
+      const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0)
+      return diff !== 0 ? diff : a.localeCompare(b)
+    })
+  }
+
+  if (!hasSupabase()) {
+    return rank(MOCK_PARTNERSHIPS.map((p) => ({ make: p.make })))
+  }
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('partnerships')
+      .select('make')
+      .eq('status', 'active')
+      .not('make', 'is', null)
+      .limit(5000)
+    if (error || !data) return []
+    return rank(data)
+  } catch {
+    return []
+  }
+}
