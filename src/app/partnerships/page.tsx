@@ -4,7 +4,9 @@ import { Suspense } from 'react'
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterChips'
+import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
+import { getPartnershipMakes } from '@/lib/partnershipsQuery'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 
@@ -49,6 +51,7 @@ export default async function PartnershipsPage({
   const params = await searchParams
 
   const activeFilterCount = Object.values(params).filter(Boolean).length
+  const makes = await getPartnershipMakes()
 
   return (
     <CompareProvider>
@@ -91,6 +94,11 @@ export default async function PartnershipsPage({
       </div>
 
       <PartnershipTabs active="available" />
+
+      {/* Airbnb-style quick-filter chip bar (Etsy×Airbnb refresh — slice 3,
+          partnerships half). Horizontally-scrolling chips that set existing
+          filter URL params (make / share type / budget). Mirrors /aircraft. */}
+      <PartnershipChipBar makes={makes} />
 
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar — desktop only */}
