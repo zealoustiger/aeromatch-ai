@@ -1,11 +1,19 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { usePathname, useSearchParams, useRouter } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { Heart } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toggleSavedListing } from '@/app/actions'
 import { cn } from '@/lib/utils'
+import {
+  isLocallySaved,
+  addLocalSave,
+  removeLocalSave,
+  localSaveCount,
+  LOCAL_SAVES_EVENT,
+} from '@/lib/localSaves'
+import SoftSavePrompt from './SoftSavePrompt'
 import type { User } from '@supabase/supabase-js'
 
 interface Props {
@@ -24,11 +32,12 @@ export default function SaveListingButton({
   variant = 'icon',
   className,
 }: Props) {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [saved, setSaved] = useState(initialSaved)
+  const [promptOpen, setPromptOpen] = useState(false)
+  const [deviceCount, setDeviceCount] = useState(0)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -40,15 +49,38 @@ export default function SaveListingButton({
     return () => subscription.unsubscribe()
   }, [])
 
+  // Reflect this device's soft-saves for logged-out visitors, and keep every
+  // mounted heart in sync when any of them changes the local store.
+  useEffect(() => {
+    if (user) return
+    const sync = () => {
+      setSaved(isLocallySaved(listingId, listingType))
+      setDeviceCount(localSaveCount())
+    }
+    sync()
+    window.addEventListener(LOCAL_SAVES_EVENT, sync)
+    return () => window.removeEventListener(LOCAL_SAVES_EVENT, sync)
+  }, [user, listingId, listingType])
+
+  const authNext = (() => {
+    const qs = searchParams.toString()
+    return qs ? `${pathname}?${qs}` : pathname
+  })()
+
   function handleClick(e: React.MouseEvent) {
     // Cards wrap the listing in a Link; never navigate when hearting.
     e.preventDefault()
     e.stopPropagation()
 
     if (!user) {
-      const qs = searchParams.toString()
-      const next = qs ? `${pathname}?${qs}` : pathname
-      router.push(`/auth?next=${encodeURIComponent(next)}`)
+      // Already device-saved → toggle off locally, no nag.
+      if (isLocallySaved(listingId, listingType)) {
+        removeLocalSave(listingId, listingType)
+        return
+      }
+      // First save of this listing → push an account, but allow device fallback.
+      setDeviceCount(localSaveCount())
+      setPromptOpen(true)
       return
     }
 
@@ -64,6 +96,11 @@ export default function SaveListingButton({
     })
   }
 
+  function handleSkipToDevice() {
+    addLocalSave(listingId, listingType)
+    setPromptOpen(false)
+  }
+
   const label = saved ? 'Saved' : 'Save'
   const heart = (
     <Heart
@@ -72,8 +109,42 @@ export default function SaveListingButton({
     />
   )
 
+  const prompt = promptOpen ? (
+    <SoftSavePrompt
+      authNext={authNext}
+      deviceSaveCount={deviceCount}
+      onSkip={handleSkipToDevice}
+      onClose={() => setPromptOpen(false)}
+    />
+  ) : null
+
   if (variant === 'full') {
     return (
+      <>
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={isPending}
+          aria-pressed={saved}
+          aria-label={saved ? 'Remove from saved listings' : 'Save this listing'}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60',
+            saved
+              ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
+              : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-sky-700',
+            className,
+          )}
+        >
+          {heart}
+          {label}
+        </button>
+        {prompt}
+      </>
+    )
+  }
+
+  return (
+    <>
       <button
         type="button"
         onClick={handleClick}
@@ -81,33 +152,14 @@ export default function SaveListingButton({
         aria-pressed={saved}
         aria-label={saved ? 'Remove from saved listings' : 'Save this listing'}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60',
-          saved
-            ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
-            : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-sky-700',
+          'inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm transition-colors hover:text-sky-700 disabled:opacity-60',
+          saved && 'text-sky-600',
           className,
         )}
       >
         {heart}
-        {label}
       </button>
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isPending}
-      aria-pressed={saved}
-      aria-label={saved ? 'Remove from saved listings' : 'Save this listing'}
-      className={cn(
-        'inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm ring-1 ring-slate-200 backdrop-blur-sm transition-colors hover:text-sky-700 disabled:opacity-60',
-        saved && 'text-sky-600',
-        className,
-      )}
-    >
-      {heart}
-    </button>
+      {prompt}
+    </>
   )
 }
