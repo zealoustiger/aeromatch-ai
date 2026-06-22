@@ -3,6 +3,7 @@
 import { useEffect, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import posthog from 'posthog-js'
+import { notifyVisitor } from '@/lib/analytics'
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com'
@@ -20,7 +21,9 @@ function PageViewTracker() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    if (!POSTHOG_KEY || !pathname) return
+    if (!pathname) return
+    notifyVisitor('$pageview')
+    if (!POSTHOG_KEY) return
     let url = window.origin + pathname
     const qs = searchParams.toString()
     if (qs) url += `?${qs}`

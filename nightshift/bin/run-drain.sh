@@ -52,8 +52,12 @@ if [ "${NS_FORCE:-0}" != "1" ] && ! in_window; then
 fi
 
 n=0; pass=0; fail=0; abort=0; stop_reason="safety cap"; CYCLE_PROMPT="$(cat "$APP/nightshift/CYCLE_TASK.md")"
+rm -f "$STATE/stop" 2>/dev/null   # clear any stale stop request from a prior run
 
 while : ; do
+  # Graceful stop: a stop request ($STATE/stop, e.g. from Forge's Stop button) ends the
+  # run cleanly at the cycle boundary — the in-flight cycle finishes + wraps first.
+  [ -f "$STATE/stop" ] && { stop_reason="stopped by Brian"; rm -f "$STATE/stop"; break; }
   [ "$n" -ge "$MAX_CYCLES" ] && { stop_reason="safety cap ($MAX_CYCLES)"; break; }
   if [ "${NS_FORCE:-0}" = "1" ]; then
     [ "$(date +%s)" -ge "$DEADLINE" ] && { stop_reason="time box"; break; }
