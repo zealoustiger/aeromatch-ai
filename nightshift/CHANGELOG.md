@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T13:05Z — PASS — og-card-parity-seed
+- Pages: /tools/cost-calculator, /guides/aircraft-co-ownership
+- What: **Made shared links to the cost calculator and the co-ownership guide unfurl into a proper preview card.** When someone pastes a link to either of these two pages into a text, Slack, iMessage, Facebook, or X/Twitter, it now shows the ClubHanger preview image, title, and description — instead of a bare, image-less link. Both are on the human's "get indexed first" priority list, and both were missing the image/preview tags that the rest of the site's pages already had. Nothing visible changed on the pages themselves; this is behind-the-scenes share metadata only.
+- Goal: SEO/shareability — `[goal]` lane (last non-bug cycle `save-search-prominence` was `[want]`, so this alternates to `[goal]`); completes the `[P2][goal]` canonical/OG sweep on two of the top-12 priority seed pages (STAGE=INDEXING → metadata quality on the seed set). Scoreboard at orient: 117 pageviews last 7d (GSC not configured; STAGE=INDEXING).
+- Spec: nightshift/specs/2026-06-22T12-53-24Z-og-card-parity-seed.md
+- Verdict: PASS. `npx next build` + typecheck green. QA smoke exit 0 on both pages at desktop 1280 + mobile 375 (HTTP 200, zero app-origin console errors, zero horizontal overflow); screenshots reviewed and both render correctly. Confirmed in rendered HTML: each page now emits `og:image` (1200×630 default card), `og:url`, `og:site_name`, `og:type`, and a `twitter:card=summary_large_image` with matching title/description/image; canonical, title, and description unchanged. (Localhost OG URLs locally only — resolves to the real domain on Vercel via NEXT_PUBLIC_SITE_URL, same as every other page.)
+- Screenshots: nightshift/screenshots/og-card-parity-seed/
+- Next: (1) **Filed a new `[P1][bug]`** — `/airports/[icao]` returns HTTP 500 on the local production build (pre-existing; reproduces on unmodified staging; real error masked by a missing `_global-error` chunk; `/aircraft/cessna/172` 500'd too). Investigate next, and verify against Vercel staging. (2) The airport-family OG fields were dropped from this cycle because the route couldn't be QA-verified — re-do them once the 500 is fixed.
+
 ## 2026-06-22T12:48Z — PASS — save-search-prominence
 - Pages: /aircraft, /partnerships
 - What: **Made the "Save this search" button on the two search pages actually noticeable.** When you've applied filters on Planes for Sale or Partnerships, there's a button to save that search to your account so you can come back to it later — but it was a plain gray button tucked next to the bold blue "+ Post" button, so most people never spotted it (even though hearting an individual listing is obvious). It now has an inviting light-blue style (blue outline, blue text, bookmark icon) so saving a search is as easy to notice as saving a listing. Nothing about how it works changed — it still only appears once you've filtered, still asks you to sign in if you're logged out, and still lets you name and save the search.
