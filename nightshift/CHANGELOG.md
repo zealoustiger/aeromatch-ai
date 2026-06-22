@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T13:51:10Z — DRAIN SUMMARY
+- Cycles this run: 3 (PASS 2 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260622T132323Z
+
 ## 2026-06-22T13:36Z — PASS — forsale-state-content-ny-il-ga-nc
 - Pages: /aircraft/for-sale/new-york, /aircraft/for-sale/illinois, /aircraft/for-sale/georgia, /aircraft/for-sale/north-carolina
 - What: **Gave four more "aircraft for sale in {State}" pages real written content** instead of just a list of planes. New York, Illinois, Georgia, and North Carolina now each open with a short, state-specific write-up ("Buying an aircraft in New York", etc.) covering that state's used-aircraft scene, where the airplanes tend to be (the main GA airports), and the local realities — weather, hangar costs, and taxes to plan for — followed by a 3-question buying FAQ. The writing is unique per state (no copy-paste, no made-up numbers) and joins the six states that already had this (CA/TX/FL/AZ/CO/WA). Nothing about the listings, search, or layout changed — this is added depth on existing pages.
