@@ -141,12 +141,14 @@ export default function AircraftSaleCard({
                 {/* Trust / completeness chip — slice 1, makes trust VISIBLE.
                     Pure read of existing columns; no ranking effect. */}
                 <AircraftTrustBadge p={p} />
-                <span
-                  title={gm.blurb}
-                  className={cn('rounded-full px-2 py-0.5 text-xs font-bold ring-1', gm.chip)}
+                <Link
+                  href="/listing-quality"
+                  title={`${gm.label} — ${gm.blurb}. What do these badges mean?`}
+                  aria-label={`${gm.label}: ${gm.blurb}. Learn what listing badges mean`}
+                  className={cn('rounded-full px-2 py-0.5 text-xs font-bold ring-1 transition-shadow hover:ring-2', gm.chip)}
                 >
                   {gm.short}
-                </span>
+                </Link>
                 {drop != null && (
                   <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                     <TrendingDown className="h-3 w-3" />

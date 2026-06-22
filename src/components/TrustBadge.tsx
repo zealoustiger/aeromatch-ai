@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ShieldCheck, Check, Circle } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { evaluateTrust, TRUST_SIGNAL_COUNT } from '@/lib/partnershipTrust'
@@ -70,6 +71,12 @@ export default function TrustBadge({
           </li>
         ))}
       </ul>
+      <Link
+        href="/listing-quality"
+        className="mt-3 inline-block text-xs font-medium text-sky-700 hover:text-sky-800 hover:underline"
+      >
+        What do these mean? →
+      </Link>
     </div>
   )
 }
