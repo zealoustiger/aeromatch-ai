@@ -8,6 +8,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
 
 const links: { href: string; label: string; icon?: LucideIcon }[] = [
   { href: '/partnerships', label: 'Partnerships' },
@@ -75,72 +76,18 @@ export default function Nav() {
                 {label}
               </Link>
             ))}
-            {user && (
-              <>
-                <Link
-                  href="/messages"
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    pathname.startsWith('/messages')
-                      ? 'bg-sky-50 text-sky-700'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  )}
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  Messages
-                </Link>
-                <Link
-                  href="/searches"
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    pathname.startsWith('/searches')
-                      ? 'bg-sky-50 text-sky-700'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  )}
-                >
-                  <Bookmark className="h-3.5 w-3.5" />
-                  My Searches
-                </Link>
-                <Link
-                  href="/saved"
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    pathname.startsWith('/saved')
-                      ? 'bg-sky-50 text-sky-700'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  )}
-                >
-                  <Heart className="h-3.5 w-3.5" />
-                  Saved
-                </Link>
-              </>
-            )}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  pathname.startsWith('/admin')
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                )}
-              >
-                <Shield className="h-3.5 w-3.5" />
-                Admin
-              </Link>
-            )}
           </nav>
 
           {/* Desktop right actions */}
           <div className="hidden items-center gap-2 sm:flex">
+            <Link
+              href="/partnerships/new"
+              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+            >
+              Post a Listing
+            </Link>
             {user ? (
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Sign out
-              </button>
+              <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} />
             ) : (
               <Link
                 href="/auth"
@@ -150,12 +97,6 @@ export default function Nav() {
                 Sign in
               </Link>
             )}
-            <Link
-              href="/partnerships/new"
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
-            >
-              Post a Listing
-            </Link>
           </div>
 
           {/* Mobile right: Post CTA + hamburger */}
@@ -194,6 +135,15 @@ export default function Nav() {
         )}
       >
         <nav className="mx-auto max-w-7xl divide-y divide-slate-100 px-4 pb-safe">
+          {user && (
+            <div className="flex items-center gap-2.5 py-4">
+              <Avatar user={user} size="sm" />
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-slate-500">Signed in as</div>
+                <div className="truncate text-sm font-semibold text-slate-900">{user.email}</div>
+              </div>
+            </div>
+          )}
           {links.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
