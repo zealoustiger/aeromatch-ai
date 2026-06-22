@@ -1,9 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { redirect } from 'next/navigation'
 import { Heart, Plane } from 'lucide-react'
 import Link from 'next/link'
 import PartnershipCard from '@/components/PartnershipCard'
 import AircraftSaleCard from '@/components/AircraftSaleCard'
+import DeviceSavedListings from '@/components/DeviceSavedListings'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 
@@ -11,7 +11,24 @@ export default async function SavedPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/auth?next=/saved')
+  // Logged-out: don't bounce to /auth. Show this device's soft-saves (slice 1)
+  // with an honest "device only" notice + an account push (slice 3).
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
+            <Heart className="h-6 w-6 text-sky-600" />
+            My Saved Listings
+          </h1>
+          <p className="mt-1 text-slate-500">
+            Listings you&apos;ve hearted on this device.
+          </p>
+        </div>
+        <DeviceSavedListings />
+      </div>
+    )
+  }
 
   // Saved listing ids in save order (newest first), split by listing type.
   const { data: savedRows } = await supabase

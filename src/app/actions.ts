@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getPartnershipsByIds } from '@/lib/partnerships'
+import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
+import type { Partnership, AircraftForSale } from '@/lib/types'
 
 export async function createPartnership(formData: FormData) {
   const supabase = await createServerSupabaseClient()
@@ -322,6 +325,62 @@ export async function mergeDeviceSaves(
   if (error && error.code !== '23505') return { error: 'Failed to merge device saves.' }
   revalidatePath('/saved')
   return { ok: true, merged: toInsert.length }
+}
+
+/**
+ * Slice 3 of soft-save. Hydrate a logged-out visitor's device-only save list
+ * (held in this browser's localStorage) into renderable card data so `/saved`
+ * can show those saves instead of bouncing the visitor to /auth. Read-only — it
+ * persists nothing. The payload comes from tamperable localStorage, so it is
+ * sanitized exactly like `mergeDeviceSaves` before any lookup.
+ */
+export async function hydrateDeviceSaves(
+  saves: { id: string; type: string }[],
+): Promise<{ partnerships: Partnership[]; aircraft: AircraftForSale[] }> {
+  if (!Array.isArray(saves) || saves.length === 0) return { partnerships: [], aircraft: [] }
+
+  // Sanitize: valid types only, well-formed ids, deduped, count-capped.
+  const seen = new Set<string>()
+  const rows = saves
+    .filter(
+      (s): s is { id: string; type: (typeof SAVED_LISTING_TYPES)[number] } =>
+        !!s &&
+        typeof s.id === 'string' &&
+        s.id.length > 0 &&
+        s.id.length <= 100 &&
+        SAVED_LISTING_TYPES.includes(s.type as (typeof SAVED_LISTING_TYPES)[number]),
+    )
+    .filter((s) => {
+      const key = `${s.type}:${s.id}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 200)
+
+  const partnershipIds = rows.filter((s) => s.type === 'partnership').map((s) => s.id)
+  const aircraftIds = rows.filter((s) => s.type === 'aircraft').map((s) => s.id)
+
+  // Hydrate, active-only, preserving the device's save order (newest-saved last
+  // in the store → the page reverses for display). Orphan/sold saves drop out.
+  let partnerships: Partnership[] = []
+  if (partnershipIds.length > 0) {
+    const fetched = await getPartnershipsByIds(partnershipIds)
+    const byId = new Map(
+      fetched.filter((p) => p.status === 'active').map((p) => [p.id, p]),
+    )
+    partnerships = partnershipIds
+      .map((id) => byId.get(id))
+      .filter((p): p is Partnership => !!p)
+  }
+
+  let aircraft: AircraftForSale[] = []
+  if (aircraftIds.length > 0) {
+    const fetched = await getAircraftForSaleByIds(aircraftIds)
+    aircraft = fetched.filter((a) => a.status === 'active')
+  }
+
+  return { partnerships, aircraft }
 }
 
 export async function getOrCreateThread(partnershipId: string, ownerId: string) {
