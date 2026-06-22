@@ -3,19 +3,19 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator } from 'lucide-react'
+import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator, Users, BookOpen } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
 
+// About lives in the footer (declutter the top nav per the human's nav-polish ask).
 const links: { href: string; label: string; icon?: LucideIcon }[] = [
-  { href: '/partnerships', label: 'Partnerships' },
-  { href: '/aircraft', label: 'Planes for Sale' },
+  { href: '/partnerships', label: 'Partnerships', icon: Users },
+  { href: '/aircraft', label: 'Planes for Sale', icon: Plane },
   { href: '/tools', label: 'Tools', icon: Calculator },
-  { href: '/guides', label: 'Guides' },
-  { href: '/about', label: 'About' },
+  { href: '/guides', label: 'Guides', icon: BookOpen },
 ]
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
