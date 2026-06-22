@@ -224,6 +224,67 @@ export function getForSaleStateFaqs(code: string): { q: string; a: string }[] | 
 }
 
 /**
+ * Make+model+STATE intersection FAQs for `/aircraft/[makeSlug]/[modelSlug]/[state]`,
+ * keyed by `makeSlug/modelSlug/stateCode` (lowercase USPS). This is the most specific
+ * for-sale family — the #1 autocomplete pattern is "{make} {model} for sale {state}"
+ * (e.g. `cessna 172 for sale california`) — so the few highest-intent, highest-inventory
+ * intersections get genuinely unique content here.
+ *
+ * Each answer combines THIS model's traits (mission, fuel burn, what to inspect) with
+ * THIS state's GA scene (where inventory clusters, basing costs, climate) — intentionally
+ * distinct from the model-only `MODEL_FAQS` and the generic-buying `FORSALE_STATE_FAQS`,
+ * so it isn't a near-duplicate of a parent page (GOAL.md: no thin/near-duplicate pages).
+ * Curated marquee combos only — every other combo renders no FAQ (no templated boilerplate
+ * across the long tail). Evergreen, well-known, durable facts only: no fabricated stats,
+ * no live counts → never stale. The combo page 404s below the inventory threshold, so an
+ * out-of-stock curated combo simply shows no FAQ (harmless).
+ */
+const MAKE_MODEL_STATE_FAQS: Record<string, { q: string; a: string }[]> = {
+  'cessna/172/ca': [
+    { q: 'Why is the Cessna 172 a popular choice in California?', a: 'California’s dense network of flight schools and clubs means a deep supply of Cessna 172s — from high-time former trainers to carefully kept private airplanes. The 172’s docile handling, four seats, and low operating cost make it a natural first airplane, and the state’s mild, VFR-friendly weather keeps these airplanes flying year-round. Because so many change hands here, you usually have several to compare rather than settling for the only one within ferry range.' },
+    { q: 'What does it cost to own a Cessna 172 in California?', a: 'The airplane itself is one of the most economical four-seaters to run — roughly 8–9 gallons an hour and a well-understood maintenance picture — but California’s basing costs are the variable that bites. Hangar and tie-down space near the Bay Area and Los Angeles is scarce and among the most expensive in the country, so price that in before you buy. Splitting those fixed costs is exactly why many California 172 owners co-own; you can browse partnerships alongside the for-sale listings here.' },
+    { q: 'What should I check when buying a Cessna 172 in California?', a: 'Many California 172s have spent time on a flight line, so scrutinize engine time since overhaul, the logbook history, and how hard the airframe has been worked. For airplanes based near the coast, look closely for corrosion during the pre-buy; inland and high-desert airplanes are usually drier. As always, confirm annual status and AD compliance, and use an independent A&P for the inspection rather than the seller’s shop.' },
+  ],
+  'cessna/172/tx': [
+    { q: 'Why look for a Cessna 172 in Texas?', a: 'Texas has a large, active general-aviation community and plenty of flight training, so 172s come up for sale regularly across the state. The 172’s four seats and modest fuel burn suit the long VFR cross-countries that Texas distances invite, and basing costs are generally friendlier than on the coasts — making it easier to keep a simple, trainer-class airplane affordable.' },
+    { q: 'What does it cost to own a Cessna 172 in Texas?', a: 'Operating a 172 is inexpensive by four-seat standards — about 8–9 gallons an hour — and Texas helps on the fixed-cost side: hangars are more available and more affordable than in California, and the state has no income tax (though sales/use tax can apply to the purchase — check current rules with a tax professional). Budget for covered storage anyway: Texas heat and hail are hard on paint, glass, and avionics.' },
+    { q: 'What should I check before buying a Cessna 172 in Texas?', a: 'Look at engine time since overhaul and the logbooks first — many 172s have trainer histories with a lot of cycles. Texas sun and summer heat bake interiors and can craze old skylights and windows, so check the plastics and paint. Confirm annual and AD status, and have an independent A&P do the pre-buy rather than relying on the seller’s shop.' },
+  ],
+  'cirrus/sr22/ca': [
+    { q: 'Is the Cirrus SR22 a good fit for flying in California?', a: 'The SR22’s speed, range, and full glass panel make quick work of California’s long hauls — Bay Area to LA, or out to the desert and the Sierra — and its airframe parachute appeals to owners flying over terrain and water. The state has an active high-performance owner community and avionics shops that know the airplane, so support is easy to find, and inventory turns over regularly in the major metros.' },
+    { q: 'What does it cost to own a Cirrus SR22 in California?', a: 'An SR22 is a serious step up from a trainer: higher fuel burn, higher insurance (especially for lower-time pilots), and the recurring cost of the airframe-parachute repack down the road. Add California’s premium hangar rates — you’ll want covered storage for the avionics and paint — and the all-in number climbs. Many California SR22 owners share the airplane in a partnership to make those fixed costs manageable; partnership listings sit alongside the for-sale ones here.' },
+    { q: 'What should I check when buying an SR22 in California?', a: 'Confirm the CAPS parachute repack status and the avionics/database currency, since both drive near-term cost. Review the maintenance history with a shop familiar with Cirrus airframes, and for coastal-based airplanes inspect for corrosion. As with any purchase, verify annual and AD compliance, and budget for transition training and insurance, which carriers weigh heavily on this type.' },
+  ],
+  'cirrus/sr22/tx': [
+    { q: 'Why is the Cirrus SR22 popular in Texas?', a: 'Texas distances reward a fast, comfortable single, and the SR22’s range and glass panel make it a genuine traveling airplane between the state’s far-flung metros. There’s a strong Cirrus owner community here and shops that specialize in the type, so finding support and a knowledgeable pre-buy is straightforward. Airplanes change hands regularly around Dallas–Fort Worth, Houston, Austin, and San Antonio.' },
+    { q: 'What does an SR22 cost to own in Texas?', a: 'Plan for high-performance economics: more fuel per hour than a trainer, higher insurance, and the eventual CAPS parachute repack. Texas eases the fixed costs — hangars are more available and there’s no state income tax (sales/use tax may still apply to the purchase; confirm with a tax professional) — but you’ll still want a hangar to protect the glass panel and paint from heat and hail.' },
+    { q: 'What should I check before buying an SR22 in Texas?', a: 'Check the parachute repack timeline and avionics database/subscription status first, then review the maintenance history with a Cirrus-experienced shop. Texas heat is hard on avionics cooling and interior plastics, so look there during the pre-buy. Confirm annual and AD compliance, and factor in transition training and an insurance quote, since underwriters scrutinize time-in-type on this airplane.' },
+  ],
+  'cirrus/sr22/fl': [
+    { q: 'Is Florida a good place to buy a Cirrus SR22?', a: 'Florida’s dense general-aviation and training activity means SR22s come up for sale often, and the year-round VFR weather keeps them flying. The airplane’s speed suits the long runs up and down the peninsula and across to the islands, and there’s no shortage of shops familiar with the type for a pre-buy. South Florida, Orlando, and Tampa Bay carry most of the inventory.' },
+    { q: 'What does it cost to own an SR22 in Florida?', a: 'Expect high-performance running costs — fuel, higher insurance, and the periodic CAPS parachute repack — plus the Florida basing reality: a hangar is strongly advised to shield the avionics and paint from salt air, sun, and summer storms, and hangar space near the coast can be tight. Sharing the airplane in a partnership is a common way Florida owners keep those fixed costs in check.' },
+    { q: 'What should I check when buying an SR22 in Florida?', a: 'Salt air is the headline risk: inspect carefully for corrosion, especially on airplanes kept outside, and confirm the avionics have been protected. Verify the parachute repack status and database currency, and review the maintenance log with a Cirrus-savvy shop. Confirm annual and AD compliance, and line up transition training and an insurance quote before you commit.' },
+  ],
+  'cessna/182/tx': [
+    { q: 'Why choose a Cessna 182 in Texas?', a: 'The 182 Skylane adds useful load, speed, and a constant-speed prop over a 172 — handy for Texas distances and density-altitude summer days when you’re carrying four people and bags. It’s a popular step-up airplane with a deep parts and maintenance network, and Texas’s active GA scene means Skylanes turn up for sale around the major metros fairly regularly.' },
+    { q: 'What does a Cessna 182 cost to own in Texas?', a: 'A 182 burns more fuel than a 172 (typically in the low-to-mid teens of gallons per hour) and the larger engine costs more at overhaul, but it’s still a straightforward, well-supported airplane. Texas helps on fixed costs — more affordable hangars and no state income tax (sales/use tax may apply to the purchase; check with a tax professional) — and a hangar is worth it to keep heat and hail off the paint and avionics.' },
+    { q: 'What should I check before buying a Cessna 182 in Texas?', a: 'Pay attention to engine time since overhaul and any history of corrosion, and on older Skylanes review the firewall area and the long-known maintenance items for the type. Texas sun is hard on paint and window plastics, so check those during the pre-buy. Confirm annual and AD compliance and use an independent A&P rather than the seller’s shop.' },
+  ],
+}
+
+/**
+ * Resolve a make+model+state intersection to its 3 curated FAQs, or null when the combo
+ * isn't curated (→ no FAQ). `code` is the USPS state code. Mirrors `getForSaleStateFaqs`.
+ */
+export function getMakeModelStateFaqs(
+  makeSlug: string,
+  modelSlug: string,
+  code: string,
+): { q: string; a: string }[] | null {
+  return MAKE_MODEL_STATE_FAQS[`${makeSlug}/${modelSlug}/${code.toLowerCase()}`] ?? null
+}
+
+/**
  * Curated make+model combos with their own programmatic for-sale landing page at
  * `/aircraft/[makeSlug]/[modelSlug]` (e.g. /aircraft/cessna/172).
  *

@@ -7,17 +7,19 @@ import AircraftSaleList, { countMakeModelState, fetchAircraftPage } from '@/comp
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
+import ModelFaq from '@/components/ModelFaq'
 import {
   resolveMakeModel,
   getStateBySlug,
   getInventoryMakeModelStates,
+  getMakeModelStateFaqs,
   STATE_NAMES,
   stateSlug,
   SITE_URL,
   SITE_NAME,
   DEFAULT_OG_IMAGE,
 } from '@/lib/seo'
-import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -127,6 +129,13 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
     url: `${SITE_URL}${path}`,
   })
 
+  // Intersection-specific FAQs — curated marquee combos only (no boilerplate on
+  // the long tail). The visible accordion answers and the FAQPage JSON-LD come
+  // from one source so they match 1:1 (Google parity). Non-curated combo → null
+  // → no FAQ section, no FAQPage markup.
+  const faqs = getMakeModelStateFaqs(entry.makeSlug, entry.modelSlug, st.code)
+  const faqJsonLd = buildFaqPageJsonLd(faqs ?? undefined, { url: `${SITE_URL}${path}` })
+
   return (
     <CompareProvider>
     {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
@@ -141,6 +150,12 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
       {/* Breadcrumb: Home → Aircraft for Sale → {Make} {Model} → {State} */}
@@ -248,6 +263,10 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Intersection-specific FAQs — curated combos only (no thin boilerplate).
+          The visible answers match the FAQPage JSON-LD emitted above 1:1. */}
+      {faqs && <ModelFaq label={`${label} for sale in ${st.name}`} faqs={faqs} className="mt-4" />}
 
       {/* Buying a plane? — related-guides cross-link block. */}
       <ForSaleGuideLinks className="mt-4" />
