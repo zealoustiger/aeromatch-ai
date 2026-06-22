@@ -934,6 +934,14 @@ export type SeoMake = {
    * none. See MAKE_FAQS.
    */
   faqs?: { q: string; a: string }[]
+  /**
+   * 2 genuine, evergreen "About {Make}" narrative paragraphs shown on the make hub
+   * page — brand history + lineup positioning, distinct from the Q&A `faqs`. Plain
+   * editorial body copy (NOT structured data), so no fabricated statistics and no
+   * live listing counts — the copy stays accurate and never goes stale. Curated
+   * makes only; a make absent from MAKE_OVERVIEWS renders no About section.
+   */
+  overview?: string[]
 }
 
 // Per-MAKE FAQs — genuine, evergreen, brand/lineup-level Q&As attached to each
@@ -986,6 +994,50 @@ const MAKE_FAQS: Record<string, { q: string; a: string }[]> = {
   ],
 }
 
+// Per-MAKE "About" overview prose — 2 genuine, evergreen narrative paragraphs per
+// curated make, rendered as editorial body copy on the make hub page
+// (`/aircraft/[make]`). This is unique content depth (brand history + lineup
+// positioning) to lift these pages above templated, count-only boilerplate in the
+// INDEXING stage — deliberately distinct from the Q&A `MAKE_FAQS` (narrative, not
+// questions). Keyed by makeSlug. Drawn from the SEO_MAKES blurbs + well-known
+// general-aviation history — NO fabricated statistics and NO live listing counts,
+// so the copy never goes stale. Curated makes (SEO_MAKES) only; a make absent here
+// renders no About section (graceful, like the dynamically-discovered model pages).
+const MAKE_OVERVIEWS: Record<string, string[]> = {
+  cessna: [
+    'Cessna has built more general-aviation airplanes than any other manufacturer, and its high-wing singles are the airplanes most people picture when they think of light aviation. The line runs from the two-seat 150 and 152 trainers up through the four-seat 172 Skyhawk — the most-produced airplane in history — to the more powerful 182 Skylane and the load-hauling 206. The high wing gives shade on the ramp, easy fuel checks, and a clear view of the ground, which is part of why so many pilots learn and travel in them.',
+    'For shared ownership, the appeal is practicality: parts are stocked everywhere, almost every mechanic has worked on them, and resale demand is deep, so a Cessna is rarely hard to maintain or sell. That predictability is why Cessna singles are the most commonly co-owned aircraft in America — a partnership splits the hangar, insurance, and annual while keeping a famously low-drama airplane on the field.',
+  ],
+  piper: [
+    'Piper is the other great name in American light singles, best known for the low-wing PA-28 Cherokee family — the Cherokee, Warrior, Archer, and retractable Arrow — alongside the timeless Cub taildragger and the six-seat Saratoga. The PA-28s pair forgiving, stable handling with simple systems and one of the largest parts and maintenance networks in aviation, which has made them perennial trainers and first airplanes.',
+    'Those same traits make Pipers natural partnership aircraft. A fixed-gear Warrior or Archer is among the most economical four-seat singles to share, the Arrow adds complex and retractable time for a group that wants to build experience, and the Saratoga steps up to six seats when a partnership needs to carry families. Across the range, low operating costs mean each owner’s monthly share stays modest.',
+  ],
+  cirrus: [
+    'Cirrus reshaped the modern piston single with the SR20 and SR22 — sleek composite airframes built around a full glass panel and the CAPS whole-airframe parachute, a safety system no other production single offered at their launch. For years they have been among the best-selling piston airplanes in the world, and their side-yoke, big-screen cockpit set the template the rest of the industry followed.',
+    'All that capability comes at a real cost to buy and operate, which is exactly why so many Cirrus owners fly in partnerships. Splitting the hangar, the higher insurance, and the periodic CAPS parachute repack across a few partners turns an advanced, fast traveling airplane into a realistic monthly number — and keeps it flying often enough to stay current.',
+  ],
+  beechcraft: [
+    'Beechcraft has long occupied the premium end of piston general aviation. The V-tail and later straight-tail Bonanza is one of the longest-running airplane designs ever built — a fast, refined single with a roomy cabin — and the twin-engine Baron extends that pedigree with a second engine for redundancy and range. Both are built to a heavier, higher-quality standard that owners describe as feeling a class above typical trainers.',
+    'That refinement brings traveling-machine running costs: more fuel, healthy engine reserves, and (on a Baron) two of everything to maintain. Co-ownership is the classic answer — a Bonanza or Baron partnership spreads the fixed costs so a group can enjoy a genuine cross-country airplane without carrying it alone.',
+  ],
+  mooney: [
+    'Mooney built its reputation on speed-per-dollar. The low-slung M20 series — with its distinctive forward-swept tail and tightly cowled airframe — slips through the air with less drag than its rivals, delivering cruise speeds that embarrass airplanes burning far more fuel. For pilots who measure an airplane by how quickly and cheaply it covers distance, a Mooney is hard to beat.',
+    'A Mooney is a traveler rather than a trainer: the cabin is snug, the gear retracts, and there are more systems to manage, so many owners arrive after time in fixed-gear singles. The low fuel burn keeps variable costs down, while the retractable gear adds an inspection and an insurance line that a partnership comfortably spreads across owners.',
+  ],
+  diamond: [
+    'Diamond is the modern-composite story in general aviation. The four-seat DA40 and twin-engine DA42 use bonded composite airframes, large bubble canopies, and — on many examples — fuel-efficient Austro Jet-A diesel engines. Combined with an outstanding safety record, those traits have made Diamonds favorites of flight schools and shared-ownership groups looking for a new-feeling, economical airplane.',
+    'The economics suit a partnership well: the diesels sip Jet-A and the airframes are durable, which keeps running costs down, while the higher purchase price and engine/gearbox reserves are exactly the kind of fixed cost that splits cleanly across owners. The result is a group flying a modern glass-panel airplane for a sensible monthly share.',
+  ],
+  vans: [
+    'Van’s Aircraft sits at the heart of the experimental amateur-built movement. The RV series — sporty two- and four-seat singles sold as kits — offers performance per dollar that certified airplanes simply can’t match, backed by one of the largest and most active builder communities in aviation. An RV-flyer’s grin is a genuine cultural fixture at fly-ins.',
+    'Because they are experimental, owners can perform much of their own maintenance, which keeps costs low and knowledge high. Partnerships are common among builders and sport pilots — sharing a finished RV spreads the cost while the group enjoys an airplane that climbs, cruises, and rolls far beyond its modest fuel burn. Just confirm the operating limitations and insurance work for multiple owners.',
+  ],
+  grumman: [
+    'Grumman’s light singles are the sports cars of the trainer ramp — defined by sliding canopies you taxi with open, bonded aluminum airframes, and a sporty, responsive feel. The two-seat AA-1 and the four-seat AA-5 line (the Traveler, Cheetah, and Tiger) developed a devoted following for being light, quick, and simply fun to fly.',
+    'Simplicity is the ownership story: clean, slippery airframes and uncomplicated systems keep both fuel and shared maintenance costs low, which makes a Grumman an excellent first-partnership single. Within the line, the Tiger is the faster, stronger climber and the Cheetah the more economical — both delivering the same open-canopy character that owners fall for.',
+  ],
+}
+
 /**
  * Every make that has ≥1 inventory-backed model family, with its models grouped
  * under it. Built purely from `getInventoryMakeModels()` so the make pages, the
@@ -1014,10 +1066,12 @@ export async function resolveMake(makeSlug: string): Promise<SeoMake | null> {
   const makes = await getInventoryMakes()
   const found = makes.find((m) => m.makeSlug === slug)
   if (!found) return null
-  // Attach the curated make-level FAQs (if any) without mutating the source —
-  // mirrors how getMakeModel attaches MODEL_FAQS. Non-curated makes stay FAQ-less.
+  // Attach the curated make-level FAQs + "About" overview prose (if any) without
+  // mutating the source — mirrors how getMakeModel attaches MODEL_FAQS. Non-curated
+  // makes stay FAQ-less / overview-less.
   const faqs = MAKE_FAQS[found.makeSlug]
-  return faqs ? { ...found, faqs } : found
+  const overview = MAKE_OVERVIEWS[found.makeSlug]
+  return faqs || overview ? { ...found, ...(faqs && { faqs }), ...(overview && { overview }) } : found
 }
 
 // Translate a Postgres `ilike` pattern into a case-insensitive anchored regex so
