@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Calculator } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import CostCalculator from '@/components/CostCalculator'
 
@@ -13,6 +13,16 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Aircraft Partnership Cost Calculator',
     description: 'See the true monthly and per-hour cost of a co-ownership share vs. renting or owning outright.',
+    url: `${SITE_URL}/tools/cost-calculator`,
+    type: 'website',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `Aircraft Partnership Cost Calculator on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Aircraft Partnership Cost Calculator',
+    description: 'See the true monthly and per-hour cost of a co-ownership share vs. renting or owning outright.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

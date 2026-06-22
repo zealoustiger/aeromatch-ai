@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Calculator, Plane, Users, Wallet, ArrowRight } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 
 const TITLE = 'How Aircraft Co-Ownership & Partnerships Work'
@@ -19,6 +19,15 @@ export const metadata: Metadata = {
       'How shared aircraft ownership works, what it costs, how partners split expenses, and how to find a partner.',
     url: `${SITE_URL}${PATH}`,
     type: 'article',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${TITLE} — a guide on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'How shared aircraft ownership works, what it costs, how partners split expenses, and how to find a partner.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
