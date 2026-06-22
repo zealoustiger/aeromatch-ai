@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
+import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterChips'
 import PartnershipList from '@/components/PartnershipList'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
@@ -99,6 +100,7 @@ export default async function PartnershipsPage({
 
         {/* Listings */}
         <div className="flex-1">
+          <PartnershipActiveFilterChips params={params} />
           <Suspense fallback={<PartnershipListSkeleton />}>
             <PartnershipList filters={params} />
           </Suspense>
