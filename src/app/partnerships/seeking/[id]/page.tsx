@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft, Mail, Phone, Search } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Mail, Phone, Search, LogIn } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
-import { formatPrice, formatShareType } from '@/lib/utils'
+import { anonymizeName, formatPrice, formatShareType } from '@/lib/utils'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -23,6 +23,23 @@ const USE_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
+/**
+ * Is the current viewer a signed-in member? Used to gate a seeker's contact
+ * details: their email/phone are private-by-default and never rendered into the
+ * public (crawlable) HTML — only signed-in members see them. Mirrors the
+ * mock-mode guard used elsewhere (logged-out default when Supabase is absent).
+ * Read-only use of the frozen supabase-server client.
+ */
+async function isViewerSignedIn(): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return false
+
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return !!user
+}
+
 async function getSeeker(id: string): Promise<PartnershipSeeker | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
@@ -40,6 +57,11 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
   const { id } = await params
   const s = await getSeeker(id)
   if (!s) notFound()
+
+  // Privacy-by-default: show the pilot as "First L." and only reveal contact
+  // details to signed-in members (never in the public/crawlable HTML).
+  const displayName = anonymizeName(s.contact_name)
+  const signedIn = await isViewerSignedIn()
 
   const aircraftWant = [
     s.preferred_makes?.join(', '),
@@ -201,30 +223,50 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
             </dl>
           </div>
 
-          {/* Contact card */}
+          {/* Contact card — contact details are private by default and only
+              shown to signed-in members, so a pilot's email/phone are never
+              published to the open web (honors the post form's "not shown
+              publicly" promise). */}
           <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
             <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
-            {s.contact_name && (
-              <p className="mb-3 text-sm text-sky-700">Reach out to {s.contact_name}</p>
-            )}
-            <div className="space-y-2">
-              {(s.contact_method === 'email' || s.contact_method === 'both') && (
-                <a
-                  href={`mailto:${s.contact_email}?subject=Re: ${encodeURIComponent(s.title)}`}
+            {signedIn ? (
+              <>
+                {displayName && (
+                  <p className="mb-3 text-sm text-sky-700">Reach out to {displayName}</p>
+                )}
+                <div className="space-y-2">
+                  {(s.contact_method === 'email' || s.contact_method === 'both') && (
+                    <a
+                      href={`mailto:${s.contact_email}?subject=Re: ${encodeURIComponent(s.title)}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+                    >
+                      <Mail className="h-4 w-4" /> Send Email
+                    </a>
+                  )}
+                  {(s.contact_method === 'phone' || s.contact_method === 'both') && s.contact_phone && (
+                    <a
+                      href={`tel:${s.contact_phone}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                    >
+                      <Phone className="h-4 w-4" /> {s.contact_phone}
+                    </a>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mb-3 text-sm text-sky-700">
+                  To protect pilots&apos; privacy, contact details are only shown to signed-in
+                  members. Sign in to reach out{displayName ? ` to ${displayName}` : ''}.
+                </p>
+                <Link
+                  href={`/auth?next=${encodeURIComponent(`/partnerships/seeking/${id}`)}`}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
                 >
-                  <Mail className="h-4 w-4" /> Send Email
-                </a>
-              )}
-              {(s.contact_method === 'phone' || s.contact_method === 'both') && s.contact_phone && (
-                <a
-                  href={`tel:${s.contact_phone}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
-                >
-                  <Phone className="h-4 w-4" /> {s.contact_phone}
-                </a>
-              )}
-            </div>
+                  <LogIn className="h-4 w-4" /> Sign in to contact this pilot
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
