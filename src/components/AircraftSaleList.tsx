@@ -220,6 +220,31 @@ export async function countForSaleState(code: string): Promise<number> {
   }
 }
 
+// Live count of active for-sale listings, optionally narrowed to a make
+// (case-insensitive substring, like the make hub page). Used by the `/partnerships`
+// cross-sell card to show how many planes are for sale the other way (make-aware
+// when a make filter is active). Mirrors `countForSaleState`; returns 0 on any
+// failure.
+export async function countForSale(make?: string): Promise<number> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return 0
+  try {
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('aircraft_for_sale')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+    const m = make?.trim()
+    if (m) query = query.ilike('make', `%${m}%`)
+    const { count, error } = await query
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
 /**
  * The states (USPS code) with the most active listings of a make+model family,
  * for the make+model page's "Browse {Model} by state" rail. Every returned state

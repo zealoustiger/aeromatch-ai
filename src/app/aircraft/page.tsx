@@ -7,6 +7,7 @@ import ActiveFilterChips from '@/components/ActiveFilterChips'
 import AircraftChipBar from '@/components/AircraftChipBar'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList from '@/components/AircraftSaleList'
+import { countActivePartnerships } from '@/lib/partnershipsQuery'
 import AlertSignup from '@/components/AlertSignup'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
@@ -164,7 +165,12 @@ export default async function AircraftPage({
 
           {/* Cross-sell to the other marketplace type (co-ownership partnerships).
               Make-aware: carries the active make filter through. */}
-          <MarketplaceCrossSell from="aircraft" make={params.make} className="mt-10" />
+          <MarketplaceCrossSell
+            from="aircraft"
+            make={params.make}
+            count={await countActivePartnerships(params.make)}
+            className="mt-10"
+          />
 
           {/* Buying a plane? — related-guides cross-link block (internal linking
               toward the buyer-guide cluster). Additive; no new page. */}
