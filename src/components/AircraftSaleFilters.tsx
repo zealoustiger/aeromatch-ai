@@ -56,6 +56,25 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
     [pushParams]
   )
 
+  // Model is multi-select: the `model` param is a comma-joined list. Toggling a
+  // model adds/removes it; an empty list drops the param entirely.
+  const toggleModel = useCallback(
+    (model: string) => {
+      pushParams((params) => {
+        const current = (params.get('model') ?? '')
+          .split(',')
+          .map((m) => m.trim())
+          .filter(Boolean)
+        const next = current.includes(model)
+          ? current.filter((m) => m !== model)
+          : [...current, model]
+        if (next.length) params.set('model', next.join(','))
+        else params.delete('model')
+      })
+    },
+    [pushParams]
+  )
+
   const clearAll = () => {
     startTransition(() => { router.push(pathname) })
   }
@@ -77,6 +96,10 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
     selectedMake && facets?.modelsByMake[selectedMake]
       ? facets.modelsByMake[selectedMake]
       : []
+  const selectedModels = (initialValues.model ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
 
   return (
     <div className="space-y-5">
@@ -106,22 +129,39 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
         )}
       </div>
 
-      {/* Model — depends on selected make */}
+      {/* Model — depends on selected make; multi-select so a pilot can search
+          several models of a make at once (e.g. SR20 + SR22). */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
           Model
+          {selectedModels.length > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {selectedModels.length} selected
+            </span>
+          )}
         </label>
-        <select
-          value={initialValues.model ?? ''}
-          onChange={(e) => updateFilter('model', e.target.value)}
-          disabled={modelOptions.length === 0}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
-        >
-          <option value="">
-            {selectedMake ? 'All models' : 'Select a make first'}
-          </option>
-          {modelOptions.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
+        {modelOptions.length === 0 ? (
+          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+            Select a make first
+          </p>
+        ) : (
+          <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
+            {modelOptions.map((m) => (
+              <label
+                key={m}
+                className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedModels.includes(m)}
+                  onChange={() => toggleModel(m)}
+                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                />
+                {m}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="border-t border-slate-100" />

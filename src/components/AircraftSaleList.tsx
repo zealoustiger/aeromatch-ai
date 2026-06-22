@@ -348,7 +348,13 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .eq('status', 'active')
 
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
-    if (filters.model) query = query.eq('model', filters.model)
+    if (filters.model) {
+      // `model` accepts a comma-joined list (multi-select on /aircraft): one
+      // value keeps the exact `.eq`; two or more match any of them via `.in`.
+      const models = filters.model.split(',').map((m) => m.trim()).filter(Boolean)
+      if (models.length === 1) query = query.eq('model', models[0])
+      else if (models.length > 1) query = query.in('model', models)
+    }
     if (filters.modelPattern) query = query.ilike('model', filters.modelPattern)
     if (filters.notModelPattern) query = query.not('model', 'ilike', filters.notModelPattern)
     if (filters.state) query = query.eq('state', filters.state)
