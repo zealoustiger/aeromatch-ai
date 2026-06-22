@@ -59,7 +59,10 @@ function describe(event: string, path: string, props: Record<string, unknown> = 
 }
 
 export async function POST(request: NextRequest) {
-  if (!TOKEN || !CHANNEL) return NextResponse.json({ ok: false }, { status: 204 })
+  // Slack not configured (e.g. staging/preview without the bot env) → no-op.
+  // A 204 must be body-less; `NextResponse.json(..., { status: 204 })` throws an
+  // "Invalid response status code 204" and 500s the beacon on every page load.
+  if (!TOKEN || !CHANNEL) return new NextResponse(null, { status: 204 })
 
   // Light same-origin guard so randoms can't spam the channel.
   const origin = request.headers.get('origin') || ''
