@@ -94,10 +94,13 @@ export default function SaveSearchButton({ basePath = '/partnerships' }: { baseP
     )
   }
 
+  // Prominent sky-accent treatment: saving a *listing* (the heart on every card) is
+  // obvious, but saving a *search* was a muted gray control users missed. This makes
+  // the two discoverable at the same level without adding a second affordance.
   return (
     <button
       onClick={handleSaveClick}
-      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700"
+      className="flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700 transition-colors hover:border-sky-400 hover:bg-sky-100"
     >
       <Bookmark className="h-4 w-4" />
       Save this search
