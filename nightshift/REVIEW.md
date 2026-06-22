@@ -1,3 +1,15 @@
+## 2026-06-22T08:56:19Z — Night Shift run: 8 cycles (PASS 7 / FAIL 1) — rate limited
+
+- PASS — partnerships-chip-bar — added an Airbnb-style quick-filter chip bar (live makes / share types / budget bands) to the top of /partnerships, completing the Etsy×Airbnb re
+- PASS — forsale-state-overview-prose — added unique 2-paragraph Buying an aircraft in {State} market-overview prose to the 6 biggest aircraft-for-sale state pages (CA/TX/FL/AZ/C
+- PASS — profile-menu — added a signed-in avatar indicator + a profile dropdown (email, Messages, Saved, My Searches, Admin-for-admins, Sign out) to the top nav, decluttering the
+- PASS — partnership-make-overview-prose — added unique evergreen About co-owning a {Make} prose to all 8 partnership make hub pages (Cessna/Piper/Cirrus/Beechcraft/Mooney/Diamon
+- PASS — partnerships-token-sweep — brought the /partnerships search page onto the warm Etsy×Airbnb cream surface + rounded filter panel (design slice 5), matching its already-w
+- PASS — seeking-content-depth — added evergreen About seeking partnerships prose + a 5-Q&A FAQ (with FAQPage JSON-LD) to /partnerships/seeking, making the thinnest priority seed
+- PASS — partnership-detail-token-sweep — warm cream token sweep onto the partnership listing detail page (/partnerships/[id]): cream `ch-surface` + the four info cards converted
+- cycle produced no verdict (exit 1)
+
+
 ## 2026-06-22T02:59:00Z — Night Shift run: 6 cycles (PASS 5 / FAIL 1) — rate limited · manual
 
 - PASS — fix-visitor-webhook-204 — visitor-radar beacon returned an invalid body-on-204 and 500'd on every page load (Slack env unset); now returns a clean empty 204, clearing th
