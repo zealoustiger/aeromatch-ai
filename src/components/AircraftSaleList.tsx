@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
-import { minScoreForGrade, type Grade } from '@/lib/listingQuality'
+import { minScoreForGrade, GRADE_CUTOFFS, type Grade } from '@/lib/listingQuality'
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
 import { buildFamilyPriceMap, compVsMarket, priceStats, type PriceStats } from '@/lib/aircraftComps'
 import AircraftSaleCard from './AircraftSaleCard'
@@ -22,7 +22,11 @@ interface Filters {
   max_year?: string
   min_tt?: string
   max_tt?: string
+  /** legacy single grade *floor* (A or B). Superseded by `grade` (multi-select);
+   *  still honored read-only so old links / saved searches keep working. */
   min_grade?: string
+  /** comma-joined multi-select subset of A/B/C (any combo). Empty == all. */
+  grade?: string
   sort?: string
   drops?: string
   page?: string
@@ -38,12 +42,56 @@ const PAGE_SIZE = 60
 // weaker listings everywhere. Defaults to 'C' (show everything).
 const FLOOR_GRADE = ((process.env.LISTING_GRADE_FLOOR ?? 'C').toUpperCase().charAt(0) || 'C') as Grade
 
-// Effective minimum score = the stricter of the site floor and the user's pick.
-function effectiveMinScore(userGrade: string | undefined): number {
-  const floor = minScoreForGrade(['A', 'B', 'C'].includes(FLOOR_GRADE) ? FLOOR_GRADE : 'C')
-  const user =
-    userGrade === 'A' || userGrade === 'B' ? minScoreForGrade(userGrade as Grade) : 0
-  return Math.max(floor, user)
+// The site-wide floor score every public query must clear.
+function floorScore(): number {
+  return minScoreForGrade(['A', 'B', 'C'].includes(FLOOR_GRADE) ? FLOOR_GRADE : 'C')
+}
+
+// `quality_score` band for each grade ([lo, hi) — hi null means open-ended).
+const GRADE_BANDS: Record<Grade, { lo: number; hi: number | null }> = {
+  A: { lo: GRADE_CUTOFFS.A, hi: null },
+  B: { lo: GRADE_CUTOFFS.B, hi: GRADE_CUTOFFS.A },
+  C: { lo: 0, hi: GRADE_CUTOFFS.B },
+}
+
+// Parse the listing-quality filter into a canonical (A,B,C-ordered) grade set.
+// Prefers the new multi-select `grade`; falls back to a legacy single `min_grade`
+// floor (A → [A]; B → [A,B]) so old links / saved searches still work. [] = none.
+function parseGradeFilter(grade: string | undefined, minGrade: string | undefined): Grade[] {
+  const all: Grade[] = ['A', 'B', 'C']
+  const raw = (grade ?? '')
+    .split(',')
+    .map((g) => g.trim().toUpperCase())
+    .filter((g): g is Grade => all.includes(g as Grade))
+  if (raw.length) return all.filter((g) => raw.includes(g))
+  if (minGrade === 'A') return ['A']
+  if (minGrade === 'B') return ['A', 'B']
+  return []
+}
+
+// Build the PostgREST narrowing for a multi-select listing-quality filter:
+// OR the selected grades' score bands, each clipped to the site floor. Returns
+//   { floor: n }     → apply a single `quality_score >= n` (none/all selected)
+//   { or: "…" }      → apply `.or(<expr>)` (a real subset of grades)
+//   { impossible }   → every selected band is below the floor (zero matches)
+function gradeQueryPlan(
+  grades: Grade[]
+): { floor: number } | { or: string } | { impossible: true } {
+  const floor = floorScore()
+  if (grades.length === 0 || grades.length === 3) return { floor }
+  const bands: string[] = []
+  for (const g of grades) {
+    const { lo, hi } = GRADE_BANDS[g]
+    const lower = Math.max(lo, floor)
+    if (hi != null && lower >= hi) continue // band entirely below the site floor
+    bands.push(
+      hi == null
+        ? `quality_score.gte.${lower}`
+        : `and(quality_score.gte.${lower},quality_score.lt.${hi})`
+    )
+  }
+  if (bands.length === 0) return { impossible: true }
+  return { or: bands.join(',') }
 }
 
 // Parse ?page into a 1-based page number, clamped to >= 1. Anything missing or
@@ -364,8 +412,12 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
     if (filters.max_year) query = query.lte('year', parseInt(filters.max_year))
     if (filters.min_tt) query = query.gte('ttaf', parseInt(filters.min_tt))
     if (filters.max_tt) query = query.lte('ttaf', parseInt(filters.max_tt))
-    const minScore = effectiveMinScore(filters.min_grade)
-    if (minScore > 0) query = query.gte('quality_score', minScore)
+    // Listing-quality: OR the selected grades' score bands (multi-select),
+    // clipped to the site floor. Falls back to a legacy single `min_grade` floor.
+    const gradePlan = gradeQueryPlan(parseGradeFilter(filters.grade, filters.min_grade))
+    if ('or' in gradePlan) query = query.or(gradePlan.or)
+    else if ('impossible' in gradePlan) query = query.gt('quality_score', 100)
+    else if (gradePlan.floor > 0) query = query.gte('quality_score', gradePlan.floor)
     if (filters.q) {
       const term = filters.q.replace(/[%,()]/g, ' ').trim()
       if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`)

@@ -75,6 +75,39 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
     [pushParams]
   )
 
+  // Listing quality is multi-select: the `grade` param is a comma-joined subset
+  // of A/B/C (any combo). Toggling a grade adds/removes it; an empty list drops
+  // the param (== "All listings"). Mirrors the Model multi-select above.
+  const toggleGrade = useCallback(
+    (grade: string) => {
+      pushParams((params) => {
+        const fromParam = (params.get('grade') ?? '')
+          .split(',')
+          .map((g) => g.trim().toUpperCase())
+          .filter((g) => ['A', 'B', 'C'].includes(g))
+        // Seed from a legacy single-floor param when no multi-select set exists,
+        // so toggling off a legacy URL behaves as the user sees it.
+        const legacy =
+          params.get('min_grade') === 'A'
+            ? ['A']
+            : params.get('min_grade') === 'B'
+              ? ['A', 'B']
+              : []
+        const current = fromParam.length ? fromParam : legacy
+        const next = current.includes(grade)
+          ? current.filter((g) => g !== grade)
+          : [...current, grade]
+        // Normalize to canonical A,B,C order so the URL is stable.
+        const ordered = ['A', 'B', 'C'].filter((g) => next.includes(g))
+        if (ordered.length) params.set('grade', ordered.join(','))
+        else params.delete('grade')
+        // Drop the legacy single-floor param so it can't linger and confuse.
+        params.delete('min_grade')
+      })
+    },
+    [pushParams]
+  )
+
   const clearAll = () => {
     startTransition(() => { router.push(pathname) })
   }
@@ -100,6 +133,25 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean)
+
+  // Selected listing-quality grades. Prefer the new multi-select `grade` param;
+  // fall back to a legacy single `min_grade` floor (A → [A]; B → [A,B]) so old
+  // links / saved searches still pre-check the right boxes.
+  const GRADE_OPTIONS = [
+    { code: 'A', label: 'Grade A', note: 'Most complete' },
+    { code: 'B', label: 'Grade B', note: 'Usable' },
+    { code: 'C', label: 'Grade C', note: 'Sparse' },
+  ] as const
+  const selectedGrades = (() => {
+    const raw = (initialValues.grade ?? '')
+      .split(',')
+      .map((g) => g.trim().toUpperCase())
+      .filter((g) => ['A', 'B', 'C'].includes(g))
+    if (raw.length) return ['A', 'B', 'C'].filter((g) => raw.includes(g))
+    if (initialValues.min_grade === 'A') return ['A']
+    if (initialValues.min_grade === 'B') return ['A', 'B']
+    return [] as string[]
+  })()
 
   return (
     <div className="space-y-5">
@@ -183,20 +235,36 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
         </select>
       </div>
 
-      {/* Listing quality */}
+      {/* Listing quality — multi-select so a pilot can include any combination
+          of A/B/C (e.g. A + B). No boxes checked == all listings. */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
           Listing quality
+          {selectedGrades.length > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {selectedGrades.length} selected
+            </span>
+          )}
         </label>
-        <select
-          defaultValue={initialValues.min_grade ?? ''}
-          onChange={(e) => updateFilter('min_grade', e.target.value)}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-        >
-          <option value="">All listings</option>
-          <option value="B">Grade B &amp; up (hide sparse)</option>
-          <option value="A">Grade A only (most complete)</option>
-        </select>
+        <div className="space-y-1.5 rounded-md border border-slate-200 p-2.5">
+          {GRADE_OPTIONS.map((g) => (
+            <label
+              key={g.code}
+              className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+            >
+              <input
+                type="checkbox"
+                checked={selectedGrades.includes(g.code)}
+                onChange={() => toggleGrade(g.code)}
+                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+              />
+              <span>
+                {g.label}{' '}
+                <span className="text-slate-400">— {g.note}</span>
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Price drops only */}

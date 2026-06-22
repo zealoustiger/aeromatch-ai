@@ -880,6 +880,19 @@ export function describeAircraftFilters(
   const minTt = num(params.min_tt)
   const maxTt = num(params.max_tt)
   const keyword = params.q?.trim()
+  // Listing-quality multi-select (subset of A/B/C). Prefer the new `grade` param;
+  // fall back to a legacy single `min_grade` floor (A → [A]; B → [A,B]).
+  const gradeRaw = (params.grade ?? '')
+    .split(',')
+    .map((g) => g.trim().toUpperCase())
+    .filter((g) => ['A', 'B', 'C'].includes(g))
+  const grades = gradeRaw.length
+    ? ['A', 'B', 'C'].filter((g) => gradeRaw.includes(g))
+    : params.min_grade === 'A'
+      ? ['A']
+      : params.min_grade === 'B'
+        ? ['A', 'B']
+        : []
 
   const dollars = (n: number) => `$${n.toLocaleString('en-US')}`
   const hours = (n: number) => `${n.toLocaleString('en-US')} hours`
@@ -902,6 +915,10 @@ export function describeAircraftFilters(
   else if (maxTt) clauses.push(`under ${hours(maxTt)}`)
   else if (minTt) clauses.push(`over ${hours(minTt)}`)
   if (keyword) clauses.push(`matching "${keyword}"`)
+  // Only meaningful as a narrowing when it's a real subset (1 or 2 grades).
+  if (grades.length >= 1 && grades.length <= 2) {
+    clauses.push(`grade ${grades.join(' or ')}`)
+  }
 
   const hasMakeOrModel = Boolean(make || model)
   if (!hasMakeOrModel && clauses.length === 0) return 'general aviation'
