@@ -227,6 +227,55 @@ export function getPartnershipStateFaqs(code: string): { q: string; a: string }[
 }
 
 /**
+ * Per-STATE "Co-owning an aircraft in {State}" overview prose — 2 genuine, evergreen
+ * narrative paragraphs per curated state, rendered as editorial body copy near the top
+ * of the partnership state page (`/partnerships/state/[state]`). The co-ownership
+ * counterpart to `FORSALE_STATE_OVERVIEWS`: unique content depth (how co-ownership
+ * works in that state's GA scene + the basing/cost realities that make sharing pay off)
+ * to lift these priority hubs (ca/tx/fl are seed pages #8/#9/#10) above templated,
+ * count-only boilerplate in the INDEXING stage. Deliberately distinct in wording from
+ * BOTH the page's Q&A `PARTNERSHIP_STATE_FAQS` AND the for-sale `FORSALE_STATE_OVERVIEWS`.
+ * Keyed by lowercase USPS code; same curated high-GA set as the partnership-state FAQs.
+ * Well-known GA facts only — NO fabricated statistics, NO live listing counts, so the
+ * copy never goes stale. Non-curated states render no overview.
+ */
+const PARTNERSHIP_STATE_OVERVIEWS: Record<string, string[]> = {
+  ca: [
+    'California is partnership country. The state pairs one of the largest pilot populations in the nation with a fly-almost-year-round climate, so a shared airplane actually earns its keep instead of sitting on a ramp between weekend flights. With several partners spreading the calendar, a Bay Area or LA-basin group can keep an airplane flying often enough that everyone stays current — the kind of utilization that makes co-ownership click rather than drift.',
+    'The economics are what push so many California pilots toward a share in the first place. Tie-down and hangar space near the coastal metros is scarce and expensive, and insurance and labor track the state’s high cost of living, so the fixed bills that sink a solo owner are exactly the ones a partnership splits cleanly. Divide the hangar, insurance, and annual across two to four owners and a capable airplane becomes a realistic monthly figure — which is why shares change hands steadily here whenever a member moves on.',
+  ],
+  tx: [
+    'Texas is built for shared flying. The long distances between its cities make a personal airplane genuinely useful, the VFR-friendly season is long, and there is no shortage of airports to base at — so a co-ownership group gets real, regular use out of a traveling single or light twin. A partnership turns "I’d fly more if it were closer and cheaper" into an airplane several pilots can reach from Dallas–Fort Worth, Houston, Austin, or San Antonio.',
+    'Sharing also smooths the costs that come with a capable traveler. Hangars are generally more available and more affordable than on the coasts, and the state’s no-income-tax setting helps — though a purchase can still trigger sales or use tax, worth checking before you buy into a share. Hot summers and the odd hailstorm make covered storage worthwhile, and that hangar, like the insurance and the annual, is simply one more fixed cost a Texas partnership divides among its members.',
+  ],
+  fl: [
+    'Florida’s combination of year-round VFR weather and some of the densest flight-training activity in the country makes it a natural place to co-own. High utilization is the whole point of a partnership, and here an airplane rarely waits long for good weather — a group of two to four pilots can keep a shared single genuinely busy across South Florida, Orlando, Tampa Bay, or Jacksonville while everyone stays proficient.',
+    'The Florida environment is also why sharing the upkeep pays off. Coastal salt air is hard on airframes and avionics, and summer heat and storms reward covered storage — so a hangar and diligent maintenance matter more here than in milder places. Those are precisely the costs a partnership is good at absorbing: split the hangar and the annual across several owners and protecting the airplane properly stops being a budget strain and becomes a shared, manageable line item.',
+  ],
+  az: [
+    'Arizona offers some of the most dependable flying weather anywhere, and that reliability is a gift to a co-ownership group — a shared airplane in Phoenix or Tucson rarely sits weathered-in, so partners get steady, predictable access to it. The dry desert air is also kind to airframes, which means the aircraft a partnership buys tends to age well and hold its value, an underrated advantage when several owners share the long-term asset.',
+    'The desert does shape the group’s choices. Summer heat and field elevation push density altitude high, so partners often favor an airplane with horsepower to spare and agree on hot-and-high operating limits up front — the sort of shared standard a well-run partnership sets together. Hangars are easier to come by than on the coasts, keeping the fixed costs each member pays reasonable, which is a big part of why Arizona’s co-ownership scene stays healthy.',
+  ],
+  co: [
+    'Colorado rewards a capable, well-equipped airplane, and that is exactly the kind of aircraft a partnership makes affordable. The flying — mountains, wide Front Range distances, real IFR weather — calls for more airplane than a bare-bones trainer, and splitting the cost across several owners is how many Colorado pilots get into one. A group also keeps a shared airplane flown regularly enough that everyone maintains the proficiency this terrain demands.',
+    'Mountain flying makes the partners’ agreement matter as much as the airplane. High terrain and high density altitude mean performance and currency genuinely count, so co-owners here tend to set mountain-flying and weather standards together and choose an airplane with the horsepower and equipment to back them. The hangar, insurance, and annual on a well-equipped Front Range single all divide cleanly across the group — turning a serious mountain airplane into a sensible monthly share.',
+  ],
+  wa: [
+    'Washington’s deep aviation culture and varied flying — the San Juans and the coast on one side, the high country east of the Cascades on the other — make a well-equipped airplane genuinely useful, and a partnership is how a lot of Northwest pilots afford one. Sharing keeps an IFR-capable single in regular use rather than parked through the gray months, and spreads the cost of the equipment this region rewards across several owners instead of one.',
+    'Pacific Northwest weather shapes how a group operates and what it spends on. Marine-layer clouds, rain, and short winter days make instrument capability and currency valuable, so partners often favor a well-equipped airplane and agree to keep their IFR proficiency up. Persistent moisture also makes a hangar worth the cost to fend off corrosion — and like the insurance and the annual, that hangar is a fixed bill a Puget Sound partnership comfortably divides among its members.',
+  ],
+}
+
+/**
+ * Resolve a partnership state code (lowercase USPS, the route slug) to its 2-paragraph
+ * overview prose, or null when the state isn't curated (→ no overview section). Mirrors
+ * `getForSaleStateOverview` / `getPartnershipStateFaqs`.
+ */
+export function getPartnershipStateOverview(code: string): string[] | null {
+  return PARTNERSHIP_STATE_OVERVIEWS[code.toLowerCase()] ?? null
+}
+
+/**
  * Per-state *buying*-focused FAQs for `/aircraft/for-sale/[state]`, keyed by lowercase
  * USPS code. Curated high-GA-activity states only — the top for-sale search targets
  * (`aircraft for sale california` is the #1 autocomplete) plus a few distinctive GA
