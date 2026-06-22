@@ -7,8 +7,9 @@ import AircraftSaleList, { countForSaleState, fetchAircraftPage, topMakeModelsFo
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
-import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
-import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import ModelFaq from '@/components/ModelFaq'
+import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, getForSaleStateFaqs, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { buildAircraftItemListJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ state: string }> }
 
@@ -86,12 +87,25 @@ export default async function StateAircraftForSalePage({ params }: Props) {
     url: `${SITE_URL}${path}`,
   })
 
+  // Per-state buying FAQs (curated high-GA states only) — unique content depth +
+  // rich-result eligibility for the INDEXING stage. The visible accordion answers
+  // and the FAQPage JSON-LD come from one source so they match 1:1 (Google parity).
+  // Non-curated states get null → no FAQ section, no FAQPage markup.
+  const faqs = getForSaleStateFaqs(entry.code)
+  const faqJsonLd = buildFaqPageJsonLd(faqs ?? undefined, { url: `${SITE_URL}${path}` })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       {itemListJsonLd && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
       {/* Breadcrumb */}
@@ -185,6 +199,10 @@ export default async function StateAircraftForSalePage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Per-state buying FAQs — curated states only (no thin boilerplate). The
+          visible answers match the FAQPage JSON-LD emitted above 1:1. */}
+      {faqs && <ModelFaq label={`Buying an aircraft in ${entry.name}`} faqs={faqs} className="mt-4" />}
 
       {/* Buying a plane? — related-guides cross-link block (internal linking
           toward the buyer-guide cluster). Additive; no new page. Mirrors the

@@ -172,6 +172,58 @@ export function getPartnershipStateFaqs(code: string): { q: string; a: string }[
 }
 
 /**
+ * Per-state *buying*-focused FAQs for `/aircraft/for-sale/[state]`, keyed by lowercase
+ * USPS code. Curated high-GA-activity states only — the top for-sale search targets
+ * (`aircraft for sale california` is the #1 autocomplete) plus a few distinctive GA
+ * states; same set as PARTNERSHIP_STATE_FAQS so the two state families stay parallel.
+ * Non-curated states render no FAQ (like a thin make), so we never ship templated
+ * boilerplate across all 50 (GOAL.md guardrail). These answer BUYING questions (where
+ * to look, what to inspect, what drives price in that state) and are intentionally
+ * distinct from the co-ownership-focused PARTNERSHIP_STATE_FAQS. Evergreen, well-known,
+ * durable facts only — no fabricated stats, no live counts.
+ */
+const FORSALE_STATE_FAQS: Record<string, { q: string; a: string }[]> = {
+  ca: [
+    { q: 'Is it a good idea to buy an aircraft in California?', a: 'California has one of the largest used-aircraft markets in the country, so selection is deep across makes, models, and price points — you are rarely stuck with just one or two candidates. The trade-off is cost of ownership after the sale: hangar and tie-down space near the coastal metros is scarce and expensive, so factor your basing costs in before you commit to a purchase.' },
+    { q: 'Where should I look for aircraft for sale in California?', a: 'Inventory clusters around the major GA hubs — the Bay Area (Palo Alto, San Carlos, Hayward, Reid-Hillview, Livermore), the Los Angeles basin (Van Nuys, Santa Monica, Long Beach, Camarillo), and San Diego (Montgomery-Gibbs, Gillespie). Buying near where you intend to base saves a ferry flight and lets you do the pre-buy inspection with a local mechanic who knows the airplane.' },
+    { q: 'What should I check before buying an aircraft in California?', a: 'Beyond the usual logbook and airworthiness review, get an independent pre-buy inspection from an A&P you trust, confirm the annual status and any open ADs, and budget for California’s higher fixed costs (hangar, insurance). Note that buying an aircraft can trigger California sales/use tax — check the current rules with a tax professional before you close.' },
+  ],
+  tx: [
+    { q: 'Why buy an aircraft in Texas?', a: 'Texas has a large, active general-aviation market and the long VFR-friendly flying seasons that keep airplanes flying and well-exercised. Distances between cities make a light aircraft genuinely useful, so there is steady demand and a deep supply of traveling singles and twins to choose from, often at more reasonable basing costs than the coasts.' },
+    { q: 'Where should I look for aircraft for sale in Texas?', a: 'The big metros carry most of the inventory: Dallas–Fort Worth (Addison, Arlington, Denton, Fort Worth Meacham), greater Houston (Sugar Land, David Wayne Hooks, Pearland, La Porte), Austin (Georgetown, San Marcos), and San Antonio. Hangars are generally more available and more affordable than in California, which widens your options on where to base after the sale.' },
+    { q: 'What should I know about taxes and inspections when buying in Texas?', a: 'Texas has no state income tax, but sales/use tax can apply to an aircraft purchase, so confirm the current rules with a tax professional before closing. As anywhere, get an independent pre-buy inspection, review the logbooks and AD compliance, and budget for a hangar — hot Texas summers are hard on paint and avionics, so covered storage protects your investment.' },
+  ],
+  fl: [
+    { q: 'Is Florida a good place to buy an aircraft?', a: 'Florida has one of the densest concentrations of general-aviation activity and flight training in the country, which means a deep, fast-moving used market and plenty of mechanics and shops to support a pre-buy. Year-round VFR weather keeps airplanes flying, so you will find a wide range of well-used aircraft as well as project planes.' },
+    { q: 'Where should I look for aircraft for sale in Florida?', a: 'Inventory concentrates in the big GA areas: South Florida (Fort Lauderdale Executive, Pompano Beach, Boca Raton, Opa-locka), the Orlando area (Orlando Executive, Kissimmee, Sanford), Tampa Bay (St. Petersburg–Clearwater, Tampa Executive), and Jacksonville. Shopping near your intended base lets a local mechanic handle the inspection and saves a long ferry flight.' },
+    { q: 'What should Florida buyers watch out for?', a: 'The coastal salt-air environment is hard on airframes and avionics, so look closely for corrosion during the pre-buy — especially on airplanes that have lived outside on a tie-down. Confirm logbooks, annual status, and AD compliance as you would anywhere, and budget for a hangar to protect the airplane from summer storms, heat, and salt after you buy.' },
+  ],
+  az: [
+    { q: 'Why buy an aircraft in Arizona?', a: 'Arizona’s dry climate and reliable VFR weather are kind to airframes — airplanes based here tend to see less corrosion than coastal aircraft — and the heavy flight-training and recreational activity means a steady supply of well-flown singles. Dry-stored, sun-faded paint is common, but the underlying metal is often in good shape.' },
+    { q: 'Where should I look for aircraft for sale in Arizona?', a: 'Most inventory is around Phoenix (Deer Valley — one of the busiest GA airports in the country — Scottsdale, Falcon Field/Mesa, Chandler, Glendale) and Tucson (Ryan Field, Tucson International GA). Hangars are more available than on the coasts, so you have flexibility on where to base after the sale.' },
+    { q: 'What should Arizona buyers keep in mind about performance?', a: 'Summer heat and field elevation push density altitude high, which hurts takeoff and climb performance — so think about whether a given airplane has enough horsepower for how and where you plan to fly. During the pre-buy, check that paint and interior plastics have not been baked brittle by years of intense sun, and confirm logbooks and AD compliance as usual.' },
+  ],
+  co: [
+    { q: 'What should I know about buying an aircraft in Colorado?', a: 'Colorado has a strong general-aviation community and a good used market, with many airplanes already equipped and flown for the kind of mountain and long-distance flying the state demands. That means you can often find a capable, well-equipped aircraft — just match the airplane’s performance to the high-altitude flying you intend to do.' },
+    { q: 'Where should I look for aircraft for sale in Colorado?', a: 'Inventory clusters along the Front Range: the Denver area (Centennial — among the busiest GA airports in the nation — Rocky Mountain Metro, Front Range), Boulder, Colorado Springs, and Fort Collins–Loveland. Buying near your base lets a local mechanic familiar with high-altitude operations handle the pre-buy inspection.' },
+    { q: 'How does mountain flying affect what I should buy in Colorado?', a: 'High terrain and high density altitude make performance genuinely matter, so many Colorado buyers favor airplanes with adequate horsepower and the equipment for IFR and mountain flying. Beyond the standard logbook and pre-buy review, consider whether the aircraft suits the missions — and the airports — you actually plan to fly from.' },
+  ],
+  wa: [
+    { q: 'Is Washington a good place to buy an aircraft?', a: 'Washington has a deep aviation culture and an active general-aviation market, with a good supply of well-equipped airplanes suited to the varied Pacific Northwest flying — the islands, the coast, and the high country east of the Cascades. IFR-capable singles are common because the region’s weather rewards them.' },
+    { q: 'Where should I look for aircraft for sale in Washington?', a: 'Most inventory is around Puget Sound: the Seattle area (Boeing Field, Renton, Paine Field/Everett, Auburn), Tacoma (Thun Field/Pierce County), and Olympia, plus Spokane and the Bellingham area near the islands. Shopping near your intended base keeps the pre-buy and any post-sale squawks local.' },
+    { q: 'What should Pacific Northwest buyers check before buying?', a: 'Persistent moisture makes corrosion and water intrusion worth a close look during the pre-buy, particularly on airplanes kept outside rather than hangared. Marine-layer weather and shorter winter days make IFR capability and a solid avionics panel valuable, so confirm the equipment matches how you plan to fly — and review logbooks and AD status as always.' },
+  ],
+}
+
+/**
+ * Resolve a for-sale state code (USPS) to its 3 curated buying FAQs, or null when the
+ * state isn't curated (→ no FAQ). Mirrors `getPartnershipStateFaqs`.
+ */
+export function getForSaleStateFaqs(code: string): { q: string; a: string }[] | null {
+  return FORSALE_STATE_FAQS[code.toLowerCase()] ?? null
+}
+
+/**
  * Curated make+model combos with their own programmatic for-sale landing page at
  * `/aircraft/[makeSlug]/[modelSlug]` (e.g. /aircraft/cessna/172).
  *
