@@ -240,6 +240,22 @@ export default async function MakeModelForSalePage({ params }: Props) {
         </div>
       </div>
 
+      {/* About the {Make} {Model} — unique, evergreen editorial prose (content
+          depth for the INDEXING stage), mirrors the make-hub "About {Make}" card.
+          Curated combos only; dynamically-discovered combos render nothing. */}
+      {entry.overview && entry.overview.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            About the {label}
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+            {entry.overview.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Market snapshot — real aggregate price stats for THIS family, computed
           from the active priced inventory. Renders ONLY when the family has
           enough priced listings (>= 5); sparse families show nothing (honesty
