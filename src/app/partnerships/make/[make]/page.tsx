@@ -5,10 +5,12 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 import { Plane, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
-import { SEO_MAKES, getMakeBySlug, SITE_URL } from '@/lib/seo'
+import ModelFaq from '@/components/ModelFaq'
+import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, SITE_URL } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
+import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ make: string }> }
 
@@ -48,12 +50,25 @@ export default async function MakePartnershipsPage({ params }: Props) {
     url: `${SITE_URL}/partnerships/make/${entry.slug}`,
   })
 
+  // Curated co-ownership FAQs (8 makes) — visible accordion + FAQPage JSON-LD,
+  // matched 1:1 from one source. Non-curated makes get null → render nothing.
+  const faqs = getPartnershipMakeFaqs(entry.slug)
+  const faqJsonLd = buildFaqPageJsonLd(faqs ?? undefined, {
+    url: `${SITE_URL}/partnerships/make/${entry.slug}`,
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {itemListJsonLd && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
       {/* Breadcrumb */}
@@ -97,6 +112,15 @@ export default async function MakePartnershipsPage({ params }: Props) {
       <Suspense fallback={<ListSkeleton />}>
         <PartnershipList filters={{ make: entry.filter }} />
       </Suspense>
+
+      {/* Co-ownership FAQ (curated makes only) */}
+      {faqs && (
+        <ModelFaq
+          label={`${entry.name} partnerships`}
+          faqs={faqs}
+          className="mt-12"
+        />
+      )}
 
       {/* Cross-links */}
       <div className="mt-12 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

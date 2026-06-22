@@ -60,6 +60,67 @@ export function getMakeBySlug(slug: string) {
   return SEO_MAKES.find((m) => m.slug === slug.toLowerCase()) ?? null
 }
 
+// Per-MAKE partnership FAQs — genuine, evergreen, CO-OWNERSHIP-level Q&As attached
+// to each curated partnership hub page (`/partnerships/make/[make]`), rendered
+// visibly AND emitted as FAQPage JSON-LD (visible text must match the structured
+// data 1:1). Keyed by SEO_MAKES slug. These are intentionally distinct from the
+// for-sale `MAKE_FAQS` (which answer buying questions): here every answer is about
+// SHARING the airplane — why the make suits a partnership, which model fits a group,
+// and how co-ownership costs split. Drawn from the SEO_MAKES blurbs + well-known
+// general-aviation facts — NO fabricated statistics and NO live listing counts, so
+// the copy stays accurate and never goes stale. A make absent here renders no FAQ.
+const PARTNERSHIP_MAKE_FAQS: Record<string, { q: string; a: string }[]> = {
+  cessna: [
+    { q: 'Why are Cessnas such popular partnership aircraft?', a: 'Cessna singles are the most commonly co-owned aircraft in America for a simple reason: parts are everywhere and nearly every A&P knows them, so maintenance is low-drama and predictable. That stability is exactly what a group of owners wants — fewer surprise bills to split and an airplane that is easy to insure across multiple pilots.' },
+    { q: 'Which Cessna is best for a co-ownership group?', a: 'The 172 Skyhawk is the default partnership single — forgiving, inexpensive to run, and universally supported. Step up to the 182 Skylane if your group regularly carries four people or flies out of higher or shorter fields and wants the extra horsepower and useful load.' },
+    { q: 'How do costs split on a Cessna partnership?', a: 'Like any share: a one-time buy-in for your portion of the airplane, a monthly fixed amount covering hangar, insurance, and the annual reserve, and an hourly wet rate for the time you actually fly. Cessna’s ubiquitous parts and mechanics keep the fixed side modest, so each owner’s monthly share stays small.' },
+  ],
+  piper: [
+    { q: 'Why co-own a Piper?', a: 'The low-wing PA-28 family — Cherokees, Archers, and Arrows — has low operating costs, forgiving handling, and a huge parts supply, which makes a Piper one of the easiest airplanes for a first partnership. Simple, well-understood systems mean predictable shared maintenance.' },
+    { q: 'Which Piper is best for a partnership?', a: 'A fixed-gear Cherokee or Archer is one of the most economical singles to share — simple systems and predictable upkeep. Move up to an Arrow if the group wants retractable and complex time, or a Saratoga when you need six seats.' },
+    { q: 'What does a Piper partnership cost?', a: 'The fixed-gear PA-28s are among the lowest-cost four-seat singles to run. Splitting the hangar, insurance, and annual across the partners keeps each owner’s monthly fixed share low; you then pay an hourly wet rate only for the hours you fly.' },
+  ],
+  cirrus: [
+    { q: 'Why do pilots co-own Cirrus aircraft?', a: 'Co-ownership is how most pilots make a Cirrus pencil out. Splitting the hangar, insurance, and the periodic CAPS parachute repack across a few partners turns an advanced glass single with a whole-airframe parachute into a realistic monthly number.' },
+    { q: 'SR20 or SR22 for a partnership?', a: 'The SR20 (about 215 hp) is the more attainable share — cheaper to buy and run, and plenty for training and regional trips. The SR22 (about 310 hp) carries more, climbs better, and flies faster. Both share the same glass panel and CAPS parachute, so the choice is really about mission and budget.' },
+    { q: 'What is unique about Cirrus partnership costs?', a: 'On top of the usual hangar, insurance, and annual, a Cirrus has the periodic CAPS parachute repack — a known recurring expense. It is one of the best reasons to share the airplane, because the repack and the glass-panel upkeep are far easier to absorb split across a group.' },
+  ],
+  beechcraft: [
+    { q: 'Why co-own a Beechcraft?', a: 'Bonanzas and Barons are legendary travelers with traveling-machine costs — higher fuel burn and healthy engine reserves (two of them on a Baron). Co-ownership is what brings those costs within reach, which is why so many of these airplanes are shared.' },
+    { q: 'Bonanza or Baron for a group?', a: 'The Bonanza is a fast, efficient single; the Baron adds a second engine for redundancy and range at roughly double the maintenance. For most partnerships the single is the easier airplane to share — choose the Baron only if the group specifically wants twin redundancy.' },
+    { q: 'How are costs split on a Beechcraft partnership?', a: 'A buy-in for your share, a monthly fixed amount for hangar, insurance, and engine reserves, and an hourly wet rate for flying. The higher reserves on a Bonanza or Baron are exactly why these get co-owned — split across partners, a premium traveler becomes affordable.' },
+  ],
+  mooney: [
+    { q: 'Why co-own a Mooney?', a: 'Mooneys deliver the best speed-per-dollar in piston aviation, but the retractable gear adds an annual inspection and an insurance premium. A partnership spreads those fixed costs, so the famously efficient M20 becomes even more economical per owner.' },
+    { q: 'Is a Mooney a good partnership airplane?', a: 'It is a capable cross-country traveler rather than a trainer — a snug cabin, retractable gear, and more systems to manage. It suits a group of pilots who mostly travel and are comfortable with a complex single, rather than one building primary time.' },
+    { q: 'What does a Mooney partnership cost?', a: 'Fuel is low for the speed you get, which keeps the hourly wet rate down. The retractable gear adds to the fixed side via inspections and insurance — costs a partnership is well suited to share across owners.' },
+  ],
+  diamond: [
+    { q: 'Why co-own a Diamond?', a: 'Modern composite airframes, fuel-efficient Austro diesels, and an excellent safety record make the DA40 and DA42 attractive to share. A partnership splits the higher purchase price and engine/gearbox reserves while everyone enjoys a new-feeling, efficient airplane.' },
+    { q: 'DA40 or DA42 for a partnership?', a: 'The four-seat DA40 single is the natural choice for most groups — efficient, safe, and simpler to share. The twin DA42 suits a partnership that specifically wants twin capability and the redundancy that comes with it.' },
+    { q: 'What does a Diamond partnership cost?', a: 'The diesel models sip Jet-A and the composite airframes are durable, which keeps the running costs reasonable; the trade-offs are a higher purchase price and engine/gearbox reserves. Sharing the airplane spreads those reserves across the partners.' },
+  ],
+  vans: [
+    { q: 'Can you co-own an experimental RV?', a: 'Absolutely — many RVs are shared. Just confirm the operating limitations and that insurance works for multiple owners, and make sure everyone in the group is comfortable with the builder-maintained nature of an amateur-built airplane.' },
+    { q: 'Why co-own a Van’s RV?', a: 'The RV series offers unmatched performance per dollar, and because owner-performed maintenance is allowed on experimentals, running costs stay low. Partnerships are common among builders and sport pilots who want fast, fun flying without a certified airplane’s price tag.' },
+    { q: 'Which RV is best for a partnership?', a: 'The two-seat RVs (like the RV-7 or RV-8) are ideal for sport flying among a small group; the four-seat RV-10 suits partners who carry families. Whichever you choose, agree up front on who maintains the airplane and how the build/condition is documented.' },
+  ],
+  grumman: [
+    { q: 'Why co-own a Grumman?', a: 'Grumman’s light singles — the AA-5 Traveler, Tiger, and Cheetah — pair sporty sliding-canopy handling with simple bonded airframes that keep both fuel and shared maintenance costs down. That low overhead makes them popular first-partnership airplanes.' },
+    { q: 'Grumman Tiger or Cheetah for a group?', a: 'The Tiger has more power and is the faster, better climber; the Cheetah is a bit more economical to run. Both share the same fun sliding-canopy character, so pick based on whether your group prioritizes performance or operating cost.' },
+    { q: 'What does a Grumman partnership cost?', a: 'Simple systems and slippery airframes keep both the hourly wet rate and shared maintenance low. A buy-in plus a modest monthly fixed share for hangar, insurance, and the annual is typically all it takes to keep one of these in a partnership.' },
+  ],
+}
+
+/**
+ * Resolve a partnership make slug to its 3 curated co-ownership FAQs, or null when
+ * the make isn't curated (→ the page renders no FAQ, like a thin make). Mirrors how
+ * `resolveMake` attaches the for-sale `MAKE_FAQS`.
+ */
+export function getPartnershipMakeFaqs(slug: string): { q: string; a: string }[] | null {
+  return PARTNERSHIP_MAKE_FAQS[slug.toLowerCase()] ?? null
+}
+
 /**
  * Curated make+model combos with their own programmatic for-sale landing page at
  * `/aircraft/[makeSlug]/[modelSlug]` (e.g. /aircraft/cessna/172).
