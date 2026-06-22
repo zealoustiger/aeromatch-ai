@@ -5,7 +5,7 @@ import { Suspense } from 'react'
 import { MapPin, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
-import { STATE_NAMES, STATE_CODES, SITE_URL, getPartnershipStateFaqs } from '@/lib/seo'
+import { STATE_NAMES, STATE_CODES, SITE_URL, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -57,6 +57,10 @@ export default async function StatePartnershipsPage({ params }: Props) {
     url: `${SITE_URL}/partnerships/state/${state.toLowerCase()}`,
   })
 
+  // Per-state "Co-owning an aircraft in {State}" overview prose (curated high-GA states
+  // only; same set as the FAQs). Non-curated states get null → no overview section.
+  const overview = getPartnershipStateOverview(code)
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {itemListJsonLd && (
@@ -95,6 +99,22 @@ export default async function StatePartnershipsPage({ params }: Props) {
           and reach pilots searching in {name}.
         </p>
       </div>
+
+      {/* Co-owning an aircraft in {State} — unique, evergreen editorial prose (content
+          depth for the INDEXING stage). Curated high-GA states only; absent → nothing
+          renders. Distinct in wording from the co-ownership FAQs near the page bottom. */}
+      {overview && overview.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            Co-owning an aircraft in {name}
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+            {overview.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
 
       <Suspense fallback={<ListSkeleton />}>
         <PartnershipList filters={{ state: code }} />
