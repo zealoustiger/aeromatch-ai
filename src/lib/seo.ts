@@ -796,7 +796,13 @@ export function describeAircraftFilters(
   params: Record<string, string | undefined>
 ): string {
   const make = params.make?.trim()
-  const model = params.model?.trim()
+  // `model` may be a comma-joined multi-select (e.g. "SR20,SR22") — render the
+  // selection cleanly as "SR20 / SR22" rather than leaking the raw comma.
+  const model = (params.model ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+    .join(' / ')
   const stateName = params.state ? STATE_NAMES[params.state.toUpperCase()] : undefined
   // A range bound is meaningful only when it parses to a positive number.
   const num = (raw: string | undefined): number | null => {
