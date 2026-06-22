@@ -1,0 +1,12 @@
+# /etc/systemd/system/nightshift-digest.timer
+# Fires the morning digest at 07:15 Pacific — after the drain's 06:50 stop and any final
+# cycle finishing (per-cycle cap 20 min). Pacific via the systemd TZ suffix; host stays UTC.
+[Unit]
+Description=Fire the ClubHanger Night Shift morning digest
+
+[Timer]
+OnCalendar=*-*-* 07:15:00 America/Los_Angeles
+Persistent=false
+
+[Install]
+WantedBy=timers.target

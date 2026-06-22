@@ -115,6 +115,19 @@ if [ -f "$CL" ] && [ "$n" -gt 0 ]; then
 "
   { head -4 "$CL"; echo "$SUMMARY"; tail -n +5 "$CL"; } > "$CL.tmp" && mv "$CL.tmp" "$CL"
   git add "$CL" 2>/dev/null && git commit -q -m "nightshift: drain summary ($n cycles, PASS $pass/FAIL $fail)" 2>/dev/null
+
+  # (a) Refresh the admin Daily Report after EVERY run: prepend a basic per-run block to
+  # REVIEW.md, then sync REVIEW.md + BACKLOG.md into admin_content (the /admin tab reads it).
+  # The 07:00 digest (run-digest.sh) later prepends a polished narrative on top.
+  RV="$APP/nightshift/REVIEW.md"
+  RUN_BLOCK="## ${END_TS} — Night Shift run: ${n} cycles (PASS ${pass} / FAIL ${fail}) — ${stop_reason}$( [ "${NS_FORCE:-0}" = "1" ] && echo ' · manual' )
+
+$(jq -r --arg rid "$RUN_ID" 'select(.run_id==$rid and .cycle!=null) | "- " + (.result // (.verdict + " — cycle " + (.cycle|tostring)))' "$LEDGER" 2>/dev/null)
+"
+  { printf '%s\n\n' "$RUN_BLOCK"; [ -f "$RV" ] && cat "$RV"; } > "$RV.tmp" && mv "$RV.tmp" "$RV"
+  ( cd "$APP" && node scripts/sync-admin-docs.mjs >/dev/null 2>&1 ) || true
+  git add "$RV" 2>/dev/null && git commit -q -m "nightshift: run report → admin Daily Report" 2>/dev/null
+
   git push origin staging 2>/dev/null || true
 fi
 
