@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInventoryMakeModelStates, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
-import { getNearAirportSitemapIcaos } from '@/lib/nearbyPartnerships'
+import { getNearAirportSitemapIcaos, getIndexableAirportIcaos } from '@/lib/nearbyPartnerships'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
@@ -62,10 +62,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }))
 
-    const { data: airports } = await supabase.from('airports').select('icao')
-
-    airportPages = (airports ?? []).map((a) => ({
-      url: `${SITE_URL}/airports/${(a.icao as string).toLowerCase()}`,
+    // Airport hub pages (`/airports/[icao]`). The `airports` table holds ~17k rows,
+    // but an airport page only has real content when partnerships are based there —
+    // every other one is a thin, near-identical "no partnerships based here yet"
+    // page. Emit ONLY airports with >= 1 based-here active partnership (the SAME
+    // rule the page uses to stay indexable — see getIndexableAirportIcaos /
+    // isAirportIndexable), so the ~17k thin pages don't dilute crawl budget
+    // (GOAL.md INDEXING stage; no thin/doorway pages). Mirrors the inventory gating
+    // already applied to every other programmatic family below.
+    const airportIcaos = await getIndexableAirportIcaos()
+    airportPages = airportIcaos.map((icao) => ({
+      url: `${SITE_URL}/airports/${icao}`,
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }))
