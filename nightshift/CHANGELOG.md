@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T12:00Z — PASS — nav-polish-icons
+- Pages: / (and every page — the top nav + footer are global)
+- What: **Polished the top navigation per the human's request: every nav item now has a small leading icon, and "About" moved out of the top nav into the footer (where it already lives).** Partnerships gets a people icon, Planes for Sale a plane, Guides a book, and Tools keeps its calculator — so the bar reads consistently instead of mixing icon/no-icon items. Dropping About from the top nav declutters the bar; About is still one click away in the footer ("About ClubHanger" / "Our story"). Nothing else changed — the logo, Post a Listing button, Sign in / profile menu, and the mobile menu (same four items, now with icons) all behave exactly as before.
+- Goal: feature depth / UX polish (lane=[want]; alternated from last non-bug cycle's [goal] `home-guides-tools-rail`). Backlog item [P3][want] "Nav polish". Pageviews at orient: 117 last 7d (GSC not configured).
+- Spec: nightshift/specs/20260622T120042Z-nav-polish-icons.md
+- Verdict: PASS — `npx next build` + TypeScript green; QA smoke (production `next start`, NOT dev) exit 0 on / · /aircraft · /partnerships · /guides · /tools at desktop 1280 + mobile 375 (all HTTP 200, zero app-origin console errors, zero horizontal overflow). Served-HTML check: header nav has the four items only (no /about), footer still links About; cropped header screenshot confirms each item now shows a leading icon and About is gone. (Note: a separate run that included /about flagged a pre-existing console error there — its hero uses external Unsplash images via next/image, which are unreachable in this sandbox and 400/404; /about returns 200 and was not touched this cycle, so it's an environment artifact, not a regression.)
+- Screenshots: nightshift/screenshots/nav-polish-icons/
+- Next: optional — give the mobile menu's signed-in section (Messages/Searches/Saved/Admin) the same icon treatment audit; or pick a P1 [want] next (airport community hubs, post-signup onboarding).
+
 ## 2026-06-22T11:54Z — PASS — home-guides-tools-rail
 - Pages: /
 - What: **The homepage now has a "Free guides & tools" section that links straight to our cost calculator and ownership guides.** Between "Why pilots use ClubHanger" and the bottom mission strip, there's a new card grid surfacing six real resources — the Cost calculator, the Earnings calculator, and the guides "How co-ownership works", "What it really costs", "How to find partners", and "Partnership agreements" — plus "All guides" and "All tools" links. Each card has an icon, a Guide/Tool tag, an accurate one-line description, and links to that page. These pages were previously only reachable from the small site footer; now a visitor planning a partnership can find them right on the homepage. Nothing else on the homepage changed (hero, listings, rails, explore cards, make/state browse, FAQ, CTA all intact). Renders cleanly at desktop and mobile (375px).
