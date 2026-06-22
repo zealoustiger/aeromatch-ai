@@ -8,6 +8,8 @@ const exploreLinks = [
   { href: '/partnerships', label: 'Browse partnerships' },
   { href: '/partnerships/seeking', label: 'Pilots seeking shares' },
   { href: '/aircraft', label: 'Aircraft for sale' },
+  { href: '/aircraft/browse', label: 'All aircraft pages' },
+  { href: '/partnerships/browse', label: 'All partnership pages' },
   { href: '/partnerships/new', label: 'Post a partnership' },
   { href: '/partnerships/seeking/new', label: 'Post a seeking listing' },
 ]
