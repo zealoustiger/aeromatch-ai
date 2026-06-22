@@ -65,9 +65,10 @@ while : ; do
   n=$((n+1))
   CYCLE_OUT="$RUNDIR/cycle-$n.jsonl"
   CYCLE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  # Mark this cycle as the active worker so Forge tails its stream.
-  printf '{"state":"running","run_id":"%s","started":"%s","active_worker":"runs/%s/cycle-%s.jsonl","cycle":%s}\n' \
-    "$RUN_ID" "$RUN_TS" "$RUN_ID" "$n" "$n" > "$STATUS"
+  # Mark this cycle as the active worker so Forge tails its stream. stop_by = the run
+  # deadline (epoch secs) so Forge can show the expected stop time / countdown.
+  printf '{"state":"running","run_id":"%s","started":"%s","active_worker":"runs/%s/cycle-%s.jsonl","cycle":%s,"stop_by":%s}\n' \
+    "$RUN_ID" "$RUN_TS" "$RUN_ID" "$n" "$n" "$DEADLINE" > "$STATUS"
 
   # Feed the prompt via STDIN, not as a -p arg: the prompt begins with "---" (frontmatter)
   # and claude's CLI would treat a -p value starting with "--" as an unknown option.
