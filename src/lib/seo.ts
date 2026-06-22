@@ -702,6 +702,64 @@ export type SeoMake = {
   /** the make's inventory-backed model families, in the order they appear in
    *  `getInventoryMakeModels()` (curated families first). */
   models: SeoMakeModel[]
+  /**
+   * 3 genuine, evergreen MAKE-level Q&As shown on the make hub page + emitted as
+   * FAQPage JSON-LD (visible text must match the structured data 1:1). Brand /
+   * lineup-level (which model to pick, what the make is known for, cost to own) —
+   * distinct from the per-model FAQs. Curated makes only; non-curated makes have
+   * none. See MAKE_FAQS.
+   */
+  faqs?: { q: string; a: string }[]
+}
+
+// Per-MAKE FAQs — genuine, evergreen, brand/lineup-level Q&As attached to each
+// curated make hub page (`/aircraft/[make]`), rendered visibly AND emitted as
+// FAQPage JSON-LD (visible text must match the structured data 1:1). Keyed by
+// makeSlug. Drawn from the SEO_MAKES blurbs + well-known general-aviation facts —
+// NO fabricated statistics and NO live listing counts, so the copy stays accurate
+// and never goes stale. Curated makes (SEO_MAKES) only; a make absent here renders
+// no FAQ (graceful, like the dynamically-discovered model pages).
+const MAKE_FAQS: Record<string, { q: string; a: string }[]> = {
+  cessna: [
+    { q: 'What is Cessna known for?', a: 'Cessna is the most prolific maker of general-aviation singles — high-wing trainers and haulers from the two-seat 150/152 up through the 172 Skyhawk, the 182 Skylane, and the 206. Parts are everywhere and nearly every A&P knows them, which is a big reason Cessnas are the most commonly co-owned aircraft in America.' },
+    { q: 'Which Cessna is best for a first airplane or partnership?', a: 'The 172 Skyhawk is the default first airplane and the most commonly shared single — forgiving, inexpensive to run, and universally supported. Step up to the 182 Skylane if you regularly carry four people or fly out of higher or shorter fields.' },
+    { q: 'How much does it cost to own a Cessna?', a: 'It varies by model, but Cessna singles are about as low-drama and predictable as ownership gets thanks to ubiquitous parts and mechanics. Splitting the hangar, insurance, and annual across a partnership keeps each owner’s share modest.' },
+  ],
+  piper: [
+    { q: 'What is Piper known for?', a: 'Piper builds the low-wing PA-28 Cherokee family — Cherokees, Archers, and Arrows — alongside the iconic Cub taildragger and the six-seat Saratoga. They are valued for low operating costs, forgiving handling, and a huge parts supply.' },
+    { q: 'Which Piper is best to co-own?', a: 'A fixed-gear Cherokee or Archer is one of the most economical singles to share — simple systems and predictable maintenance make it an ideal first partnership. Move up to an Arrow for retractable and complex time, or a Saratoga when you need six seats.' },
+    { q: 'How much does it cost to own a Piper?', a: 'The fixed-gear PA-28s are among the lowest-cost four-seat singles to run; retractable Arrows and the larger Saratoga cost a bit more. A partnership spreads the fixed costs and keeps any of them affordable.' },
+  ],
+  cirrus: [
+    { q: 'What is Cirrus known for?', a: 'Cirrus builds modern composite singles — the SR20 and SR22 — with full glass panels and the CAPS whole-airframe parachute. They have been among the best-selling piston singles in the world and set the template for the modern GA cockpit.' },
+    { q: 'Should I choose an SR20 or an SR22?', a: 'The SR20 (about 215 hp) is the more attainable entry — cheaper to buy and run, and plenty for training and regional trips. The SR22 (about 310 hp) carries more, climbs better, and flies faster. Both share the same glass panel and parachute.' },
+    { q: 'Why co-own a Cirrus?', a: 'Co-ownership is how most pilots make a Cirrus pencil out. Splitting the hangar, insurance, and the periodic CAPS parachute repack across a few partners turns an advanced single into a realistic monthly number.' },
+  ],
+  beechcraft: [
+    { q: 'What is Beechcraft known for?', a: 'Beechcraft builds high-performance travelers — the legendary Bonanza single and the twin-engine Baron — to a premium standard, with roomy cabins and strong cruise speeds.' },
+    { q: 'Are Beechcraft aircraft expensive to own?', a: 'They are serious traveling machines with traveling-machine costs — higher fuel burn and healthy engine reserves (two of them on a Baron). That is exactly why Bonanzas and Barons are so often co-owned.' },
+    { q: 'Bonanza or Baron?', a: 'The Bonanza is a fast, efficient single; the Baron adds a second engine for redundancy and range at roughly double the maintenance. Choose the single unless you specifically want twin redundancy.' },
+  ],
+  mooney: [
+    { q: 'What is Mooney known for?', a: 'Mooney builds sleek, low-drag retractable singles — the M20 series — famous for delivering the best speed-per-dollar in piston aviation. They go fast on remarkably little fuel.' },
+    { q: 'How much does it cost to own a Mooney?', a: 'Fuel costs are low for the speed, but the retractable gear adds an annual inspection and an insurance premium. A partnership spreads those fixed costs across owners.' },
+    { q: 'Is a Mooney a good first airplane?', a: 'It is a capable cross-country traveler rather than a trainer — a snug cabin, retractable gear, and more systems to manage. Many owners step into a Mooney after some time in fixed-gear singles.' },
+  ],
+  diamond: [
+    { q: 'What is Diamond known for?', a: 'Diamond builds modern composite airframes — the four-seat DA40 and the twin DA42 — many fitted with fuel-efficient Austro diesel engines, with an excellent safety record. They are popular with flight schools and shared-ownership groups.' },
+    { q: 'Are Diamonds cheap to own?', a: 'The diesel models sip Jet-A and the composite airframes are durable, which keeps running costs reasonable; the trade-offs are a higher purchase price and engine/gearbox reserves. Sharing the airplane spreads those reserves.' },
+    { q: 'Why co-own a Diamond?', a: 'The modern panel, strong safety record, and diesel economy make Diamonds attractive to share — a partnership splits the fixed costs while everyone enjoys a new-feeling, efficient airplane.' },
+  ],
+  vans: [
+    { q: 'What are Van’s RV aircraft?', a: 'The RV series are experimental amateur-built kit airplanes — sporty two- and four-seat singles offering unmatched performance per dollar, backed by a huge and active builder community.' },
+    { q: 'Are experimentals cheaper to own?', a: 'Often yes — owner-performed maintenance is allowed on experimentals, which keeps costs low, and the performance per dollar is the best in aviation. Partnerships are common among builders and sport pilots.' },
+    { q: 'Can you co-own an experimental RV?', a: 'Absolutely — many RVs are shared. Just confirm the operating limitations and insurance work for multiple owners, and that everyone is comfortable with the builder-maintained nature of the airplane.' },
+  ],
+  grumman: [
+    { q: 'What is Grumman known for?', a: 'Grumman’s light singles are defined by sliding canopies and sporty handling — the two-seat AA-1 and the four-seat AA-5 Traveler, Tiger, and Cheetah. Simple bonded airframes keep them light and quick for the fuel burn.' },
+    { q: 'Are Grummans cheap to own?', a: 'Yes — simple systems and slippery airframes keep both fuel and shared maintenance costs down, which makes them popular first-partnership singles.' },
+    { q: 'Grumman Tiger or Cheetah?', a: 'The Tiger has more power and is the faster, better climber; the Cheetah is a bit more economical. Both share the same fun sliding-canopy character.' },
+  ],
 }
 
 /**
@@ -730,7 +788,12 @@ export async function getInventoryMakes(): Promise<SeoMake[]> {
 export async function resolveMake(makeSlug: string): Promise<SeoMake | null> {
   const slug = makeSlug.toLowerCase()
   const makes = await getInventoryMakes()
-  return makes.find((m) => m.makeSlug === slug) ?? null
+  const found = makes.find((m) => m.makeSlug === slug)
+  if (!found) return null
+  // Attach the curated make-level FAQs (if any) without mutating the source —
+  // mirrors how getMakeModel attaches MODEL_FAQS. Non-curated makes stay FAQ-less.
+  const faqs = MAKE_FAQS[found.makeSlug]
+  return faqs ? { ...found, faqs } : found
 }
 
 // Translate a Postgres `ilike` pattern into a case-insensitive anchored regex so
