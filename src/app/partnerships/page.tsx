@@ -55,16 +55,20 @@ export default async function PartnershipsPage({
 
   return (
     <CompareProvider>
+    {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 5 token
+        sweep). Full-bleed cream behind the surface, reversible + scoped here;
+        mirrors /aircraft so the page matches its already-warm cards. */}
+    <div className="ch-surface min-h-screen">
     {/* Extra bottom padding so the fixed compare tray never overlaps content. */}
     <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-10 lg:px-8">
       {/* Page header */}
       <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Users className="h-6 w-6 text-sky-500" />
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-slate-900">
+            <Users className="h-7 w-7 text-sky-500" />
             Aircraft Partnerships
           </h1>
-          <p className="mt-1 text-slate-500">
+          <p className="mt-1 text-slate-600">
             Find co-ownership opportunities near your home airport.
           </p>
           <Link
@@ -103,7 +107,7 @@ export default async function PartnershipsPage({
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar — desktop only */}
         <aside className="hidden w-full shrink-0 lg:block lg:w-64">
-          <div className="sticky top-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="ch-panel sticky top-24 p-5">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
@@ -121,6 +125,7 @@ export default async function PartnershipsPage({
         </div>
       </div>
     </div>
+    </div>
     <CompareTray />
     </CompareProvider>
   )
@@ -130,7 +135,7 @@ function PartnershipListSkeleton() {
   return (
     <div className="space-y-4">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="h-48 animate-pulse rounded-xl bg-slate-100" />
+        <div key={i} className="h-48 animate-pulse rounded-2xl bg-slate-100" />
       ))}
     </div>
   )
