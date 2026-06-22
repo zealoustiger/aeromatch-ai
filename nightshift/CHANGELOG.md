@@ -2,6 +2,19 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-22T02:23Z — PASS — fix-visitor-webhook-204
+- Pages: /aircraft, /, /partnerships (all pages — the bug fired on every page load)
+- What: **Fixed a bug that was throwing a server error on every single page load across the whole site.** The real-time "visitor radar" feature (the one that pings Slack when someone visits) has a tiny beacon that every visitor's browser calls on each page. When the Slack credentials aren't set in an environment (which is the case on staging/preview), that beacon was crashing with a 500 error — because it tried to send a "204 No Content" response *with* a body, which isn't allowed. Every visitor was silently logging a red 500 error in their browser console on every page. The fix returns a proper empty 204 instead, so the beacon quietly does nothing when Slack isn't configured (exactly as intended) and the console stays clean. The Slack-alerting behavior, when credentials *are* set (production), is completely unchanged.
+- Goal: **[bug] / blocker (uncapped, fixed first).** Not the planned lane pick: this cycle was owed **[want]** (last non-bug cycle, partnership-make-faq, was [goal]), and I had the [want] follow-up — removable active-filter chips on /aircraft — built and green. But QA surfaced this pre-existing sitewide 500 console error, which the allocation policy says to fix **before** anything else (a console error is a blocker) — and critically it was breaking the mandatory QA "zero app-origin console errors" gate for *every* cycle going forward, so it had to land first. The deferred filter-chips work is preserved on branch `night/aircraft-filter-chips` (build-green) for the next [want] cycle. Scoreboard at orient: STAGE=INDEXING (GSC not configured this run), pageviews 114/7d.
+- Spec: nightshift/specs/20260622T022343Z-fix-visitor-webhook-204.md
+- Verdict: PASS. One line of app code changed in `src/app/api/visitor-webhook/route.ts`: the not-configured early return `NextResponse.json({ ok: false }, { status: 204 })` (which throws `TypeError: Invalid response status code 204` — a 204 must be body-less — and 500s) became `new NextResponse(null, { status: 204 })`. Root-caused from the server log (`Invalid response status code 204`) + confirmed the beacon source (`src/lib/analytics.ts`) and the unset env (`SLACK_BOT_TOKEN`/`SLACK_VISITOR_CHANNEL_ID`). `npx next build` green ("✓ Compiled successfully in 22.7s", 239/239 static pages); `tsc --noEmit` clean (only the 4 pre-existing `.test.ts` baseline errors, 0 in touched files). QA against the PRODUCTION build (`npx next build` + `npm run start`, NOT `next dev`; killed lingering stale port-3000 servers first):
+  - **(1) Beacon fixed:** `POST /api/visitor-webhook` (Slack env unset) → **204** (was **500**), no body. ✓
+  - **(2) Smoke PASS exit 0:** `/aircraft`, `/`, `/partnerships` × desktop 1280 + mobile 375 → all HTTP 200, **zero** app-origin console errors (the sitewide 500 is gone — it was present on every page before), **zero** horizontal overflow. ✓
+  - **(3) No server-side throw during QA:** 0 `Invalid response status code 204` lines in the server log across the full smoke run. ✓
+  - **(4) Looks right:** /aircraft desktop + 375px screenshots confirm listings/photos/sidebar/footer render correctly and unchanged (backend-only fix). ✓
+- Screenshots: nightshift/screenshots/fix-visitor-webhook-204/
+- Next: ship the preserved **active-filter chips on /aircraft** (branch `night/aircraft-filter-chips`, spec 20260622T022343Z-aircraft-filter-chips.md) as the next [want] cycle — removable chips in the results header, build-green, just needs a fresh QA pass + merge.
+
 ## 2026-06-22T00:39:19Z — DRAIN SUMMARY
 - Cycles this run: 6 (PASS 5 / FAIL 1 / ABORT 0)
 - Stopped because: safety cap (6)
