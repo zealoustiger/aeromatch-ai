@@ -5,7 +5,7 @@ import { MapPin, Plane, ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
 import {
@@ -57,11 +57,26 @@ export async function generateMetadata({
   // the index. Same rule the sitemap gates on (getIndexableAirportIcaos).
   const indexable = await isAirportIndexable(airport.icao)
 
+  const url = `${SITE_URL}/airports/${airport.icao.toLowerCase()}`
+
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/airports/${airport.icao.toLowerCase()}` },
-    openGraph: { title, description },
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${airport.name} (${airport.icao}) on ClubHanger` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [DEFAULT_OG_IMAGE],
+    },
     ...(indexable ? {} : { robots: { index: false, follow: true } }),
   }
 }
