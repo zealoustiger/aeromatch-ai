@@ -2,9 +2,10 @@ import { Layers } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
-import PartnershipCard from './PartnershipCard'
+import PartnershipRailCard from './PartnershipRailCard'
+import RailScroller from './RailScroller'
 
-const MAX = 3
+const MAX = 12
 
 function hasSupabase(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -30,6 +31,11 @@ function rank(current: Partnership, candidates: Partnership[]): Partnership[] {
  * "Similar listings" module for partnership detail pages: same make or same
  * home-airport region, ranked, excluding the current listing. Fails soft (renders
  * nothing) when there are no sensible matches.
+ *
+ * Presentation: a horizontal snap-carousel (hidden scrollbar + scroll-snap +
+ * desktop chevrons) of compact `PartnershipRailCard`s, shared with the homepage
+ * curated rails and the aircraft "Similar" rail via `RailScroller` — the
+ * partnership twin of the "more like this" Option-B rail.
  */
 export default async function SimilarListings({ current }: { current: Partnership }) {
   let candidates: Partnership[] = []
@@ -64,11 +70,13 @@ export default async function SimilarListings({ current }: { current: Partnershi
         <Layers className="h-5 w-5 text-sky-600" />
         Similar partnerships
       </h2>
-      <div className="space-y-4">
+      <RailScroller>
         {similar.map((p) => (
-          <PartnershipCard key={p.id} p={p} />
+          <li key={p.id} className="shrink-0 snap-start">
+            <PartnershipRailCard p={p} />
+          </li>
         ))}
-      </div>
+      </RailScroller>
     </section>
   )
 }
