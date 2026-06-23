@@ -7,7 +7,8 @@ import RailScroller from './RailScroller'
 export default async function FeaturedListings() {
   // Fetch 12 (was 6) so the rail has more to swipe through, matching the
   // 12-card homepage curated rails and the in-listing "Similar" rails.
-  const listings = await getLatestPartnerships(12)
+  // photoOnly: every featured card shows a real photo (section hides if none qualify).
+  const listings = await getLatestPartnerships(12, true)
 
   if (listings.length === 0) return null
 

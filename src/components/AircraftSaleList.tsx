@@ -8,6 +8,9 @@ import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
   q?: string
+  /** Homepage surfaces only — restrict to listings with a real harvested photo
+   *  (image_is_placeholder=false) so cards never show the generic make silhouette. */
+  photoOnly?: boolean
   make?: string
   model?: string
   /** family-level model match (ilike); used by the make+model SEO pages where
@@ -420,6 +423,7 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .select('*', { count: 'exact' })
       .eq('status', 'active')
 
+    if (filters.photoOnly) query = query.eq('image_is_placeholder', false)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
     if (filters.model) {
       // `model` accepts a comma-joined list (multi-select on /aircraft): one
@@ -576,7 +580,7 @@ const DEAL_MAX_PER_FAMILY = 6
  * Nothing is fabricated or padded — an empty result is returned as `[]`.
  * Read-only, no schema change.
  */
-export async function fetchUnderMarketDeals(limit = 48): Promise<AircraftDeal[]> {
+export async function fetchUnderMarketDeals(limit = 48, photoOnly = false): Promise<AircraftDeal[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
@@ -589,6 +593,7 @@ export async function fetchUnderMarketDeals(limit = 48): Promise<AircraftDeal[]>
       .from('aircraft_for_sale')
       .select('*')
       .eq('status', 'active')
+    if (photoOnly) query = query.eq('image_is_placeholder', false)
       .gte('asking_price', DEAL_MIN_PRICE)
     const floor = floorScore()
     if (floor > 0) query = query.gte('quality_score', floor)

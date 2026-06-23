@@ -10,7 +10,7 @@ import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
  * empty-state fallback, etc.) reuses the same query instead of duplicating it.
  * Mirrors the listing query in PartnershipList: status='active', newest first.
  */
-export async function getLatestPartnerships(limit: number): Promise<Partnership[]> {
+export async function getLatestPartnerships(limit: number, photoOnly = false): Promise<Partnership[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
@@ -18,12 +18,15 @@ export async function getLatestPartnerships(limit: number): Promise<Partnership[
 
   try {
     const supabase = await createServerSupabaseClient()
-    const { data } = await supabase
+    let query = supabase
       .from('partnerships')
       .select('*')
+      .eq('status', 'active')
+    // photoOnly: homepage cards must show a real photo, never the make placeholder.
+    if (photoOnly) query = query.eq('image_is_placeholder', false)
+    const { data } = await query
       // Real-photo listings first so the homepage leads with credible imagery,
       // then newest within each group.
-      .eq('status', 'active')
       .order('image_is_placeholder', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(limit)

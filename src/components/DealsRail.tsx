@@ -29,7 +29,9 @@ const MIN_PER_RAIL = 4
 const PER_RAIL = 12
 
 export default async function DealsRail() {
-  const deals = await fetchUnderMarketDeals(PER_RAIL)
+  // photoOnly: every homepage deal card shows a real photo (drops the rail below
+  // MIN_PER_RAIL → hidden, rather than surfacing a placeholder).
+  const deals = await fetchUnderMarketDeals(PER_RAIL, true)
   if (deals.length < MIN_PER_RAIL) return null
 
   return (

@@ -79,7 +79,9 @@ export default async function HomeRails() {
   // Fetch every candidate rail in parallel via the marketplace's own helper.
   const resolved = await Promise.all(
     RAILS.map(async (rail): Promise<ResolvedRail | null> => {
-      const { listings, error } = await fetchAircraftPage(rail.filters)
+      // photoOnly: homepage cards must always show a real plane photo, never the
+      // make placeholder — a rail thinned below MIN_PER_RAIL drops out entirely.
+      const { listings, error } = await fetchAircraftPage({ ...rail.filters, photoOnly: true })
       if (error || listings.length < MIN_PER_RAIL) return null
       return { title: rail.title, href: rail.href, listings: listings.slice(0, PER_RAIL) }
     })
