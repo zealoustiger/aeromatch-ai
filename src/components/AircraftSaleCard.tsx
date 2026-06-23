@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { resolveMakeModelFamily } from '@/lib/seo'
@@ -90,7 +90,8 @@ export default function AircraftSaleCard({
 }) {
   const label = aircraftTitle(p)
   // Real harvested source photo when we have one; else a per-make placeholder.
-  const realPhoto = p.images?.[0]
+  // pickRealPhoto skips source "noimage" placeholders (which 400 the optimizer).
+  const realPhoto = pickRealPhoto(p.images)
   const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
   const isPlaceholder = !realPhoto
   const isExternal = p.source !== 'user'

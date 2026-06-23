@@ -10,7 +10,7 @@ import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakes, resolveMake, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, type SeoMakeModel } from '@/lib/seo'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = { params: Promise<{ make: string }> }
@@ -124,7 +124,7 @@ export default async function MakeForSalePage({ params }: Props) {
   // and order as the rendered list), each a Product/Offer with real data only.
   const { listings } = await fetchAircraftPage({ make: entry.make })
   // Hero photo: borrow a real photo from a listing when available.
-  const heroPhoto = listings.find((l) => l.images?.[0])?.images?.[0] ?? null
+  const heroPhoto = listings.map((l) => pickRealPhoto(l.images)).find(Boolean) ?? null
   const itemListJsonLd = buildAircraftItemListJsonLd(listings, {
     name: `${entry.make} aircraft for sale`,
     url: `${SITE_URL}${path}`,

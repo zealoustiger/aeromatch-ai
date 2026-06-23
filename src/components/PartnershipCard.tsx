@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { MapPin, Clock, Users, ExternalLink } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
@@ -23,8 +23,9 @@ const shareColors: Record<string, string> = {
 export default function PartnershipCard({ p, saved = false }: { p: Partnership; saved?: boolean }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
-  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
-  const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
+  const realPhoto = pickRealPhoto(p.images)
+  const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make)
+  const isPlaceholder = p.image_is_placeholder !== false && !realPhoto
 
   return (
     <article className="ch-card group overflow-hidden bg-white">
