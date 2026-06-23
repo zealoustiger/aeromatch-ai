@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'Aircraft Title, Escrow & Closing — How Buying a Plane Actually Closes'
 const PATH = '/guides/aircraft-title-escrow-and-closing'
@@ -405,6 +406,14 @@ export default function TitleEscrowClosingGuidePage() {
         </p>
       </article>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildArticleJsonLd({ title: TITLE, description: DESCRIPTION, path: PATH })
+          ),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

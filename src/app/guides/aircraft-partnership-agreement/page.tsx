@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'What to Put in an Aircraft Partnership Agreement'
 const PATH = '/guides/aircraft-partnership-agreement'
@@ -427,6 +428,14 @@ export default function PartnershipAgreementGuidePage() {
         </p>
       </article>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildArticleJsonLd({ title: TITLE, description: DESCRIPTION, path: PATH })
+          ),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
