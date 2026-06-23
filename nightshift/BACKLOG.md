@@ -79,6 +79,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   INDEXING goal). Slice: (1) route + gallery + specs + source CTA; (2) cost-to-own +
   price-history block; (3) similar listings; (4) JSON-LD Vehicle/Offer + sitemap +
   internal links from cards. (Subsumes the Phase-2 photo gallery/lightbox.)
+  — **slice 1 ✅ SHIPPED 2026-06-23T07:55Z** (`internal-aircraft-listing-detail`):
+  new `/aircraft/listing/[id]` route with `PhotoGallery` (thumbnail strip + lightbox),
+  specs grid, price + price-drop, source/grade/New/registration badges, description,
+  Save/Share, breadcrumb + make+model family link, `generateMetadata` (canonical/OG);
+  `AircraftSaleCard` photo+title now link internally (footer source CTA unchanged);
+  bad ids 404. See CHANGELOG. **Next: slice 2 (cost-to-own + price-history block);
+  slice 3 (similar listings); slice 4 (Vehicle/Offer JSON-LD + sitemap + wire homepage
+  `AircraftRailCard` to the detail page).**
 - **[P1][want] "ClubHanger Estimate" — fair-value pricing (Zestimate analog).** "Priced
   $18k below similar 2008 SR22s" + a Good-deal / Priced-high score, computed from comps
   on make/model/year-band/hours. Differentiator. Slice: (1) comp model + API; (2) deal
