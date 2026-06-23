@@ -11,7 +11,8 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { Avatar } from '@/components/ProfileMenu'
+import AviatorAvatar, { type AviatorConfig } from '@/components/AviatorAvatar'
+import AvatarPicker from '@/components/AvatarPicker'
 import AccountSignOutButton from '@/components/AccountSignOutButton'
 import { SITE_NAME } from '@/lib/seo'
 import type { SavedSearch } from '@/lib/types'
@@ -126,6 +127,13 @@ export default async function AccountPage() {
     .order('created_at', { ascending: false })
   const searches = (searchesData ?? []) as SavedSearch[]
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('avatar_config')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const avatarConfig = (profile?.avatar_config ?? null) as AviatorConfig | null
+
   return (
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -136,13 +144,22 @@ export default async function AccountPage() {
             Account &amp; alerts
           </h1>
           <div className="mt-3 flex items-center gap-3">
-            <Avatar user={user} size="sm" />
+            <AviatorAvatar seed={user.id} config={avatarConfig} size={40} />
             <div className="min-w-0">
               <div className="text-xs font-medium text-slate-500">Signed in as</div>
               <div className="truncate text-sm font-semibold text-slate-900">{user.email}</div>
             </div>
           </div>
         </div>
+
+        {/* Avatar picker */}
+        <section className="ch-panel mb-6 p-6">
+          <h2 className="text-base font-semibold text-slate-900">Your avatar</h2>
+          <p className="mt-2 mb-4 text-sm text-slate-600">
+            Every pilot gets a ClubHanger aviator. Pick the one that feels like you — or shuffle for more.
+          </p>
+          <AvatarPicker seed={user.id} initial={avatarConfig} />
+        </section>
 
         {/* Email alerts — saved searches are the alert subscriptions */}
         <section className="ch-panel p-6">

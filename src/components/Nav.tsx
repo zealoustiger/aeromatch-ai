@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
+import type { AviatorConfig } from '@/components/AviatorAvatar'
 
 // About lives in the footer (declutter the top nav per the human's nav-polish ask).
 const links: { href: string; label: string; icon?: LucideIcon }[] = [
@@ -27,15 +28,24 @@ export default function Nav() {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [avatarConfig, setAvatarConfig] = useState<AviatorConfig | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    // Load the user's chosen aviator config so the nav matches their /account pick
+    // (the component falls back to a seeded default when none is set).
+    async function loadAvatar(u: User | null) {
+      if (!u) { setAvatarConfig(null); return }
+      const { data } = await supabase.from('profiles').select('avatar_config').eq('user_id', u.id).maybeSingle()
+      setAvatarConfig((data?.avatar_config ?? null) as AviatorConfig | null)
+    }
+    supabase.auth.getUser().then(({ data }) => { setUser(data.user); loadAvatar(data.user) })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
+      loadAvatar(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -87,7 +97,7 @@ export default function Nav() {
               Post a Listing
             </Link>
             {user ? (
-              <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} />
+              <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} />
             ) : (
               <Link
                 href="/auth"
@@ -137,7 +147,7 @@ export default function Nav() {
         <nav className="mx-auto max-w-7xl divide-y divide-slate-100 px-4 pb-safe">
           {user && (
             <div className="flex items-center gap-2.5 py-4">
-              <Avatar user={user} size="sm" />
+              <Avatar user={user} size="sm" config={avatarConfig} />
               <div className="min-w-0">
                 <div className="text-xs font-medium text-slate-500">Signed in as</div>
                 <div className="truncate text-sm font-semibold text-slate-900">{user.email}</div>

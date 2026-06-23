@@ -8,6 +8,23 @@ import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { sendEmail, buildAlertConfirmEmail } from '@/lib/email'
 import { SITE_URL } from '@/lib/seo'
 import type { Partnership, AircraftForSale } from '@/lib/types'
+import type { AviatorConfig } from '@/components/AviatorAvatar'
+
+// Save the signed-in user's chosen aviator avatar to their profile. Upserts the
+// profile row (user_id is the PK / RLS key) so it works for users who haven't
+// otherwise filled out a profile yet.
+export async function saveAvatarConfig(config: AviatorConfig): Promise<{ ok: boolean }> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({ user_id: user.id, avatar_config: config, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  if (error) return { ok: false }
+  revalidatePath('/account')
+  revalidatePath('/') // nav avatar
+  return { ok: true }
+}
 
 export async function createPartnership(formData: FormData) {
   const supabase = await createServerSupabaseClient()

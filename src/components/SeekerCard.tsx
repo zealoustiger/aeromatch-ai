@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MapPin, Clock, Search } from 'lucide-react'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice } from '@/lib/utils'
+import AviatorAvatar from '@/components/AviatorAvatar'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine',
@@ -28,6 +29,17 @@ export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
+          {/* Pilot header — aviator avatar (seeded by id) + anonymized name */}
+          <div className="mb-3 flex items-center gap-2.5">
+            <AviatorAvatar seed={seeker.id} size={42} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-800">
+                {anonymizeName(seeker.contact_name) || 'A pilot'}
+              </p>
+              <p className="text-xs text-slate-400">Looking to join a partnership</p>
+            </div>
+          </div>
+
           {/* Badges */}
           <div className="mb-2 flex flex-wrap gap-1.5">
             {seeker.total_hours && (
@@ -84,7 +96,6 @@ export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
 
       <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
         Posted {new Date(seeker.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        {anonymizeName(seeker.contact_name) && ` · ${anonymizeName(seeker.contact_name)}`}
       </div>
     </Link>
   )
