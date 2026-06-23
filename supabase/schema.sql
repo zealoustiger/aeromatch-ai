@@ -470,3 +470,48 @@ create table if not exists report_feedback (
   response    text                          -- Claude's reply / what was done
 );
 alter table report_feedback enable row level security;
+
+-- =====================================================
+-- APPLIED 2026-06-22 (human-greenlit; mirrors live DB)
+-- =====================================================
+-- Pilot profiles + listing reviews (migration: profiles_and_reviews)
+create table if not exists profiles (
+  user_id          uuid        primary key references auth.users(id) on delete cascade,
+  display_name     text,
+  home_airport     text,
+  total_hours      integer,
+  ratings_held     text[],
+  mission          text,
+  bio              text,
+  avatar_url       text,
+  verified         boolean     not null default false,       -- admin-only (trigger-protected)
+  verified_ratings text[]      not null default '{}',
+  created_at       timestamptz default now(),
+  updated_at       timestamptz default now()
+);
+-- triggers profiles_updated_at + profiles_protect_verification (verification is service-role only)
+-- RLS: public read; owner insert/update (verified fields frozen for non-service-role)
+
+create table if not exists listing_reviews (
+  id             uuid        default gen_random_uuid() primary key,
+  created_at     timestamptz default now(),
+  target_type    text        not null check (target_type in ('partnership','seeker')),
+  target_id      uuid        not null,
+  author_user_id uuid        not null references auth.users(id) on delete cascade,
+  rating         integer     check (rating between 1 and 5),
+  body           text        not null check (char_length(body) between 1 and 2000),
+  status         text        not null default 'visible' check (status in ('visible','hidden')),
+  unique (target_type, target_id, author_user_id)
+);
+
+-- threads: can now target a seeker, not only a partnership (migration: threads_seeker_support)
+alter table threads alter column partnership_id drop not null;
+alter table threads add column if not exists seeker_id uuid references partnership_seekers(id) on delete cascade;
+-- + constraint threads_one_target (exactly one of partnership_id / seeker_id)
+-- + partial unique index threads_seeker_inquirer_uniq (seeker_id, inquirer_id)
+
+-- alerts: double-opt-in + digest bookkeeping (migration: alerts_double_opt_in)
+alter table alerts add column if not exists confirm_token     text default gen_random_uuid();
+alter table alerts add column if not exists confirmed_at      timestamptz;
+alter table alerts add column if not exists unsubscribe_token text default gen_random_uuid();
+alter table alerts add column if not exists last_digest_at    timestamptz;
