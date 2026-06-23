@@ -449,6 +449,70 @@ export function getForSaleStateOverview(code: string): string[] | null {
 }
 
 /**
+ * Per-AIRPORT "About co-ownership at {airport}" overview prose — 2 genuine, evergreen
+ * narrative paragraphs per curated airport, rendered as editorial body copy near the top
+ * of the airport hub page (`/airports/[icao]`). The airport-hub counterpart to
+ * `PARTNERSHIP_STATE_OVERVIEWS` / `FORSALE_STATE_OVERVIEWS`: unique content depth (the
+ * field's GA character + why co-ownership and the basing/cost realities make sharing pay
+ * off there) so these crawl-hub pages carry real content instead of a templated,
+ * count-only intro in the INDEXING stage. Keyed by LOWERCASE ICAO — and curated ONLY for
+ * the handful of airports that are genuinely index-worthy (>= 1 active partnership based
+ * there, the same gate `getIndexableAirportIcaos` applies). Every other airport page is
+ * noindex,follow and renders no overview, so this adds depth exactly where it's indexed
+ * with zero thin/doorway risk. Well-known, durable GA facts only — NO fabricated
+ * statistics, NO live listing counts — so the copy never goes stale. Deliberately distinct
+ * in wording from the page's existing templated intro paragraph.
+ */
+const AIRPORT_OVERVIEWS: Record<string, string[]> = {
+  kads: [
+    'Addison is one of the busiest reliever airports in the Dallas–Fort Worth area, a single-runway field ringed by corporate hangars, flight schools, and maintenance and avionics shops just north of downtown Dallas. That concentration of activity and support is exactly what a co-ownership group wants on its home field, because keeping a shared airplane flying and well-maintained is far easier when the shops and instructors are right there. With several partners spreading the calendar, an airplane based at Addison can stay in regular use across the Metroplex instead of waiting on one owner’s free weekends.',
+    'Basing at a field this popular is also why sharing the costs makes sense. Hangar and ramp space at Addison is in steady demand and priced accordingly, so the fixed bills that weigh on a solo owner — the hangar, insurance, and annual — are precisely the ones a partnership splits cleanly. Divide them across two to four Dallas-area owners and a capable traveling single becomes a realistic monthly figure, which is a big part of why co-ownership shares change hands around relievers like Addison whenever a member moves on.',
+  ],
+  kaus: [
+    'Austin–Bergstrom is the Austin area’s primary airport, a busy Class C field where airline traffic and general aviation share the same airspace and GA works through the field’s FBOs. Plenty of Central Texas pilots keep capable, traveling airplanes in the Austin orbit, and the long Texas VFR season means a shared airplane here earns real use — the steady utilization that keeps every partner current rather than rusty. Many area co-owners base at the smaller relievers around the metro and use Bergstrom’s services when a trip calls for it, the kind of flexible arrangement a well-run group sorts out together.',
+    'Operating in and around a primary airport is part of what makes splitting the costs attractive. Ramp, hangar, and handling near a field this busy add up, and insurance and the annual on a capable single are fixed bills no matter how often any one person flies — so dividing them across a partnership is how a lot of Austin pilots get into more airplane than they would buy alone. Spread the hangar, insurance, and annual across two to four owners and the monthly number pencils out, which keeps the area’s co-ownership scene active.',
+  ],
+  kfxe: [
+    'Fort Lauderdale Executive is one of South Florida’s premier general-aviation relievers, a busy towered field thick with flight schools, charter operators, and maintenance shops just inland from the coast. Year-round VFR weather is the whole reason co-ownership works so well here: a shared airplane rarely waits long for good flying weather, so a group of two to four pilots can keep it genuinely busy across South Florida while everyone stays proficient. The depth of shops and instructors on and around the field makes maintaining and training in a shared airplane straightforward.',
+    'The coastal South Florida setting is also why sharing the upkeep pays off. Salt air is hard on airframes and avionics, and summer heat and storms reward covered storage, so a hangar matters more here than in milder, drier places — and a hangar, like the insurance and the annual, is a fixed cost a partnership absorbs far more comfortably than a solo owner. Split those bills across several Fort Lauderdale–area owners and protecting a capable airplane properly becomes a shared, manageable line item rather than a budget strain.',
+  ],
+  khwd: [
+    'Hayward Executive sits in the heart of the San Francisco Bay Area, a busy towered reliever on the East Bay shoreline between Oakland and the South Bay. It draws a deep community of pilots, instructors, and shops, and its central location puts much of Northern California within an easy hop — exactly the setting where a co-owned airplane earns its keep. With the Bay Area’s mild, fly-most-of-the-year climate and several partners spreading the calendar, an airplane based at Hayward can stay in regular use instead of sitting on the ramp between one owner’s weekend flights.',
+    'The Bay Area economics are what push so many Hayward pilots toward a share. Hangar and tie-down space anywhere around the bay is scarce and expensive, and insurance and labor track the region’s high cost of living, so the fixed bills that sink a solo owner are the very ones a partnership splits cleanly. Divide the hangar, insurance, and annual across two to four owners and a capable airplane becomes a realistic monthly figure — which is why co-ownership shares change hands steadily around fields like Hayward.',
+  ],
+  klvk: [
+    'Livermore Municipal is one of the busiest general-aviation airports in the San Francisco Bay Area, a towered field at the eastern edge of the bay’s sprawl with a strong training and recreational community. Its East Bay location keeps it a little less crowded than the peninsula fields while still putting all of Northern California within reach — a combination that makes it a natural home for a co-ownership group. The Bay Area’s long flying season means a shared airplane based here can stay genuinely busy, keeping every partner current rather than rusty.',
+    'Even at one of the region’s more workable fields, basing costs are a big reason pilots share. Hangar space around the Bay Area is in chronically short supply, and insurance and maintenance track the local cost of living, so the fixed bills are exactly what a partnership is built to divide. Spread the hangar, insurance, and annual across two to four Livermore-area owners and a capable single drops to a sensible monthly share — which is why co-ownership stays popular at East Bay fields like Livermore.',
+  ],
+  koak: [
+    'Oakland International is best known for its airline terminal, but its North Field is one of the busiest general-aviation complexes on the West Coast — home to flight schools, maintenance, and a deep community of Bay Area pilots. Basing a shared airplane at a field with that much GA infrastructure makes keeping it flown and maintained easy, and the Bay Area’s mild, fly-most-of-the-year weather means a co-ownership group gets steady, regular use out of it rather than letting it sit between one owner’s trips.',
+    'Operating around a major Bay Area airport is also why splitting the costs makes sense. Hangar and tie-down space on the bay is scarce and commands premium rates, and insurance and labor follow the region’s high cost of living, so the fixed bills that strain a solo owner are precisely the ones a partnership shares cleanly. Divide the hangar, insurance, and annual across two to four owners and a capable airplane becomes a realistic monthly figure — a big part of why co-ownership shares turn over steadily around fields like Oakland.',
+  ],
+  kpao: [
+    'Palo Alto Airport sits in the middle of Silicon Valley, a compact, exceptionally busy towered field that serves one of the densest pilot communities in the country. Demand to fly from here is high and the flying season is long, so a co-owned airplane based at Palo Alto rarely wants for use — a group of two to four partners can keep it genuinely busy and everyone current, which is the whole point of sharing an airplane rather than letting it sit.',
+    'The peninsula is also about as expensive a place to keep an airplane as exists, which is exactly why co-ownership thrives here. Hangar and tie-down space at Palo Alto and the surrounding fields is scarce and carries long waitlists, and insurance and labor track Silicon Valley’s cost of living, so the fixed bills that overwhelm a solo owner are the ones a partnership splits cleanly. Spread the hangar, insurance, and annual across several owners and a capable airplane becomes a realistic monthly figure — which keeps shares changing hands steadily around Palo Alto.',
+  ],
+  krhv: [
+    'Reid-Hillview is San Jose’s close-in general-aviation airport, a busy towered reliever serving the South Bay’s large community of pilots and flight schools. Its location in the heart of Santa Clara County puts it within easy reach for much of the South Bay, and the Bay Area’s long flying season means a shared airplane here can stay in regular use — the steady utilization that keeps a co-ownership group’s partners proficient instead of rusty.',
+    'South Bay basing costs are a big reason pilots here share an airplane. Hangar and tie-down space around San Jose is scarce and expensive, and insurance and labor follow Silicon Valley’s high cost of living, so the fixed bills that weigh on a solo owner are precisely the ones a partnership divides cleanly. Split the hangar, insurance, and annual across two to four Reid-Hillview–area owners and a capable single becomes a realistic monthly figure — which is why co-ownership shares stay in demand at South Bay fields like Reid-Hillview.',
+  ],
+  ksql: [
+    'San Carlos Airport is a compact, very busy towered field on the San Francisco Peninsula, tucked between the larger fields at San Francisco and Palo Alto. It anchors a deep peninsula community of pilots, instructors, and shops, and its central Bay Area location keeps much of Northern California within an easy flight. With the region’s mild, fly-most-of-the-year climate and several partners spreading the calendar, a co-owned airplane based at San Carlos can stay genuinely busy rather than parked between one owner’s flights.',
+    'Peninsula economics are what make sharing pay off here. Hangar and tie-down space at San Carlos and the neighboring fields is scarce and expensive, and insurance and labor track one of the highest costs of living in the country, so the fixed bills that sink a solo owner are exactly the ones a partnership splits cleanly. Divide the hangar, insurance, and annual across two to four owners and a capable airplane becomes a realistic monthly figure — which is why co-ownership shares change hands steadily around San Carlos.',
+  ],
+}
+
+/**
+ * Resolve an airport ICAO (any case; the route slug is lowercase) to its 2-paragraph
+ * overview prose, or null when the airport isn't curated (→ no overview section). Mirrors
+ * `getPartnershipStateOverview` / `getForSaleStateOverview`. Curated only for the
+ * genuinely index-worthy airport hubs; every other airport renders no overview.
+ */
+export function getAirportOverview(icao: string): string[] | null {
+  return AIRPORT_OVERVIEWS[icao.toLowerCase()] ?? null
+}
+
+/**
  * Make+model+STATE intersection FAQs for `/aircraft/[makeSlug]/[modelSlug]/[state]`,
  * keyed by `makeSlug/modelSlug/stateCode` (lowercase USPS). This is the most specific
  * for-sale family — the #1 autocomplete pattern is "{make} {model} for sale {state}"
