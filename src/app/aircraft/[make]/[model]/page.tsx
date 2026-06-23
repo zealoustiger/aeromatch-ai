@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { Plane, ArrowRight, Gauge, Wallet, LineChart } from 'lucide-react'
+import { Plane, ArrowRight, Gauge, Wallet, LineChart, Lightbulb, Check } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel, priceStatsForMakeModel } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
@@ -269,6 +269,28 @@ export default async function MakeModelForSalePage({ params }: Props) {
             Representative figures for a popular {label} variant — exact specs vary by
             model year, engine, and avionics configuration.
           </p>
+        </section>
+      )}
+
+      {/* What's different about the {Make} {Model} — 3 short, scannable
+          differentiator bullets (the decision-useful gist for a buyer comparing
+          families). Curated combos only; dynamic combos render nothing — we never
+          fabricate. Distinct from the spec table (facts) and the "About" prose
+          (narrative). */}
+      {entry.highlights && entry.highlights.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <Lightbulb className="h-4 w-4 text-sky-500" />
+            What&apos;s different about the {label}
+          </h2>
+          <ul className="space-y-3">
+            {entry.highlights.map((point, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-600">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
