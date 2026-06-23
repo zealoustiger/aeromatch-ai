@@ -62,12 +62,7 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   unaffected (buy-in ≠ aircraft price).
 
 **Homepage curated collections (replaces the old slice-4 "Time-builders under $100k"):**
-- **[P1][want] Re-theme collections — stop leading with the cheapest planes.** New
-  aspirational set, each linking to the matching filtered search: *Just listed this
-  week · Recently reduced (price drops) · Glass-panel cross-country (G1000/Perspective)
-  · Turnkey & ready to fly (fresh annual / low SMOH) · Family four-seaters
-  (172/182/SR20/Archer) · Step-up performance (SR22/Bonanza/Mooney) · Near your home
-  airport.* No "under $X" lead themes. Only priced real aircraft (respect the $50k floor).
+- ~~**[P1][want] Re-theme collections — stop leading with the cheapest planes.**~~ ✅ SHIPPED 2026-06-23T06:49Z (`rethemed-home-collections`). `HomeRails` `RAILS` re-themed to: *Just listed this week · Recently reduced (price drops) · Glass-panel cross-country · Step-up performance (Cirrus SR22) · Family four-seaters (Cessna 172)*; no "under $X" lead themes, all carry `min_price=50000` (real priced aircraft only), model rails match the model field + link to curated model pages, thin rails auto-drop. See CHANGELOG. **Remaining from the original wishlist:** a "Turnkey & ready to fly" rail (needs a reliable fresh-annual/low-SMOH signal — no clean filter today) and "Near your home airport" (needs home-airport/geolocation — no server-side location yet).
 - **[P1][want] Redesign the collection layout — drop the horizontal scrollbar.**
   Preferred **Option A: category tile mosaic** (Airbnb "Explore" / Zillow tiles) —
   responsive grid of big rounded photo tiles (real plane photo behind the label), no
