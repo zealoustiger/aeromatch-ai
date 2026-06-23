@@ -47,7 +47,26 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
-### Brainstorm 2026-06-22 — Zillow/Redfin marketplace + data quality (human-set, P1)
+### Backlog capture — screenshots (human, added in chat)
+Items the human captured from chat with a reference screenshot. Each links a
+screenshot in Supabase Storage (`backlog-shots` bucket). **When an item here is
+completed, delete its screenshot object from `backlog-shots` to reclaim storage.**
+
+- **[P2][want] Optional note when saving a listing.** When a user saves a listing,
+  let them attach an **optional free-text note** (e.g. "great panel — ask about damage
+  history"). If a note exists, display it **(a)** on the listing page and **(b)** on the
+  saved listings page (`/saved`). Screenshot (aircraft listing detail — note the
+  **Save** button, top-right, where the note affordance attaches):
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/save-note-listing/20260623-falcon-example.png
+  — shows breadcrumb `Home / Planes for Sale / Dassault Falcon 900ex`, a Share + **Save**
+  pair top-right, the photo, a PRICE card ($795,000), and a "View on AircraftForSale"
+  card. Data: add a `note text` column to the saved-listings record (per-user save row).
+  Slice: (1) note column + an "add note" input in the save flow (inline on save, or an
+  edit affordance once saved); (2) render the note on `/saved`; (3) render the note on
+  the listing detail page when present (optionally on the listing card too). Applies to
+  both aircraft-for-sale saves and partnership saves.
+
+
 Theme: make ClubHanger feel like a polished Zillow/Redfin for aircraft, and stop
 showing junk. All human-requested this session. Inspiration: Zillow + Redfin
 (listing pages, price history, map, Zestimate), Etsy/Airbnb (collection layout).
