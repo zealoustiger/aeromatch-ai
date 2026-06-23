@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import PartnershipCard from '@/components/PartnershipCard'
 import Breadcrumbs from '@/components/Breadcrumbs'
-import { SITE_URL, STATE_NAMES } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import {
   getNearbyPartnerships,
@@ -28,14 +28,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // becomes "Aircraft partnerships near {name} ({ICAO}) | ClubHanger".
   const title = `Aircraft partnerships near ${airport.name} (${airport.icao})`
   const description = `Browse ${results.length} aircraft co-ownership partnerships and flying shares within ${NEAR_RADIUS_NM} nm of ${airport.name}${place ? ` in ${place}` : ''}. See buy-in, monthly, and hourly costs upfront — ordered by distance. Free to search.`
+  const url = `${SITE_URL}/partnerships/near/${airport.icao.toLowerCase()}`
+  const ogDescription = `Co-ownership shares and flying partnerships within ${NEAR_RADIUS_NM} nm of ${airport.name}, ordered by distance.`
 
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/partnerships/near/${airport.icao.toLowerCase()}` },
+    alternates: { canonical: url },
     openGraph: {
-      title: `Aircraft partnerships near ${airport.name} (${airport.icao})`,
-      description: `Co-ownership shares and flying partnerships within ${NEAR_RADIUS_NM} nm of ${airport.name}, ordered by distance.`,
+      title,
+      description: ogDescription,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${title} on ${SITE_NAME}` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: ogDescription,
+      images: [DEFAULT_OG_IMAGE],
     },
   }
 }
