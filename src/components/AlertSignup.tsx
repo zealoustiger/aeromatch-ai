@@ -42,10 +42,10 @@ export default function AlertSignup({ context, sourcePath }: Props) {
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
-            <h2 className="text-base font-semibold text-slate-900">You&apos;re on the list.</h2>
+            <h2 className="text-base font-semibold text-slate-900">Almost there — check your inbox.</h2>
             <p className="mt-1 text-sm text-slate-600">
-              We&apos;ll email you when new {context} listings appear. No spam — just relevant
-              aircraft.
+              We just emailed you a confirmation link. Click it to start getting alerts when
+              new {context} listings appear. No spam — just relevant aircraft.
             </p>
           </div>
         </div>

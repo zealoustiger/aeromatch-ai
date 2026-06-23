@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
+import { sendEmail, buildAlertConfirmEmail } from '@/lib/email'
+import { SITE_URL } from '@/lib/seo'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 
 export async function createPartnership(formData: FormData) {
@@ -159,11 +161,20 @@ export async function joinWaitlist(email: string, searchParams: string) {
 // Basic email-format check (intentionally lenient — server-side guard, not RFC-perfect).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Email-alerts capture (slice 1). Visitors opt into alerts for a make/model or
-// state from the programmatic for-sale pages — NO account required. Anon insert
-// is allowed by the `alerts` table RLS; rows land status='pending' (the seam for
-// a future double-opt-in confirmation). Idempotent on (email, source_path): the
-// same email+context twice is a no-op success, never an error.
+// Email-alerts capture + double-opt-in (slices 1-2). Visitors opt into alerts
+// for a make/model or state from the programmatic for-sale pages — NO account
+// required. Anon insert is allowed by the `alerts` table RLS; rows land
+// status='pending' until the visitor clicks the confirmation link.
+//
+// We mint the confirm + unsubscribe tokens in-app (rather than relying on the
+// column defaults) so the action has them in hand to build the email links
+// without needing to read the row back (anon has no SELECT on `alerts`, by
+// design — the table holds PII). On a genuinely NEW signup we fire a
+// double-opt-in confirmation email; with no `RESEND_API_KEY` configured that
+// send is a logged no-op (see `lib/email.ts`), so this is safe to ship.
+//
+// Idempotent on (email, source_path): the same email+context twice is a no-op
+// success (and we do NOT re-send the confirmation), never an error.
 export async function subscribeToAlerts(
   email: string,
   context: string,
@@ -176,22 +187,41 @@ export async function subscribeToAlerts(
 
   const supabase = await createServerSupabaseClient()
 
+  const confirmToken = crypto.randomUUID()
+  const unsubscribeToken = crypto.randomUUID()
+
   // Plain INSERT (not upsert): the `alerts` table is insert-only for anon (no
   // public SELECT, to protect PII), and PostgREST upsert needs SELECT to detect
   // conflicts — so we insert and treat a unique-violation (same email+context)
-  // as an idempotent success rather than an error. Dedupe is graceful: signing
-  // up twice for the same alert is a no-op "you're on the list", not an error.
+  // as an idempotent success rather than an error.
   const { error } = await supabase.from('alerts').insert({
     email: clean,
     context: context || null,
     source_path: sourcePath || null,
     status: 'pending',
+    confirm_token: confirmToken,
+    unsubscribe_token: unsubscribeToken,
   })
 
-  // 23505 = unique_violation on (email, source_path) — already subscribed. Idempotent.
-  if (error && error.code !== '23505') {
+  // 23505 = unique_violation on (email, source_path) — already subscribed.
+  // Idempotent success, and crucially we skip the email so a re-submit can't be
+  // used to spam an address with confirmation mail.
+  if (error) {
+    if (error.code === '23505') return { ok: true }
     return { error: 'Something went wrong. Please try again.' }
   }
+
+  // Genuinely new signup → send the double-opt-in confirmation email. Tokens go
+  // in the URL; the confirm/unsubscribe routes look them up with the service
+  // role. Awaited but failure is non-fatal (the row is already saved).
+  const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${confirmToken}`
+  const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubscribeToken}`
+  const { subject, html, text } = buildAlertConfirmEmail({
+    context: context || null,
+    confirmUrl,
+    unsubscribeUrl,
+  })
+  await sendEmail({ to: clean, subject, html, text })
 
   return { ok: true }
 }
