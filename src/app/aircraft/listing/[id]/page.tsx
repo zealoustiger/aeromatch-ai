@@ -18,8 +18,10 @@ import {
   Sparkles,
   Wallet,
   ArrowRight,
+  Scale,
 } from 'lucide-react'
-import { getAircraftForSaleById } from '@/lib/aircraftForSale'
+import { getAircraftForSaleById, getFamilyAskingPrices } from '@/lib/aircraftForSale'
+import { clubHangerEstimate, type ClubHangerEstimate } from '@/lib/aircraftEstimate'
 import { estimateOwnershipCost } from '@/lib/calculators'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
@@ -151,6 +153,19 @@ export default async function AircraftListingDetailPage({
 
   // Rough cost-to-own estimate (only meaningful when we have a real asking price).
   const ownership = p.asking_price ? estimateOwnershipCost(p.asking_price) : null
+
+  // ClubHanger Estimate — this listing's asking price vs. the median of OTHER active
+  // priced listings in the same make+model family (Zillow-Zestimate analog). Only
+  // computed when we have a real price AND the listing resolves to a known family;
+  // the pure helper returns null on thin comp sets, so the block self-suppresses.
+  const estimate =
+    p.asking_price && family
+      ? clubHangerEstimate(
+          p.asking_price,
+          await getFamilyAskingPrices(family.make, family.modelPattern, family.notModelPattern)
+        )
+      : null
+  const familyLabel = family ? `${family.make} ${family.model}` : null
 
   // Structured data — a single Product/Offer for this listing. Real harvested
   // photo only (never our per-make placeholder or the site-logo OG fallback).
@@ -396,6 +411,18 @@ export default async function AircraftListingDetailPage({
               )}
             </div>
 
+            {/* ClubHanger Estimate — price vs. the same-family median. Renders only
+                when there's a real price and enough same-family comps. */}
+            {estimate && familyLabel && (
+              <EstimatePanel
+                estimate={estimate}
+                familyLabel={familyLabel}
+                familyHref={
+                  family ? `/aircraft/${family.makeSlug}/${family.modelSlug}` : undefined
+                }
+              />
+            )}
+
             {/* Source CTA — keeps the outbound path the cards used to provide. */}
             <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
               <h2 className="mb-1 text-sm font-semibold text-sky-800">View the original listing</h2>
@@ -434,6 +461,78 @@ function EstRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-slate-500">{label}</dt>
       <dd className="font-semibold text-slate-800">{value}</dd>
+    </div>
+  )
+}
+
+// Per-verdict presentation for the ClubHanger Estimate badge + headline. The label
+// is a DESCRIPTIVE market comparison (below / around / above the family median), not
+// an endorsement — the comp set is the whole make+model family, so a gap can reflect
+// year/hours/avionics rather than a bargain (see the caveat line below).
+const ESTIMATE_META: Record<
+  ClubHangerEstimate['verdict'],
+  { label: string; chip: string; Icon: typeof TrendingDown }
+> = {
+  below: {
+    label: 'Below market',
+    chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    Icon: TrendingDown,
+  },
+  around: {
+    label: 'Around market',
+    chip: 'bg-sky-50 text-sky-700 ring-sky-200',
+    Icon: Scale,
+  },
+  above: {
+    label: 'Above market',
+    chip: 'bg-amber-50 text-amber-700 ring-amber-200',
+    Icon: TrendingUp,
+  },
+}
+
+function EstimatePanel({
+  estimate,
+  familyLabel,
+  familyHref,
+}: {
+  estimate: ClubHangerEstimate
+  familyLabel: string
+  familyHref?: string
+}) {
+  const meta = ESTIMATE_META[estimate.verdict]
+  const dir = estimate.deltaDollars < 0 ? 'below' : 'above'
+  const headline =
+    estimate.verdict === 'around'
+      ? `Asking price is around the median for ${familyLabel} listings.`
+      : `Asking ${formatPrice(Math.abs(estimate.deltaDollars))} (${estimate.deltaPct}%) ${dir} the median ${familyLabel} listing.`
+
+  return (
+    <div className="ch-panel p-5">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Scale className="h-4 w-4" /> ClubHanger Estimate
+      </h2>
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1 ${meta.chip}`}
+      >
+        <meta.Icon className="h-4 w-4" /> {meta.label}
+      </span>
+      <p className="mt-3 text-sm font-medium leading-relaxed text-slate-700">{headline}</p>
+      <p className="mt-2 text-xs text-slate-500">
+        Based on the median asking price ({formatPrice(estimate.median)}) of {estimate.compCount}{' '}
+        other {familyLabel} listing{estimate.compCount === 1 ? '' : 's'} for sale now.
+      </p>
+      {familyHref && (
+        <Link
+          href={familyHref}
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+        >
+          See all {familyLabel} for sale <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
+      <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
+        Compares this asking price to all {familyLabel} listings — actual value also depends on
+        year, hours, and avionics. An estimate, not an appraisal or an offer.
+      </p>
     </div>
   )
 }

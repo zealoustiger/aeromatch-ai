@@ -150,3 +150,46 @@ export async function getAircraftForSaleByIds(ids: string[]): Promise<AircraftFo
   const results = await Promise.all(ids.map((id) => getAircraftForSaleById(id)))
   return results.filter((p): p is AircraftForSale => p !== null)
 }
+
+/**
+ * Raw asking prices of all ACTIVE, PRICED listings in one make+model family, used
+ * by the listing detail page's "ClubHanger Estimate" comp set. The family is passed
+ * as `make` + `modelPattern` (+ optional `notModelPattern`) — exactly the fields on
+ * a resolved `SeoMakeModel` — so this comp set lines up with the make+model page's
+ * "Market snapshot" (`priceStatsForMakeModel` uses the identical filter). Read-only,
+ * no schema change; returns [] on any failure or when Supabase isn't configured.
+ *
+ * Note: no $50k floor here (unlike the sitemap/similar queries) — the estimate
+ * compares against the genuine going rate of the whole priced family; the per-listing
+ * pure helper applies its own honesty floors (min comps / dead band).
+ */
+export async function getFamilyAskingPrices(
+  make: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<number[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const base = supabase
+      .from('aircraft_for_sale')
+      .select('asking_price')
+      .eq('status', 'active')
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .not('asking_price', 'is', null)
+      .gt('asking_price', 0)
+      .limit(5000)
+    const { data, error } = await (notModelPattern
+      ? base.not('model', 'ilike', notModelPattern)
+      : base)
+    if (error || !data) return []
+    return data
+      .map((r) => r.asking_price as number | null)
+      .filter((p): p is number => p != null && Number.isFinite(p) && p > 0)
+  } catch {
+    return []
+  }
+}
