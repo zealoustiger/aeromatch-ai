@@ -91,6 +91,17 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   $18k below similar 2008 SR22s" + a Good-deal / Priced-high score, computed from comps
   on make/model/year-band/hours. Differentiator. Slice: (1) comp model + API; (2) deal
   badge on cards (extends existing `CompResult`); (3) price-analysis block on detail page.
+  — **slice 1 (comp model) + slice 2 (per-card pill) already live** as `src/lib/aircraftComps.ts`
+  (`compVsMarket`) + the `AircraftSaleCard` `CompPill`. — **slice 3 ✅ SHIPPED 2026-06-23T08:01Z**
+  (`clubhanger-estimate-detail`): a "ClubHanger Estimate" panel on `/aircraft/listing/[id]`
+  comparing the asking price to the median of OTHER active priced same-make+model listings —
+  **Below / Around / Above market** with $/% delta, comp count, family link, and a year/hours/
+  avionics caveat. Deliberately a **descriptive market comparison, not an endorsement**
+  (comp set is the whole family). Pure unit-tested helper `src/lib/aircraftEstimate.ts` +
+  read-only `getFamilyAskingPrices()`; self-suppresses on no-price/unknown-family/<4 comps.
+  See CHANGELOG. **Remaining:** the **endorsement-style "Good deal / Priced high" score** —
+  ship once comps are narrowed to **year-band + hours** (then a value judgement is honest);
+  optionally surface the verdict chip on the detail page's "Similar aircraft" cards.
 - **[P2][want] Price history + "Price cut ↓$X" + days-on-market + "New" pills (Redfin).**
   Data already stored (`previous_price`, `price_changed_at`, `first_seen_at`). Slice:
   (1) New + Price-cut pills on cards (extend existing `priceDrop`/`isNew`); (2)
