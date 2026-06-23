@@ -5,7 +5,7 @@ import { MapPin, Plane, ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES, getAirportOverview } from '@/lib/seo'
 import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
 import {
@@ -114,6 +114,12 @@ export default async function AirportPage({
     (h) => h.icao !== airport.icao.toLowerCase()
   )
 
+  // Unique-content-depth (STAGE=INDEXING): curated, evergreen "About co-ownership at
+  // {airport}" prose for the genuinely index-worthy airport hubs, so an indexed page
+  // carries real location-specific content instead of just a templated, count-only
+  // intro. Null for non-curated (thin/noindex) airports → no overview section.
+  const overview = getAirportOverview(airport.icao)
+
   // Schema.org: an Airport Place node (real codes/coords/region only) + an
   // ItemList of the partnerships shown on the page (in render order: at-airport
   // first, then nearby), each linking to its real /partnerships/[id]. Real data
@@ -174,6 +180,19 @@ export default async function AirportPage({
           {airport.city}, {airport.state}
         </p>
       </div>
+
+      {overview && (
+        <section className="mb-10 max-w-3xl">
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">
+            About co-ownership at {airport.name}
+          </h2>
+          <div className="space-y-4 text-slate-600">
+            {overview.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-4 text-lg font-semibold text-slate-900">
