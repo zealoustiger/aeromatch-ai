@@ -93,7 +93,16 @@ export async function POST(request: NextRequest) {
   const region = request.headers.get('x-vercel-ip-country-region') || null
   const country = request.headers.get('x-vercel-ip-country') || null
   const device = /mobile|android|iphone|ipad/i.test(ua) ? '📱 mobile' : '💻 desktop'
-  const loc = [city, region].filter(Boolean).join(', ') || 'Unknown location'
+  // Client IP: Vercel puts the real client first in x-forwarded-for. Keep it for
+  // post-hoc bot/human triage (whois the IP, inspect the UA) — PostHog can't, since
+  // privacy blockers / the GFW stop its tracker but never our first-party beacon.
+  const ip =
+    (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
+    request.headers.get('x-real-ip') ||
+    null
+  // Fall back to the country code when no city resolves, so an "unknown" visitor
+  // still shows where they're roughly from in Slack instead of a blank.
+  const loc = [city, region].filter(Boolean).join(', ') || country || 'Unknown location'
 
   const admin = createAdminClient()
   const { data: existing } = await admin
@@ -117,6 +126,8 @@ export async function POST(request: NextRequest) {
         city,
         region,
         country,
+        ip,
+        user_agent: ua,
         first_path: path,
       })
       // Also post the first action as a reply so the thread reads consistently.
