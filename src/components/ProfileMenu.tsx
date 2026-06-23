@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Bookmark, Heart, MessageCircle, LogOut, Shield } from 'lucide-react'
+import { Settings, Bookmark, Heart, MessageCircle, LogOut, Shield } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
@@ -76,6 +76,7 @@ export default function ProfileMenu({
   }, [open])
 
   const items: MenuItem[] = [
+    { href: '/account', label: 'Account', icon: Settings },
     { href: '/messages', label: 'Messages', icon: MessageCircle },
     { href: '/saved', label: 'Saved', icon: Heart },
     { href: '/searches', label: 'My Searches', icon: Bookmark },
