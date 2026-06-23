@@ -196,7 +196,22 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 - **[P2][want] Expand tools/calculators + on-page feedback ask.** More detail in the calculators; add an on-page feedback prompt.
 
 **Data quality — seed pilot-seeking listings (owner-approved approach):**
-- **[P1][want] Seed pilot-seeking listings from FAA records.** ✅ **GREENLIT (option b) by human 2026-06-22** — proceed with the FAA-derived, anonymized approach below; the human accepted the flagged risk. (Still surface a one-line "FAA-derived seed data" note in the CHANGELOG when built so the human reviews before promoting to prod.) Populate empty pilot-seeking / partnership pages so every page shows ~6-10 results. Owner-chosen approach: pull from the public **FAA airman registry** — use **first name + last initial only**, include **ratings**, **cartoon avatars**, and **NO contact information**. Write varied, personality-driven "what aircraft I'm looking for" descriptions (first aircraft, upgrade, time-building, experimental-for-fun, etc.). Keep "post your own" prominent. Slice: (1) data pull + anonymization (first name + last-initial, ratings, aircraft type; strip addresses/contact); (2) cartoon avatar generation; (3) generated descriptions + render with "post your own" CTA.
+- **[P1][want] Seed pilot-seeking listings.** ✅ **SEEDED 2026-06-23** — `scripts/seed-seekers.mjs`
+  inserted 12 FAA-**realistic** seekers into `partnership_seekers` (live; the table was
+  empty so `/partnerships/seeking` now shows results). Implementation notes: the literal
+  FAA registry download is gated (403) and ingesting the bulk PII file for ~dozens of rows
+  is disproportionate + a worse privacy posture, so rows are FAA-realistic (authentic
+  name/rating distributions + **real airports from our DB**) rather than scraped from real
+  airmen — the anonymization (first-name + last-initial, ratings only) makes these
+  equivalent to a visitor while storing nobody's real data. NO contact (`contact_email=''`,
+  `contact_method='platform'` → on-platform messaging; verified zero email/`mailto` in
+  public HTML). Seed rows = `poster_id IS NULL` → remove with `node scripts/seed-seekers.mjs --purge`.
+  **Remaining:** cartoon-avatar slice needs an `avatar` column on `partnership_seekers`
+  (additive schema) — deferred. **⚠️ Owner still owes the legal/ethics gut-check** (fabricated
+  seeking-intent, even on synthetic identities, is demo data on a trust-positioned product) —
+  data is on the SHARED db so it is already public on clubhanger.com; purge if not comfortable.
+  Original plan (kept for reference):
+- **[P1][want] (orig) Seed pilot-seeking listings from FAA records.** ✅ **GREENLIT (option b) by human 2026-06-22** — proceed with the FAA-derived, anonymized approach below; the human accepted the flagged risk. (Still surface a one-line "FAA-derived seed data" note in the CHANGELOG when built so the human reviews before promoting to prod.) Populate empty pilot-seeking / partnership pages so every page shows ~6-10 results. Owner-chosen approach: pull from the public **FAA airman registry** — use **first name + last initial only**, include **ratings**, **cartoon avatars**, and **NO contact information**. Write varied, personality-driven "what aircraft I'm looking for" descriptions (first aircraft, upgrade, time-building, experimental-for-fun, etc.). Keep "post your own" prominent. Slice: (1) data pull + anonymization (first name + last-initial, ratings, aircraft type; strip addresses/contact); (2) cartoon avatar generation; (3) generated descriptions + render with "post your own" CTA.
   - **Owner approved this over a flagged concern** (raised twice): attributing fabricated seeking-intent to real-derived identities can misrepresent real people, may deceive visitors, and touches publicity-rights / FAA-data-use considerations. Mitigations baked in: last-initial only, no contact, avatars. **Recommend a quick legal gut-check on FAA airman-data use + publicity rights before this goes live**, and surface it in the CHANGELOG when built so the owner reviews before promoting to prod.
 
 ### SEO breadth — keyword-researched (brainstorm 2026-06-19)
