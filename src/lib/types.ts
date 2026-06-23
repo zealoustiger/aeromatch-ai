@@ -86,6 +86,11 @@ export interface AircraftForSale {
 
   // Quality (generated column; 0-100). Grade derived in src/lib/listingQuality.ts
   quality_score: number | null
+
+  // Real photos harvested from the source listing (hotlinked URLs). Empty when
+  // the source had none or isn't yet supported → fall back to a make placeholder.
+  images: string[]
+  image_is_placeholder: boolean
 }
 
 export interface Airport {

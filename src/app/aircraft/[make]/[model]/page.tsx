@@ -127,6 +127,10 @@ export default async function MakeModelForSalePage({ params }: Props) {
     modelPattern: entry.modelPattern,
     notModelPattern: entry.notModelPattern,
   })
+  // Hero photo: borrow a real photo from one of this family's listings when we
+  // have one, so the header shows an actual aircraft instead of a placeholder.
+  const heroPhoto = listings.find((l) => l.images?.[0])?.images?.[0] ?? null
+
   const itemListJsonLd = buildAircraftItemListJsonLd(listings, {
     name: `${label} for sale`,
     url: `${SITE_URL}${path}`,
@@ -190,15 +194,17 @@ export default async function MakeModelForSalePage({ params }: Props) {
           </div>
           <div className="relative hidden h-full min-h-[200px] md:block">
             <Image
-              src={getPlaceholderPhoto(entry.make)}
+              src={heroPhoto ?? getPlaceholderPhoto(entry.make)}
               alt={`${label} aircraft`}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 0vw, 50vw"
             />
-            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-              Not actual plane photo
-            </span>
+            {!heroPhoto && (
+              <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                Not actual plane photo
+              </span>
+            )}
           </div>
         </div>
       </div>

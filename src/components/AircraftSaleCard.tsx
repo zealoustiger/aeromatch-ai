@@ -89,7 +89,10 @@ export default function AircraftSaleCard({
   comp?: CompResult | null
 }) {
   const label = aircraftTitle(p)
-  const imageUrl = getPlaceholderPhoto(p.make ?? '')
+  // Real harvested source photo when we have one; else a per-make placeholder.
+  const realPhoto = p.images?.[0]
+  const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
+  const isPlaceholder = !realPhoto
   const isExternal = p.source !== 'user'
   const source = sourceLabel(p.source)
   const drop = priceDrop(p)
@@ -118,9 +121,16 @@ export default function AircraftSaleCard({
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 208px"
             />
-            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-              Not actual plane photo
-            </span>
+            {isPlaceholder && (
+              <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                Not actual plane photo
+              </span>
+            )}
+            {!isPlaceholder && p.images.length > 1 && (
+              <span className="absolute bottom-2 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                +{p.images.length - 1} photos
+              </span>
+            )}
           </a>
           {/* Favorite — sibling of the photo link (not nested) for valid markup;
               mirrors the partnership card's heart. */}

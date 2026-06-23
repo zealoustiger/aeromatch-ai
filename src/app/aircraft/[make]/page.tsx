@@ -123,6 +123,8 @@ export default async function MakeForSalePage({ params }: Props) {
   // ItemList JSON-LD for the listings the visitor actually sees (same make filter
   // and order as the rendered list), each a Product/Offer with real data only.
   const { listings } = await fetchAircraftPage({ make: entry.make })
+  // Hero photo: borrow a real photo from a listing when available.
+  const heroPhoto = listings.find((l) => l.images?.[0])?.images?.[0] ?? null
   const itemListJsonLd = buildAircraftItemListJsonLd(listings, {
     name: `${entry.make} aircraft for sale`,
     url: `${SITE_URL}${path}`,
@@ -192,15 +194,17 @@ export default async function MakeForSalePage({ params }: Props) {
           </div>
           <div className="relative hidden h-full min-h-[200px] md:block">
             <Image
-              src={getPlaceholderPhoto(entry.make)}
+              src={heroPhoto ?? getPlaceholderPhoto(entry.make)}
               alt={`${entry.make} aircraft`}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 0vw, 50vw"
             />
-            <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-              Not actual plane photo
-            </span>
+            {!heroPhoto && (
+              <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                Not actual plane photo
+              </span>
+            )}
           </div>
         </div>
       </div>

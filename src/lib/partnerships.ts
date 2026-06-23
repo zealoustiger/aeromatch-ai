@@ -21,7 +21,10 @@ export async function getLatestPartnerships(limit: number): Promise<Partnership[
     const { data } = await supabase
       .from('partnerships')
       .select('*')
+      // Real-photo listings first so the homepage leads with credible imagery,
+      // then newest within each group.
       .eq('status', 'active')
+      .order('image_is_placeholder', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(limit)
     return data ?? []
