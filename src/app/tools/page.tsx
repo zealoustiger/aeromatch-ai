@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Calculator, TrendingUp, ArrowRight } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 
 const TITLE = 'Aircraft Partnership Calculators & Tools'
@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
+    url: `${SITE_URL}${PATH}`,
+    type: 'website',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, alt: `${TITLE} on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

@@ -12,13 +12,15 @@ import {
   ArrowRight,
   Calculator,
 } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 
 const TITLE = 'Aircraft Co-Ownership Guides'
 const PATH = '/guides'
 const DESCRIPTION =
   'Plain-English guides to aircraft co-ownership and flying partnerships: how shared ownership works, what it really costs, and what to put in a partnership agreement. Honest, educational explainers written for pilots — no jargon, no sales pitch.'
+const OG_DESCRIPTION =
+  'Pilot-written guides to aircraft co-ownership: how partnerships work, what they cost, and what belongs in a co-ownership agreement.'
 
 export const metadata: Metadata = {
   title: { absolute: `${TITLE} — How Sharing a Plane Works | ClubHanger` },
@@ -26,10 +28,17 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}${PATH}` },
   openGraph: {
     title: TITLE,
-    description:
-      'Pilot-written guides to aircraft co-ownership: how partnerships work, what they cost, and what belongs in a co-ownership agreement.',
+    description: OG_DESCRIPTION,
     url: `${SITE_URL}${PATH}`,
     type: 'website',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, alt: `${TITLE} on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: OG_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

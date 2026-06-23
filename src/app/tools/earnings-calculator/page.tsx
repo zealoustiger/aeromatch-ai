@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import EarningsCalculator from '@/components/EarningsCalculator'
+
+const OG_TITLE = 'Aircraft Partnership Earnings Calculator'
+const OG_DESCRIPTION =
+  'Model the monthly offset and break-even of offering shares in your aircraft.'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Earnings Calculator — Offset Your Ownership Costs',
@@ -11,8 +15,18 @@ export const metadata: Metadata = {
     'See how much offering partnership shares in your aircraft could offset your fixed costs. Model monthly dues income, flying margin, upfront buy-ins, and how many partners cover your hangar and insurance.',
   alternates: { canonical: `${SITE_URL}/tools/earnings-calculator` },
   openGraph: {
-    title: 'Aircraft Partnership Earnings Calculator',
-    description: 'Model the monthly offset and break-even of offering shares in your aircraft.',
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    url: `${SITE_URL}/tools/earnings-calculator`,
+    type: 'website',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, alt: `${OG_TITLE} on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
