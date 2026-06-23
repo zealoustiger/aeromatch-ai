@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator, Users, BookOpen } from 'lucide-react'
+import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator, Users, BookOpen, Settings } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
@@ -157,6 +157,18 @@ export default function Nav() {
               {label}
             </Link>
           ))}
+          {user && (
+            <Link
+              href="/account"
+              className={cn(
+                'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+                pathname.startsWith('/account') ? 'text-sky-700' : 'text-slate-700'
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              Account
+            </Link>
+          )}
           {user && (
             <Link
               href="/messages"
