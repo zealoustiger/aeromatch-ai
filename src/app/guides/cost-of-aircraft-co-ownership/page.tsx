@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Calculator, Plane, Wallet, ArrowRight, BookOpen } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
@@ -20,6 +20,15 @@ export const metadata: Metadata = {
       'The real cost components of aircraft co-ownership — buy-in, fixed costs, and hourly costs — plus a worked Cessna 172 example with honest estimate ranges.',
     url: `${SITE_URL}${PATH}`,
     type: 'article',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${TITLE} — a guide on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'The real cost components of aircraft co-ownership — buy-in, fixed costs, and hourly costs — plus a worked Cessna 172 example with honest estimate ranges.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

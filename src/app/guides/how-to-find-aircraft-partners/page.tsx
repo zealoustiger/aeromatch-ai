@@ -14,7 +14,7 @@ import {
   Building2,
   FileText,
 } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
@@ -33,6 +33,15 @@ export const metadata: Metadata = {
       'Where to find aircraft co-owners (flying clubs, FBOs and flight schools, EAA chapters and type clubs, airport boards, and online marketplaces), how to vet a potential partner, the red flags to avoid, how many partners makes sense, and how to go from a handshake to a signed agreement. Educational, not legal/tax/financial advice.',
     url: `${SITE_URL}${PATH}`,
     type: 'article',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${TITLE} — a guide on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'Where to find aircraft co-owners (flying clubs, FBOs and flight schools, EAA chapters and type clubs, airport boards, and online marketplaces), how to vet a potential partner, the red flags to avoid, how many partners makes sense, and how to go from a handshake to a signed agreement. Educational, not legal/tax/financial advice.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
