@@ -7,6 +7,7 @@ import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
+import AlertSignup from '@/components/AlertSignup'
 import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
@@ -135,6 +136,14 @@ export default async function StatePartnershipsPage({ params }: Props) {
       <Suspense fallback={<ListSkeleton />}>
         <PartnershipList filters={{ state: code }} />
       </Suspense>
+
+      {/* Email-alerts capture — inline, no account required. Backed by the same
+          double-opt-in `alerts` pipeline the for-sale pages use. */}
+      <AlertSignup
+        context={name}
+        sourcePath={`/partnerships/state/${state.toLowerCase()}`}
+        noun="partnership"
+      />
 
       {/* Co-ownership FAQ (curated states only) */}
       {faqs && (

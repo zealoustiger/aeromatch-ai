@@ -9,6 +9,12 @@ interface Props {
   context: string
   /** The page the signup came from, e.g. "/aircraft/cessna/172". */
   sourcePath: string
+  /**
+   * The kind of listing being alerted on, used in the body copy: "a new {context}
+   * {noun} is listed". Defaults to "aircraft" so the for-sale callers are unchanged;
+   * partnership pages pass "partnership". Plural is derived for "just relevant …".
+   */
+  noun?: string
 }
 
 /**
@@ -16,7 +22,9 @@ interface Props {
  * no fake urgency — a single email field + button that drops the email + context
  * into the additive `alerts` table (no account required). Sky-blue accent only.
  */
-export default function AlertSignup({ context, sourcePath }: Props) {
+export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: Props) {
+  // "aircraft" is already plural; everything else just takes an -s.
+  const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -45,7 +53,7 @@ export default function AlertSignup({ context, sourcePath }: Props) {
             <h2 className="text-base font-semibold text-slate-900">Almost there — check your inbox.</h2>
             <p className="mt-1 text-sm text-slate-600">
               We just emailed you a confirmation link. Click it to start getting alerts when
-              new {context} listings appear. No spam — just relevant aircraft.
+              new {context} listings appear. No spam — just relevant {nounPlural}.
             </p>
           </div>
         </div>
@@ -60,7 +68,7 @@ export default function AlertSignup({ context, sourcePath }: Props) {
                 Get alerts for new {context} listings
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                We&apos;ll email you when a new {context} aircraft is listed. One email field, no
+                We&apos;ll email you when a new {context} {noun} is listed. One email field, no
                 account needed.
               </p>
             </div>
