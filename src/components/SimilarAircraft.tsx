@@ -1,18 +1,24 @@
 import { Layers } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { getSimilarAircraftForSale } from '@/lib/aircraftForSale'
-import AircraftSaleCard from './AircraftSaleCard'
+import AircraftRailCard from './AircraftRailCard'
+import RailScroller from './RailScroller'
 
 /**
  * "Similar aircraft for sale" module for the listing detail page: real other
  * active same-make listings (same make+model family ranked first), excluding the
- * current one, each a crawlable internal <Link> to its own detail page via
- * AircraftSaleCard. Keeps buyers browsing on-site (the Zillow "more like this"
- * loop) and adds internal links between detail pages. Fails soft — renders
- * nothing when there are no sensible matches.
+ * current one, each a crawlable internal <Link> to its own detail page. Keeps
+ * buyers browsing on-site (the Zillow "more like this" loop) and adds internal
+ * links between detail pages. Fails soft — renders nothing when there are no
+ * sensible matches.
+ *
+ * Presentation: a horizontal snap-carousel (hidden scrollbar + scroll-snap +
+ * desktop chevrons) of compact `AircraftRailCard`s, shared with the homepage
+ * curated rails via `RailScroller` — the "more like this" Option-B rail. Fetches
+ * up to 12 so the rail is worth scrolling; cards stay server-rendered children.
  */
 export default async function SimilarAircraft({ current }: { current: AircraftForSale }) {
-  const similar = await getSimilarAircraftForSale(current, 3)
+  const similar = await getSimilarAircraftForSale(current, 12)
   if (similar.length === 0) return null
 
   return (
@@ -21,11 +27,13 @@ export default async function SimilarAircraft({ current }: { current: AircraftFo
         <Layers className="h-5 w-5 text-sky-600" />
         Similar aircraft for sale
       </h2>
-      <div className="space-y-4">
+      <RailScroller>
         {similar.map((p) => (
-          <AircraftSaleCard key={p.id} p={p} />
+          <li key={p.id} className="shrink-0 snap-start">
+            <AircraftRailCard p={p} />
+          </li>
         ))}
-      </div>
+      </RailScroller>
     </section>
   )
 }
