@@ -7,11 +7,12 @@ import AircraftSaleList, { fetchAircraftPage } from '@/components/AircraftSaleLi
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import AlertSignup from '@/components/AlertSignup'
+import ModelFaq from '@/components/ModelFaq'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 import { MISSIONS, getMission } from '@/lib/missions'
 import { SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
-import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 type Props = {
   params: Promise<{ mission: string }>
@@ -71,6 +72,11 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
     url: `${SITE_URL}${basePath}`,
   })
 
+  // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
+  const faqJsonLd = buildFaqPageJsonLd(m.faqs, {
+    url: `${SITE_URL}${basePath}`,
+  })
+
   const otherMissions = MISSIONS.filter((x) => x.slug !== m.slug)
   const makeLinks = SEO_MAKES.slice(0, 6)
 
@@ -80,6 +86,12 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
 
@@ -131,6 +143,9 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
             context={`${m.label} aircraft for sale`}
             sourcePath={basePath}
           />
+
+          {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+          <ModelFaq label={m.label} faqs={m.faqs} className="mt-10" />
 
           {/* Cross-links: the other missions (keeps the family internally linked). */}
           <div className="ch-panel mt-10 p-6">
