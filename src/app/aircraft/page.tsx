@@ -17,6 +17,7 @@ import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
+import { MISSIONS } from '@/lib/missions'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -199,6 +200,24 @@ export default async function AircraftPage({
                   className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
                 >
                   {STATE_NAMES[c]}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Browse by mission — crawlable internal links to the curated mission
+              landing pages (glass cockpit / IFR / tailwheel / low-time). Reaches
+              the new family from the priority seed page #2. */}
+          <div className="ch-panel mt-4 p-6">
+            <h2 className="mb-3 text-base font-semibold text-slate-900">Browse aircraft by mission</h2>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {MISSIONS.map((m) => (
+                <Link
+                  key={m.slug}
+                  href={`/aircraft/mission/${m.slug}`}
+                  className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                >
+                  {m.h1}
                 </Link>
               ))}
             </div>
