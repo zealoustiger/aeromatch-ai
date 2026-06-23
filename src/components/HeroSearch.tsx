@@ -20,9 +20,9 @@ const SKIP_TYPES = new Set(['closed', 'heliport', 'seaplane_base', 'balloonport'
 
 export default function HeroSearch() {
   const router = useRouter()
-  // Which marketplace the hero searches. Partnerships keeps the airport/radius
-  // behavior; "forsale" routes to the public /aircraft search.
-  const [searchType, setSearchType] = useState<'partnerships' | 'forsale'>('partnerships')
+  // Which marketplace the hero searches. Defaults to planes-for-sale (the broader,
+  // public, no-gate experience); "partnerships" keeps the airport/radius behavior.
+  const [searchType, setSearchType] = useState<'partnerships' | 'forsale'>('forsale')
   const [forSaleQuery, setForSaleQuery] = useState('')
 
   // Auth state — read-only, mirrors SaveListingButton. Signed-in users skip the gate.
@@ -151,7 +151,7 @@ export default function HeroSearch() {
         {/* Marketplace tabs — Partnerships ↔ Planes for sale */}
         <div className="mb-5 flex justify-center">
           <div className="inline-flex rounded-full bg-white/10 p-1 ring-1 ring-white/20 backdrop-blur-sm">
-            {([['partnerships', Users, 'Partnerships'], ['forsale', Plane, 'Planes for sale']] as const).map(
+            {([['forsale', Plane, 'Planes for sale'], ['partnerships', Users, 'Partnerships']] as const).map(
               ([key, Icon, label]) => (
                 <button
                   key={key}
