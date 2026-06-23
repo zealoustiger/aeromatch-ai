@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'Aircraft Leaseback vs. Co-Ownership'
 const PATH = '/guides/leaseback-vs-co-ownership'
@@ -481,6 +482,14 @@ export default function LeasebackVsCoOwnershipGuidePage() {
         </p>
       </article>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildArticleJsonLd({ title: TITLE, description: DESCRIPTION, path: PATH })
+          ),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

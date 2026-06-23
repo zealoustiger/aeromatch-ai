@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Calculator, Plane, Users, Wallet, ArrowRight } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'How Aircraft Co-Ownership & Partnerships Work'
 const PATH = '/guides/aircraft-co-ownership'
@@ -353,6 +354,14 @@ export default function CoOwnershipGuidePage() {
         </p>
       </article>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildArticleJsonLd({ title: TITLE, description: DESCRIPTION, path: PATH })
+          ),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

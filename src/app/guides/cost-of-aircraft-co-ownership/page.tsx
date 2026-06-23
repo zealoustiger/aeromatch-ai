@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Calculator, Plane, Wallet, ArrowRight, BookOpen } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'How Much Does It Cost to Co-Own an Aircraft?'
 const PATH = '/guides/cost-of-aircraft-co-ownership'
@@ -390,6 +391,14 @@ export default function CostGuidePage() {
         </p>
       </article>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildArticleJsonLd({ title: TITLE, description: DESCRIPTION, path: PATH })
+          ),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
