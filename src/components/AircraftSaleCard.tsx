@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart } from 'lucide-react'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -20,6 +20,24 @@ const DAY_MS = 86_400_000
 function isNew(firstSeenAt: string | null): boolean {
   if (!firstSeenAt) return false
   return Date.now() - new Date(firstSeenAt).getTime() < 7 * DAY_MS
+}
+
+// Redfin-style days-on-market label from when we first saw the listing.
+// Returns null when we have no first_seen_at (so no empty/"null" chip renders).
+function listedAgo(firstSeenAt: string | null): string | null {
+  if (!firstSeenAt) return null
+  const then = new Date(firstSeenAt).getTime()
+  if (Number.isNaN(then)) return null
+  const days = Math.floor((Date.now() - then) / DAY_MS)
+  if (days <= 0) return 'Listed today'
+  if (days === 1) return 'Listed 1 day ago'
+  if (days < 7) return `Listed ${days} days ago`
+  if (days < 14) return 'Listed 1 week ago'
+  if (days < 30) return `Listed ${Math.floor(days / 7)} weeks ago`
+  if (days < 60) return 'Listed 1 month ago'
+  if (days < 365) return `Listed ${Math.floor(days / 30)} months ago`
+  const years = Math.floor(days / 365)
+  return years === 1 ? 'Listed 1 year ago' : `Listed ${years} years ago`
 }
 
 // Confirmed price drop: we recorded a higher previous price.
@@ -98,6 +116,7 @@ export default function AircraftSaleCard({
   const source = sourceLabel(p.source)
   const drop = priceDrop(p)
   const fresh = isNew(p.first_seen_at)
+  const listed = listedAgo(p.first_seen_at)
   const grade = gradeFromScore(p.quality_score)
   const gm = gradeMeta(grade)
   // Internal link to the make+model for-sale family page — only when a real page
@@ -251,6 +270,12 @@ export default function AircraftSaleCard({
               <span className="flex items-center gap-1">
                 <Wrench className="h-3.5 w-3.5" />
                 {p.smoh.toLocaleString()} SMOH
+              </span>
+            )}
+            {listed && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {listed}
               </span>
             )}
 
