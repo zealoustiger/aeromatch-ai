@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 
-import { Plane, SlidersHorizontal } from 'lucide-react'
+import { Plane, SlidersHorizontal, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
 import ActiveFilterChips from '@/components/ActiveFilterChips'
 import AircraftChipBar from '@/components/AircraftChipBar'
@@ -90,6 +90,13 @@ export default async function AircraftPage({
           <p className="mt-1 text-slate-600">
             Aircraft for sale aggregated from across the web — search them all in one place.
           </p>
+          <Link
+            href="/aircraft/deals"
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+          >
+            <TrendingDown className="h-4 w-4" />
+            See aircraft priced below market
+          </Link>
         </div>
 
         {/* Action bar — filter button visible only on mobile */}
