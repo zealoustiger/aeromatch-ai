@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { MapPin, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
@@ -89,14 +90,14 @@ export default async function StatePartnershipsPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
-      {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-slate-400">
-        <Link href="/" className="hover:text-slate-600">Home</Link>
-        <span className="mx-2">/</span>
-        <Link href="/partnerships" className="hover:text-slate-600">Partnerships</Link>
-        <span className="mx-2">/</span>
-        <span className="text-slate-600">{name}</span>
-      </nav>
+      {/* Breadcrumb (shared component → crawlable trail + BreadcrumbList JSON-LD) */}
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Partnerships', href: '/partnerships' },
+          { label: name },
+        ]}
+      />
 
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 sm:text-3xl">

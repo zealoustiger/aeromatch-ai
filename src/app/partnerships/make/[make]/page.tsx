@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { Plane, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
@@ -90,14 +91,14 @@ export default async function MakePartnershipsPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
-      {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-slate-400">
-        <Link href="/" className="hover:text-slate-600">Home</Link>
-        <span className="mx-2">/</span>
-        <Link href="/partnerships" className="hover:text-slate-600">Partnerships</Link>
-        <span className="mx-2">/</span>
-        <span className="text-slate-600">{entry.name}</span>
-      </nav>
+      {/* Breadcrumb (shared component → crawlable trail + BreadcrumbList JSON-LD) */}
+      <Breadcrumbs
+        items={[
+          { label: 'Home', href: '/' },
+          { label: 'Partnerships', href: '/partnerships' },
+          { label: entry.name },
+        ]}
+      />
 
       {/* Header with photo */}
       <div className="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
