@@ -1,3 +1,12 @@
+## 2026-06-23T11:34:25Z — Night Shift run: 5 cycles (PASS 4 / FAIL 1) — rate limited
+
+- PASS — airport-hub-overview-prose — the 9 indexable /airports/[icao] hub pages now open with curated, location-specific About co-ownership at {airport} prose (real content dept
+- PASS — account-settings-page — new `/account` page giving signed-in pilots an account & email-alerts hub (saved-search subscriptions, activity links, sign out), with a public s
+- PASS — aircraft-hub-aggregateoffer-jsonld — added AggregateOffer price-range JSON-LD to the /aircraft hub (priority seed page #2), matching the structured-data depth its make/m
+- PASS — model-differentiator-highlights — Added a What's different about the {Make} {Model} card (3 plain-language bullets) to all 8 curated make+model for-sale pages, between t
+- cycle produced no verdict (exit 1)
+
+
 # Overnight review — 2026-06-22
 
 ## 📊 Traffic (PostHog) — as of 2026-06-22
