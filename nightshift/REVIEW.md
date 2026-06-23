@@ -1,3 +1,12 @@
+## 2026-06-23T13:55:04Z — Night Shift run: 5 cycles (PASS 5 / FAIL 0) — night ended
+
+- PASS — aircraft-mission-landing-pages — shipped 4 curated shop by mission SEO pages (glass-cockpit, IFR, tailwheel, low-time) with unique buyer guidance + live listings + JSON-
+- PASS — mission-chips-deeplink — the IFR/Glass cockpit/Tailwheel/Low-time chips on the Planes-for-Sale page now open their dedicated mission landing pages instead of filtering i
+- PASS — mission-page-faqs — added a 4-question FAQ accordion + matching FAQPage structured data to all four /aircraft/mission landing pages
+- PASS — hero-for-sale-search — homepage hero can now search planes for sale (free-text + example chips), not just partnerships
+- PASS — model-specs-highlights-batch2 — added key-spec tables + what's different highlights to 12 more curated make+model for sale pages
+
+
 ## 2026-06-23T12:00:08Z — Night Shift run: 1 cycles (PASS 0 / FAIL 1) — rate limited
 
 - cycle produced no verdict (exit 1)
