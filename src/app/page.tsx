@@ -361,6 +361,42 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── SEO: BROWSE AIRCRAFT FOR SALE BY MAKE ──
+          Internal links from the homepage (highest-authority page) into the
+          aircraft-for-sale make hubs — the #1 search-demand family ("{make} for
+          sale"), which the homepage otherwise never links to (it surfaced only the
+          partnership make/state hubs). Pure static links to real, inventory-backed
+          hubs (every SEO_MAKES slug resolves via resolveMake), so no DB query and no
+          404 risk. Each make hub fans crawl out to its model + state pages, and the
+          "browse all" link reaches every for-sale programmatic page. STAGE=INDEXING. */}
+      <section className="border-t border-slate-100 bg-white py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-slate-900">
+                <Plane className="h-5 w-5 text-sky-600" />
+                Browse aircraft for sale by make
+              </h2>
+              <p className="text-sm text-slate-500">Every listing for the most popular GA aircraft, aggregated from across the web.</p>
+            </div>
+            <Link href="/aircraft/browse" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700">
+              Browse all aircraft for sale <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+            {SEO_MAKES.map(({ slug, name }) => (
+              <Link
+                key={slug}
+                href={`/aircraft/${slug}`}
+                className="py-1 text-sm text-slate-600 transition-colors hover:text-sky-600 hover:underline"
+              >
+                {name} aircraft for sale
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── SEO: BROWSE BY STATE ── */}
       <section className="border-t border-slate-100 bg-white py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
