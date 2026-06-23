@@ -47,6 +47,63 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
+### Brainstorm 2026-06-22 — Zillow/Redfin marketplace + data quality (human-set, P1)
+Theme: make ClubHanger feel like a polished Zillow/Redfin for aircraft, and stop
+showing junk. All human-requested this session. Inspiration: Zillow + Redfin
+(listing pages, price history, map, Zestimate), Etsy/Airbnb (collection layout).
+
+**Data quality (do first):**
+- **[P1][bug] Hide listings under $50k + no-price from all buyer surfaces.** Verified:
+  the 211 sub-$50k listings are parts/projects ("M20C COWLING", "O-235 MAGS",
+  "PROPELLER BLADES", rivet-gun kits), not flyable aircraft; 514 listings have no
+  price. Slice: (1) global `asking_price >= 50000` floor across `/aircraft` browse,
+  counts, family pages + sitemap (don't index them); (2) suppress no-price listings
+  from homepage + curated collections (priced real aircraft only). Keep partnerships
+  unaffected (buy-in ≠ aircraft price).
+
+**Homepage curated collections (replaces the old slice-4 "Time-builders under $100k"):**
+- **[P1][want] Re-theme collections — stop leading with the cheapest planes.** New
+  aspirational set, each linking to the matching filtered search: *Just listed this
+  week · Recently reduced (price drops) · Glass-panel cross-country (G1000/Perspective)
+  · Turnkey & ready to fly (fresh annual / low SMOH) · Family four-seaters
+  (172/182/SR20/Archer) · Step-up performance (SR22/Bonanza/Mooney) · Near your home
+  airport.* No "under $X" lead themes. Only priced real aircraft (respect the $50k floor).
+- **[P1][want] Redesign the collection layout — drop the horizontal scrollbar.**
+  Preferred **Option A: category tile mosaic** (Airbnb "Explore" / Zillow tiles) —
+  responsive grid of big rounded photo tiles (real plane photo behind the label), no
+  horizontal scroll, 375px-first, tap → filtered results, on the homepage. **Option B:
+  polished snap-carousel** (hidden scrollbar, scroll-snap, next-card peek, chevron
+  arrows on desktop hover) for in-listing "more like this" rails. (Human may pick A vs
+  a tabbed Option C after a mock.) Reuse `.ch-card`/cream tokens.
+
+**Zillow/Redfin features buyers love (all [want]):**
+- **[P1][want] Internal listing detail pages.** Today planes link OUT to the source;
+  Zillow/Redfin keep users on-site. Build rich `/aircraft/[…]/listing/[id]` (or similar)
+  pages: full photo gallery + all specs + cost-to-own + price history + similar listings
+  + contact/source CTA. Biggest UX **and** SEO win (new indexable family — helps the
+  INDEXING goal). Slice: (1) route + gallery + specs + source CTA; (2) cost-to-own +
+  price-history block; (3) similar listings; (4) JSON-LD Vehicle/Offer + sitemap +
+  internal links from cards. (Subsumes the Phase-2 photo gallery/lightbox.)
+- **[P1][want] "ClubHanger Estimate" — fair-value pricing (Zestimate analog).** "Priced
+  $18k below similar 2008 SR22s" + a Good-deal / Priced-high score, computed from comps
+  on make/model/year-band/hours. Differentiator. Slice: (1) comp model + API; (2) deal
+  badge on cards (extends existing `CompResult`); (3) price-analysis block on detail page.
+- **[P2][want] Price history + "Price cut ↓$X" + days-on-market + "New" pills (Redfin).**
+  Data already stored (`previous_price`, `price_changed_at`, `first_seen_at`). Slice:
+  (1) New + Price-cut pills on cards (extend existing `priceDrop`/`isNew`); (2)
+  price-history mini-chart on the detail page; (3) days-on-market label.
+- **[P1][want] Map search (Zillow/Redfin core).** Browse planes & partnerships on a map
+  by airport/region using `airports` lat/lng; click pins → listings. Slice: (1) map view
+  on `/aircraft` + `/partnerships`; (2) pin clustering; (3) "search this area" / region
+  filter; (4) sidebar list ↔ map sync.
+- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).** Save
+  exists; add saved-search → alert when new matching listings appear (pairs with the
+  `alerts` table). Slice: (1) wire alerts to saved searches; (2) nightly match job; (3)
+  email (human tests sending later — build, don't send) + settings page.
+- **[P2][want] "Similar planes" comparables on every listing.** Same make/model/region;
+  keeps users browsing (the Zillow "more homes like this" loop). Slice: (1) similar-by-
+  make/model on the detail page; (2) "also near {airport}" variant.
+
 ### Design & aesthetic — 2026-06-20 (fresh human request)
 The human likes the look/feel of **Etsy + Airbnb** and wants ClubHanger to adopt a
 combination of the two (see the Etsy × Airbnb entry under **Inspiration** for the
