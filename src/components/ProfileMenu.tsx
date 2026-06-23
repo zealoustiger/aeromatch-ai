@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Settings, Bookmark, Heart, MessageCircle, LogOut, Shield } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
+import AviatorAvatar, { type AviatorConfig } from '@/components/AviatorAvatar'
 
 // Deterministic avatar (initial + background) for users without a photo. Picks a
 // stable warm/sky tone from the email so the same person always reads the same.
@@ -28,20 +29,10 @@ function avatarFor(user: User): { initial: string; bg: string; label: string } {
   return { initial, bg, label: email || 'Account' }
 }
 
-function Avatar({ user, size = 'md' }: { user: User; size?: 'md' | 'sm' }) {
-  const { initial, bg } = avatarFor(user)
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white',
-        bg,
-        size === 'md' ? 'h-8 w-8 text-sm' : 'h-9 w-9 text-base'
-      )}
-    >
-      {initial}
-    </span>
-  )
+function Avatar({ user, size = 'md', config = null }: { user: User; size?: 'md' | 'sm'; config?: AviatorConfig | null }) {
+  // Every user gets a ClubHanger aviator — their chosen config if set, else a
+  // stable one seeded by their id. (Replaces the old initials chip.)
+  return <AviatorAvatar seed={user.id} config={config} size={size === 'md' ? 34 : 36} ring={false} />
 }
 
 type MenuItem = { href: string; label: string; icon: LucideIcon }
@@ -50,10 +41,12 @@ export default function ProfileMenu({
   user,
   isAdmin,
   onSignOut,
+  avatarConfig = null,
 }: {
   user: User
   isAdmin: boolean
   onSignOut: () => void
+  avatarConfig?: AviatorConfig | null
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -93,7 +86,7 @@ export default function ProfileMenu({
         aria-label="Account menu"
         className="flex items-center rounded-full ring-1 ring-slate-200 transition-shadow hover:ring-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
       >
-        <Avatar user={user} />
+        <Avatar user={user} config={avatarConfig} />
       </button>
 
       {open && (
@@ -102,7 +95,7 @@ export default function ProfileMenu({
           className="absolute right-0 top-11 z-50 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
         >
           <div className="flex items-center gap-2.5 px-3 py-3">
-            <Avatar user={user} size="sm" />
+            <Avatar user={user} size="sm" config={avatarConfig} />
             <div className="min-w-0">
               <div className="text-xs font-medium text-slate-500">Signed in as</div>
               <div className="truncate text-sm font-semibold text-slate-900">{label}</div>

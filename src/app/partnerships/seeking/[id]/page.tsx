@@ -4,6 +4,7 @@ import { MapPin, Clock, Calendar, ChevronLeft, Mail, Phone, Search, LogIn } from
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatShareType } from '@/lib/utils'
+import AviatorAvatar from '@/components/AviatorAvatar'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -81,6 +82,15 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            {/* Pilot header — aviator avatar (seeded by id) + anonymized name */}
+            <div className="mb-5 flex items-center gap-3">
+              <AviatorAvatar seed={s.id} size={64} />
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-slate-900">{displayName || 'A pilot'}</p>
+                <p className="text-sm text-slate-500">Seeking a partnership share</p>
+              </div>
+            </div>
+
             {/* Badges */}
             <div className="mb-4 flex flex-wrap gap-2">
               {s.total_hours && (
