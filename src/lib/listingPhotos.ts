@@ -72,13 +72,18 @@ export function extractAircraftForSale(html: string): string[] {
   return out
 }
 
+// A listing with no photos exposes the source's own "no image" graphic as its
+// og:image (e.g. static.aircraftforsale.com/.../noimage-300x225.webp). That's not
+// a real plane photo — drop it so the listing stays a placeholder, not a fake one.
+const NOIMG_RE = /no[\s._-]?image|placeholder|no[\s._-]?photo/i
+
 /** Dispatch to the right extractor for a given source. */
 export function extractPhotos(source: string, html: string, sourceUrl: string): PhotoResult {
   switch (source) {
     case 'barnstormers':
-      return { images: extractBarnstormers(html, sourceUrl), supported: true }
+      return { images: extractBarnstormers(html, sourceUrl).filter((u) => !NOIMG_RE.test(u)), supported: true }
     case 'aircraftforsale':
-      return { images: extractAircraftForSale(html), supported: true }
+      return { images: extractAircraftForSale(html).filter((u) => !NOIMG_RE.test(u)), supported: true }
     default:
       // hangar67 etc. — JS-rendered, handled in Phase 2.
       return { images: [], supported: false }
