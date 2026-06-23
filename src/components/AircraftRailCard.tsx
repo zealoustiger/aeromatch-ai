@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
@@ -9,8 +10,10 @@ import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
  * Mirrors the FeaturedListingCard look (rounded photo on top, price-first
  * details) but sized for a horizontal rail item, and reuses the slice-1
  * `.ch-card` token + `getPlaceholderPhoto` + `formatPrice` for visual cohesion
- * with the rest of the marketplace. Links to the listing's source (same target
- * the full `AircraftSaleCard` uses). Presentational only — no DB read here.
+ * with the rest of the marketplace. Links to the listing's INTERNAL detail page
+ * (`/aircraft/listing/[id]`), mirroring how `AircraftSaleCard` links its photo +
+ * title — keeps homepage clicks (and crawlers) on-site, spreading internal-link
+ * reachability into the sitemapped detail family. Presentational only — no DB read.
  */
 function aircraftTitle(p: AircraftForSale): string {
   const parts = [p.year, p.make, p.model].filter(Boolean)
@@ -20,14 +23,10 @@ function aircraftTitle(p: AircraftForSale): string {
 export default function AircraftRailCard({ p }: { p: AircraftForSale }) {
   const label = aircraftTitle(p)
   const imageUrl = getPlaceholderPhoto(p.make ?? '')
-  const isExternal = p.source !== 'user'
-  const href = p.source_url ?? '#'
 
   return (
-    <a
-      href={href}
-      target={isExternal ? '_blank' : undefined}
-      rel={isExternal ? 'noopener noreferrer' : undefined}
+    <Link
+      href={`/aircraft/listing/${p.id}`}
       className="ch-card group block w-60 shrink-0 overflow-hidden bg-white sm:w-64"
     >
       {/* Photo */}
@@ -64,6 +63,6 @@ export default function AircraftRailCard({ p }: { p: AircraftForSale }) {
           </p>
         )}
       </div>
-    </a>
+    </Link>
   )
 }
