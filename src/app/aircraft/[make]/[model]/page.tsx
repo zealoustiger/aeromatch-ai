@@ -246,6 +246,32 @@ export default async function MakeModelForSalePage({ params }: Props) {
         </div>
       </div>
 
+      {/* Key specifications — scannable table of real, representative figures for
+          this family (curated models only; none for dynamic combos — we never
+          fabricate specs). Mirrors the market-snapshot card styling. The footnote
+          discloses these are representative of a popular variant (variants differ),
+          so there's no false precision. */}
+      {entry.specTable && entry.specTable.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <Gauge className="h-4 w-4 text-sky-500" />
+            {label} key specifications
+          </h2>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+            {entry.specTable.map((row) => (
+              <div key={row.label} className="border-b border-slate-100 pb-2">
+                <dt className="text-xs font-medium text-slate-500">{row.label}</dt>
+                <dd className="mt-0.5 text-sm font-semibold text-slate-800">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-4 text-xs text-slate-400">
+            Representative figures for a popular {label} variant — exact specs vary by
+            model year, engine, and avionics configuration.
+          </p>
+        </section>
+      )}
+
       {/* About the {Make} {Model} — unique, evergreen editorial prose (content
           depth for the INDEXING stage), mirrors the make-hub "About {Make}" card.
           Curated combos only; dynamically-discovered combos render nothing. */}

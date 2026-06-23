@@ -513,6 +513,16 @@ export type SeoMakeModel = {
    * dynamically-discovered combos have none. See MODEL_OVERVIEWS.
    */
   overview?: string[]
+  /**
+   * Scannable key/value spec rows of real, public-domain, representative figures
+   * (seats, engine, hp, cruise, range, useful load, fuel, gear). Rendered as a
+   * "key specifications" table for unique, factual on-page depth. Curated combos
+   * with confident, well-documented data only; dynamically-discovered combos have
+   * none (we never fabricate specs). Figures are representative of a popular
+   * variant — the page footnotes that exact specs vary by year/config. See
+   * MODEL_SPECS.
+   */
+  specTable?: { label: string; value: string }[]
 }
 
 export const SEO_MAKE_MODELS: SeoMakeModel[] = [
@@ -844,18 +854,115 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   ],
 }
 
+// Per-model "key specifications" tables — real, public-domain, REPRESENTATIVE
+// figures for a popular variant of each family (POH / type-certificate data
+// points). Deliberately family-level and disclosed as representative on the page
+// (variants differ by year/engine/avionics), so no fabricated precision. Keyed by
+// `make/model`. Only well-documented, high-inventory families I'm confident about
+// get a table; everything else (and every dynamic combo) renders no table rather
+// than guess. Mirrors the MODEL_FAQS / MODEL_OVERVIEWS attach pattern below.
+const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
+  'cessna/172': [
+    { label: 'Seats', value: '4' },
+    { label: 'Engine', value: 'Lycoming IO-360 (172S)' },
+    { label: 'Horsepower', value: '180 hp' },
+    { label: 'Cruise speed', value: '~124 kt' },
+    { label: 'Range', value: '~640 nm' },
+    { label: 'Useful load', value: '~880 lb' },
+    { label: 'Fuel (usable)', value: '53 gal' },
+    { label: 'Landing gear', value: 'Fixed tricycle' },
+  ],
+  'cessna/182': [
+    { label: 'Seats', value: '4' },
+    { label: 'Engine', value: 'Lycoming IO-540 (182T)' },
+    { label: 'Horsepower', value: '230 hp' },
+    { label: 'Cruise speed', value: '~145 kt' },
+    { label: 'Range', value: '~930 nm' },
+    { label: 'Useful load', value: '~1,100 lb' },
+    { label: 'Fuel (usable)', value: '87 gal' },
+    { label: 'Landing gear', value: 'Fixed tricycle' },
+  ],
+  'cessna/150': [
+    { label: 'Seats', value: '2' },
+    { label: 'Engine', value: 'Continental O-200-A' },
+    { label: 'Horsepower', value: '100 hp' },
+    { label: 'Cruise speed', value: '~100 kt' },
+    { label: 'Range', value: '~420 nm' },
+    { label: 'Useful load', value: '~500 lb' },
+    { label: 'Fuel (usable)', value: '~22.5 gal' },
+    { label: 'Landing gear', value: 'Fixed tricycle' },
+  ],
+  'cirrus/sr22': [
+    { label: 'Seats', value: '4–5' },
+    { label: 'Engine', value: 'Continental IO-550-N' },
+    { label: 'Horsepower', value: '310 hp' },
+    { label: 'Cruise speed', value: '~183 kt' },
+    { label: 'Range', value: '~1,000 nm' },
+    { label: 'Useful load', value: '~1,300 lb' },
+    { label: 'Fuel (usable)', value: '92 gal' },
+    { label: 'Safety', value: 'CAPS whole-airframe parachute' },
+  ],
+  'cirrus/sr20': [
+    { label: 'Seats', value: '4–5' },
+    { label: 'Engine', value: 'Continental IO-390 (later)' },
+    { label: 'Horsepower', value: '215 hp' },
+    { label: 'Cruise speed', value: '~155 kt' },
+    { label: 'Range', value: '~700 nm' },
+    { label: 'Useful load', value: '~1,050 lb' },
+    { label: 'Fuel (usable)', value: '56 gal' },
+    { label: 'Safety', value: 'CAPS whole-airframe parachute' },
+  ],
+  'piper/cherokee': [
+    { label: 'Seats', value: '4' },
+    { label: 'Engine', value: 'Lycoming O-360 (PA-28-180)' },
+    { label: 'Horsepower', value: '180 hp' },
+    { label: 'Cruise speed', value: '~120 kt' },
+    { label: 'Range', value: '~560 nm' },
+    { label: 'Useful load', value: '~1,000 lb' },
+    { label: 'Fuel (usable)', value: '48 gal' },
+    { label: 'Landing gear', value: 'Fixed tricycle' },
+  ],
+  'piper/arrow': [
+    { label: 'Seats', value: '4' },
+    { label: 'Engine', value: 'Lycoming IO-360 (PA-28R-201)' },
+    { label: 'Horsepower', value: '200 hp' },
+    { label: 'Cruise speed', value: '~137 kt' },
+    { label: 'Range', value: '~880 nm' },
+    { label: 'Useful load', value: '~1,150 lb' },
+    { label: 'Fuel (usable)', value: '72 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+  ],
+  'beechcraft/bonanza': [
+    { label: 'Seats', value: '4–6' },
+    { label: 'Engine', value: 'Continental IO-550-B (A36)' },
+    { label: 'Horsepower', value: '300 hp' },
+    { label: 'Cruise speed', value: '~174 kt' },
+    { label: 'Range', value: '~920 nm' },
+    { label: 'Useful load', value: '~1,050 lb' },
+    { label: 'Fuel (usable)', value: '74 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+  ],
+}
+
 export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel | null {
   const m = makeSlug.toLowerCase()
   const md = modelSlug.toLowerCase()
   const entry = SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md)
   if (!entry) return null
-  // Attach the curated FAQs + "About" overview prose (if any) without mutating the
-  // source array. Mirrors how resolveMake attaches MAKE_FAQS + MAKE_OVERVIEWS.
+  // Attach the curated FAQs + "About" overview prose + key-spec table (if any)
+  // without mutating the source array. Mirrors how resolveMake attaches MAKE_FAQS
+  // + MAKE_OVERVIEWS.
   const key = `${entry.makeSlug}/${entry.modelSlug}`
   const faqs = MODEL_FAQS[key]
   const overview = MODEL_OVERVIEWS[key]
-  return faqs || overview
-    ? { ...entry, ...(faqs && { faqs }), ...(overview && { overview }) }
+  const specTable = MODEL_SPECS[key]
+  return faqs || overview || specTable
+    ? {
+        ...entry,
+        ...(faqs && { faqs }),
+        ...(overview && { overview }),
+        ...(specTable && { specTable }),
+      }
     : entry
 }
 
