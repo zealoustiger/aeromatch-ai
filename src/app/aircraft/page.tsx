@@ -16,7 +16,7 @@ import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
-import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -76,6 +76,14 @@ export default async function AircraftPage({
     name: aircraftTitle,
     url: `${SITE_URL}/aircraft`,
   })
+  // Page-level price-range AggregateOffer from the SAME listings (real asking_price
+  // only; null when <2 priced). Brings the /aircraft hub (priority seed page #2) to
+  // structured-data parity with the make / make+model / state sub-family pages, which
+  // already emit this — price-range rich-result eligibility for the INDEXING stage.
+  const aggregateOfferJsonLd = buildAircraftAggregateOfferJsonLd(itemListListings, {
+    name: aircraftTitle,
+    url: `${SITE_URL}/aircraft`,
+  })
 
   return (
     <CompareProvider>
@@ -83,6 +91,12 @@ export default async function AircraftPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {aggregateOfferJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
         />
       )}
     {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 1).
