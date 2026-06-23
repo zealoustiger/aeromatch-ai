@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import { fetchAircraftPage } from '@/components/AircraftSaleList'
 import { AircraftForSale } from '@/lib/types'
 import AircraftRailCard from './AircraftRailCard'
+import RailScroller from './RailScroller'
 
 /**
  * Homepage curated rails (Etsy-style), slice 4 of the Etsy × Airbnb refresh.
@@ -115,17 +116,16 @@ export default async function HomeRails() {
                 </Link>
               </div>
 
-              {/* Horizontal rail. `overflow-x-auto` scrolls the ROW; the parent
-                  page stays overflow-hidden so there is zero PAGE overflow. */}
-              <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [scrollbar-width:thin]">
-                <ul className="flex gap-4">
-                  {rail.listings.map((p) => (
-                    <li key={p.id} className="contents">
-                      <AircraftRailCard p={p} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {/* Horizontal rail as a snap-carousel (hidden scrollbar + scroll-snap
+                  + desktop chevrons). The row scrolls internally; the parent page
+                  stays overflow-hidden so there is zero PAGE overflow. */}
+              <RailScroller>
+                {rail.listings.map((p) => (
+                  <li key={p.id} className="shrink-0 snap-start">
+                    <AircraftRailCard p={p} />
+                  </li>
+                ))}
+              </RailScroller>
             </div>
           ))}
         </div>
