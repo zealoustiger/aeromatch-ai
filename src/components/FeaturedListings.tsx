@@ -2,9 +2,12 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import FeaturedListingCard from './FeaturedListingCard'
+import RailScroller from './RailScroller'
 
 export default async function FeaturedListings() {
-  const listings = await getLatestPartnerships(6)
+  // Fetch 12 (was 6) so the rail has more to swipe through, matching the
+  // 12-card homepage curated rails and the in-listing "Similar" rails.
+  const listings = await getLatestPartnerships(12)
 
   if (listings.length === 0) return null
 
@@ -24,11 +27,18 @@ export default async function FeaturedListings() {
           </Link>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Horizontal snap-carousel (hidden scrollbar + scroll-snap + desktop
+            chevrons), shared with the curated rails + the in-listing "Similar"
+            rails via RailScroller. Cards stay server-rendered; the row scrolls
+            internally so there is zero PAGE overflow. Fixed-width <li> wrappers
+            constrain the otherwise full-width FeaturedListingCard. */}
+        <RailScroller>
           {listings.map((p) => (
-            <FeaturedListingCard key={p.id} p={p} />
+            <li key={p.id} className="w-72 shrink-0 snap-start sm:w-80">
+              <FeaturedListingCard p={p} />
+            </li>
           ))}
-        </div>
+        </RailScroller>
 
         <div className="mt-8 text-center sm:hidden">
           <Link
