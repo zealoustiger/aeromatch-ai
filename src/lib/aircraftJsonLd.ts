@@ -103,6 +103,70 @@ export function buildAircraftItemListJsonLd(
 }
 
 /**
+ * Build a single-listing `Product`/`Offer` JSON-LD node for an aircraft DETAIL
+ * page (`/aircraft/listing/[id]`). Unlike the list-page builders above, this
+ * marks up ONE specific aircraft, so it is the canonical place to attach the
+ * real per-listing photo and the on-page Offer.
+ *
+ * HONESTY RULES (same as the list builders, GOAL.md anti-slop / anti-cloaking):
+ * - `name` mirrors the visible page H1 (the listing title); `url` is the
+ *   canonical detail-page URL (passed in — no cloaking).
+ * - `offers` is attached ONLY when the listing has a genuine numeric
+ *   `asking_price > 0`. "Make offer" / "Call" listings get no offer, never a
+ *   fabricated price.
+ * - `image` is attached ONLY when the caller passes a genuinely harvested photo
+ *   (the detail page resolves this with `pickRealPhoto`, which filters source
+ *   "no-image" graphics). The site-logo OG fallback is NEVER used as a product
+ *   image, and our own per-make placeholder is never marked up as a real photo.
+ * - NO `aggregateRating` / `review` — ClubHanger has no review data here, and
+ *   fake review markup is a Google penalty.
+ * Returns null only when there is no title to mark up (never happens for a
+ * rendered page; the route 404s on a missing listing).
+ */
+export function buildAircraftListingJsonLd(
+  p: AircraftForSale,
+  opts: { url: string; image?: string | null }
+): Record<string, unknown> | null {
+  const name = p.title?.trim()
+  if (!name) return null
+
+  const product: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name,
+    url: opts.url,
+  }
+
+  if (p.make) product.brand = { '@type': 'Brand', name: p.make }
+
+  // Prefer the real listing description; else a factual year-make-model line.
+  const desc = p.description?.trim()
+  const label = aircraftLabel(p)
+  if (desc) product.description = desc
+  else if (label && label !== name) product.description = `${label} aircraft for sale.`
+
+  // Real harvested photo only (caller passes pickRealPhoto's result, or null).
+  if (opts.image) product.image = opts.image
+
+  // Tail number is a real, stable identifier when we have it.
+  if (p.registration) product.sku = p.registration
+
+  // Real numeric price → a real Offer on the detail page itself. No number → none.
+  if (typeof p.asking_price === 'number' && p.asking_price > 0) {
+    product.offers = {
+      '@type': 'Offer',
+      price: p.asking_price,
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      itemCondition: 'https://schema.org/UsedCondition',
+      url: opts.url,
+    }
+  }
+
+  return product
+}
+
+/**
  * Build a page-level `Product` node whose `offers` is an `AggregateOffer`
  * (price-range) summarizing the for-sale listings on an aggregation page. This
  * makes the make / make+model / make+model+state pages eligible for Google's
