@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import PartnershipCard from '@/components/PartnershipCard'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import {
@@ -126,6 +127,14 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
           </div>
         ))}
       </div>
+
+      {/* No-account email capture for new nearby partnerships — same low-friction,
+          confirmed double-opt-in pipeline the make/state hubs + for-sale pages use. */}
+      <AlertSignup
+        context={`${airport.icao} area`}
+        sourcePath={`/partnerships/near/${airport.icao.toLowerCase()}`}
+        noun="partnership"
+      />
 
       {/* Cross-links */}
       <div className="mt-12 grid gap-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-2">
