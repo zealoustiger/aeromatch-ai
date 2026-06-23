@@ -7,6 +7,7 @@ import { Plane, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
@@ -181,6 +182,11 @@ export default async function MakePartnershipsPage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Co-ownership resources — additive internal linking into the guides cluster +
+          cost calculator (priority seed pages), the partnership-side counterpart to
+          ForSaleGuideLinks on the for-sale surfaces. */}
+      <PartnershipResourceLinks className="mt-8" />
     </div>
   )
 }
