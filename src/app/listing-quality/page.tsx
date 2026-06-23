@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ShieldCheck, BadgeCheck, Check, ArrowRight } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -24,6 +24,15 @@ export const metadata: Metadata = {
       'A plain-English guide to ClubHanger’s listing-quality grade (A/B/C) and the trust signals shown on every listing.',
     url: `${SITE_URL}${PATH}`,
     type: 'website',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, alt: `${TITLE} on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'A plain-English guide to ClubHanger’s listing-quality grade (A/B/C) and the trust signals shown on every listing.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
