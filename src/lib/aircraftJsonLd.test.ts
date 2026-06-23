@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from './aircraftJsonLd.ts'
+import {
+  buildAircraftItemListJsonLd,
+  buildAircraftAggregateOfferJsonLd,
+  buildAircraftListingJsonLd,
+} from './aircraftJsonLd.ts'
 import type { AircraftForSale } from './types.ts'
 
 function listing(overrides: Partial<AircraftForSale> = {}): AircraftForSale {
@@ -138,6 +142,63 @@ test('AggregateOffer: count + range reflect only the priced listings', () => {
   assert.equal(offer.offerCount, 2)
   assert.equal(offer.lowPrice, 100000)
   assert.equal(offer.highPrice, 300000)
+})
+
+// ---- buildAircraftListingJsonLd (single detail page) ----
+
+const DETAIL_URL = 'https://clubhanger.com/aircraft/listing/id-1'
+
+test('detail Product: name mirrors the title, url is the canonical detail page, real Offer', () => {
+  const out = buildAircraftListingJsonLd(listing(), { url: DETAIL_URL })!
+  assert.equal(out['@context'], 'https://schema.org')
+  assert.equal(out['@type'], 'Product')
+  assert.equal(out.name, '2004 Cessna 172S Skyhawk')
+  assert.equal(out.url, DETAIL_URL)
+  assert.deepEqual(out.brand, { '@type': 'Brand', name: 'Cessna' })
+  const offer = out.offers as Record<string, unknown>
+  assert.equal(offer['@type'], 'Offer')
+  assert.equal(offer.price, 250000)
+  assert.equal(offer.priceCurrency, 'USD')
+  assert.equal(offer.availability, 'https://schema.org/InStock')
+  assert.equal(offer.itemCondition, 'https://schema.org/UsedCondition')
+  // Offer is presented on the detail page itself, not the source site.
+  assert.equal(offer.url, DETAIL_URL)
+})
+
+test('detail Product: NO offer when there is no numeric price (never invent one)', () => {
+  const out = buildAircraftListingJsonLd(
+    listing({ asking_price: null, price_text: 'Make offer' }),
+    { url: DETAIL_URL }
+  )!
+  assert.equal(out.offers, undefined)
+})
+
+test('detail Product: image included ONLY when a real photo is passed', () => {
+  const withPhoto = buildAircraftListingJsonLd(listing(), {
+    url: DETAIL_URL,
+    image: 'https://cdn.example.com/real-plane.jpg',
+  })!
+  assert.equal(withPhoto.image, 'https://cdn.example.com/real-plane.jpg')
+
+  const noPhoto = buildAircraftListingJsonLd(listing(), { url: DETAIL_URL, image: null })!
+  assert.equal(noPhoto.image, undefined)
+})
+
+test('detail Product: registration becomes sku; never emits rating/review/fabricated image', () => {
+  const json = JSON.stringify(
+    buildAircraftListingJsonLd(listing({ registration: 'N12345' }), { url: DETAIL_URL })
+  )
+  assert.ok(json.includes('"sku":"N12345"'))
+  assert.ok(!json.includes('aggregateRating'))
+  assert.ok(!json.includes('"review"'))
+  assert.ok(!json.includes('"image"'))
+})
+
+test('detail Product: returns null when there is no title to mark up', () => {
+  assert.equal(
+    buildAircraftListingJsonLd(listing({ title: '' as unknown as string }), { url: DETAIL_URL }),
+    null
+  )
 })
 
 test('AggregateOffer: returns null with fewer than 2 priced listings (no fabrication)', () => {

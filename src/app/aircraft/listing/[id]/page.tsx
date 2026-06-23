@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   MapPin,
-  ChevronLeft,
   ExternalLink,
   Gauge,
   Wrench,
@@ -27,6 +26,8 @@ import { formatPrice } from '@/lib/utils'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { pickRealPhoto } from '@/lib/aircraftPhotos'
+import { buildAircraftListingJsonLd } from '@/lib/aircraftJsonLd'
+import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs'
 import PhotoGallery from '@/components/PhotoGallery'
 import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
@@ -150,6 +151,23 @@ export default async function AircraftListingDetailPage({
   // Rough cost-to-own estimate (only meaningful when we have a real asking price).
   const ownership = p.asking_price ? estimateOwnershipCost(p.asking_price) : null
 
+  // Structured data — a single Product/Offer for this listing. Real harvested
+  // photo only (never our per-make placeholder or the site-logo OG fallback).
+  const detailUrl = `${SITE_URL}/aircraft/listing/${p.id}`
+  const realPhoto = p.image_is_placeholder ? null : pickRealPhoto(p.images)
+  const productJsonLd = buildAircraftListingJsonLd(p, { url: detailUrl, image: realPhoto })
+
+  // Crawlable breadcrumb trail (Home › Planes for Sale › family › this listing);
+  // the shared component also emits BreadcrumbList JSON-LD.
+  const crumbs: Crumb[] = [
+    { label: 'Home', href: '/' },
+    { label: 'Planes for Sale', href: '/aircraft' },
+    ...(family
+      ? [{ label: `${family.make} ${family.model}`, href: `/aircraft/${family.makeSlug}/${family.modelSlug}` }]
+      : []),
+    { label },
+  ]
+
   // Price history — render only when a real recorded change exists (no fabrication).
   const changedFrom =
     p.previous_price != null && p.asking_price != null && p.previous_price !== p.asking_price
@@ -173,19 +191,19 @@ export default async function AircraftListingDetailPage({
 
   return (
     <div className="ch-surface min-h-screen">
+      {productJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        />
+      )}
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Top bar — back + save/share */}
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <Link
-            href="/aircraft"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
-          >
-            <ChevronLeft className="h-4 w-4" /> Back to Planes for Sale
-          </Link>
-          <div className="flex items-center gap-2">
-            <ShareListingButton url={`${SITE_URL}/aircraft/listing/${p.id}`} />
-            <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={false} variant="full" />
-          </div>
+        {/* Crawlable breadcrumb trail (also emits BreadcrumbList JSON-LD). */}
+        <Breadcrumbs items={crumbs} />
+        {/* Save / share */}
+        <div className="mb-6 flex items-center justify-end gap-2">
+          <ShareListingButton url={detailUrl} />
+          <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={false} variant="full" />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
