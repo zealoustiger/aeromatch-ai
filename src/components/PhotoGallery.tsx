@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, isUsablePhoto } from '@/lib/aircraftPhotos'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,7 +23,7 @@ export default function PhotoGallery({
   alt: string
   imageIsPlaceholder?: boolean | null
 }) {
-  const real = (images ?? []).filter(Boolean)
+  const real = (images ?? []).filter(isUsablePhoto)
   const hasReal = real.length > 0
   const photos = hasReal ? real : [getPlaceholderPhoto(make)]
   const isPlaceholder = !hasReal || imageIsPlaceholder === true

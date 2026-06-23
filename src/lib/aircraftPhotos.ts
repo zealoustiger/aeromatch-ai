@@ -30,3 +30,20 @@ const FALLBACK =
 export function getPlaceholderPhoto(make: string): string {
   return MAKE_PHOTOS[make.toLowerCase()] ?? FALLBACK
 }
+
+// Some aggregated listings store the *source site's own* "no photo" graphic as
+// their first image (e.g. static.aircraftforsale.com/.../noimage-300x225.webp).
+// Those aren't real plane photos — and their hosts aren't in next.config's image
+// allowlist, so the Next image optimizer 400s on them. Treat them as no photo so
+// we fall back to our own per-make placeholder (with the "Not actual plane photo"
+// badge) instead of rendering a broken image + console error.
+const SOURCE_PLACEHOLDER_RE = /no[\s._-]?image|placeholder|no[\s._-]?photo/i
+
+export function isUsablePhoto(url: string | null | undefined): url is string {
+  return !!url && !SOURCE_PLACEHOLDER_RE.test(url)
+}
+
+// First genuinely usable real photo from a listing's images, or null.
+export function pickRealPhoto(images: string[] | null | undefined): string | null {
+  return (images ?? []).find(isUsablePhoto) ?? null
+}

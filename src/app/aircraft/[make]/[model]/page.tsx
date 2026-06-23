@@ -10,7 +10,7 @@ import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
@@ -129,7 +129,7 @@ export default async function MakeModelForSalePage({ params }: Props) {
   })
   // Hero photo: borrow a real photo from one of this family's listings when we
   // have one, so the header shows an actual aircraft instead of a placeholder.
-  const heroPhoto = listings.find((l) => l.images?.[0])?.images?.[0] ?? null
+  const heroPhoto = listings.map((l) => pickRealPhoto(l.images)).find(Boolean) ?? null
 
   const itemListJsonLd = buildAircraftItemListJsonLd(listings, {
     name: `${label} for sale`,

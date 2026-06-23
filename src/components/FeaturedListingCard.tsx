@@ -3,13 +3,14 @@ import Image from 'next/image'
 import { MapPin } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 
 /** Redfin-style photo-forward card: large image on top, price-first details below. */
 export default function FeaturedListingCard({ p }: { p: Partnership }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
-  const imageUrl = p.images?.[0] ?? getPlaceholderPhoto(p.make)
-  const isPlaceholder = p.image_is_placeholder !== false && !p.images?.[0]
+  const realPhoto = pickRealPhoto(p.images)
+  const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make)
+  const isPlaceholder = p.image_is_placeholder !== false && !realPhoto
 
   return (
     <Link
