@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-23T12:40Z — PASS — aircraft-mission-landing-pages
+- Pages: /aircraft/mission/glass-cockpit, /aircraft/mission/ifr, /aircraft/mission/tailwheel, /aircraft/mission/low-time, /aircraft
+- What: **New "shop by mission" pages for planes for sale.** Four genuinely-useful landing pages now exist — **Glass Cockpit**, **IFR-Equipped**, **Tailwheel**, and **Low-Time** aircraft for sale — each one written to match how buyers actually search ("glass cockpit aircraft for sale", "tailwheel aircraft for sale", etc.). Every page leads with 2-3 paragraphs of honest, plain-language buyer guidance (what the term means, what to check in the logs/panel before buying, the trade-offs) and then shows the live grid of real matching listings from our inventory (56-120 real planes each). They cross-link to each other, to the popular make hubs, and to the buyer guides, and they're now in the sitemap and reachable from a new "Browse aircraft by mission" links block on the main /aircraft page. Unknown mission URLs 404 — we don't generate empty pages. This completes slice (2) of the mission-presets backlog item (slice 1, the mission chips, already shipped in AircraftChipBar).
+- Goal: SEO breadth (INDEXING stage) — a new quality indexable page family targeting real high-intent buyer queries, each with unique editorial content + live data (not thin/doorway) + ItemList JSON-LD + canonical/OG + internal links + sitemap. On-site pageviews at orient: 148/7d (PostHog secondary; GSC not configured). SEO lift lags weeks — judge by these leading indicators.
+- Spec: nightshift/specs/20260623T113247Z-aircraft-mission-landing-pages.md
+- Verdict: PASS — `next build` compiled clean + Next typecheck passed (pre-existing `.test.ts` tsc errors only, untouched); QA smoke exit 0 on all 4 mission pages + /aircraft at desktop 1280 + mobile 375 (HTTP 200, zero app console errors, zero horizontal overflow); screenshots read and confirmed (breadcrumb, H1, intro panel, real listing grid, cross-link footers all render; mobile stacks cleanly). Verified each page has a unique H1/title/meta/self-canonical, ItemList JSON-LD present, real listings render, bad slug 404s, all 4 in sitemap.xml, and the "Browse aircraft by mission" block links them from /aircraft.
+- Screenshots: nightshift/screenshots/aircraft-mission-landing-pages/
+- Next: wire the existing AircraftChipBar mission chips to deep-link to these pages (currently they apply in-place filters); consider a "near me"/region mission once geolocation lands; optionally add a short FAQ accordion per mission for more long-tail coverage; a partnerships-side mission family.
+
 ## 2026-06-23T12:00:08Z — DRAIN SUMMARY
 - Cycles this run: 1 (PASS 0 / FAIL 1 / ABORT 0)
 - Stopped because: rate limited
