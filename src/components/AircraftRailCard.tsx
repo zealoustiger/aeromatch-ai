@@ -20,7 +20,15 @@ function aircraftTitle(p: AircraftForSale): string {
   return parts.length ? parts.join(' ') : 'Aircraft'
 }
 
-export default function AircraftRailCard({ p }: { p: AircraftForSale }) {
+export default function AircraftRailCard({
+  p,
+  discountPct,
+}: {
+  p: AircraftForSale
+  /** When set (deals rail), shows an emerald "~X% below average" pill on the
+   *  photo. Same wording as the full-card `CompPill` so the two stay in sync. */
+  discountPct?: number
+}) {
   const label = aircraftTitle(p)
   const imageUrl = getPlaceholderPhoto(p.make ?? '')
 
@@ -39,6 +47,11 @@ export default function AircraftRailCard({ p }: { p: AircraftForSale }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="256px"
         />
+        {discountPct != null && (
+          <span className="absolute left-2 top-2 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            ~{discountPct}% below average
+          </span>
+        )}
         <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
           Not actual plane photo
         </span>

@@ -5,6 +5,7 @@ import { Plane, Users, Search, MapPin, DollarSign, ShieldCheck, ArrowRight, Calc
 import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
 import HomeRails from '@/components/HomeRails'
+import DealsRail from '@/components/DealsRail'
 import { STATE_NAMES, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 const faqItems = [
@@ -218,6 +219,9 @@ export default function HomePage() {
 
       {/* ── CURATED RAILS — Etsy-style horizontal collections of real for-sale aircraft ── */}
       <HomeRails />
+
+      {/* ── PRICED BELOW MARKET — rail of below-market deals (links to /aircraft/deals) ── */}
+      <DealsRail />
 
       {/* ── EXPLORE — three big photo cards ── */}
       <section className="bg-slate-50 py-16">
