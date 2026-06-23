@@ -107,9 +107,10 @@ Repeat until a stop condition (section 3) fires:
 Stop the loop on the FIRST of these:
 
 - **Backlog drained** — no eligible item remains. Best outcome.
-- **Night's end** — local time is at/after **06:50** (the 07:00 digest needs a
-  clean tree). Let the current worker finish, then stop. Check with
-  `date +%H%M`; the night window is 23:00–06:xx local.
+- **Night's end** — **do not start a new cycle once local time is at/after 06:15.**
+  Usage buffer that leaves session-limit headroom for the next night (the 07:00
+  digest is token-free, so this is a margin, not a hard dependency). Let the
+  current worker finish, then stop. Check with `date +%H%M`; window is 23:00–06:15 local.
 - **Usage / session limit hit** — if a worker fails with a usage-limit / rate-limit
   / "session limit reached" error, or you yourself get one: **do not retry in a
   loop.** Stop now (section 4 "pause"). The next hourly fire is the retry.
