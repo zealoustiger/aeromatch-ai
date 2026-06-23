@@ -70,6 +70,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   polished snap-carousel** (hidden scrollbar, scroll-snap, next-card peek, chevron
   arrows on desktop hover) for in-listing "more like this" rails. (Human may pick A vs
   a tabbed Option C after a mock.) Reuse `.ch-card`/cream tokens.
+  — **Interim Option-B polish ✅ SHIPPED 2026-06-23T08:47Z** (`home-rails-snap-carousel`):
+  the homepage curated rails now hide the scrollbar + scroll-snap + next-card peek +
+  desktop chevron arrows via a reusable client `RailScroller` (cards stay server-rendered
+  as children). This delivers the headline "drop the horizontal scrollbar" reversibly on
+  the existing real-listing rails. **STILL OPEN — the wholesale redesign awaits the human's
+  mock: Option A (category-tile mosaic) vs tabbed Option C.** Also: apply `RailScroller` to
+  the in-listing Similar-aircraft rails (the real Option-B target) + the newest-partnerships
+  homepage row for consistency.
 
 **Zillow/Redfin features buyers love (all [want]):**
 - **[P1][want] Internal listing detail pages.** Today planes link OUT to the source;
