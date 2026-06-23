@@ -11,6 +11,37 @@ const HOME_CITY = (process.env.VISITOR_HOME_CITY || 'Oakland').toLowerCase()
 const BOT_RE =
   /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|slackbot|whatsapp|telegram|headless|lighthouse|preview|monitor|ahrefs|semrush|dataprovider|python-requests|curl|wget|axios|node-fetch/i
 
+// Cloud / datacenter / hosting orgs — a "visitor" whose IP belongs to one of
+// these is almost always a bot (crawler, scraper, uptime monitor) running on a
+// server, not a person. We TAG these rather than drop them, so the channel still
+// shows every visit but real humans are easy to pick out.
+const CLOUD_RE =
+  /digitalocean|amazon|\baws\b|ec2|google|\bgcp\b|googleusercontent|microsoft|azure|hetzner|\bovh\b|linode|vultr|oracle|alibaba|aliyun|tencent|scaleway|contabo|leaseweb|choopa|\bm247\b|datacamp|hostinger|cloudflare|fastly|akamai|hosting|datacenter|colocation/i
+
+// Look up the IP's owning org (ipinfo.io — https, commercial-use OK, works
+// server-side without a token; set IPINFO_TOKEN to raise the free rate limit).
+// Returns the org name with the leading "AS#### " stripped, e.g. "DigitalOcean,
+// LLC". Fail-open: any error returns null and the visit counts as human.
+async function ipOrg(ip: string | null): Promise<string | null> {
+  if (!ip) return null
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 2500)
+  try {
+    const token = process.env.IPINFO_TOKEN ? `?token=${process.env.IPINFO_TOKEN}` : ''
+    const res = await fetch(`https://ipinfo.io/${ip}/json${token}`, {
+      signal: ctrl.signal,
+      headers: { accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    const j = (await res.json()) as { org?: string }
+    return (j.org || '').replace(/^AS\d+\s+/, '').trim() || null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 // Paths not worth a ping.
 function boring(path: string) {
   return /^\/(admin|api|auth|_next)/.test(path)
@@ -82,9 +113,9 @@ export async function POST(request: NextRequest) {
   const props = body.props || {}
   if (!sessionId || boring(path)) return NextResponse.json({ ok: true })
 
-  // Bot backstop + skip our own city.
+  // We no longer drop bot hits — they're tagged below and still posted, so the
+  // channel shows everything. Just skip our own city.
   const ua = request.headers.get('user-agent') || ''
-  if (BOT_RE.test(ua)) return NextResponse.json({ ok: true })
   const city = request.headers.get('x-vercel-ip-city')
     ? decodeURIComponent(request.headers.get('x-vercel-ip-city')!)
     : null
@@ -113,10 +144,21 @@ export async function POST(request: NextRequest) {
 
   try {
     if (!existing) {
-      // First action this session → start a thread.
+      // First action this session → classify (bot vs human) and start a thread.
+      // The IP-org lookup only runs here, once per session, not on every event.
+      const org = await ipOrg(ip)
+      const uaBot = BOT_RE.test(ua)
+      const cloudBot = !!org && CLOUD_RE.test(org)
+      const isBot = uaBot || cloudBot
+      const provider = org ? org.replace(/,?\s*(LLC|Inc\.?|Ltd\.?|GmbH|S\.?A\.?S?\.?|B\.?V\.?).*$/i, '').trim() : null
+      const botReason = cloudBot ? provider || 'datacenter' : uaBot ? 'bot user-agent' : null
+
+      const headline = isBot
+        ? `🤖 *Bot* — ${botReason} · ${loc} · ${device}`
+        : `🟢 *New visitor* — ${loc} · ${device}`
       const root = await slack('chat.postMessage', {
         channel: CHANNEL,
-        text: `🟢 *New visitor* — ${loc} · ${device}\nlanded on \`${path}\``,
+        text: `${headline}\n${isBot ? 'hit' : 'landed on'} \`${path}\``,
         unfurl_links: false,
       })
       if (!root.ok) return NextResponse.json({ ok: false, error: root.error })
@@ -128,6 +170,8 @@ export async function POST(request: NextRequest) {
         country,
         ip,
         user_agent: ua,
+        is_bot: isBot,
+        ip_org: org,
         first_path: path,
       })
       // Also post the first action as a reply so the thread reads consistently.
