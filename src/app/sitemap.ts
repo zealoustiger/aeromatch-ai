@@ -4,6 +4,7 @@ import { getForSaleListingSitemapRows } from '@/lib/aircraftForSale'
 import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInventoryMakeModelStates, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 import { getNearAirportSitemapIcaos, getIndexableAirportIcaos } from '@/lib/nearbyPartnerships'
+import { MISSIONS } from '@/lib/missions'
 
 // Largest valid Date from a set of ISO/date strings, ignoring null/undefined/unparseable
 // values. Used to derive an honest, data-derived `lastmod` for the aggregation pages
@@ -207,6 +208,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/aircraft`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/aircraft/browse`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/aircraft/deals`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
+    // Curated "mission" landing pages (`/aircraft/mission/[mission]`) — a fixed,
+    // hand-curated set (like guides) of high-intent buyer searches, each carrying
+    // unique editorial guidance + the live matching listings. Data-derived freshness.
+    ...MISSIONS.map((m) => ({
+      url: `${SITE_URL}/aircraft/mission/${m.slug}`,
+      lastModified: aircraftLastMod,
+      changeFrequency: 'daily' as const,
+      priority: 0.6,
+    })),
     // Static content pages (tools/guides/about) carry no data-derived date — leaving
     // `lastModified` unset is more honest than stamping a build-time "now" on unchanged copy.
     { url: `${SITE_URL}/tools`, changeFrequency: 'monthly', priority: 0.6 },
