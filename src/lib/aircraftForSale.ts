@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
+import { resolveMakeModelFamily } from '@/lib/seo'
 
 /**
  * Single for-sale aircraft fetch by id. Mirrors `getPartnershipById` in
@@ -68,6 +69,72 @@ export async function getForSaleListingSitemapRows(): Promise<
       if (data.length < PAGE) break
     }
     return rows
+  } catch {
+    return []
+  }
+}
+
+// Recency key for ranking ties: prefer the freshest listing (first_seen, then
+// created). Unparseable/missing dates sort last (-Infinity).
+function recencyMs(p: AircraftForSale): number {
+  const raw = p.first_seen_at ?? p.created_at
+  const t = raw ? new Date(raw).getTime() : NaN
+  return Number.isNaN(t) ? -Infinity : t
+}
+
+/**
+ * Rank same-make candidates for the "Similar aircraft" module: exact make+model
+ * family match first, then same state, then a comparable price (within ±25%);
+ * freshest listing breaks ties. Pure JS over rows already fetched.
+ */
+function rankSimilar(current: AircraftForSale, candidates: AircraftForSale[]): AircraftForSale[] {
+  const curFamily = resolveMakeModelFamily(current.make, current.model)
+  const curKey = curFamily ? `${curFamily.makeSlug}/${curFamily.modelSlug}` : null
+  const curPrice = current.asking_price ?? null
+  return candidates
+    .map((p) => {
+      const fam = resolveMakeModelFamily(p.make, p.model)
+      const key = fam ? `${fam.makeSlug}/${fam.modelSlug}` : null
+      let score = 0
+      if (curKey && key === curKey) score += 4
+      if (current.state && p.state && p.state === current.state) score += 2
+      if (curPrice && p.asking_price && Math.abs(p.asking_price - curPrice) <= curPrice * 0.25) score += 1
+      return { p, score }
+    })
+    .sort((a, b) => b.score - a.score || recencyMs(b.p) - recencyMs(a.p))
+    .map((x) => x.p)
+}
+
+/**
+ * "Similar aircraft for sale" for the listing detail page (Zillow/Redfin
+ * "more like this"): real active same-make listings, excluding the current one,
+ * gated to the same $50k buyer-quality floor the sitemap uses (no parts/junk),
+ * ranked by `rankSimilar`. Returns [] (render nothing) when the listing has no
+ * usable make or there are no sensible matches — never fabricates rows.
+ */
+export async function getSimilarAircraftForSale(
+  current: AircraftForSale,
+  limit = 3
+): Promise<AircraftForSale[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+
+  const make = current.make?.trim()
+  if (!make) return []
+
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('*')
+      .eq('status', 'active')
+      .neq('id', current.id)
+      .ilike('make', `%${make}%`)
+      .gte('asking_price', SITEMAP_PRICE_FLOOR)
+      .limit(40)
+    if (error || !data) return []
+    return rankSimilar(current, data).slice(0, limit)
   } catch {
     return []
   }

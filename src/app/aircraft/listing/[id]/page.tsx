@@ -31,6 +31,7 @@ import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs'
 import PhotoGallery from '@/components/PhotoGallery'
 import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
+import SimilarAircraft from '@/components/SimilarAircraft'
 
 const DAY_MS = 86_400_000
 
@@ -415,6 +416,13 @@ export default async function AircraftListingDetailPage({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Similar aircraft — real other same-make active listings, each a
+            crawlable internal link to its own detail page. Renders nothing when
+            there are no sensible matches. */}
+        <div className="mt-10">
+          <SimilarAircraft current={p} />
         </div>
       </div>
     </div>
