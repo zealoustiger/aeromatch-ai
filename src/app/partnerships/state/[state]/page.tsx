@@ -6,6 +6,7 @@ import { MapPin, ArrowRight } from 'lucide-react'
 import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
@@ -173,6 +174,11 @@ export default async function StatePartnershipsPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Co-ownership resources — additive internal linking into the guides cluster +
+          cost calculator (priority seed pages), the partnership-side counterpart to
+          ForSaleGuideLinks on the for-sale surfaces. */}
+      <PartnershipResourceLinks className="mt-8" />
     </div>
   )
 }
