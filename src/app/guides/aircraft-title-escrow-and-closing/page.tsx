@@ -14,7 +14,7 @@ import {
   ListChecks,
   Receipt,
 } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
@@ -33,6 +33,15 @@ export const metadata: Metadata = {
       'The legal and financial side of buying a used airplane: title and lien searches, what an escrow agent does, the bill of sale and FAA aircraft registration, releasing liens, the typical closing sequence, and how sales/use tax can apply. Educational, not legal/tax/financial advice.',
     url: `${SITE_URL}${PATH}`,
     type: 'article',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${TITLE} — a guide on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'The legal and financial side of buying a used airplane: title and lien searches, what an escrow agent does, the bill of sale and FAA aircraft registration, releasing liens, the typical closing sequence, and how sales/use tax can apply. Educational, not legal/tax/financial advice.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

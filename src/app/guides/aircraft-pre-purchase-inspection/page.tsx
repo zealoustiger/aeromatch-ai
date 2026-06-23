@@ -17,7 +17,7 @@ import {
   ScrollText,
   Users,
 } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
@@ -36,6 +36,15 @@ export const metadata: Metadata = {
       'What a pre-purchase (pre-buy) inspection covers and why it matters when buying a used airplane: logbooks and AD compliance, engine compression and oil analysis, airframe and corrosion, avionics, title/liens and paperwork, damage history, how to choose an independent inspector, how to think about scope and cost, and the red flags to watch for. Educational, not legal/tax/financial/airworthiness advice.',
     url: `${SITE_URL}${PATH}`,
     type: 'article',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${TITLE} — a guide on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'What a pre-purchase (pre-buy) inspection covers and why it matters when buying a used airplane: logbooks and AD compliance, engine compression and oil analysis, airframe and corrosion, avionics, title/liens and paperwork, damage history, how to choose an independent inspector, how to think about scope and cost, and the red flags to watch for. Educational, not legal/tax/financial/airworthiness advice.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

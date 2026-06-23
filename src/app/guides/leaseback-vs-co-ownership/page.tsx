@@ -13,7 +13,7 @@ import {
   ArrowRight,
   BookOpen,
 } from 'lucide-react'
-import { SITE_URL } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
@@ -32,6 +32,15 @@ export const metadata: Metadata = {
       'Leaseback (income from renting your plane to a flight school/FBO) vs. co-ownership (sharing the plane and its costs with other pilots) — who each suits, control, wear, tax and insurance at a high level, and how to decide. Educational, not legal/tax/financial advice.',
     url: `${SITE_URL}${PATH}`,
     type: 'article',
+    siteName: SITE_NAME,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${TITLE} — a guide on ${SITE_NAME}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'Leaseback (income from renting your plane to a flight school/FBO) vs. co-ownership (sharing the plane and its costs with other pilots) — who each suits, control, wear, tax and insurance at a high level, and how to decide. Educational, not legal/tax/financial advice.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
