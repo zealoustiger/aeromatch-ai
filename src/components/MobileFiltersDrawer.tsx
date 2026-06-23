@@ -6,15 +6,18 @@ import { cn } from '@/lib/utils'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
 import PartnershipFilters from './PartnershipFilters'
 import AircraftSaleFilters from './AircraftSaleFilters'
+import SeekerFilters from './SeekerFilters'
 
 interface Props {
   initialValues: Record<string, string | undefined>
   activeCount: number
-  variant?: 'partnership' | 'sale'
+  variant?: 'partnership' | 'sale' | 'seeker'
   facets?: AircraftFacets
+  /** Make options for the seeker variant's make dropdown. */
+  makes?: string[]
 }
 
-export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets }: Props) {
+export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets, makes }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -69,6 +72,8 @@ export default function MobileFiltersDrawer({ initialValues, activeCount, varian
         <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
           {variant === 'sale' ? (
             <AircraftSaleFilters initialValues={initialValues} facets={facets} />
+          ) : variant === 'seeker' ? (
+            <SeekerFilters initialValues={initialValues} makes={makes} />
           ) : (
             <PartnershipFilters initialValues={initialValues} />
           )}
