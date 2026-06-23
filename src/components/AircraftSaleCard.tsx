@@ -128,10 +128,8 @@ export default function AircraftSaleCard({
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
         <div className="relative h-52 sm:h-auto sm:w-56 sm:shrink-0">
-          <a
-            href={p.source_url ?? '#'}
-            target={isExternal ? '_blank' : undefined}
-            rel={isExternal ? 'noopener noreferrer' : undefined}
+          <Link
+            href={`/aircraft/listing/${p.id}`}
             className="relative block h-full w-full"
           >
             <Image
@@ -151,7 +149,7 @@ export default function AircraftSaleCard({
                 +{p.images.length - 1} photos
               </span>
             )}
-          </a>
+          </Link>
           {/* Favorite — sibling of the photo link (not nested) for valid markup;
               mirrors the partnership card's heart. */}
           <div className="absolute right-2 top-2 z-10">
@@ -203,15 +201,11 @@ export default function AircraftSaleCard({
               </div>
 
               {/* Title */}
-              <a
-                href={p.source_url ?? '#'}
-                target={isExternal ? '_blank' : undefined}
-                rel={isExternal ? 'noopener noreferrer' : undefined}
-              >
+              <Link href={`/aircraft/listing/${p.id}`}>
                 <h2 className="text-base font-semibold leading-snug text-slate-900 group-hover:text-sky-700">
                   {p.title}
                 </h2>
-              </a>
+              </Link>
               <p className="mt-0.5 text-sm font-medium text-slate-500">{label}</p>
 
               {/* Internal link to the make+model for-sale family page */}
