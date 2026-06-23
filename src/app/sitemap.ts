@@ -206,6 +206,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/partnerships/browse`, lastModified: partnershipsLastMod, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/aircraft`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/aircraft/browse`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
+    { url: `${SITE_URL}/aircraft/deals`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
     // Static content pages (tools/guides/about) carry no data-derived date — leaving
     // `lastModified` unset is more honest than stamping a build-time "now" on unchanged copy.
     { url: `${SITE_URL}/tools`, changeFrequency: 'monthly', priority: 0.6 },

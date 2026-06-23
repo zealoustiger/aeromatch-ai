@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
 import { minScoreForGrade, GRADE_CUTOFFS, type Grade } from '@/lib/listingQuality'
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
-import { buildFamilyPriceMap, compVsMarket, priceStats, type PriceStats } from '@/lib/aircraftComps'
+import { buildFamilyPriceMap, compVsMarket, familyKey, priceStats, type CompResult, type PriceStats } from '@/lib/aircraftComps'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -536,6 +536,89 @@ async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
     return buildFamilyPriceMap(data)
   } catch {
     return new Map()
+  }
+}
+
+/** A single under-market deal: the listing plus its (always `below`) comp result. */
+export interface AircraftDeal {
+  listing: AircraftForSale
+  comp: CompResult
+}
+
+/** Real-aircraft price floor for the deals page (mirrors the homepage rails). */
+const DEAL_MIN_PRICE = 50000
+/** Minimum discount vs. the family median (whole %) to qualify as a "deal".
+ *  `compVsMarket` already requires the listing be MORE than DEAD_BAND (5%) below
+ *  the median of >= MIN_OTHER_COMPS other comps; we raise the bar to a clearly
+ *  meaningful gap so the page only shows genuine bargains, never marginal ones. */
+export const DEAL_MIN_PCT = 10
+/** Plausibility ceiling on the discount. A make+model family median spans many
+ *  years/conditions (e.g. a 1953 straight-tail vs a modern G36 Bonanza, or a
+ *  project R44 against a field of flyable ones), so a "discount" beyond this is
+ *  almost never a real bargain — it's a materially different airframe, a noisy
+ *  tiny family, or a data artifact. Excluding them keeps the page honest and
+ *  useful instead of leading with embarrassing 80%-off outliers the caveat alone
+ *  can't redeem. Real, defensible bargains live in the DEAL_MIN_PCT–DEAL_MAX_PCT
+ *  band. */
+export const DEAL_MAX_PCT = 45
+/** Cap per make+model family so one popular family can't flood the page. */
+const DEAL_MAX_PER_FAMILY = 6
+
+/**
+ * Fetch the active for-sale listings asking meaningfully BELOW the median of
+ * comparable same make+model listings, ranked by the largest discount first.
+ *
+ * Honesty guardrails (GOAL.md): the comp set + median come from the SAME
+ * `fetchFamilyPriceMap()` the per-card "vs market" pill uses (so the % shown on
+ * the deals page matches the card pill exactly), `compVsMarket` enforces the
+ * >= MIN_OTHER_COMPS floor, candidates clear the $50k real-aircraft floor + the
+ * site quality floor, and we keep ONLY genuine `below` results at >= DEAL_MIN_PCT.
+ * Nothing is fabricated or padded — an empty result is returned as `[]`.
+ * Read-only, no schema change.
+ */
+export async function fetchUnderMarketDeals(limit = 48): Promise<AircraftDeal[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const familyPriceMap = await fetchFamilyPriceMap()
+    if (familyPriceMap.size === 0) return []
+
+    const supabase = await createServerSupabaseClient()
+    let query = supabase
+      .from('aircraft_for_sale')
+      .select('*')
+      .eq('status', 'active')
+      .gte('asking_price', DEAL_MIN_PRICE)
+    const floor = floorScore()
+    if (floor > 0) query = query.gte('quality_score', floor)
+    // Cap the candidate scan; we only ever render `limit` rows after ranking.
+    const { data, error } = await query.limit(2000)
+    if (error || !data) return []
+
+    // Score every candidate against its family median; keep genuine deals only.
+    const scored: { deal: AircraftDeal; pct: number }[] = []
+    for (const row of data as AircraftForSale[]) {
+      const comp = compVsMarket(row, familyPriceMap)
+      if (!comp || comp.kind !== 'below' || comp.pct < DEAL_MIN_PCT || comp.pct > DEAL_MAX_PCT) continue
+      scored.push({ deal: { listing: row, comp }, pct: comp.pct })
+    }
+    scored.sort((a, b) => b.pct - a.pct)
+
+    // Largest discount first, with a per-family cap for variety.
+    const perFamily = new Map<string, number>()
+    const out: AircraftDeal[] = []
+    for (const { deal } of scored) {
+      const key = familyKey(deal.listing) ?? 'unknown'
+      const n = perFamily.get(key) ?? 0
+      if (n >= DEAL_MAX_PER_FAMILY) continue
+      perFamily.set(key, n + 1)
+      out.push(deal)
+      if (out.length >= limit) break
+    }
+    return out
+  } catch {
+    return []
   }
 }
 
