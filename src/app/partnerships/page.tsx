@@ -6,7 +6,8 @@ import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterChips'
 import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
-import { getPartnershipMakes } from '@/lib/partnershipsQuery'
+import { getPartnershipMakes, getPartnershipListings } from '@/lib/partnershipsQuery'
+import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { countForSale, fetchAircraftPage } from '@/components/AircraftSaleList'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
@@ -16,7 +17,7 @@ import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 import Link from 'next/link'
-import { SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 const partnershipsTitle = 'Aircraft Partnerships & Co-Ownership Near You'
 const partnershipsDescription =
@@ -55,8 +56,25 @@ export default async function PartnershipsPage({
   const activeFilterCount = Object.values(params).filter(Boolean).length
   const makes = await getPartnershipMakes()
 
+  // ItemList JSON-LD for the partnerships the visitor actually sees — fetched with
+  // the SAME filters PartnershipList renders below, so the structured data matches
+  // the visible cards 1:1 (mirrors the make/state sub-family pages, which already
+  // emit ItemList; this closes the gap on the /partnerships hub, priority seed page #3).
+  // The helper returns null (renders nothing) when no valid rows qualify.
+  const { listings: itemListListings } = await getPartnershipListings(params)
+  const itemListJsonLd = buildPartnershipItemListJsonLd(itemListListings, {
+    name: partnershipsTitle,
+    url: `${SITE_URL}/partnerships`,
+  })
+
   return (
     <CompareProvider>
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
     {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 5 token
         sweep). Full-bleed cream behind the surface, reversible + scoped here;
         mirrors /aircraft so the page matches its already-warm cards. */}

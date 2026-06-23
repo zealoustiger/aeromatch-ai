@@ -6,7 +6,7 @@ import Link from 'next/link'
 import ActiveFilterChips from '@/components/ActiveFilterChips'
 import AircraftChipBar from '@/components/AircraftChipBar'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
-import AircraftSaleList from '@/components/AircraftSaleList'
+import AircraftSaleList, { fetchAircraftPage } from '@/components/AircraftSaleList'
 import { countActivePartnerships, getPartnershipListings } from '@/lib/partnershipsQuery'
 import AlertSignup from '@/components/AlertSignup'
 import Breadcrumbs from '@/components/Breadcrumbs'
@@ -15,7 +15,8 @@ import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
-import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { buildAircraftItemListJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -65,8 +66,25 @@ export default async function AircraftPage({
   ).toString()
   const alertSourcePath = alertQuery ? `/aircraft?${alertQuery}` : '/aircraft'
 
+  // ItemList JSON-LD for the listings the visitor actually sees — fetched with the
+  // SAME filters AircraftSaleList renders below, so the structured data matches the
+  // visible cards 1:1 (mirrors the make/model/state sub-family pages, which already
+  // emit ItemList; this closes the gap on the /aircraft hub, priority seed page #2).
+  // The helper returns null (renders nothing) when no priced/valid rows qualify.
+  const { listings: itemListListings } = await fetchAircraftPage(params)
+  const itemListJsonLd = buildAircraftItemListJsonLd(itemListListings, {
+    name: aircraftTitle,
+    url: `${SITE_URL}/aircraft`,
+  })
+
   return (
     <CompareProvider>
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
     {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 1).
         Full-bleed cream behind the reference surface, reversible + scoped here. */}
     <div className="ch-surface min-h-screen">
