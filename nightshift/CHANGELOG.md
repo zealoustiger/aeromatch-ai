@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-23T11:34:25Z — DRAIN SUMMARY
+- Cycles this run: 5 (PASS 4 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260623T104645Z
+
 ## 2026-06-23T11:20Z — PASS — model-differentiator-highlights
 - Pages: /aircraft/cessna/172, /aircraft/cessna/182, /aircraft/cessna/150, /aircraft/cirrus/sr22, /aircraft/cirrus/sr20, /aircraft/piper/cherokee, /aircraft/piper/arrow, /aircraft/beechcraft/bonanza
 - What: **Each of the 8 curated make+model "for sale" pages now has a short "What's different about the {Make} {Model}" card** — three scannable, plain-language bullets distilling what genuinely sets that model apart (its standout trait, who it suits, and the honest trade-off). E.g. the Cessna 172 card says it's the most-produced aircraft ever with unmatched parts/mechanic support, a forgiving trainer, and a high-wing that limits useful load with full fuel. It sits between the existing key-specs table (the numbers) and the "About" prose (the story), giving a buyer comparing families the decision-useful gist at a glance. Non-curated/auto-discovered model pages show no card — we never fabricate.
