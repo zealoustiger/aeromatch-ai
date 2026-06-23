@@ -1,31 +1,10 @@
 import Link from 'next/link'
 import { ArrowRight, Plane } from 'lucide-react'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { Partnership, PartnershipSeeker } from '@/lib/types'
-import { MOCK_SEEKERS } from '@/lib/mockData'
+import { Partnership } from '@/lib/types'
 import { getLatestPartnerships } from '@/lib/partnerships'
+import { getSeekers, anySeekerFilter, type SeekerFilters } from '@/lib/seekersQuery'
 import SeekerCard from './SeekerCard'
 import PartnershipCard from './PartnershipCard'
-
-async function getSeekers(state?: string, make?: string): Promise<PartnershipSeeker[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-
-  if (!hasSupabase) {
-    let results = MOCK_SEEKERS
-    if (state) results = results.filter((s) => s.state === state)
-    if (make) results = results.filter((s) => s.preferred_makes?.some((m) => m.toLowerCase().includes(make.toLowerCase())))
-    return results
-  }
-
-  const supabase = await createServerSupabaseClient()
-  let query = supabase.from('partnership_seekers').select('*').eq('status', 'active').order('created_at', { ascending: false })
-
-  if (state) query = query.eq('state', state)
-
-  const { data } = await query
-  return (data as PartnershipSeeker[]) ?? []
-}
 
 export default async function SeekerList({
   filters,
@@ -40,12 +19,12 @@ export default async function SeekerList({
    */
   fallbackPartnerships?: Partnership[]
 }) {
-  const seekers = await getSeekers(filters.state, filters.make)
+  const seekers = await getSeekers(filters as SeekerFilters)
 
   if (seekers.length === 0) {
     return (
       <SeekerEmptyState
-        filtered={Boolean(filters.state || filters.make)}
+        filtered={anySeekerFilter(filters as SeekerFilters)}
         partnerships={fallbackPartnerships}
       />
     )

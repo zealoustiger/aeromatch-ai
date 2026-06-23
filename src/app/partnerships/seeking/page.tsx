@@ -1,13 +1,18 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Search, ArrowRight } from 'lucide-react'
+import { Search, ArrowRight, SlidersHorizontal } from 'lucide-react'
 import SeekerList from '@/components/SeekerList'
+import SeekerChipBar from '@/components/SeekerChipBar'
+import SeekerFilters from '@/components/SeekerFilters'
+import SeekerActiveFilterChips from '@/components/SeekerActiveFilterChips'
+import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import PartnershipTabs from '@/components/PartnershipTabs'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
+import { getSeekerMakes } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -91,98 +96,110 @@ export default async function SeekingPartnershipsPage({
 
   // The make hubs this page should reach so it isn't an internal dead-end.
   const makeLinks = SEO_MAKES.slice(0, 3)
+  // Makes seekers actually want — feeds the chip bar + the make filter dropdown.
+  const seekerMakes = await getSeekerMakes()
+  const activeFilterCount = ['airport', 'state', 'make', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {itemListJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+    <div className="ch-surface min-h-screen">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        {itemListJsonLd && (
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+        )}
+        {faqJsonLd && (
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+        )}
+
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Partnerships', href: '/partnerships' },
+            { label: 'Seeking' },
+          ]}
         />
-      )}
-      {faqJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
-      )}
 
-      <Breadcrumbs
-        items={[
-          { label: 'Home', href: '/' },
-          { label: 'Partnerships', href: '/partnerships' },
-          { label: 'Seeking' },
-        ]}
-      />
-
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Search className="h-6 w-6 text-sky-500" />
-            Pilots Seeking Partnerships
-          </h1>
-          <p className="mt-1 text-slate-500">
-            Qualified pilots looking for a co-ownership share near their home airport.
-          </p>
-        </div>
-        <Link
-          href="/partnerships/seeking/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-        >
-          + Post Seeking Listing
-        </Link>
-      </div>
-
-      <PartnershipTabs active="seeking" />
-
-      {/* About — unique, evergreen editorial prose (content depth for the INDEXING
-          stage). Distinct in wording from the FAQ below. */}
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="mb-3 text-base font-semibold text-slate-900">
-          About pilots seeking aircraft partnerships
-        </h2>
-        <div className="space-y-3 text-sm leading-relaxed text-slate-600">
-          {SEEKING_OVERVIEW.map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
-        </div>
-      </section>
-
-      <Suspense fallback={<SeekerListSkeleton />}>
-        <SeekerList filters={params} fallbackPartnerships={railPartnerships} />
-      </Suspense>
-
-      {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
-      <ModelFaq
-        label="Pilots seeking partnerships"
-        faqs={SEEKING_FAQS}
-        className="mt-12"
-      />
-
-      {/* Cross-links so crawlers (and pilots) reach the partnership hub families
-          from here — this page used to be an internal dead-end. */}
-      <div className="mt-12 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-3 text-base font-semibold text-slate-900">
-          Browse aircraft partnerships
-        </h2>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {makeLinks.map(({ slug, name }) => (
+        {/* Header */}
+        <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-slate-900">
+              <Search className="h-7 w-7 text-sky-500" />
+              Pilots Seeking Partnerships
+            </h1>
+            <p className="mt-1 text-slate-600">
+              Qualified pilots looking for a co-ownership share near their home airport.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="lg:hidden">
+              <MobileFiltersDrawer variant="seeker" initialValues={params} activeCount={activeFilterCount} makes={seekerMakes} />
+            </div>
             <Link
-              key={slug}
-              href={`/partnerships/make/${slug}`}
-              className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+              href="/partnerships/seeking/new"
+              className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 sm:px-4"
             >
-              {name} partnerships
+              <span className="sm:hidden">+ Post</span>
+              <span className="hidden sm:inline">+ Post Seeking Listing</span>
             </Link>
-          ))}
+          </div>
         </div>
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <Link
-            href="/partnerships"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
-          >
-            View all partnerships <ArrowRight className="h-4 w-4" />
-          </Link>
+
+        <PartnershipTabs active="seeking" />
+
+        {/* Quick-filter chip bar (mirrors /aircraft + /partnerships). */}
+        <SeekerChipBar makes={seekerMakes} />
+
+        <div className="flex flex-col gap-8 lg:flex-row">
+          {/* Filters sidebar — desktop only */}
+          <aside className="hidden w-full shrink-0 lg:block lg:w-64">
+            <div className="ch-panel sticky top-24 p-5">
+              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filter Pilots
+              </div>
+              <SeekerFilters initialValues={params} makes={seekerMakes} />
+            </div>
+          </aside>
+
+          {/* Results */}
+          <div className="min-w-0 flex-1">
+            <SeekerActiveFilterChips params={params} />
+            <Suspense fallback={<SeekerListSkeleton />}>
+              <SeekerList filters={params} fallbackPartnerships={railPartnerships} />
+            </Suspense>
+          </div>
+        </div>
+
+        {/* About — unique, evergreen editorial prose (content depth for the INDEXING
+            stage). Moved below the results so the page leads with filters + listings. */}
+        <section className="mt-12 ch-panel p-5 sm:p-6">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            About pilots seeking aircraft partnerships
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+            {SEEKING_OVERVIEW.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+
+        {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+        <ModelFaq label="Pilots seeking partnerships" faqs={SEEKING_FAQS} className="mt-8" />
+
+        {/* Cross-links so crawlers (and pilots) reach the partnership hub families. */}
+        <div className="mt-8 ch-panel p-6">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">Browse aircraft partnerships</h2>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {makeLinks.map(({ slug, name }) => (
+              <Link key={slug} href={`/partnerships/make/${slug}`} className="text-sm text-slate-500 hover:text-sky-600 hover:underline">
+                {name} partnerships
+              </Link>
+            ))}
+          </div>
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <Link href="/partnerships" className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700">
+              View all partnerships <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
