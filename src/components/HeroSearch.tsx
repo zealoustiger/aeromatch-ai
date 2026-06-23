@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, MapPin, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Search, X, MapPin, Plane, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { createClient } from '@/lib/supabase'
@@ -13,7 +13,12 @@ const RADIUS_OPTIONS = [25, 50, 100, 150, 200]
 
 export default function HeroSearch() {
   const router = useRouter()
+  // Which marketplace the hero searches. Partnerships keeps the original
+  // airport/radius behavior; "forsale" routes to the public /aircraft search.
+  const [searchType, setSearchType] = useState<'partnerships' | 'forsale'>('partnerships')
   const [mode, setMode] = useState<'airports' | 'radius'>('airports')
+  // Planes-for-sale free-text query (make / model / keyword).
+  const [forSaleQuery, setForSaleQuery] = useState('')
 
   // Auth state — read-only, mirrors SaveListingButton. Signed-in users skip the gate.
   const [user, setUser] = useState<User | null>(null)
@@ -90,6 +95,18 @@ export default function HeroSearch() {
     setShowGate(true)
   }
 
+  // ── Planes-for-sale free-text search ──
+  // Routes to the existing public /aircraft listing search (q matches title +
+  // description). No sign-up gate: browsing for-sale aircraft is already public.
+  function searchForSale(term: string) {
+    const q = term.trim()
+    track('search_performed', { mode: 'forsale', q })
+    router.push(q ? `/aircraft?q=${encodeURIComponent(q)}` : '/aircraft')
+  }
+
+  // Example queries that teach phrasing (and double as one-tap searches).
+  const FORSALE_EXAMPLES = ['Cessna 172', 'Cirrus SR22', 'Glass panel']
+
   const canSearch =
     mode === 'airports'
       ? airports.length > 0 || airportInput.trim().length >= 3
@@ -98,6 +115,40 @@ export default function HeroSearch() {
   return (
     <>
       <div className="w-full max-w-2xl">
+        {/* Search-type toggle — Partnerships ↔ Planes for sale */}
+        <div className="mb-5 flex justify-center">
+          <div className="inline-flex rounded-full bg-white/10 p-1 ring-1 ring-white/20 backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={() => setSearchType('partnerships')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors',
+                searchType === 'partnerships'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-200 hover:text-white'
+              )}
+            >
+              <Users className="h-4 w-4" />
+              Partnerships
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchType('forsale')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors',
+                searchType === 'forsale'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-200 hover:text-white'
+              )}
+            >
+              <Plane className="h-4 w-4" />
+              Planes for sale
+            </button>
+          </div>
+        </div>
+
+      {searchType === 'partnerships' && (
+        <>
         {/* Mode toggle */}
         <div className="mb-4 flex items-center justify-center gap-3">
           <button
@@ -200,6 +251,50 @@ export default function HeroSearch() {
             ? 'Press Enter or comma after each ICAO code to add multiple airports.'
             : 'Find all partnerships based within your chosen radius.'}
         </p>
+        </>
+      )}
+
+      {searchType === 'forsale' && (
+        <>
+          {/* Free-text planes-for-sale search → the public /aircraft?q= listing
+              search (matches title + description). No sign-up gate. */}
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={forSaleQuery}
+                onChange={(e) => setForSaleQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') searchForSale(forSaleQuery)
+                }}
+                placeholder="Search planes for sale — make, model, or keyword"
+                className="h-[52px] w-full rounded-xl bg-white pl-9 pr-3 text-sm text-slate-900 shadow-lg placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+              />
+            </div>
+            <button
+              onClick={() => searchForSale(forSaleQuery)}
+              className="flex h-[52px] items-center justify-center gap-2 rounded-xl bg-sky-600 px-6 text-base font-semibold text-white shadow-lg transition-all hover:bg-sky-500 sm:w-auto"
+            >
+              <Search className="h-5 w-5" />
+              Search
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs text-slate-300">Try:</span>
+            {FORSALE_EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => searchForSale(ex)}
+                className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-100 ring-1 ring-white/20 transition-colors hover:bg-white/20"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       </div>
 
       {showGate && (
