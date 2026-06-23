@@ -623,6 +623,15 @@ export type SeoMakeModel = {
    * MODEL_SPECS.
    */
   specTable?: { label: string; value: string }[]
+  /**
+   * 3 short, scannable "what's different about this model" differentiator bullets —
+   * the decision-useful gist a buyer comparing families wants at a glance (what sets
+   * the model apart, who it suits, the notable trade-off). Real, well-known
+   * characteristics only — never fabricated. Deliberately distinct from the narrative
+   * `overview` prose and the factual `specTable`. Curated combos only; dynamically-
+   * discovered combos have none. See MODEL_HIGHLIGHTS.
+   */
+  highlights?: string[]
 }
 
 export const SEO_MAKE_MODELS: SeoMakeModel[] = [
@@ -1044,24 +1053,74 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
   ],
 }
 
+// Short "what's different about this model" differentiator bullets — 3 per curated
+// family, the decision-useful gist for a buyer comparing families (the distinguishing
+// trait, who it suits, the notable trade-off). Real, well-known characteristics only —
+// no fabricated figures. Keyed `${makeSlug}/${modelSlug}`; keep in sync with the
+// MODEL_SPECS family set above. See SeoMakeModel.highlights.
+const MODEL_HIGHLIGHTS: Record<string, string[]> = {
+  'cessna/172': [
+    'The most-produced aircraft ever — unmatched parts, mechanic, and instructor support, and the easiest single to insure and resell.',
+    'Forgiving, docile handling makes it the default primary trainer and a low-stress first aircraft to own.',
+    'High-wing layout gives shade, easy passenger entry, and great downward visibility for sightseeing — but limits useful load with full fuel.',
+  ],
+  'cessna/182': [
+    "The 172's bigger sibling: more horsepower and a constant-speed prop deliver real four-seats-with-bags useful load.",
+    'Carries four adults, full fuel, and baggage — a genuine family hauler rather than a two-plus-light-bags compromise.',
+    'Nose-heavy on landing and thirstier to operate; rewards trim discipline with stable, capable IFR cross-country manners.',
+  ],
+  'cessna/150': [
+    'A two-seat trainer that is the cheapest practical way into aircraft ownership and building hours.',
+    'The small 100 hp Continental sips fuel — among the lowest operating costs in the GA fleet.',
+    'Cramped cabin and modest useful load keep it to two people and light bags; not a cross-country traveler.',
+  ],
+  'cirrus/sr22': [
+    'The CAPS whole-airframe parachute is the headline safety feature and a major insurance and resale talking point.',
+    '310 hp and ~183 kt cruise make it one of the fastest fixed-gear pistons — a serious cross-country machine.',
+    'Side-yoke, glass panel, and a premium cabin feel closer to a modern car than a legacy GA aircraft, at a premium price.',
+  ],
+  'cirrus/sr20': [
+    'Same airframe, parachute, and glass cockpit as the SR22 at a lower purchase and operating cost.',
+    '215 hp trades top speed for affordability — a popular step-up trainer and a common first Cirrus.',
+    'Fixed gear plus CAPS keeps insurance attainable for lower-time pilots moving into a modern composite.',
+  ],
+  'piper/cherokee': [
+    'Low-wing layout and a single cabin door give it a sportier feel than the high-wing Cessnas.',
+    'The simple, fixed-gear PA-28 airframe is inexpensive to maintain and one of the most common trainers after the 172.',
+    'The stable laminar "Hershey-bar" wing is predictable; later tapered-wing models add a little speed.',
+  ],
+  'piper/arrow': [
+    'Retractable gear and a constant-speed prop make it the classic complex-endorsement and commercial time-builder.',
+    '~137 kt cruise on 200 hp — noticeably faster and more efficient than the fixed-gear Cherokee it is based on.',
+    'Some years add automatic gear extension; insurance and maintenance run higher than a fixed-gear PA-28.',
+  ],
+  'beechcraft/bonanza': [
+    'Build quality and ramp presence put it at the top of the single-engine piston class — the classic "doctor\'s airplane."',
+    '300 hp, retractable gear, and ~174 kt make the A36 a fast six-seat family and business cross-country plane.',
+    'Premium parts and the V-tail variant\'s history mean higher upkeep; a thorough pre-buy and type-specific training matter.',
+  ],
+}
+
 export function getMakeModel(makeSlug: string, modelSlug: string): SeoMakeModel | null {
   const m = makeSlug.toLowerCase()
   const md = modelSlug.toLowerCase()
   const entry = SEO_MAKE_MODELS.find((e) => e.makeSlug === m && e.modelSlug === md)
   if (!entry) return null
-  // Attach the curated FAQs + "About" overview prose + key-spec table (if any)
-  // without mutating the source array. Mirrors how resolveMake attaches MAKE_FAQS
-  // + MAKE_OVERVIEWS.
+  // Attach the curated FAQs + "About" overview prose + key-spec table + "what's
+  // different" highlights (if any) without mutating the source array. Mirrors how
+  // resolveMake attaches MAKE_FAQS + MAKE_OVERVIEWS.
   const key = `${entry.makeSlug}/${entry.modelSlug}`
   const faqs = MODEL_FAQS[key]
   const overview = MODEL_OVERVIEWS[key]
   const specTable = MODEL_SPECS[key]
-  return faqs || overview || specTable
+  const highlights = MODEL_HIGHLIGHTS[key]
+  return faqs || overview || specTable || highlights
     ? {
         ...entry,
         ...(faqs && { faqs }),
         ...(overview && { overview }),
         ...(specTable && { specTable }),
+        ...(highlights && { highlights }),
       }
     : entry
 }
