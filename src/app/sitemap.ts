@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getForSaleListingSitemapRows } from '@/lib/aircraftForSale'
 import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInventoryMakeModelStates, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 import { getNearAirportSitemapIcaos, getIndexableAirportIcaos } from '@/lib/nearbyPartnerships'
@@ -25,6 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let aircraftLastMod: Date | undefined
 
   let listingPages: MetadataRoute.Sitemap = []
+  let forSaleListingPages: MetadataRoute.Sitemap = []
   let airportPages: MetadataRoute.Sitemap = []
   let nearAirportPages: MetadataRoute.Sitemap = []
   let makePages2: MetadataRoute.Sitemap = []
@@ -69,6 +71,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: l.updated_at ? new Date(l.updated_at) : undefined,
       changeFrequency: 'weekly' as const,
       priority: 0.7,
+    }))
+
+    // Individual aircraft-for-sale detail pages (`/aircraft/listing/[id]`). Each is a
+    // genuinely-unique page (real photos + specs + description + price for one aircraft),
+    // self-canonical, with its own OG/title — but the family was orphaned from the
+    // sitemap. Emit ONLY priced active listings (see getForSaleListingSitemapRows: the
+    // $50k floor drops parts/projects + no-price rows so no thin/junk pages enter the
+    // sitemap). Per-listing `lastmod` = the newest of price-change / re-seen / created.
+    const forSaleRows = await getForSaleListingSitemapRows()
+    forSaleListingPages = forSaleRows.map((r) => ({
+      url: `${SITE_URL}/aircraft/listing/${r.id}`,
+      lastModified: maxDate(r.price_changed_at, r.last_seen_at, r.created_at),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
     }))
 
     // Airport hub pages (`/airports/[icao]`). The `airports` table holds ~17k rows,
@@ -232,5 +248,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...airportPages,
     ...nearAirportPages,
     ...listingPages,
+    ...forSaleListingPages,
   ]
 }
