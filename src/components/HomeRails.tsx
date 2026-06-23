@@ -31,26 +31,40 @@ interface RailDef {
   href: string
 }
 
+// Aspirational, no-cheap-lead collections (human P1 [want], 2026-06-22). Every
+// rail carries `min_price: '50000'` so only real, priced aircraft show — parts
+// and project listings sit below that, and no-price rows are excluded — which
+// honors the "respect the $50k floor / only priced real aircraft" guidance.
+// Titles name the actual filter so each rail is honest about what it shows.
 const RAILS: RailDef[] = [
   {
-    title: 'Time-builders under $100k',
-    filters: { max_price: '100000', sort: 'price_asc' },
-    href: '/aircraft?max_price=100000',
+    title: 'Just listed this week',
+    filters: { min_price: '50000' }, // default sort = newest (created_at desc)
+    href: '/aircraft?min_price=50000',
   },
   {
-    title: 'Glass-panel singles',
-    filters: { q: 'glass' },
-    href: '/aircraft?q=glass',
+    title: 'Recently reduced',
+    filters: { drops: '1', min_price: '50000', sort: 'reduced' },
+    href: '/aircraft?drops=1&min_price=50000&sort=reduced',
   },
   {
-    title: 'Cessna for sale',
-    filters: { make: 'Cessna' },
-    href: '/aircraft?make=Cessna',
+    title: 'Glass-panel cross-country',
+    filters: { q: 'glass', min_price: '50000' },
+    href: '/aircraft?q=glass&min_price=50000',
   },
   {
-    title: 'New this week',
-    filters: {},
-    href: '/aircraft',
+    // Match the MODEL field (not free text) so the rail can't pull in unrelated
+    // listings; %SR22% also covers the SR22T turbo — both are step-up singles.
+    title: 'Step-up performance (Cirrus SR22)',
+    filters: { make: 'Cirrus', modelPattern: '%SR22%', min_price: '50000' },
+    href: '/aircraft/cirrus/sr22',
+  },
+  {
+    // Model-field match avoids the `%172%`-vs-year-"1972" false positives a free
+    // text search would hit; "See all" lands on the curated Cessna 172 page.
+    title: 'Family four-seaters (Cessna 172)',
+    filters: { make: 'Cessna', modelPattern: '%172%', min_price: '50000' },
+    href: '/aircraft/cessna/172',
   },
 ]
 
