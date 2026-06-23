@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 
 /**
  * Compact, photo-forward rail card for the homepage curated rails (slice 4).
@@ -30,7 +30,11 @@ export default function AircraftRailCard({
   discountPct?: number
 }) {
   const label = aircraftTitle(p)
-  const imageUrl = getPlaceholderPhoto(p.make ?? '')
+  // Real harvested photo when present (homepage rails pass photoOnly, so on the
+  // homepage this is always set); else the per-make placeholder.
+  const realPhoto = pickRealPhoto(p.images)
+  const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
+  const isPlaceholder = !realPhoto
 
   return (
     <Link
@@ -52,9 +56,11 @@ export default function AircraftRailCard({
             ~{discountPct}% below average
           </span>
         )}
-        <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-          Not actual plane photo
-        </span>
+        {isPlaceholder && (
+          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+            Not actual plane photo
+          </span>
+        )}
       </div>
 
       {/* Details */}

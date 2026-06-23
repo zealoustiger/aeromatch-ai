@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { MapPin } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, aircraftLabel } from '@/lib/utils'
-import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 
 /**
  * Compact, photo-forward rail card for a co-ownership partnership — the partnership
@@ -15,7 +15,9 @@ import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
  */
 export default function PartnershipRailCard({ p }: { p: Partnership }) {
   const label = aircraftLabel(p.make, p.model, p.year)
-  const imageUrl = getPlaceholderPhoto(p.make ?? '')
+  const realPhoto = pickRealPhoto(p.images)
+  const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
+  const isPlaceholder = !realPhoto
 
   return (
     <Link
@@ -32,9 +34,11 @@ export default function PartnershipRailCard({ p }: { p: Partnership }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="256px"
         />
-        <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
-          Not actual plane photo
-        </span>
+        {isPlaceholder && (
+          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+            Not actual plane photo
+          </span>
+        )}
       </div>
 
       {/* Details */}
