@@ -160,7 +160,7 @@ export default async function AircraftListingDetailPage({
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main content */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             <PhotoGallery
               images={p.images}
               make={p.make ?? ''}
@@ -252,7 +252,7 @@ export default async function AircraftListingDetailPage({
           </div>
 
           {/* Sidebar — price + source CTA */}
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <div className="ch-panel p-5">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Price</h2>
               {p.asking_price ? (
