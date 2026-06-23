@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-23T13:55:04Z — DRAIN SUMMARY
+- Cycles this run: 5 (PASS 5 / FAIL 0 / ABORT 0)
+- Stopped because: night ended
+- Run: 20260623T130004Z
+
 ## 2026-06-23T13:47Z — PASS — model-specs-highlights-batch2
 - Pages: /aircraft/cirrus/sr22t, /aircraft/mooney/m20, /aircraft/beechcraft/baron, /aircraft/piper/comanche, /aircraft/bellanca/citabria, /aircraft/vans/rv, /aircraft/piper/cub, /aircraft/cessna/180, /aircraft/piper/saratoga, /aircraft/grumman/aa-1, /aircraft/grumman/aa-5, /aircraft/robinson/r44
 - What: **Twelve more "for sale" make+model pages now carry the same two content blocks the eight flagship pages already had — a "key specifications" table and a "What's different about the {make} {model}" card.** Until now these twelve families (e.g. the Mooney M20, Beechcraft Baron, Piper Comanche/Cub/Saratoga, Cessna 180, Van's RV, Grumman AA-1/AA-5, Robinson R44, Citabria, turbo Cirrus SR22T) had the buyer-guidance prose and FAQs but no at-a-glance spec table or three-bullet "what makes this one different" summary. Each now shows eight scannable specs (seats, engine, horsepower, cruise speed, range, useful load, fuel, gear/config) for a popular variant of that family, plus three plain-language bullets distilling its standout trait, who it suits, and the honest trade-off — e.g. the Baron's "second engine for redundancy, but two overhaul reserves," the R44's "2,200-hour overhaul clock," the Mooney's "efficiency benchmark." The figures are real, well-documented representative numbers and carry the existing "representative variant — exact specs vary" footnote, so nothing goes stale or overclaims. Non-curated/auto-discovered model pages still show neither block.
