@@ -5,11 +5,12 @@ import { MapPin, Plane, ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
 import {
   getNearbyPartnerships,
+  getIndexableAirportHubs,
   isAirportIndexable,
   NEAR_RADIUS_NM,
   MIN_NEARBY,
@@ -104,6 +105,15 @@ export default async function AirportPage({
   const nearCount =
     nearData && nearData.results.length >= MIN_NEARBY ? nearData.results.length : 0
 
+  // Internal-linking graph (STAGE=INDEXING, #2 indexing lever): wire this hub up to
+  // its state partnership page and across to the other genuinely-indexable airport
+  // hubs, so the airport family is a crawlable mesh instead of a dead-end.
+  const stateCode = airport.state?.toUpperCase()
+  const stateName = stateCode ? STATE_NAMES[stateCode] : undefined // only link known USPS codes
+  const otherHubs = (await getIndexableAirportHubs()).filter(
+    (h) => h.icao !== airport.icao.toLowerCase()
+  )
+
   // Schema.org: an Airport Place node (real codes/coords/region only) + an
   // ItemList of the partnerships shown on the page (in render order: at-airport
   // first, then nearby), each linking to its real /partnerships/[id]. Real data
@@ -131,6 +141,17 @@ export default async function AirportPage({
         <Link href="/partnerships" className="hover:text-slate-600">
           Partnerships
         </Link>
+        {stateName && stateCode && (
+          <>
+            <span className="mx-2">/</span>
+            <Link
+              href={`/partnerships/state/${stateCode.toLowerCase()}`}
+              className="hover:text-slate-600"
+            >
+              {stateName}
+            </Link>
+          </>
+        )}
         <span className="mx-2">/</span>
         <span className="text-slate-600">{airport.icao}</span>
       </nav>
@@ -212,13 +233,52 @@ export default async function AirportPage({
         </Link>
       )}
 
+      {/* Cross-link the airport family — every link is a gated indexable hub that
+          renders real "Based at {ICAO}" content, so this is a crawl mesh, not a set
+          of thin/broken links (STAGE=INDEXING internal-linking lever). */}
+      {otherHubs.length > 0 && (
+        <section className="mt-12 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">
+            Other airports with active partnerships
+          </h2>
+          <p className="mb-4 text-sm text-slate-500">
+            Browse aircraft co-ownership shares based at these airports.
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {otherHubs.map((h) => (
+              <Link
+                key={h.icao}
+                href={`/airports/${h.icao}`}
+                className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+              >
+                {h.name}
+                {h.city && h.state ? ` (${h.city}, ${h.state})` : ` (${h.icao.toUpperCase()})`}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <p className="mt-10 text-sm text-slate-400">
-        Looking for something specific?{' '}
+        {stateName && stateCode ? (
+          <>
+            See all{' '}
+            <Link
+              href={`/partnerships/state/${stateCode.toLowerCase()}`}
+              className="font-medium text-sky-600 hover:text-sky-700"
+            >
+              aircraft partnerships in {stateName}
+            </Link>
+            , or{' '}
+          </>
+        ) : (
+          'Looking for something specific? '
+        )}
         <Link
           href={`/partnerships?airport=${airport.icao}&radius=50`}
           className="font-medium text-sky-600 hover:text-sky-700"
         >
-          Search with filters →
+          search with filters →
         </Link>
       </p>
     </div>

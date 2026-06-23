@@ -254,6 +254,43 @@ export async function getIndexableAirportIcaos(): Promise<string[]> {
     .sort((x, y) => x.localeCompare(y))
 }
 
+/** An indexable airport hub (>= 1 based active partnership) with display details. */
+export interface IndexableAirportHub {
+  /** lowercase ICAO, e.g. "kpao" — matches the /airports/[icao] route. */
+  icao: string
+  name: string
+  city: string | null
+  state: string | null
+}
+
+/**
+ * The genuinely index-worthy airport hubs (same gated set as
+ * `getIndexableAirportIcaos`) with their name/city/state for display. Used by the
+ * `/airports/[icao]` page to cross-link the airport family — every link points to
+ * an airport that itself renders real "Based at {ICAO}" content (never a thin/404
+ * page). Delegates to `getIndexableAirportIcaos` for the gating so the two can't
+ * drift; only the display fields are fetched on top. Sorted by ICAO ascending.
+ */
+export async function getIndexableAirportHubs(): Promise<IndexableAirportHub[]> {
+  const icaos = await getIndexableAirportIcaos()
+  if (icaos.length === 0) return []
+
+  const supabase = await createServerSupabaseClient()
+  const { data } = await supabase
+    .from('airports')
+    .select('icao, name, city, state')
+    .in('icao', icaos.map((c) => c.toUpperCase()))
+
+  return (data ?? [])
+    .map((a) => ({
+      icao: (a.icao as string).toLowerCase(),
+      name: a.name as string,
+      city: (a.city as string | null) ?? null,
+      state: (a.state as string | null) ?? null,
+    }))
+    .sort((x, y) => x.icao.localeCompare(y.icao))
+}
+
 /**
  * Per-page check (same rule as `getIndexableAirportIcaos`): is this airport
  * index-worthy? True iff >= 1 active partnership is based at it.
