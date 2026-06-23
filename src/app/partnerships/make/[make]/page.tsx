@@ -8,6 +8,7 @@ import PartnershipList from '@/components/PartnershipList'
 import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
+import AlertSignup from '@/components/AlertSignup'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
@@ -149,6 +150,14 @@ export default async function MakePartnershipsPage({ params }: Props) {
       <Suspense fallback={<ListSkeleton />}>
         <PartnershipList filters={{ make: entry.filter }} />
       </Suspense>
+
+      {/* Email-alerts capture — inline, no account required. Backed by the same
+          double-opt-in `alerts` pipeline the for-sale pages use. */}
+      <AlertSignup
+        context={entry.name}
+        sourcePath={`/partnerships/make/${entry.slug}`}
+        noun="partnership"
+      />
 
       {/* Co-ownership FAQ (curated makes only) */}
       {faqs && (
