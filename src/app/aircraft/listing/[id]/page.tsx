@@ -15,9 +15,13 @@ import {
   ShieldAlert,
   Clock,
   TrendingDown,
+  TrendingUp,
   Sparkles,
+  Wallet,
+  ArrowRight,
 } from 'lucide-react'
 import { getAircraftForSaleById } from '@/lib/aircraftForSale'
+import { estimateOwnershipCost } from '@/lib/calculators'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
@@ -70,6 +74,19 @@ function priceDrop(p: AircraftForSale): number | null {
   }
   return null
 }
+
+// Readable absolute date ("Apr 12, 2026"); null when unparseable/missing.
+function formatDate(iso: string | null): string | null {
+  if (!iso) return null
+  const t = new Date(iso)
+  if (Number.isNaN(t.getTime())) return null
+  return t.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+const money = (n: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+    Math.round(n)
+  )
 
 export async function generateMetadata({
   params,
@@ -129,6 +146,19 @@ export default async function AircraftListingDetailPage({
   const drop = priceDrop(p)
   const fresh = p.first_seen_at != null && Date.now() - new Date(p.first_seen_at).getTime() < 7 * DAY_MS
   const listed = listedAgo(p.first_seen_at)
+
+  // Rough cost-to-own estimate (only meaningful when we have a real asking price).
+  const ownership = p.asking_price ? estimateOwnershipCost(p.asking_price) : null
+
+  // Price history — render only when a real recorded change exists (no fabrication).
+  const changedFrom =
+    p.previous_price != null && p.asking_price != null && p.previous_price !== p.asking_price
+      ? p.previous_price
+      : null
+  const priceDelta = changedFrom != null ? p.asking_price! - changedFrom : null
+  const pricePct = changedFrom ? Math.round((priceDelta! / changedFrom) * 100) : null
+  const changedDate = formatDate(p.price_changed_at)
+  const listedDate = formatDate(p.first_seen_at)
 
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
@@ -249,6 +279,84 @@ export default async function AircraftListingDetailPage({
                 </dl>
               </div>
             )}
+
+            {/* Price history — only when a real recorded change exists. */}
+            {changedFrom != null && priceDelta != null && (
+              <div className="ch-panel p-6">
+                <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Price history</h2>
+                <ol className="space-y-3">
+                  {changedDate && (
+                    <li className="flex items-baseline justify-between gap-4 text-sm">
+                      <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                        {priceDelta < 0 ? (
+                          <TrendingDown className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <TrendingUp className="h-4 w-4 text-amber-600" />
+                        )}
+                        Price {priceDelta < 0 ? 'reduced' : 'increased'}
+                        <span className="text-slate-400">· {changedDate}</span>
+                      </span>
+                      <span className="text-right">
+                        <span className="block font-semibold text-slate-900">{formatPrice(p.asking_price)}</span>
+                        <span
+                          className={`text-xs font-medium ${priceDelta < 0 ? 'text-emerald-600' : 'text-amber-600'}`}
+                        >
+                          {priceDelta < 0 ? '−' : '+'}
+                          {formatPrice(Math.abs(priceDelta))}
+                          {pricePct != null && ` (${priceDelta < 0 ? '' : '+'}${pricePct}%)`}
+                        </span>
+                      </span>
+                    </li>
+                  )}
+                  <li className="flex items-baseline justify-between gap-4 text-sm">
+                    <span className="flex items-center gap-1.5 text-slate-500">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      {listedDate ? `Listed · ${listedDate}` : 'Originally listed'}
+                    </span>
+                    <span className="font-medium text-slate-400 line-through">{formatPrice(changedFrom)}</span>
+                  </li>
+                </ol>
+              </div>
+            )}
+
+            {/* Estimated cost to own — transparent rule-of-thumb estimate. */}
+            {ownership && (
+              <div className="ch-panel p-6">
+                <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                  <Wallet className="h-4 w-4" /> Estimated cost to own
+                </h2>
+                <p className="mb-4 text-xs text-slate-400">
+                  A rough rule-of-thumb estimate for owning this aircraft outright — your actual costs
+                  will vary with insurance, location, and how much you fly.
+                </p>
+                <dl className="space-y-2 text-sm">
+                  <EstRow label={`Insurance (≈1% of hull value)`} value={`${money(ownership.insuranceAnnual)}/yr`} />
+                  <EstRow label="Hangar / tie-down (typical)" value={`${money(ownership.hangarAnnual)}/yr`} />
+                  <EstRow label="Annual inspection (typical)" value={`${money(ownership.annualInspection)}/yr`} />
+                  <EstRow
+                    label={`Operating @ ${ownership.hoursPerYear} hrs/yr (fuel + reserves, ~${money(
+                      ownership.operatingPerHour
+                    )}/hr)`}
+                    value={`${money(ownership.operatingAnnual)}/yr`}
+                  />
+                </dl>
+                <div className="mt-4 flex items-baseline justify-between border-t border-slate-100 pt-3">
+                  <span className="text-sm font-semibold text-slate-700">Estimated total</span>
+                  <span className="text-right">
+                    <span className="block text-2xl font-extrabold text-slate-900">
+                      {money(ownership.totalMonthly)}/mo
+                    </span>
+                    <span className="text-xs text-slate-400">≈ {money(ownership.totalAnnual)}/yr</span>
+                  </span>
+                </div>
+                <Link
+                  href="/tools/cost-calculator"
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+                >
+                  Run your own numbers in the cost calculator <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Sidebar — price + source CTA */}
@@ -291,6 +399,15 @@ export default async function AircraftListingDetailPage({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function EstRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-slate-500">{label}</dt>
+      <dd className="font-semibold text-slate-800">{value}</dd>
     </div>
   )
 }

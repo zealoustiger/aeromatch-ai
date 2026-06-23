@@ -96,6 +96,56 @@ export function computeCost(input: CostInputs): CostResult {
   }
 }
 
+/**
+ * Transparent rule-of-thumb estimate of annual/monthly cost to OWN a piston single
+ * outright, derived from its asking price. Only the insurance line scales with the
+ * listing (hull value); hangar, annual inspection, and operating are clearly-labeled
+ * typical figures so nothing is presented as listing-specific that isn't. This is a
+ * decision-support estimate (the Zillow "estimated payment" analog), not a quote —
+ * callers must show the disclaimer + breakdown. All money is whole USD/yr unless noted.
+ */
+export interface OwnershipEstimate {
+  /** Annual hull insurance — 1% of asking price, floored so cheap hulls aren't ~$0. */
+  insuranceAnnual: number
+  /** Typical annual hangar / tie-down. */
+  hangarAnnual: number
+  /** Typical annual inspection for a simple piston single. */
+  annualInspection: number
+  /** Operating (fuel + oil + maintenance reserves) for the assumed hours below. */
+  operatingAnnual: number
+  /** Hours/yr assumed for the operating figure. */
+  hoursPerYear: number
+  /** Assumed all-in operating rate (USD/hr). */
+  operatingPerHour: number
+  /** Sum of the four annual lines. */
+  totalAnnual: number
+  /** totalAnnual / 12. */
+  totalMonthly: number
+}
+
+export function estimateOwnershipCost(askingPrice: number): OwnershipEstimate {
+  const hull = Math.max(0, askingPrice || 0)
+  // 1% of hull value is a conservative full-coverage figure for a typical piston
+  // single; floor at $1,000 so a cheap hull doesn't read as near-free to insure.
+  const insuranceAnnual = Math.max(1000, Math.round((hull * 0.01) / 100) * 100)
+  const hangarAnnual = 3000
+  const annualInspection = 2000
+  const hoursPerYear = 75
+  const operatingPerHour = 150
+  const operatingAnnual = hoursPerYear * operatingPerHour
+  const totalAnnual = insuranceAnnual + hangarAnnual + annualInspection + operatingAnnual
+  return {
+    insuranceAnnual,
+    hangarAnnual,
+    annualInspection,
+    operatingAnnual,
+    hoursPerYear,
+    operatingPerHour,
+    totalAnnual,
+    totalMonthly: totalAnnual / 12,
+  }
+}
+
 export interface EarningsInputs {
   /** Full aircraft monthly fixed cost the owner carries today (USD/mo). */
   monthlyFixedTotal: number
