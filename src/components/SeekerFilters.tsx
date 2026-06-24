@@ -3,12 +3,6 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useTransition } from 'react'
 
-const US_STATES = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
-  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
-  'VA', 'WA', 'WV', 'WI', 'WY',
-]
 const RADIUS = [25, 50, 100, 150, 200]
 const RATINGS = ['PPL', 'IFR', 'Commercial', 'CFI', 'ATP', 'Complex']
 const SHARE_TYPES = [
@@ -20,7 +14,7 @@ const HOURS = [100, 250, 500, 1000]
 
 interface Props {
   initialValues: Record<string, string | undefined>
-  /** Makes seekers are looking for, for the make dropdown (values match stored data). */
+  /** Makes seekers are looking for, for the make filter (values match stored data). */
   makes?: string[]
 }
 
@@ -30,25 +24,93 @@ export default function SeekerFilters({ initialValues, makes = [] }: Props) {
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
-  const update = useCallback(
-    (key: string, value: string) => {
+  const pushParams = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value) params.set(key, value)
-      else params.delete(key)
-      // Radius is meaningless without an airport — drop it when airport clears.
-      if (key === 'airport' && !value) params.delete('radius')
+      mutate(params)
       startTransition(() => router.push(`${pathname}?${params.toString()}`))
     },
     [router, pathname, searchParams]
+  )
+
+  const update = useCallback(
+    (key: string, value: string) => {
+      pushParams((params) => {
+        if (value) params.set(key, value)
+        else params.delete(key)
+        // Radius is meaningless without an airport — drop it when airport clears.
+        if (key === 'airport' && !value) params.delete('radius')
+      })
+    },
+    [pushParams]
+  )
+
+  // Make / Rating are multi-select: the param is a comma-joined list. Toggling a
+  // value adds/removes it; an empty list drops the param entirely.
+  const toggleMulti = useCallback(
+    (key: string, value: string) => {
+      pushParams((params) => {
+        const current = (params.get(key) ?? '')
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean)
+        const next = current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value]
+        if (next.length) params.set(key, next.join(','))
+        else params.delete(key)
+      })
+    },
+    [pushParams]
   )
 
   const clearAll = () => startTransition(() => router.push(pathname))
   const hasFilters = Object.values(initialValues).some(Boolean)
   const labelCls = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500'
   const fieldCls = 'w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100'
+  const checkboxCls = 'h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200'
+
+  const selectedMakes = new Set(
+    (initialValues.make ?? '').split(',').map((m) => m.trim()).filter(Boolean)
+  )
+  const selectedRatings = new Set(
+    (initialValues.rating ?? '').split(',').map((r) => r.trim()).filter(Boolean)
+  )
 
   return (
     <div className="space-y-5">
+      {/* Aircraft make wanted — the owner's first question ("do they want MY type of
+          plane?"), so it leads. Multi-select: an owner may accept several makes. */}
+      <div>
+        <label className={labelCls}>
+          Aircraft Make Wanted
+          {selectedMakes.size > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {selectedMakes.size} selected
+            </span>
+          )}
+        </label>
+        {makes.length === 0 ? (
+          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+            No makes to filter yet
+          </p>
+        ) : (
+          <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
+            {makes.map((m) => (
+              <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={selectedMakes.has(m)}
+                  onChange={() => toggleMulti('make', m)}
+                  className={checkboxCls}
+                />
+                {m}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Home airport + radius */}
       <div>
         <label className={labelCls}>Near Home Airport</label>
@@ -70,31 +132,29 @@ export default function SeekerFilters({ initialValues, makes = [] }: Props) {
         </select>
       </div>
 
-      {/* State */}
+      {/* Rating held — multi-select: an owner may accept any of several ratings. */}
       <div>
-        <label className={labelCls}>State</label>
-        <select defaultValue={initialValues.state ?? ''} onChange={(e) => update('state', e.target.value)} className={fieldCls}>
-          <option value="">All states</option>
-          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-
-      {/* Aircraft make wanted */}
-      <div>
-        <label className={labelCls}>Aircraft Make Wanted</label>
-        <select defaultValue={initialValues.make ?? ''} onChange={(e) => update('make', e.target.value)} className={fieldCls}>
-          <option value="">Any make</option>
-          {makes.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-      </div>
-
-      {/* Rating held */}
-      <div>
-        <label className={labelCls}>Rating Held</label>
-        <select defaultValue={initialValues.rating ?? ''} onChange={(e) => update('rating', e.target.value)} className={fieldCls}>
-          <option value="">Any rating</option>
-          {RATINGS.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <label className={labelCls}>
+          Rating Held
+          {selectedRatings.size > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {selectedRatings.size} selected
+            </span>
+          )}
+        </label>
+        <div className="space-y-1.5 rounded-md border border-slate-200 p-2.5">
+          {RATINGS.map((r) => (
+            <label key={r} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={selectedRatings.has(r)}
+                onChange={() => toggleMulti('rating', r)}
+                className={checkboxCls}
+              />
+              {r}
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Min total hours */}

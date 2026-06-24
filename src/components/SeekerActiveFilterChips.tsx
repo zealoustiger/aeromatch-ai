@@ -40,11 +40,24 @@ export default function SeekerActiveFilterChips({ params }: { params: Params }) 
   const state = params.state?.trim()
   if (state) chips.push({ key: 'state', label: STATE_NAMES[state.toUpperCase()] ?? state, href: buildHref(params, (p) => p.delete('state')) })
 
-  const make = params.make?.trim()
-  if (make) chips.push({ key: 'make', label: `Wants ${make}`, href: buildHref(params, (p) => p.delete('make')) })
+  // Make / Rating are multi-select (comma-joined) → one removable chip per value,
+  // each link dropping only that value and leaving the rest of the list applied.
+  const splitMulti = (raw: string | undefined): string[] =>
+    (raw ?? '').split(',').map((v) => v.trim()).filter(Boolean)
 
-  const rating = params.rating?.trim()
-  if (rating) chips.push({ key: 'rating', label: `${rating}-rated`, href: buildHref(params, (p) => p.delete('rating')) })
+  const dropFromList = (key: string, value: string) => (p: URLSearchParams) => {
+    const next = splitMulti(p.get(key) ?? undefined).filter((v) => v !== value)
+    if (next.length) p.set(key, next.join(','))
+    else p.delete(key)
+  }
+
+  for (const make of splitMulti(params.make)) {
+    chips.push({ key: `make:${make}`, label: `Wants ${make}`, href: buildHref(params, dropFromList('make', make)) })
+  }
+
+  for (const rating of splitMulti(params.rating)) {
+    chips.push({ key: `rating:${rating}`, label: `${rating}-rated`, href: buildHref(params, dropFromList('rating', rating)) })
+  }
 
   const minHours = num(params.min_hours)
   if (minHours) chips.push({ key: 'min_hours', label: `${minHours}+ hours`, href: buildHref(params, (p) => p.delete('min_hours')) })
