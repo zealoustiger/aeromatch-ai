@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T09:01:51Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 0 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260624T090148Z
+
 ## 2026-06-24T09:01:45Z — DRAIN SUMMARY
 - Cycles this run: 6 (PASS 5 / FAIL 1 / ABORT 0)
 - Stopped because: rate limited
