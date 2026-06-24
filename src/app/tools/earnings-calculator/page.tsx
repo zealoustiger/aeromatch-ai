@@ -4,6 +4,8 @@ import { TrendingUp } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import EarningsCalculator from '@/components/EarningsCalculator'
+import ModelFaq from '@/components/ModelFaq'
+import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 const OG_TITLE = 'Aircraft Partnership Earnings Calculator'
 const OG_DESCRIPTION =
@@ -46,13 +48,52 @@ const appJsonLd = {
   },
 }
 
+// Curated, evergreen FAQ for the earnings calculator — genuine questions an aircraft
+// OWNER weighing whether to offer partnership shares actually asks (the owner side,
+// mirroring the buyer-side FAQ on the cost calculator). Answers are written from this
+// page's own explanations (no fabricated figures, no live counts), so they stay
+// accurate and never go stale. Rendered as a visible accordion (ModelFaq) AND emitted
+// as FAQPage JSON-LD, so the visible text matches the structured data 1:1.
+const EARNINGS_FAQS: { q: string; a: string }[] = [
+  {
+    q: 'How much can I earn by offering partnership shares in my aircraft?',
+    a: 'Bringing on partners doesn’t turn your plane into a profit center — it offsets the costs you already pay. Each partner pays a one-time buy-in (capital you recover upfront), monthly dues toward your fixed costs, and a wet rate when they fly. Your monthly offset is the dues income plus the margin between the wet rate you charge and your real cost per hour. Enter your numbers in the calculator above to see the monthly figure for your aircraft.',
+  },
+  {
+    q: 'How many partners do I need to cover my fixed costs?',
+    a: 'It depends on your fixed costs (hangar, insurance, annual reserve) and the monthly dues each partner pays. The "fixed costs covered" bar in the calculator shows how close your dues come to zeroing out those costs — many owners fully cover their fixed costs with two or three partners while keeping priority access to the aircraft.',
+  },
+  {
+    q: 'What is the buy-in and do I keep it?',
+    a: 'The buy-in is a one-time payment each partner makes for their ownership share of the aircraft. It is capital you recover upfront, not income — it reflects the value of the equity stake the partner is buying. The recurring offset to your ownership costs comes from the monthly dues and the flying margin, which the calculator models separately from the upfront buy-in.',
+  },
+  {
+    q: 'How is the monthly offset different from the flying margin?',
+    a: 'The monthly offset has two parts: the dues income each partner pays toward fixed costs every month whether or not they fly, plus the flying margin — the difference between the wet rate you charge and your real cost per hour, earned only on the hours partners actually fly. Dues are steady; the flying-margin portion scales with how much your partners fly.',
+  },
+  {
+    q: 'Will adding partners limit my own access to the aircraft?',
+    a: 'Most co-ownership groups are small (typically 2–4 owners), so each owner still gets consistent, scheduled access. The goal is to offset your fixed costs without giving up priority on the airplane — you decide how many shares to offer. Once you have modeled the offset here, you can post your partnership to start finding qualified, budget-matched pilots.',
+  },
+]
+
 export default function EarningsCalculatorPage() {
+  const faqJsonLd = buildFaqPageJsonLd(EARNINGS_FAQS, {
+    url: `${SITE_URL}/tools/earnings-calculator`,
+  })
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <Breadcrumbs
         items={[
           { label: 'Home', href: '/' },
@@ -97,6 +138,9 @@ export default function EarningsCalculatorPage() {
           .
         </p>
       </div>
+
+      {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+      <ModelFaq label="Aircraft partnership earnings" faqs={EARNINGS_FAQS} className="mt-12 max-w-2xl" />
     </div>
   )
 }
