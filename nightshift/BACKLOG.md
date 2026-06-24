@@ -308,6 +308,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   vs "SR20-G2"). Slice: (1) group variants under a canonical parent + "(all)"; (2) normalize
   variant naming; (3) collapse-by-default with "show variants". Screenshot:
   https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/model-filter-rollup-variants/20260624-model-filter-rollup-variants.png
+  — **grouping + (all) + collapse slices ✅ SHIPPED 2026-06-24T11:00Z** (`model-filter-variant-rollup`):
+  parent "{base} (all)" rolls up clustered variants (one click selects all members, checked/
+  indeterminate/none state), individual variants behind a collapse-by-default "Show N variants"
+  disclosure; singletons unchanged; pure unit-tested `groupModelVariants` helper over the existing
+  comma-joined `model` param (no query/schema change), deliberately conservative (SR22T≠SR22). See
+  CHANGELOG. **Remaining: (2) normalize stored variant casing in the DB (deferred — destructive-ish,
+  ask-a-human); collapse the per-variant chips in ActiveFilterChips into one parent chip; apply the
+  same rollup to the partnerships/seeking model filters.**
 - **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**
   Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
   buying criteria. Surface them **higher and always-visible** in the main filter panel, and
