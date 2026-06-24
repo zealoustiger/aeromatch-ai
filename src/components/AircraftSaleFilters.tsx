@@ -75,51 +75,17 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
     [pushParams]
   )
 
-  // Listing quality is multi-select: the `grade` param is a comma-joined subset
-  // of A/B/C (any combo). Toggling a grade adds/removes it; an empty list drops
-  // the param (== "All listings"). Mirrors the Model multi-select above.
-  const toggleGrade = useCallback(
-    (grade: string) => {
-      pushParams((params) => {
-        const fromParam = (params.get('grade') ?? '')
-          .split(',')
-          .map((g) => g.trim().toUpperCase())
-          .filter((g) => ['A', 'B', 'C'].includes(g))
-        // Seed from a legacy single-floor param when no multi-select set exists,
-        // so toggling off a legacy URL behaves as the user sees it.
-        const legacy =
-          params.get('min_grade') === 'A'
-            ? ['A']
-            : params.get('min_grade') === 'B'
-              ? ['A', 'B']
-              : []
-        const current = fromParam.length ? fromParam : legacy
-        const next = current.includes(grade)
-          ? current.filter((g) => g !== grade)
-          : [...current, grade]
-        // Normalize to canonical A,B,C order so the URL is stable.
-        const ordered = ['A', 'B', 'C'].filter((g) => next.includes(g))
-        if (ordered.length) params.set('grade', ordered.join(','))
-        else params.delete('grade')
-        // Drop the legacy single-floor param so it can't linger and confuse.
-        params.delete('min_grade')
-      })
-    },
-    [pushParams]
-  )
-
   const clearAll = () => {
     startTransition(() => { router.push(pathname) })
   }
 
   const hasFilters = Object.values(initialValues).some(Boolean)
 
-  // Secondary, Controller-style dimensions live behind a progressive-disclosure
-  // toggle so the panel leads cleanly with Make → Model. Auto-open when any of
-  // them is already active, so an active filter is never hidden.
-  const SECONDARY_KEYS = [
-    'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt',
-  ] as const
+  // Core buying criteria (Price / Year / Total Time) now lead the panel, always
+  // visible under Make → Model. Only State stays behind the progressive-disclosure
+  // "More filters" toggle, which auto-opens when State is already active so an
+  // active filter is never hidden.
+  const SECONDARY_KEYS = ['state'] as const
   const secondaryActive = SECONDARY_KEYS.some((k) => initialValues[k])
   const [showMore, setShowMore] = useState(secondaryActive)
 
@@ -133,25 +99,6 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean)
-
-  // Selected listing-quality grades. Prefer the new multi-select `grade` param;
-  // fall back to a legacy single `min_grade` floor (A → [A]; B → [A,B]) so old
-  // links / saved searches still pre-check the right boxes.
-  const GRADE_OPTIONS = [
-    { code: 'A', label: 'Grade A', note: 'Most complete' },
-    { code: 'B', label: 'Grade B', note: 'Usable' },
-    { code: 'C', label: 'Grade C', note: 'Sparse' },
-  ] as const
-  const selectedGrades = (() => {
-    const raw = (initialValues.grade ?? '')
-      .split(',')
-      .map((g) => g.trim().toUpperCase())
-      .filter((g) => ['A', 'B', 'C'].includes(g))
-    if (raw.length) return ['A', 'B', 'C'].filter((g) => raw.includes(g))
-    if (initialValues.min_grade === 'A') return ['A']
-    if (initialValues.min_grade === 'B') return ['A', 'B']
-    return [] as string[]
-  })()
 
   return (
     <div className="space-y-5">
@@ -218,6 +165,87 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
 
       <div className="border-t border-slate-100" />
 
+      {/* Core buying criteria — always visible (promoted out of "More filters"). */}
+      {/* Price range */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Price ($)
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            aria-label="Minimum price"
+            placeholder="Min"
+            defaultValue={initialValues.min_price ?? ''}
+            onChange={(e) => updateFilter('min_price', e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+          <span className="text-sm text-slate-400">–</span>
+          <input
+            type="number"
+            aria-label="Maximum price"
+            placeholder="Max"
+            defaultValue={initialValues.max_price ?? ''}
+            onChange={(e) => updateFilter('max_price', e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+        </div>
+      </div>
+
+      {/* Year range */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Year
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            aria-label="Earliest year"
+            placeholder="Min"
+            defaultValue={initialValues.min_year ?? ''}
+            onChange={(e) => updateFilter('min_year', e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+          <span className="text-sm text-slate-400">–</span>
+          <input
+            type="number"
+            aria-label="Latest year"
+            placeholder="Max"
+            defaultValue={initialValues.max_year ?? ''}
+            onChange={(e) => updateFilter('max_year', e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+        </div>
+      </div>
+
+      {/* Total time range (airframe hours) */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Total Time (hrs)
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            aria-label="Minimum total time"
+            placeholder="Min"
+            defaultValue={initialValues.min_tt ?? ''}
+            onChange={(e) => updateFilter('min_tt', e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+          <span className="text-sm text-slate-400">–</span>
+          <input
+            type="number"
+            aria-label="Maximum total time"
+            placeholder="Max"
+            defaultValue={initialValues.max_tt ?? ''}
+            onChange={(e) => updateFilter('max_tt', e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100" />
+
       {/* Sort */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -233,38 +261,6 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
           <option value="price_asc">Price: low to high</option>
           <option value="price_desc">Price: high to low</option>
         </select>
-      </div>
-
-      {/* Listing quality — multi-select so a pilot can include any combination
-          of A/B/C (e.g. A + B). No boxes checked == all listings. */}
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Listing quality
-          {selectedGrades.length > 0 && (
-            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
-              · {selectedGrades.length} selected
-            </span>
-          )}
-        </label>
-        <div className="space-y-1.5 rounded-md border border-slate-200 p-2.5">
-          {GRADE_OPTIONS.map((g) => (
-            <label
-              key={g.code}
-              className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
-            >
-              <input
-                type="checkbox"
-                checked={selectedGrades.includes(g.code)}
-                onChange={() => toggleGrade(g.code)}
-                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
-              />
-              <span>
-                {g.label}{' '}
-                <span className="text-slate-400">— {g.note}</span>
-              </span>
-            </label>
-          ))}
-        </div>
       </div>
 
       {/* Price drops only */}
@@ -323,84 +319,6 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
                 <option value="">All states</option>
                 {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-            </div>
-
-            {/* Price range */}
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Price ($)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  aria-label="Minimum price"
-                  placeholder="Min"
-                  defaultValue={initialValues.min_price ?? ''}
-                  onChange={(e) => updateFilter('min_price', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-                <span className="text-sm text-slate-400">–</span>
-                <input
-                  type="number"
-                  aria-label="Maximum price"
-                  placeholder="Max"
-                  defaultValue={initialValues.max_price ?? ''}
-                  onChange={(e) => updateFilter('max_price', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-              </div>
-            </div>
-
-            {/* Year range */}
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Year
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  aria-label="Earliest year"
-                  placeholder="Min"
-                  defaultValue={initialValues.min_year ?? ''}
-                  onChange={(e) => updateFilter('min_year', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-                <span className="text-sm text-slate-400">–</span>
-                <input
-                  type="number"
-                  aria-label="Latest year"
-                  placeholder="Max"
-                  defaultValue={initialValues.max_year ?? ''}
-                  onChange={(e) => updateFilter('max_year', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-              </div>
-            </div>
-
-            {/* Total time range (airframe hours) */}
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Total Time (hrs)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  aria-label="Minimum total time"
-                  placeholder="Min"
-                  defaultValue={initialValues.min_tt ?? ''}
-                  onChange={(e) => updateFilter('min_tt', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-                <span className="text-sm text-slate-400">–</span>
-                <input
-                  type="number"
-                  aria-label="Maximum total time"
-                  placeholder="Max"
-                  defaultValue={initialValues.max_tt ?? ''}
-                  onChange={(e) => updateFilter('max_tt', e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-              </div>
             </div>
           </div>
         )}
