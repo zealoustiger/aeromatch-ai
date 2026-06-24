@@ -192,6 +192,66 @@ export const COMPARISONS: Comparison[] = [
       { q: 'Should I buy a 150 or a 172?', a: 'Choose the 150 to build hours and fly locally at the lowest possible cost with one passenger. Choose the 172 if you need to carry up to four people, want more useful load and cross-country speed, and want one airplane that does it all.' },
     ],
   },
+  {
+    slug: 'cessna-182-vs-beechcraft-bonanza',
+    a: { makeSlug: 'cessna', modelSlug: '182' },
+    b: { makeSlug: 'beechcraft', modelSlug: 'bonanza' },
+    intro:
+      'The Cessna 182 Skylane and the Beechcraft Bonanza are both four-seat-plus cross-country singles, but they sit a class apart in speed and price. The high-wing 182 is a rugged, fixed-gear hauler that carries four adults with bags, flies into rougher strips, and stays relatively simple and affordable to own. The Bonanza is the benchmark high-performance single — 300 hp, retractable gear, a four-to-six-seat cabin, top-tier build quality and ~174 kt cruise — at a higher purchase price and premium upkeep. One maximizes capability per dollar; the other maximizes speed, cabin, and prestige.',
+    faqs: [
+      { q: 'Is a Beechcraft Bonanza faster than a Cessna 182?', a: 'Yes, by a clear margin. The 300 hp Bonanza cruises around 174 kt against about 145 kt for the 230 hp Cessna 182. The 182 trades that speed for fixed-gear simplicity, rugged short-field ability, and lower cost.' },
+      { q: 'Which is cheaper to own, a 182 or a Bonanza?', a: 'The 182, generally. Its fixed gear and simpler systems keep maintenance and insurance below the Bonanza, whose retractable gear, bigger engine, and premium parts raise upkeep — costs many Bonanza owners share through co-ownership.' },
+      { q: 'Which should I choose?', a: 'Choose the 182 for rugged, economical four-seat hauling from shorter or rougher fields; choose the Bonanza for roughly 30 kt more speed, a larger cabin, and top-class build quality if the higher running cost fits your mission.' },
+    ],
+  },
+  {
+    slug: 'mooney-m20-vs-piper-comanche',
+    a: { makeSlug: 'mooney', modelSlug: 'm20' },
+    b: { makeSlug: 'piper', modelSlug: 'comanche' },
+    intro:
+      'The Mooney M20 and the Piper Comanche are two efficient, four-seat retractable-gear travelers that post nearly identical ~160 kt cruise and ~1,000 nm range — but they get there differently. The Mooney does it on just 200 hp, with a low, slick airframe and a famously snug cabin, making it the fuel-economy benchmark. The Comanche uses a bigger 250 hp engine for a much larger useful load and a roomier cabin, with optional long-range tanks, at the cost of more fuel and a parts supply that runs through type clubs since it left production decades ago. One wins on miles per gallon; the other on load and cabin.',
+    faqs: [
+      { q: 'Mooney M20 or Piper Comanche — which is more fuel-efficient?', a: 'The Mooney. It matches the Comanche’s ~160 kt cruise on just 200 hp versus the Comanche’s 250 hp, so it burns noticeably less fuel for the same speed. The Comanche spends that extra power on a much bigger useful load.' },
+      { q: 'Which carries more?', a: 'The Comanche, by a wide margin — about 1,250 lb of useful load against roughly 900 lb for the Mooney, plus a roomier cabin and optional long-range tanks. The Mooney trades cabin and load for the efficiency that defines it.' },
+      { q: 'Which is easier to own?', a: 'The Mooney has the broader, more current parts supply, while the Comanche has been out of production for decades, so some parts come through type clubs and specialists. Both are retractables that add a gear inspection and an insurance line, so a shared maintenance kitty helps on either.' },
+    ],
+  },
+  {
+    slug: 'piper-saratoga-vs-cessna-182',
+    a: { makeSlug: 'piper', modelSlug: 'saratoga' },
+    b: { makeSlug: 'cessna', modelSlug: '182' },
+    intro:
+      'The Piper Saratoga and the Cessna 182 Skylane are both family haulers, but they answer different questions about how much cabin you need. The Saratoga is the six-seat flagship of the PA-32 line — 300 hp, a genuine third row, and around 1,350 lb of useful load to actually fill it — a true big-cabin IFR traveler. The 182 is the four-seat workhorse: a high-wing, fixed-gear single that carries four adults with bags simply and affordably. The Saratoga gives you two more seats, more speed, and more load; the 182 gives most families everything they need for far less fuel.',
+    faqs: [
+      { q: 'What is the main difference between a Saratoga and a 182?', a: 'Cabin size. The Saratoga is a six-seat PA-32 with about 1,350 lb of useful load and a third row, while the 182 is a four-seat airplane with roughly 1,100 lb. The Saratoga is the choice when you regularly carry more than four people.' },
+      { q: 'Is the Saratoga much more expensive to operate than a 182?', a: 'Yes. Its 300 hp engine and 102-gallon fuel system burn considerably more than the 230 hp 182, which is exactly why big-cabin Saratogas are so often co-owned across a few families. The 182 is cheaper to buy and feed.' },
+      { q: 'Which is faster?', a: 'The Saratoga, at about 160 kt versus roughly 145 kt for the 182 — and it carries more while doing it. The 182 narrows the real-world gap on fuel cost and simplicity, especially in its fixed-gear form.' },
+    ],
+  },
+  {
+    slug: 'cessna-180-vs-cessna-182',
+    a: { makeSlug: 'cessna', modelSlug: '180' },
+    b: { makeSlug: 'cessna', modelSlug: '182' },
+    intro:
+      'The Cessna 180 Skywagon and the Cessna 182 Skylane are mechanically close cousins — the same ~230 hp class, similar ~145 kt cruise and useful load — so the real decision is the landing gear. The 180 is a conventional-gear (tailwheel) hauler that built Cessna’s backcountry reputation: rough-strip and float capable, durable, and famous for holding its value, but demanding genuine tailwheel proficiency. The 182 is the nosewheel Skylane — easier to fly and insure, far more plentiful, and the default family IFR cross-country single. Same basic airplane, two very different missions.',
+    faqs: [
+      { q: 'What is the difference between a Cessna 180 and a 182?', a: 'Mainly the landing gear. Both are high-wing singles around 230 hp with similar ~145 kt cruise and useful load, but the 180 is a conventional-gear (tailwheel) Skywagon and the 182 is the nosewheel Skylane. The tailwheel is the 180’s whole point — and its main learning curve.' },
+      { q: 'Which is better for backcountry or float flying?', a: 'The 180. Its tailwheel gear, durable airframe, and float capability make it a backcountry and bush favorite, where the nosewheel 182 is happier on improved runways as a stable IFR cross-country airplane.' },
+      { q: 'Which is easier and cheaper to insure?', a: 'The 182, generally. Its nosewheel is more forgiving and far more pilots are current in it, so it is easier to insure and transition into. The 180 needs genuine tailwheel proficiency and a tailwheel insurance policy.' },
+    ],
+  },
+  {
+    slug: 'piper-cub-vs-bellanca-citabria',
+    a: { makeSlug: 'piper', modelSlug: 'cub' },
+    b: { makeSlug: 'bellanca', modelSlug: 'citabria' },
+    intro:
+      'The Piper Cub and the Bellanca Citabria are the two classic fabric-covered, tandem-seat taildraggers pilots dream about — and the choice is about how much you want them to do. The J-3 Cub is the icon: 65 hp, ~65 kt, tiny tanks, and pure low-and-slow simplicity, bought with the heart as much as the head. The Citabria adds a 150 hp engine, ~105 kt cruise, more range, and real aerobatic capability (its name is "airbatic" spelled backward), making it a more versatile tailwheel and basic-aerobatics trainer. Both teach stick-and-rudder flying; the Citabria simply does more of it, faster.',
+    faqs: [
+      { q: 'Is the Citabria faster than a Piper Cub?', a: 'Yes, considerably. The 150 hp Citabria cruises around 105 kt with usable range, while the 65 hp J-3 Cub ambles at about 65 kt on tiny tanks. The Cub is a local-fun classic; the Citabria can actually travel a bit.' },
+      { q: 'Which is better for learning tailwheel or aerobatics?', a: 'Both are excellent tailwheel trainers, but the Citabria is aerobatic-capable and has the power for basic aerobatics and spin training, while the Cub is pure low-and-slow stick-and-rudder fun without the aerobatic envelope.' },
+      { q: 'Which is cheaper to own?', a: 'Both are simple fabric taildraggers whose main costs are fabric upkeep and tailwheel-rated insurance. The Cub’s tiny 65 hp engine and 12-gallon tank make it the cheaper of the two to feed; the Citabria burns more for its extra speed and capability.' },
+    ],
+  },
 ]
 
 const BY_SLUG = new Map(COMPARISONS.map((c) => [c.slug, c]))
