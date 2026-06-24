@@ -57,9 +57,13 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   seed pages into the new family. **Why this grows pageviews:** "X vs Y" is one of the
   highest-intent, highest-volume informational query patterns in aircraft buying, and these
   pages carry real unique value while spreading crawl equity into the model hubs (INDEXING
-  stage). Slice 1 = 8 curated pairs + index hub + sitemap. **Next:** add more curated pairs
-  (e.g. Mooney M20 vs Bonanza, Comanche vs Arrow), a ClubHanger-Estimate price-context row,
-  and FAQ/structured data once a comparison-appropriate schema is settled.
+  stage). Slice 1 = 8 curated pairs + index hub + sitemap. Expanded to **13** curated pairs
+  (`compare-pairs-expansion`, 2026-06-24) and to **18** (`compare-pairs-expansion-2`,
+  2026-06-24: 182 vs Bonanza, Mooney M20 vs Comanche, Saratoga vs 182, Cessna 180 vs 182,
+  Cub vs Citabria). FAQ + FAQPage JSON-LD now ship on every pair. **Next:** a few more
+  curated pairs remain (e.g. Cessna 172 vs Grumman AA-5/Tiger, Grumman AA-5 vs Cherokee,
+  Cessna 150 vs Piper Cub); then a ClubHanger-Estimate price-context row once a
+  comparison-appropriate display is settled.
 
 ### Growth & data — owner acquisition (human, 2026-06-23)
 FAA-registry-powered ideas. The aircraft registry is public (tail number → owner
