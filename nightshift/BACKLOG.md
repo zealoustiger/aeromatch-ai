@@ -230,6 +230,13 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   with **examples of good writing**; (5) reuse partnership-form friction-reducers (optional
   labels, autosave + save-state, sensible order). Slice: (1) fields 1–3; (2) description help
   + examples; (3) shared autosave + 375px polish.
+  — **slice 2 (description help + examples) ✅ SHIPPED 2026-06-24T07:28Z** (`seeking-description-help`):
+  a "How to write a great description" tips panel (4 bullets) + a native `<details>` "See two example
+  descriptions" disclosure (first-time buyer + experienced time-builder) around the Description textarea
+  on `/partnerships/seeking/new`. Static/presentational only — no new fields, no schema, no change to
+  `createSeekerListing`. See CHANGELOG. **Remaining: slice 3 — shared autosave + "Saving…/Saved" indicator
+  (pairs with the deferred post-partnership autosave slice) + 375px micro-polish; plus the still-open
+  field changes (1) multiple base airports and (2) "willing to travel" → drive-time.**
 - **[P2][want] "Generate with AI" for title + description (all post flows).** On Seeking
   (and for-sale + partnership), a **"Generate with AI"** button where the user dumps a
   **stream-of-consciousness** and the AI drafts an initial **title + description** they can
