@@ -383,6 +383,11 @@ Two confirmed gaps: (1) all 1,856 listings came from a **single manual ingest on
 - **[P2] Listing comparison.** Select 2-3 listings → side-by-side spec/cost/requirements comparison. A compare tray + a `/compare` view. Works for planes-for-sale (specs) and partnerships (costs/requirements).
 
 ### Partnerships
+- **[P2][want] Rework the "Filter Pilots" sidebar (pilot-seeking page).** This filter is used by an *owner who posted a partnership and is screening pilot-seekers*, so reorder/trim it to how they actually think. Current order (per attached screenshot): Near Home Airport (+ exact/radius) · State · Aircraft Make Wanted · Rating Held · Min Total Hours · Preferred Share. Changes:
+  1. **Lead with Aircraft Make (+ Model) Wanted** — move it to the TOP filter (it's the owner's first question: "do they want *my* type of plane?"). Add a dependent **Model** filter (Make → Model) and make both **multi-select**, matching the marketplace filter direction.
+  2. **Remove the State filter** — redundant with "Near Home Airport" (geography is already covered by airport + radius).
+  3. **Rating Held → multi-select** (an owner may accept any of PPL / IFR / Commercial / CFI, not just one).
+  4. Keep Near Home Airport (+ radius), Min Total Hours, Preferred Share, "Clear all filters." 375px-first, sky-blue.
 - **[P2] Merge "Available" + "Seeking" into one toggle.** `/partnerships/seeking` is currently blank. Instead of two separate lists, when searching partnerships show a mix of **available partnerships** + **pilots seeking to form groups**, with a toggle: Available / Seeking / Both. Keep SEO intact.
 
 ### Re-filed from the 6/14 feature run — adapt the existing code, don't rebuild from scratch
