@@ -47,6 +47,20 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
+### Agent-invented SEO experiments
+- **[agent][goal] Aircraft comparison pages (`/aircraft/compare/[a-vs-b]`).** ✅ SHIPPED
+  2026-06-24 (`aircraft-compare-pages`). A new indexable family targeting the very
+  high-volume "{model} vs {model}" buyer query class (e.g. "Cessna 172 vs Cirrus SR22"),
+  built entirely from the existing curated `MODEL_SPECS` + `MODEL_HIGHLIGHTS` tables (no
+  fabricated figures) with a unique per-pair editorial intro, a side-by-side spec table,
+  both models' highlights, live inventory CTAs, and internal links from the indexed model
+  seed pages into the new family. **Why this grows pageviews:** "X vs Y" is one of the
+  highest-intent, highest-volume informational query patterns in aircraft buying, and these
+  pages carry real unique value while spreading crawl equity into the model hubs (INDEXING
+  stage). Slice 1 = 8 curated pairs + index hub + sitemap. **Next:** add more curated pairs
+  (e.g. Mooney M20 vs Bonanza, Comanche vs Arrow), a ClubHanger-Estimate price-context row,
+  and FAQ/structured data once a comparison-appropriate schema is settled.
+
 ### Growth & data — owner acquisition (human, 2026-06-23)
 FAA-registry-powered ideas. The aircraft registry is public (tail number → owner
 name OR LLC + mailing address, make/model/year; NO emails/phones). Two items:

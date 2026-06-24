@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { Plane, ArrowRight, Gauge, Wallet, LineChart, Lightbulb, Check } from 'lucide-react'
+import { Plane, ArrowRight, Gauge, Wallet, LineChart, Lightbulb, Check, GitCompare } from 'lucide-react'
 import AircraftSaleList, { countMakeModel, fetchAircraftPage, topStatesForMakeModel, priceStatsForMakeModel } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
@@ -12,6 +12,7 @@ import AlertSignup from '@/components/AlertSignup'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
+import { comparisonsForModel, resolveComparisonModel } from '@/lib/aircraftComparisons'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -81,6 +82,9 @@ export default async function MakeModelForSalePage({ params }: Props) {
 
   const label = `${entry.make} ${entry.model}`
   const path = `/aircraft/${entry.makeSlug}/${entry.modelSlug}`
+  // Curated head-to-head comparisons featuring this family — internal links into the
+  // /aircraft/compare/[a-vs-b] family (only present for curated families).
+  const comparisons = comparisonsForModel(entry.makeSlug, entry.modelSlug)
   // Related-combos rail — draw from the full inventory-backed set, excluding the
   // current combo. Curated families lead (they have hand-tuned copy + the most
   // inventory); capped to 12.
@@ -291,6 +295,33 @@ export default async function MakeModelForSalePage({ params }: Props) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Compare the {Make} {Model} — internal links into the head-to-head
+          comparison family (/aircraft/compare/[a-vs-b]). Curated families only. */}
+      {comparisons.length > 0 && (
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <GitCompare className="h-4 w-4 text-sky-500" />
+            Compare the {label}
+          </h2>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {comparisons.map((c) => {
+              const a = resolveComparisonModel(c.a)
+              const b = resolveComparisonModel(c.b)
+              if (!a || !b) return null
+              return (
+                <Link
+                  key={c.slug}
+                  href={`/aircraft/compare/${c.slug}`}
+                  className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                >
+                  {a.make} {a.model} vs {b.make} {b.model}
+                </Link>
+              )
+            })}
+          </div>
         </section>
       )}
 
