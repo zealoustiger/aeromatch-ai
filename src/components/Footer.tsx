@@ -99,7 +99,26 @@ export default function Footer() {
 
           {/* Makes + company */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Partnerships by make</h3>
+            {/* Aircraft-for-sale make hubs — the #1 search-demand family ("{make}
+                for sale"). Sitewide internal links into /aircraft/[make] from every
+                page (the footer renders everywhere) distribute crawl budget into the
+                for-sale family. Mirrors the homepage "Browse aircraft for sale by make"
+                block: SEO_MAKES slugs all resolve to real, inventory-backed hubs, so
+                these are static links with no DB query and no 404 risk. STAGE=INDEXING. */}
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">Aircraft for sale by make</h3>
+            <ul className="space-y-2">
+              {SEO_MAKES.slice(0, 6).map(({ slug, name }) => (
+                <li key={slug}>
+                  <Link
+                    href={`/aircraft/${slug}`}
+                    className="text-sm text-slate-500 hover:text-sky-600"
+                  >
+                    {name} aircraft for sale
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Partnerships by make</h3>
             <ul className="space-y-2">
               {SEO_MAKES.slice(0, 6).map(({ slug, name }) => (
                 <li key={slug}>
