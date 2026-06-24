@@ -1,3 +1,13 @@
+## 2026-06-24T09:01:45Z — Night Shift run: 6 cycles (PASS 5 / FAIL 1) — rate limited
+
+- PASS — seeking-form-autosave — the Post-a-Seeking form now autosaves to localStorage with a Saving…/Draft saved/Draft restored indicator (shared useFormDraft hook), so users 
+- PASS — aircraft-hub-faq-jsonld — Added an About buying aircraft explainer + 5-question FAQ (with matching FAQPage JSON-LD) to the /aircraft for-sale hub, the #2 priority seed p
+- PASS — save-search-in-filter-panel — Added a Save this search button inside the Filter Results panel (desktop + mobile drawer) on /aircraft and /partnerships, above Clear all f
+- PASS — earnings-calculator-faq-jsonld — added a 5-question FAQ section + FAQPage structured data to /tools/earnings-calculator (owner-side, mirrors the cost calculator; all 12 
+- PASS — one-click-save-search — Saving a search is now one click: it auto-names from your active filters and confirms with a link to Saved Searches, no naming step
+- cycle produced no verdict (exit 1)
+
+
 # Overnight review — 2026-06-23
 
 ## 📊 Traffic (PostHog) — as of 2026-06-23
