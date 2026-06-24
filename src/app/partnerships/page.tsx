@@ -16,8 +16,48 @@ import PartnershipTabs from '@/components/PartnershipTabs'
 import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
+import ModelFaq from '@/components/ModelFaq'
 import Link from 'next/link'
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
+
+// Unique, evergreen content depth for this priority seed page (#3, STAGE=INDEXING).
+// Explains what an aircraft partnership IS so the hub carries real, substantively-unique
+// value regardless of how many listings are live. NO fabricated statistics and NO live
+// counts, so the copy stays accurate and never goes stale. Intentionally distinct in
+// wording from PARTNERSHIPS_FAQS below.
+const PARTNERSHIPS_OVERVIEW: string[] = [
+  'An aircraft partnership — also called co-ownership or a flying group — is a small group of pilots who share the cost of buying and operating one airplane. Instead of carrying the full purchase price, monthly hangar, insurance, and maintenance on your own, you split the fixed costs across the group and pay for the hours you actually fly. For most owners that is the difference between an airplane that mostly sits and one that earns its keep.',
+  'Every listing here lays out the three numbers that actually matter so you can compare partnerships honestly: the buy-in (your share of the aircraft and any reserves), the fixed monthly cost (your slice of hangar, insurance, and recurring expenses), and the hourly or "wet" rate that covers fuel and engine reserves while you fly. Browse by home airport, state, make, and budget to find shares that fit how and where you fly — most groups keep the airplane at one home field, so location is usually the first filter that matters.',
+  'Partnerships range from a simple two-person share on a training-friendly single to a larger equity group around a faster cross-country aircraft. If you do not see the right open share yet, post a free "seeking" listing so owners forming a group can find you, and use the cost calculator to sanity-check what a given buy-in and hourly rate really mean per year. ClubHanger is free to search and free to post, and contact happens on-platform so you can vet a prospective partner before sharing personal details.',
+]
+
+// Curated, evergreen FAQ for the partnerships hub — genuine Q&As a prospective
+// co-owner actually asks. Rendered as a visible accordion AND emitted as FAQPage
+// JSON-LD, so the visible text must match the structured data 1:1 (ModelFaq +
+// buildFaqPageJsonLd share this array). No fabricated stats / live counts → never stale.
+const PARTNERSHIPS_FAQS: { q: string; a: string }[] = [
+  {
+    q: 'What is an aircraft partnership?',
+    a: 'It is an arrangement where two or more pilots co-own one airplane and share its costs. Each partner holds a share of the aircraft and contributes to the fixed expenses — hangar, insurance, and maintenance — while paying an hourly rate for the time they personally fly. It is the most common way pilots own a capable airplane without carrying the whole cost alone.',
+  },
+  {
+    q: 'How much does joining an aircraft partnership cost?',
+    a: 'There are three parts to the cost, and every ClubHanger listing shows them: the buy-in (your one-time share of the aircraft, plus any reserves), the fixed monthly cost (your portion of hangar, insurance, and recurring expenses), and an hourly or wet rate that covers fuel and engine reserves as you fly. Splitting the fixed costs across the group is what makes co-ownership far cheaper than owning outright.',
+  },
+  {
+    q: 'How many people are usually in an aircraft partnership?',
+    a: 'Most partnerships range from two to about six pilots. Smaller groups give each partner more availability and a bigger say; larger groups spread the fixed costs further but mean more scheduling around each other. The right size depends on how often you want to fly and how much you want to lower your monthly cost.',
+  },
+  {
+    q: 'How do I find a partnership near my home airport?',
+    a: 'Use the filters on this page to search by home airport, state, make, and budget — most groups base the aircraft at a single field, so starting from your airport or region is the fastest way to find a realistic fit. You can also browse by make or state from the partnerships directory to see what co-ownership looks like in your area.',
+  },
+  {
+    q: 'What if there is no open share that fits me yet?',
+    a: 'Post a free "seeking" listing describing the aircraft you want, your mission, your budget, and your home airport, so owners forming a group can reach out to you. Many co-ownership groups come together before an aircraft is even purchased, so getting your listing up early means the right owner can find you when a share opens.',
+  },
+]
 
 const partnershipsTitle = 'Aircraft Partnerships & Co-Ownership Near You'
 const partnershipsDescription =
@@ -67,12 +107,23 @@ export default async function PartnershipsPage({
     url: `${SITE_URL}/partnerships`,
   })
 
+  // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
+  const faqJsonLd = buildFaqPageJsonLd(PARTNERSHIPS_FAQS, {
+    url: `${SITE_URL}/partnerships`,
+  })
+
   return (
     <CompareProvider>
       {itemListJsonLd && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
     {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 5 token
@@ -132,7 +183,7 @@ export default async function PartnershipsPage({
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
             </div>
-            <PartnershipFilters initialValues={params} />
+            <PartnershipFilters initialValues={params} saveSearchBasePath="/partnerships" />
           </div>
         </aside>
 
@@ -156,6 +207,22 @@ export default async function PartnershipsPage({
           />
         </div>
       </div>
+
+      {/* About — unique, evergreen editorial prose (content depth for the INDEXING
+          stage). Below the listings so the page leads with filters + results. */}
+      <section className="mt-12 ch-panel p-5 sm:p-6">
+        <h2 className="mb-3 text-base font-semibold text-slate-900">
+          About aircraft partnerships
+        </h2>
+        <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+          {PARTNERSHIPS_OVERVIEW.map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
+        </div>
+      </section>
+
+      {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+      <ModelFaq label="Aircraft partnerships" faqs={PARTNERSHIPS_FAQS} className="mt-8" />
     </div>
     </div>
     <CompareTray />

@@ -5,6 +5,7 @@ import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInvento
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 import { getNearAirportSitemapIcaos, getIndexableAirportIcaos } from '@/lib/nearbyPartnerships'
 import { MISSIONS } from '@/lib/missions'
+import { COMPARISONS } from '@/lib/aircraftComparisons'
 
 // Largest valid Date from a set of ISO/date strings, ignoring null/undefined/unparseable
 // values. Used to derive an honest, data-derived `lastmod` for the aggregation pages
@@ -208,6 +209,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/aircraft`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/aircraft/browse`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/aircraft/deals`, lastModified: aircraftLastMod, changeFrequency: 'daily', priority: 0.6 },
+    // Head-to-head comparison pages (`/aircraft/compare/[a-vs-b]`) — a fixed,
+    // hand-curated set of high-intent "{model} vs {model}" buyer queries, each
+    // built from curated spec/highlight data (no thin/combinatorial pages).
+    { url: `${SITE_URL}/aircraft/compare`, changeFrequency: 'monthly', priority: 0.5 },
+    ...COMPARISONS.map((c) => ({
+      url: `${SITE_URL}/aircraft/compare/${c.slug}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
     // Curated "mission" landing pages (`/aircraft/mission/[mission]`) — a fixed,
     // hand-curated set (like guides) of high-intent buyer searches, each carrying
     // unique editorial guidance + the live matching listings. Data-derived freshness.
@@ -228,6 +238,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/guides/cost-of-aircraft-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/aircraft-partnership-agreement`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/leaseback-vs-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/flying-club-vs-co-ownership`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/how-to-find-aircraft-partners`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/aircraft-pre-purchase-inspection`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/guides/aircraft-title-escrow-and-closing`, changeFrequency: 'monthly', priority: 0.6 },

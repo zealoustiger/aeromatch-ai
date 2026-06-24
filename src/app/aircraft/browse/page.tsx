@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plane, MapPin, Layers, ArrowRight } from 'lucide-react'
+import { Plane, MapPin, Layers, ArrowRight, GitCompare, Target } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import {
@@ -14,6 +14,8 @@ import {
   type SeoMakeModel,
 } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
+import { COMPARISONS, resolveComparisonModel } from '@/lib/aircraftComparisons'
+import { MISSIONS } from '@/lib/missions'
 
 // This hub is a genuine navigation index, not a doorway page: every link below is
 // derived from the SAME inventory-backed helpers the sitemap and the programmatic
@@ -23,7 +25,7 @@ const PATH = '/aircraft/browse'
 const URL = `${SITE_URL}${PATH}`
 const title = 'Browse all aircraft for sale — by make, model & state'
 const description =
-  'A complete index of every aircraft-for-sale page on ClubHanger: browse general aviation listings by make, by make and model, or by US state — all aggregated from across the web in one place.'
+  'A complete index of every aircraft-for-sale page on ClubHanger: browse general aviation listings by make, by make and model, or by US state, compare popular models head to head, or shop by mission — all aggregated from across the web in one place.'
 
 export const metadata: Metadata = {
   title: { absolute: `${title} | ${SITE_NAME}` },
@@ -78,6 +80,16 @@ export default async function AircraftBrowsePage() {
 
   const totalMakes = makeGroups.length
   const totalModels = makeGroups.reduce((sum, g) => sum + g.models.length, 0)
+
+  // --- Curated head-to-head comparison pages (mirrors the fixed COMPARISONS list
+  // emitted in sitemap.ts). Resolve each side's curated make/model so the label
+  // matches the destination page exactly; drop any entry whose data is missing
+  // (resolveComparisonModel returns null) so we never link a broken page. ---------
+  const compareCards = COMPARISONS.map((c) => {
+    const a = resolveComparisonModel(c.a)
+    const b = resolveComparisonModel(c.b)
+    return a && b ? { slug: c.slug, a, b } : null
+  }).filter((x): x is NonNullable<typeof x> => x !== null)
 
   // CollectionPage JSON-LD: an ItemList of the make hub pages (real pages, each
   // with ≥1 live listing). Mirrors the repo's existing application/ld+json pattern.
@@ -135,6 +147,18 @@ export default async function AircraftBrowsePage() {
             <a href="#by-model" className="text-sky-600 hover:underline">By make &amp; model</a>
             <span className="mx-2 text-slate-300">·</span>
             <a href="#by-state" className="text-sky-600 hover:underline">By state</a>
+            {compareCards.length > 0 && (
+              <>
+                <span className="mx-2 text-slate-300">·</span>
+                <a href="#compare" className="text-sky-600 hover:underline">Compare</a>
+              </>
+            )}
+            {MISSIONS.length > 0 && (
+              <>
+                <span className="mx-2 text-slate-300">·</span>
+                <a href="#by-mission" className="text-sky-600 hover:underline">By mission</a>
+              </>
+            )}
           </p>
         </header>
 
@@ -221,6 +245,60 @@ export default async function AircraftBrowsePage() {
                 >
                   {STATE_NAMES[code]}{' '}
                   <span className="text-xs text-slate-400">({n.toLocaleString()})</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ---- Compare aircraft (curated head-to-head pages) ---- */}
+        {compareCards.length > 0 && (
+          <section id="compare" className="ch-panel mb-8 scroll-mt-24 p-5 sm:p-6">
+            <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+              <GitCompare className="h-5 w-5 text-sky-500" />
+              Compare aircraft
+            </h2>
+            <p className="mb-4 text-sm text-slate-500">
+              Head-to-head, side-by-side comparisons of popular general-aviation singles —
+              specs, performance, and ownership trade-offs.{' '}
+              <Link href="/aircraft/compare" className="text-sky-600 hover:underline">
+                See all comparisons
+              </Link>
+              .
+            </p>
+            <div className="grid gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+              {compareCards.map(({ slug, a, b }) => (
+                <Link
+                  key={slug}
+                  href={`/aircraft/compare/${slug}`}
+                  className="truncate text-sm text-slate-600 hover:text-sky-600 hover:underline"
+                >
+                  {a.make} {a.model} <span className="text-slate-400">vs</span> {b.make} {b.model}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ---- By mission (curated buyer-intent landing pages) ---- */}
+        {MISSIONS.length > 0 && (
+          <section id="by-mission" className="ch-panel mb-8 scroll-mt-24 p-5 sm:p-6">
+            <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+              <Target className="h-5 w-5 text-sky-500" />
+              By mission
+            </h2>
+            <p className="mb-4 text-sm text-slate-500">
+              Shop by what you want the airplane to do — each page collects the live
+              listings that fit.
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {MISSIONS.map((m) => (
+                <Link
+                  key={m.slug}
+                  href={`/aircraft/mission/${m.slug}`}
+                  className="text-sm text-slate-600 hover:text-sky-600 hover:underline"
+                >
+                  {m.label}
                 </Link>
               ))}
             </div>

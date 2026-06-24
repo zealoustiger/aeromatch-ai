@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Night Shift MORNING DIGEST entrypoint (VPS / Docker).
-# A `claude -p` reads the night's CHANGELOG, writes a narrative overnight review to
-# nightshift/REVIEW.md, and syncs it to the admin Daily Report tab. Fired by a 07:15 PT
-# systemd timer, after the drain's 06:50 stop. Read-and-summarize only — builds nothing.
+# Runs the TOKEN-FREE digest builder (no `claude` turn) so the morning report is
+# immune to the Claude subscription rate limit — the one thing that should never be
+# blocked by usage. `build-digest.mjs` reads the night's CHANGELOG + live traffic,
+# writes nightshift/REVIEW.md, and syncs it to the admin Daily Report tab.
+# Fired by a 07:15 PT systemd timer, after the drain's stop. Read-and-summarize only.
 set -uo pipefail
 APP="${NS_APP_DIR:-/app}"
 cd "$APP" || { echo "no app dir $APP" >&2; exit 1; }
@@ -15,14 +17,25 @@ git config --global --add safe.directory "$APP" 2>/dev/null || true
 git config --global user.email "nightshift@clubhanger.local" 2>/dev/null || true
 git config --global user.name  "ClubHanger Night Shift" 2>/dev/null || true
 
-# Feed the prompt via STDIN (with `-p` and no arg): the prompt begins with `---`
-# frontmatter, which breaks claude when passed as a -p argument (it exits 1 with no
-# output). Same fix the per-cycle drain uses. Persist output to the state dir.
+# Latest staging — the night's CHANGELOG, plus this script itself for the next run.
+git fetch --quiet origin 2>/dev/null || true
+git checkout staging --quiet 2>/dev/null || true
+git pull --quiet --ff-only 2>/dev/null || true
+
+# Creds for the sub-scripts (traffic-report → PostHog, sync-admin-docs → Supabase).
+set -a; [ -f "$APP/.env.local" ] && . "$APP/.env.local"; set +a
+
+# Build the report (writes nightshift/REVIEW.md + syncs the admin Daily Report).
+# NO `claude` → zero tokens → not blocked by the subscription rate limit.
 STATE="${NS_STATE_DIR:-/home/night/state}"
-printf '%s' "$(cat "$APP/nightshift/DIGEST_TASK.md")" | \
-  timeout --signal=INT "${NS_DIGEST_TIMEOUT:-600}" \
-    claude --dangerously-skip-permissions --output-format json -p \
-    > "$STATE/digest.out" 2> "$STATE/digest.err"
-rc=${PIPESTATUS[1]}
+node nightshift/bin/build-digest.mjs > "$STATE/digest.out" 2> "$STATE/digest.err"
+rc=$?
+cat "$STATE/digest.out" 2>/dev/null
+
+# Commit the regenerated report to staging (logs only — safe).
+git add nightshift/REVIEW.md 2>/dev/null || true
+git commit -q -m "nightshift: morning digest (VPS, token-free)" 2>/dev/null || true
+git push --quiet origin staging 2>/dev/null || true
+
 echo "digest exit $rc"
 exit "$rc"

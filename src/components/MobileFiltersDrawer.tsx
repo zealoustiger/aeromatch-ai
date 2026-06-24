@@ -71,11 +71,11 @@ export default function MobileFiltersDrawer({ initialValues, activeCount, varian
         {/* Scrollable filters */}
         <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
           {variant === 'sale' ? (
-            <AircraftSaleFilters initialValues={initialValues} facets={facets} />
+            <AircraftSaleFilters initialValues={initialValues} facets={facets} saveSearchBasePath="/aircraft" />
           ) : variant === 'seeker' ? (
             <SeekerFilters initialValues={initialValues} makes={makes} />
           ) : (
-            <PartnershipFilters initialValues={initialValues} />
+            <PartnershipFilters initialValues={initialValues} saveSearchBasePath="/partnerships" />
           )}
         </div>
 

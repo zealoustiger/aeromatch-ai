@@ -1,12 +1,13 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { Check, Loader2 } from 'lucide-react'
 import { createSeekerListing } from '@/app/actions'
 import { cn } from '@/lib/utils'
+import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex', 'Multi-Engine']
-const SCHEDULING = ['Google Calendar', 'FlyingClub', 'OpenPilot', 'SimPlates', 'Email/text', 'Other']
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
 const INTENDED_USE_OPTIONS = [
   { value: 'personal_travel', label: 'Personal Travel' },
@@ -23,11 +24,28 @@ const AIRCRAFT_CATEGORIES = [
   { value: 'turboprop', label: 'Turboprop' },
   { value: 'jet', label: 'Jet' },
 ]
-const US_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-  'VA','WA','WV','WI','WY',
+
+// Plain-language guidance shown beside the Description field so the box isn't a
+// blank-page barrier. Tips + two genuine example write-ups (a first-time buyer and
+// an experienced IFR time-builder) — purely static content, no client state.
+const DESCRIPTION_TIPS = [
+  'Lead with who you are — your ratings, total hours, and how current you are.',
+  'Say how you actually fly: typical missions, hours per month, day/night/IFR.',
+  'Be clear on what you want — share size, budget, based airport, and timeline.',
+  'Show you’ll be a good partner: how you treat aircraft, fund reserves, and communicate.',
+]
+
+const DESCRIPTION_EXAMPLES = [
+  {
+    label: 'First-time buyer',
+    text:
+      'Private pilot, 240 hours, recently instrument-rated and flying about 8 hours a month out of KAUS. Looking for a 1/3 or 1/4 share in a well-maintained IFR single (Cessna 182 or Cirrus SR20/22) for weekend trips around Texas and the occasional cross-country to see family. I’m meticulous about squawks and logbooks, happy to fund a healthy engine/maintenance reserve, and I prefer a scheduling app so everyone has fair access. Hoping to join in the next 1–2 months.',
+  },
+  {
+    label: 'Experienced time-builder',
+    text:
+      'Commercial pilot, 1,400 hours, CFI/CFII building toward the airlines. Fly 15–20 hours a month and want a 1/2 share in a glass-panel SR22 or similar near KPAO for instrument currency and cross-country work. I keep aircraft hangared and spotless, pay reserves on time, and I’m an easy, communicative partner. Open to a leaseback structure if it works for the group. Ready to move quickly for the right airplane.',
+  },
 ]
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
@@ -72,6 +90,32 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
+function DraftIndicator({ status }: { status: DraftStatus }) {
+  const base = 'flex items-center gap-1.5 text-xs'
+  switch (status) {
+    case 'saving':
+      return (
+        <span className={cn(base, 'text-slate-400')} aria-live="polite">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+        </span>
+      )
+    case 'saved':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft saved
+        </span>
+      )
+    case 'restored':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft restored — picking up where you left off
+        </span>
+      )
+    default:
+      return <span className={cn(base, 'text-slate-400')}>Your progress autosaves on this device</span>
+  }
+}
+
 export default function PostSeekerListingForm() {
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
@@ -85,8 +129,20 @@ export default function PostSeekerListingForm() {
     null
   )
 
+  const { formRef, status, handleSubmit, handleResult } = useFormDraft('ch:draft:seeker-new')
+
+  // Clear the saved draft on a successful post; restore it after a failed submit
+  // (React resets the uncontrolled form once the action resolves).
+  useEffect(() => {
+    if (state) handleResult(Boolean(state.ok))
+  }, [state, handleResult])
+
   return (
-    <form action={action} className="space-y-8">
+    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-8">
+      <div className="flex justify-end">
+        <DraftIndicator status={status} />
+      </div>
+
       {/* Aircraft preferences */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Aircraft Preferences</SectionHeader>
@@ -172,22 +228,9 @@ export default function PostSeekerListingForm() {
               maxLength={4}
               className="font-mono uppercase"
             />
-            <p className="mt-1 text-xs text-slate-400">4-letter ICAO code for your home airport</p>
-          </div>
-          <div>
-            <Label>Airport Name</Label>
-            <Input name="airport_name" placeholder="e.g. Austin-Bergstrom International" />
-          </div>
-          <div>
-            <Label>City</Label>
-            <Input name="city" placeholder="e.g. Austin" />
-          </div>
-          <div>
-            <Label>State</Label>
-            <Select name="state">
-              <option value="">Select state</option>
-              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <p className="mt-1 text-xs text-slate-400">
+              Just the 4-letter ICAO code — we&apos;ll fill in the airport name, city, and state from it.
+            </p>
           </div>
           <div>
             <Label>Willing to Travel</Label>
@@ -246,26 +289,17 @@ export default function PostSeekerListingForm() {
       {/* Partnership preferences */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Partnership Preferences</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Preferred Share Types</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {SHARE_TYPES.map((t) => (
-                <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                  <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
-                  {t}
-                </label>
-              ))}
-            </div>
-            <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
+        <div>
+          <Label>Preferred Share Types</Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SHARE_TYPES.map((t) => (
+              <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
+                <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
+                {t}
+              </label>
+            ))}
           </div>
-          <div>
-            <Label>Preferred Scheduling System</Label>
-            <Select name="preferred_scheduling">
-              <option value="">No preference</option>
-              {SCHEDULING.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </div>
+          <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
         </div>
       </section>
 
@@ -284,6 +318,33 @@ export default function PostSeekerListingForm() {
           </div>
           <div>
             <Label>Description</Label>
+            <div className="mb-2 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+              <p className="text-xs font-semibold text-sky-800">How to write a great description</p>
+              <ul className="mt-1.5 space-y-1">
+                {DESCRIPTION_TIPS.map((tip) => (
+                  <li key={tip} className="flex gap-1.5 text-xs text-slate-600">
+                    <span aria-hidden className="text-sky-400">•</span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+              <details className="group mt-2">
+                <summary className="cursor-pointer list-none text-xs font-medium text-sky-700 hover:text-sky-800">
+                  <span className="group-open:hidden">See two example descriptions</span>
+                  <span className="hidden group-open:inline">Hide examples</span>
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {DESCRIPTION_EXAMPLES.map((ex) => (
+                    <div key={ex.label} className="rounded-md border border-slate-200 bg-white p-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        {ex.label}
+                      </p>
+                      <p className="mt-1 text-xs italic leading-relaxed text-slate-600">“{ex.text}”</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
             <textarea
               name="description"
               rows={5}
@@ -300,7 +361,8 @@ export default function PostSeekerListingForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>Your Name</Label>
-            <Input name="contact_name" placeholder="First name or handle" />
+            <Input name="contact_name" placeholder="e.g. Brian Ma" />
+            <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly (e.g. Brian M.).</p>
           </div>
           <div>
             <Label required>Email</Label>

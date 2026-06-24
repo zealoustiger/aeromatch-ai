@@ -4,6 +4,8 @@ import { Calculator } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import CostCalculator from '@/components/CostCalculator'
+import ModelFaq from '@/components/ModelFaq'
+import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Cost Calculator — True Cost of Co-Ownership',
@@ -42,13 +44,51 @@ const appJsonLd = {
   },
 }
 
+// Curated, evergreen FAQ for the cost calculator — genuine questions a pilot
+// weighing a partnership share actually asks. Answers are written from this page's
+// own explanations (no fabricated figures, no live counts), so they stay accurate
+// and never go stale. Rendered as a visible accordion (ModelFaq) AND emitted as
+// FAQPage JSON-LD, so the visible text matches the structured data 1:1.
+const COST_FAQS: { q: string; a: string }[] = [
+  {
+    q: 'How much does it cost to own an aircraft in a partnership?',
+    a: 'Your cost has two parts: your share of the fixed costs (hangar, insurance, and an annual/maintenance reserve), which you pay whether or not you fly, plus your flying at the wet rate, which covers fuel and per-hour upkeep. Plug a share’s buy-in, monthly fixed cost, and wet rate into the calculator above to see your true all-in monthly figure for the hours you expect to fly.',
+  },
+  {
+    q: 'Is an aircraft partnership cheaper than renting?',
+    a: 'For most active pilots, yes. A partnership almost always beats renting once you fly a handful of hours a month, because you stop paying a marked-up rental rate on every hour. Use the comparison panel to enter your local club’s rental rate and find the break-even point where the share becomes cheaper for you.',
+  },
+  {
+    q: 'What is included in the "all-in monthly" cost?',
+    a: 'The all-in monthly figure is your share of the fixed costs — hangar, insurance, and an annual reserve — plus your flying at the wet rate for the hours you plan to fly that month. Fixed costs are owed even in a month you don’t fly; the wet-rate portion scales with how much you actually fly.',
+  },
+  {
+    q: 'How is the true cost per hour calculated?',
+    a: 'True cost per hour spreads your share of the fixed costs across the hours you actually fly and adds the wet rate. Because the fixed costs are the same no matter how much you fly, your effective hourly cost drops the more you fly — flying more hours in the month lowers your true cost per hour.',
+  },
+  {
+    q: 'Why is co-ownership so much cheaper than owning a plane outright?',
+    a: 'The expensive part of owning an aircraft is the fixed cost — hangar, insurance, and the annual — which you pay even if the plane sits. In a partnership you split those fixed costs across the group, so each owner carries only a fraction of them, while still flying at roughly the same hourly cost. That split is what makes co-ownership dramatically cheaper than sole ownership.',
+  },
+]
+
 export default function CostCalculatorPage() {
+  const faqJsonLd = buildFaqPageJsonLd(COST_FAQS, {
+    url: `${SITE_URL}/tools/cost-calculator`,
+  })
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <Breadcrumbs
         items={[
           { label: 'Home', href: '/' },
@@ -93,6 +133,9 @@ export default function CostCalculatorPage() {
           .
         </p>
       </div>
+
+      {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+      <ModelFaq label="Aircraft partnership costs" faqs={COST_FAQS} className="mt-12 max-w-2xl" />
     </div>
   )
 }

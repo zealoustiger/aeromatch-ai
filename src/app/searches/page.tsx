@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Bookmark, Search, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import DeleteSearchButton from '@/components/DeleteSearchButton'
+import RenameSavedSearch from '@/components/RenameSavedSearch'
 import type { SavedSearch } from '@/lib/types'
 
 // Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
@@ -109,7 +110,7 @@ export default async function SearchesPage() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-slate-900">{s.name}</p>
+                  <RenameSavedSearch id={s.id} name={s.name} />
                   <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
                     {marketplaceLabel(s.path)}
                   </span>

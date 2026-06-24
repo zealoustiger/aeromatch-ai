@@ -1,7 +1,9 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
+import { X } from 'lucide-react'
+import SaveSearchButton from './SaveSearchButton'
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -18,29 +20,89 @@ const SHARE_TYPES = [
   { value: 'dry_lease', label: 'Dry Lease' },
 ]
 
-interface Props {
-  initialValues: Record<string, string | undefined>
+// Normalize free text into a deduped list of ICAO/FAA airport codes: split on
+// commas/whitespace, uppercase, strip non-alphanumerics, drop anything not 2-4
+// chars (so stray punctuation never becomes a bogus code).
+function parseAirportCodes(raw: string): string[] {
+  const out: string[] = []
+  for (const token of raw.split(/[\s,]+/)) {
+    const code = token.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (code.length >= 2 && code.length <= 4 && !out.includes(code)) out.push(code)
+  }
+  return out
 }
 
-export default function PartnershipFilters({ initialValues }: Props) {
+interface Props {
+  initialValues: Record<string, string | undefined>
+  /** When set, render an in-panel "Save this search" button above "Clear all
+   *  filters" (the base route the saved search reopens). Lets users save where
+   *  they tune filters, not just from the top action bar. */
+  saveSearchBasePath?: string
+}
+
+export default function PartnershipFilters({ initialValues, saveSearchBasePath }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
-  const updateFilter = useCallback(
-    (key: string, value: string) => {
+  const pushParams = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
-      }
+      mutate(params)
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`)
       })
     },
     [router, pathname, searchParams]
+  )
+
+  const updateFilter = useCallback(
+    (key: string, value: string) => {
+      pushParams((params) => {
+        if (value) params.set(key, value)
+        else params.delete(key)
+      })
+    },
+    [pushParams]
+  )
+
+  // Home airport is multi-select: the `airports` param is a comma-joined list of
+  // ICAO codes OR'd together by the query (`.in('home_airport', …)`). Initial codes
+  // come from `airports`, falling back to a lone legacy `airport` param so old links /
+  // saved searches keep working. Editing consolidates into `airports` and drops the
+  // legacy `airport`/`radius` pair to avoid two airport sources fighting.
+  const airportCodes = parseAirportCodes(
+    initialValues.airports ?? initialValues.airport ?? ''
+  )
+  const [airportDraft, setAirportDraft] = useState('')
+
+  const setAirports = useCallback(
+    (codes: string[]) => {
+      pushParams((params) => {
+        params.delete('airport')
+        params.delete('radius')
+        if (codes.length) params.set('airports', codes.join(','))
+        else params.delete('airports')
+      })
+    },
+    [pushParams]
+  )
+
+  // Add whatever codes the draft text holds (split on comma/space), deduped against
+  // the current list; clears the input. No-op when the draft yields nothing new.
+  const commitAirportDraft = useCallback(() => {
+    const additions = parseAirportCodes(airportDraft)
+    setAirportDraft('')
+    if (!additions.length) return
+    const next = [...airportCodes]
+    for (const code of additions) if (!next.includes(code)) next.push(code)
+    if (next.length !== airportCodes.length) setAirports(next)
+  }, [airportDraft, airportCodes, setAirports])
+
+  const removeAirport = useCallback(
+    (code: string) => setAirports(airportCodes.filter((c) => c !== code)),
+    [airportCodes, setAirports]
   )
 
   const clearAll = () => {
@@ -51,18 +113,47 @@ export default function PartnershipFilters({ initialValues }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Airport */}
+      {/* Home airport(s) — multi-select. Type a code and press Enter/comma/space (or
+          blur) to add it as a chip; airports entered here are OR'd in the results. */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
           Home Airport (ICAO)
+          {airportCodes.length > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {airportCodes.length} selected
+            </span>
+          )}
         </label>
+        {airportCodes.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {airportCodes.map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => removeAirport(code)}
+                aria-label={`Remove ${code}`}
+                className="group inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 py-1 pl-2.5 pr-1.5 font-mono text-xs font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+              >
+                {code}
+                <X className="h-3 w-3 text-sky-400 group-hover:text-sky-600" />
+              </button>
+            ))}
+          </div>
+        )}
         <input
           type="text"
-          placeholder="e.g. KAUS, KDAL"
-          defaultValue={initialValues.airport ?? ''}
-          onChange={(e) => updateFilter('airport', e.target.value.toUpperCase())}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-mono focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-          maxLength={4}
+          inputMode="text"
+          placeholder="e.g. KAUS, KDAL — Enter to add"
+          value={airportDraft}
+          onChange={(e) => setAirportDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+              e.preventDefault()
+              commitAirportDraft()
+            }
+          }}
+          onBlur={commitAirportDraft}
+          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-mono uppercase focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
         />
       </div>
 
@@ -147,12 +238,15 @@ export default function PartnershipFilters({ initialValues }: Props) {
       </div>
 
       {hasFilters && (
-        <button
-          onClick={clearAll}
-          className="w-full rounded-md border border-slate-200 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
-        >
-          Clear all filters
-        </button>
+        <div className="space-y-2 border-t border-slate-100 pt-4">
+          {saveSearchBasePath && <SaveSearchButton fullWidth basePath={saveSearchBasePath} />}
+          <button
+            onClick={clearAll}
+            className="w-full rounded-md border border-slate-200 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
+          >
+            Clear all filters
+          </button>
+        </div>
       )}
     </div>
   )

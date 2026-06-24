@@ -1,22 +1,17 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { Info, Check, Loader2 } from 'lucide-react'
 import { createPartnership } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
+import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex']
 const SCHEDULING = ['Google Calendar', 'FlyingClub', 'OpenPilot', 'SimPlates', 'Email/text', 'Other']
 
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
-
-const US_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-  'VA','WA','WV','WI','WY',
-]
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -60,6 +55,32 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
+function DraftIndicator({ status }: { status: DraftStatus }) {
+  const base = 'flex items-center gap-1.5 text-xs'
+  switch (status) {
+    case 'saving':
+      return (
+        <span className={cn(base, 'text-slate-400')} aria-live="polite">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+        </span>
+      )
+    case 'saved':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft saved
+        </span>
+      )
+    case 'restored':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft restored — picking up where you left off
+        </span>
+      )
+    default:
+      return <span className={cn(base, 'text-slate-400')}>Your progress autosaves on this device</span>
+  }
+}
+
 export default function PostPartnershipForm() {
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
@@ -78,8 +99,20 @@ export default function PostPartnershipForm() {
     null
   )
 
+  const { formRef, status, handleSubmit, handleResult } = useFormDraft('ch:draft:partnership-new')
+
+  // Clear the saved draft on a successful post; restore it after a failed submit
+  // (React resets the uncontrolled form once the action resolves).
+  useEffect(() => {
+    if (state) handleResult(Boolean(state.ok))
+  }, [state, handleResult])
+
   return (
-    <form action={action} className="space-y-8">
+    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-8">
+      <div className="flex justify-end">
+        <DraftIndicator status={status} />
+      </div>
+
       {/* Aircraft details */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Aircraft Details</SectionHeader>
@@ -102,40 +135,53 @@ export default function PostPartnershipForm() {
           <div>
             <Label>N-Number (Registration)</Label>
             <Input name="registration" placeholder="e.g. N12345" className="font-mono uppercase" />
+            <p className="mt-1 text-xs text-slate-400">Optional — helps verify the aircraft, but leave it blank if you'd rather not.</p>
           </div>
         </div>
       </section>
 
-      {/* Location */}
+      {/* Listing content — moved up so the headline + description (what pilots read
+          first) come right after the aircraft, not at the very bottom of the form. */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <SectionHeader>Listing Details</SectionHeader>
+        <div className="space-y-4">
+          <div>
+            <Label required>Title</Label>
+            <Input
+              name="title"
+              placeholder="e.g. 1/3 Share Available — 2004 C172S, Austin TX (KAUS)"
+              required
+            />
+            <p className="mt-1 text-xs text-slate-400">Be specific — include aircraft, share type, and airport.</p>
+          </div>
+          <div>
+            <Label>Description</Label>
+            <textarea
+              name="description"
+              rows={5}
+              placeholder="Tell prospective partners about the aircraft, the current group, how scheduling works, and what you're looking for in a partner..."
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Location — just the ICAO. The airport name, city, and state are implied by
+          the identifier, so we derive them server-side instead of asking again. */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Home Airport</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label required>ICAO Code</Label>
-            <Input
-              name="home_airport"
-              placeholder="e.g. KAUS"
-              required
-              maxLength={4}
-              className="font-mono uppercase"
-            />
-            <p className="mt-1 text-xs text-slate-400">4-letter ICAO identifier (e.g. KAUS, KDAL, KFXE)</p>
-          </div>
-          <div>
-            <Label>Airport Name</Label>
-            <Input name="airport_name" placeholder="e.g. Austin-Bergstrom International" />
-          </div>
-          <div>
-            <Label>City</Label>
-            <Input name="city" placeholder="e.g. Austin" />
-          </div>
-          <div>
-            <Label>State</Label>
-            <Select name="state">
-              <option value="">Select state</option>
-              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </div>
+        <div className="sm:max-w-xs">
+          <Label required>ICAO Code</Label>
+          <Input
+            name="home_airport"
+            placeholder="e.g. KAUS"
+            required
+            maxLength={4}
+            className="font-mono uppercase"
+          />
+          <p className="mt-1 text-xs text-slate-400">
+            4-letter identifier (e.g. KAUS, KDAL, KFXE). We&apos;ll fill in the airport name, city, and state for you.
+          </p>
         </div>
       </section>
 
@@ -171,13 +217,26 @@ export default function PostPartnershipForm() {
       {/* Costs */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Costs</SectionHeader>
-        <p className="mb-4 text-xs text-slate-500">Leave blank if you'd rather discuss in messages. Listings with costs shown get significantly more inquiries.</p>
+        <p className="mb-4 flex items-start gap-1.5 text-xs text-slate-500">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <span>
+            Partnerships are structured in different ways — some charge a monthly fixed cost, some an
+            hourly wet rate, some both. Enter the buy-in, and{' '}
+            <span
+              className="cursor-help underline decoration-dotted underline-offset-2"
+              title="Every group splits costs differently. Fill in whichever of the monthly and hourly rates apply to yours and leave the other blank — you can always explain the details in your description."
+            >
+              leave any rate that doesn&apos;t apply blank
+            </span>
+            . Listings with costs shown get significantly more inquiries.
+          </span>
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <Label>Buy-In Price</Label>
+            <Label required>Buy-In Price</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="buy_in_price" type="number" placeholder="15000" className="pl-7" min={0} />
+              <Input name="buy_in_price" type="number" placeholder="15000" className="pl-7" min={0} required />
             </div>
           </div>
           <div>
@@ -195,50 +254,6 @@ export default function PostPartnershipForm() {
               <Input name="hourly_wet" type="number" placeholder="85" className="pl-7" min={0} />
             </div>
             <p className="mt-1 text-xs text-slate-400">Fuel + oil included</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Requirements */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <SectionHeader>Pilot Requirements</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Minimum Hours</Label>
-            <Input name="min_hours" type="number" placeholder="e.g. 150" min={0} />
-          </div>
-          <div>
-            <Label>Required Ratings / Endorsements</Label>
-            <Input
-              name="ratings_required"
-              placeholder="e.g. PPL, IFR, Complex"
-            />
-            <p className="mt-1 text-xs text-slate-400">Comma-separated</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Listing content */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <SectionHeader>Listing Details</SectionHeader>
-        <div className="space-y-4">
-          <div>
-            <Label required>Title</Label>
-            <Input
-              name="title"
-              placeholder="e.g. 1/3 Share Available — 2004 C172S, Austin TX (KAUS)"
-              required
-            />
-            <p className="mt-1 text-xs text-slate-400">Be specific — include aircraft, share type, and airport.</p>
-          </div>
-          <div>
-            <Label>Description</Label>
-            <textarea
-              name="description"
-              rows={5}
-              placeholder="Tell prospective partners about the aircraft, the current group, how scheduling works, and what you're looking for in a partner..."
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-            />
           </div>
         </div>
       </section>

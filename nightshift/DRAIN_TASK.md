@@ -88,8 +88,11 @@ Repeat until a stop condition (section 3) fires:
    > desktop+375px) AND visually inspect the screenshots it saves. **Only on a clean PASS**
    > (smoke test exit 0 + screenshots look right) merge `night/<slug>` into `staging`
    > and `git push origin staging`. Append the CHANGELOG entry (PASS/FAIL) and
-   > commit logs to staging. Obey every hard guardrail (staging only, never main /
-   > prod, never `.env`/secrets, additive SQL only).
+   > commit logs to staging. **If the BACKLOG item carried a `backlog-shots/…`
+   > screenshot URL, on PASS delete that Storage object** (service-role
+   > `DELETE {SUPABASE_URL}/storage/v1/object/backlog-shots/<path>`) so captured
+   > screenshots only persist while the work is pending. Obey every hard guardrail
+   > (staging only, never main / prod, never `.env`/secrets, additive SQL only).
    > Then reply to me with **ONE line only**: `PASS|FAIL|ABORT — <slug> — <plain-language what>`.
    > Do NOT paste diffs, build output, or screenshots back — they live in git and
    > nightshift/. Keep your reply to that single line.

@@ -47,7 +47,85 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
-### Brainstorm 2026-06-22 — Zillow/Redfin marketplace + data quality (human-set, P1)
+### Agent-invented SEO experiments
+- **[agent][goal] Aircraft comparison pages (`/aircraft/compare/[a-vs-b]`).** ✅ SHIPPED
+  2026-06-24 (`aircraft-compare-pages`). A new indexable family targeting the very
+  high-volume "{model} vs {model}" buyer query class (e.g. "Cessna 172 vs Cirrus SR22"),
+  built entirely from the existing curated `MODEL_SPECS` + `MODEL_HIGHLIGHTS` tables (no
+  fabricated figures) with a unique per-pair editorial intro, a side-by-side spec table,
+  both models' highlights, live inventory CTAs, and internal links from the indexed model
+  seed pages into the new family. **Why this grows pageviews:** "X vs Y" is one of the
+  highest-intent, highest-volume informational query patterns in aircraft buying, and these
+  pages carry real unique value while spreading crawl equity into the model hubs (INDEXING
+  stage). Slice 1 = 8 curated pairs + index hub + sitemap. Expanded to **13** curated pairs
+  (`compare-pairs-expansion`, 2026-06-24) and to **18** (`compare-pairs-expansion-2`,
+  2026-06-24: 182 vs Bonanza, Mooney M20 vs Comanche, Saratoga vs 182, Cessna 180 vs 182,
+  Cub vs Citabria). FAQ + FAQPage JSON-LD now ship on every pair. Expanded to **21**
+  (`compare-pairs-expansion-3`, 2026-06-24: Cessna 172 vs Grumman AA-5, Grumman AA-5 vs
+  Cherokee, Cessna 150 vs Piper Cub — brings the Grumman AA-5 into the family). Expanded
+  to **24** (`compare-pairs-expansion-4`, 2026-06-24: Cirrus SR20 vs Cessna 172, Beechcraft
+  Bonanza vs Piper Saratoga, Mooney M20 vs Piper Arrow). **Next:** the curated-model pool is
+  now very heavily cross-compared — **DIVERSIFY off this family next [goal] cycle** to avoid
+  over-concentration (several recent cycles touched it). Remaining niche pairs are thin on
+  genuine value; better next [goal] bets: a ClubHanger-Estimate price-context row once a
+  comparison-appropriate display is settled, a CWV/`next/image` pass, or geocoding
+  `aircraft_for_sale.location` to light up `/aircraft/near/[icao]`.
+
+### Growth & data — owner acquisition (human, 2026-06-23)
+FAA-registry-powered ideas. The aircraft registry is public (tail number → owner
+name OR LLC + mailing address, make/model/year; NO emails/phones). Two items:
+
+- **[P2][want] N-number autofill on "Post a Listing".** Owner/seller types their FAA
+  tail number (N-number) and we prefill make / model / year (and flag individual-vs-LLC
+  ownership) from the FAA Aircraft Registry. One-click, accurate listings — gets owners
+  to come to us. Low-risk, clean public data. Slice: (1) data source — either the
+  single-record inquiry endpoint (`registry.faa.gov/aircraftinquiry`, per-lookup) or
+  import the bulk Releasable Aircraft DB (`MASTER.txt` + `ACFTREF.txt`) into an
+  `faa_aircraft` table (refresh monthly); (2) an N-number field on the post form that
+  fetches + prefills make/model/year; (3) show owner-type (individual vs LLC/trust) hint.
+  No emails (FAA has none).
+
+- **[P2][want] Owner-leads list from airport-based tail numbers — DATA COLLECTION ONLY,
+  NO OUTREACH YET.** Growth-prospecting dataset: for a chosen airport, enumerate based
+  aircraft + tail numbers, enrich each via the FAA registry to an owner name or LLC +
+  address, resolve LLCs via state business registries (registered agent / members +
+  address), and later attach likely online profiles / emails — assembled into a `leads`
+  table + admin view. **Build the list only; contact NObody.** Slice: (1) source
+  based-aircraft tail numbers for an airport (ADS-B operators seen at the field / airport
+  directory / FAA owner-address proximity — pick a method); (2) FAA registry enrich →
+  owner/LLC + address; (3) LLC resolution via Secretary-of-State lookups → agent/members;
+  (4) **(gated, later)** profile/email discovery; (5) `leads` table + admin view.
+  - **HARD GATE — outreach is OFF.** Do NOT build any send/email/message flow and do NOT
+    contact leads. Assembling the dataset is the entire scope. Before ANY outreach: a human
+    decision **and** a compliance check (CAN-SPAM, FAA data-use + owner opt-outs, state-data
+    ToS, publicity/privacy). Brand note: cold-blasting scraped owners cuts against the
+    trust differentiator and risks sender reputation — this is a curated, careful list,
+    not a spam cannon.
+  - **Flag for human review before any autonomous build.** Touches third-party sources:
+    FAA registry is clean/public, but ADS-B, state-SoS scraping, and email enrichment each
+    need a ToS/compliance look — the night-shift loop should NOT scrape these unattended
+    without sign-off. (Pairs with the N-number autofill item above, which shares the FAA data.)
+
+### Backlog capture — screenshots (human, added in chat)
+Items the human captured from chat with a reference screenshot. Each links a
+screenshot in Supabase Storage (`backlog-shots` bucket). **When an item here is
+completed, delete its screenshot object from `backlog-shots` to reclaim storage.**
+
+- **[P2][want] Optional note when saving a listing.** When a user saves a listing,
+  let them attach an **optional free-text note** (e.g. "great panel — ask about damage
+  history"). If a note exists, display it **(a)** on the listing page and **(b)** on the
+  saved listings page (`/saved`). Screenshot (aircraft listing detail — note the
+  **Save** button, top-right, where the note affordance attaches):
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/save-note-listing/20260623-falcon-example.png
+  — shows breadcrumb `Home / Planes for Sale / Dassault Falcon 900ex`, a Share + **Save**
+  pair top-right, the photo, a PRICE card ($795,000), and a "View on AircraftForSale"
+  card. Data: add a `note text` column to the saved-listings record (per-user save row).
+  Slice: (1) note column + an "add note" input in the save flow (inline on save, or an
+  edit affordance once saved); (2) render the note on `/saved`; (3) render the note on
+  the listing detail page when present (optionally on the listing card too). Applies to
+  both aircraft-for-sale saves and partnership saves.
+
+
 Theme: make ClubHanger feel like a polished Zillow/Redfin for aircraft, and stop
 showing junk. All human-requested this session. Inspiration: Zillow + Redfin
 (listing pages, price history, map, Zestimate), Etsy/Airbnb (collection layout).
@@ -107,9 +185,15 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   avionics caveat. Deliberately a **descriptive market comparison, not an endorsement**
   (comp set is the whole family). Pure unit-tested helper `src/lib/aircraftEstimate.ts` +
   read-only `getFamilyAskingPrices()`; self-suppresses on no-price/unknown-family/<4 comps.
-  See CHANGELOG. **Remaining:** the **endorsement-style "Good deal / Priced high" score** —
-  ship once comps are narrowed to **year-band + hours** (then a value judgement is honest);
-  optionally surface the verdict chip on the detail page's "Similar aircraft" cards.
+  See CHANGELOG. — **endorsement-style "Good deal / Priced high" verdict ✅ SHIPPED
+  2026-06-24T10:21Z** (`clubhanger-estimate-deal-verdict`): a "Deal check" line in the
+  detail-page `EstimatePanel` comparing the asking price only against **similar-year
+  (±5yr) + similar-hours** same-make+model comps (≥4 required) → **Good deal / Fair price /
+  Priced high**, additive on top of the existing whole-family descriptive estimate; pure
+  unit-tested `clubHangerDealVerdict` + read-only `getFamilyComps`; self-suppresses on
+  thin/missing data. **Remaining:** optionally surface the verdict chip on the detail
+  page's "Similar aircraft" cards + the browse `AircraftSaleCard`; consider accepting SMOH
+  when TTAF is missing to widen coverage.
 - **[P2][want] Price history + "Price cut ↓$X" + days-on-market + "New" pills (Redfin).**
   Data already stored (`previous_price`, `price_changed_at`, `first_seen_at`). Slice:
   (1) New + Price-cut pills on cards (extend existing `priceDrop`/`isNew`); (2)
@@ -125,6 +209,158 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
 - **[P2][want] "Similar planes" comparables on every listing.** Same make/model/region;
   keeps users browsing (the Zillow "more homes like this" loop). Slice: (1) similar-by-
   make/model on the detail page; (2) "also near {airport}" variant.
+
+#### Batch from chat — 2026-06-24 (posting/messaging/filter friction)
+
+- **[P2][want] Post-a-partnership: multi-photo drag-and-drop upload.** The "Post a
+  partnership" page should let the user upload **multiple photos** via an easy
+  **drag-and-drop** zone (with click-to-browse fallback), thumbnail previews,
+  remove-before-submit, and reorder if cheap. Today the flow lacks an easy multi-image
+  uploader. Slice: (1) DnD + multi-select zone with previews → Supabase Storage + attach
+  URLs to the listing; (2) remove/reorder + validation (type/size/count cap); (3) progress
+  states + 375px polish.
+- **[P1][want] Post-a-partnership form: make posting frictionless.** Goal — make posting a
+  partnership as easy as possible. Changes: (1) **N-number optional** with helper text;
+  (2) **simplify "Home airport"** to just the identifier, drop airport-name/city/state
+  (implied); (3) **buy-in required**, monthly-fixed + wet (per-hr) rate **optional** with an
+  **info hover** explaining partnerships work different ways (leave blank if N/A); (4)
+  **remove the pilot-requirements** section; (5) **move "Listing details" earlier** (2nd–3rd
+  section); (6) **autosave** with a visible "Saving…/Saved" indicator so users don't fear
+  losing progress. Slice: (1) field changes 1–5; (2) autosave + save-state; (3) 375px polish.
+  — **slice 1 (field changes 1–5) ✅ SHIPPED 2026-06-24T06:24Z** (`post-partnership-frictionless`):
+  N-number marked optional; Home Airport asks for ICAO only (server now derives
+  airport_name/city/state from the `airports` table so the state SEO pages keep real data);
+  Buy-In required + Monthly/Wet optional with an info hover; Pilot Requirements section removed;
+  Listing Details moved to the 2nd section. No schema change. See CHANGELOG.
+  — **slice 2 (autosave + "Saving…/Saved" indicator) ✅ SHIPPED 2026-06-24T08:08Z** (`post-partnership-autosave`):
+  new reusable `useFormDraft` hook autosaves the form to localStorage (debounced) with a
+  Saving…/Draft saved/Draft restored indicator, restores on return, clears on successful post.
+  Client-only, no schema. **Remaining: slice 3 (375px micro-polish); and adopt the same hook on the
+  Post-a-Seeking form (`/partnerships/seeking/new`).**
+- **[P2][want] Easy toggle between the three "Post a…" types.** From "Post a Partnership,"
+  make it easy to switch between **post partnership / post plane for sale / post pilot
+  seeking partnership** — a segmented toggle/tabs at the top (or at minimum clear links to
+  the other two). Today they're separate pages with no cross-nav. Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/post-type-toggle/20260624-post-type-toggle.png
+- **[P1][want] Post-a-Seeking form: make it frictionless.** Goal — make posting a "pilot
+  seeking partnership" listing as easy as possible. Changes: (1) **base location → multiple
+  airports**, drop airport-name/city/state (implied); (2) **"willing to travel" → drive time**
+  (e.g. 30/45/60 min), infer distance behind the scenes; (3) **remove "preferred scheduling
+  system"**; (4) **description help outside the box** on how to write a great description,
+  with **examples of good writing**; (5) reuse partnership-form friction-reducers (optional
+  labels, autosave + save-state, sensible order). Slice: (1) fields 1–3; (2) description help
+  + examples; (3) shared autosave + 375px polish.
+  — **slice 2 (description help + examples) ✅ SHIPPED 2026-06-24T07:28Z** (`seeking-description-help`):
+  a "How to write a great description" tips panel (4 bullets) + a native `<details>` "See two example
+  descriptions" disclosure (first-time buyer + experienced time-builder) around the Description textarea
+  on `/partnerships/seeking/new`. Static/presentational only — no new fields, no schema, no change to
+  `createSeekerListing`. See CHANGELOG. **Remaining: slice 3 — shared autosave + "Saving…/Saved" indicator
+  (pairs with the deferred post-partnership autosave slice) + 375px micro-polish; plus the still-open
+  field changes (1) multiple base airports and (2) "willing to travel" → drive-time.**
+- **[P2][want] "Generate with AI" for title + description (all post flows).** On Seeking
+  (and for-sale + partnership), a **"Generate with AI"** button where the user dumps a
+  **stream-of-consciousness** and the AI drafts an initial **title + description** they can
+  edit. Lowers the blank-page barrier; pairs with the "examples of good writing" help. Slice:
+  (1) Seeking page input → AI-drafted title+desc into fields (editable, not auto-submit); (2)
+  reuse on for-sale + partnership; (3) loading/regenerate/limits. Uses Claude (see
+  `claude-api`); keep prompt + model config server-side.
+- ~~**[P2][want] Seeking-partnership profile: fill the empty right rail.**~~ ✅ SHIPPED
+  2026-06-24T06:02Z (`seeking-profile-right-rail`). On `/partnerships/seeking/[id]`, the
+  **Aircraft Preferences** and **Flying Profile** cards moved out of the full-width left column
+  into the **right rail** (order: Budget → Aircraft Preferences → Flying Profile → contact CTA),
+  with their inner grids collapsed to a single column to fit the narrow rail; "About me" stays
+  the main left column. Same data + privacy gating, purely a layout balance/conversion move.
+  See CHANGELOG. (Screenshot object can be deleted from `backlog-shots`.)
+- **[P1][want] On-site messaging instead of exposing emails.** Replace the "Send Email" CTA
+  ("Have a plane that fits? Reach out to … → Send Email") with a **"Send Message"** flow that
+  delivers an **on-site message** to the listing owner instead of handing out their email. If
+  no message center/chat exists yet, **build it out** (note: an account "Messages" quick-link
+  already exists per recent CHANGELOG — check existing infra first). Slice: (1) `messages`
+  schema (thread per listing+sender, additive, RLS so only the two parties read) + send form
+  replacing the email CTA; (2) inbox at `/messages` (thread list + view + reply) wired to the
+  account link; (3) new-message email **notification** behind `RESEND_API_KEY` (link back, no
+  raw email exposed); (4) unread badge + 375px polish. Keep "Send Email" as fallback until
+  messaging is live. Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/in-app-messaging/20260624-in-app-messaging.png
+- ~~**[P2][want] Partnership filter: multiple airport codes.**~~ ✅ SHIPPED 2026-06-24T10:40Z
+  (`partnership-filter-multi-airport`). The `/partnerships` "Home Airport (ICAO)" filter now
+  takes **multiple codes** (Enter/comma/blur to add) as removable chips, OR'd via the existing
+  `airports` param + `.in('home_airport', …)` query path; one removable chip per airport also
+  renders in the results header (`PartnershipActiveFilterChips`). Desktop + 375px; legacy single
+  `?airport=KHWD` (+radius) preserved. Pure front-end (no schema). See CHANGELOG. (Screenshot
+  object can be deleted from `backlog-shots`.) **Next:** same multi-airport input on the seeking
+  browse filter (`SeekerFilters`) + the seeking-form "multiple base airports" field; optional
+  "within X mi" radius alongside the multi-airport list.
+- ~~**[P2][want] Add "Save this search" inside the filter panel.**~~ ✅ SHIPPED
+  2026-06-24T08:39Z (`save-search-in-filter-panel`). A full-width "Save this search" button
+  now renders inside the Filter Results panel (desktop sidebar + mobile drawer) above
+  "Clear all filters" on both `/aircraft` and `/partnerships`, reusing the existing
+  `SaveSearchButton` (new opt-in `fullWidth` prop) + `saveSearch` action; the top-right
+  button is unchanged and it self-hides when no filters are active. NO schema. See CHANGELOG.
+  (Screenshot object can be deleted from `backlog-shots`.) **Next:** the related save-search
+  UX items below — one-click auto-named save + inline rename on `/searches`, and making the
+  results-header "Save this search" more prominent.
+- **[P2][want] One-click save search: auto-name + skip the naming step.** Saving a search
+  forces the user to name it first. **Auto-generate a name** from active filters (e.g.
+  "Cessna partnerships near KHWD under $20k buy-in") and save in **one click**; show a
+  confirmation that points to the **Saved Searches** page with a **link** to go there.
+  **Renaming** happens on the Saved Searches page (inline). Slice: (1) auto-name + one-click
+  save + post-save toast linking `/searches`; (2) inline rename on Saved Searches.
+  — **slice 1 (auto-name + one-click save) ✅ SHIPPED** (`SaveSearchButton` + `autoNameSearch`).
+  — **slice 2 (inline rename on `/searches`) ✅ SHIPPED 2026-06-24T12:31Z** (`saved-search-inline-rename`):
+  a pencil affordance on each saved-search name opens an inline editor (Enter saves / Esc cancels),
+  backed by a new owner-scoped `renameSavedSearch` action (23505-aware); no schema. **This item is now complete.**
+- **[P2][want] Model filter: roll up variants into a parent model.** The Model filter lists
+  every variant separately (SR20, Sr20 G2, Sr20 G3, Sr20 G6, SR20-G2, SR20-G3, SF50 G2 Plus,
+  …), so picking "an SR20" means checking many near-duplicate boxes. Add a parent **"SR20
+  (all)" / "SR22 (all)"** option that ORs all variants; keep individual variants behind
+  progressive disclosure. Also normalize the casing/dupe inconsistency ("SR20" vs "Sr20 G2"
+  vs "SR20-G2"). Slice: (1) group variants under a canonical parent + "(all)"; (2) normalize
+  variant naming; (3) collapse-by-default with "show variants". Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/model-filter-rollup-variants/20260624-model-filter-rollup-variants.png
+  — **grouping + (all) + collapse slices ✅ SHIPPED 2026-06-24T11:00Z** (`model-filter-variant-rollup`):
+  parent "{base} (all)" rolls up clustered variants (one click selects all members, checked/
+  indeterminate/none state), individual variants behind a collapse-by-default "Show N variants"
+  disclosure; singletons unchanged; pure unit-tested `groupModelVariants` helper over the existing
+  comma-joined `model` param (no query/schema change), deliberately conservative (SR22T≠SR22). See
+  CHANGELOG. — **per-variant active-filter chips collapsed into one parent chip ✅ SHIPPED
+  2026-06-24T12:08Z** (`active-filter-chip-rollup`): on `/aircraft`, a fully-selected model group
+  now renders a single "{base} (all)" results-header chip (removal strips all members) instead of
+  one chip per variant; partial selections stay per-variant. Pure front-end via `groupModelVariants`
+  + the page's existing facets; no query/schema change. See CHANGELOG. **Remaining: (2) normalize
+  stored variant casing in the DB (deferred — destructive-ish, ask-a-human); apply the same rollup
+  to the partnerships/seeking model filters + their active-filter chips.**
+- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**
+  Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
+  buying criteria. Surface them **higher and always-visible** in the main filter panel, and
+  **remove "Listing quality"** as a filter. (Reordering already-present fields — not the
+  deferred avionics/SMOH filters.) Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/filter-promote-core-fields/20260624-filter-promote-core-fields.png
+- **[P2][want] Filter: "Priced below market" checkbox.** Alongside "Price drops," add an
+  **"Aircraft priced below market"** checkbox showing only listings under computed market
+  value for their make/model. Depends on the **price-vs-market** comp calc already in the
+  backlog (own-inventory comps, show only with ≥N comps). Slice: (1) reuse/finish the
+  per-listing below-market flag; (2) checkbox + query; (3) badge parity in cards + filter.
+- **[P2][want] Filter: airport ICAO + distance radius (for-sale).** Add an **optional**
+  location filter to for-sale browse — enter an **airport ICAO** + a **distance** (e.g. within
+  100/250/500 mi or custom) to show only aircraft in range, like the partnership browse
+  centers on a home airport. Slice: (1) ICAO input + distance selector → geocode airport
+  (reuse our coords) + filter by distance (needs lat/long or geocoded location); (2) "within X
+  of {ICAO}" filter chip; (3) sort-by-distance + 375px polish. If listing coords are sparse,
+  fall back to state/metro match and note the coverage gap.
+- **[P1][bug] Hide parts/wanted listings — only show actual aircraft.** The feed leaks
+  non-aircraft listings — **parts and wanted ads**, mostly from **Barnstormers** (e.g. "CIRRUS
+  SR22T WING ASSEMBLY", "WHEELPANTS FOR THE CIRRUS SR22", and a "CIRRUS SR22 NON TURBO" that's
+  actually a **WANTED** ad). The Barnstormers adapter's parts/wanted regex isn't catching
+  these. Tighten classification: title keywords (wing/wheel pants/fairing/assembly/parts/
+  avionics/prop/engine-only, **WANTED/accepting orders** in title or description) + **low or
+  missing price** as a secondary flag. Apply at **ingest** (drop/flag via a `category`/
+  `is_aircraft` field) so junk never reaches the DB, plus a display-side guard for existing
+  rows, plus a one-time backfill cleanup of `aircraft_for_sale`. Slice: (1) strengthen
+  ingest-time filter (title+desc+price) + admin count of removals; (2) backfill cleanup of
+  existing junk; (3) optional `category` tag so genuine parts could bucket separately later.
+  Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/filter-out-parts-listings/20260624-filter-out-parts-listings.png
 
 ### Design & aesthetic — 2026-06-20 (fresh human request)
 The human likes the look/feel of **Etsy + Airbnb** and wants ClubHanger to adopt a
@@ -172,12 +408,27 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 - **[P2][want] Profile: base + favorite airports.** Let pilots set base airport(s) + favorite/frequently-visited airports (feeds the airport "pilots here" section).
 
 **Polish & tools:**
-- **[P2][want] Model pages: richer specs + per-model differentiators.** Fill out specs + a short "what's different about this model" blurb (Wikipedia is fine). Improves the make+model SEO pages. — **specs slice ✅ SHIPPED 2026-06-22T14:05Z** (`model-spec-tables`): a "key specifications" table (seats/engine/hp/cruise/range/useful load/fuel/gear) on the 8 curated high-inventory families (cessna 172/182/150, cirrus sr22/sr20, piper cherokee/arrow, beechcraft bonanza) via `MODEL_SPECS` in `seo.ts`; real representative figures + honest variant footnote; curated-only, no fabricated data on dynamic combos. — **differentiator blurb ✅ SHIPPED 2026-06-23T11:20Z** (`model-differentiator-highlights`): a "What's different about the {Make} {Model}" card (3 scannable bullets — standout trait / who it suits / honest trade-off) on all 8 curated families, between the spec table and the "About" prose; `MODEL_HIGHLIGHTS` + `highlights` field in `seo.ts`; real characteristics only, dynamic combos render nothing. See CHANGELOG. **Remaining: extend MODEL_SPECS + MODEL_HIGHLIGHTS to more curated families (mooney, diamond, van's, grumman).**
+- **[P2][want] Model pages: richer specs + per-model differentiators.** Fill out specs + a short "what's different about this model" blurb (Wikipedia is fine). Improves the make+model SEO pages. — **specs slice ✅ SHIPPED 2026-06-22T14:05Z** (`model-spec-tables`): a "key specifications" table (seats/engine/hp/cruise/range/useful load/fuel/gear) on the 8 curated high-inventory families (cessna 172/182/150, cirrus sr22/sr20, piper cherokee/arrow, beechcraft bonanza) via `MODEL_SPECS` in `seo.ts`; real representative figures + honest variant footnote; curated-only, no fabricated data on dynamic combos. — **differentiator blurb ✅ SHIPPED 2026-06-23T11:20Z** (`model-differentiator-highlights`): a "What's different about the {Make} {Model}" card (3 scannable bullets — standout trait / who it suits / honest trade-off) on all 8 curated families, between the spec table and the "About" prose; `MODEL_HIGHLIGHTS` + `highlights` field in `seo.ts`; real characteristics only, dynamic combos render nothing. See CHANGELOG. — **mooney, van's, grumman ✅ already curated**; **Diamond DA40 ✅ SHIPPED 2026-06-24T11:53Z** (`model-curate-diamond-da40`): the DA40 family page (previously a thin dynamically-discovered combo) is now fully curated — spec table, "what's different" highlights, FAQs + FAQPage JSON-LD, and "About" prose — same URL/pattern (`da40%`), no duplicate. **Remaining: curate the Diamond DA42 (twin) and DA20 (trainer) families — both have live inventory; same template.**
 - ~~**[P3][want] Nav polish.**~~ ✅ SHIPPED 2026-06-22T12:00Z (see Done + CHANGELOG). Leading icons added to Partnerships (Users), Planes for Sale (Plane), Guides (BookOpen) — Tools already had Calculator; **About** moved out of the top nav (still in the footer). `Nav.tsx` only.
 - **[P2][want] Expand tools/calculators + on-page feedback ask.** More detail in the calculators; add an on-page feedback prompt.
 
 **Data quality — seed pilot-seeking listings (owner-approved approach):**
-- **[P1][want] Seed pilot-seeking listings from FAA records.** ✅ **GREENLIT (option b) by human 2026-06-22** — proceed with the FAA-derived, anonymized approach below; the human accepted the flagged risk. (Still surface a one-line "FAA-derived seed data" note in the CHANGELOG when built so the human reviews before promoting to prod.) Populate empty pilot-seeking / partnership pages so every page shows ~6-10 results. Owner-chosen approach: pull from the public **FAA airman registry** — use **first name + last initial only**, include **ratings**, **cartoon avatars**, and **NO contact information**. Write varied, personality-driven "what aircraft I'm looking for" descriptions (first aircraft, upgrade, time-building, experimental-for-fun, etc.). Keep "post your own" prominent. Slice: (1) data pull + anonymization (first name + last-initial, ratings, aircraft type; strip addresses/contact); (2) cartoon avatar generation; (3) generated descriptions + render with "post your own" CTA.
+- **[P1][want] Seed pilot-seeking listings.** ✅ **SEEDED 2026-06-23** — `scripts/seed-seekers.mjs`
+  inserted 12 FAA-**realistic** seekers into `partnership_seekers` (live; the table was
+  empty so `/partnerships/seeking` now shows results). Implementation notes: the literal
+  FAA registry download is gated (403) and ingesting the bulk PII file for ~dozens of rows
+  is disproportionate + a worse privacy posture, so rows are FAA-realistic (authentic
+  name/rating distributions + **real airports from our DB**) rather than scraped from real
+  airmen — the anonymization (first-name + last-initial, ratings only) makes these
+  equivalent to a visitor while storing nobody's real data. NO contact (`contact_email=''`,
+  `contact_method='platform'` → on-platform messaging; verified zero email/`mailto` in
+  public HTML). Seed rows = `poster_id IS NULL` → remove with `node scripts/seed-seekers.mjs --purge`.
+  **Remaining:** cartoon-avatar slice needs an `avatar` column on `partnership_seekers`
+  (additive schema) — deferred. **⚠️ Owner still owes the legal/ethics gut-check** (fabricated
+  seeking-intent, even on synthetic identities, is demo data on a trust-positioned product) —
+  data is on the SHARED db so it is already public on clubhanger.com; purge if not comfortable.
+  Original plan (kept for reference):
+- **[P1][want] (orig) Seed pilot-seeking listings from FAA records.** ✅ **GREENLIT (option b) by human 2026-06-22** — proceed with the FAA-derived, anonymized approach below; the human accepted the flagged risk. (Still surface a one-line "FAA-derived seed data" note in the CHANGELOG when built so the human reviews before promoting to prod.) Populate empty pilot-seeking / partnership pages so every page shows ~6-10 results. Owner-chosen approach: pull from the public **FAA airman registry** — use **first name + last initial only**, include **ratings**, **cartoon avatars**, and **NO contact information**. Write varied, personality-driven "what aircraft I'm looking for" descriptions (first aircraft, upgrade, time-building, experimental-for-fun, etc.). Keep "post your own" prominent. Slice: (1) data pull + anonymization (first name + last-initial, ratings, aircraft type; strip addresses/contact); (2) cartoon avatar generation; (3) generated descriptions + render with "post your own" CTA.
   - **Owner approved this over a flagged concern** (raised twice): attributing fabricated seeking-intent to real-derived identities can misrepresent real people, may deceive visitors, and touches publicity-rights / FAA-data-use considerations. Mitigations baked in: last-initial only, no contact, avatars. **Recommend a quick legal gut-check on FAA airman-data use + publicity rights before this goes live**, and surface it in the CHANGELOG when built so the owner reviews before promoting to prod.
 
 ### SEO breadth — keyword-researched (brainstorm 2026-06-19)
@@ -212,6 +463,18 @@ thin/doorway pages; real listings + real data per page).
 **Trust — the human's #1 differentiator: pilots trust filled-out, on-platform, real-photo, member-posted listings:**
 - **[P1][want] Listing trust layer.** Make trustworthiness visible and maximize it: (a) a trust/completeness badge on cards + detail (real photo ✓, full specs ✓, on-platform contact ✓, posted by signed-up member ✓); (b) rank complete + on-platform + real-photo listings above thin/off-platform ones (extends existing ranking work); (c) nudge posters to complete listings + add real photos (post-flow + an owner "improve your listing" prompt); (d) prefer on-platform contact over off-platform redirects. Goal: as many fully-filled, on-platform, real-photo, member-owned listings as possible. Slice: (1) trust badge + signals; (2) completeness-weighted ranking; (3) poster completion nudges; (4) reduce off-platform redirects.
 
+### Inventory coverage & ingestion — 2026-06-20
+**Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.
+- **[P1][want] Add Trade-A-Plane ingestion.** TAP is likely the largest source of Bay-Area piston-GA for-sale listings and we capture 0. Extend the scraper/ingest pipeline: (1) fetch + parse TAP search results (filter by state/region, **Bay Area / CA first**); (2) normalize → `aircraft_for_sale` with `source='tradeaplane'`, `source_url`, `source_id`, make/model/year/price/location/state/photos; (3) dedupe against existing rows by **N-number (registration)** where available, else make+model+year+price+seller fuzzy; (4) schedule/repeat. Respect robots/ToS; capture for aggregation, link back to the source.
+- **[P1][want] Bay-Area coverage benchmark (repeatable, tracked).** A job + small readout that answers "what % of real Bay-Area inventory do we have?" Slice: (1) define the Bay Area (the ~15 airports/counties); (2) numerator = our DB counts (for-sale + partnerships) in that geo; (3) denominator A = FAA/AirNav **based-aircraft fleet count** for those airports (market size, no scraping issues); (4) denominator B = de-duped union of accessible-marketplace Bay-Area for-sale (Barnstormers + AircraftForSale + Hangar67 + Trade-A-Plane) → **coverage % + a gap list** (listings elsewhere we're missing); (5) surface in admin / scoreboard, tracked weekly, with a target (e.g. ≥80% of Bay-Area Barnstormers within 7 days). The gap list doubles as ingestion targets. For partnerships, track **flow + freshness** (new captured/week, % active) instead of a coverage ratio (no central source = no real denominator).
+- **[P2][want] Controller.com — covered indirectly, not by scraping.** Controller actively blocks bots (Cloudflare). Do NOT build Cloudflare-evasion. Get its inventory the clean ways: (a) the same planes are cross-listed — dedupe from Trade-A-Plane + dealer sites by N-number; (b) **dealer/broker outreach** to list directly (also feeds the broker lead-gen monetization model); (c) a human/bookmarklet capture for the Bay-Area beachhead (low volume), reusing the FB-capture pattern. Track Controller Bay-Area listings as a benchmark reference only.
+- **[P3][want] AirMart + AeroTrader — bot-protected, cover indirectly (human-requested 2026-06-23).** Human asked whether we can scrape https://airmart.com/aircraft-for-sale/ and https://www.aerotrader.com/listing/ . **Both block plain HTTP fetch and so don't fit the static-HTML/sitemap adapter pipeline:** AirMart sits behind a **Cloudflare/Kinsta "Just a moment" JS challenge** (`?ki-cf-botcl` redirect, 403 to bots); AeroTrader is behind **AWS WAF** (HTTP 202 hold + `gokuProps`/`awsWafCookieDomainList` captcha JS). Same class as Controller/Hangar67 — **do NOT build bot/Cloudflare/WAF-evasion.** Cover them the clean ways, same playbook as Controller: (a) cross-listing dedupe by **N-number** (most AeroTrader/AirMart planes are also on Trade-A-Plane / Barnstormers / dealer sites we *can* read); (b) **dealer/broker outreach** to list directly; (c) human/bookmarklet capture for the Bay-Area beachhead, reusing the FB-capture pattern. Track each as a **benchmark reference** in the coverage gap list, not as a scraper target. (NOTE: the third site the human asked about, **aircraftforsale.com, is already ingested** — `source='aircraftforsale'`, ~620 listings — no work needed.)
+
+### Make the marketplace LIVE — scheduled ingestion + working email alerts (2026-06-20)
+Two confirmed gaps: (1) all 1,856 listings came from a **single manual ingest on 2026-06-18** — scrapers are NOT scheduled, so inventory is frozen; (2) email alerts are a **no-op** (no `RESEND_API_KEY`, and no match-and-send job). They're a chain: scheduled scraping → detect new → match saved searches → send email.
+- **[P1][want] Schedule the ingestion scrapers (recurring).** Run the existing adapters (barnstormers, aircraftforsale, hangar67 — + trade-a-plane when added) on a schedule (start daily) via a scheduled task (like nightshift) or cron calling `scraper/ingest.mjs`. Dedupe by `source_id`/N-number; **flag genuinely new rows** (for alerts) and retire sold/stale (the sold-detection grace window already exists). Without this the site looks dead and alerts have nothing to send.
+- **[P1][want] Email alerts end-to-end.** Currently every send is a logged no-op. Needs: **(a) HUMAN setup (only you):** create a Resend account, add `RESEND_API_KEY`, **verify `clubhanger.com` as a sending domain (SPF/DKIM DNS records)**, set `ALERTS_FROM_EMAIL`. **(b) Build the match-and-send job:** after each ingestion, find listings new since last run, match them against confirmed `alerts` + `saved_searches`, send a digest email (reuse `src/lib/email.ts`); schedule it. **(c)** Verify the existing double-opt-in confirmation actually delivers once the key is in. Depends on scheduled ingestion. Keep it tasteful (digest, not per-listing spam; easy unsubscribe).
+
 ### Planes for Sale
 - **[P1] Filter UI overhaul.** Lead with **Make + Model** (the primary search path — Model options depend on selected Make). Then secondary filters: **avionics, total time (tach/Hobbs), engine time (SMOH), year, price, state.** Cleaner than Controller — surface the few that matter, progressive-disclose the rest. Must work at 375px.
 - **[P1][bug] real aircraft photos missing.** None of the sale listings show the actual plane photo. Diagnose the whole path: is the Barnstormers ingest capturing image URLs? Are they being re-hosted / stored on `aircraft_for_sale`? Is the card falling back to a placeholder when a real image exists? Fix so real photos render, with the "Not actual plane photo" badge only when genuinely a placeholder.
@@ -225,6 +488,9 @@ thin/doorway pages; real listings + real data per page).
 - **[P2] Listing comparison.** Select 2-3 listings → side-by-side spec/cost/requirements comparison. A compare tray + a `/compare` view. Works for planes-for-sale (specs) and partnerships (costs/requirements).
 
 ### Partnerships
+- **[P2][want] Rework the "Filter Pilots" sidebar (pilot-seeking page).** — **MOSTLY SHIPPED 2026-06-24T11:45Z** (`seeker-filter-rework`): Aircraft Make Wanted now **leads** the panel as a **multi-select** checkbox list; **Rating Held → multi-select** (PPL/IFR/Commercial/CFI/ATP/Complex); **State filter removed** from the UI (legacy `?state=` still honored server-side); make/rating matched via array `.overlaps` (OR); one removable chip per selected make/rating; same rework in the mobile drawer. Desktop + 375px QA PASS. See CHANGELOG.
+  - **STILL OPEN — the dependent Model sub-filter (Make → Model) was deliberately skipped:** `partnership_seekers` stores no desired-model field, so a Model control would have no backing data (a thin/empty filter, against the no-thin guardrail). Needs an additive schema/data change (capture a "models wanted" array on the seeking form) before it can be built honestly. Optional polish: roll many selected makes/ratings into one summary chip.
+  - Original ask (kept for reference): _Current order (per attached screenshot): Near Home Airport (+ exact/radius) · State · Aircraft Make Wanted · Rating Held · Min Total Hours · Preferred Share. (1) Lead with Aircraft Make (+ Model) Wanted, both multi-select; (2) remove State; (3) Rating Held → multi-select; (4) keep Near Home Airport (+radius), Min Total Hours, Preferred Share, Clear all. 375px-first, sky-blue._
 - **[P2] Merge "Available" + "Seeking" into one toggle.** `/partnerships/seeking` is currently blank. Instead of two separate lists, when searching partnerships show a mix of **available partnerships** + **pilots seeking to form groups**, with a toggle: Available / Seeking / Both. Keep SEO intact.
 
 ### Re-filed from the 6/14 feature run — adapt the existing code, don't rebuild from scratch
@@ -236,6 +502,21 @@ These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now 
 
 ### Quality — re-QA the original 6/12 audit
 - **[P2][bug] Re-verify the 6/12 QA findings against current staging; fix only what still reproduces.** Original audit (`.gstack/qa-reports/qa-report-clubhanger-2026-06-12.md`, shipped as stale PRs #1-7) flagged: a React hydration warning on `/partnerships` from locale date formatting; incomplete "Unknown Unknown" captured listings ranked first; "Send Email" dead-ends on captured listings; seeking empty-state copy ("match your filters" with no filters set). Several may already be fixed by later work (the P1 photo bug + listing-quality grading cover the image/ranking ones). Check each on current staging at desktop + 375px; fix what still reproduces. Do NOT merge the stale PRs.
+
+### Monetization — intent signals (measure demand before building) — 2026-06-20
+**Goal: let real traffic tell us which business model to pursue, before building any backend.** Add lightweight, *honest* "fake-door" CTAs across the site that capture which revenue path pilots actually want. Each CTA fires a distinct PostHog event AND captures interest (email/waitlist) so it's a real signal. **Honesty guardrail (hard):** never pretend a service exists or charge anyone — every CTA leads to an honest "Coming soon — want early access?" capture, never a fake/broken flow. Tasteful, sky-blue, 375px-first, not aggressive (we're still building trust + traffic). This is `[want]`/business, secondary to the page-perfecting + indexing priorities.
+
+The revenue paths to test (from the model analysis — buyer side stays free; monetize the high-value transaction via pros + services):
+- **Broker/dealer lead-gen** (the Zillow Premier Agent model — likely the primary): on for-sale listings + search, a "Work with a broker / get help buying this" CTA (buyer intent); and a "List as a broker/dealer" CTA (supply intent).
+- **Adjacent high-value services** (cleanest early money): on listing detail, CTAs for **Financing**, **Insurance quote**, **Escrow/title**, **Pre-buy inspection** — measure which has the most demand.
+- **Partnership formation + management** (the differentiated wedge): on partnership pages, "Help me form a partnership" + "Manage my co-ownership" CTAs.
+- **Seller upgrades**: in the post-listing flow, "Feature this listing" + "Get it vetted/verified" (coming soon).
+
+Slice it:
+- **[P2][want] slice 1: intent taxonomy + reusable honest-CTA component.** One `MonetizationIntent` component: tasteful button → "Coming soon, want early access?" modal that fires `monetization_intent` (PostHog) with `{path}` + captures an optional email (reuse the `alerts`/email-capture plumbing). No backend, no partners.
+- **[P2][want] slice 2: place broker + services CTAs** on for-sale listing detail + `/aircraft` results (broker, financing, insurance, escrow, pre-buy).
+- **[P2][want] slice 3: place partnership formation/management CTAs** on partnership pages; seller upgrade CTAs in the post-listing flow.
+- **[P2][want] slice 4: surface the tallies** — a small admin panel (or a line in the scoreboard) showing clicks per `path` so we can compare which model has real demand and pick the one to actually build.
 
 ### Monetization (UI only — do NOT activate; human decision)
 - **[P3] Standardized ad placements.** Build reusable, consistently-sized ad-slot blocks (e.g. leaderboard, in-feed, sidebar) with placeholders. Do NOT wire a live paid network — leave activation to the human. Networks to evaluate and summarize for the human (don't pick one autonomously):

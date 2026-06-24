@@ -13,11 +13,13 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
+import ModelFaq from '@/components/ModelFaq'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
-import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
+import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { MISSIONS } from '@/lib/missions'
+import { COMPARISONS, comparisonLabel } from '@/lib/aircraftComparisons'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -45,6 +47,42 @@ export const metadata: Metadata = {
     images: [DEFAULT_OG_IMAGE],
   },
 }
+
+// Unique, evergreen editorial prose for the for-sale hub (content depth for the
+// INDEXING stage — priority seed page #2). No live counts / fabricated stats, so
+// it stays accurate over time. Distinct in angle from the PARTNERSHIPS_OVERVIEW.
+const AIRCRAFT_OVERVIEW: string[] = [
+  'ClubHanger aggregates general-aviation aircraft for sale from across the web — sources like Barnstormers and other classifieds — into one searchable place. Every listing links back to its original source, where you complete the purchase: ClubHanger is a search tool, not the seller or a broker, and we never take a commission on a sale.',
+  'Use the filters to narrow the market the way buyers actually shop — by make and model, asking price, year, total time on the airframe, and location. The chip bar at the top sets the same filters in one tap, and you can save a search to get an email when new matching aircraft are listed. Listing data comes from third parties and can go stale, so always confirm the details on the source listing before you act.',
+  'Buying a used aircraft is a bigger commitment than the sticker price: budget for a pre-buy inspection, review the logbooks and damage history, and weigh ongoing costs like the annual, insurance, and hangar or tie-down. If owning a whole aircraft is more than you need, a co-ownership partnership splits those costs across several pilots — browse open shares under Partnerships.',
+]
+
+// Curated, evergreen FAQ for the for-sale hub — genuine questions a buyer searches.
+// Rendered as a visible accordion AND emitted as FAQPage JSON-LD, so the visible
+// text must match the structured data 1:1 (ModelFaq + buildFaqPageJsonLd share this
+// array). No fabricated stats / live counts → never goes stale.
+const AIRCRAFT_FAQS: { q: string; a: string }[] = [
+  {
+    q: 'Where do these aircraft for sale come from?',
+    a: 'They are aggregated from third-party aircraft classifieds across the web, such as Barnstormers. ClubHanger collects them into one searchable place and links each listing back to its original source, where the sale actually happens. ClubHanger is not the seller and does not take a commission.',
+  },
+  {
+    q: 'How do I search for a specific aircraft?',
+    a: 'Use the filters to narrow by make and model, asking price, year, total time on the airframe, and location. The quick-filter chip bar at the top of the page sets the same filters in one tap, and you can sort by newest, price, or recent price drops.',
+  },
+  {
+    q: 'How much does it cost to buy a used general aviation aircraft?',
+    a: 'It varies widely by type, age, hours, and avionics — a basic two-seat trainer and a glass-panel cross-country single sit at very different price points. Each listing shows the seller’s asking price, and many also show how that price compares to other similar aircraft on the marketplace so you can judge whether it is priced below, around, or above the market.',
+  },
+  {
+    q: 'What should I check before buying a used aircraft?',
+    a: 'Review the airframe and engine logbooks, the time since the last engine overhaul, any damage history, and when the last annual inspection was completed. Most buyers also commission an independent pre-buy inspection before closing. Always confirm the details on the source listing, since aggregated data can be out of date.',
+  },
+  {
+    q: 'Can I buy a share of an aircraft instead of the whole thing?',
+    a: 'Yes. If owning an entire aircraft is more than you need, a co-ownership partnership lets several pilots split the purchase and the ongoing costs. Browse open partnership shares under Partnerships, or use the cost calculator to compare full ownership against a share.',
+  },
+]
 
 type SearchParams = Record<string, string | undefined>
 
@@ -85,6 +123,10 @@ export default async function AircraftPage({
     name: aircraftTitle,
     url: `${SITE_URL}/aircraft`,
   })
+  // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
+  const faqJsonLd = buildFaqPageJsonLd(AIRCRAFT_FAQS, {
+    url: `${SITE_URL}/aircraft`,
+  })
 
   return (
     <CompareProvider>
@@ -98,6 +140,12 @@ export default async function AircraftPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateOfferJsonLd) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
     {/* Warm cream marketplace surface (Etsy×Airbnb design tokens — slice 1).
@@ -156,7 +204,7 @@ export default async function AircraftPage({
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
             </div>
-            <AircraftSaleFilters initialValues={params} facets={facets} />
+            <AircraftSaleFilters initialValues={params} facets={facets} saveSearchBasePath="/aircraft" />
           </div>
         </aside>
 
@@ -165,7 +213,7 @@ export default async function AircraftPage({
             widening the page at desktop. */}
         <div className="min-w-0 flex-1">
           {/* Active-filter chips — removable, one per active filter. */}
-          <ActiveFilterChips params={params} />
+          <ActiveFilterChips params={params} facets={facets} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
             <AircraftSaleList filters={params} />
           </Suspense>
@@ -223,6 +271,38 @@ export default async function AircraftPage({
             </div>
           </div>
 
+          {/* Compare aircraft head-to-head — crawlable internal links to the curated
+              comparison pages ("{model} vs {model}"). Reaches that family from the
+              priority seed page #2 (previously linked only from individual model hubs),
+              spreading crawl equity from a high-authority page. Labels via the shared
+              comparisonLabel helper; any pair that fails to resolve is skipped. */}
+          <div className="ch-panel mt-4 p-6">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-semibold text-slate-900">Compare aircraft head-to-head</h2>
+              <Link
+                href="/aircraft/compare"
+                className="text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+              >
+                View all comparisons →
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {COMPARISONS.map((c) => {
+                const label = comparisonLabel(c)
+                if (!label) return null
+                return (
+                  <Link
+                    key={c.slug}
+                    href={`/aircraft/compare/${c.slug}`}
+                    className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Cross-sell to the other marketplace type (co-ownership partnerships).
               Make-aware: carries the active make filter through. */}
           <MarketplaceCrossSell
@@ -238,6 +318,23 @@ export default async function AircraftPage({
           <ForSaleGuideLinks className="mt-4" />
         </div>
       </div>
+
+      {/* About — unique, evergreen editorial prose (content depth for the INDEXING
+          stage, priority seed page #2). Below the listings so the page leads with
+          filters + results. Mirrors the /partnerships hub. */}
+      <section className="mt-12 ch-panel p-5 sm:p-6">
+        <h2 className="mb-3 text-base font-semibold text-slate-900">
+          About buying aircraft on ClubHanger
+        </h2>
+        <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+          {AIRCRAFT_OVERVIEW.map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
+        </div>
+      </section>
+
+      {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
+      <ModelFaq label="Buying an aircraft" faqs={AIRCRAFT_FAQS} className="mt-8" />
     </div>
     </div>
     <CompareTray />

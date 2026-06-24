@@ -27,24 +27,60 @@ export default function SeekerActiveFilterChips({ params }: { params: Params }) 
     return Number.isFinite(n) && n > 0 ? n : null
   }
 
-  const airport = params.airport?.trim()
-  if (airport) {
-    const radius = num(params.radius)
-    chips.push({
-      key: 'airport',
-      label: radius ? `Within ${radius} mi of ${airport.toUpperCase()}` : airport.toUpperCase(),
-      href: buildHref(params, (p) => { p.delete('airport'); p.delete('radius') }),
-    })
+  // Home airports — the multi-select `airports` param renders one removable chip
+  // per code (removing one rewrites `airports` without it). Takes precedence over
+  // the legacy single `airport`(+radius) chip, kept only for back-compat with old
+  // links / saved searches that still carry `airport`.
+  const airportCodes = (params.airports ?? '')
+    .split(',')
+    .map((a) => a.trim().toUpperCase())
+    .filter(Boolean)
+  if (airportCodes.length > 0) {
+    const soleRadius = airportCodes.length === 1 ? num(params.radius) : null
+    for (const code of airportCodes) {
+      chips.push({
+        key: `airport:${code}`,
+        label: soleRadius ? `Within ${soleRadius} mi of ${code}` : code,
+        href: buildHref(params, (p) => {
+          const rest = airportCodes.filter((c) => c !== code)
+          if (rest.length) p.set('airports', rest.join(','))
+          else { p.delete('airports'); p.delete('radius') }
+        }),
+      })
+    }
+  } else {
+    const airport = params.airport?.trim()
+    if (airport) {
+      const radius = num(params.radius)
+      chips.push({
+        key: 'airport',
+        label: radius ? `Within ${radius} mi of ${airport.toUpperCase()}` : airport.toUpperCase(),
+        href: buildHref(params, (p) => { p.delete('airport'); p.delete('radius') }),
+      })
+    }
   }
 
   const state = params.state?.trim()
   if (state) chips.push({ key: 'state', label: STATE_NAMES[state.toUpperCase()] ?? state, href: buildHref(params, (p) => p.delete('state')) })
 
-  const make = params.make?.trim()
-  if (make) chips.push({ key: 'make', label: `Wants ${make}`, href: buildHref(params, (p) => p.delete('make')) })
+  // Make / Rating are multi-select (comma-joined) → one removable chip per value,
+  // each link dropping only that value and leaving the rest of the list applied.
+  const splitMulti = (raw: string | undefined): string[] =>
+    (raw ?? '').split(',').map((v) => v.trim()).filter(Boolean)
 
-  const rating = params.rating?.trim()
-  if (rating) chips.push({ key: 'rating', label: `${rating}-rated`, href: buildHref(params, (p) => p.delete('rating')) })
+  const dropFromList = (key: string, value: string) => (p: URLSearchParams) => {
+    const next = splitMulti(p.get(key) ?? undefined).filter((v) => v !== value)
+    if (next.length) p.set(key, next.join(','))
+    else p.delete(key)
+  }
+
+  for (const make of splitMulti(params.make)) {
+    chips.push({ key: `make:${make}`, label: `Wants ${make}`, href: buildHref(params, dropFromList('make', make)) })
+  }
+
+  for (const rating of splitMulti(params.rating)) {
+    chips.push({ key: `rating:${rating}`, label: `${rating}-rated`, href: buildHref(params, dropFromList('rating', rating)) })
+  }
 
   const minHours = num(params.min_hours)
   if (minHours) chips.push({ key: 'min_hours', label: `${minHours}+ hours`, href: buildHref(params, (p) => p.delete('min_hours')) })

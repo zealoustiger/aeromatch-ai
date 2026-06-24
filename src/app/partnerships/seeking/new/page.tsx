@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import PostSeekerListingForm from '@/components/PostSeekerListingForm'
+import PostTypeTabs from '@/components/PostTypeTabs'
 
 export const metadata: Metadata = {
   title: 'Post a Seeking Listing — Find an Aircraft Partnership',
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function NewSeekerListingPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+      <PostTypeTabs active="seeking" />
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Post a Seeking Listing</h1>
         <p className="mt-2 text-slate-500">

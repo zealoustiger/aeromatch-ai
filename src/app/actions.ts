@@ -35,15 +35,26 @@ export async function createPartnership(formData: FormData) {
   const ratingsRaw = formData.get('ratings_required') as string
   const ratings = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
 
+  // The post form now asks only for the ICAO (frictionless) — derive the airport
+  // name / city / state from the authoritative `airports` table so the location is
+  // accurate and the `/partnerships/state/[state]` SEO pages still get a real state.
+  // Falls back to null when the ICAO isn't in our table (insert still succeeds).
+  const home_airport = (formData.get('home_airport') as string).toUpperCase()
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('name, city, state')
+    .eq('icao', home_airport)
+    .maybeSingle()
+
   const payload = {
     make: formData.get('make') as string,
     model: formData.get('model') as string,
     year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
     registration: (formData.get('registration') as string) || null,
-    home_airport: (formData.get('home_airport') as string).toUpperCase(),
-    airport_name: (formData.get('airport_name') as string) || null,
-    city: (formData.get('city') as string) || null,
-    state: (formData.get('state') as string) || null,
+    home_airport,
+    airport_name: airport?.name ?? null,
+    city: airport?.city ?? null,
+    state: airport?.state ?? null,
     share_type: formData.get('share_type') as string,
     shares_available: parseInt(formData.get('shares_available') as string) || 1,
     total_shares: formData.get('total_shares') ? parseInt(formData.get('total_shares') as string) : null,
@@ -118,6 +129,17 @@ export async function createSeekerListing(formData: FormData) {
   const useRaw = formData.get('intended_use') as string
   const intended_use = useRaw ? useRaw.split(',').map((u) => u.trim()).filter(Boolean) : null
 
+  // The form now asks only for the ICAO (frictionless) — derive the airport
+  // name / city / state from the authoritative `airports` table so the location is
+  // accurate and the seeking / `/partnerships/state/[state]` SEO surfaces still get a
+  // real state. Falls back to null when the ICAO isn't in our table (insert still succeeds).
+  const home_airport = (formData.get('home_airport') as string).toUpperCase()
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('name, city, state')
+    .eq('icao', home_airport)
+    .maybeSingle()
+
   const payload = {
     preferred_makes,
     preferred_models: (formData.get('preferred_models') as string) || null,
@@ -127,10 +149,10 @@ export async function createSeekerListing(formData: FormData) {
     max_buy_in: formData.get('max_buy_in') ? parseInt(formData.get('max_buy_in') as string) : null,
     max_monthly: formData.get('max_monthly') ? parseInt(formData.get('max_monthly') as string) : null,
     max_hourly: formData.get('max_hourly') ? parseInt(formData.get('max_hourly') as string) : null,
-    home_airport: (formData.get('home_airport') as string).toUpperCase(),
-    airport_name: (formData.get('airport_name') as string) || null,
-    city: (formData.get('city') as string) || null,
-    state: (formData.get('state') as string) || null,
+    home_airport,
+    airport_name: airport?.name ?? null,
+    city: airport?.city ?? null,
+    state: airport?.state ?? null,
     willing_to_travel_nm: formData.get('willing_to_travel_nm') ? parseInt(formData.get('willing_to_travel_nm') as string) : null,
     total_hours: formData.get('total_hours') ? parseInt(formData.get('total_hours') as string) : null,
     ratings_held,
@@ -483,6 +505,33 @@ export async function deleteSavedSearch(id: string) {
     .eq('user_id', user.id)
 
   if (error) return { error: 'Failed to delete search.' }
+
+  revalidatePath('/searches')
+  return { ok: true }
+}
+
+// Rename a saved search's display name (slice 2 of one-click save). Owner-scoped
+// (user_id + RLS), additive — only the `name` column changes, never the criteria.
+// Mirrors saveSearch's 23505 handling so a duplicate name is a friendly message,
+// not a crash.
+export async function renameSavedSearch(id: string, name: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const trimmed = name.trim().slice(0, 120)
+  if (!trimmed) return { error: 'Name cannot be empty.' }
+
+  const { error } = await supabase
+    .from('saved_searches')
+    .update({ name: trimmed })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    if (error.code === '23505') return { error: 'You already have a search with that name.' }
+    return { error: 'Failed to rename search.' }
+  }
 
   revalidatePath('/searches')
   return { ok: true }
