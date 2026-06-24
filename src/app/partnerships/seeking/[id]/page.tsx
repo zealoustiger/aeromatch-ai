@@ -127,11 +127,43 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               </div>
             )}
           </div>
+        </div>
 
-          {/* Aircraft preferences */}
+        {/* Sidebar — key match facts sit beside the contact CTA */}
+        <div className="space-y-4">
+          {/* Budget card */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Budget</h2>
+            <dl className="space-y-3">
+              {s.max_buy_in && (
+                <div>
+                  <dt className="text-xs text-slate-400">Max Buy-In</dt>
+                  <dd className="text-2xl font-bold text-slate-900">{formatPrice(s.max_buy_in)}</dd>
+                </div>
+              )}
+              {s.max_monthly && (
+                <div>
+                  <dt className="text-xs text-slate-400">Max Monthly</dt>
+                  <dd className="text-lg font-semibold text-slate-800">{formatPrice(s.max_monthly)}<span className="text-sm font-normal text-slate-400">/mo</span></dd>
+                </div>
+              )}
+              {s.max_hourly && (
+                <div>
+                  <dt className="text-xs text-slate-400">Max Wet Rate</dt>
+                  <dd className="text-lg font-semibold text-slate-800">{formatPrice(s.max_hourly)}<span className="text-sm font-normal text-slate-400">/hr</span></dd>
+                </div>
+              )}
+              {!s.max_buy_in && !s.max_monthly && (
+                <dd className="text-sm text-slate-400">Flexible — contact to discuss</dd>
+              )}
+            </dl>
+          </div>
+
+          {/* Aircraft preferences — in the right rail so the key match facts sit
+              beside the contact CTA; single-column grid to fit the narrow rail. */}
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Aircraft Preferences</h2>
-            <dl className="grid gap-3 sm:grid-cols-2">
+            <dl className="grid gap-3">
               <div>
                 <dt className="text-xs text-slate-400">Looking for</dt>
                 <dd className="mt-0.5 flex items-center gap-1.5 font-semibold text-slate-800">
@@ -177,7 +209,7 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
           {(s.hours_per_month || (s.intended_use && s.intended_use.length > 0)) && (
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Flying Profile</h2>
-              <dl className="grid gap-3 sm:grid-cols-2">
+              <dl className="grid gap-3">
                 {s.hours_per_month && (
                   <div>
                     <dt className="text-xs text-slate-400">Expected hours/month</dt>
@@ -201,37 +233,6 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
               </dl>
             </div>
           )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Budget card */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Budget</h2>
-            <dl className="space-y-3">
-              {s.max_buy_in && (
-                <div>
-                  <dt className="text-xs text-slate-400">Max Buy-In</dt>
-                  <dd className="text-2xl font-bold text-slate-900">{formatPrice(s.max_buy_in)}</dd>
-                </div>
-              )}
-              {s.max_monthly && (
-                <div>
-                  <dt className="text-xs text-slate-400">Max Monthly</dt>
-                  <dd className="text-lg font-semibold text-slate-800">{formatPrice(s.max_monthly)}<span className="text-sm font-normal text-slate-400">/mo</span></dd>
-                </div>
-              )}
-              {s.max_hourly && (
-                <div>
-                  <dt className="text-xs text-slate-400">Max Wet Rate</dt>
-                  <dd className="text-lg font-semibold text-slate-800">{formatPrice(s.max_hourly)}<span className="text-sm font-normal text-slate-400">/hr</span></dd>
-                </div>
-              )}
-              {!s.max_buy_in && !s.max_monthly && (
-                <dd className="text-sm text-slate-400">Flexible — contact to discuss</dd>
-              )}
-            </dl>
-          </div>
 
           {/* Contact card — contact details are private by default and only
               shown to signed-in members, so a pilot's email/phone are never
