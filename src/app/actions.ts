@@ -129,6 +129,17 @@ export async function createSeekerListing(formData: FormData) {
   const useRaw = formData.get('intended_use') as string
   const intended_use = useRaw ? useRaw.split(',').map((u) => u.trim()).filter(Boolean) : null
 
+  // The form now asks only for the ICAO (frictionless) — derive the airport
+  // name / city / state from the authoritative `airports` table so the location is
+  // accurate and the seeking / `/partnerships/state/[state]` SEO surfaces still get a
+  // real state. Falls back to null when the ICAO isn't in our table (insert still succeeds).
+  const home_airport = (formData.get('home_airport') as string).toUpperCase()
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('name, city, state')
+    .eq('icao', home_airport)
+    .maybeSingle()
+
   const payload = {
     preferred_makes,
     preferred_models: (formData.get('preferred_models') as string) || null,
@@ -138,10 +149,10 @@ export async function createSeekerListing(formData: FormData) {
     max_buy_in: formData.get('max_buy_in') ? parseInt(formData.get('max_buy_in') as string) : null,
     max_monthly: formData.get('max_monthly') ? parseInt(formData.get('max_monthly') as string) : null,
     max_hourly: formData.get('max_hourly') ? parseInt(formData.get('max_hourly') as string) : null,
-    home_airport: (formData.get('home_airport') as string).toUpperCase(),
-    airport_name: (formData.get('airport_name') as string) || null,
-    city: (formData.get('city') as string) || null,
-    state: (formData.get('state') as string) || null,
+    home_airport,
+    airport_name: airport?.name ?? null,
+    city: airport?.city ?? null,
+    state: airport?.state ?? null,
     willing_to_travel_nm: formData.get('willing_to_travel_nm') ? parseInt(formData.get('willing_to_travel_nm') as string) : null,
     total_hours: formData.get('total_hours') ? parseInt(formData.get('total_hours') as string) : null,
     ratings_held,

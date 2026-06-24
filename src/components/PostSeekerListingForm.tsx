@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex', 'Multi-Engine']
-const SCHEDULING = ['Google Calendar', 'FlyingClub', 'OpenPilot', 'SimPlates', 'Email/text', 'Other']
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
 const INTENDED_USE_OPTIONS = [
   { value: 'personal_travel', label: 'Personal Travel' },
@@ -22,12 +21,6 @@ const AIRCRAFT_CATEGORIES = [
   { value: 'mel', label: 'Multi-Engine' },
   { value: 'turboprop', label: 'Turboprop' },
   { value: 'jet', label: 'Jet' },
-]
-const US_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-  'VA','WA','WV','WI','WY',
 ]
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
@@ -172,22 +165,9 @@ export default function PostSeekerListingForm() {
               maxLength={4}
               className="font-mono uppercase"
             />
-            <p className="mt-1 text-xs text-slate-400">4-letter ICAO code for your home airport</p>
-          </div>
-          <div>
-            <Label>Airport Name</Label>
-            <Input name="airport_name" placeholder="e.g. Austin-Bergstrom International" />
-          </div>
-          <div>
-            <Label>City</Label>
-            <Input name="city" placeholder="e.g. Austin" />
-          </div>
-          <div>
-            <Label>State</Label>
-            <Select name="state">
-              <option value="">Select state</option>
-              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <p className="mt-1 text-xs text-slate-400">
+              Just the 4-letter ICAO code — we&apos;ll fill in the airport name, city, and state from it.
+            </p>
           </div>
           <div>
             <Label>Willing to Travel</Label>
@@ -246,26 +226,17 @@ export default function PostSeekerListingForm() {
       {/* Partnership preferences */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Partnership Preferences</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Preferred Share Types</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {SHARE_TYPES.map((t) => (
-                <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                  <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
-                  {t}
-                </label>
-              ))}
-            </div>
-            <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
+        <div>
+          <Label>Preferred Share Types</Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SHARE_TYPES.map((t) => (
+              <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
+                <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
+                {t}
+              </label>
+            ))}
           </div>
-          <div>
-            <Label>Preferred Scheduling System</Label>
-            <Select name="preferred_scheduling">
-              <option value="">No preference</option>
-              {SCHEDULING.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </div>
+          <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
         </div>
       </section>
 
