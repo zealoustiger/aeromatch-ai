@@ -509,3 +509,30 @@ export async function deleteSavedSearch(id: string) {
   revalidatePath('/searches')
   return { ok: true }
 }
+
+// Rename a saved search's display name (slice 2 of one-click save). Owner-scoped
+// (user_id + RLS), additive — only the `name` column changes, never the criteria.
+// Mirrors saveSearch's 23505 handling so a duplicate name is a friendly message,
+// not a crash.
+export async function renameSavedSearch(id: string, name: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const trimmed = name.trim().slice(0, 120)
+  if (!trimmed) return { error: 'Name cannot be empty.' }
+
+  const { error } = await supabase
+    .from('saved_searches')
+    .update({ name: trimmed })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    if (error.code === '23505') return { error: 'You already have a search with that name.' }
+    return { error: 'Failed to rename search.' }
+  }
+
+  revalidatePath('/searches')
+  return { ok: true }
+}
