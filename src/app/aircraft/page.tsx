@@ -213,7 +213,7 @@ export default async function AircraftPage({
             widening the page at desktop. */}
         <div className="min-w-0 flex-1">
           {/* Active-filter chips — removable, one per active filter. */}
-          <ActiveFilterChips params={params} />
+          <ActiveFilterChips params={params} facets={facets} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
             <AircraftSaleList filters={params} />
           </Suspense>
