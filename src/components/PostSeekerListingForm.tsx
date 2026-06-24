@@ -23,6 +23,29 @@ const AIRCRAFT_CATEGORIES = [
   { value: 'jet', label: 'Jet' },
 ]
 
+// Plain-language guidance shown beside the Description field so the box isn't a
+// blank-page barrier. Tips + two genuine example write-ups (a first-time buyer and
+// an experienced IFR time-builder) — purely static content, no client state.
+const DESCRIPTION_TIPS = [
+  'Lead with who you are — your ratings, total hours, and how current you are.',
+  'Say how you actually fly: typical missions, hours per month, day/night/IFR.',
+  'Be clear on what you want — share size, budget, based airport, and timeline.',
+  'Show you’ll be a good partner: how you treat aircraft, fund reserves, and communicate.',
+]
+
+const DESCRIPTION_EXAMPLES = [
+  {
+    label: 'First-time buyer',
+    text:
+      'Private pilot, 240 hours, recently instrument-rated and flying about 8 hours a month out of KAUS. Looking for a 1/3 or 1/4 share in a well-maintained IFR single (Cessna 182 or Cirrus SR20/22) for weekend trips around Texas and the occasional cross-country to see family. I’m meticulous about squawks and logbooks, happy to fund a healthy engine/maintenance reserve, and I prefer a scheduling app so everyone has fair access. Hoping to join in the next 1–2 months.',
+  },
+  {
+    label: 'Experienced time-builder',
+    text:
+      'Commercial pilot, 1,400 hours, CFI/CFII building toward the airlines. Fly 15–20 hours a month and want a 1/2 share in a glass-panel SR22 or similar near KPAO for instrument currency and cross-country work. I keep aircraft hangared and spotless, pay reserves on time, and I’m an easy, communicative partner. Open to a leaseback structure if it works for the group. Ready to move quickly for the right airplane.',
+  },
+]
+
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -255,6 +278,33 @@ export default function PostSeekerListingForm() {
           </div>
           <div>
             <Label>Description</Label>
+            <div className="mb-2 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+              <p className="text-xs font-semibold text-sky-800">How to write a great description</p>
+              <ul className="mt-1.5 space-y-1">
+                {DESCRIPTION_TIPS.map((tip) => (
+                  <li key={tip} className="flex gap-1.5 text-xs text-slate-600">
+                    <span aria-hidden className="text-sky-400">•</span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+              <details className="group mt-2">
+                <summary className="cursor-pointer list-none text-xs font-medium text-sky-700 hover:text-sky-800">
+                  <span className="group-open:hidden">See two example descriptions</span>
+                  <span className="hidden group-open:inline">Hide examples</span>
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {DESCRIPTION_EXAMPLES.map((ex) => (
+                    <div key={ex.label} className="rounded-md border border-slate-200 bg-white p-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        {ex.label}
+                      </p>
+                      <p className="mt-1 text-xs italic leading-relaxed text-slate-600">“{ex.text}”</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
             <textarea
               name="description"
               rows={5}
