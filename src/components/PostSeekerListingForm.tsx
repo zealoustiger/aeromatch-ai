@@ -1,8 +1,10 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { Check, Loader2 } from 'lucide-react'
 import { createSeekerListing } from '@/app/actions'
 import { cn } from '@/lib/utils'
+import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex', 'Multi-Engine']
@@ -88,6 +90,32 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
+function DraftIndicator({ status }: { status: DraftStatus }) {
+  const base = 'flex items-center gap-1.5 text-xs'
+  switch (status) {
+    case 'saving':
+      return (
+        <span className={cn(base, 'text-slate-400')} aria-live="polite">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+        </span>
+      )
+    case 'saved':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft saved
+        </span>
+      )
+    case 'restored':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft restored — picking up where you left off
+        </span>
+      )
+    default:
+      return <span className={cn(base, 'text-slate-400')}>Your progress autosaves on this device</span>
+  }
+}
+
 export default function PostSeekerListingForm() {
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
@@ -101,8 +129,20 @@ export default function PostSeekerListingForm() {
     null
   )
 
+  const { formRef, status, handleSubmit, handleResult } = useFormDraft('ch:draft:seeker-new')
+
+  // Clear the saved draft on a successful post; restore it after a failed submit
+  // (React resets the uncontrolled form once the action resolves).
+  useEffect(() => {
+    if (state) handleResult(Boolean(state.ok))
+  }, [state, handleResult])
+
   return (
-    <form action={action} className="space-y-8">
+    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-8">
+      <div className="flex justify-end">
+        <DraftIndicator status={status} />
+      </div>
+
       {/* Aircraft preferences */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <SectionHeader>Aircraft Preferences</SectionHeader>
