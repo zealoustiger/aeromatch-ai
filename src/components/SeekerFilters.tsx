@@ -1,9 +1,22 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
+import { X } from 'lucide-react'
 
 const RADIUS = [25, 50, 100, 150, 200]
+
+// Normalize free text into a deduped list of ICAO/FAA airport codes: split on
+// commas/whitespace, uppercase, strip non-alphanumerics, drop anything not 2-4
+// chars (so stray punctuation never becomes a bogus code). Mirrors PartnershipFilters.
+function parseAirportCodes(raw: string): string[] {
+  const out: string[] = []
+  for (const token of raw.split(/[\s,]+/)) {
+    const code = token.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (code.length >= 2 && code.length <= 4 && !out.includes(code)) out.push(code)
+  }
+  return out
+}
 const RATINGS = ['PPL', 'IFR', 'Commercial', 'CFI', 'ATP', 'Complex']
 const SHARE_TYPES = [
   { value: '1/2', label: '1/2 Share' },
@@ -64,6 +77,43 @@ export default function SeekerFilters({ initialValues, makes = [] }: Props) {
     [pushParams]
   )
 
+  // Home airport is multi-select: the `airports` param is a comma-joined list of
+  // ICAO codes OR'd by the query (`.in('home_airport', …)`). Initial codes come from
+  // `airports`, falling back to a lone legacy `airport` param so old links / saved
+  // searches keep working. The radius dropdown only applies to a single airport
+  // (radius around several centers is ambiguous), so we surface it only then.
+  const airportCodes = parseAirportCodes(initialValues.airports ?? initialValues.airport ?? '')
+  const [airportDraft, setAirportDraft] = useState('')
+
+  const setAirports = useCallback(
+    (codes: string[]) => {
+      pushParams((params) => {
+        params.delete('airport')
+        if (codes.length) params.set('airports', codes.join(','))
+        else params.delete('airports')
+        // Radius is only meaningful around a single airport — drop it otherwise.
+        if (codes.length !== 1) params.delete('radius')
+      })
+    },
+    [pushParams]
+  )
+
+  // Add whatever codes the draft text holds (split on comma/space), deduped against
+  // the current list; clears the input. No-op when the draft yields nothing new.
+  const commitAirportDraft = useCallback(() => {
+    const additions = parseAirportCodes(airportDraft)
+    setAirportDraft('')
+    if (!additions.length) return
+    const next = [...airportCodes]
+    for (const code of additions) if (!next.includes(code)) next.push(code)
+    if (next.length !== airportCodes.length) setAirports(next)
+  }, [airportDraft, airportCodes, setAirports])
+
+  const removeAirport = useCallback(
+    (code: string) => setAirports(airportCodes.filter((c) => c !== code)),
+    [airportCodes, setAirports]
+  )
+
   const clearAll = () => startTransition(() => router.push(pathname))
   const hasFilters = Object.values(initialValues).some(Boolean)
   const labelCls = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500'
@@ -111,25 +161,58 @@ export default function SeekerFilters({ initialValues, makes = [] }: Props) {
         )}
       </div>
 
-      {/* Home airport + radius */}
+      {/* Home airport(s) — multi-select. Type a code and press Enter/comma/space (or
+          blur) to add it as a chip; airports entered here are OR'd in the results.
+          Radius applies only when a single airport is selected. */}
       <div>
-        <label className={labelCls}>Near Home Airport</label>
+        <label className={labelCls}>
+          Near Home Airport
+          {airportCodes.length > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {airportCodes.length} selected
+            </span>
+          )}
+        </label>
+        {airportCodes.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {airportCodes.map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => removeAirport(code)}
+                aria-label={`Remove ${code}`}
+                className="group inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 py-1 pl-2.5 pr-1.5 font-mono text-xs font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+              >
+                {code}
+                <X className="h-3 w-3 text-sky-400 group-hover:text-sky-600" />
+              </button>
+            ))}
+          </div>
+        )}
         <input
           type="text"
-          placeholder="e.g. KAUS"
-          defaultValue={initialValues.airport ?? ''}
-          onChange={(e) => update('airport', e.target.value.toUpperCase())}
-          className={`${fieldCls} font-mono`}
-          maxLength={4}
+          placeholder="e.g. KAUS, KDAL — Enter to add"
+          value={airportDraft}
+          onChange={(e) => setAirportDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+              e.preventDefault()
+              commitAirportDraft()
+            }
+          }}
+          onBlur={commitAirportDraft}
+          className={`${fieldCls} font-mono uppercase`}
         />
-        <select
-          defaultValue={initialValues.radius ?? ''}
-          onChange={(e) => update('radius', e.target.value)}
-          className={`${fieldCls} mt-2`}
-        >
-          <option value="">Exact airport</option>
-          {RADIUS.map((r) => <option key={r} value={r}>Within {r} mi</option>)}
-        </select>
+        {airportCodes.length === 1 && (
+          <select
+            defaultValue={initialValues.radius ?? ''}
+            onChange={(e) => update('radius', e.target.value)}
+            className={`${fieldCls} mt-2`}
+          >
+            <option value="">Exact airport</option>
+            {RADIUS.map((r) => <option key={r} value={r}>Within {r} mi</option>)}
+          </select>
+        )}
       </div>
 
       {/* Rating held — multi-select: an owner may accept any of several ratings. */}

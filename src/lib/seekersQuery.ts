@@ -4,6 +4,9 @@ import { MOCK_SEEKERS } from '@/lib/mockData'
 import type { PartnershipSeeker } from '@/lib/types'
 
 export type SeekerFilters = {
+  /** Multi-airport list (comma-joined ICAO codes), OR'd together. */
+  airports?: string
+  /** Legacy single airport (kept for old links / saved searches), optionally + radius. */
   airport?: string
   radius?: string
   state?: string
@@ -19,7 +22,7 @@ function hasSupabase() {
 }
 
 export function anySeekerFilter(f: SeekerFilters): boolean {
-  return Boolean(f.airport || f.state || f.make || f.rating || f.min_hours || f.share_type)
+  return Boolean(f.airports || f.airport || f.state || f.make || f.rating || f.min_hours || f.share_type)
 }
 
 /** Parse a comma-joined multi-select param ("Cessna,Cirrus") into a clean, de-duped
@@ -27,6 +30,20 @@ export function anySeekerFilter(f: SeekerFilters): boolean {
 function parseMulti(raw: string | undefined): string[] {
   if (!raw) return []
   return [...new Set(raw.split(',').map((v) => v.trim()).filter(Boolean))]
+}
+
+/** Resolve the home-airport filter into a list of ICAO codes to OR over. Prefers
+ *  the multi-airport `airports` param; falls back to the legacy single `airport`
+ *  (optionally expanded by `radius`). A lone airport with a radius expands to every
+ *  field within range; several airports are matched exactly (radius is ambiguous
+ *  across multiple centers, so the UI only offers it for a single airport). */
+async function resolveSeekerAirports(f: SeekerFilters): Promise<string[]> {
+  const codes = parseMulti(f.airports ?? f.airport).map((c) => c.toUpperCase())
+  if (codes.length === 1) {
+    const radius = f.radius ? parseInt(f.radius, 10) : 0
+    if (radius > 0) return getAirportsWithinRadius(codes[0], radius)
+  }
+  return codes
 }
 
 /** Pilots-seeking listings matching the active filters (newest first). Seeker
@@ -40,7 +57,9 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
 
   if (!hasSupabase()) {
     let r = MOCK_SEEKERS
-    if (f.state) r = r.filter((s) => s.state === f.state!.toUpperCase())
+    const codes = parseMulti(f.airports ?? f.airport).map((c) => c.toUpperCase())
+    if (codes.length) r = r.filter((s) => codes.includes((s.home_airport ?? '').toUpperCase()))
+    else if (f.state) r = r.filter((s) => s.state === f.state!.toUpperCase())
     if (makes.length) {
       const wanted = new Set(makes.map((m) => m.toLowerCase()))
       r = r.filter((s) => s.preferred_makes?.some((m) => wanted.has(m.toLowerCase())))
@@ -61,12 +80,11 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
     .eq('status', 'active')
     .order('created_at', { ascending: false })
 
-  // Location: a home airport (optionally expanded by radius) wins over a plain state.
-  if (f.airport?.trim()) {
-    const code = f.airport.trim().toUpperCase()
-    const radius = f.radius ? parseInt(f.radius, 10) : 0
-    const icaos = radius > 0 ? await getAirportsWithinRadius(code, radius) : [code]
-    if (icaos.length) query = query.in('home_airport', icaos)
+  // Location: a home airport list (multi-airport, or a lone airport optionally
+  // expanded by radius) wins over a plain state.
+  const airportIcaos = await resolveSeekerAirports(f)
+  if (airportIcaos.length) {
+    query = query.in('home_airport', airportIcaos)
   } else if (f.state?.trim()) {
     query = query.eq('state', f.state.trim().toUpperCase())
   }
