@@ -252,6 +252,42 @@ export const COMPARISONS: Comparison[] = [
       { q: 'Which is cheaper to own?', a: 'Both are simple fabric taildraggers whose main costs are fabric upkeep and tailwheel-rated insurance. The Cub’s tiny 65 hp engine and 12-gallon tank make it the cheaper of the two to feed; the Citabria burns more for its extra speed and capability.' },
     ],
   },
+  {
+    slug: 'cessna-172-vs-grumman-aa-5',
+    a: { makeSlug: 'cessna', modelSlug: '172' },
+    b: { makeSlug: 'grumman', modelSlug: 'aa-5' },
+    intro:
+      'The Cessna 172 and the Grumman AA-5 (Cheetah/Tiger) are both fixed-gear four-seat singles, so the comparison comes down to ubiquity versus sportiness. The 172 is the most-produced airplane ever — forgiving, easy to insure, and supported by parts and instructors everywhere, which is why it is the default trainer and first airplane. The low-drag Grumman, with its sliding canopy and slick airframe, is quicker for the same horsepower and feels sportier to fly, but rides on a much smaller fleet and support network. One is the safe, universally-supported choice; the other trades a little support for speed and character.',
+    faqs: [
+      { q: 'Is the Grumman Tiger faster than a Cessna 172?', a: 'Yes. The 180 hp AA-5 Tiger cruises around 139 kt against about 124 kt for the 180 hp Cessna 172, thanks to the Grumman’s low-drag airframe and sliding canopy — meaningfully more speed on the same power and fixed gear.' },
+      { q: 'Which is easier to own and resell?', a: 'The 172, by a wide margin. As the most-produced aircraft ever it has unmatched parts, mechanic, and instructor support and is the easiest single to insure and resell. The Grumman flies on a smaller fleet, so plan for a more specialized support network in exchange for its speed and character.' },
+      { q: 'Which is the better first four-seater?', a: 'For most new owners the 172, for its forgiving handling, easy insurance, and universal support. The AA-5 suits a pilot who wants a fun, simple, economical traveler with more speed — the 180 hp Tiger is the faster climber, the 150 hp Cheetah the more economical, so pick by mission and budget.' },
+    ],
+  },
+  {
+    slug: 'grumman-aa-5-vs-piper-cherokee',
+    a: { makeSlug: 'grumman', modelSlug: 'aa-5' },
+    b: { makeSlug: 'piper', modelSlug: 'cherokee' },
+    intro:
+      'The Grumman AA-5 (Cheetah/Tiger) and the Piper Cherokee (PA-28) are both fixed-gear four-seat singles around 180 hp, so the choice is really speed versus load and support. The slick, sliding-canopy Grumman is the quicker of the two for the same power and has a sporty feel. The low-wing Cherokee carries more and rides on one of the largest parts-and-instructor networks in aviation, second only to the 172. Both are simple and economical to own; you are choosing between a little more speed or a little more load and support.',
+    faqs: [
+      { q: 'What is the difference between a Grumman Tiger and a Piper Cherokee?', a: 'Both are fixed-gear 180 hp four-seaters, but the Grumman AA-5’s low-drag airframe and sliding canopy make it noticeably faster — about 139 kt cruise (Tiger) versus roughly 120 kt for the PA-28-180 — while the Cherokee offers more useful load and a much larger support network.' },
+      { q: 'Which one carries more?', a: 'The Cherokee — about 1,000 lb of useful load against roughly 900 lb for the AA-5 — and it is among the most common, easiest-to-support four-seat trainers after the 172. The Grumman trades a little load for more speed on the same power.' },
+      { q: 'Which is easier and cheaper to own?', a: 'Both are simple, economical fixed-gear singles. The Cherokee’s edge is its enormous parts and mechanic network, which keeps maintenance predictable and resale easy. The Grumman is also inexpensive to run — especially the 150 hp Cheetah — but flies on a smaller fleet, so factor in a more specialized support base.' },
+    ],
+  },
+  {
+    slug: 'cessna-150-vs-piper-cub',
+    a: { makeSlug: 'cessna', modelSlug: '150' },
+    b: { makeSlug: 'piper', modelSlug: 'cub' },
+    intro:
+      'The Cessna 150 and the Piper J-3 Cub are both two-seat classics, but they answer very different questions. The 150 is the practical, nosewheel metal trainer — about 100 kt on a fuel-sipping 100 hp engine, the cheapest practical way into ownership and hour-building, with parts everywhere. The Cub is the iconic fabric, tandem-seat taildragger: 65 hp, around 65 kt, tiny tanks, and pure low-and-slow charm, usually bought with the heart as much as the head. One is the sensible everyday trainer; the other is a stick-and-rudder classic you keep flying for the joy of it.',
+    faqs: [
+      { q: 'Cessna 150 or Piper Cub for learning to fly?', a: 'Most students train in the 150: it has a forgiving nosewheel, cruises around 100 kt, carries more range, and is the cheapest practical way into ownership. The J-3 Cub is a tailwheel taildragger flown low and slow at about 65 kt — wonderful for stick-and-rudder skills and a tailwheel endorsement, but not a practical everyday trainer.' },
+      { q: 'Which is cheaper to own?', a: 'Both are inexpensive. The 100 hp Cessna 150 sips fuel and is all-metal with huge parts support, giving it among the lowest operating costs in the fleet. The 65 hp Cub burns even less but adds fabric upkeep and tailwheel-rated insurance, and is often bought as a classic to keep flying rather than as a budget calculation.' },
+      { q: 'Can either fly cross-country?', a: 'Not really. The 150 manages short hops at about 100 kt with roughly 420 nm of range but a cramped two-seat cabin; the Cub, at about 65 kt with around 190 nm range on 12 gallons, is a local-fun airplane. Both are two-seats-and-light-bags machines, not travelers.' },
+    ],
+  },
 ]
 
 const BY_SLUG = new Map(COMPARISONS.map((c) => [c.slug, c]))
