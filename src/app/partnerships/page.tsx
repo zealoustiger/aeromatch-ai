@@ -183,7 +183,7 @@ export default async function PartnershipsPage({
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
             </div>
-            <PartnershipFilters initialValues={params} />
+            <PartnershipFilters initialValues={params} saveSearchBasePath="/partnerships" />
           </div>
         </aside>
 
