@@ -319,9 +319,13 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   indeterminate/none state), individual variants behind a collapse-by-default "Show N variants"
   disclosure; singletons unchanged; pure unit-tested `groupModelVariants` helper over the existing
   comma-joined `model` param (no query/schema change), deliberately conservative (SR22T≠SR22). See
-  CHANGELOG. **Remaining: (2) normalize stored variant casing in the DB (deferred — destructive-ish,
-  ask-a-human); collapse the per-variant chips in ActiveFilterChips into one parent chip; apply the
-  same rollup to the partnerships/seeking model filters.**
+  CHANGELOG. — **per-variant active-filter chips collapsed into one parent chip ✅ SHIPPED
+  2026-06-24T12:08Z** (`active-filter-chip-rollup`): on `/aircraft`, a fully-selected model group
+  now renders a single "{base} (all)" results-header chip (removal strips all members) instead of
+  one chip per variant; partial selections stay per-variant. Pure front-end via `groupModelVariants`
+  + the page's existing facets; no query/schema change. See CHANGELOG. **Remaining: (2) normalize
+  stored variant casing in the DB (deferred — destructive-ish, ask-a-human); apply the same rollup
+  to the partnerships/seeking model filters + their active-filter chips.**
 - **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**
   Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
   buying criteria. Surface them **higher and always-visible** in the main filter panel, and
