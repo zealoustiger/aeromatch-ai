@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T09:01:45Z — DRAIN SUMMARY
+- Cycles this run: 6 (PASS 5 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260624T082322Z
+
 ## 2026-06-24T08:55Z — PASS — one-click-save-search
 - Pages: /aircraft, /partnerships
 - What: **Saving a search is now one click.** The "Save this search" button (in the filter panel + the top action bar on both Planes-for-Sale and Partnerships) used to pop a "Name this search…" box you had to fill in before it would save. Now it saves instantly with an auto-generated, readable name built from whatever filters you've set — e.g. "Cessna 172 for sale in CA under $80k" or "Cirrus partnerships near KHWD" — and then confirms with a green "Search saved · View in Saved Searches" link straight to your Saved Searches page, where you can manage (and, in a follow-up, rename) it. If you click save on a search you've already saved, it calmly says "Already saved" instead of throwing an error. Signed-out users are still sent to sign in first and returned to the same filtered search; the button still hides itself when no filters are active.
