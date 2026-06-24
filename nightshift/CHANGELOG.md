@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T12:50Z — PASS — guide-flying-club-vs-co-ownership
+- Pages: /guides/flying-club-vs-co-ownership, /guides
+- What: **New plain-English guide: "Flying Club vs. Aircraft Co-Ownership."** It answers a real question pilots weigh when they want to fly affordably — join a flying club (pay to belong and rent the club's planes) or buy a share of one aircraft with a few partners. The guide compares the two side by side: what you pay and what you build (equity), fleet access vs. one shared plane, who controls the schedule and maintenance, how easy each is to get into and out of, who each suits, and how to decide — with the same honest, "this is not legal/tax/financial advice" framing as the sibling guides. It now shows as a card on the Guides hub and links out to the related guides, the cost calculator, and partnerships.
+- Goal: SEO content depth / INDEXING stage — `[goal]` lane (last non-bug cycle `saved-search-inline-rename` pulled `[want]` → alternated to `[goal]`). On-site pageviews at orient: 325 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING). A genuinely-unique, high-intent indexable page that diversifies off the heavily-worked aircraft-compare family (per its own "DIVERSIFY next" note) and extends the proven "X vs co-ownership" decision-guide pattern (leaseback-vs). Added to the guides hub ItemList JSON-LD + sitemap.
+- Spec: nightshift/specs/20260624T123850Z-guide-flying-club-vs-co-ownership.md
+- Verdict: PASS. `npx next build` green (new page statically prerendered ○); QA smoke exit 0 on /guides + the new page at desktop 1280 and mobile 375 — all HTTP 200, zero app-origin console errors, zero horizontal overflow. Screenshots read correctly: full editorial layout (H1, disclaimer, TOC, two model cards, side-by-side table, prose sections, FAQ, related guides, CTA) on desktop; clean single-column at 375px with the comparison table scrolling inside its own container; the new card appears in the right slot on the Guides hub. (Pre-existing `tsc --noEmit` errors live only in `.test.ts` files and are unrelated to this change.)
+- Screenshots: nightshift/screenshots/guide-flying-club-vs-co-ownership/
+- Next: consider a "fractional ownership vs co-ownership" companion guide; cross-link the new guide from the cost-of-co-ownership and how-to-find-partners guides; and link relevant guides from the partnership hub pages to spread crawl equity further.
+
 ## 2026-06-24T12:31Z — PASS — saved-search-inline-rename
 - Pages: /searches
 - What: **You can now rename a saved search right on the Saved Searches page.** Since saving a search now auto-generates its name in one click, there was no way to fix or personalize that name afterward. Each saved search gets a small pencil button next to its name — click it to edit the name inline (Enter to save, Esc to cancel). If you try a name you've already used, you get a friendly "you already have a search with that name" note instead of an error.
