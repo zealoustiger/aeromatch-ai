@@ -272,11 +272,15 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   with the seeking-form multi-airport change. Slice: (1) multi-airport input + chips + OR
   query; (2) per-airport filter chips in the results header; (3) 375px polish. Screenshot:
   https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/partnership-filter-multi-airport/20260624-partnership-filter-multi-airport.png
-- **[P2][want] Add "Save this search" inside the filter panel.** "Save this search" currently
-  lives only top-right where it's easily missed. Add an **in-context** entry point **inside
-  the "Filter Results" panel** (e.g. near "Clear all filters") — where users tune their
-  search — while keeping the top-right one. Screenshot:
-  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/save-search-in-filter-panel/20260624-save-search-in-filter-panel.png
+- ~~**[P2][want] Add "Save this search" inside the filter panel.**~~ ✅ SHIPPED
+  2026-06-24T08:39Z (`save-search-in-filter-panel`). A full-width "Save this search" button
+  now renders inside the Filter Results panel (desktop sidebar + mobile drawer) above
+  "Clear all filters" on both `/aircraft` and `/partnerships`, reusing the existing
+  `SaveSearchButton` (new opt-in `fullWidth` prop) + `saveSearch` action; the top-right
+  button is unchanged and it self-hides when no filters are active. NO schema. See CHANGELOG.
+  (Screenshot object can be deleted from `backlog-shots`.) **Next:** the related save-search
+  UX items below — one-click auto-named save + inline rename on `/searches`, and making the
+  results-header "Save this search" more prominent.
 - **[P2][want] One-click save search: auto-name + skip the naming step.** Saving a search
   forces the user to name it first. **Auto-generate a name** from active filters (e.g.
   "Cessna partnerships near KHWD under $20k buy-in") and save in **one click**; show a
