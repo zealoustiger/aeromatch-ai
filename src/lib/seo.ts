@@ -761,6 +761,18 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Four-seat composite single with a glass cockpit, a long efficient wing, and a sliding bubble canopy — known for outstanding visibility and one of the best safety records in general aviation.',
     costToOwn: 'One of the most economical modern four-seat singles to fly — fixed gear keeps it simple, and the Jet-A diesel NG variant sips fuel. A partnership spreads the hangar, insurance, and composite upkeep so a glass-panel single stays affordable.',
   },
+  {
+    makeSlug: 'diamond', modelSlug: 'da42', make: 'Diamond', model: 'DA42',
+    modelPattern: 'da42%',
+    specs: 'Composite four-seat twin (the Twin Star) with two fuel-efficient Jet-A diesel engines, a Garmin glass cockpit, retractable gear, and a long-legged ~165 kt cruise on remarkably low fuel burn.',
+    costToOwn: 'A twin, so two engines and two reserves — but the diesels sip Jet-A, which keeps the fuel bill closer to a high-performance single. Co-ownership is the usual way to make a modern twin pencil out, spreading the gearbox/engine reserves and insurance across a group.',
+  },
+  {
+    makeSlug: 'diamond', modelSlug: 'da20', make: 'Diamond', model: 'DA20',
+    modelPattern: 'da20%',
+    specs: 'Two-seat composite single with a bubble canopy and a control stick — light, sporty, fuel-sipping, and famous for outstanding visibility; a favorite trainer and time-builder.',
+    costToOwn: 'About as economical as flying gets in a modern composite airframe — two seats and a small engine mean small bills. A partnership splits an already-modest hangar, annual, and insurance, so it is an easy first airplane to share.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -877,6 +889,16 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'How much does it cost to own a Diamond DA40?', a: 'It is one of the more economical modern four-seat singles to fly — fixed gear keeps the systems simple, and the Jet-A diesel NG variant sips fuel. The main running costs are composite upkeep and insurance, which a partnership spreads across owners along with the hangar.' },
     { q: 'Is the Diamond DA40 a good first airplane?', a: 'Yes — its benign, forgiving handling and excellent visibility make it a popular trainer and an easy step-up four-seater. Many flight schools and first-time owners choose it for exactly those reasons.' },
   ],
+  'diamond/da42': [
+    { q: 'What is the Diamond DA42 Twin Star?', a: 'It is a composite four-seat twin powered by two fuel-efficient Jet-A diesel engines with single-lever FADEC control, a Garmin glass cockpit, and retractable gear. It is known for cruising in the 160s on remarkably low total fuel burn for a twin, and for its modern airframe and strong safety record.' },
+    { q: 'How much does it cost to own a Diamond DA42?', a: 'It is a twin, so you carry two engines, two reserves, and a higher insurance bill — but the diesels sip Jet-A, which keeps the fuel cost closer to a high-performance single than a typical avgas twin. Most owners co-own a DA42 in a partnership to spread the engine/gearbox reserves and fixed costs.' },
+    { q: 'Why choose a diesel twin over a piston single?', a: 'The DA42 gives you the redundancy of a second engine plus the economy of Jet-A diesels and a modern glass panel. It suits a group that specifically wants twin capability for training, travel over water or terrain, or all-weather IFR — and is willing to share the higher fixed costs that come with two engines.' },
+  ],
+  'diamond/da20': [
+    { q: 'What is the Diamond DA20 known for?', a: 'The DA20 is a light two-seat composite single with a bubble canopy and a center control stick, prized for its sporty, responsive handling and outstanding visibility. The DA20-C1 Eclipse is a common trainer and time-builder; it has even been used for ab-initio military pilot screening.' },
+    { q: 'How much does it cost to own a Diamond DA20?', a: 'It is one of the most economical airplanes to operate — two seats and a small, efficient engine keep fuel and maintenance bills low. A partnership splits an already-modest hangar, annual, and insurance, which makes it one of the easiest first airplanes to share.' },
+    { q: 'Is the Diamond DA20 a good trainer?', a: 'Yes — its honest handling, great visibility, and low operating cost have made it a staple at flight schools and a popular personal trainer and time-builder. The trade-off versus a four-seater is two seats and modest baggage, so it is built for training and fun flying rather than family travel.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -975,6 +997,14 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'diamond/da40': [
     'The Diamond DA40 Diamond Star is the Austrian-designed composite four-seater that helped bring glass cockpits and modern airframes to the training and personal-flying market. Its long, slender wing, sliding bubble canopy, and all-composite construction give it outstanding visibility and benign, forgiving handling — and the type has earned one of the strongest safety records in general aviation, which is a large part of why so many flight schools and private owners chose it.',
     'Fixed gear and simple systems make the DA40 one of the more economical modern four-seat singles to fly, and the later Jet-A diesel NG variant adds remarkable range on a notably low fuel burn. A partnership spreads the hangar, insurance, and composite upkeep across owners, so a group can share a modern glass-panel cross-country single — and keep it flown often enough that everyone stays current — for a sensible monthly share.',
+  ],
+  'diamond/da42': [
+    'The Diamond DA42 Twin Star is the four-seat composite twin that reintroduced fuel-efficient diesel power to general aviation. Two Jet-A turbodiesels with single-lever FADEC control, a Garmin glass panel, retractable gear, and the same bonded composite airframe and bubble canopy as its DA40 sibling give it modern systems, a strong safety record, and a long-legged cruise in the 160s — all on a total fuel burn that embarrasses most avgas twins.',
+    'For a partnership, the DA42 is the affordable way into a modern twin. A second engine brings redundancy that owners value for IFR, night, and over-water or mountainous flying, and the diesels keep the Jet-A bill closer to a high-performance single than a legacy piston twin. The trade-off is two engines, two reserves, and twin insurance — exactly the fixed costs a group of partners is built to share, so everyone gets twin capability and a new-feeling glass cockpit for a sensible monthly number.',
+  ],
+  'diamond/da20': [
+    'The Diamond DA20 is the light, sporty two-seat composite single that helped modernize the training fleet. A bubble canopy and center control stick give it fighter-like visibility and crisp, responsive handling, while the bonded composite airframe and efficient engine — a Rotax 912 in the early DA20-A1 Katana, a 125 hp Continental in the DA20-C1 Eclipse — keep it light and economical. Its honest manners and low running costs have made it a flight-school staple, and the C1 has even been used for military ab-initio pilot screening.',
+    'For a first airplane or a time-builder, the DA20 is one of the easiest singles to share. Two seats and a small, fuel-sipping engine mean modest fuel and maintenance bills, and a partnership splits the already-low hangar, annual, and insurance across owners — so a group can keep a fun, modern, great-visibility airplane flown often without anyone carrying the whole cost. The trade-off versus a four-seater is just that: two seats and limited baggage, so it is built for training and pure flying rather than family travel.',
   ],
 }
 
@@ -1196,6 +1226,26 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Fuel (usable)', value: '~40 gal' },
     { label: 'Airframe', value: 'Composite, fixed tricycle gear' },
   ],
+  'diamond/da42': [
+    { label: 'Seats', value: '4' },
+    { label: 'Engines', value: '2 × Austro AE300 Jet-A diesel' },
+    { label: 'Horsepower', value: '168 hp each (336 hp total)' },
+    { label: 'Cruise speed', value: '~165 kt' },
+    { label: 'Range', value: '~1,200 nm' },
+    { label: 'Useful load', value: '~1,000 lb' },
+    { label: 'Fuel (usable)', value: '~50 gal (Jet-A)' },
+    { label: 'Airframe', value: 'Composite, retractable tricycle gear' },
+  ],
+  'diamond/da20': [
+    { label: 'Seats', value: '2' },
+    { label: 'Engine', value: 'Continental IO-240-B (DA20-C1)' },
+    { label: 'Horsepower', value: '125 hp' },
+    { label: 'Cruise speed', value: '~135 kt' },
+    { label: 'Range', value: '~525 nm' },
+    { label: 'Useful load', value: '~530 lb' },
+    { label: 'Fuel (usable)', value: '~24 gal' },
+    { label: 'Airframe', value: 'Composite, fixed tricycle gear' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1308,6 +1358,16 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'A composite airframe, long efficient wing, and sliding bubble canopy give the DA40 outstanding visibility and one of the best safety records in general aviation.',
     'Suits a pilot who wants a modern glass-panel four-seater for training and efficient cross-countries — and the Jet-A diesel NG variant adds remarkable range on a low fuel burn.',
     'The honest trade-off is a modest full-fuel useful load and a back seat that is snug for adults on long trips; you board over the wing under the canopy rather than through a door.',
+  ],
+  'diamond/da42': [
+    'A composite four-seat twin with two Jet-A diesels and single-lever FADEC control — the redundancy of a second engine with fuel burn closer to a high-performance single.',
+    'Suits a group that specifically wants twin capability — IFR, night, over-water or mountain flying — in a modern glass-panel airframe, and is willing to share the higher fixed costs.',
+    'The honest trade-off is twin economics: two engines, two reserves (including gearbox overhauls), and twin insurance — exactly why the DA42 is so often co-owned rather than flown solo.',
+  ],
+  'diamond/da20': [
+    'A light two-seat composite single with a bubble canopy and a center stick — fighter-like visibility and sporty, responsive handling at a very low operating cost.',
+    'Suits a pilot who wants an economical, fun trainer or time-builder to fly often — a flight-school staple that even the military has used for ab-initio pilot screening.',
+    'The honest trade-off is just two seats and modest baggage: it is built for training and pure flying, not family travel, and you board over the side under the canopy rather than through a door.',
   ],
 }
 
