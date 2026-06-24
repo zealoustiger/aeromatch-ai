@@ -3,14 +3,14 @@
 ## 📊 Traffic (PostHog) — as of 2026-06-24
 
 - **Visitors:** 13 all-time · 13 in the last 7 days
-- **Pageviews:** 327 all-time · 327 in the last 7 days
+- **Pageviews:** 328 all-time · 328 in the last 7 days
 - **Not from Oakland:** 11 visitors _(early on, most non-local hits are crawlers/bots, not real users)_
 
 **By city**
 
 | City | Visitors | Pageviews |
 |---|--:|--:|
-| Oakland | 3 | 313 |
+| Oakland | 3 | 314 |
 | Monte Vista | 2 | 2 |
 | (unknown) | 2 | 2 |
 | Seattle | 1 | 3 |
@@ -28,7 +28,7 @@
 | / | 71 |
 | /aircraft | 60 |
 | /partnerships | 56 |
-| /admin | 33 |
+| /admin | 34 |
 | /partnerships/seeking | 20 |
 | /saved | 7 |
 | /admin/backlog | 6 |
