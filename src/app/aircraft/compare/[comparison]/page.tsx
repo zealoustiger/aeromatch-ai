@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Plane, ArrowRight, Gauge, Lightbulb, Check, GitCompare } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import ModelFaq from '@/components/ModelFaq'
 import { countMakeModel } from '@/components/AircraftSaleList'
+import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import {
   COMPARISONS,
@@ -86,8 +88,19 @@ export default async function ComparisonPage({ params }: Props) {
   // Other comparisons to cross-link (keeps crawl equity inside the family).
   const others = COMPARISONS.filter((x) => x.slug !== c.slug)
 
+  // FAQPage JSON-LD built from the SAME Q&As rendered visibly below (Google parity).
+  const faqJsonLd = buildFaqPageJsonLd(c.faqs, {
+    url: `${SITE_URL}/aircraft/compare/${c.slug}`,
+  })
+
   return (
     <div className="ch-surface min-h-screen">
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <Breadcrumbs
           items={[
@@ -194,6 +207,11 @@ export default async function ComparisonPage({ params }: Props) {
             )}
           </div>
         ) : null}
+
+        {/* Head-to-head FAQ — genuine Q&As, mirrored 1:1 by the FAQPage JSON-LD above. */}
+        {c.faqs.length > 0 && (
+          <ModelFaq label={title} faqs={c.faqs} className="mt-8" />
+        )}
 
         {/* More comparisons — cross-links across the new family. */}
         {others.length > 0 && (
