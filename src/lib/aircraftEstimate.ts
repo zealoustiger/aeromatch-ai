@@ -112,3 +112,132 @@ export function clubHangerEstimate(
     deltaPct,
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * ClubHanger Deal Check — the endorsement-style "good deal / fair / priced high"
+ * verdict the whole-family estimate above deliberately withholds.
+ *
+ * The family-median estimate is honest only as a DESCRIPTIVE comparison because its
+ * comp set is the entire make+model family — a price gap there can simply mean this
+ * airplane is newer or lower-time, not a bargain. This helper earns the right to make
+ * a value judgement by first narrowing the comp set to listings of SIMILAR YEAR and
+ * SIMILAR HOURS, controlling for the two biggest value drivers, then comparing against
+ * that tighter median. Same honesty philosophy, one notch stricter on purpose:
+ *  - The subject must itself have a year AND total time — we can't honestly judge a
+ *    listing on year/hours when it doesn't state them.
+ *  - We require >= MIN_DEAL_COMPS comps that fall inside BOTH bands; below that the
+ *    narrowed median is too thin to call → no verdict.
+ *  - A ±DEAL_DEAD_BAND window around the narrowed median reads "Fair price" rather than
+ *    inventing a small percentage.
+ *  - Whole-dollar / whole-percent only — no false precision.
+ * Pure: no DB, no React, no imports. Unit-tested in `aircraftEstimate.test.ts`.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Minimum number of similar-year + similar-hours comps required before we publish a
+ *  value verdict (stricter intent than the descriptive estimate's family median). */
+export const MIN_DEAL_COMPS = 4
+
+/** A comp's year must be within ±this many years of the subject to count as
+ *  "similar year". 5 years brackets a typical model/avionics generation. */
+export const DEAL_YEAR_BAND = 5
+
+/** A comp's total time qualifies as "similar hours" when it is within the larger of an
+ *  absolute and a relative band of the subject's hours — so low-time airframes get a
+ *  sensible floor and high-time ones a proportional window. */
+export const DEAL_HOURS_ABS_BAND = 1000
+export const DEAL_HOURS_REL_BAND = 0.35
+
+/** Within ±this fraction of the narrowed median we call it "Fair price". */
+export const DEAL_DEAD_BAND = 0.05
+
+export type DealVerdict = 'good' | 'fair' | 'high'
+
+/** One same-family comp listing for the deal check. */
+export interface DealComp {
+  asking_price: number | null
+  year: number | null
+  ttaf: number | null
+}
+
+/** The subject listing being judged. */
+export interface DealSubject {
+  askingPrice: number | null | undefined
+  year: number | null | undefined
+  ttaf: number | null | undefined
+}
+
+export interface ClubHangerDealVerdict {
+  /** Good deal (below the similar-year/hours median), Fair (inside the dead band), or
+   *  Priced high (above it). A genuine value judgement — the comp set controls for
+   *  year and hours. */
+  verdict: DealVerdict
+  /** Median asking price of the narrowed (similar-year + similar-hours) comps. */
+  median: number
+  /** Number of comps inside BOTH the year and hours bands. */
+  compCount: number
+  /** Signed whole-dollar distance from the narrowed median (negative = below). */
+  deltaDollars: number
+  /** Absolute whole-percent distance from the narrowed median (>= 1 for non-fair). */
+  deltaPct: number
+  /** The ± year band actually used (for the on-page explanation). */
+  yearBand: number
+}
+
+/** True when a comp's total time is within the subject's similar-hours band. */
+function hoursWithinBand(subjectTtaf: number, compTtaf: number): boolean {
+  const band = Math.max(DEAL_HOURS_ABS_BAND, subjectTtaf * DEAL_HOURS_REL_BAND)
+  return Math.abs(compTtaf - subjectTtaf) <= band
+}
+
+/**
+ * Compute the ClubHanger Deal Check verdict for one listing against same-family comps
+ * narrowed to similar year + similar hours.
+ *
+ * `comps` is the set of OTHER active priced same-family listings (the caller excludes
+ * the subject by id in the DB read, so there's no self-comparison to undo here).
+ *
+ * Returns null — i.e. NO verdict — when the subject lacks a real price / year / total
+ * time, or when fewer than MIN_DEAL_COMPS comps fall inside both bands. Thin or
+ * uncontrolled data publishes nothing rather than a misleading endorsement.
+ */
+export function clubHangerDealVerdict(
+  subject: DealSubject,
+  comps: DealComp[]
+): ClubHangerDealVerdict | null {
+  const { askingPrice, year, ttaf } = subject
+  if (askingPrice == null || !Number.isFinite(askingPrice) || askingPrice <= 0) return null
+  if (year == null || !Number.isFinite(year)) return null
+  if (ttaf == null || !Number.isFinite(ttaf) || ttaf < 0) return null
+
+  const narrowed: number[] = []
+  for (const c of comps) {
+    const price = c.asking_price
+    if (price == null || !Number.isFinite(price) || price <= 0) continue
+    if (c.year == null || !Number.isFinite(c.year)) continue
+    if (c.ttaf == null || !Number.isFinite(c.ttaf) || c.ttaf < 0) continue
+    if (Math.abs(c.year - year) > DEAL_YEAR_BAND) continue
+    if (!hoursWithinBand(ttaf, c.ttaf)) continue
+    narrowed.push(price)
+  }
+  if (narrowed.length < MIN_DEAL_COMPS) return null
+
+  narrowed.sort((a, b) => a - b)
+  const median = Math.round(medianOfSorted(narrowed))
+  if (median <= 0) return null
+
+  const deltaDollars = Math.round(askingPrice - median)
+  const delta = (askingPrice - median) / median
+
+  if (Math.abs(delta) < DEAL_DEAD_BAND) {
+    return { verdict: 'fair', median, compCount: narrowed.length, deltaDollars, deltaPct: 0, yearBand: DEAL_YEAR_BAND }
+  }
+  const deltaPct = Math.max(1, Math.round(Math.abs(delta) * 100))
+  return {
+    verdict: delta < 0 ? 'good' : 'high',
+    median,
+    compCount: narrowed.length,
+    deltaDollars,
+    deltaPct,
+    yearBand: DEAL_YEAR_BAND,
+  }
+}

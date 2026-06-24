@@ -20,8 +20,13 @@ import {
   ArrowRight,
   Scale,
 } from 'lucide-react'
-import { getAircraftForSaleById, getFamilyAskingPrices } from '@/lib/aircraftForSale'
-import { clubHangerEstimate, type ClubHangerEstimate } from '@/lib/aircraftEstimate'
+import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
+import {
+  clubHangerEstimate,
+  clubHangerDealVerdict,
+  type ClubHangerEstimate,
+  type ClubHangerDealVerdict,
+} from '@/lib/aircraftEstimate'
 import { estimateOwnershipCost } from '@/lib/calculators'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
@@ -158,12 +163,22 @@ export default async function AircraftListingDetailPage({
   // priced listings in the same make+model family (Zillow-Zestimate analog). Only
   // computed when we have a real price AND the listing resolves to a known family;
   // the pure helper returns null on thin comp sets, so the block self-suppresses.
-  const estimate =
+  // ClubHanger Deal Check — the endorsement-style "good deal / fair / priced high"
+  // verdict, honest because it compares only against similar-year + similar-hours
+  // comps (the helper returns null on thin/uncontrolled data, so it self-suppresses).
+  // Both family reads run concurrently and only when there's a real price + family.
+  const [familyPrices, familyComps] =
     p.asking_price && family
-      ? clubHangerEstimate(
-          p.asking_price,
-          await getFamilyAskingPrices(family.make, family.modelPattern, family.notModelPattern)
-        )
+      ? await Promise.all([
+          getFamilyAskingPrices(family.make, family.modelPattern, family.notModelPattern),
+          getFamilyComps(family.make, family.modelPattern, family.notModelPattern, p.id),
+        ])
+      : [[], []]
+  const estimate =
+    p.asking_price && family ? clubHangerEstimate(p.asking_price, familyPrices) : null
+  const dealVerdict =
+    p.asking_price && family
+      ? clubHangerDealVerdict({ askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf }, familyComps)
       : null
   const familyLabel = family ? `${family.make} ${family.model}` : null
 
@@ -416,6 +431,7 @@ export default async function AircraftListingDetailPage({
             {estimate && familyLabel && (
               <EstimatePanel
                 estimate={estimate}
+                deal={dealVerdict}
                 familyLabel={familyLabel}
                 familyHref={
                   family ? `/aircraft/${family.makeSlug}/${family.modelSlug}` : undefined
@@ -490,12 +506,63 @@ const ESTIMATE_META: Record<
   },
 }
 
+// Per-verdict presentation for the ClubHanger Deal Check. Unlike the descriptive
+// family-median estimate above, this IS a value judgement — earned by comparing only
+// against similar-year + similar-hours comps (see `clubHangerDealVerdict`).
+const DEAL_META: Record<
+  ClubHangerDealVerdict['verdict'],
+  { label: string; chip: string; Icon: typeof TrendingDown }
+> = {
+  good: {
+    label: 'Good deal',
+    chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    Icon: TrendingDown,
+  },
+  fair: {
+    label: 'Fair price',
+    chip: 'bg-sky-50 text-sky-700 ring-sky-200',
+    Icon: Scale,
+  },
+  high: {
+    label: 'Priced high',
+    chip: 'bg-amber-50 text-amber-700 ring-amber-200',
+    Icon: TrendingUp,
+  },
+}
+
+function DealCheck({ deal, familyLabel }: { deal: ClubHangerDealVerdict; familyLabel: string }) {
+  const meta = DEAL_META[deal.verdict]
+  const dir = deal.deltaDollars < 0 ? 'below' : 'above'
+  const sentence =
+    deal.verdict === 'fair'
+      ? `Right around the going rate for similar-year, similar-hours ${familyLabel} listings.`
+      : `Asking ${formatPrice(Math.abs(deal.deltaDollars))} (${deal.deltaPct}%) ${dir} the median of similar-year, similar-hours ${familyLabel} listings.`
+  return (
+    <div className="mt-4 border-t border-slate-100 pt-4">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Deal check</p>
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1 ${meta.chip}`}
+      >
+        <meta.Icon className="h-4 w-4" /> {meta.label}
+      </span>
+      <p className="mt-3 text-sm font-medium leading-relaxed text-slate-700">{sentence}</p>
+      <p className="mt-2 text-xs text-slate-500">
+        Compared with {deal.compCount} {familyLabel} listing{deal.compCount === 1 ? '' : 's'} for sale
+        now within ±{deal.yearBand} years and comparable total time — controlling for the two biggest
+        value drivers, so this is a genuine value read (median {formatPrice(deal.median)}).
+      </p>
+    </div>
+  )
+}
+
 function EstimatePanel({
   estimate,
+  deal,
   familyLabel,
   familyHref,
 }: {
   estimate: ClubHangerEstimate
+  deal?: ClubHangerDealVerdict | null
   familyLabel: string
   familyHref?: string
 }) {
@@ -521,6 +588,7 @@ function EstimatePanel({
         Based on the median asking price ({formatPrice(estimate.median)}) of {estimate.compCount}{' '}
         other {familyLabel} listing{estimate.compCount === 1 ? '' : 's'} for sale now.
       </p>
+      {deal && <DealCheck deal={deal} familyLabel={familyLabel} />}
       {familyHref && (
         <Link
           href={familyHref}
