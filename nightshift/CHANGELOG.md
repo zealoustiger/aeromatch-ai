@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T11:53Z — PASS — model-curate-diamond-da40
+- Pages: /aircraft/diamond/da40
+- What: **Upgraded the Diamond DA40 "for sale" page from a thin auto-generated page to a fully fleshed-out, curated one.** It now shows a **key-specifications table** (seats, engine, horsepower, cruise, range, useful load, fuel, airframe), a **"What's different about the Diamond DA40"** highlights card, a **three-question FAQ** (with matching structured data for Google), and an **"About the Diamond DA40"** write-up — all genuine, well-known facts about the airplane. The page already had ~9 real Diamond DA40 listings; this adds the unique buyer-guidance content around them. The web address is unchanged, so no duplicate page is created.
+- Goal: SEO breadth + quality / `[goal]` lane (last non-bug cycle `seeker-filter-rework` pulled `[want]` → alternated to `[goal]`). On-site pageviews at orient: 325 last 7d (PostHog secondary signal; GSC not configured). STAGE=INDEXING — this is the highest-leverage indexing move: enrich an existing, already-crawlable URL with unique content + FAQPage JSON-LD rather than spin up a new thin page. Also diversifies off the heavily-worked compare-pairs family, per the backlog's "DIVERSIFY" note, and closes the one curated-make gap the backlog named (Diamond).
+- Spec: nightshift/specs/20260624T115318Z-model-curate-diamond-da40.md
+- Verdict: PASS. `next build` + typecheck green (clean `.next` rebuild — the first server run served a stale prerender; verified curated content after `rm -rf .next`). QA smoke exit 0 on `/aircraft/diamond/da40` at 1280 + 375 (HTTP 200, zero app console errors, zero horizontal overflow); screenshots look right (all curated sections stack cleanly on mobile). Confirmed in rendered HTML: curated meta description, key-specs table (Lycoming IO-360), highlights, FAQ visible text + FAQPage JSON-LD (1:1 parity), About prose, and 18 real DA40 listing links. Curated entry matches the prior dynamic slug/pattern exactly (`diamond/da40`, `da40%`) → no duplicate URL.
+- Screenshots: nightshift/screenshots/model-curate-diamond-da40/
+- Next: curate the Diamond **DA42** (twin) and **DA20** (trainer) families — both have live inventory and follow the identical template (SEO_MAKE_MODELS + MODEL_SPECS/HIGHLIGHTS/FAQS/OVERVIEWS).
+
 ## 2026-06-24T11:45Z — PASS — seeker-filter-rework
 - Pages: /partnerships/seeking
 - What: **Reworked the "Filter Pilots" sidebar** on the pilots-seeking page to match how an aircraft owner screening pilots actually thinks. **Aircraft Make Wanted now leads the panel** and is **multi-select** (tick several makes — an owner may accept any of them). **Rating Held is now multi-select** too (PPL/IFR/Commercial/CFI/ATP/Complex — any combination). The **State filter was removed** as redundant with the Near-Home-Airport + radius control above it. Each selected make and rating shows as its own removable chip in the results header, and the same rework applies in the mobile filter drawer.
