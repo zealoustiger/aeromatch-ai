@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T10:40Z — PASS — partnership-filter-multi-airport
+- Pages: /partnerships
+- What: **The partnerships filter now lets you search by more than one home airport at once.** Before, the "Home Airport (ICAO)" box accepted a single field; now you can type several codes (e.g. KHWD, KOAK, KCCR) — press Enter, comma, or just click away to add each as a small removable chip — and you'll see partnerships based at **any** of those airports together. Each chosen airport also appears as a removable chip above the results, so you can drop one airport without clearing the rest. Works on desktop and mobile; existing single-airport links and saved searches keep working unchanged.
+- Goal: feature depth ([want] lane) — buyer-requested filter UX (pairs with the seeking-form multi-airport item). Not a tonight-pageview play; pageviews 7d=325 at orient (STAGE=INDEXING). Honest leading-indicator note: this is a pure front-end exposure of capability the query layer already had (`resolveAirportList` → `.in('home_airport', …)`), so it adds no new pages and no schema.
+- Spec: nightshift/specs/20260624T104023Z-partnership-filter-multi-airport.md
+- Verdict: PASS. `npx next build` + typecheck green. QA smoke (production `next start`) exit 0 on `/partnerships` and `/partnerships?airports=KHWD,KOAK` at desktop 1280 + mobile 375 — HTTP 200, zero app-origin console errors, zero horizontal overflow. Screenshots confirm: filter panel shows "· 2 selected" with KHWD/KOAK chips + the "Enter to add" input; results-header shows one removable chip per airport; results are real Hayward/Oakland listings. Legacy `?airport=KHWD` re-checked: 200, single chip + "near KHWD" header (back-compat intact).
+- Goal-lane: [want] (last non-bug cycle browse-compare-mission-links pulled [goal]; last cycle PASS → no blocker → [want] owed per the 1:1).
+- Screenshots: nightshift/screenshots/partnership-filter-multi-airport/
+- Next: apply the same multi-airport chip input to the seeking browse filter (`SeekerFilters`) and the still-open seeking-form "multiple base airports" field; optionally a "within X mi" radius alongside multi-airport.
+
 ## 2026-06-24T10:26Z — PASS — browse-compare-mission-links
 - Pages: /aircraft/browse
 - What: **The "Browse all aircraft for sale" index page now also links to our head-to-head comparisons and our shop-by-mission pages** — two whole families of pages that already existed (and were already in the sitemap) but couldn't be reached by clicking around from the site's main aircraft index. Added a **"Compare aircraft"** section listing every curated comparison (e.g. *Cessna 172 vs Cirrus SR22*, *Cherokee vs Arrow*) with a "See all comparisons" link, and a **"By mission"** section with quick links (*Glass cockpit · IFR-equipped · Tailwheel · Low-time*). Also widened the page's intro and jump-nav so visitors and search crawlers can hop straight to either. No new pages, no data invented — just connecting pages we already publish.

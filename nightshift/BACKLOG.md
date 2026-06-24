@@ -272,12 +272,15 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   raw email exposed); (4) unread badge + 375px polish. Keep "Send Email" as fallback until
   messaging is live. Screenshot:
   https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/in-app-messaging/20260624-in-app-messaging.png
-- **[P2][want] Partnership filter: multiple airport codes.** The partnership browse filter's
-  "Home airport (ICAO)" field accepts only one airport. Let users enter **multiple codes**
-  (e.g. KHWD, KOAK, KCCR), OR them together, and render one removable chip per airport. Pairs
-  with the seeking-form multi-airport change. Slice: (1) multi-airport input + chips + OR
-  query; (2) per-airport filter chips in the results header; (3) 375px polish. Screenshot:
-  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/partnership-filter-multi-airport/20260624-partnership-filter-multi-airport.png
+- ~~**[P2][want] Partnership filter: multiple airport codes.**~~ ✅ SHIPPED 2026-06-24T10:40Z
+  (`partnership-filter-multi-airport`). The `/partnerships` "Home Airport (ICAO)" filter now
+  takes **multiple codes** (Enter/comma/blur to add) as removable chips, OR'd via the existing
+  `airports` param + `.in('home_airport', …)` query path; one removable chip per airport also
+  renders in the results header (`PartnershipActiveFilterChips`). Desktop + 375px; legacy single
+  `?airport=KHWD` (+radius) preserved. Pure front-end (no schema). See CHANGELOG. (Screenshot
+  object can be deleted from `backlog-shots`.) **Next:** same multi-airport input on the seeking
+  browse filter (`SeekerFilters`) + the seeking-form "multiple base airports" field; optional
+  "within X mi" radius alongside the multi-airport list.
 - ~~**[P2][want] Add "Save this search" inside the filter panel.**~~ ✅ SHIPPED
   2026-06-24T08:39Z (`save-search-in-filter-panel`). A full-width "Save this search" button
   now renders inside the Filter Results panel (desktop sidebar + mobile drawer) above
