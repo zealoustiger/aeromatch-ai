@@ -132,6 +132,66 @@ export const COMPARISONS: Comparison[] = [
       { q: 'Which is the better family cross-country airplane?', a: 'Both seat four comfortably. Choose the 182 for rugged short- and rough-field capability, big useful load, and lower cost; choose the SR22 for speed, a glass panel, and the CAPS parachute on longer trips.' },
     ],
   },
+  {
+    slug: 'mooney-m20-vs-cirrus-sr22',
+    a: { makeSlug: 'mooney', modelSlug: 'm20' },
+    b: { makeSlug: 'cirrus', modelSlug: 'sr22' },
+    intro:
+      'The Mooney M20 and the Cirrus SR22 are two very different answers to the same question: how do I cross the country quickly in a single? The Mooney is the efficiency benchmark — a low, slick retractable that posts ~160 kt on a 200 hp engine and modest fuel burn, in a deliberately snug cabin. The SR22 throws 310 hp and a wide composite cabin at the problem, cruising faster (~183 kt) with a glass panel and a CAPS whole-airframe parachute, but burning far more fuel. One wins on miles-per-gallon; the other on speed, space, and technology.',
+    faqs: [
+      { q: 'Which is more fuel-efficient, a Mooney M20 or a Cirrus SR22?', a: 'The Mooney, by a wide margin. Its 200 hp engine and slick, low-drag airframe deliver ~160 kt on far less fuel than the SR22’s 310 hp, which trades that economy for ~183 kt cruise and a roomier cabin.' },
+      { q: 'Is the Cirrus SR22 faster than a Mooney M20?', a: 'Yes. The SR22 cruises around 183 kt against roughly 160 kt for the M20. The Mooney closes much of the real-world gap on fuel burn and range, but the SR22 is the faster airplane outright and carries more.' },
+      { q: 'Which has the bigger cabin?', a: 'The SR22. Its wide composite cabin seats four to five with easier entry, while the Mooney’s low, tightly cowled fuselage is famously snug. The Mooney trades cabin room for the efficiency that defines it; the SR22 trades fuel for space and the CAPS parachute.' },
+    ],
+  },
+  {
+    slug: 'mooney-m20-vs-beechcraft-bonanza',
+    a: { makeSlug: 'mooney', modelSlug: 'm20' },
+    b: { makeSlug: 'beechcraft', modelSlug: 'bonanza' },
+    intro:
+      'The Mooney M20 and the Beechcraft Bonanza are both classic metal retractable-gear travelers, but they aim at different owners. The Mooney is the efficiency champion — ~160 kt on a 200 hp engine and a low fuel burn, in a tight four-seat cabin built to go far on a budget. The Bonanza is the benchmark high-performance single: 300 hp, ~174 kt, a roomy four-to-six-seat cabin, and top-of-class build quality and ramp presence, at a higher purchase and running cost. The Mooney maximizes miles per gallon; the Bonanza maximizes cabin, load, and prestige.',
+    faqs: [
+      { q: 'Mooney M20 or Beechcraft Bonanza — which is cheaper to own?', a: 'The Mooney, generally. Its 200 hp engine sips far less fuel than the Bonanza’s 300 hp, and both carry the retractable-gear inspection and insurance line. The Bonanza costs more to buy and feed in exchange for a bigger cabin, more load, and more speed.' },
+      { q: 'Which is faster, the M20 or the Bonanza?', a: 'The Bonanza, at about 174 kt versus roughly 160 kt for the M20 — but the Mooney achieves its speed on a much smaller engine, so the gap on fuel burn runs the other way. Both are genuine ~1,000 nm-class cross-country singles.' },
+      { q: 'Which has more cabin and useful load?', a: 'The Bonanza. Its four-to-six-seat cabin and ~1,050 lb useful load outclass the Mooney’s snug four-seat layout, making the Bonanza the better choice for carrying people and bags while the Mooney wins on efficiency.' },
+    ],
+  },
+  {
+    slug: 'piper-comanche-vs-piper-arrow',
+    a: { makeSlug: 'piper', modelSlug: 'comanche' },
+    b: { makeSlug: 'piper', modelSlug: 'arrow' },
+    intro:
+      'The Piper Comanche and the Piper Arrow are both low-wing retractable-gear Pipers, but they come from different eras and missions. The PA-24 Comanche is the older, faster traveler — 250 hp, ~160 kt, and big tanks for genuine long-leg range — with a dedicated type community supporting an out-of-production airframe. The PA-28R Arrow is the simpler, more plentiful complex trainer: 200 hp, ~137 kt, and the classic stepping-stone to a retractable-gear and constant-speed-prop endorsement. The Comanche is more airplane for serious travel; the Arrow is easier to insure, support, and step up into.',
+    faqs: [
+      { q: 'Is the Piper Comanche faster than the Arrow?', a: 'Yes. The 250 hp Comanche cruises around 160 kt against about 137 kt for the 200 hp Arrow, and its larger optional tanks give longer legs. The Arrow trades that speed for simpler ownership and easier parts and insurance.' },
+      { q: 'Which is easier and cheaper to own?', a: 'The Arrow. It is more plentiful, simpler, and still in widespread training use, so parts, mechanics, and insurance are easier to come by. The Comanche has been out of production for decades, so some parts run through type clubs and specialists — a knowledgeable mechanic and a shared maintenance kitty matter.' },
+      { q: 'Which should I choose?', a: 'Choose the Arrow for a forgiving, well-supported first complex airplane or commercial time-builder. Choose the Comanche if you want more speed, range, and capability for the money and will join its active type community to keep it well maintained.' },
+    ],
+  },
+  {
+    slug: 'beechcraft-bonanza-vs-beechcraft-baron',
+    a: { makeSlug: 'beechcraft', modelSlug: 'bonanza' },
+    b: { makeSlug: 'beechcraft', modelSlug: 'baron' },
+    intro:
+      'The Beechcraft Bonanza and Baron are siblings — the Baron is essentially the twin-engine evolution of the Bonanza — so this is the classic single-versus-twin decision. The A36 Bonanza is the benchmark high-performance single: 300 hp, ~174 kt, six seats, and the lowest cost of the two to buy and run. The Baron 58 adds a second 300 hp engine for redundancy and ~200 kt cruise with a much bigger useful load and range, at roughly double the fuel, two overhaul reserves, and twin-rated insurance. You are really choosing whether a second engine is worth the cost.',
+    faqs: [
+      { q: 'What is the difference between a Bonanza and a Baron?', a: 'The Baron is the twin-engine version of the Bonanza lineage. The A36 Bonanza is a 300 hp single cruising ~174 kt; the Baron 58 has two 300 hp engines (600 hp total), cruises around 200 kt, and carries far more — with the cost and complexity of a second engine.' },
+      { q: 'Is the Baron much more expensive to own than a Bonanza?', a: 'Considerably. The Baron burns roughly twice the fuel, carries two engines to overhaul, and needs a multi-engine rating and twin insurance, so it costs far more to run solo than a Bonanza — which is exactly why Barons are so commonly co-owned across several partners.' },
+      { q: 'Should I step up from a Bonanza to a Baron?', a: 'Step up if you want twin-engine redundancy for night, weather, or over-water flying and routinely fill six seats with bags over long distances. If your mission fits a single, the Bonanza delivers most of the cabin and speed for far less money.' },
+    ],
+  },
+  {
+    slug: 'cessna-150-vs-cessna-172',
+    a: { makeSlug: 'cessna', modelSlug: '150' },
+    b: { makeSlug: 'cessna', modelSlug: '172' },
+    intro:
+      'The Cessna 150 and Cessna 172 are the two airplanes most pilots learn in, so the comparison is really about how much airplane you need first. The two-seat 150 is the cheapest practical way into ownership — a 100 hp trainer that sips fuel and is cheap to maintain, but tops out around 100 kt and carries only two people and light bags. The four-seat 172 Skyhawk adds an 80 hp-bigger engine, real back seats, more useful load, and ~124 kt cruise, making it the do-everything family trainer at a modestly higher running cost. Many owners start in a 150 and step up to a 172.',
+    faqs: [
+      { q: 'What is the difference between a Cessna 150 and a 172?', a: 'Size and power. The 150 is a two-seat, 100 hp trainer cruising ~100 kt; the 172 Skyhawk is a four-seat, 180 hp airplane cruising ~124 kt with much more useful load. Both are high-wing, fixed-gear, and famously easy to fly and support.' },
+      { q: 'Which is cheaper to own, a 150 or a 172?', a: 'The 150. Its small 100 hp engine has among the lowest fuel and operating costs in the fleet, making it the cheapest practical way into aircraft ownership. The 172 costs a bit more to run in exchange for two more seats, more load, and more speed.' },
+      { q: 'Should I buy a 150 or a 172?', a: 'Choose the 150 to build hours and fly locally at the lowest possible cost with one passenger. Choose the 172 if you need to carry up to four people, want more useful load and cross-country speed, and want one airplane that does it all.' },
+    ],
+  },
 ]
 
 const BY_SLUG = new Map(COMPARISONS.map((c) => [c.slug, c]))
