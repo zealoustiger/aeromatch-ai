@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useState, useTransition } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
+import SaveSearchButton from './SaveSearchButton'
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -15,9 +16,13 @@ const US_STATES = [
 interface Props {
   initialValues: Record<string, string | undefined>
   facets?: AircraftFacets
+  /** When set, render an in-panel "Save this search" button above "Clear all
+   *  filters" (the base route the saved search reopens). Lets users save where
+   *  they tune filters, not just from the top action bar. */
+  saveSearchBasePath?: string
 }
 
-export default function AircraftSaleFilters({ initialValues, facets }: Props) {
+export default function AircraftSaleFilters({ initialValues, facets, saveSearchBasePath }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -325,12 +330,15 @@ export default function AircraftSaleFilters({ initialValues, facets }: Props) {
       </div>
 
       {hasFilters && (
-        <button
-          onClick={clearAll}
-          className="w-full rounded-md border border-slate-200 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
-        >
-          Clear all filters
-        </button>
+        <div className="space-y-2 border-t border-slate-100 pt-4">
+          {saveSearchBasePath && <SaveSearchButton fullWidth basePath={saveSearchBasePath} />}
+          <button
+            onClick={clearAll}
+            className="w-full rounded-md border border-slate-200 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
+          >
+            Clear all filters
+          </button>
+        </div>
       )}
     </div>
   )

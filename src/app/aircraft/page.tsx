@@ -204,7 +204,7 @@ export default async function AircraftPage({
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
             </div>
-            <AircraftSaleFilters initialValues={params} facets={facets} />
+            <AircraftSaleFilters initialValues={params} facets={facets} saveSearchBasePath="/aircraft" />
           </div>
         </aside>
 
