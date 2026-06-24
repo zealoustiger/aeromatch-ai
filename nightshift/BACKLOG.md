@@ -215,8 +215,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   N-number marked optional; Home Airport asks for ICAO only (server now derives
   airport_name/city/state from the `airports` table so the state SEO pages keep real data);
   Buy-In required + Monthly/Wet optional with an info hover; Pilot Requirements section removed;
-  Listing Details moved to the 2nd section. No schema change. See CHANGELOG. **Remaining: slice 2
-  (autosave + "Saving…/Saved" indicator); slice 3 (375px micro-polish).**
+  Listing Details moved to the 2nd section. No schema change. See CHANGELOG.
+  — **slice 2 (autosave + "Saving…/Saved" indicator) ✅ SHIPPED 2026-06-24T08:08Z** (`post-partnership-autosave`):
+  new reusable `useFormDraft` hook autosaves the form to localStorage (debounced) with a
+  Saving…/Draft saved/Draft restored indicator, restores on return, clears on successful post.
+  Client-only, no schema. **Remaining: slice 3 (375px micro-polish); and adopt the same hook on the
+  Post-a-Seeking form (`/partnerships/seeking/new`).**
 - **[P2][want] Easy toggle between the three "Post a…" types.** From "Post a Partnership,"
   make it easy to switch between **post partnership / post plane for sale / post pilot
   seeking partnership** — a segmented toggle/tabs at the top (or at minimum clear links to
