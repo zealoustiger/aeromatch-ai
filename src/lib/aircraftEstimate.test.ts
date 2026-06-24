@@ -4,7 +4,16 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { clubHangerEstimate, MIN_ESTIMATE_COMPS, ESTIMATE_DEAD_BAND } from './aircraftEstimate.ts'
+import {
+  clubHangerEstimate,
+  clubHangerDealVerdict,
+  MIN_ESTIMATE_COMPS,
+  ESTIMATE_DEAD_BAND,
+  MIN_DEAL_COMPS,
+  DEAL_YEAR_BAND,
+  DEAL_HOURS_ABS_BAND,
+  type DealComp,
+} from './aircraftEstimate.ts'
 
 // The array passed to clubHangerEstimate INCLUDES the listing's own price (one
 // occurrence is excluded internally), mirroring how the page passes the raw family
@@ -66,4 +75,83 @@ test('excludes exactly ONE occurrence of the listing price (duplicates kept as c
   // others sorted: 340,340,360,380,400 → median 360k; subject 340k → -20k.
   assert.equal(e!.median, 360_000)
   assert.equal(e!.deltaDollars, -20_000)
+})
+
+/* ── ClubHanger Deal Check (similar-year + similar-hours value verdict) ──────── */
+
+// A 2008 SR22 @ 1,200 hrs. With ±5yr and a 1,000hr band, these five comps are all
+// "similar": prices 320/340/360/380/400k → median 360k. The last two are deliberately
+// OUT of band (year 1998; hours 3,000) and must be excluded.
+const SR22_COMPS: DealComp[] = [
+  { asking_price: 340_000, year: 2008, ttaf: 1_200 },
+  { asking_price: 360_000, year: 2010, ttaf: 1_500 },
+  { asking_price: 380_000, year: 2006, ttaf: 800 },
+  { asking_price: 400_000, year: 2012, ttaf: 2_000 },
+  { asking_price: 320_000, year: 2005, ttaf: 1_000 },
+  { asking_price: 150_000, year: 1998, ttaf: 1_200 }, // out of year band → excluded
+  { asking_price: 180_000, year: 2008, ttaf: 3_000 }, // out of hours band → excluded
+]
+
+test('deal: good deal — clearly below the similar-year/hours median', () => {
+  const d = clubHangerDealVerdict({ askingPrice: 280_000, year: 2008, ttaf: 1_200 }, SR22_COMPS)
+  assert.ok(d)
+  assert.equal(d!.verdict, 'good')
+  assert.equal(d!.median, 360_000) // proves the two out-of-band cheap comps were excluded
+  assert.equal(d!.compCount, 5)
+  assert.equal(d!.deltaDollars, -80_000)
+  assert.equal(d!.deltaPct, 22) // round(80/360*100)
+  assert.equal(d!.yearBand, DEAL_YEAR_BAND)
+})
+
+test('deal: priced high — clearly above the similar median', () => {
+  const d = clubHangerDealVerdict({ askingPrice: 440_000, year: 2008, ttaf: 1_200 }, SR22_COMPS)
+  assert.ok(d)
+  assert.equal(d!.verdict, 'high')
+  assert.equal(d!.deltaDollars, 80_000)
+  assert.equal(d!.deltaPct, 22)
+})
+
+test('deal: fair — within the dead band of the similar median, pct 0', () => {
+  const d = clubHangerDealVerdict({ askingPrice: 368_000, year: 2008, ttaf: 1_200 }, SR22_COMPS)
+  assert.ok(d)
+  assert.equal(d!.verdict, 'fair')
+  assert.equal(d!.deltaPct, 0)
+  assert.equal(d!.deltaDollars, 8_000)
+})
+
+test('deal: null when subject lacks a year or total time — cannot honestly judge', () => {
+  assert.equal(clubHangerDealVerdict({ askingPrice: 280_000, year: null, ttaf: 1_200 }, SR22_COMPS), null)
+  assert.equal(clubHangerDealVerdict({ askingPrice: 280_000, year: 2008, ttaf: null }, SR22_COMPS), null)
+  assert.equal(clubHangerDealVerdict({ askingPrice: null, year: 2008, ttaf: 1_200 }, SR22_COMPS), null)
+})
+
+test('deal: null when fewer than MIN_DEAL_COMPS fall inside BOTH bands', () => {
+  // Only 3 in-band comps; the rest are out of year/hours band → no verdict.
+  const sparse: DealComp[] = [
+    { asking_price: 340_000, year: 2008, ttaf: 1_200 },
+    { asking_price: 360_000, year: 2009, ttaf: 1_300 },
+    { asking_price: 380_000, year: 2007, ttaf: 1_100 },
+    { asking_price: 200_000, year: 1990, ttaf: 1_200 }, // out of band
+    { asking_price: 210_000, year: 2008, ttaf: 6_000 }, // out of band
+  ]
+  assert.ok(3 < MIN_DEAL_COMPS)
+  assert.equal(clubHangerDealVerdict({ askingPrice: 300_000, year: 2008, ttaf: 1_200 }, sparse), null)
+})
+
+test('deal: hours band scales with the subject (relative band for high-time airframes)', () => {
+  // Subject 5,000 hrs → band = max(1,000, 5,000*0.35=1,750) = 1,750. A 6,500hr comp
+  // (Δ1,500) is in; an 8,000hr comp (Δ3,000) is out. Use a fixed-year set so only the
+  // hours band decides membership.
+  const comps: DealComp[] = [
+    { asking_price: 200_000, year: 2008, ttaf: 4_000 }, // Δ1,000 in
+    { asking_price: 210_000, year: 2008, ttaf: 4_500 }, // Δ500 in
+    { asking_price: 220_000, year: 2008, ttaf: 6_000 }, // Δ1,000 in
+    { asking_price: 230_000, year: 2008, ttaf: 6_500 }, // Δ1,500 in
+    { asking_price: 60_000, year: 2008, ttaf: 8_000 }, //  Δ3,000 OUT
+  ]
+  const d = clubHangerDealVerdict({ askingPrice: 150_000, year: 2008, ttaf: 5_000 }, comps)
+  assert.ok(d)
+  assert.equal(d!.compCount, 4) // the 8,000hr comp excluded
+  assert.equal(d!.median, 215_000) // median of 200/210/220/230 → (210+220)/2
+  assert.ok(DEAL_HOURS_ABS_BAND === 1_000)
 })

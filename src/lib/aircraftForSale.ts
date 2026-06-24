@@ -193,3 +193,46 @@ export async function getFamilyAskingPrices(
     return []
   }
 }
+
+/**
+ * Same-family active priced comps WITH year + total time, used by the listing detail
+ * page's "ClubHanger Deal Check" (the similar-year + similar-hours value verdict). The
+ * family filter mirrors `getFamilyAskingPrices` exactly, but this read also returns
+ * `year`/`ttaf` and EXCLUDES the subject listing by id (`excludeId`) so the verdict's
+ * pure helper never has to undo a self-comparison. Read-only, no schema change; returns
+ * [] on any failure or when Supabase isn't configured.
+ */
+export async function getFamilyComps(
+  make: string,
+  modelPattern: string,
+  notModelPattern: string | undefined,
+  excludeId: string
+): Promise<{ asking_price: number | null; year: number | null; ttaf: number | null }[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const base = supabase
+      .from('aircraft_for_sale')
+      .select('asking_price, year, ttaf')
+      .eq('status', 'active')
+      .neq('id', excludeId)
+      .ilike('make', `%${make}%`)
+      .ilike('model', modelPattern)
+      .not('asking_price', 'is', null)
+      .gt('asking_price', 0)
+      .limit(5000)
+    const { data, error } = await (notModelPattern
+      ? base.not('model', 'ilike', notModelPattern)
+      : base)
+    if (error || !data) return []
+    return data.map((r) => ({
+      asking_price: r.asking_price as number | null,
+      year: r.year as number | null,
+      ttaf: r.ttaf as number | null,
+    }))
+  } catch {
+    return []
+  }
+}
