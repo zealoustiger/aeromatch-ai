@@ -98,7 +98,7 @@ export default async function SeekingPartnershipsPage({
   const makeLinks = SEO_MAKES.slice(0, 3)
   // Makes seekers actually want — feeds the chip bar + the make filter dropdown.
   const seekerMakes = await getSeekerMakes()
-  const activeFilterCount = ['airport', 'state', 'make', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
+  const activeFilterCount = ['airports', 'airport', 'state', 'make', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   return (
     <div className="ch-surface min-h-screen">

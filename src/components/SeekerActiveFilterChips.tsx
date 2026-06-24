@@ -27,14 +27,37 @@ export default function SeekerActiveFilterChips({ params }: { params: Params }) 
     return Number.isFinite(n) && n > 0 ? n : null
   }
 
-  const airport = params.airport?.trim()
-  if (airport) {
-    const radius = num(params.radius)
-    chips.push({
-      key: 'airport',
-      label: radius ? `Within ${radius} mi of ${airport.toUpperCase()}` : airport.toUpperCase(),
-      href: buildHref(params, (p) => { p.delete('airport'); p.delete('radius') }),
-    })
+  // Home airports — the multi-select `airports` param renders one removable chip
+  // per code (removing one rewrites `airports` without it). Takes precedence over
+  // the legacy single `airport`(+radius) chip, kept only for back-compat with old
+  // links / saved searches that still carry `airport`.
+  const airportCodes = (params.airports ?? '')
+    .split(',')
+    .map((a) => a.trim().toUpperCase())
+    .filter(Boolean)
+  if (airportCodes.length > 0) {
+    const soleRadius = airportCodes.length === 1 ? num(params.radius) : null
+    for (const code of airportCodes) {
+      chips.push({
+        key: `airport:${code}`,
+        label: soleRadius ? `Within ${soleRadius} mi of ${code}` : code,
+        href: buildHref(params, (p) => {
+          const rest = airportCodes.filter((c) => c !== code)
+          if (rest.length) p.set('airports', rest.join(','))
+          else { p.delete('airports'); p.delete('radius') }
+        }),
+      })
+    }
+  } else {
+    const airport = params.airport?.trim()
+    if (airport) {
+      const radius = num(params.radius)
+      chips.push({
+        key: 'airport',
+        label: radius ? `Within ${radius} mi of ${airport.toUpperCase()}` : airport.toUpperCase(),
+        href: buildHref(params, (p) => { p.delete('airport'); p.delete('radius') }),
+      })
+    }
   }
 
   const state = params.state?.trim()
