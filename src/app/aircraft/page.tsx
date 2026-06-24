@@ -18,6 +18,7 @@ import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd } from '@/lib/aircraftJsonLd'
 import { MISSIONS } from '@/lib/missions'
+import { COMPARISONS, comparisonLabel } from '@/lib/aircraftComparisons'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 
@@ -220,6 +221,38 @@ export default async function AircraftPage({
                   {m.h1}
                 </Link>
               ))}
+            </div>
+          </div>
+
+          {/* Compare aircraft head-to-head — crawlable internal links to the curated
+              comparison pages ("{model} vs {model}"). Reaches that family from the
+              priority seed page #2 (previously linked only from individual model hubs),
+              spreading crawl equity from a high-authority page. Labels via the shared
+              comparisonLabel helper; any pair that fails to resolve is skipped. */}
+          <div className="ch-panel mt-4 p-6">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-semibold text-slate-900">Compare aircraft head-to-head</h2>
+              <Link
+                href="/aircraft/compare"
+                className="text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+              >
+                View all comparisons →
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {COMPARISONS.map((c) => {
+                const label = comparisonLabel(c)
+                if (!label) return null
+                return (
+                  <Link
+                    key={c.slug}
+                    href={`/aircraft/compare/${c.slug}`}
+                    className="text-sm text-slate-500 hover:text-sky-600 hover:underline"
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
             </div>
           </div>
 
