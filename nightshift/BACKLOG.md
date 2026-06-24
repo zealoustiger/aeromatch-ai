@@ -175,9 +175,15 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   avionics caveat. Deliberately a **descriptive market comparison, not an endorsement**
   (comp set is the whole family). Pure unit-tested helper `src/lib/aircraftEstimate.ts` +
   read-only `getFamilyAskingPrices()`; self-suppresses on no-price/unknown-family/<4 comps.
-  See CHANGELOG. **Remaining:** the **endorsement-style "Good deal / Priced high" score** —
-  ship once comps are narrowed to **year-band + hours** (then a value judgement is honest);
-  optionally surface the verdict chip on the detail page's "Similar aircraft" cards.
+  See CHANGELOG. — **endorsement-style "Good deal / Priced high" verdict ✅ SHIPPED
+  2026-06-24T10:21Z** (`clubhanger-estimate-deal-verdict`): a "Deal check" line in the
+  detail-page `EstimatePanel` comparing the asking price only against **similar-year
+  (±5yr) + similar-hours** same-make+model comps (≥4 required) → **Good deal / Fair price /
+  Priced high**, additive on top of the existing whole-family descriptive estimate; pure
+  unit-tested `clubHangerDealVerdict` + read-only `getFamilyComps`; self-suppresses on
+  thin/missing data. **Remaining:** optionally surface the verdict chip on the detail
+  page's "Similar aircraft" cards + the browse `AircraftSaleCard`; consider accepting SMOH
+  when TTAF is missing to widen coverage.
 - **[P2][want] Price history + "Price cut ↓$X" + days-on-market + "New" pills (Redfin).**
   Data already stored (`previous_price`, `price_changed_at`, `first_seen_at`). Slice:
   (1) New + Price-cut pills on cards (extend existing `priceDrop`/`isNew`); (2)
