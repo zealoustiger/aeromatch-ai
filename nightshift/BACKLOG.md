@@ -197,6 +197,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   **remove the pilot-requirements** section; (5) **move "Listing details" earlier** (2nd–3rd
   section); (6) **autosave** with a visible "Saving…/Saved" indicator so users don't fear
   losing progress. Slice: (1) field changes 1–5; (2) autosave + save-state; (3) 375px polish.
+  — **slice 1 (field changes 1–5) ✅ SHIPPED 2026-06-24T06:24Z** (`post-partnership-frictionless`):
+  N-number marked optional; Home Airport asks for ICAO only (server now derives
+  airport_name/city/state from the `airports` table so the state SEO pages keep real data);
+  Buy-In required + Monthly/Wet optional with an info hover; Pilot Requirements section removed;
+  Listing Details moved to the 2nd section. No schema change. See CHANGELOG. **Remaining: slice 2
+  (autosave + "Saving…/Saved" indicator); slice 3 (375px micro-polish).**
 - **[P2][want] Easy toggle between the three "Post a…" types.** From "Post a Partnership,"
   make it easy to switch between **post partnership / post plane for sale / post pilot
   seeking partnership** — a segmented toggle/tabs at the top (or at minimum clear links to
