@@ -47,6 +47,41 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
+### Growth & data — owner acquisition (human, 2026-06-23)
+FAA-registry-powered ideas. The aircraft registry is public (tail number → owner
+name OR LLC + mailing address, make/model/year; NO emails/phones). Two items:
+
+- **[P2][want] N-number autofill on "Post a Listing".** Owner/seller types their FAA
+  tail number (N-number) and we prefill make / model / year (and flag individual-vs-LLC
+  ownership) from the FAA Aircraft Registry. One-click, accurate listings — gets owners
+  to come to us. Low-risk, clean public data. Slice: (1) data source — either the
+  single-record inquiry endpoint (`registry.faa.gov/aircraftinquiry`, per-lookup) or
+  import the bulk Releasable Aircraft DB (`MASTER.txt` + `ACFTREF.txt`) into an
+  `faa_aircraft` table (refresh monthly); (2) an N-number field on the post form that
+  fetches + prefills make/model/year; (3) show owner-type (individual vs LLC/trust) hint.
+  No emails (FAA has none).
+
+- **[P2][want] Owner-leads list from airport-based tail numbers — DATA COLLECTION ONLY,
+  NO OUTREACH YET.** Growth-prospecting dataset: for a chosen airport, enumerate based
+  aircraft + tail numbers, enrich each via the FAA registry to an owner name or LLC +
+  address, resolve LLCs via state business registries (registered agent / members +
+  address), and later attach likely online profiles / emails — assembled into a `leads`
+  table + admin view. **Build the list only; contact NObody.** Slice: (1) source
+  based-aircraft tail numbers for an airport (ADS-B operators seen at the field / airport
+  directory / FAA owner-address proximity — pick a method); (2) FAA registry enrich →
+  owner/LLC + address; (3) LLC resolution via Secretary-of-State lookups → agent/members;
+  (4) **(gated, later)** profile/email discovery; (5) `leads` table + admin view.
+  - **HARD GATE — outreach is OFF.** Do NOT build any send/email/message flow and do NOT
+    contact leads. Assembling the dataset is the entire scope. Before ANY outreach: a human
+    decision **and** a compliance check (CAN-SPAM, FAA data-use + owner opt-outs, state-data
+    ToS, publicity/privacy). Brand note: cold-blasting scraped owners cuts against the
+    trust differentiator and risks sender reputation — this is a curated, careful list,
+    not a spam cannon.
+  - **Flag for human review before any autonomous build.** Touches third-party sources:
+    FAA registry is clean/public, but ADS-B, state-SoS scraping, and email enrichment each
+    need a ToS/compliance look — the night-shift loop should NOT scrape these unattended
+    without sign-off. (Pairs with the N-number autofill item above, which shares the FAA data.)
+
 ### Backlog capture — screenshots (human, added in chat)
 Items the human captured from chat with a reference screenshot. Each links a
 screenshot in Supabase Storage (`backlog-shots` bucket). **When an item here is
