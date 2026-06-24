@@ -52,20 +52,41 @@ export default function PartnershipActiveFilterChips({ params }: { params: Param
   }
   const dollars = (n: number) => `$${n.toLocaleString('en-US')}`
 
-  // Home airport — removing it also clears `radius` (radius is meaningless alone).
-  const airport = params.airport?.trim()
-  if (airport) {
-    const radius = num(params.radius)
-    chips.push({
-      key: 'airport',
-      label: radius
-        ? `Within ${radius} mi of ${airport.toUpperCase()}`
-        : airport.toUpperCase(),
-      href: buildHref(params, (p) => {
-        p.delete('airport')
-        p.delete('radius')
-      }),
-    })
+  // Home airports — the multi-select `airports` param renders one removable chip
+  // per code (removing one rewrites `airports` without it). Takes precedence over
+  // the legacy single `airport`+`radius` chip, which is kept only for back-compat
+  // with old links / saved searches that still carry `airport`.
+  const airportCodes = (params.airports ?? '')
+    .split(',')
+    .map((a) => a.trim().toUpperCase())
+    .filter(Boolean)
+  if (airportCodes.length > 0) {
+    for (const code of airportCodes) {
+      chips.push({
+        key: `airport:${code}`,
+        label: code,
+        href: buildHref(params, (p) => {
+          const rest = airportCodes.filter((c) => c !== code)
+          if (rest.length) p.set('airports', rest.join(','))
+          else p.delete('airports')
+        }),
+      })
+    }
+  } else {
+    const airport = params.airport?.trim()
+    if (airport) {
+      const radius = num(params.radius)
+      chips.push({
+        key: 'airport',
+        label: radius
+          ? `Within ${radius} mi of ${airport.toUpperCase()}`
+          : airport.toUpperCase(),
+        href: buildHref(params, (p) => {
+          p.delete('airport')
+          p.delete('radius')
+        }),
+      })
+    }
   }
 
   // State
