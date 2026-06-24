@@ -306,6 +306,10 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   confirmation that points to the **Saved Searches** page with a **link** to go there.
   **Renaming** happens on the Saved Searches page (inline). Slice: (1) auto-name + one-click
   save + post-save toast linking `/searches`; (2) inline rename on Saved Searches.
+  — **slice 1 (auto-name + one-click save) ✅ SHIPPED** (`SaveSearchButton` + `autoNameSearch`).
+  — **slice 2 (inline rename on `/searches`) ✅ SHIPPED 2026-06-24T12:31Z** (`saved-search-inline-rename`):
+  a pencil affordance on each saved-search name opens an inline editor (Enter saves / Esc cancels),
+  backed by a new owner-scoped `renameSavedSearch` action (23505-aware); no schema. **This item is now complete.**
 - **[P2][want] Model filter: roll up variants into a parent model.** The Model filter lists
   every variant separately (SR20, Sr20 G2, Sr20 G3, Sr20 G6, SR20-G2, SR20-G3, SF50 G2 Plus,
   …), so picking "an SR20" means checking many near-duplicate boxes. Add a parent **"SR20
