@@ -63,12 +63,13 @@ Repeat until a stop condition (section 3) fires:
    pageview-chasing):
    - **Blockers first, uncapped:** if the most recent CHANGELOG entry is a **FAIL**,
      or there's a known broken page / console error / CWV regression → fix it.
-   - **Else alternate `[want]` ↔ `[goal]` ~1:1** (the `roadmap:goal = 1:1` knob in
-     GOAL.md): look at the last *non-bug* CHANGELOG entry — if it pulled `[want]`,
-     this cycle is `[goal]`; if `[goal]`, this cycle is `[want]`. Pick the highest-value
-     item in that lane (P1 first; `[P1][want]` preempts). `[goal]` = a `[goal]` backlog
-     item or an SEO experiment the worker invents (and appends to BACKLOG `[agent]`);
-     `[want]` = the top human-wanted feature/fix.
+   - **Else weight `[want]` over `[goal]` ~3:1** (≈75% features / 25% SEO — the
+     `roadmap:goal = 3:1` knob in GOAL.md): look at the recent *non-bug* CHANGELOG
+     entries — pull `[goal]` only when the last **3** non-bug cycles were all `[want]`
+     (≈ every 4th non-bug cycle is SEO/page-improvement); otherwise pull `[want]`. Pick
+     the highest-value item in that lane (P1 first; `[P1][want]` preempts). `[goal]` = a
+     `[goal]` backlog item or an SEO experiment the worker invents (and appends to BACKLOG
+     `[agent]`); `[want]` = the top human-wanted feature/fix.
    - **If the chosen lane is empty, fall through to the other; if both human lanes are
      empty, default to `[goal]`.** The backlog never truly empties — the worker
      generates the next SEO experiment. Only stop on the night/usage/time limits in
