@@ -6,6 +6,7 @@ import {
   Wallet,
   FileText,
   Scale,
+  Building2,
   Search,
   ClipboardCheck,
   Landmark,
@@ -78,6 +79,13 @@ const GUIDES: {
     description:
       'The decision guide: leaseback (rent your plane to a flight school for income) versus co-ownership (share the plane and costs with partners) — who each is for, control, wear, tax and insurance, and how to choose.',
     icon: Scale,
+  },
+  {
+    path: '/guides/flying-club-vs-co-ownership',
+    title: 'Flying Club vs. Aircraft Co-Ownership',
+    description:
+      'The other decision guide: joining a flying club (pay to belong and rent the club’s aircraft) versus co-ownership (buy a share of one plane and split its costs) — what you pay, what you build, fleet access, control, exit, and who each suits.',
+    icon: Building2,
   },
   {
     path: '/guides/how-to-find-aircraft-partners',
