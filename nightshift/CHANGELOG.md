@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T12:31Z — PASS — model-curate-diamond-da42-da20
+- Pages: /aircraft/diamond/da42, /aircraft/diamond/da20
+- What: **Fully curated the Diamond DA42 (twin) and DA20 (trainer) plane pages.** Both were thin, auto-generated count-only pages; they now carry the same rich, hand-written content as the DA40 page — a key-specs table, a "what's different about this model" highlights block, a 3-question FAQ (shown on the page and mirrored 1:1 in FAQPage structured data for Google), and an "About" overview written from genuine, well-known facts (no made-up figures). Each still shows its real live listings (DA42 = 7 aircraft, DA20 = 5) and its own unique title/canonical. This finishes curating the Diamond family (DA40 was done last cycle).
+- Goal: SEO breadth + quality — `[goal]` lane (last non-bug cycle `active-filter-chip-rollup` pulled `[want]` → alternated to `[goal]`). On-site pageviews at orient: 325 last 7d (PostHog secondary; GSC not configured). STAGE=INDEXING — this upgrades two existing inventory-backed pages from thin to genuinely unique/index-worthy (page quality is the INDEXING lever), rather than adding new pages. Was the explicit "Next" queued by `model-curate-diamond-da40`; the prior run had written the spec + edits to the working tree but crashed before committing/landing — this cycle adopted that work, committed it on the branch, and shipped it cleanly.
+- Spec: nightshift/specs/20260624T121827Z-model-curate-diamond-da42-da20.md
+- Verdict: PASS — `npx next build` + typecheck green; QA smoke exit 0 on both routes at desktop 1280 + mobile 375 (HTTP 200, zero app console errors, zero horizontal overflow). Screenshots reviewed: both pages render all curated sections, real listings, and the FAQ correctly; no layout breakage. Verified live: DA42 title "Diamond DA42 for sale — 7 aircraft", DA20 "— 5 aircraft", FAQPage JSON-LD present on both.
+- Screenshots: nightshift/screenshots/model-curate-diamond-da42-da20/
+- Next: Diamond family curation is complete for the high-inventory models (DA40/DA42/DA20). DIVERSIFY the next `[goal]` cycle off Diamond — candidates: a CWV/`next/image` pass on the curated model pages, geocoding `aircraft_for_sale.location` to light up `/aircraft/near/[icao]`, or curating the next-highest-inventory uncurated make+model family (check `getInventoryMakeModels` for the largest combos still lacking MODEL_FAQS/OVERVIEWS entries).
+
 ## 2026-06-24T12:08Z — PASS — active-filter-chip-rollup
 - Pages: /aircraft
 - What: **Tidied the active-filter chips on the Planes-for-Sale page.** When you pick a whole model family in one click (e.g. "SR20 (all)", which behind the scenes selects all 8 SR20 sub-variants), the row of removable filter chips above the results now shows **one tidy "SR20 (all)" chip** instead of eight near-identical variant chips. Removing that one chip clears the whole family at once. If you instead pick only some variants of a family, those still show as individual chips (so nothing is hidden). No change to which planes show — purely a cleaner filter display.
