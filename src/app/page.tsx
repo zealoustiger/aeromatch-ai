@@ -6,7 +6,8 @@ import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
 import HomeRails from '@/components/HomeRails'
 import DealsRail from '@/components/DealsRail'
-import { STATE_NAMES, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { STATE_NAMES, STATE_CODES, stateSlug, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { countForSaleState } from '@/components/AircraftSaleList'
 
 const faqItems = [
   {
@@ -183,7 +184,25 @@ const resources = [
   },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  // For-sale-by-state internal links — gated to states with REAL live inventory via
+  // the SAME `countForSaleState` source of truth the sitemap + /aircraft/browse use,
+  // so every link resolves to a real (non-404, indexable) /aircraft/for-sale/[state]
+  // page. Mirrors the by-make + partnerships-by-state blocks below. STAGE=INDEXING:
+  // a direct homepage (highest-authority) link into the #1 search-demand family
+  // ("aircraft for sale {state}") concentrates crawl + link equity on it.
+  let forSaleStates: { code: string; n: number }[] = []
+  try {
+    const counts = await Promise.all(STATE_CODES.map((code) => countForSaleState(code)))
+    forSaleStates = STATE_CODES.map((code, i) => ({ code, n: counts[i] }))
+      .filter((s) => s.n > 0)
+      .sort((a, b) => STATE_NAMES[a.code].localeCompare(STATE_NAMES[b.code]))
+  } catch {
+    // Supabase unavailable at build/request time → omit the block rather than link
+    // to states whose inventory we can't confirm (no thin/404 links).
+    forSaleStates = []
+  }
+
   return (
     <div className="overflow-x-hidden">
 
@@ -400,6 +419,47 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── SEO: BROWSE AIRCRAFT FOR SALE BY STATE ──
+          Symmetric to the by-make block above + the partnerships-by-state block
+          below. Links the #1-demand for-sale family ("aircraft for sale {state}")
+          DIRECTLY from the homepage instead of only via /aircraft/browse (one hop
+          closer = more crawl priority + link equity). Inventory-gated (forSaleStates
+          is built from countForSaleState > 0), so every link is a real indexable
+          page — never a thin/404 state. Self-hides when no inventory is confirmed. */}
+      {forSaleStates.length > 0 && (
+        <section className="border-t border-slate-100 bg-white py-14">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-slate-900">
+                  <MapPin className="h-5 w-5 text-sky-600" />
+                  Browse aircraft for sale by state
+                </h2>
+                <p className="text-sm text-slate-500">
+                  General aviation listings in {forSaleStates.length}{' '}
+                  {forSaleStates.length === 1 ? 'state' : 'states'} with live inventory.
+                </p>
+              </div>
+              <Link href="/aircraft/browse" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700">
+                Browse all aircraft for sale <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
+              {forSaleStates.map(({ code, n }) => (
+                <Link
+                  key={code}
+                  href={`/aircraft/for-sale/${stateSlug(STATE_NAMES[code])}`}
+                  className="py-1 text-sm text-slate-600 transition-colors hover:text-sky-600 hover:underline"
+                >
+                  {STATE_NAMES[code]} aircraft for sale{' '}
+                  <span className="text-xs text-slate-400">({n.toLocaleString()})</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── SEO: BROWSE BY STATE ── */}
       <section className="border-t border-slate-100 bg-white py-14">
