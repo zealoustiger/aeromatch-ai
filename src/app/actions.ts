@@ -35,15 +35,26 @@ export async function createPartnership(formData: FormData) {
   const ratingsRaw = formData.get('ratings_required') as string
   const ratings = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
 
+  // The post form now asks only for the ICAO (frictionless) — derive the airport
+  // name / city / state from the authoritative `airports` table so the location is
+  // accurate and the `/partnerships/state/[state]` SEO pages still get a real state.
+  // Falls back to null when the ICAO isn't in our table (insert still succeeds).
+  const home_airport = (formData.get('home_airport') as string).toUpperCase()
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('name, city, state')
+    .eq('icao', home_airport)
+    .maybeSingle()
+
   const payload = {
     make: formData.get('make') as string,
     model: formData.get('model') as string,
     year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
     registration: (formData.get('registration') as string) || null,
-    home_airport: (formData.get('home_airport') as string).toUpperCase(),
-    airport_name: (formData.get('airport_name') as string) || null,
-    city: (formData.get('city') as string) || null,
-    state: (formData.get('state') as string) || null,
+    home_airport,
+    airport_name: airport?.name ?? null,
+    city: airport?.city ?? null,
+    state: airport?.state ?? null,
     share_type: formData.get('share_type') as string,
     shares_available: parseInt(formData.get('shares_available') as string) || 1,
     total_shares: formData.get('total_shares') ? parseInt(formData.get('total_shares') as string) : null,
