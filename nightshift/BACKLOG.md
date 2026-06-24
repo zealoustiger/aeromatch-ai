@@ -62,10 +62,14 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   2026-06-24: 182 vs Bonanza, Mooney M20 vs Comanche, Saratoga vs 182, Cessna 180 vs 182,
   Cub vs Citabria). FAQ + FAQPage JSON-LD now ship on every pair. Expanded to **21**
   (`compare-pairs-expansion-3`, 2026-06-24: Cessna 172 vs Grumman AA-5, Grumman AA-5 vs
-  Cherokee, Cessna 150 vs Piper Cub — brings the Grumman AA-5 into the family). **Next:**
-  the 20-model curated pool is now nearly fully cross-compared; a few niche pairs remain
-  (e.g. Grumman AA-1 vs Cessna 150, Vans RV vs a certified single); then a
-  ClubHanger-Estimate price-context row once a comparison-appropriate display is settled.
+  Cherokee, Cessna 150 vs Piper Cub — brings the Grumman AA-5 into the family). Expanded
+  to **24** (`compare-pairs-expansion-4`, 2026-06-24: Cirrus SR20 vs Cessna 172, Beechcraft
+  Bonanza vs Piper Saratoga, Mooney M20 vs Piper Arrow). **Next:** the curated-model pool is
+  now very heavily cross-compared — **DIVERSIFY off this family next [goal] cycle** to avoid
+  over-concentration (several recent cycles touched it). Remaining niche pairs are thin on
+  genuine value; better next [goal] bets: a ClubHanger-Estimate price-context row once a
+  comparison-appropriate display is settled, a CWV/`next/image` pass, or geocoding
+  `aircraft_for_sale.location` to light up `/aircraft/near/[icao]`.
 
 ### Growth & data — owner acquisition (human, 2026-06-23)
 FAA-registry-powered ideas. The aircraft registry is public (tail number → owner
