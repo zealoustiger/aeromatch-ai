@@ -2,6 +2,11 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T13:01:36Z — DRAIN SUMMARY
+- Cycles this run: 5 (PASS 4 / FAIL 1 / ABORT 0)
+- Stopped because: rate limited
+- Run: 20260624T122323Z
+
 ## 2026-06-24T12:55Z — PASS — seeker-filter-multi-airport
 - Pages: /partnerships/seeking
 - What: **The Pilots-Seeking page now lets you filter by more than one home airport at once.** Before, the "Near Home Airport" box took a single ICAO code; now you can type several (e.g. KAUG, KBWI, KCLT) — press Enter, comma, or click away to add each as a small removable chip — and you'll see pilots based at **any** of those airports together. Each chosen airport also shows as a removable chip above the results, so you can drop one without clearing the rest. The "within X miles" radius option now appears only when a single airport is selected (a radius around several airports doesn't make sense). Works the same on desktop and mobile, and existing single-airport links and saved searches keep working unchanged. This mirrors the multi-airport filter already shipped on the main `/partnerships` page.
