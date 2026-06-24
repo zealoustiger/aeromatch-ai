@@ -145,6 +145,118 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   keeps users browsing (the Zillow "more homes like this" loop). Slice: (1) similar-by-
   make/model on the detail page; (2) "also near {airport}" variant.
 
+#### Batch from chat — 2026-06-24 (posting/messaging/filter friction)
+
+- **[P2][want] Post-a-partnership: multi-photo drag-and-drop upload.** The "Post a
+  partnership" page should let the user upload **multiple photos** via an easy
+  **drag-and-drop** zone (with click-to-browse fallback), thumbnail previews,
+  remove-before-submit, and reorder if cheap. Today the flow lacks an easy multi-image
+  uploader. Slice: (1) DnD + multi-select zone with previews → Supabase Storage + attach
+  URLs to the listing; (2) remove/reorder + validation (type/size/count cap); (3) progress
+  states + 375px polish.
+- **[P1][want] Post-a-partnership form: make posting frictionless.** Goal — make posting a
+  partnership as easy as possible. Changes: (1) **N-number optional** with helper text;
+  (2) **simplify "Home airport"** to just the identifier, drop airport-name/city/state
+  (implied); (3) **buy-in required**, monthly-fixed + wet (per-hr) rate **optional** with an
+  **info hover** explaining partnerships work different ways (leave blank if N/A); (4)
+  **remove the pilot-requirements** section; (5) **move "Listing details" earlier** (2nd–3rd
+  section); (6) **autosave** with a visible "Saving…/Saved" indicator so users don't fear
+  losing progress. Slice: (1) field changes 1–5; (2) autosave + save-state; (3) 375px polish.
+- **[P2][want] Easy toggle between the three "Post a…" types.** From "Post a Partnership,"
+  make it easy to switch between **post partnership / post plane for sale / post pilot
+  seeking partnership** — a segmented toggle/tabs at the top (or at minimum clear links to
+  the other two). Today they're separate pages with no cross-nav. Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/post-type-toggle/20260624-post-type-toggle.png
+- **[P1][want] Post-a-Seeking form: make it frictionless.** Goal — make posting a "pilot
+  seeking partnership" listing as easy as possible. Changes: (1) **base location → multiple
+  airports**, drop airport-name/city/state (implied); (2) **"willing to travel" → drive time**
+  (e.g. 30/45/60 min), infer distance behind the scenes; (3) **remove "preferred scheduling
+  system"**; (4) **description help outside the box** on how to write a great description,
+  with **examples of good writing**; (5) reuse partnership-form friction-reducers (optional
+  labels, autosave + save-state, sensible order). Slice: (1) fields 1–3; (2) description help
+  + examples; (3) shared autosave + 375px polish.
+- **[P2][want] "Generate with AI" for title + description (all post flows).** On Seeking
+  (and for-sale + partnership), a **"Generate with AI"** button where the user dumps a
+  **stream-of-consciousness** and the AI drafts an initial **title + description** they can
+  edit. Lowers the blank-page barrier; pairs with the "examples of good writing" help. Slice:
+  (1) Seeking page input → AI-drafted title+desc into fields (editable, not auto-submit); (2)
+  reuse on for-sale + partnership; (3) loading/regenerate/limits. Uses Claude (see
+  `claude-api`); keep prompt + model config server-side.
+- **[P2][want] Seeking-partnership profile: fill the empty right rail.** On the "Seeking a
+  partnership share" detail page the right column is sparse (just Budget/Max-Buy-In + Send
+  Email), while **Aircraft Preferences** and **Flying Profile** sit in full-width cards at the
+  bottom of the left column. Move those two into the **right rail** to balance the layout and
+  keep key match facts beside the contact CTA; keep "About me" as the main left column.
+  Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/seeking-profile-right-nav/20260624-seeking-profile-right-nav.png
+- **[P1][want] On-site messaging instead of exposing emails.** Replace the "Send Email" CTA
+  ("Have a plane that fits? Reach out to … → Send Email") with a **"Send Message"** flow that
+  delivers an **on-site message** to the listing owner instead of handing out their email. If
+  no message center/chat exists yet, **build it out** (note: an account "Messages" quick-link
+  already exists per recent CHANGELOG — check existing infra first). Slice: (1) `messages`
+  schema (thread per listing+sender, additive, RLS so only the two parties read) + send form
+  replacing the email CTA; (2) inbox at `/messages` (thread list + view + reply) wired to the
+  account link; (3) new-message email **notification** behind `RESEND_API_KEY` (link back, no
+  raw email exposed); (4) unread badge + 375px polish. Keep "Send Email" as fallback until
+  messaging is live. Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/in-app-messaging/20260624-in-app-messaging.png
+- **[P2][want] Partnership filter: multiple airport codes.** The partnership browse filter's
+  "Home airport (ICAO)" field accepts only one airport. Let users enter **multiple codes**
+  (e.g. KHWD, KOAK, KCCR), OR them together, and render one removable chip per airport. Pairs
+  with the seeking-form multi-airport change. Slice: (1) multi-airport input + chips + OR
+  query; (2) per-airport filter chips in the results header; (3) 375px polish. Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/partnership-filter-multi-airport/20260624-partnership-filter-multi-airport.png
+- **[P2][want] Add "Save this search" inside the filter panel.** "Save this search" currently
+  lives only top-right where it's easily missed. Add an **in-context** entry point **inside
+  the "Filter Results" panel** (e.g. near "Clear all filters") — where users tune their
+  search — while keeping the top-right one. Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/save-search-in-filter-panel/20260624-save-search-in-filter-panel.png
+- **[P2][want] One-click save search: auto-name + skip the naming step.** Saving a search
+  forces the user to name it first. **Auto-generate a name** from active filters (e.g.
+  "Cessna partnerships near KHWD under $20k buy-in") and save in **one click**; show a
+  confirmation that points to the **Saved Searches** page with a **link** to go there.
+  **Renaming** happens on the Saved Searches page (inline). Slice: (1) auto-name + one-click
+  save + post-save toast linking `/searches`; (2) inline rename on Saved Searches.
+- **[P2][want] Model filter: roll up variants into a parent model.** The Model filter lists
+  every variant separately (SR20, Sr20 G2, Sr20 G3, Sr20 G6, SR20-G2, SR20-G3, SF50 G2 Plus,
+  …), so picking "an SR20" means checking many near-duplicate boxes. Add a parent **"SR20
+  (all)" / "SR22 (all)"** option that ORs all variants; keep individual variants behind
+  progressive disclosure. Also normalize the casing/dupe inconsistency ("SR20" vs "Sr20 G2"
+  vs "SR20-G2"). Slice: (1) group variants under a canonical parent + "(all)"; (2) normalize
+  variant naming; (3) collapse-by-default with "show variants". Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/model-filter-rollup-variants/20260624-model-filter-rollup-variants.png
+- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**
+  Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
+  buying criteria. Surface them **higher and always-visible** in the main filter panel, and
+  **remove "Listing quality"** as a filter. (Reordering already-present fields — not the
+  deferred avionics/SMOH filters.) Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/filter-promote-core-fields/20260624-filter-promote-core-fields.png
+- **[P2][want] Filter: "Priced below market" checkbox.** Alongside "Price drops," add an
+  **"Aircraft priced below market"** checkbox showing only listings under computed market
+  value for their make/model. Depends on the **price-vs-market** comp calc already in the
+  backlog (own-inventory comps, show only with ≥N comps). Slice: (1) reuse/finish the
+  per-listing below-market flag; (2) checkbox + query; (3) badge parity in cards + filter.
+- **[P2][want] Filter: airport ICAO + distance radius (for-sale).** Add an **optional**
+  location filter to for-sale browse — enter an **airport ICAO** + a **distance** (e.g. within
+  100/250/500 mi or custom) to show only aircraft in range, like the partnership browse
+  centers on a home airport. Slice: (1) ICAO input + distance selector → geocode airport
+  (reuse our coords) + filter by distance (needs lat/long or geocoded location); (2) "within X
+  of {ICAO}" filter chip; (3) sort-by-distance + 375px polish. If listing coords are sparse,
+  fall back to state/metro match and note the coverage gap.
+- **[P1][bug] Hide parts/wanted listings — only show actual aircraft.** The feed leaks
+  non-aircraft listings — **parts and wanted ads**, mostly from **Barnstormers** (e.g. "CIRRUS
+  SR22T WING ASSEMBLY", "WHEELPANTS FOR THE CIRRUS SR22", and a "CIRRUS SR22 NON TURBO" that's
+  actually a **WANTED** ad). The Barnstormers adapter's parts/wanted regex isn't catching
+  these. Tighten classification: title keywords (wing/wheel pants/fairing/assembly/parts/
+  avionics/prop/engine-only, **WANTED/accepting orders** in title or description) + **low or
+  missing price** as a secondary flag. Apply at **ingest** (drop/flag via a `category`/
+  `is_aircraft` field) so junk never reaches the DB, plus a display-side guard for existing
+  rows, plus a one-time backfill cleanup of `aircraft_for_sale`. Slice: (1) strengthen
+  ingest-time filter (title+desc+price) + admin count of removals; (2) backfill cleanup of
+  existing junk; (3) optional `category` tag so genuine parts could bucket separately later.
+  Screenshot:
+  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/filter-out-parts-listings/20260624-filter-out-parts-listings.png
+
 ### Design & aesthetic — 2026-06-20 (fresh human request)
 The human likes the look/feel of **Etsy + Airbnb** and wants ClubHanger to adopt a
 combination of the two (see the Etsy × Airbnb entry under **Inspiration** for the
@@ -251,6 +363,7 @@ thin/doorway pages; real listings + real data per page).
 - **[P1][want] Add Trade-A-Plane ingestion.** TAP is likely the largest source of Bay-Area piston-GA for-sale listings and we capture 0. Extend the scraper/ingest pipeline: (1) fetch + parse TAP search results (filter by state/region, **Bay Area / CA first**); (2) normalize → `aircraft_for_sale` with `source='tradeaplane'`, `source_url`, `source_id`, make/model/year/price/location/state/photos; (3) dedupe against existing rows by **N-number (registration)** where available, else make+model+year+price+seller fuzzy; (4) schedule/repeat. Respect robots/ToS; capture for aggregation, link back to the source.
 - **[P1][want] Bay-Area coverage benchmark (repeatable, tracked).** A job + small readout that answers "what % of real Bay-Area inventory do we have?" Slice: (1) define the Bay Area (the ~15 airports/counties); (2) numerator = our DB counts (for-sale + partnerships) in that geo; (3) denominator A = FAA/AirNav **based-aircraft fleet count** for those airports (market size, no scraping issues); (4) denominator B = de-duped union of accessible-marketplace Bay-Area for-sale (Barnstormers + AircraftForSale + Hangar67 + Trade-A-Plane) → **coverage % + a gap list** (listings elsewhere we're missing); (5) surface in admin / scoreboard, tracked weekly, with a target (e.g. ≥80% of Bay-Area Barnstormers within 7 days). The gap list doubles as ingestion targets. For partnerships, track **flow + freshness** (new captured/week, % active) instead of a coverage ratio (no central source = no real denominator).
 - **[P2][want] Controller.com — covered indirectly, not by scraping.** Controller actively blocks bots (Cloudflare). Do NOT build Cloudflare-evasion. Get its inventory the clean ways: (a) the same planes are cross-listed — dedupe from Trade-A-Plane + dealer sites by N-number; (b) **dealer/broker outreach** to list directly (also feeds the broker lead-gen monetization model); (c) a human/bookmarklet capture for the Bay-Area beachhead (low volume), reusing the FB-capture pattern. Track Controller Bay-Area listings as a benchmark reference only.
+- **[P3][want] AirMart + AeroTrader — bot-protected, cover indirectly (human-requested 2026-06-23).** Human asked whether we can scrape https://airmart.com/aircraft-for-sale/ and https://www.aerotrader.com/listing/ . **Both block plain HTTP fetch and so don't fit the static-HTML/sitemap adapter pipeline:** AirMart sits behind a **Cloudflare/Kinsta "Just a moment" JS challenge** (`?ki-cf-botcl` redirect, 403 to bots); AeroTrader is behind **AWS WAF** (HTTP 202 hold + `gokuProps`/`awsWafCookieDomainList` captcha JS). Same class as Controller/Hangar67 — **do NOT build bot/Cloudflare/WAF-evasion.** Cover them the clean ways, same playbook as Controller: (a) cross-listing dedupe by **N-number** (most AeroTrader/AirMart planes are also on Trade-A-Plane / Barnstormers / dealer sites we *can* read); (b) **dealer/broker outreach** to list directly; (c) human/bookmarklet capture for the Bay-Area beachhead, reusing the FB-capture pattern. Track each as a **benchmark reference** in the coverage gap list, not as a scraper target. (NOTE: the third site the human asked about, **aircraftforsale.com, is already ingested** — `source='aircraftforsale'`, ~620 listings — no work needed.)
 
 ### Planes for Sale
 - **[P1] Filter UI overhaul.** Lead with **Make + Model** (the primary search path — Model options depend on selected Make). Then secondary filters: **avionics, total time (tach/Hobbs), engine time (SMOH), year, price, state.** Cleaner than Controller — surface the few that matter, progressive-disclose the rest. Must work at 375px.
