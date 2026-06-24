@@ -288,6 +288,42 @@ export const COMPARISONS: Comparison[] = [
       { q: 'Can either fly cross-country?', a: 'Not really. The 150 manages short hops at about 100 kt with roughly 420 nm of range but a cramped two-seat cabin; the Cub, at about 65 kt with around 190 nm range on 12 gallons, is a local-fun airplane. Both are two-seats-and-light-bags machines, not travelers.' },
     ],
   },
+  {
+    slug: 'cirrus-sr20-vs-cessna-172',
+    a: { makeSlug: 'cirrus', modelSlug: 'sr20' },
+    b: { makeSlug: 'cessna', modelSlug: '172' },
+    intro:
+      'The Cirrus SR20 and the Cessna 172 are both fixed-gear four-seat singles, so the comparison is really about old-school simplicity versus modern technology. The 172 is the most-produced airplane ever — 180 hp, forgiving, cheap to run, and supported by parts and instructors everywhere. The SR20 is the attainable end of the Cirrus line: a 215 hp composite airframe with a glass cockpit, a side-yoke, and a CAPS whole-airframe parachute, cruising meaningfully faster but costing more to buy and run. One is the safest, lowest-drama first airplane; the other is a modern step-up you can still learn in.',
+    faqs: [
+      { q: 'Is the Cirrus SR20 faster than a Cessna 172?', a: 'Yes. The SR20’s 215 hp gives about 155 kt cruise against roughly 124 kt for the 180 hp Cessna 172. The 172 trades that speed for simplicity and the lowest operating cost in aviation.' },
+      { q: 'Which is cheaper to own, an SR20 or a 172?', a: 'The 172, by a clear margin. It burns less fuel and has no glass-panel upkeep or parachute system, and its parts and maintenance are the most ubiquitous anywhere. The SR20 adds a bigger engine, avionics upkeep, and the periodic CAPS parachute repack — costs many owners share through co-ownership.' },
+      { q: 'Which is the better first airplane?', a: 'For the lowest cost and easiest insurance, the 172 — it is the default trainer for good reason. The SR20 is a great choice for a pilot who wants a glass panel and the CAPS parachute from the start and is willing to do type-specific transition training and pay more to run it.' },
+    ],
+  },
+  {
+    slug: 'beechcraft-bonanza-vs-piper-saratoga',
+    a: { makeSlug: 'beechcraft', modelSlug: 'bonanza' },
+    b: { makeSlug: 'piper', modelSlug: 'saratoga' },
+    intro:
+      'The Beechcraft Bonanza and the Piper Saratoga are both 300 hp travelers, but they optimize for different things. The A36 Bonanza is the benchmark high-performance single — fast at about 174 kt, top-tier build quality and ramp presence, with a four-to-six-seat cabin. The PA-32R Saratoga is the big-cabin hauler: a genuine six-seat cabin with a third row, around 1,350 lb of useful load, and 102 gallons of fuel, cruising a touch slower at about 160 kt. The Bonanza wins on speed and prestige; the Saratoga wins on cabin room and load.',
+    faqs: [
+      { q: 'Which is faster, a Bonanza or a Saratoga?', a: 'The Bonanza, at about 174 kt versus roughly 160 kt for the Saratoga — both on 300 hp, but the Bonanza’s airframe is slicker. The Saratoga spends that energy on a bigger cabin and more load rather than outright speed.' },
+      { q: 'Which carries more, the Bonanza or the Saratoga?', a: 'The Saratoga, clearly — about 1,350 lb of useful load, a true six-seat cabin with a third row, and 102 gallons of fuel, against roughly 1,050 lb and 74 gallons for the Bonanza. The Saratoga is the choice when you regularly carry more than four people with bags.' },
+      { q: 'Which should I choose?', a: 'Choose the Bonanza for speed, classic build quality, and a four-to-six-seat cabin if your loads are moderate. Choose the Saratoga when you routinely fill six seats and want the big cabin and useful load, accepting a little less speed. Both are premium retractable singles whose upkeep is often shared across a partnership.' },
+    ],
+  },
+  {
+    slug: 'mooney-m20-vs-piper-arrow',
+    a: { makeSlug: 'mooney', modelSlug: 'm20' },
+    b: { makeSlug: 'piper', modelSlug: 'arrow' },
+    intro:
+      'The Mooney M20 and the Piper Arrow are both four-seat, 200 hp retractable-gear singles, which makes them a near-perfect apples-to-apples matchup — and a study in airframe efficiency. The Mooney is the speed-and-economy benchmark: a low, slick airframe that posts about 160 kt on the same 200 hp the Arrow uses to make roughly 137 kt, in a famously snug cabin. The PA-28R Arrow is the plentiful, forgiving complex trainer — slower but with more useful load and one of the largest parts-and-instructor networks in aviation. One wins on speed per horsepower; the other on load and easy ownership.',
+    faqs: [
+      { q: 'Is the Mooney M20 faster than a Piper Arrow?', a: 'Yes, and on the same power. Both use a 200 hp engine, but the Mooney’s low-drag airframe cruises around 160 kt against roughly 137 kt for the Arrow — a clear speed and fuel-efficiency edge for the Mooney.' },
+      { q: 'Which carries more?', a: 'The Arrow — about 1,150 lb of useful load against roughly 900 lb for the Mooney, with a slightly roomier cabin. The Mooney’s tight, low fuselage is the price it pays for the efficiency that defines it.' },
+      { q: 'Which is easier to own?', a: 'The Arrow, generally. As a widely-used complex trainer it has a large parts and mechanic network and is easy to insure and transition into. The Mooney is also economical to run but flies on a smaller fleet, so plan for more specialized support. Both are retractables that add a gear inspection and insurance line, so a shared maintenance kitty helps on either.' },
+    ],
+  },
 ]
 
 const BY_SLUG = new Map(COMPARISONS.map((c) => [c.slug, c]))
