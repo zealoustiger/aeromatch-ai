@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-24T06:02Z — PASS — seeking-profile-right-rail
+- Pages: /partnerships/seeking/[id]
+- What: **The "Seeking a partnership share" pilot profile page now puts the pilot's match facts in the right column, beside the contact button — instead of leaving that column half-empty.** Before, the right rail held only a Budget card and the "Have a plane that fits?" contact card, while the **Aircraft Preferences** (what aircraft / category / year range / share types they want) and **Flying Profile** (expected hours per month / intended use) sat in big full-width cards at the bottom of the left column, below a much shorter "About me". Those two cards now move into the right rail in a sensible order — Budget → Aircraft Preferences → Flying Profile → contact CTA — so a plane owner reads exactly what the pilot is looking for right next to the button they'd use to reach out, and the page reads balanced instead of lopsided. "About me" stays the main left column. Same data, same privacy gating (contact details still only show to signed-in members) — purely a layout move.
+- Goal: feature depth / UX balance + conversion — **[want] lane** (last non-bug cycle `model-specs-highlights-batch2` pulled [goal]; last cycle PASS so no blocker → [want] owed per the 1:1). Closes the `[P2][want] Seeking-partnership profile: fill the empty right rail` backlog item (screenshot-backed). Keeping the key match facts beside the contact CTA is a small conversion/clarity win the pageview metric can't see tonight. Scoreboard at orient: 325 pageviews last 7d (GSC not configured; STAGE=INDEXING).
+- Spec: nightshift/specs/20260624T060213Z-seeking-profile-right-rail.md
+- Verdict: PASS — `next build` + typecheck green; QA smoke exit 0 on a real seeker profile at desktop 1280 + mobile 375 (HTTP 200, zero app-origin console errors, zero horizontal overflow); screenshots confirm the right rail now reads Budget → Aircraft Preferences → Flying Profile → contact CTA, About-me stays the left column, and the moved cards' inner grids collapse to a single column so nothing looks cramped in the narrow rail.
+- Screenshots: nightshift/screenshots/seeking-profile-right-rail/
+- Next: per the backlog batch — the matching `[P1][want]` "On-site messaging instead of exposing emails" would replace this page's "Send Email" CTA with an in-app Send-Message flow; and `[P1][want] Post-a-Seeking form: make it frictionless` reworks the post side. Either is a larger, multi-slice [want] item.
+
 ## 2026-06-23T13:55:04Z — DRAIN SUMMARY
 - Cycles this run: 5 (PASS 5 / FAIL 0 / ABORT 0)
 - Stopped because: night ended

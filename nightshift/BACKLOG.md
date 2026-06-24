@@ -217,13 +217,13 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   (1) Seeking page input → AI-drafted title+desc into fields (editable, not auto-submit); (2)
   reuse on for-sale + partnership; (3) loading/regenerate/limits. Uses Claude (see
   `claude-api`); keep prompt + model config server-side.
-- **[P2][want] Seeking-partnership profile: fill the empty right rail.** On the "Seeking a
-  partnership share" detail page the right column is sparse (just Budget/Max-Buy-In + Send
-  Email), while **Aircraft Preferences** and **Flying Profile** sit in full-width cards at the
-  bottom of the left column. Move those two into the **right rail** to balance the layout and
-  keep key match facts beside the contact CTA; keep "About me" as the main left column.
-  Screenshot:
-  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/seeking-profile-right-nav/20260624-seeking-profile-right-nav.png
+- ~~**[P2][want] Seeking-partnership profile: fill the empty right rail.**~~ ✅ SHIPPED
+  2026-06-24T06:02Z (`seeking-profile-right-rail`). On `/partnerships/seeking/[id]`, the
+  **Aircraft Preferences** and **Flying Profile** cards moved out of the full-width left column
+  into the **right rail** (order: Budget → Aircraft Preferences → Flying Profile → contact CTA),
+  with their inner grids collapsed to a single column to fit the narrow rail; "About me" stays
+  the main left column. Same data + privacy gating, purely a layout balance/conversion move.
+  See CHANGELOG. (Screenshot object can be deleted from `backlog-shots`.)
 - **[P1][want] On-site messaging instead of exposing emails.** Replace the "Send Email" CTA
   ("Have a plane that fits? Reach out to … → Send Email") with a **"Send Message"** flow that
   delivers an **on-site message** to the listing owner instead of handing out their email. If
