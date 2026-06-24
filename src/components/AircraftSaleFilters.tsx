@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
+import { groupModelVariants } from '@/lib/modelGroups'
 import SaveSearchButton from './SaveSearchButton'
 
 const US_STATES = [
@@ -80,6 +81,24 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
     [pushParams]
   )
 
+  // Roll up a parent "(all)" group: if every member is already selected, remove
+  // them all; otherwise add the missing ones. Members carry exact DB strings, so
+  // this is just a multi-edit of the same comma-joined `model` param.
+  const toggleModelGroup = useCallback(
+    (members: string[], allSelected: boolean) => {
+      pushParams((params) => {
+        const current = new Set(
+          (params.get('model') ?? '').split(',').map((m) => m.trim()).filter(Boolean)
+        )
+        if (allSelected) members.forEach((m) => current.delete(m))
+        else members.forEach((m) => current.add(m))
+        if (current.size) params.set('model', [...current].join(','))
+        else params.delete('model')
+      })
+    },
+    [pushParams]
+  )
+
   const clearAll = () => {
     startTransition(() => { router.push(pathname) })
   }
@@ -104,6 +123,10 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean)
+  // Roll near-duplicate variants (SR20, Sr20 G2, SR20-G2, …) under one parent so
+  // picking "an SR20" is one click. Single-member groups render as plain checkboxes.
+  const modelGroups = useMemo(() => groupModelVariants(modelOptions), [modelOptions])
+  const selectedModelSet = new Set(selectedModels)
 
   return (
     <div className="space-y-5">
@@ -149,21 +172,33 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
             Select a make first
           </p>
         ) : (
-          <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
-            {modelOptions.map((m) => (
-              <label
-                key={m}
-                className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedModels.includes(m)}
-                  onChange={() => toggleModel(m)}
-                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+          <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
+            {modelGroups.map((g) =>
+              g.members.length === 1 ? (
+                // Singleton — render as a plain checkbox (unchanged behaviour).
+                <label
+                  key={g.key}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedModelSet.has(g.members[0])}
+                    onChange={() => toggleModel(g.members[0])}
+                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                  />
+                  {g.members[0]}
+                </label>
+              ) : (
+                <ModelGroupRow
+                  key={g.key}
+                  groupKey={g.key}
+                  members={g.members}
+                  selected={selectedModelSet}
+                  onToggleGroup={toggleModelGroup}
+                  onToggleVariant={toggleModel}
                 />
-                {m}
-              </label>
-            ))}
+              )
+            )}
           </div>
         )}
       </div>
@@ -338,6 +373,75 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
           >
             Clear all filters
           </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One rolled-up model family: a parent "{key} (all)" checkbox that selects every
+ * variant in one click, with the individual variants behind a collapse-by-default
+ * "Show N variants" disclosure. The parent reflects all / some (indeterminate) /
+ * none of its members being selected.
+ */
+function ModelGroupRow({
+  groupKey,
+  members,
+  selected,
+  onToggleGroup,
+  onToggleVariant,
+}: {
+  groupKey: string
+  members: string[]
+  selected: Set<string>
+  onToggleGroup: (members: string[], allSelected: boolean) => void
+  onToggleVariant: (model: string) => void
+}) {
+  const selectedCount = members.reduce((n, m) => (selected.has(m) ? n + 1 : n), 0)
+  const allSelected = selectedCount === members.length
+  const someSelected = selectedCount > 0 && !allSelected
+  const [open, setOpen] = useState(someSelected)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex flex-1 cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someSelected
+            }}
+            onChange={() => onToggleGroup(members, allSelected)}
+            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+          />
+          <span>
+            {groupKey} <span className="text-slate-400">(all)</span>
+          </span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="shrink-0 text-xs font-medium text-sky-600 transition-colors hover:text-sky-700"
+        >
+          {open ? 'Hide' : `Show ${members.length} variants`}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-1.5 space-y-1.5 border-l border-slate-100 pl-4">
+          {members.map((m) => (
+            <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={selected.has(m)}
+                onChange={() => onToggleVariant(m)}
+                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+              />
+              {m}
+            </label>
+          ))}
         </div>
       )}
     </div>
