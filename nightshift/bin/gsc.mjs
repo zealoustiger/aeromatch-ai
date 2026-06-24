@@ -97,6 +97,32 @@ export async function getGscSummary() {
   }
 }
 
+/** Run a single Search Console searchAnalytics query (read-only). `dims` is the
+ *  dimensions array, e.g. ['page'] or ['page','query']. Window defaults to the
+ *  last 28 days (GSC data lags ~2-3 days, so endDate = yesterday).
+ *  Returns { ok:true, rows } or { ok:false, reason }. Never throws. */
+export async function gscQuery(dims, { days = 28, rowLimit = 1000 } = {}) {
+  const env = loadEnv()
+  const SITE = env.GSC_SITE_URL || 'https://clubhanger.com/'
+  let sa
+  if (env.GSC_SA_JSON) { try { sa = JSON.parse(env.GSC_SA_JSON) } catch { return { ok: false, reason: 'bad GSC_SA_JSON' } } }
+  else if (env.GSC_SA_FILE) { try { sa = JSON.parse(readFileSync(env.GSC_SA_FILE, 'utf8')) } catch { return { ok: false, reason: 'cannot read GSC_SA_FILE' } } }
+  else return { ok: false, reason: 'no service-account creds' }
+  try {
+    const token = await getToken(sa)
+    const enc = encodeURIComponent(SITE)
+    const r = await fetch(`https://searchconsole.googleapis.com/webmasters/v3/sites/${enc}/searchAnalytics/query`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate: daysAgo(days), endDate: daysAgo(1), dimensions: dims, rowLimit }),
+    })
+    if (!r.ok) return { ok: false, reason: `searchAnalytics ${r.status}: ${(await r.text()).slice(0, 160)}` }
+    return { ok: true, rows: (await r.json()).rows || [] }
+  } catch (e) {
+    return { ok: false, reason: String(e.message || e) }
+  }
+}
+
 /** Stage of the search funnel + what to prioritize. Drives the loop's SEO focus. */
 export function gscStage(g) {
   if (!g.ok) return null
