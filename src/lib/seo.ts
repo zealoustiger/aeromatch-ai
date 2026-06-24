@@ -755,6 +755,12 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Four-seat piston helicopter, ~110 kt cruise — the world’s most popular civil helicopter.',
     costToOwn: 'Rotary ownership runs on a scheduled overhaul clock, which makes a partnership almost essential. Splitting the 2,200-hr overhaul reserve and insurance across owners is how most R44s are flown.',
   },
+  {
+    makeSlug: 'diamond', modelSlug: 'da40', make: 'Diamond', model: 'DA40',
+    modelPattern: 'da40%',
+    specs: 'Four-seat composite single with a glass cockpit, a long efficient wing, and a sliding bubble canopy — known for outstanding visibility and one of the best safety records in general aviation.',
+    costToOwn: 'One of the most economical modern four-seat singles to fly — fixed gear keeps it simple, and the Jet-A diesel NG variant sips fuel. A partnership spreads the hangar, insurance, and composite upkeep so a glass-panel single stays affordable.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -866,6 +872,11 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'Why co-own an R44?', a: 'Helicopter ownership runs on a scheduled overhaul clock — the airframe and major components have a 2,200-hour/12-year overhaul. Splitting that reserve and the insurance across owners is how most R44s are flown.' },
     { q: 'Is an R44 expensive to own?', a: 'The big number is the scheduled overhaul reserve, plus insurance that reflects rotary operations. Budgeting per-hour for the overhaul from the start — and sharing it in a partnership — is what makes R44 ownership work.' },
   ],
+  'diamond/da40': [
+    { q: 'What is the Diamond DA40 known for?', a: 'The DA40 Diamond Star is a four-seat composite single with a glass cockpit, a long efficient wing, and a sliding bubble canopy. It is best known for its outstanding visibility and one of the strongest safety records in general aviation.' },
+    { q: 'How much does it cost to own a Diamond DA40?', a: 'It is one of the more economical modern four-seat singles to fly — fixed gear keeps the systems simple, and the Jet-A diesel NG variant sips fuel. The main running costs are composite upkeep and insurance, which a partnership spreads across owners along with the hangar.' },
+    { q: 'Is the Diamond DA40 a good first airplane?', a: 'Yes — its benign, forgiving handling and excellent visibility make it a popular trainer and an easy step-up four-seater. Many flight schools and first-time owners choose it for exactly those reasons.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -960,6 +971,10 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'robinson/r44': [
     'The Robinson R44 is the world’s most popular civil helicopter — a four-seat piston machine cruising around 110 kt, widely used for training, personal travel, and utility work. Affordable to buy relative to turbine helicopters and supported by a vast global network, the R44 is the airplane-equivalent default for pilots entering rotary ownership.',
     'Helicopter ownership runs on a scheduled overhaul clock — the airframe and major components carry a 2,200-hour/12-year overhaul — which makes a partnership almost essential. Splitting that overhaul reserve and the insurance across owners, and budgeting per-hour for it from the start, is how most R44s are flown and what keeps rotary ownership realistic.',
+  ],
+  'diamond/da40': [
+    'The Diamond DA40 Diamond Star is the Austrian-designed composite four-seater that helped bring glass cockpits and modern airframes to the training and personal-flying market. Its long, slender wing, sliding bubble canopy, and all-composite construction give it outstanding visibility and benign, forgiving handling — and the type has earned one of the strongest safety records in general aviation, which is a large part of why so many flight schools and private owners chose it.',
+    'Fixed gear and simple systems make the DA40 one of the more economical modern four-seat singles to fly, and the later Jet-A diesel NG variant adds remarkable range on a notably low fuel burn. A partnership spreads the hangar, insurance, and composite upkeep across owners, so a group can share a modern glass-panel cross-country single — and keep it flown often enough that everyone stays current — for a sensible monthly share.',
   ],
 }
 
@@ -1171,6 +1186,16 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Fuel (usable)', value: '~46 gal' },
     { label: 'Configuration', value: 'Skids (helicopter)' },
   ],
+  'diamond/da40': [
+    { label: 'Seats', value: '4' },
+    { label: 'Engine', value: 'Lycoming IO-360-M1A (DA40)' },
+    { label: 'Horsepower', value: '180 hp' },
+    { label: 'Cruise speed', value: '~150 kt' },
+    { label: 'Range', value: '~720 nm (DA40 NG diesel: longer)' },
+    { label: 'Useful load', value: '~880 lb' },
+    { label: 'Fuel (usable)', value: '~40 gal' },
+    { label: 'Airframe', value: 'Composite, fixed tricycle gear' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1278,6 +1303,11 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'The world’s most popular civil helicopter — a four-seat piston machine at ~110 kt, the default entry into rotary ownership.',
     'Suits a pilot entering helicopter ownership for training, personal travel, or utility work on a piston (not turbine) budget.',
     'Runs on a 2,200-hour/12-year overhaul clock for the airframe and major components, so budgeting that reserve per hour — usually via a partnership — is essential.',
+  ],
+  'diamond/da40': [
+    'A composite airframe, long efficient wing, and sliding bubble canopy give the DA40 outstanding visibility and one of the best safety records in general aviation.',
+    'Suits a pilot who wants a modern glass-panel four-seater for training and efficient cross-countries — and the Jet-A diesel NG variant adds remarkable range on a low fuel burn.',
+    'The honest trade-off is a modest full-fuel useful load and a back seat that is snug for adults on long trips; you board over the wing under the canopy rather than through a door.',
   ],
 }
 
