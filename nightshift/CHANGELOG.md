@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T120500Z — PASS — seeker-save-search
+- Pages: /partnerships/seeking
+- What: **Aircraft owners browsing for seeker pilots can now save their search on `/partnerships/seeking`.** A "Save this search" button now appears in the desktop filter sidebar, the mobile filter drawer, and the results column — identically to how `/aircraft` and `/partnerships` already work. Active filters auto-name the saved search in seeker-specific language (e.g. "Cessna seekers near KPAO · PPL,IFR, 250+ hrs") so the name reads right on `/searches`, rather than reading as "Cessna partnerships near KPAO" (the previous fallback). 4 files: new `nameSeeker()` in `savedSearchName.ts` + routing it in `autoNameSearch()`; `SeekerFilters.tsx` gains `saveSearchBasePath` prop + `SaveSearchButton`; `MobileFiltersDrawer.tsx` passes the path for the seeker variant; `partnerships/seeking/page.tsx` wires both. 3 new unit tests in `savedSearchName.test.ts` (all pass).
+- Goal: feature parity / UX consistency — `[want]` lane (last 3 non-bug cycles: listing-completeness-panel [want], airport-seeker-section [want], carbon-cub-curate [goal] — NOT all 3 [want], so [want] owed per 3:1 policy). Pageviews at orient: 374 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING).
+- Goal-lane: [want]
+- Spec: nightshift/specs/20260625T115148Z-seeker-save-search.md
+- Verdict: PASS. `npx next build` compiled clean (289 static pages, exit 0, no TypeScript errors). QA smoke (`next start` production build on port 3045, NOT dev) — exit 0 on `/partnerships/seeking`, `/aircraft`, `/partnerships` at desktop 1280 + mobile 375 (6/6 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Visual cycle: screenshots read — `/partnerships/seeking` renders cleanly at both viewports; filter sidebar and seeker cards intact; `SaveSearchButton` self-suppresses when no filters are active (same client-side behavior as on /aircraft + /partnerships), so correctly absent in headless unauthenticated smoke with no filter params. No layout breakage.
+- Screenshots: nightshift/screenshots/seeker-save-search/
+- Next: (1) `autoNameSearch` now handles three paths (/aircraft, /partnerships/seeking, /partnerships) cleanly. (2) The `/searches` page now receives seeker searches and renames them correctly. (3) Could add "Save this search" to the seeker chip bar as well (currently chip bar doesn't have a save button on any page — mirrors the pattern already shipped). (4) Mark the "Promote Price/Year/Total-Time out of More filters" + "Easy toggle between Post types" + "Post-a-Seeking autosave" BACKLOG items as ✅ DONE — all three are already shipped but not marked.
+
 ## 2026-06-25T114500Z — PASS — listing-completeness-panel
 - Pages: /aircraft/listing/[id]
 - What: **Aircraft detail pages now show a "Listing info" completeness panel** below the ClubHanger Estimate. Five key signals — Real photos, Asking price, Make/model/year, Registration (N-number), Total airframe time — each display a green check (✓) when present or a muted dash (—) when missing, plus a X/5 count in the header. Buyers can see at a glance what information is available without decoding the opaque A/B/C grade badge. The panel is additive and self-contained; the grade badge is unchanged.
