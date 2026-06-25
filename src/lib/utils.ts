@@ -44,3 +44,16 @@ export function anonymizeName(name?: string | null): string | null {
   const lastInitial = tokens[tokens.length - 1][0]?.toUpperCase()
   return lastInitial ? `${first} ${lastInitial}.` : first
 }
+
+/**
+ * Convert a stored nautical-mile travel radius to a human-readable drive-time
+ * label. Seekers think in drive time, not nm — this translates stored values
+ * (from either the old nm options or the new drive-time options) for display.
+ */
+export function travelLabel(nm: number): string {
+  if (nm <= 28) return '~30 min drive'
+  if (nm <= 45) return '~45 min drive'
+  if (nm <= 60) return '~1 hr drive'
+  if (nm <= 85) return '~1.5 hr drive'
+  return '~2 hr drive'
+}

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { MapPin, Clock, Search } from 'lucide-react'
 import { PartnershipSeeker } from '@/lib/types'
-import { anonymizeName, formatPrice } from '@/lib/utils'
+import { anonymizeName, formatPrice, travelLabel } from '@/lib/utils'
 import AviatorAvatar from '@/components/AviatorAvatar'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -65,7 +65,7 @@ export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
               <MapPin className="h-3.5 w-3.5" />
               <strong className="font-semibold text-slate-700">{seeker.home_airport}</strong>
               {seeker.city && ` · ${seeker.city}, ${seeker.state}`}
-              {seeker.willing_to_travel_nm && ` (±${seeker.willing_to_travel_nm} nm)`}
+              {seeker.willing_to_travel_nm && ` (${travelLabel(seeker.willing_to_travel_nm)})`}
             </span>
             <span className="flex items-center gap-1">
               <Search className="h-3.5 w-3.5" />

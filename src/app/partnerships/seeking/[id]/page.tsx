@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft, Search } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
-import { anonymizeName, formatPrice, formatShareType } from '@/lib/utils'
+import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/utils'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SeekerContactBar from '@/components/SeekerContactBar'
 import { MOCK_SEEKERS } from '@/lib/mockData'
@@ -96,7 +96,7 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
                 <MapPin className="h-4 w-4 text-slate-400" />
                 <strong className="font-semibold text-slate-700">{s.home_airport}</strong>
                 {s.city && ` · ${s.city}, ${s.state}`}
-                {s.willing_to_travel_nm && ` (willing to travel ±${s.willing_to_travel_nm} nm)`}
+                {s.willing_to_travel_nm && ` (willing to commute ${travelLabel(s.willing_to_travel_nm)})`}
               </span>
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4 text-slate-400" />
