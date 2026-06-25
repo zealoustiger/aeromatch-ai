@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft, Search } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Search, Handshake, ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/utils'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SeekerContactBar from '@/components/SeekerContactBar'
+import PartnershipCard from '@/components/PartnershipCard'
+import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -26,6 +28,33 @@ const USE_LABELS: Record<string, string> = {
 }
 
 
+const MATCH_LIMIT = 4
+
+/**
+ * Find up to 4 active partnerships that match this seeker's location and
+ * aircraft preference. Airport-first; falls back to state if the airport
+ * returns nothing. Self-suppresses (returns []) when no sensible match exists.
+ */
+async function getMatchingPartnerships(s: PartnershipSeeker) {
+  const make = s.preferred_makes?.length === 1 ? s.preferred_makes[0] : undefined
+  const buyin = s.max_buy_in != null ? String(s.max_buy_in) : undefined
+
+  const { listings } = await getPartnershipListings({
+    airport: s.home_airport,
+    ...(make ? { make } : {}),
+    ...(buyin ? { max_buyin: buyin } : {}),
+  })
+  if (listings.length > 0) return listings.slice(0, MATCH_LIMIT)
+
+  if (!s.state) return []
+  const { listings: byState } = await getPartnershipListings({
+    state: s.state,
+    ...(make ? { make } : {}),
+    ...(buyin ? { max_buyin: buyin } : {}),
+  })
+  return byState.slice(0, MATCH_LIMIT)
+}
+
 async function getSeeker(id: string): Promise<PartnershipSeeker | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
@@ -43,6 +72,8 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
   const { id } = await params
   const s = await getSeeker(id)
   if (!s) notFound()
+
+  const matches = await getMatchingPartnerships(s)
 
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
@@ -232,6 +263,31 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
           />
         </div>
       </div>
+
+      {/* Matching partnerships — show up to 4 open partnerships near this
+          seeker's airport (or state as a fallback) that fit their preferences.
+          Self-suppresses entirely when no sensible match exists. */}
+      {matches.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <Handshake className="h-5 w-5 text-sky-600" />
+            Partnerships near {s.home_airport}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {matches.map((p) => (
+              <PartnershipCard key={p.id} p={p} />
+            ))}
+          </div>
+          <div className="mt-4">
+            <Link
+              href={`/partnerships?airport=${encodeURIComponent(s.home_airport)}`}
+              className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+            >
+              Browse all partnerships near {s.home_airport} <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   )
 }
