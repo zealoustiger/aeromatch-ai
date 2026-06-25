@@ -27,11 +27,12 @@ entries** (what's already done + the last lane). Optionally glance at the scoreb
 
 - **Blocker first (uncapped):** if the most recent CHANGELOG entry is a **FAIL**, or there's
   a known broken page / console error / CWV regression → fix that. Otherwise:
-- **Alternate `[want]` ↔ `[goal]` ~1:1:** look at the last *non-bug* CHANGELOG entry — if it
-  pulled `[want]`, this cycle is `[goal]`; if `[goal]`, this cycle is `[want]`. Pick the
-  highest-value item in that lane (P1 first; `[P1][want]` preempts). `[goal]` = a `[goal]`
-  backlog item or an SEO experiment you invent (and append to BACKLOG as `[agent]`); `[want]`
-  = the top human-wanted feature/fix.
+- **Weight `[want]` over `[goal]` ~3:1** (≈75% features / 25% SEO — the `roadmap:goal = 3:1`
+  knob in GOAL.md): look at the recent *non-bug* CHANGELOG entries — pull `[goal]` only when
+  the last **3** non-bug cycles were all `[want]` (≈ every 4th non-bug cycle is SEO/page work);
+  otherwise pull `[want]`. Pick the highest-value item in that lane (P1 first; `[P1][want]`
+  preempts). `[goal]` = a `[goal]` backlog item or an SEO experiment you invent (and append to
+  BACKLOG as `[agent]`); `[want]` = the top human-wanted feature/fix.
 - **If the chosen lane is empty, fall through to the other; if both human lanes are empty,
   default to `[goal]`** (invent the next SEO experiment). The backlog never truly empties.
 - Obey GOAL.md guardrails (no thin/doorway pages, no analytics gaming, never regress Core
@@ -49,8 +50,11 @@ If — and only if — you are certain there is genuinely nothing safe to do, ou
   NOT `next dev`) and run
   `node nightshift/bin/qa-smoke.mjs --slug <slug> <affected paths>`
   (gates on HTTP 200 / no app-origin console errors / no horizontal overflow at desktop 1280 +
-  mobile 375). Then **read the screenshots** it saves under `nightshift/screenshots/<slug>/`
-  and confirm the page looks right. Stop the server when done.
+  mobile 375). **Read the saved screenshots ONLY for VISUAL cycles** (components / CSS / layout /
+  anything a user sees rendered) — for those, confirm the page looks right; PASS needs smoke
+  exit 0 AND screenshots looking correct. **For non-visual cycles** (copy/content, metadata/SEO,
+  JSON-LD, data/query, config, sitemap, redirects) do NOT read the screenshots — the smoke gate
+  is sufficient (they're still saved for the audit trail). Stop the server when done.
 - **Only on a clean PASS** (smoke exit 0 + screenshots look right + every acceptance criterion
   met): `git checkout staging`, `git merge --no-ff night/<slug>`, `git push origin staging`.
   Vercel auto-deploys staging.

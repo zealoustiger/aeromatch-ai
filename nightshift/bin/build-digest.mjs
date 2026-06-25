@@ -150,6 +150,29 @@ if (fails.length) {
   out.push('')
 }
 
+// Code-quality spot-checks — Opus judged a sample of PASSed cycles (since the last
+// promote). Surface the recent grades + any flagged weaknesses.
+try {
+  const ql = readFileSync(join(root, 'nightshift/QUALITY.md'), 'utf8')
+  const qBlocks = ql.split(/\n(?=## )/).filter((b) => /^## \d{4}-/.test(b.trimStart()))
+  const recent = qBlocks
+    .map((b) => {
+      const h = b.match(/^## (\S+) — (\S+) — score (\d)\/5/m)
+      return h && new Date(h[1]) > boundary ? { ts: h[1], slug: h[2], score: +h[3], body: b } : null
+    })
+    .filter(Boolean)
+  if (recent.length) {
+    const avg = (recent.reduce((s, r) => s + r.score, 0) / recent.length).toFixed(1)
+    out.push('---', '', `## 🧪 Code-quality spot-checks — ${recent.length} judged, avg ${avg}/5`, '')
+    for (const r of recent.sort((a, b) => a.score - b.score)) {
+      const weak = (r.body.match(/^- Weaknesses[^\n]*$/im) || [''])[0].replace(/^- Weaknesses\s*\/?\s*risks:\s*/i, '').trim()
+      const flag = r.score < 4 ? ' ⚠️' : ''
+      out.push(`- **${r.slug} — ${r.score}/5**${flag}${weak && weak.toLowerCase() !== 'none material' ? ` — ${weak}` : ''}`)
+    }
+    out.push('')
+  }
+} catch {}
+
 out.push('---')
 out.push('')
 out.push('## To ship')
