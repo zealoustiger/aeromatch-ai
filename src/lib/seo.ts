@@ -773,6 +773,12 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Two-seat composite single with a bubble canopy and a control stick — light, sporty, fuel-sipping, and famous for outstanding visibility; a favorite trainer and time-builder.',
     costToOwn: 'About as economical as flying gets in a modern composite airframe — two seats and a small engine mean small bills. A partnership splits an already-modest hangar, annual, and insurance, so it is an easy first airplane to share.',
   },
+  {
+    makeSlug: 'cessna', modelSlug: '210', make: 'Cessna', model: '210',
+    modelPattern: '210%',
+    specs: 'Six-seat retractable high-wing single, ~285 hp, ~174 kt cruise, cantilever wing — the Centurion is one of the highest-performing high-wing singles ever built.',
+    costToOwn: 'A complex, capable airplane with a matching maintenance bill — retractable gear, fuel injection, and (on turbo and pressurized models) additional systems. Co-ownership is the classic way to make a Centurion pencil out, splitting the reserves and the annual.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -899,6 +905,11 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'How much does it cost to own a Diamond DA20?', a: 'It is one of the most economical airplanes to operate — two seats and a small, efficient engine keep fuel and maintenance bills low. A partnership splits an already-modest hangar, annual, and insurance, which makes it one of the easiest first airplanes to share.' },
     { q: 'Is the Diamond DA20 a good trainer?', a: 'Yes — its honest handling, great visibility, and low operating cost have made it a staple at flight schools and a popular personal trainer and time-builder. The trade-off versus a four-seater is two seats and modest baggage, so it is built for training and fun flying rather than family travel.' },
   ],
+  'cessna/210': [
+    { q: 'What is the Cessna 210 Centurion?', a: 'The Cessna 210 Centurion is a six-seat high-wing retractable-gear single — one of the most capable piston singles Cessna ever built. Its cantilever wing (no struts), fuel-injected Continental engine, and roomy cabin made it a benchmark IFR and cross-country machine from the 1960s through the mid-1980s.' },
+    { q: 'How much does a Cessna 210 cost to own?', a: 'More than most fixed-gear singles — the retractable gear, fuel injection, and (on turbo and pressurized variants) additional systems raise the annual inspection and maintenance bill. The reserve for the Continental IO-520 overhaul is the largest line item. Co-ownership is the classic way to make a Centurion realistic, splitting the fixed costs across partners.' },
+    { q: 'Is the Cessna 210 a good aircraft for co-ownership?', a: 'Yes — its complexity and running costs are exactly why so many 210s are shared. A well-maintained Centurion rewards partners with genuine six-seat, IFR cross-country capability at a cruise close to 170 kt; splitting the hangar, the annual, and the engine reserve makes those numbers work.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -1005,6 +1016,10 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'diamond/da20': [
     'The Diamond DA20 is the light, sporty two-seat composite single that helped modernize the training fleet. A bubble canopy and center control stick give it fighter-like visibility and crisp, responsive handling, while the bonded composite airframe and efficient engine — a Rotax 912 in the early DA20-A1 Katana, a 125 hp Continental in the DA20-C1 Eclipse — keep it light and economical. Its honest manners and low running costs have made it a flight-school staple, and the C1 has even been used for military ab-initio pilot screening.',
     'For a first airplane or a time-builder, the DA20 is one of the easiest singles to share. Two seats and a small, fuel-sipping engine mean modest fuel and maintenance bills, and a partnership splits the already-low hangar, annual, and insurance across owners — so a group can keep a fun, modern, great-visibility airplane flown often without anyone carrying the whole cost. The trade-off versus a four-seater is just that: two seats and limited baggage, so it is built for training and pure flying rather than family travel.',
+  ],
+  'cessna/210': [
+    'The Cessna 210 Centurion is one of the most capable piston singles Cessna ever built — a six-seat high-wing retractable with a cantilever wing (no external struts), a fuel-injected Continental engine, and a roomy, stand-up-in-the-door cabin that puts it firmly in the IFR cross-country class. Produced from 1957 through 1985, the line grew steadily in power and sophistication, and its later normally-aspirated and turbocharged variants became a benchmark for pilots who needed genuine six-seat range and speed from a high-wing single.',
+    'That capability comes with a matching maintenance budget. The retractable gear, fuel injection, and (on turbo and pressurized variants) the added systems raise the annual and the reserves well above a fixed-gear Cessna. The Continental IO-520 overhaul is the biggest periodic cost, and knowledgeable avionics support matters on a complex, aging fleet. Co-ownership is the time-tested answer: a Centurion partnership shares the hangar, the annual, the reserves, and the expertise — so a group of partners can fly a genuinely capable IFR single at a sensible cost per month.',
   ],
 }
 
@@ -1246,6 +1261,16 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Fuel (usable)', value: '~24 gal' },
     { label: 'Airframe', value: 'Composite, fixed tricycle gear' },
   ],
+  'cessna/210': [
+    { label: 'Seats', value: '6' },
+    { label: 'Engine', value: 'Continental IO-520-L (210L/N)' },
+    { label: 'Horsepower', value: '285 hp' },
+    { label: 'Cruise speed', value: '~174 kt' },
+    { label: 'Range', value: '~900 nm' },
+    { label: 'Useful load', value: '~1,500 lb' },
+    { label: 'Fuel (usable)', value: '90 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1368,6 +1393,11 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'A light two-seat composite single with a bubble canopy and a center stick — fighter-like visibility and sporty, responsive handling at a very low operating cost.',
     'Suits a pilot who wants an economical, fun trainer or time-builder to fly often — a flight-school staple that even the military has used for ab-initio pilot screening.',
     'The honest trade-off is just two seats and modest baggage: it is built for training and pure flying, not family travel, and you board over the side under the canopy rather than through a door.',
+  ],
+  'cessna/210': [
+    'A six-seat retractable high-wing single with a cantilever wing (no struts) and a fuel-injected Continental — one of the most capable piston singles Cessna ever built, with a ~174 kt cruise and genuine IFR range.',
+    'Suits a pilot or group that wants real six-seat, cross-country, IFR capability from a high-wing airframe and is ready to manage a complex, mature aircraft.',
+    'Higher maintenance than a fixed-gear Cessna — retractable gear, fuel injection, and a Continental IO-520 overhaul reserve are the main costs; co-ownership is the classic answer for keeping a Centurion affordable.',
   ],
 }
 
