@@ -31,7 +31,10 @@ async function main() {
   const args = process.argv.slice(2)
   const dryRun = args.includes('--dry-run')
   const pagesArg = args.find((a) => a.startsWith('--pages='))
-  const pages = pagesArg ? parseInt(pagesArg.split('=')[1], 10) : 2
+  // Page depth for paginated adapters (barnstormers). 6 gets ~full coverage of
+  // each category (it stops early once a category runs out of pages). hangar67 /
+  // aircraftforsale ignore this and enumerate their full sitemaps.
+  const pages = pagesArg ? parseInt(pagesArg.split('=')[1], 10) : 6
   const sourceArg = args.find((a) => a.startsWith('--source='))
   const only = sourceArg ? sourceArg.split('=')[1] : null
 
