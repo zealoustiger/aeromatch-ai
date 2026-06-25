@@ -37,7 +37,7 @@ function NumberField({
   return (
     <label className="block text-sm font-medium text-slate-700">
       {label}
-      <span className="mt-1 flex items-center rounded-lg border border-slate-300 focus-within:border-sky-500 focus-within:ring-1 focus-within:ring-sky-500">
+      <span className="mt-1 flex items-center rounded-lg border border-slate-300 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
         {prefix && <span className="pl-3 text-sm text-slate-400">{prefix}</span>}
         <input
           type="number"
@@ -86,15 +86,15 @@ export default function EarningsCalculator({
 
   if (variant === 'compact') {
     return (
-      <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-5 shadow-sm">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-sky-700">
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-emerald-700">
           <TrendingUp className="h-4 w-4" /> What could this offset?
         </h2>
         <div className="grid grid-cols-2 gap-3">
           <NumberField label="Partners" value={sharesOffered} onChange={setSharesOffered} />
           <NumberField label="Dues / partner" value={monthlyDuesPerShare} onChange={setMonthlyDuesPerShare} prefix="$" suffix="/mo" step={10} />
         </div>
-        <dl className="mt-4 space-y-2 border-t border-sky-100 pt-3 text-sm">
+        <dl className="mt-4 space-y-2 border-t border-emerald-100 pt-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-slate-600">Monthly offset</dt>
             <dd className="font-semibold text-slate-900">{money(result.monthlyOffset)}</dd>
@@ -106,7 +106,7 @@ export default function EarningsCalculator({
         </dl>
         <Link
           href="/tools/earnings-calculator"
-          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-sky-700 hover:underline"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline"
         >
           Open full calculator <ArrowRight className="h-3 w-3" />
         </Link>
@@ -131,8 +131,8 @@ export default function EarningsCalculator({
       </div>
 
       {/* Results */}
-      <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-sky-700">Your offset</h2>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-emerald-700">Your offset</h2>
         <div className="space-y-3">
           <Result label="Monthly offset / earnings" value={money(result.monthlyOffset)} big />
           <Result label="Annual offset" value={money(result.annualOffset)} />
@@ -146,8 +146,8 @@ export default function EarningsCalculator({
             <span>Fixed costs covered by dues</span>
             <span>{coveragePct}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-sky-100">
-            <div className="h-full rounded-full bg-sky-500" style={{ width: `${coveragePct}%` }} />
+          <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
+            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${coveragePct}%` }} />
           </div>
           <p className="mt-2 text-sm text-slate-600">
             {result.netMonthlyFixedAfterDues > 0

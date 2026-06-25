@@ -103,7 +103,7 @@ export default function CostCalculator({
             <dd className="font-semibold text-slate-900">{money(result.trueCostPerHour)}/hr</dd>
           </div>
           {result.vsRentingMonthlySavings > 0 && (
-            <div className="flex justify-between text-sky-700">
+            <div className="flex justify-between text-emerald-700">
               <dt>vs. renting @ {money(rentalRate)}/hr</dt>
               <dd className="font-semibold">save {money(result.vsRentingMonthlySavings)}/mo</dd>
             </div>
@@ -180,7 +180,7 @@ function CompareRow({ label, them, you, savings }: { label: string; them: number
       <span className="text-slate-600">{label}</span>
       <span className="text-right">
         <span className="block font-semibold text-slate-800">{money(them)}/mo</span>
-        <span className={cheaper ? 'text-xs font-medium text-sky-600' : 'text-xs font-medium text-amber-600'}>
+        <span className={cheaper ? 'text-xs font-medium text-emerald-600' : 'text-xs font-medium text-amber-600'}>
           {cheaper ? `save ${money(savings)}/mo` : `+${money(Math.abs(savings))}/mo`}
         </span>
       </span>
