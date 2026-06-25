@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Plane, ArrowRight } from 'lucide-react'
+import { MapPin, Plane, ArrowRight, Search } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES, getAirportOverview } from '@/lib/seo'
 import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
+import SeekerCard from '@/components/SeekerCard'
+import { getSeekers } from '@/lib/seekersQuery'
 import {
   getNearbyPartnerships,
   getIndexableAirportHubs,
@@ -92,9 +94,15 @@ export default async function AirportPage({
   if (!airport) notFound()
 
   const nearbyIcaos = await getAirportsWithinRadius(airport.icao, 50)
-  const allListings = await getListings(nearbyIcaos)
+  const [allListings, allSeekers] = await Promise.all([
+    getListings(nearbyIcaos),
+    getSeekers({ airports: airport.icao }),
+  ])
   const atAirport = allListings.filter((l) => l.home_airport === airport.icao)
   const nearby = allListings.filter((l) => l.home_airport !== airport.icao)
+  // Seekers whose home airport exactly matches — preview up to 4; link to full browse.
+  const seekersHere = allSeekers.slice(0, 4)
+  const seekerCount = allSeekers.length
 
   // Internal link to the canonical geo "partnerships near [airport]" page
   // (`/partnerships/near/[icao]`). Gate it on the EXACT same inventory check that
@@ -216,6 +224,45 @@ export default async function AirportPage({
           </div>
         )}
       </section>
+
+      {/* Pilots seeking a partnership at this airport — community hub slice */}
+      {seekersHere.length > 0 && (
+        <section className="mt-10">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Pilots seeking a partnership at {airport.icao} ({seekerCount})
+            </h2>
+            {seekerCount > seekersHere.length && (
+              <Link
+                href={`/partnerships/seeking?airports=${airport.icao}`}
+                className="text-sm font-medium text-sky-600 hover:text-sky-700"
+              >
+                See all {seekerCount} →
+              </Link>
+            )}
+          </div>
+          <div className="space-y-4">
+            {seekersHere.map((s) => (
+              <SeekerCard key={s.id} seeker={s} />
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/partnerships/seeking?airports=${airport.icao}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-100"
+            >
+              <Search className="h-4 w-4" />
+              Browse all pilots seeking here
+            </Link>
+            <Link
+              href="/partnerships/seeking/new"
+              className="text-sm font-medium text-slate-500 hover:text-sky-600"
+            >
+              Post your own seeking listing →
+            </Link>
+          </div>
+        </section>
+      )}
 
       {nearby.length > 0 && (
         <section className="mt-10">
