@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T114500Z — PASS — listing-completeness-panel
+- Pages: /aircraft/listing/[id]
+- What: **Aircraft detail pages now show a "Listing info" completeness panel** below the ClubHanger Estimate. Five key signals — Real photos, Asking price, Make/model/year, Registration (N-number), Total airframe time — each display a green check (✓) when present or a muted dash (—) when missing, plus a X/5 count in the header. Buyers can see at a glance what information is available without decoding the opaque A/B/C grade badge. The panel is additive and self-contained; the grade badge is unchanged.
+- Goal: feature depth / listing transparency — `[want]` lane (last 3 non-bug: airport-seeker-section [want], carbon-cub-curate [goal], message-notify-throttle [want] — not all 3 [want], so [want] owed per 3:1 policy). Pageviews at orient: 374 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING). 2 files: new `src/components/ListingCompletenessPanel.tsx` (pure presentational, typed against `AircraftForSale`); `src/app/aircraft/listing/[id]/page.tsx` (import + render after `EstimatePanel`, before Source CTA).
+- Goal-lane: [want]
+- Spec: nightshift/specs/20260625T112729Z-listing-completeness-panel.md
+- Verdict: PASS. `npx next build` compiled clean (289 static pages, exit 0, no TypeScript errors). QA smoke (`next start` production build on port 3040, NOT dev) — exit 0 on `/aircraft/listing/1486000f-…` (Beechcraft B36tc Bonanza), `/aircraft`, `/partnerships` at desktop 1280 + mobile 375 (6/6 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Visual cycle: screenshots read — "LISTING INFO" panel renders cleanly in the sidebar below the estimate, green ✓ for present fields, muted — for missing; clean layout at both viewports, no overflow.
+- Screenshots: nightshift/screenshots/listing-completeness-panel/
+- Next: (1) Surface the completeness signals on `/saved` listing cards (optional — adds density). (2) Extend the same panel to partnership detail pages when relevant fields exist. (3) Consider surfacing a "Data completeness" sort option on browse so buyers can rank listings by completeness.
+
 ## 2026-06-25T110609Z — PASS — airport-seeker-section
 - Pages: /airports/[icao]
 - What: **Airport detail pages now show a "Pilots seeking a partnership at {ICAO}" section.** Each airport page gets a new section between "Based at {ICAO}" and "Within 50 miles" showing up to 4 seeker cards — aviator avatar, anonymized pilot name, ratings/hours badges, listing title, and budget — plus a "Browse all pilots seeking here" button (→ `/partnerships/seeking?airports={ICAO}`) and a "Post your own seeking listing" CTA (→ `/partnerships/seeking/new`). When no seekers are based at that airport, the section is omitted entirely (no empty state). Turns the airport page from a partnerships-only view into a genuine two-sided community hub.
