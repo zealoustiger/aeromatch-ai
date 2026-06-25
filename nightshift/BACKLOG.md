@@ -256,13 +256,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   `createSeekerListing`. See CHANGELOG. **Remaining: slice 3 — shared autosave + "Saving…/Saved" indicator
   (pairs with the deferred post-partnership autosave slice) + 375px micro-polish; plus the still-open
   field changes (1) multiple base airports and (2) "willing to travel" → drive-time.**
-- **[P2][want] "Generate with AI" for title + description (all post flows).** On Seeking
-  (and for-sale + partnership), a **"Generate with AI"** button where the user dumps a
-  **stream-of-consciousness** and the AI drafts an initial **title + description** they can
-  edit. Lowers the blank-page barrier; pairs with the "examples of good writing" help. Slice:
-  (1) Seeking page input → AI-drafted title+desc into fields (editable, not auto-submit); (2)
-  reuse on for-sale + partnership; (3) loading/regenerate/limits. Uses Claude (see
-  `claude-api`); keep prompt + model config server-side.
+- **[P2][want] "Generate with AI" for title + description (all post flows).** ✅ SHIPPED slice 1
+  2026-06-25T060247Z (`seeking-ai-draft`). Seeking form (`/partnerships/seeking/new`) now has
+  a violet "Generate with AI ✨" box above Title/Description — user types stream-of-consciousness
+  notes, Claude Haiku server-side drafts title+desc, fills both fields (editable, not auto-submit).
+  Remaining slices: (2) reuse `generateSeekerDraft`-style action on for-sale + partnership post
+  forms; (3) rate limit / cost cap before wide traffic.
 - ~~**[P2][want] Seeking-partnership profile: fill the empty right rail.**~~ ✅ SHIPPED
   2026-06-24T06:02Z (`seeking-profile-right-rail`). On `/partnerships/seeking/[id]`, the
   **Aircraft Preferences** and **Flying Profile** cards moved out of the full-width left column

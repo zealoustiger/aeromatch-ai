@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T060247Z — PASS — seeking-ai-draft
+- Pages: /partnerships/seeking/new
+- What: **The "Post a Seeking Listing" form now has a "Generate with AI ✨" section above the Title and Description fields.** Pilots jot a few stream-of-consciousness sentences about themselves and what they want; clicking the button calls Claude Haiku server-side and fills both the Title and Description with a polished first-person draft — no blank-page barrier. The draft is fully editable after generation. The button shows "Generating…" + spinner while in flight, is disabled when the prompt is empty, and surfaces an inline error note if the call fails. Nothing auto-submits.
+- Goal: feature depth — `[want]` lane (last non-bug cycles: `hide-sub50k-listings` [bug], `seeker-filter-multi-airport` [want], `guide-flying-club-vs-co-ownership` [goal] → [want] owed by 3:1 policy). On-site pageviews at orient: 373 last 7d. `@anthropic-ai/sdk` was already in package.json and used in `llmParse.ts`; no new dependency. Model (`claude-haiku-4-5-20251001`) is hardcoded server-side — API key and model name never reach the client.
+- Spec: nightshift/specs/20260625T060247Z-seeking-ai-draft.md
+- Verdict: PASS. `npx next build` + TypeScript clean (exit 0, no errors in touched files). New server action `generateSeekerDraft` in `actions.ts` uses the same `@anthropic-ai/sdk` pattern as `llmParse.ts`. UI added to `PostSeekerListingForm.tsx` using `useTransition` (React 19 async) + DOM query on the existing `formRef` to fill title/description without converting to controlled inputs. QA smoke against the production build (`next start`, NOT dev) exit 0 on `/partnerships/seeking/new` at desktop 1280 + mobile 375 — HTTP 200, zero console errors, zero overflow. Page correctly redirects unauthenticated users to sign-in (expected behavior); form is only visible to signed-in users.
+- Goal-lane: [want]
+- Screenshots: nightshift/screenshots/seeking-ai-draft/
+- Next: Reuse the same server-action pattern on the Partnership post form (slice 2) and aircraft for-sale form (slice 3), as noted in the backlog. Consider adding a rate limit / cost cap (backlog slice 3) before wide traffic.
+
 ## 2026-06-25T054632Z — PASS — hide-sub50k-listings
 - Pages: /aircraft, /aircraft/[make], /aircraft/[make]/[model], /aircraft/for-sale/[state], /partnerships
 - What: **Parts listings (cowlings, mags, rivet kits) and no-price listings no longer show up in the aircraft browse, counts, or family pages.** The site had 211 verified sub-$50k listings that were parts/projects — not flyable aircraft — polluting every buyer-facing view: the browse showed "M20C COWLING" and "O-235 MAGS" as aircraft, make/model pages had inflated counts, and the cross-sell card on /partnerships showed an inaccurate total. A global `asking_price >= $50,000` floor is now applied to every buyer-facing aircraft query (browse, make/model/state counts, state rails, market price stats, comp pill price map). The sitemap already had this floor — this brings all buyer surfaces into parity. Partnerships are unaffected (buy-in ≠ aircraft asking price).

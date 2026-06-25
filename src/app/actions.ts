@@ -9,6 +9,7 @@ import { sendEmail, buildAlertConfirmEmail } from '@/lib/email'
 import { SITE_URL } from '@/lib/seo'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
+import Anthropic from '@anthropic-ai/sdk'
 
 // Save the signed-in user's chosen aviator avatar to their profile. Upserts the
 // profile row (user_id is the PK / RLS key) so it works for users who haven't
@@ -535,4 +536,46 @@ export async function renameSavedSearch(id: string, name: string) {
 
   revalidatePath('/searches')
   return { ok: true }
+}
+
+export async function generateSeekerDraft(prompt: string): Promise<{ title: string; description: string }> {
+  const text = prompt.trim()
+  if (!text) throw new Error('Prompt is required.')
+  if (text.length > 2000) throw new Error('Prompt is too long.')
+
+  const client = new Anthropic()
+  const res = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: `You help pilots write "Seeking Aircraft Partnership" listings for ClubHanger, a co-ownership marketplace.
+
+Given the pilot's stream-of-consciousness notes, produce:
+1. title: A concise, specific listing title (max 120 chars) — include ratings, desired share type, aircraft type, and location or airport if mentioned.
+2. description: A compelling 200–350 word first-person write-up covering who they are (ratings, hours, currency), how they fly (missions, frequency), what they want (share/aircraft/budget/airport), and why they'd be a great partner (aircraft care, communication style, reserves).
+
+Do not invent facts not present in the prompt; if key details are missing, use natural placeholders like "[X] hours total time". Write in a direct, professional but warm first-person voice.`,
+    tools: [
+      {
+        name: 'draft_listing',
+        description: 'Output the drafted listing title and description.',
+        input_schema: {
+          type: 'object' as const,
+          properties: {
+            title: { type: 'string', description: 'Concise listing title, max 120 characters' },
+            description: { type: 'string', description: 'Listing description, 200–350 words, first-person' },
+          },
+          required: ['title', 'description'],
+          additionalProperties: false,
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'draft_listing' },
+    messages: [{ role: 'user', content: text }],
+  })
+
+  const block = res.content.find((b) => b.type === 'tool_use')
+  if (!block || block.type !== 'tool_use') throw new Error('No draft generated.')
+  const f = block.input as { title: string; description: string }
+  if (!f.title || !f.description) throw new Error('Incomplete draft generated.')
+  return { title: f.title.slice(0, 200), description: f.description }
 }
