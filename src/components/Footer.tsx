@@ -36,11 +36,6 @@ const companyLinks = [
   { href: '/about', label: 'About ClubHanger' },
 ]
 
-const toolLinks = [
-  { href: '/tools/cost-calculator', label: 'Cost calculator' },
-  { href: '/tools/earnings-calculator', label: 'Earnings calculator' },
-]
-
 export default function Footer() {
   return (
     <footer className="mt-20 border-t border-slate-200 bg-white">

@@ -96,6 +96,39 @@ export function computeCost(input: CostInputs): CostResult {
   }
 }
 
+export interface OwnershipEstimate {
+  insuranceAnnual: number
+  hangarAnnual: number
+  annualInspection: number
+  hoursPerYear: number
+  operatingPerHour: number
+  operatingAnnual: number
+  totalAnnual: number
+  totalMonthly: number
+}
+
+/** Rough-estimate sole-ownership cost from asking price only. All figures are
+ *  typical US piston-GA averages — not an appraisal or quote. */
+export function estimateOwnershipCost(askingPrice: number): OwnershipEstimate {
+  const insuranceAnnual = Math.round(askingPrice * 0.01)
+  const hangarAnnual = 7500
+  const annualInspection = 2500
+  const hoursPerYear = 100
+  const operatingPerHour = 120
+  const operatingAnnual = hoursPerYear * operatingPerHour
+  const totalAnnual = insuranceAnnual + hangarAnnual + annualInspection + operatingAnnual
+  return {
+    insuranceAnnual,
+    hangarAnnual,
+    annualInspection,
+    hoursPerYear,
+    operatingPerHour,
+    operatingAnnual,
+    totalAnnual,
+    totalMonthly: Math.round(totalAnnual / 12),
+  }
+}
+
 export interface EarningsInputs {
   /** Full aircraft monthly fixed cost the owner carries today (USD/mo). */
   monthlyFixedTotal: number
