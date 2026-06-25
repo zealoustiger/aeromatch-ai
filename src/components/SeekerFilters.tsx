@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useState, useTransition } from 'react'
 import { X } from 'lucide-react'
+import SaveSearchButton from './SaveSearchButton'
 
 const RADIUS = [25, 50, 100, 150, 200]
 
@@ -29,9 +30,12 @@ interface Props {
   initialValues: Record<string, string | undefined>
   /** Makes seekers are looking for, for the make filter (values match stored data). */
   makes?: string[]
+  /** When set, render an in-panel "Save this search" button above "Clear all
+   *  filters" (the base route the saved search reopens). */
+  saveSearchBasePath?: string
 }
 
-export default function SeekerFilters({ initialValues, makes = [] }: Props) {
+export default function SeekerFilters({ initialValues, makes = [], saveSearchBasePath }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -259,9 +263,15 @@ export default function SeekerFilters({ initialValues, makes = [] }: Props) {
       </div>
 
       {hasFilters && (
-        <button onClick={clearAll} className="w-full rounded-md border border-slate-200 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50">
-          Clear all filters
-        </button>
+        <div className="space-y-2 border-t border-slate-100 pt-4">
+          {saveSearchBasePath && <SaveSearchButton fullWidth basePath={saveSearchBasePath} />}
+          <button
+            onClick={clearAll}
+            className="w-full rounded-md border border-slate-200 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
+          >
+            Clear all filters
+          </button>
+        </div>
       )}
     </div>
   )

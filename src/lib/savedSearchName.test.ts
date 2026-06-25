@@ -53,3 +53,21 @@ test('name is clamped to a sane length', () => {
   const long = autoNameSearch('make=' + 'x'.repeat(200), '/aircraft')
   assert.ok(long.length <= 80, `expected ≤80, got ${long.length}`)
 })
+
+test('seeker: make + airports + rating + hours', () => {
+  assert.equal(
+    autoNameSearch('make=Cessna&airports=kpao,khwd&rating=PPL,IFR&min_hours=250', '/partnerships/seeking'),
+    'Cessna seekers near KPAO,KHWD · PPL,IFR, 250+ hrs'
+  )
+})
+
+test('seeker: single airport + share type', () => {
+  assert.equal(
+    autoNameSearch('airports=kaus&share_type=1%2F2', '/partnerships/seeking'),
+    'Seekers near KAUS · 1/2'
+  )
+})
+
+test('seeker: bare query → generic label', () => {
+  assert.equal(autoNameSearch('', '/partnerships/seeking'), 'Seekers')
+})

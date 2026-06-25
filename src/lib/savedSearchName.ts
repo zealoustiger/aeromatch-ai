@@ -79,11 +79,39 @@ function namePartnership(p: URLSearchParams): string {
   return name
 }
 
+function nameSeeker(p: URLSearchParams): string {
+  const make = p.get('make')?.trim()
+  const lead = make ? `${make} seekers` : 'Seekers'
+
+  let name = lead
+
+  const airports = p.get('airports')?.trim()
+  const airport = p.get('airport')?.trim()
+  const radius = p.get('radius')?.trim()
+  if (airports) name += ` near ${airports.toUpperCase()}`
+  else if (airport && radius) name += ` within ${radius}mi of ${airport.toUpperCase()}`
+  else if (airport) name += ` near ${airport.toUpperCase()}`
+
+  const tail: string[] = []
+  const rating = p.get('rating')?.trim()
+  if (rating) tail.push(rating.toUpperCase())
+  const minHours = p.get('min_hours')?.trim()
+  if (minHours && Number.isFinite(Number(minHours))) tail.push(`${Number(minHours).toLocaleString()}+ hrs`)
+  const shareType = p.get('share_type')?.trim()
+  if (shareType) tail.push(shareType)
+
+  if (tail.length) name += ` · ${tail.join(', ')}`
+  return name
+}
+
 const MAX_NAME_LEN = 80
 
 /** Build a concise, readable name for a saved search from its query string + path. */
 export function autoNameSearch(params: string, path: string): string {
   const p = new URLSearchParams(params)
-  const name = path === '/aircraft' ? nameAircraft(p) : namePartnership(p)
+  let name: string
+  if (path === '/aircraft') name = nameAircraft(p)
+  else if (path === '/partnerships/seeking') name = nameSeeker(p)
+  else name = namePartnership(p)
   return name.length > MAX_NAME_LEN ? `${name.slice(0, MAX_NAME_LEN - 1).trimEnd()}…` : name
 }

@@ -73,7 +73,7 @@ export default function MobileFiltersDrawer({ initialValues, activeCount, varian
           {variant === 'sale' ? (
             <AircraftSaleFilters initialValues={initialValues} facets={facets} saveSearchBasePath="/aircraft" />
           ) : variant === 'seeker' ? (
-            <SeekerFilters initialValues={initialValues} makes={makes} />
+            <SeekerFilters initialValues={initialValues} makes={makes} saveSearchBasePath="/partnerships/seeking" />
           ) : (
             <PartnershipFilters initialValues={initialValues} saveSearchBasePath="/partnerships" />
           )}

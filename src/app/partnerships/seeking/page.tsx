@@ -10,6 +10,7 @@ import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import PartnershipTabs from '@/components/PartnershipTabs'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
+import SaveSearchButton from '@/components/SaveSearchButton'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import { getSeekerMakes } from '@/lib/seekersQuery'
@@ -156,13 +157,19 @@ export default async function SeekingPartnershipsPage({
                 <SlidersHorizontal className="h-4 w-4" />
                 Filter Pilots
               </div>
-              <SeekerFilters initialValues={params} makes={seekerMakes} />
+              <SeekerFilters initialValues={params} makes={seekerMakes} saveSearchBasePath="/partnerships/seeking" />
             </div>
           </aside>
 
           {/* Results */}
           <div className="min-w-0 flex-1">
             <SeekerActiveFilterChips params={params} />
+            {/* "Save this search" button — appears when filters are active so the
+                owner can recall their preferred seeker search later (parity with
+                /aircraft and /partnerships). Hides when no filters are set. */}
+            <div className="mb-3">
+              <SaveSearchButton basePath="/partnerships/seeking" />
+            </div>
             <Suspense fallback={<SeekerListSkeleton />}>
               <SeekerList filters={params} fallbackPartnerships={railPartnerships} />
             </Suspense>
