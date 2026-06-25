@@ -779,6 +779,12 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Six-seat retractable high-wing single, ~285 hp, ~174 kt cruise, cantilever wing — the Centurion is one of the highest-performing high-wing singles ever built.',
     costToOwn: 'A complex, capable airplane with a matching maintenance bill — retractable gear, fuel injection, and (on turbo and pressurized models) additional systems. Co-ownership is the classic way to make a Centurion pencil out, splitting the reserves and the annual.',
   },
+  {
+    makeSlug: 'cessna', modelSlug: '206', make: 'Cessna', model: '206',
+    modelPattern: '206%',
+    specs: 'Six-seat fixed-gear high-wing hauler, 300 hp Continental IO-520-F, ~150 kt cruise, ~1,800 lb useful load — the Stationair is one of the most capable load-carrying singles ever built.',
+    costToOwn: 'Fixed gear keeps maintenance simpler than the 210, but a Continental IO-520 overhaul reserve is still the biggest line item. Co-ownership spreads the reserves and the hangar so partners can share one of the most capable piston workhorses in general aviation.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -910,6 +916,11 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'How much does a Cessna 210 cost to own?', a: 'More than most fixed-gear singles — the retractable gear, fuel injection, and (on turbo and pressurized variants) additional systems raise the annual inspection and maintenance bill. The reserve for the Continental IO-520 overhaul is the largest line item. Co-ownership is the classic way to make a Centurion realistic, splitting the fixed costs across partners.' },
     { q: 'Is the Cessna 210 a good aircraft for co-ownership?', a: 'Yes — its complexity and running costs are exactly why so many 210s are shared. A well-maintained Centurion rewards partners with genuine six-seat, IFR cross-country capability at a cruise close to 170 kt; splitting the hangar, the annual, and the engine reserve makes those numbers work.' },
   ],
+  'cessna/206': [
+    { q: 'What is the Cessna 206 Stationair?', a: 'The Cessna 206 Stationair is a six-seat, fixed-gear, high-wing single powered by a 300 hp Continental IO-520-F. It is built around exceptional useful load — often close to 1,800 lb — giving it the ability to carry six occupants plus baggage, carry cargo, or take off from rough strips on big tires. Widely used in bush flying, island hopping, and utility operations, it is the working airplane of the Cessna line.' },
+    { q: 'How much does a Cessna 206 cost to own?', a: 'Less complex than the retractable-gear 210, but the Continental IO-520 overhaul reserve is still the largest single cost — plan on setting aside a meaningful amount per hour from the first flight. Fixed gear keeps the annual inspection simpler and eliminates the gear-related insurance premium. Co-ownership spreads those reserves and the hangar across partners, making the 206 one of the most affordable ways to access a genuine six-seat, utility-capable single.' },
+    { q: 'Is the Cessna 206 good for co-ownership?', a: 'Very — the 206 is one of the most practical partnership aircraft. Its fixed gear keeps maintenance predictable, its Continental engine is well-supported everywhere, and its cavernous cabin hauls real loads for all the partners. Groups that fly family trips, camping runs, or frequent short-field operations find that a shared 206 is a remarkably cost-effective answer.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -1020,6 +1031,10 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'cessna/210': [
     'The Cessna 210 Centurion is one of the most capable piston singles Cessna ever built — a six-seat high-wing retractable with a cantilever wing (no external struts), a fuel-injected Continental engine, and a roomy, stand-up-in-the-door cabin that puts it firmly in the IFR cross-country class. Produced from 1957 through 1985, the line grew steadily in power and sophistication, and its later normally-aspirated and turbocharged variants became a benchmark for pilots who needed genuine six-seat range and speed from a high-wing single.',
     'That capability comes with a matching maintenance budget. The retractable gear, fuel injection, and (on turbo and pressurized variants) the added systems raise the annual and the reserves well above a fixed-gear Cessna. The Continental IO-520 overhaul is the biggest periodic cost, and knowledgeable avionics support matters on a complex, aging fleet. Co-ownership is the time-tested answer: a Centurion partnership shares the hangar, the annual, the reserves, and the expertise — so a group of partners can fly a genuinely capable IFR single at a sensible cost per month.',
+  ],
+  'cessna/206': [
+    'The Cessna 206 Stationair is the hauler of the Cessna family. Where the 172 and 182 optimized for four-seat touring, Cessna built the 206 around a single priority: put as much as possible inside a high-wing single and get it off a short, rough strip. The result is a six-seat, fixed-gear airplane with a useful load that approaches or exceeds 1,800 lb on many variants — more than almost any other piston single — and a cabin wide enough to fit a cargo pod under the belly or take floats for water operations.',
+    'That utility profile is why the 206 has been a workhorse in Alaska, the Pacific Islands, the Caribbean, and anywhere a reliable piston single needs to carry people and freight into airstrips that challenge anything with retractable gear. For co-owners, it is one of the most practical shares in general aviation: the fixed gear keeps the annual and insurance straightforward, the Continental IO-520-F is well-supported everywhere, and the big cabin genuinely hauls everyone in the group. Splitting the engine reserve and the hangar across partners makes a 206 surprisingly affordable relative to what it delivers.',
   ],
 }
 
@@ -1271,6 +1286,16 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Fuel (usable)', value: '90 gal' },
     { label: 'Landing gear', value: 'Retractable tricycle' },
   ],
+  'cessna/206': [
+    { label: 'Seats', value: '6' },
+    { label: 'Engine', value: 'Continental IO-520-F (U206G)' },
+    { label: 'Horsepower', value: '300 hp' },
+    { label: 'Cruise speed', value: '~150 kt' },
+    { label: 'Range', value: '~850 nm' },
+    { label: 'Useful load', value: '~1,800 lb' },
+    { label: 'Fuel (usable)', value: '84 gal' },
+    { label: 'Landing gear', value: 'Fixed tricycle' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1398,6 +1423,11 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'A six-seat retractable high-wing single with a cantilever wing (no struts) and a fuel-injected Continental — one of the most capable piston singles Cessna ever built, with a ~174 kt cruise and genuine IFR range.',
     'Suits a pilot or group that wants real six-seat, cross-country, IFR capability from a high-wing airframe and is ready to manage a complex, mature aircraft.',
     'Higher maintenance than a fixed-gear Cessna — retractable gear, fuel injection, and a Continental IO-520 overhaul reserve are the main costs; co-ownership is the classic answer for keeping a Centurion affordable.',
+  ],
+  'cessna/206': [
+    'Exceptional useful load — close to 1,800 lb on many variants — lets it carry six adults, cargo, or heavy gear off short and rough strips where other six-seaters cannot go.',
+    'Fixed gear makes it far simpler and cheaper to insure and maintain than the retractable 210; the Continental IO-520-F is widely supported and every A&P knows it.',
+    'Float conversion and cargo-pod options make it one of the most versatile platforms in piston aviation — a genuine working airplane, not just a hauler.',
   ],
 }
 
