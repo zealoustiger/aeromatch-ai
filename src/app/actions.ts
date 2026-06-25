@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
-import { sendEmail, buildAlertConfirmEmail } from '@/lib/email'
+import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail } from '@/lib/email'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_URL } from '@/lib/seo'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
@@ -558,6 +559,33 @@ export async function getOrCreateSeekerThread(seekerId: string, seekerOwnerId: s
   return { threadId: data.id }
 }
 
+// Look up the thread's OTHER participant and send them a new-message email.
+// Resolves (never throws) so the caller can fire-and-forget safely.
+async function notifyMessageRecipient(threadId: string, senderId: string): Promise<void> {
+  try {
+    // Service-role client: need to read thread + look up recipient email.
+    const admin = createAdminClient()
+    const { data: thread } = await admin
+      .from('threads')
+      .select('owner_id, inquirer_id')
+      .eq('id', threadId)
+      .single()
+    if (!thread) return
+
+    const recipientId =
+      thread.inquirer_id === senderId ? thread.owner_id : thread.inquirer_id
+    if (!recipientId || recipientId === senderId) return
+
+    const { data: { user: recipient } } = await admin.auth.admin.getUserById(recipientId)
+    if (!recipient?.email) return
+
+    const threadUrl = `${SITE_URL}/messages/${threadId}`
+    await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email })
+  } catch {
+    // Non-fatal — message is already saved; email is best-effort.
+  }
+}
+
 export async function sendMessage(threadId: string, body: string) {
   const trimmed = body.trim()
   if (!trimmed || trimmed.length > 2000) return { error: 'Invalid message.' }
@@ -577,6 +605,9 @@ export async function sendMessage(threadId: string, body: string) {
     .from('threads')
     .update({ last_message_at: new Date().toISOString(), last_message_sender_id: user.id })
     .eq('id', threadId)
+
+  // Fire-and-forget: notify the other participant by email (no-op when RESEND_API_KEY absent).
+  void notifyMessageRecipient(threadId, user.id)
 
   return { ok: true }
 }
