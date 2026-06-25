@@ -538,6 +538,48 @@ export async function renameSavedSearch(id: string, name: string) {
   return { ok: true }
 }
 
+export async function generatePartnershipDraft(prompt: string): Promise<{ title: string; description: string }> {
+  const text = prompt.trim()
+  if (!text) throw new Error('Prompt is required.')
+  if (text.length > 2000) throw new Error('Prompt is too long.')
+
+  const client = new Anthropic()
+  const res = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: `You help aircraft owners write "Partnership Available" listings for ClubHanger, a co-ownership marketplace.
+
+Given the owner's stream-of-consciousness notes about their aircraft and partnership, produce:
+1. title: A concise, specific listing title (max 120 chars) — include share type, year + make + model, and airport if mentioned (e.g. "1/3 Share — 2004 Cessna 172S, Austin TX (KAUS)").
+2. description: A compelling 200–350 word write-up covering the aircraft (condition, avionics, maintenance history), the partnership structure (current partners, scheduling, costs if mentioned), what makes this a great opportunity, and what you're looking for in a new partner (experience level, use patterns, communication style).
+
+Do not invent facts not present in the prompt; if key details are missing, use natural placeholders like "[X]-hour engine." Write in a direct, welcoming owner voice — warm but professional.`,
+    tools: [
+      {
+        name: 'draft_listing',
+        description: 'Output the drafted listing title and description.',
+        input_schema: {
+          type: 'object' as const,
+          properties: {
+            title: { type: 'string', description: 'Concise listing title, max 120 characters' },
+            description: { type: 'string', description: 'Listing description, 200–350 words, owner voice' },
+          },
+          required: ['title', 'description'],
+          additionalProperties: false,
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'draft_listing' },
+    messages: [{ role: 'user', content: text }],
+  })
+
+  const block = res.content.find((b) => b.type === 'tool_use')
+  if (!block || block.type !== 'tool_use') throw new Error('No draft generated.')
+  const f = block.input as { title: string; description: string }
+  if (!f.title || !f.description) throw new Error('Incomplete draft generated.')
+  return { title: f.title.slice(0, 200), description: f.description }
+}
+
 export async function generateSeekerDraft(prompt: string): Promise<{ title: string; description: string }> {
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
