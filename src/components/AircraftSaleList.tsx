@@ -40,6 +40,12 @@ interface Filters {
 
 const PAGE_SIZE = 60
 
+// Site-wide buyer-surface price floor: the verified sub-$50k rows are parts/
+// projects ("M20C COWLING", "O-235 MAGS", rivet-gun kits), not flyable aircraft;
+// null-price rows carry no buyer value. Applied uniformly to browse, counts, and
+// family pages — the sitemap already uses the identical floor in aircraftForSale.ts.
+const BUYER_PRICE_FLOOR = 50_000
+
 // Site-wide quality floor: the lowest grade the public site will ever show,
 // regardless of the user's filter. Set LISTING_GRADE_FLOOR=B (or A) to hide
 // weaker listings everywhere. Defaults to 'C' (show everything).
@@ -157,6 +163,7 @@ export async function countMakeModel(
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
     if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
@@ -189,6 +196,7 @@ export async function countMakeModelState(
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
       .eq('state', code)
@@ -215,6 +223,7 @@ export async function countForSaleState(code: string): Promise<number> {
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .eq('state', code)
     if (error) return 0
     return count ?? 0
@@ -238,6 +247,7 @@ export async function countForSale(make?: string): Promise<number> {
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
     const m = make?.trim()
     if (m) query = query.ilike('make', `%${m}%`)
     const { count, error } = await query
@@ -271,6 +281,7 @@ export async function topStatesForMakeModel(
       .from('aircraft_for_sale')
       .select('state')
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
       .not('state', 'is', null)
@@ -316,6 +327,7 @@ export async function topMakeModelsForState(
       .from('aircraft_for_sale')
       .select('make, model')
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .eq('state', code)
       .not('make', 'is', null)
       .not('model', 'is', null)
@@ -360,10 +372,9 @@ export async function priceStatsForMakeModel(
       .from('aircraft_for_sale')
       .select('asking_price')
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
-      .not('asking_price', 'is', null)
-      .gt('asking_price', 0)
       .limit(5000)
     const { data, error } = await (notModelPattern
       ? base.not('model', 'ilike', notModelPattern)
@@ -422,6 +433,7 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .from('aircraft_for_sale')
       .select('*', { count: 'exact' })
       .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
 
     if (filters.photoOnly) query = query.eq('image_is_placeholder', false)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
@@ -533,8 +545,7 @@ async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
       .from('aircraft_for_sale')
       .select('make, model, asking_price')
       .eq('status', 'active')
-      .not('asking_price', 'is', null)
-      .gt('asking_price', 0)
+      .gte('asking_price', BUYER_PRICE_FLOOR)
       .limit(5000)
     if (error || !data) return new Map()
     return buildFamilyPriceMap(data)
