@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T064443Z — PASS — ai-draft-rate-limit
+- Pages: /partnerships/new, /partnerships/seeking/new
+- What: **The "Generate with AI" feature on both posting forms now rejects unauthenticated callers and rate-limits logged-in users to 10 AI draft requests per hour.** Previously, the two server actions (`generatePartnershipDraft`, `generateSeekerDraft`) had no auth check — any caller (including non-logged-in users making direct requests) could trigger Anthropic API calls at will. Now both actions verify the caller is signed in and enforce a simple per-user hourly limit; exceeding it returns a clear "please wait a bit" message. This completes slice 3 of the "[P2][want] Generate with AI" backlog item (slice 1 = seeking form, slice 2 = partnership form).
+- Goal: feature depth / defensive cost control — `[want]` lane (last 3 non-bug cycles: `model-curate-cessna-210` [goal], `partnership-ai-draft` [want], `seeking-ai-draft` [want] — last was [goal] so [want] owed per 3:1 policy). Pageviews at orient: 381 last 7d. Pure server-side change in `actions.ts`: a 24-line `checkAiDraftAccess()` helper (module-level `Map<userId, {count, resetAt}>`) + one `await checkAiDraftAccess()` call at the top of each generation function. Implementation note: rate limit is in-process (module-level Map) — effective for typical Vercel warm-instance reuse at current traffic; swap for Redis/KV if traffic grows.
+- Goal-lane: [want]
+- Spec: nightshift/specs/20260625T064443Z-ai-draft-rate-limit.md
+- Verdict: PASS. `npx next build` compiled successfully (exit 0, no TypeScript errors in touched files). QA smoke against the production build (`next start`, NOT dev) exit 0 on `/partnerships/new` and `/partnerships/seeking/new` at desktop 1280 + mobile 375 (4/4 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Non-visual cycle (server-side logic only, no UI change) — screenshots saved as audit trail, not read.
+- Screenshots: nightshift/screenshots/ai-draft-rate-limit/
+- Next: rate limit is in-memory and process-scoped — if traffic grows significantly, swap for a Supabase-backed or Redis-backed counter. The third AI form (aircraft-for-sale post) doesn't exist yet — add the same pattern when that form ships. The auth check also revealed these actions were previously callable anonymously; any future AI-backed server actions should include auth + rate limit from the start.
+
 ## 2026-06-25T063500Z — PASS — model-curate-cessna-210
 - Pages: /aircraft/cessna/210
 - What: **Upgraded the Cessna 210 Centurion page from a thin auto-generated page to a fully curated one.** The page now carries a key-specifications table (6 seats, Continental IO-520-L, 285 hp, ~174 kt cruise, ~900 nm range, ~1,500 lb useful load, 90 gal usable), a "What's different about the Cessna 210" three-bullet highlights block (cantilever retractable high-wing; complex/IFR capable; partnership-friendly cost structure), two "About the Cessna 210" editorial paragraphs (history + co-ownership angle), and a 3-question FAQ visible on the page and emitted 1:1 as FAQPage structured data. All content is genuine/evergreen — the Centurion's specs are among the best-documented in GA. Real live listings still show below the curated content.
