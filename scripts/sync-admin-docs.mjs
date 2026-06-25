@@ -10,6 +10,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { estimateMarkdown } from '../nightshift/bin/backlog-estimate.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -33,12 +34,15 @@ const DOCS = [
   { key: 'daily_report', title: 'Daily Report', file: 'nightshift/REVIEW.md' },
 ]
 
-const rows = DOCS.filter((d) => existsSync(join(root, d.file))).map((d) => ({
-  key: d.key,
-  title: d.title,
-  content: readFileSync(join(root, d.file), 'utf8'),
-  updated_at: new Date().toISOString(),
-}))
+const rows = DOCS.filter((d) => existsSync(join(root, d.file))).map((d) => {
+  let content = readFileSync(join(root, d.file), 'utf8')
+  // Prepend a live burn-down estimate (open items / cycles / hours / nights) to
+  // the Backlog page so the admin sees how much work remains at a glance.
+  if (d.key === 'backlog') {
+    try { content = `${estimateMarkdown(content)}\n\n---\n\n${content}` } catch {}
+  }
+  return { key: d.key, title: d.title, content, updated_at: new Date().toISOString() }
+})
 
 if (rows.length === 0) {
   console.log('No docs found to sync.')
