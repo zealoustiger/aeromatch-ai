@@ -111,6 +111,11 @@ Items the human captured from chat with a reference screenshot. Each links a
 screenshot in Supabase Storage (`backlog-shots` bucket). **When an item here is
 completed, delete its screenshot object from `backlog-shots` to reclaim storage.**
 
+- **[P3][want] Link to email settings from Saved Searches.** On the Saved Searches
+  page (`/searches`), add a clear link/CTA to the email-notification settings on the
+  profile/account page (`/account`) — so a user managing saved searches can jump
+  straight to controlling their email alerts for them. (No screenshot.)
+
 - **[P2][want] Optional note when saving a listing.** When a user saves a listing,
   let them attach an **optional free-text note** (e.g. "great panel — ask about damage
   history"). If a note exists, display it **(a)** on the listing page and **(b)** on the
