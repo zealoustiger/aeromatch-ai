@@ -797,6 +797,12 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Two-seat tandem taildragger, 180 hp Lycoming O-360, STOL-optimized, carbon-fiber-and-aluminum composite construction — built for backcountry and off-airport operations.',
     costToOwn: 'A purpose-built STOL machine with a premium price to match. Partnerships work especially well here because most Carbon Cub owners fly it hard in short bursts — weekend fly-ins, hunting/fishing trips, remote strip access — and sharing keeps the hangar and insurance manageable between adventures.',
   },
+  {
+    makeSlug: 'cessna', modelSlug: '310', make: 'Cessna', model: '310',
+    modelPattern: '%310%',
+    specs: 'Classic five/six-seat light twin, 2× Continental IO-520 (285 hp each on the 310R), ~185 kt cruise — a legendary piston twin with distinctive wingtip tanks and a real IFR cabin.',
+    costToOwn: 'Two engines mean two overhaul reserves plus higher insurance — exactly why co-ownership is the norm in the type. Splitting the fixed costs across a group keeps a capable, well-supported twin within reach.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -943,6 +949,11 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'What makes the Carbon Cub good for backcountry flying?', a: 'The Carbon Cub\'s low empty weight (lighter than a Super Cub), high-lift wing, and 180 hp Lycoming O-360 combine to produce STOL performance that opens up strips other airplanes cannot safely use. Fitted with tundra tires, it can land and take off from gravel bars and mountain meadows that would challenge much more expensive purpose-built bush planes.' },
     { q: 'Is the Carbon Cub a good aircraft to co-own?', a: 'Yes — most Carbon Cub missions are seasonal and trip-specific: a hunting flight in October, a fishing trip in summer, a fly-in over a long weekend. That natural burst usage pattern makes it one of the cleanest fits for shared ownership: partners divide the hangar and insurance evenly and each gets the airplane when they actually need it.' },
   ],
+  'cessna/310': [
+    { q: 'What is the Cessna 310?', a: 'The Cessna 310 is a twin-engine, five- to six-seat piston aircraft produced by Cessna from 1954 to 1980. It is known for its distinctive wingtip fuel tanks, comfortable cabin, and reliable Continental engines. The 310R, the most common late-model variant, runs two Continental IO-520-M engines producing 285 hp each. With well over 5,000 examples built across all variants, the 310 is one of the most widely owned light twins in general aviation.' },
+    { q: 'How much does a Cessna 310 cost to own?', a: 'The biggest cost drivers are the two engine overhaul reserves — each Continental IO-520 carries a recommended TBO, so a co-ownership group typically sets aside a per-hour reserve for both engines as they fly. Add hangar, insurance on a light twin, and the annual inspection, and the 310 is a significant monthly commitment for a solo owner. Splitting those fixed costs across two to four partners is how most 310s are kept flying today.' },
+    { q: 'Is the Cessna 310 a good aircraft to co-own?', a: 'It is one of the classic co-ownership airplanes in general aviation. Two engines, a comfortable cabin, and genuine IFR range make it a compelling traveling machine; two engine overhaul reserves and the insurance premium for a light twin make sharing the costs almost essential. The 310 is also common enough that finding parts, type-experienced mechanics, and new partners is easier than with many other light twins.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -1065,6 +1076,10 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'cubcrafters/carbon': [
     'The CubCrafters Carbon Cub is the modern answer to the Piper Super Cub — a two-seat tandem taildragger built in Yakima, Washington, using carbon-fiber-and-aluminum composite construction that shaves hundreds of pounds off the original formula while keeping the high-lift wing and conventional gear that define the Cub bloodline. CubCrafters offers it in kit form as the EX (Experimental Amateur-Built) and factory-built as the FX (Experimental Exhibition), with major variants including the EX-3 and FX-3 and the earlier SS. All share the same mission: get in and out of places no other airplane can reach.',
     'That mission has made the Carbon Cub the standard-bearer for the backcountry movement — the airplane most commonly spotted on gravel bars in Alaska, mountain meadows in the Rockies, and remote hunting and fishing strips across the West. With tundra tires or amphibious floats, a skilled pilot, and a 180 hp Lycoming, it opens up terrain that would be off-limits to certified fixed-gear singles. Co-ownership fits the Carbon Cub naturally: mission flying tends to be seasonal and trip-specific, so partners rarely conflict on scheduling, and splitting the hangar and insurance across two or three owners keeps the yearly fixed cost well below what the adventure is worth.',
+  ],
+  'cessna/310': [
+    'The Cessna 310 is one of the defining light twins of the general-aviation era — a five- to six-seat aircraft that Cessna built in large numbers from 1954 through 1980, producing well over 5,000 examples across the base 310 and the turbocharged T310. Instantly recognizable by the teardrop wingtip fuel tanks that became its signature, the 310 offered business and personal travelers a genuine IFR cabin-class twin at a piston price. The later 310R, powered by 285 hp Continental IO-520-M engines and fitted with refined systems and interior, is the variant most commonly seen in today\'s market and the standard against which earlier 310s are measured.',
+    'Two Continental engines bring two overhaul reserves, two insurance lines, and a maintenance bill that accumulates with every hundred hours — and that reality has always made the 310 a natural co-ownership airplane. A partnership group shares not only the cash cost but the scheduling and proficiency motivation that comes with a type that rewards regular flying. Well-maintained 310Rs are durable, widely supported, and valued for the combination of cabin room, true IFR range, and respectable single-engine performance that made them a first-choice business twin in their day.',
   ],
 }
 
@@ -1347,6 +1362,16 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Design intent', value: 'STOL / off-airport / backcountry' },
     { label: 'Available as', value: 'EX (kit-built) or FX (factory-built)' },
   ],
+  'cessna/310': [
+    { label: 'Seats', value: '5–6' },
+    { label: 'Engines', value: '2× Continental IO-520-M (310R)' },
+    { label: 'Horsepower', value: '285 hp each (570 hp total)' },
+    { label: 'Cruise speed', value: '~185 kt' },
+    { label: 'Range', value: '~1,000 nm' },
+    { label: 'Useful load', value: '~1,750 lb' },
+    { label: 'Fuel (usable)', value: '~100 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1489,6 +1514,11 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'Carbon fiber and aluminum composite construction makes the Carbon Cub significantly lighter than a Super Cub, translating directly into better STOL performance — shorter ground rolls and better useful load from marginal strips.',
     'Purpose-built for off-airport operations: the high-lift wing, tundra-tire compatibility, and powerful engine open up gravel bars, mountain meadows, and remote strips that challenge any certified fixed-gear single.',
     'Available as an EX (Experimental Amateur-Built kit) or FX (factory-completed) — both are experimental-category aircraft, which allows owner maintenance but means each ship\'s airworthiness history matters more than in certified types.',
+  ],
+  'cessna/310': [
+    'One of the most widely built and supported light twins in general aviation — well over 5,000 produced, giving the type a deep parts supply, a large community of type-experienced mechanics, and steady demand at resale.',
+    'Two Continental IO-520 engines deliver genuine twin redundancy, a ~185 kt cruise, and real IFR range; two engine overhaul reserves and a light-twin insurance bill make co-ownership the standard way to own one.',
+    'The 310R is the refined late-model benchmark: improved single-engine performance, better systems, and the iconic wingtip-tank look that makes it the most sought-after variant and the easiest to sell when a partner moves on.',
   ],
 }
 
