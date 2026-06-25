@@ -12,6 +12,7 @@ import ContactButtons from '@/components/ContactButtons'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import SaveListingButton from '@/components/SaveListingButton'
+import SavedListingNote from '@/components/SavedListingNote'
 import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import PhotoGallery from '@/components/PhotoGallery'
@@ -43,24 +44,6 @@ async function isListingOwner(posterId: string | null): Promise<boolean> {
   return !!user && user.id === posterId
 }
 
-async function isListingSaved(id: string): Promise<boolean> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-  if (!hasSupabase) return false
-
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return false
-
-  const { data } = await supabase
-    .from('saved_listings')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('listing_id', id)
-    .eq('listing_type', 'partnership')
-    .maybeSingle()
-  return !!data
-}
 
 export async function generateMetadata({
   params,
@@ -130,8 +113,45 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const p = await getPartnership(id)
   if (!p) notFound()
 
-  const saved = await isListingSaved(p.id)
   const isOwner = await isListingOwner(p.poster_id)
+
+  // Fetch the current user's saved row for this partnership so we can:
+  // (a) pass the real initialSaved state (eliminates the heart-state flash), and
+  // (b) render the note editor if the user has saved this listing.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let savedRowId: string | null = null
+  let savedNote: string | null = null
+  let notesEnabled = false
+
+  if (user) {
+    // Try to select with the note column; fall back gracefully when the column
+    // hasn't been migrated yet (same pattern as the /saved page and aircraft detail).
+    const withNote = await supabase
+      .from('saved_listings')
+      .select('id, note')
+      .eq('user_id', user.id)
+      .eq('listing_id', p.id)
+      .eq('listing_type', 'partnership')
+      .maybeSingle()
+
+    if (!withNote.error) {
+      notesEnabled = true
+      savedRowId = withNote.data?.id ?? null
+      savedNote = withNote.data?.note ?? null
+    } else {
+      // note column not yet migrated (42703) or other error — id-only fallback.
+      const fallback = await supabase
+        .from('saved_listings')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('listing_id', p.id)
+        .eq('listing_type', 'partnership')
+        .maybeSingle()
+      savedRowId = fallback.data?.id ?? null
+    }
+  }
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -161,9 +181,14 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
           >
             <ChevronLeft className="h-4 w-4" /> Back to Partnerships
           </Link>
-          <div className="flex items-center gap-2">
-            <ShareListingButton url={`${SITE_URL}/partnerships/${p.id}`} />
-            <SaveListingButton listingId={p.id} initialSaved={saved} variant="full" />
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <ShareListingButton url={`${SITE_URL}/partnerships/${p.id}`} />
+              <SaveListingButton listingId={p.id} initialSaved={!!savedRowId} variant="full" />
+            </div>
+            {notesEnabled && savedRowId && (
+              <SavedListingNote savedRowId={savedRowId} note={savedNote} />
+            )}
           </div>
         </div>
 
