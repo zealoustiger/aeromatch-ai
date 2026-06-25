@@ -1,3 +1,12 @@
+## 2026-06-25T12:31:39Z — Night Shift run: 4 cycles (PASS 3 / FAIL 1) — rate limited
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+
+- PASS — listing-completeness-panel — aircraft detail pages now show a Listing info panel with 5 green-check / muted-dash signals (photos, price, specs, N-number, total time) so 
+- PASS — seeker-save-search — Save this search added to /partnerships/seeking browse, closing the parity gap with /aircraft and /partnerships
+- PASS — cessna-310-curate — Cessna 310 model page fully curated with spec table, differentiator bullets, editorial paragraphs, and FAQPage JSON-LD (1 file, `seo.ts`; 290 static 
+- cycle produced no verdict (exit 1)
+
+
 ## 2026-06-25T07:06:07Z — Night Shift run: 7 cycles (PASS 6 / FAIL 1) — rate limited · manual
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 
