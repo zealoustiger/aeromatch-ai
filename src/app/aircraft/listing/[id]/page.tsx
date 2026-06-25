@@ -41,6 +41,7 @@ import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
 import SimilarAircraft from '@/components/SimilarAircraft'
 import SavedListingNote from '@/components/SavedListingNote'
+import ListingCompletenessPanel from '@/components/ListingCompletenessPanel'
 
 const DAY_MS = 86_400_000
 
@@ -483,6 +484,9 @@ export default async function AircraftListingDetailPage({
                 }
               />
             )}
+
+            {/* Listing completeness — shows buyers which key signals are present. */}
+            <ListingCompletenessPanel p={p} />
 
             {/* Source CTA — keeps the outbound path the cards used to provide. */}
             <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
