@@ -19,6 +19,13 @@ import Anthropic from '@anthropic-ai/sdk'
 const AI_DRAFT_CALLS = new Map<string, { count: number; resetAt: number }>()
 const AI_DRAFT_MAX_PER_HOUR = 10
 
+// Per-thread throttle for new-message email notifications. Stores the timestamp
+// of the last email sent for each threadId. At most 1 notification per thread
+// per hour — prevents inbox spam in active back-and-forth conversations while
+// still delivering the first "you have a new message" nudge.
+const MESSAGE_NOTIFY_LAST = new Map<string, number>()
+const MESSAGE_NOTIFY_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
+
 async function checkAiDraftAccess(): Promise<string> {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -560,9 +567,15 @@ export async function getOrCreateSeekerThread(seekerId: string, seekerOwnerId: s
 }
 
 // Look up the thread's OTHER participant and send them a new-message email.
-// Resolves (never throws) so the caller can fire-and-forget safely.
+// Throttled to at most one email per thread per hour to avoid spamming active
+// conversations. Resolves (never throws) so the caller can fire-and-forget safely.
 async function notifyMessageRecipient(threadId: string, senderId: string): Promise<void> {
   try {
+    // Throttle: skip if we already sent a notification for this thread recently.
+    const now = Date.now()
+    const lastSent = MESSAGE_NOTIFY_LAST.get(threadId) ?? 0
+    if (now - lastSent < MESSAGE_NOTIFY_INTERVAL_MS) return
+
     // Service-role client: need to read thread + look up recipient email.
     const admin = createAdminClient()
     const { data: thread } = await admin
@@ -581,6 +594,9 @@ async function notifyMessageRecipient(threadId: string, senderId: string): Promi
 
     const threadUrl = `${SITE_URL}/messages/${threadId}`
     await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email })
+
+    // Record successful send time so subsequent messages in this thread are suppressed.
+    MESSAGE_NOTIFY_LAST.set(threadId, Date.now())
   } catch {
     // Non-fatal — message is already saved; email is best-effort.
   }
