@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T12:31:47Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 0 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Stopped because: rate limited
+- Run: 20260625T123143Z
+
 ## 2026-06-25T12:31:39Z — DRAIN SUMMARY
 - Cycles this run: 4 (PASS 3 / FAIL 1 / ABORT 0)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
