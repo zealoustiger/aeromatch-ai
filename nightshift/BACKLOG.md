@@ -136,13 +136,7 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
 (listing pages, price history, map, Zestimate), Etsy/Airbnb (collection layout).
 
 **Data quality (do first):**
-- **[P1][bug] Hide listings under $50k + no-price from all buyer surfaces.** Verified:
-  the 211 sub-$50k listings are parts/projects ("M20C COWLING", "O-235 MAGS",
-  "PROPELLER BLADES", rivet-gun kits), not flyable aircraft; 514 listings have no
-  price. Slice: (1) global `asking_price >= 50000` floor across `/aircraft` browse,
-  counts, family pages + sitemap (don't index them); (2) suppress no-price listings
-  from homepage + curated collections (priced real aircraft only). Keep partnerships
-  unaffected (buy-in ≠ aircraft price).
+- ~~**[P1][bug] Hide listings under $50k + no-price from all buyer surfaces.**~~ **Slice 1 ✅ SHIPPED 2026-06-25** (`hide-sub50k-listings`): global `asking_price >= $50k` floor applied to all 9 buyer-facing queries in `AircraftSaleList.tsx` — browse, counts, family pages (make/model/state), market price stats, comp pill price map. Sitemap already had this floor; now all buyer surfaces are in parity. **Remaining:** slice 2 — suppress no-price rows from homepage `HomeRails` `photoOnly` path (low impact, HomeRails already passes `min_price=50000` on most rails). Also see the separate `[P1][bug] Hide parts/wanted listings` item for tightening the ingest classifier. Keep partnerships unaffected (buy-in ≠ aircraft price).
 
 **Homepage curated collections (replaces the old slice-4 "Time-builders under $100k"):**
 - ~~**[P1][want] Re-theme collections — stop leading with the cheapest planes.**~~ ✅ SHIPPED 2026-06-23T06:49Z (`rethemed-home-collections`). `HomeRails` `RAILS` re-themed to: *Just listed this week · Recently reduced (price drops) · Glass-panel cross-country · Step-up performance (Cirrus SR22) · Family four-seaters (Cessna 172)*; no "under $X" lead themes, all carry `min_price=50000` (real priced aircraft only), model rails match the model field + link to curated model pages, thin rails auto-drop. See CHANGELOG. **Remaining from the original wishlist:** a "Turnkey & ready to fly" rail (needs a reliable fresh-annual/low-SMOH signal — no clean filter today) and "Near your home airport" (needs home-airport/geolocation — no server-side location yet).

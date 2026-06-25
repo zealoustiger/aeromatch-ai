@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T054632Z — PASS — hide-sub50k-listings
+- Pages: /aircraft, /aircraft/[make], /aircraft/[make]/[model], /aircraft/for-sale/[state], /partnerships
+- What: **Parts listings (cowlings, mags, rivet kits) and no-price listings no longer show up in the aircraft browse, counts, or family pages.** The site had 211 verified sub-$50k listings that were parts/projects — not flyable aircraft — polluting every buyer-facing view: the browse showed "M20C COWLING" and "O-235 MAGS" as aircraft, make/model pages had inflated counts, and the cross-sell card on /partnerships showed an inaccurate total. A global `asking_price >= $50,000` floor is now applied to every buyer-facing aircraft query (browse, make/model/state counts, state rails, market price stats, comp pill price map). The sitemap already had this floor — this brings all buyer surfaces into parity. Partnerships are unaffected (buy-in ≠ aircraft asking price).
+- Goal: Bug fix — `[bug]` lane (P1 blocker: known broken data on buyer surfaces across all aircraft pages). Pageviews at orient: 373 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING).
+- Spec: nightshift/specs/20260625T054632Z-hide-sub50k-listings.md
+- Verdict: PASS. `npx next build` + typecheck green (exit 0). Change is additive — one new constant (`BUYER_PRICE_FLOOR = 50_000`) applied to 9 buyer-facing queries in `AircraftSaleList.tsx`; no schema change, no component change. QA smoke against the PRODUCTION build (`next start`, NOT dev) exit 0 on `/aircraft`, `/aircraft/cessna`, `/aircraft/cessna/172`, `/aircraft/for-sale/california`, `/partnerships` at desktop 1280 + mobile 375 (10/10 — HTTP 200, zero app-origin console errors, zero horizontal overflow). The `/aircraft/for-sale/ca` test URL used initially returned 404 (expected — state URLs use full-name slugs like `california`, not USPS codes); confirmed `/aircraft/for-sale/california` returns 200. Non-visual cycle (data/query change) — screenshots saved as audit trail, not read.
+- Goal-lane: [bug]
+- Screenshots: nightshift/screenshots/hide-sub50k-listings/
+- Next: Slice 2 — suppress no-price listings from homepage curated collections (HomeRails already has `min_price=50000` but the `photoOnly` path may still surface no-price rows); also consider applying the floor to `getAircraftFacets` in `aircraft-facets.ts` (make/model filter options) and tightening the Barnstormers ingest classifier to drop parts/wanted ads at ingest time (the other P1[bug]: "CIRRUS SR22T WING ASSEMBLY" / "WHEELPANTS FOR THE CIRRUS SR22" listings that share real make/model strings need title-keyword filtering at source).
+
 ## 2026-06-24T13:01:42Z — DRAIN SUMMARY
 - Cycles this run: 1 (PASS 0 / FAIL 1 / ABORT 0)
 - Stopped because: rate limited
