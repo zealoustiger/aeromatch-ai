@@ -126,7 +126,12 @@ async function sendDigest(alert, items, label) {
   const text = `${items.length} new ${label} matched your ClubHanger saved search:\n\n` +
     shown.map((m) => `${m.title} — ${m.price} (${m.location})\n${m.url}`).join('\n\n') +
     `\n\nUnsubscribe: ${unsub}`
-  if (DRY || !RESEND) { log(`  [dry] would email ${alert.email}: ${subject}`); return true }
+  // --dry-run: pretend success WITHOUT advancing the cursor (handled by caller via DRY).
+  if (DRY) { log(`  [dry] would email ${alert.email}: ${subject}`); return true }
+  // No Resend key: we genuinely cannot send. Return false so the caller does NOT
+  // advance last_digest_at — otherwise a missing/expired key silently eats every
+  // match in the window (the cursor moves past listings that were never emailed).
+  if (!RESEND) { log(`  ✗ no RESEND_API_KEY — NOT sending and NOT advancing cursor for ${alert.email}`); return false }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST', headers: { Authorization: `Bearer ${RESEND}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: FROM, to: alert.email, subject, html, text }),
