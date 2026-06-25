@@ -785,6 +785,12 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Six-seat fixed-gear high-wing hauler, 300 hp Continental IO-520-F, ~150 kt cruise, ~1,800 lb useful load — the Stationair is one of the most capable load-carrying singles ever built.',
     costToOwn: 'Fixed gear keeps maintenance simpler than the 210, but a Continental IO-520 overhaul reserve is still the biggest line item. Co-ownership spreads the reserves and the hangar so partners can share one of the most capable piston workhorses in general aviation.',
   },
+  {
+    makeSlug: 'cessna', modelSlug: '421', make: 'Cessna', model: '421',
+    modelPattern: '421%',
+    specs: 'Pressurized six-seat cabin-class twin, 2× Continental GTSIO-520 (375 hp each), ~195 kt cruise — a small pressurized twin with stand-up-in-the-door comfort at a piston price point.',
+    costToOwn: 'Two turbocharged geared engines make the 421 one of the more expensive pistons to run — co-ownership is almost universal in the type. A group spreads two overhaul reserves, the hangar, and insurance across owners, turning a capable pressurized twin into a sensible monthly share.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -921,6 +927,11 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'How much does a Cessna 206 cost to own?', a: 'Less complex than the retractable-gear 210, but the Continental IO-520 overhaul reserve is still the largest single cost — plan on setting aside a meaningful amount per hour from the first flight. Fixed gear keeps the annual inspection simpler and eliminates the gear-related insurance premium. Co-ownership spreads those reserves and the hangar across partners, making the 206 one of the most affordable ways to access a genuine six-seat, utility-capable single.' },
     { q: 'Is the Cessna 206 good for co-ownership?', a: 'Very — the 206 is one of the most practical partnership aircraft. Its fixed gear keeps maintenance predictable, its Continental engine is well-supported everywhere, and its cavernous cabin hauls real loads for all the partners. Groups that fly family trips, camping runs, or frequent short-field operations find that a shared 206 is a remarkably cost-effective answer.' },
   ],
+  'cessna/421': [
+    { q: 'What is the Cessna 421 Golden Eagle?', a: 'The Cessna 421 Golden Eagle is a pressurized, twin-engine cabin-class aircraft produced by Cessna from 1967 to 1985. It seats up to six passengers in a pressurized stand-up cabin powered by two Continental GTSIO-520 geared, turbocharged engines producing 375 hp each. The 421 occupies the niche between unpressurized piston twins and turboprops — a genuinely comfortable long-range IFR machine at a piston price point.' },
+    { q: 'How much does a Cessna 421 cost to own?', a: 'More than almost any other piston twin — two turbocharged geared engines with shorter overhaul intervals are the biggest cost driver, and pressurization system maintenance adds another layer on top. The fixed costs (two engine reserves, hangar, insurance on a complex pressurized twin) are precisely why virtually every 421 is co-owned. A well-structured partnership splits those reserves and the hangar across owners, making the airplane manageable.' },
+    { q: 'Is the Cessna 421 a good aircraft for co-ownership?', a: 'It is — and co-ownership is practically the only way most pilots access one. The two engine overhaul reserves alone justify sharing the airplane, and the 421\'s pressurized cabin, ~195 kt cruise, and real IFR range reward a group of pilots who want to go places efficiently. A partnership that agrees on maintenance standards and scheduling has access to one of the most capable pistons ever built at a fraction of the solo cost.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -1035,6 +1046,10 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'cessna/206': [
     'The Cessna 206 Stationair is the hauler of the Cessna family. Where the 172 and 182 optimized for four-seat touring, Cessna built the 206 around a single priority: put as much as possible inside a high-wing single and get it off a short, rough strip. The result is a six-seat, fixed-gear airplane with a useful load that approaches or exceeds 1,800 lb on many variants — more than almost any other piston single — and a cabin wide enough to fit a cargo pod under the belly or take floats for water operations.',
     'That utility profile is why the 206 has been a workhorse in Alaska, the Pacific Islands, the Caribbean, and anywhere a reliable piston single needs to carry people and freight into airstrips that challenge anything with retractable gear. For co-owners, it is one of the most practical shares in general aviation: the fixed gear keeps the annual and insurance straightforward, the Continental IO-520-F is well-supported everywhere, and the big cabin genuinely hauls everyone in the group. Splitting the engine reserve and the hangar across partners makes a 206 surprisingly affordable relative to what it delivers.',
+  ],
+  'cessna/421': [
+    'The Cessna 421 Golden Eagle occupies a unique position in general aviation: a pressurized, twin-engine cabin-class aircraft that sits between the unpressurized piston twins and the entry turboprops. Cessna built the 421 with a full stand-up cabin, two turbocharged Continental geared engines, and the kind of range and cruise altitude that let a group travel at the flight levels — above most weather — in genuine comfort. Produced from 1967 through 1985, the line evolved through three variants (421A, 421B, and the redesigned wet-wing 421C) and became the benchmark small pressurized twin of its era.',
+    'The economics of the 421 are why partnerships are so deeply embedded in the type. Two turbocharged geared engines each running on their own overhaul clock, a pressurization system that needs periodic attention, and the insurance bill for a complex multi-engine pressurized aircraft all add up quickly for a solo owner. A co-ownership group distributes those costs cleanly — each partner pays their share of a sensible monthly fixed expense rather than absorbing the whole bill alone — and keeps the airplane flying often enough that everyone stays current in a machine that genuinely rewards proficiency.',
   ],
 }
 
@@ -1296,6 +1311,17 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Fuel (usable)', value: '84 gal' },
     { label: 'Landing gear', value: 'Fixed tricycle' },
   ],
+  'cessna/421': [
+    { label: 'Seats', value: '6–8' },
+    { label: 'Engines', value: '2× Continental GTSIO-520-L (421C)' },
+    { label: 'Horsepower', value: '375 hp each' },
+    { label: 'Cruise speed', value: '~195 kt' },
+    { label: 'Range', value: '~1,100 nm' },
+    { label: 'Useful load', value: '~1,800 lb' },
+    { label: 'Fuel (usable)', value: '~204 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+    { label: 'Pressurization', value: '~4.2 psi differential' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1428,6 +1454,11 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'Exceptional useful load — close to 1,800 lb on many variants — lets it carry six adults, cargo, or heavy gear off short and rough strips where other six-seaters cannot go.',
     'Fixed gear makes it far simpler and cheaper to insure and maintain than the retractable 210; the Continental IO-520-F is widely supported and every A&P knows it.',
     'Float conversion and cargo-pod options make it one of the most versatile platforms in piston aviation — a genuine working airplane, not just a hauler.',
+  ],
+  'cessna/421': [
+    'A pressurized cabin at a piston-twin price: the 421 flies at the flight levels with ~195 kt cruise, genuine six-seat comfort, and a stand-up cabin that makes it feel like a small airliner.',
+    'Two turbocharged geared engines with their own overhaul clocks make the 421 one of the more expensive pistons to run solo — co-ownership is virtually universal in the type for exactly this reason.',
+    'The 421C\'s wet-wing redesign added integral fuel tanks and structural improvements; it is the most sought-after variant and the benchmark against which earlier 421s are measured.',
   ],
 }
 
