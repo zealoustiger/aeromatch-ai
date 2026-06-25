@@ -11,6 +11,31 @@ import type { Partnership, AircraftForSale } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
 import Anthropic from '@anthropic-ai/sdk'
 
+// Simple in-process rate limiter for AI draft generation. Works correctly for
+// typical Vercel patterns where warm instances are reused for sequential requests
+// from the same session. Not distributed — for high-traffic, swap for Redis/KV;
+// at current traffic levels this is sufficient and requires no schema change.
+const AI_DRAFT_CALLS = new Map<string, { count: number; resetAt: number }>()
+const AI_DRAFT_MAX_PER_HOUR = 10
+
+async function checkAiDraftAccess(): Promise<string> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated.')
+
+  const now = Date.now()
+  const entry = AI_DRAFT_CALLS.get(user.id) ?? { count: 0, resetAt: now + 3_600_000 }
+  if (now > entry.resetAt) {
+    AI_DRAFT_CALLS.set(user.id, { count: 1, resetAt: now + 3_600_000 })
+  } else if (entry.count >= AI_DRAFT_MAX_PER_HOUR) {
+    throw new Error('Too many AI draft requests — please wait a bit before trying again.')
+  } else {
+    AI_DRAFT_CALLS.set(user.id, { count: entry.count + 1, resetAt: entry.resetAt })
+  }
+
+  return user.id
+}
+
 // Save the signed-in user's chosen aviator avatar to their profile. Upserts the
 // profile row (user_id is the PK / RLS key) so it works for users who haven't
 // otherwise filled out a profile yet.
@@ -539,6 +564,7 @@ export async function renameSavedSearch(id: string, name: string) {
 }
 
 export async function generatePartnershipDraft(prompt: string): Promise<{ title: string; description: string }> {
+  await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
   if (text.length > 2000) throw new Error('Prompt is too long.')
@@ -581,6 +607,7 @@ Do not invent facts not present in the prompt; if key details are missing, use n
 }
 
 export async function generateSeekerDraft(prompt: string): Promise<{ title: string; description: string }> {
+  await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
   if (text.length > 2000) throw new Error('Prompt is too long.')
