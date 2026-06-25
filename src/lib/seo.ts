@@ -791,6 +791,12 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Pressurized six-seat cabin-class twin, 2× Continental GTSIO-520 (375 hp each), ~195 kt cruise — a small pressurized twin with stand-up-in-the-door comfort at a piston price point.',
     costToOwn: 'Two turbocharged geared engines make the 421 one of the more expensive pistons to run — co-ownership is almost universal in the type. A group spreads two overhaul reserves, the hangar, and insurance across owners, turning a capable pressurized twin into a sensible monthly share.',
   },
+  {
+    makeSlug: 'cubcrafters', modelSlug: 'carbon', make: 'CubCrafters', model: 'Carbon Cub',
+    modelPattern: 'carbon%',
+    specs: 'Two-seat tandem taildragger, 180 hp Lycoming O-360, STOL-optimized, carbon-fiber-and-aluminum composite construction — built for backcountry and off-airport operations.',
+    costToOwn: 'A purpose-built STOL machine with a premium price to match. Partnerships work especially well here because most Carbon Cub owners fly it hard in short bursts — weekend fly-ins, hunting/fishing trips, remote strip access — and sharing keeps the hangar and insurance manageable between adventures.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -932,6 +938,11 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'How much does a Cessna 421 cost to own?', a: 'More than almost any other piston twin — two turbocharged geared engines with shorter overhaul intervals are the biggest cost driver, and pressurization system maintenance adds another layer on top. The fixed costs (two engine reserves, hangar, insurance on a complex pressurized twin) are precisely why virtually every 421 is co-owned. A well-structured partnership splits those reserves and the hangar across owners, making the airplane manageable.' },
     { q: 'Is the Cessna 421 a good aircraft for co-ownership?', a: 'It is — and co-ownership is practically the only way most pilots access one. The two engine overhaul reserves alone justify sharing the airplane, and the 421\'s pressurized cabin, ~195 kt cruise, and real IFR range reward a group of pilots who want to go places efficiently. A partnership that agrees on maintenance standards and scheduling has access to one of the most capable pistons ever built at a fraction of the solo cost.' },
   ],
+  'cubcrafters/carbon': [
+    { q: 'What is the CubCrafters Carbon Cub?', a: 'The Carbon Cub is a modern two-seat tandem taildragger built by CubCrafters in Yakima, Washington. Inspired by the Piper Super Cub but using carbon-fiber-and-aluminum composite construction, it is considerably lighter than its predecessor and purpose-built for STOL and off-airport operations. It comes in two main forms: the EX (Experimental Amateur-Built kit) and the FX (Experimental Exhibition, factory-completed).' },
+    { q: 'What makes the Carbon Cub good for backcountry flying?', a: 'The Carbon Cub\'s low empty weight (lighter than a Super Cub), high-lift wing, and 180 hp Lycoming O-360 combine to produce STOL performance that opens up strips other airplanes cannot safely use. Fitted with tundra tires, it can land and take off from gravel bars and mountain meadows that would challenge much more expensive purpose-built bush planes.' },
+    { q: 'Is the Carbon Cub a good aircraft to co-own?', a: 'Yes — most Carbon Cub missions are seasonal and trip-specific: a hunting flight in October, a fishing trip in summer, a fly-in over a long weekend. That natural burst usage pattern makes it one of the cleanest fits for shared ownership: partners divide the hangar and insurance evenly and each gets the airplane when they actually need it.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -1050,6 +1061,10 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'cessna/421': [
     'The Cessna 421 Golden Eagle occupies a unique position in general aviation: a pressurized, twin-engine cabin-class aircraft that sits between the unpressurized piston twins and the entry turboprops. Cessna built the 421 with a full stand-up cabin, two turbocharged Continental geared engines, and the kind of range and cruise altitude that let a group travel at the flight levels — above most weather — in genuine comfort. Produced from 1967 through 1985, the line evolved through three variants (421A, 421B, and the redesigned wet-wing 421C) and became the benchmark small pressurized twin of its era.',
     'The economics of the 421 are why partnerships are so deeply embedded in the type. Two turbocharged geared engines each running on their own overhaul clock, a pressurization system that needs periodic attention, and the insurance bill for a complex multi-engine pressurized aircraft all add up quickly for a solo owner. A co-ownership group distributes those costs cleanly — each partner pays their share of a sensible monthly fixed expense rather than absorbing the whole bill alone — and keeps the airplane flying often enough that everyone stays current in a machine that genuinely rewards proficiency.',
+  ],
+  'cubcrafters/carbon': [
+    'The CubCrafters Carbon Cub is the modern answer to the Piper Super Cub — a two-seat tandem taildragger built in Yakima, Washington, using carbon-fiber-and-aluminum composite construction that shaves hundreds of pounds off the original formula while keeping the high-lift wing and conventional gear that define the Cub bloodline. CubCrafters offers it in kit form as the EX (Experimental Amateur-Built) and factory-built as the FX (Experimental Exhibition), with major variants including the EX-3 and FX-3 and the earlier SS. All share the same mission: get in and out of places no other airplane can reach.',
+    'That mission has made the Carbon Cub the standard-bearer for the backcountry movement — the airplane most commonly spotted on gravel bars in Alaska, mountain meadows in the Rockies, and remote hunting and fishing strips across the West. With tundra tires or amphibious floats, a skilled pilot, and a 180 hp Lycoming, it opens up terrain that would be off-limits to certified fixed-gear singles. Co-ownership fits the Carbon Cub naturally: mission flying tends to be seasonal and trip-specific, so partners rarely conflict on scheduling, and splitting the hangar and insurance across two or three owners keeps the yearly fixed cost well below what the adventure is worth.',
   ],
 }
 
@@ -1322,6 +1337,16 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Landing gear', value: 'Retractable tricycle' },
     { label: 'Pressurization', value: '~4.2 psi differential' },
   ],
+  'cubcrafters/carbon': [
+    { label: 'Seats', value: '2 (tandem)' },
+    { label: 'Engine', value: 'Lycoming O-360-C1G' },
+    { label: 'Horsepower', value: '180 hp' },
+    { label: 'Cruise speed', value: '~108 kt' },
+    { label: 'Airframe', value: 'Carbon fiber and aluminum composite' },
+    { label: 'Landing gear', value: 'Conventional (tailwheel)' },
+    { label: 'Design intent', value: 'STOL / off-airport / backcountry' },
+    { label: 'Available as', value: 'EX (kit-built) or FX (factory-built)' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1459,6 +1484,11 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'A pressurized cabin at a piston-twin price: the 421 flies at the flight levels with ~195 kt cruise, genuine six-seat comfort, and a stand-up cabin that makes it feel like a small airliner.',
     'Two turbocharged geared engines with their own overhaul clocks make the 421 one of the more expensive pistons to run solo — co-ownership is virtually universal in the type for exactly this reason.',
     'The 421C\'s wet-wing redesign added integral fuel tanks and structural improvements; it is the most sought-after variant and the benchmark against which earlier 421s are measured.',
+  ],
+  'cubcrafters/carbon': [
+    'Carbon fiber and aluminum composite construction makes the Carbon Cub significantly lighter than a Super Cub, translating directly into better STOL performance — shorter ground rolls and better useful load from marginal strips.',
+    'Purpose-built for off-airport operations: the high-lift wing, tundra-tire compatibility, and powerful engine open up gravel bars, mountain meadows, and remote strips that challenge any certified fixed-gear single.',
+    'Available as an EX (Experimental Amateur-Built kit) or FX (factory-completed) — both are experimental-category aircraft, which allows owner maintenance but means each ship\'s airworthiness history matters more than in certified types.',
   ],
 }
 
