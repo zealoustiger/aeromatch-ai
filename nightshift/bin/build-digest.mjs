@@ -14,6 +14,16 @@ import { dirname, join } from 'node:path'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const BASE = 'https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app'
 
+// Tolerant timestamp parse: workers write the CHANGELOG header timestamp slightly
+// differently per model — Opus used ISO with colons (2026-06-25T13:35:00Z), Sonnet
+// the compact form (2026-06-25T133500Z), which `new Date()` rejects. Normalize the
+// compact "T HHMM[SS] Z" form to colons before parsing so neither gets dropped.
+function parseTs(raw) {
+  if (!raw) return new Date(NaN)
+  const m = raw.trim().match(/^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})(\d{2})?Z?$/)
+  return new Date(m ? `${m[1]}T${m[2]}:${m[3]}:${m[4] || '00'}Z` : raw.trim())
+}
+
 // Promote boundary: cycles newer than main's last commit are the unpromoted batch.
 let boundary = new Date(Date.now() - 18 * 3600e3)
 try {
@@ -31,7 +41,7 @@ const cycles = []
 for (const b of blocks) {
   const h = b.match(/^## (\S+) — (PASS|FAIL) — (\S+)/m)
   if (!h) continue
-  const ts = new Date(h[1])
+  const ts = parseTs(h[1])
   if (isNaN(ts) || ts <= boundary) continue
   cycles.push({ ts, status: h[2], slug: h[3], pages: field(b, 'Pages'), what: field(b, 'What') })
 }
