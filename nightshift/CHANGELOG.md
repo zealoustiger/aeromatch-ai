@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T07:06:07Z — DRAIN SUMMARY
+- Cycles this run: 7 (PASS 6 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Stopped because: rate limited
+- Run: 20260625T054105Z (manual NS_FORCE)
+
 ## 2026-06-25T070000Z — PASS — seeker-messaging
 - Pages: /partnerships/seeking/[id], /messages, /messages/[threadId]
 - What: **Pilots seeking partnerships can now be contacted via on-site messaging instead of raw email.** The seeker detail page ("Have a plane that fits?") now shows a dark "Send Message" primary button powered by the existing `/messages` thread system. Signed-out visitors are redirected to auth; signed-in aircraft owners land in `/messages/[threadId]`. Email + phone remain as secondary fallbacks. The `/messages` inbox and thread-view header also correctly display seeker threads now (title + "Pilot seeking partnership" label / header link to the seeker page), instead of showing "Deleted listing." The DB schema already had `seeker_id` on `threads` from a prior migration — this cycle is entirely application-layer.
