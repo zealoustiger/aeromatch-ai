@@ -50,17 +50,35 @@ export function loadEnvLocal() {
 }
 
 // ── fetch + html helpers ────────────────────────────────────────────────────────
-export async function fetchHtml(url, { retries = 2 } = {}) {
+// Retry-After is either a delay in seconds or an HTTP date. Returns ms, or null.
+function parseRetryAfter(h) {
+  if (!h) return null
+  const secs = Number(h)
+  if (Number.isFinite(secs)) return Math.max(0, secs * 1000)
+  const at = Date.parse(h)
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : null
+}
+
+// Fetch with exponential backoff + jitter. Errors carry `.status` and (for 429)
+// `.retryAfter` (ms) so callers can coordinate a shared throttle. Non-429 4xx are
+// thrown immediately — a 404/403 won't fix itself, so retrying just wastes time.
+export async function fetchHtml(url, { retries = 2, timeoutMs = 20000 } = {}) {
   let lastErr
   for (let i = 0; i <= retries; i++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': UA } })
+      const signal = typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(timeoutMs) : undefined
+      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal })
       if (res.ok) return res.text()
-      lastErr = new Error(`HTTP ${res.status}`)
+      const err = new Error(`HTTP ${res.status}`)
+      err.status = res.status
+      if (res.status === 429 || res.status === 503) err.retryAfter = parseRetryAfter(res.headers.get('retry-after'))
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) throw err // permanent
+      lastErr = err
     } catch (e) {
+      if (e.status && e.status >= 400 && e.status < 500 && e.status !== 429) throw e
       lastErr = e
     }
-    await sleep(800 * (i + 1))
+    if (i < retries) await sleep((lastErr?.retryAfter ?? 800 * 2 ** i) + Math.floor(Math.random() * 400))
   }
   throw lastErr
 }
