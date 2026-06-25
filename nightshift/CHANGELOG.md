@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T063500Z — PASS — model-curate-cessna-210
+- Pages: /aircraft/cessna/210
+- What: **Upgraded the Cessna 210 Centurion page from a thin auto-generated page to a fully curated one.** The page now carries a key-specifications table (6 seats, Continental IO-520-L, 285 hp, ~174 kt cruise, ~900 nm range, ~1,500 lb useful load, 90 gal usable), a "What's different about the Cessna 210" three-bullet highlights block (cantilever retractable high-wing; complex/IFR capable; partnership-friendly cost structure), two "About the Cessna 210" editorial paragraphs (history + co-ownership angle), and a 3-question FAQ visible on the page and emitted 1:1 as FAQPage structured data. All content is genuine/evergreen — the Centurion's specs are among the best-documented in GA. Real live listings still show below the curated content.
+- Goal: SEO breadth + quality — `[goal]` lane (last 3 non-bug cycles — `partnership-ai-draft`, `seeking-ai-draft`, `seeker-filter-multi-airport` — all `[want]`, so `[goal]` owed per the 3:1 policy). STAGE=INDEXING — enriching an existing crawlable URL with unique content + FAQPage JSON-LD is the highest-leverage indexing move. Diversifies off the heavily-worked compare-pairs and Diamond families; continues the queued "curate next-highest-inventory uncurated Cessna family" follow-up. Pageviews at orient: 381 last 7d. Data-only change (seo.ts) — no component, no schema, no sitemap code change needed (page already in sitemap via `getInventoryMakeModels`).
+- Spec: nightshift/specs/20260624T125918Z-model-curate-cessna-210.md
+- Verdict: PASS. `npx next build` compiled successfully (exit 0, no errors in touched files). QA smoke against the production build (`next start`, NOT dev) exit 0 on `/aircraft/cessna/210` at desktop 1280 + mobile 375 — HTTP 200, zero app-origin console errors, zero horizontal overflow. Screenshots reviewed (visual cycle): all curated sections render correctly — specs table, highlights, About prose, listings, FAQ accordion — desktop two-column and mobile single-column both look right with no layout breakage.
+- Goal-lane: [goal]
+- Screenshots: nightshift/screenshots/model-curate-cessna-210/
+- Next: Cessna family curation now covers 172, 182, 150, 180, and 210. Remaining uncurated high-inventory Cessna models worth checking: 206, 310 (twin). Next `[goal]` diversification options: a CWV/`next/image` pass on curated model pages, geocoding `aircraft_for_sale.location` to light up `/aircraft/near/[icao]`, or curating the next-highest uncurated family (check `getInventoryMakeModels`).
+
 ## 2026-06-25T061751Z — PASS — partnership-ai-draft
 - Pages: /partnerships/new
 - What: **The "Post a Partnership" form now has a "Generate with AI ✨" section above the Title and Description fields.** Aircraft owners jot a few sentences about their plane, the partnership structure, and what they're looking for in a partner; clicking the button calls Claude Haiku server-side and fills both the Title and Description with a polished owner-voice draft — no blank-page barrier for new listings. The draft is fully editable after generation. The button shows "Generating…" + spinner while in flight, is disabled when the prompt is empty, and surfaces an inline error note if the call fails. Nothing auto-submits.
