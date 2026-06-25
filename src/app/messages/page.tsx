@@ -17,6 +17,7 @@ export default async function MessagesPage() {
     .select(`
       id, created_at, inquirer_id, owner_id,
       partnership:partnerships(id, title, make, model, year, home_airport),
+      seeker:partnership_seekers(id, title),
       messages(id, body, created_at, sender_id)
     `)
     .order('created_at', { ascending: false })
@@ -48,10 +49,16 @@ export default async function MessagesPage() {
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">
           {sorted.map((thread) => {
             const p = thread.partnership as unknown as { id: string; title: string; make: string; model: string; year: number | null; home_airport: string } | null
+            const sk = thread.seeker as unknown as { id: string; title: string } | null
             const msgs = (thread.messages ?? []) as Message[]
             const last = msgs.at(-1)
-            const isOwner = thread.owner_id === user.id
-            const label = isOwner ? 'Inquiry about your listing' : 'Your inquiry'
+
+            const threadTitle = p?.title ?? sk?.title ?? 'Deleted listing'
+            const threadSub = p
+              ? `${aircraftLabel(p.make, p.model, p.year)} · ${p.home_airport}`
+              : sk
+              ? 'Pilot seeking partnership'
+              : (thread.owner_id === user.id ? 'Inquiry about your listing' : 'Your inquiry')
 
             return (
               <Link
@@ -63,12 +70,8 @@ export default async function MessagesPage() {
                   <MessageCircle className="h-5 w-5 text-sky-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-slate-900">
-                    {p?.title ?? 'Deleted listing'}
-                  </p>
-                  <p className="truncate text-xs text-slate-500">
-                    {p ? `${aircraftLabel(p.make, p.model, p.year)} · ${p.home_airport}` : label}
-                  </p>
+                  <p className="truncate font-semibold text-slate-900">{threadTitle}</p>
+                  <p className="truncate text-xs text-slate-500">{threadSub}</p>
                   {last && (
                     <p className="mt-0.5 truncate text-sm text-slate-500">
                       {last.sender_id === user.id ? 'You: ' : ''}

@@ -503,6 +503,31 @@ export async function getOrCreateThread(partnershipId: string, ownerId: string) 
   return { threadId: data.id }
 }
 
+export async function getOrCreateSeekerThread(seekerId: string, seekerOwnerId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (user.id === seekerOwnerId) return { error: 'Cannot message your own listing' }
+
+  const { data: existing } = await supabase
+    .from('threads')
+    .select('id')
+    .eq('seeker_id', seekerId)
+    .eq('inquirer_id', user.id)
+    .maybeSingle()
+
+  if (existing) return { threadId: existing.id }
+
+  const { data, error } = await supabase
+    .from('threads')
+    .insert({ seeker_id: seekerId, inquirer_id: user.id, owner_id: seekerOwnerId })
+    .select('id')
+    .single()
+
+  if (error) return { error: 'Failed to start conversation.' }
+  return { threadId: data.id }
+}
+
 export async function sendMessage(threadId: string, body: string) {
   const trimmed = body.trim()
   if (!trimmed || trimmed.length > 2000) return { error: 'Invalid message.' }

@@ -108,7 +108,8 @@ export interface Airport {
 export interface Thread {
   id: string
   created_at: string
-  partnership_id: string
+  partnership_id: string | null
+  seeker_id?: string | null
   inquirer_id: string
   owner_id: string
 }
