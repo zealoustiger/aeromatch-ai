@@ -52,6 +52,48 @@ export async function getScraperHealth(admin: SupabaseClient, daysBack = 10): Pr
   return { days, today, sources, todayTotal }
 }
 
+export type SourceFreshness = {
+  source: string
+  activeTotal: number
+  reseenLastRun: number // active listings touched in the latest scrape window
+  staleActive: number // active but not seen in >2 days (lingering — maybe sold)
+  sold: number
+  lastScrape: string | null
+  reseenRate: number // reseenLastRun / activeTotal (0..1)
+}
+
+/** Per-source freshness: how much of each source's active inventory the latest
+ *  scrape actually re-saw (coverage), how many active listings are going stale
+ *  (not seen recently), and how many have been auto-marked sold. A low re-seen
+ *  rate means the scrape isn't comprehensive (so "not seen" ≠ "gone"). */
+export async function getListingFreshness(admin: SupabaseClient): Promise<SourceFreshness[]> {
+  const count = async (build: (q: any) => any): Promise<number> => {
+    const { count } = await build(admin.from('aircraft_for_sale').select('id', { count: 'exact', head: true }))
+    return count ?? 0
+  }
+  const out: SourceFreshness[] = []
+  for (const source of SCRAPER_SOURCES) {
+    const { data: latest } = await admin
+      .from('aircraft_for_sale').select('last_seen_at').eq('source', source)
+      .not('last_seen_at', 'is', null).order('last_seen_at', { ascending: false }).limit(1)
+    const lastScrape = latest?.[0]?.last_seen_at ?? null
+    const reseenWindow = lastScrape ? new Date(Date.parse(lastScrape) - 6 * 3600e3).toISOString() : null
+    const staleCut = new Date(Date.now() - 2 * 864e5).toISOString()
+
+    const [activeTotal, reseenLastRun, staleActive, sold] = await Promise.all([
+      count((q) => q.eq('source', source).eq('status', 'active')),
+      reseenWindow ? count((q) => q.eq('source', source).eq('status', 'active').gte('last_seen_at', reseenWindow)) : Promise.resolve(0),
+      count((q) => q.eq('source', source).eq('status', 'active').lt('last_seen_at', staleCut)),
+      count((q) => q.eq('source', source).eq('status', 'sold')),
+    ])
+    out.push({
+      source, activeTotal, reseenLastRun, staleActive, sold, lastScrape,
+      reseenRate: activeTotal > 0 ? reseenLastRun / activeTotal : 0,
+    })
+  }
+  return out.sort((a, b) => b.activeTotal - a.activeTotal)
+}
+
 export type RealListing = {
   id: string
   kind: 'aircraft' | 'partnership' | 'seeker'

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { getScraperHealth, getRealListings } from '@/lib/adminScrapers'
+import { getScraperHealth, getRealListings, getListingFreshness } from '@/lib/adminScrapers'
 import { moderateListing } from './actions'
 
 export const metadata = { title: 'Review Listings', robots: { index: false } }
@@ -80,9 +80,12 @@ export default async function ReviewListingsTab({
     viewingHidden ? Promise.resolve(null) : getScraperHealth(admin),
     viewingHidden ? Promise.resolve(null) : getRealListings(admin),
   ])
+  const freshness = viewingHidden ? null : await getListingFreshness(admin)
 
   // "Last new" is stale (scraper likely not running) if older than yesterday.
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
+  const fmtDate = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' }) : 'never'
 
   return (
     <section>
@@ -196,6 +199,57 @@ export default async function ReviewListingsTab({
           <p className="mt-2 text-xs text-slate-400">
             Green = new listings first seen that day. An all-grey row (or a stale “Last new”) means that scraper hasn’t added anything recently.
           </p>
+        </div>
+      )}
+
+      {/* Listing freshness & coverage — re-seen rate (is the scrape comprehensive?),
+          lingering-stale count, and auto-sold count per source. */}
+      {freshness && (
+        <div className="mb-8">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <Activity className="h-4 w-4" /> Listing freshness &amp; coverage
+          </h3>
+          <p className="mb-3 mt-0.5 text-xs text-slate-400">
+            Re-seen rate = share of active listings the latest scrape actually re-confirmed. High (&gt;85%) = comprehensive
+            scrape, so the 7-day auto-sold sweep is reliable. Low = the scrape only covers part of the source.
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-slate-400">
+                  <th className="px-3 py-2 font-semibold">Source</th>
+                  <th className="px-3 py-2 text-right font-medium">Active</th>
+                  <th className="px-3 py-2 text-right font-medium">Re-seen rate</th>
+                  <th className="px-3 py-2 text-right font-medium">Going stale (&gt;2d)</th>
+                  <th className="px-3 py-2 text-right font-medium">Auto-sold</th>
+                  <th className="px-3 py-2 font-medium">Last scrape</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {freshness.map((f) => {
+                  const pct = Math.round(f.reseenRate * 100)
+                  const good = pct >= 85
+                  const scrapeStale = !f.lastScrape || Date.now() - Date.parse(f.lastScrape) > 36 * 3600e3
+                  return (
+                    <tr key={f.source}>
+                      <td className="px-3 py-2 font-medium text-slate-700">{f.source}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-600">{f.activeTotal.toLocaleString()}</td>
+                      <td className={`px-3 py-2 text-right font-semibold tabular-nums ${good ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {f.activeTotal ? `${pct}%` : '—'}
+                      </td>
+                      <td className={`px-3 py-2 text-right tabular-nums ${f.staleActive > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {f.staleActive.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-500">{f.sold.toLocaleString()}</td>
+                      <td className={`px-3 py-2 ${scrapeStale ? 'font-medium text-amber-600' : 'text-slate-500'}`}>
+                        {fmtDate(f.lastScrape)}{scrapeStale ? ' ⚠' : ''}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
