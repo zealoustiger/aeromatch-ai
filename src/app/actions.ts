@@ -365,6 +365,36 @@ export async function toggleSavedListing(
 }
 
 /**
+ * Attach (or clear) an optional free-text note on a saved listing. The note lives
+ * on the per-user saved_listings row, so users can remember why they saved a plane
+ * ("great panel — ask about damage history"). An empty/whitespace note clears it.
+ * Owner-scoped server-side (RLS + explicit user_id match). Degrades gracefully if
+ * the `note` column hasn't been migrated yet (returns a friendly error).
+ */
+export async function updateSavedNote(savedRowId: string, note: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const trimmed = note.trim().slice(0, 1000)
+
+  const { error } = await supabase
+    .from('saved_listings')
+    .update({ note: trimmed === '' ? null : trimmed })
+    .eq('id', savedRowId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    // 42703 = undefined_column — the note column isn't migrated yet.
+    if (error.code === '42703') return { error: 'Notes aren’t available yet — try again shortly.' }
+    return { error: 'Failed to save your note.' }
+  }
+
+  revalidatePath('/saved')
+  return { ok: true, note: trimmed }
+}
+
+/**
  * Slice 2 of soft-save: merge a logged-out visitor's device-only saves (held in
  * localStorage) into their real account once they sign in/up. Idempotent and
  * defensive — the payload comes straight from a client localStorage that could be

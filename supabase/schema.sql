@@ -361,8 +361,12 @@ create table if not exists saved_listings (
   user_id       uuid        references auth.users(id) on delete cascade not null,
   listing_id    uuid        not null,
   listing_type  text        not null default 'partnership',
+  note          text,       -- optional free-text note the user attaches to a save
   unique(user_id, listing_id, listing_type)
 );
+
+-- Additive (2026-06-25): existing databases get the optional per-save note column.
+alter table saved_listings add column if not exists note text;
 
 alter table saved_listings enable row level security;
 
