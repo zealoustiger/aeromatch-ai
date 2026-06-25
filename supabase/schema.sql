@@ -515,3 +515,14 @@ alter table alerts add column if not exists confirm_token     text default gen_r
 alter table alerts add column if not exists confirmed_at      timestamptz;
 alter table alerts add column if not exists unsubscribe_token text default gen_random_uuid();
 alter table alerts add column if not exists last_digest_at    timestamptz;
+
+-- threads: unread-badge support (migration: threads_unread_badge)
+-- Denormalized last-message fields let the nav query unread count without joining messages.
+-- Read timestamps let each participant track which threads they've seen.
+alter table threads add column if not exists last_message_at         timestamptz;
+alter table threads add column if not exists last_message_sender_id  uuid references auth.users(id);
+alter table threads add column if not exists inquirer_read_at        timestamptz;
+alter table threads add column if not exists owner_read_at           timestamptz;
+
+create policy "threads_participant_update" on threads
+  for update using (auth.uid() = inquirer_id or auth.uid() = owner_id);

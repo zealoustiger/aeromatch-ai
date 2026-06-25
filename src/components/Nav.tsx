@@ -30,6 +30,7 @@ export default function Nav() {
   const [user, setUser] = useState<User | null>(null)
   const [avatarConfig, setAvatarConfig] = useState<AviatorConfig | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
@@ -49,6 +50,25 @@ export default function Nav() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Fetch unread message count whenever the user or route changes.
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return }
+    const supabase = createClient()
+    supabase
+      .from('threads')
+      .select('inquirer_id, owner_id, last_message_at, last_message_sender_id, inquirer_read_at, owner_read_at')
+      .not('last_message_sender_id', 'is', null)
+      .then(({ data }) => {
+        const count = (data ?? []).filter((t) => {
+          if (t.last_message_sender_id === user.id) return false
+          const readAt = t.inquirer_id === user.id ? t.inquirer_read_at : t.owner_read_at
+          if (!readAt) return true
+          return new Date(readAt) < new Date(t.last_message_at!)
+        }).length
+        setUnreadCount(count)
+      })
+  }, [user, pathname])
 
   // Close mobile menu on route change
   useEffect(() => { setMenuOpen(false) }, [pathname])
@@ -97,7 +117,7 @@ export default function Nav() {
               Post a Listing
             </Link>
             {user ? (
-              <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} />
+              <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} unreadCount={unreadCount} />
             ) : (
               <Link
                 href="/auth"
@@ -189,6 +209,11 @@ export default function Nav() {
             >
               <MessageCircle className="h-4 w-4" />
               Messages
+              {unreadCount > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Link>
           )}
           {user && (

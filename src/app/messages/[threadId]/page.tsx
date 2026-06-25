@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ChevronLeft, MapPin } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { aircraftLabel } from '@/lib/utils'
+import { markThreadRead } from '@/app/actions'
 import MessageThread from '@/components/MessageThread'
 import type { Message } from '@/lib/types'
 
@@ -28,6 +29,9 @@ export default async function ThreadPage({
     .single()
 
   if (!thread) notFound()
+
+  // Mark the thread as read for this participant on every view.
+  await markThreadRead(threadId)
 
   const { data: initialMessages } = await supabase
     .from('messages')

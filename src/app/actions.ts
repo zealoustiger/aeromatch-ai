@@ -541,7 +541,34 @@ export async function sendMessage(threadId: string, body: string) {
     .insert({ thread_id: threadId, sender_id: user.id, body: trimmed })
 
   if (error) return { error: 'Failed to send message.' }
+
+  // Stamp the thread so the unread-badge query can check cheaply (no join needed).
+  await supabase
+    .from('threads')
+    .update({ last_message_at: new Date().toISOString(), last_message_sender_id: user.id })
+    .eq('id', threadId)
+
   return { ok: true }
+}
+
+export async function markThreadRead(threadId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: thread } = await supabase
+    .from('threads')
+    .select('id, inquirer_id, owner_id')
+    .eq('id', threadId)
+    .single()
+
+  if (!thread) return
+
+  const field = thread.inquirer_id === user.id ? 'inquirer_read_at' : 'owner_read_at'
+  await supabase
+    .from('threads')
+    .update({ [field]: new Date().toISOString() })
+    .eq('id', threadId)
 }
 
 export async function deleteSavedSearch(id: string) {

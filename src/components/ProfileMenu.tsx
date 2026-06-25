@@ -42,11 +42,13 @@ export default function ProfileMenu({
   isAdmin,
   onSignOut,
   avatarConfig = null,
+  unreadCount = 0,
 }: {
   user: User
   isAdmin: boolean
   onSignOut: () => void
   avatarConfig?: AviatorConfig | null
+  unreadCount?: number
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -83,10 +85,15 @@ export default function ProfileMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Account menu"
-        className="flex items-center rounded-full ring-1 ring-slate-200 transition-shadow hover:ring-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+        aria-label={unreadCount > 0 ? `Account menu — ${unreadCount} unread message${unreadCount === 1 ? '' : 's'}` : 'Account menu'}
+        className="relative flex items-center rounded-full ring-1 ring-slate-200 transition-shadow hover:ring-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
       >
         <Avatar user={user} config={avatarConfig} />
+        {unreadCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold text-white ring-2 ring-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -112,6 +119,11 @@ export default function ProfileMenu({
             >
               <Icon className="h-4 w-4 text-slate-400" />
               {label}
+              {href === '/messages' && unreadCount > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Link>
           ))}
           <div className="my-1 border-t border-slate-100" />
