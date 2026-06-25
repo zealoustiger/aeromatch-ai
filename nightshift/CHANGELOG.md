@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T105149Z — PASS — hide-parts-wanted-listings
+- Pages: /aircraft, /aircraft/[make]/[model] (all buyer browse surfaces)
+- What: **Parts listings and wanted ads are now suppressed from all buyer-facing aircraft surfaces.** Two layers: (1) the Barnstormers ingest-time filter expanded from 5 patterns to 13 — new catches include `assembly` (wing assembly, gear assembly), `wheel pant(s)` / `wheelpants`, `cowling`, `fairing`, `for parts`, `accepting orders`, and `wtb`; a description-level check also drops listings whose body starts with `WANTED`, `WTB`, or `ACCEPTING ORDERS` (catches wanted ads where the marker is in the body not title). (2) A display-side `.not('title', 'ilike', ...)` guard on `fetchAircraftPage` suppresses existing junk rows in the DB (wanted, wheelpant, assembly patterns) without deleting them — all buyer browse and make/model pages are covered.
+- Goal: data quality / marketplace trust — `[bug]` lane (P1 bug: parts/wanted ads leaking into buyer surfaces). Bug cycles don't count against the [want]/[goal] 3:1 ratio. Pageviews at orient: 374 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING).
+- Goal-lane: [bug]
+- Spec: nightshift/specs/20260625T105149Z-hide-parts-wanted-listings.md
+- Verdict: PASS. `npx next build` compiled clean (289 static pages, exit 0, no TypeScript errors). QA smoke (`next start` production build on port 3025, NOT dev) — exit 0 on `/aircraft`, `/aircraft/cirrus/sr22`, `/aircraft/cessna/172` at desktop 1280 + mobile 375 (6/6 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Non-visual cycle (pure query-filter change, no component/CSS change) — screenshots saved as audit trail, not read.
+- Screenshots: nightshift/screenshots/hide-parts-wanted-listings/
+- Next: (1) Slice 2 — a one-time backfill to mark existing junk rows `status='inactive'` (human DDL or a safe admin-only script, since the loop can't run destructive SQL); the display-side guard is a bridge until then. (2) Apply same junk-title patterns to `getForSaleListingSitemapRows` so known junk IDs don't appear in the sitemap. (3) Audit the AircraftForSale adapter for the same patterns — Barnstormers is the main culprit but cross-check.
+
 ## 2026-06-25T103436Z — PASS — carbon-cub-curate
 - Pages: /aircraft/cubcrafters/carbon, /aircraft/cubcrafters, /aircraft
 - What: **The CubCrafters Carbon Cub model page now has full editorial depth** — a key-specifications table (seats, engine, hp, cruise speed, construction, gear type, design intent, kit vs. factory), three "what's different" differentiator bullets (composite construction and STOL performance, off-airport mission capability, experimental-category ownership implications), an "About the CubCrafters Carbon Cub" two-paragraph editorial overview (Carbon Cub history and backcountry lineage; co-ownership fit and mission profile), and a 3-question FAQ accordion with FAQPage JSON-LD (what is the Carbon Cub, why is it good for backcountry, is it good to co-own). The page was previously auto-generated from inventory with no curated content. Same data-only pattern as the cessna/421, cessna/206, cessna/210 cycles — one file touched (`src/lib/seo.ts`).
