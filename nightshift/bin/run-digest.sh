@@ -25,6 +25,10 @@ git pull --quiet --ff-only 2>/dev/null || true
 # Creds for the sub-scripts (traffic-report → PostHog, sync-admin-docs → Supabase).
 set -a; [ -f "$APP/.env.local" ] && . "$APP/.env.local"; set +a
 
+# Keep the CHANGELOG small (it grows every night and the orchestrator reads it
+# each orient) — archive entries older than a week. Token discipline, not deletion.
+node nightshift/bin/rotate-changelog.mjs --keep-days 7 2>/dev/null || true
+
 # Build the report (writes nightshift/REVIEW.md + syncs the admin Daily Report).
 # NO `claude` → zero tokens → not blocked by the subscription rate limit.
 STATE="${NS_STATE_DIR:-/home/night/state}"
@@ -32,8 +36,8 @@ node nightshift/bin/build-digest.mjs > "$STATE/digest.out" 2> "$STATE/digest.err
 rc=$?
 cat "$STATE/digest.out" 2>/dev/null
 
-# Commit the regenerated report to staging (logs only — safe).
-git add nightshift/REVIEW.md 2>/dev/null || true
+# Commit the regenerated report + rotated changelog to staging (logs only — safe).
+git add nightshift/REVIEW.md nightshift/CHANGELOG.md nightshift/CHANGELOG-archive.md 2>/dev/null || true
 git commit -q -m "nightshift: morning digest (VPS, token-free)" 2>/dev/null || true
 git push --quiet origin staging 2>/dev/null || true
 

@@ -65,11 +65,18 @@ Write a short spec to `nightshift/specs/<UTC-timestamp>-<slug>.md` with:
   It checks each page at **desktop 1280 + mobile 375** for: HTTP 200, **zero** app-origin
   console errors, and **zero** horizontal overflow — and exits non-zero if any fail. This is
   the hard gate: a non-zero exit means **do NOT merge**.
-- It also saves one "after" screenshot per page/viewport to `nightshift/screenshots/<slug>/`.
-  **Read those screenshots and visually confirm the page looks right** (catches "renders but
-  looks wrong" — overlap, broken layout — that the assertions miss). PASS requires BOTH the
-  smoke test exit 0 AND the screenshots looking correct. The screenshots are kept as an audit
-  trail (not for human review — the human reviews the staging site itself).
+- It also saves one "after" screenshot per page/viewport to `nightshift/screenshots/<slug>/`
+  as an audit trail (always saved, either way below).
+- **Read the screenshots into context ONLY for VISUAL cycles** — ones that touch components,
+  CSS/Tailwind, layout, or anything a user sees rendered. For those, visually confirm the page
+  looks right (catches "renders but looks wrong" — overlap, broken layout — that the assertions
+  miss); PASS then requires **both** smoke exit 0 **and** the screenshots looking correct.
+- **For NON-visual cycles — do NOT read the screenshots into context.** Copy/content,
+  metadata/SEO, JSON-LD, data/query, config, sitemap, redirects: the programmatic smoke gate
+  (HTTP 200 / no app-console errors / no overflow) above is sufficient; PASS = smoke exit 0.
+  Loading screenshots is the single most expensive step per cycle (vision tokens) — reserve it
+  for when a human eye actually adds signal. When unsure whether a change is visual, lean toward
+  reading them.
 - Check console for errors (including **hydration mismatch** warnings — these only surface reliably on a production build), check the page renders, check each acceptance criterion.
 - **Reproduce before you believe it:** any apparent bug must repro on a fresh page load before you act on it — don't trust a single flaky observation. Prefer real clicks over JS `.click()`.
 - Verdict: **PASS** only if the build is green AND every acceptance criterion is met AND no new console errors. Otherwise **FAIL**.

@@ -47,12 +47,18 @@ leaves a stale lock that the next fire reclaims after 70 min.
 ## 1. Orient (once, in this session)
 
 - `git fetch`, `git checkout staging`, `git pull`.
-- Read in full: `nightshift/GOAL.md` (the north-star metric the night optimizes),
+- Read in full **once**: `nightshift/GOAL.md` (the north-star metric the night optimizes),
   `nightshift/RUNBOOK.md` (the per-cycle contract), `nightshift/FREEZE.md`
-  (hard do-not-touch), `nightshift/BACKLOG.md` (what to build), and the recent
-  `nightshift/CHANGELOG.md` entries (what's already done / last cycle's verdict).
+  (hard do-not-touch), `nightshift/BACKLOG.md` (what to build).
+- For `nightshift/CHANGELOG.md` (it's long and grows nightly), **read only the recent tail —
+  `head -40 nightshift/CHANGELOG.md`** (entries are newest-first). That's all you need for
+  "what's already done / last cycle's verdict". Never read the whole CHANGELOG.
 - **Read the scoreboard once:** `node nightshift/bin/scoreboard.mjs`. This is the
   goal (pageviews) the whole night moves. Keep it in mind when picking work.
+- **Token discipline (you hold these in context — don't re-read them):** after this orient,
+  do NOT re-Read GOAL/RUNBOOK/FREEZE/BACKLOG mid-loop — you already have them. Each cycle, the
+  only fresh read you need is the CHANGELOG **tail** (`head -15`) to see the last verdict/lane;
+  workers get their item passed in, so they don't read the whole backlog either.
 
 ## 2. Drain loop
 
