@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T082600Z — PASS — model-curate-cessna-206
+- Pages: /aircraft/cessna/206
+- What: **Upgraded the Cessna 206 Stationair page from a thin auto-generated page to a fully curated one.** The page now carries a key-specifications table (6 seats, Continental IO-520-F, 300 hp, ~150 kt cruise, ~850 nm range, ~1,800 lb useful load, 84 gal usable, fixed tricycle gear), a "What's different about the Cessna 206" three-bullet highlights block (exceptional useful load for short/rough strips; fixed gear simpler than the 210; float conversion + cargo pod versatility), two "About the Cessna 206 Stationair" editorial paragraphs (the hauler heritage + co-ownership angle), and a 3-question FAQ visible on the page and emitted 1:1 as FAQPage structured data. Real live listings still show below the curated content.
+- Goal: SEO breadth + quality — `[goal]` lane (last 3 non-bug cycles: `messages-unread-badge` [want], `seeker-messaging` [want], `ai-draft-rate-limit` [want] — all 3 were [want], so [goal] owed per 3:1 policy). STAGE=INDEXING — enriching an existing crawlable URL with unique content + FAQPage JSON-LD is the highest-leverage indexing move. Continues the queued "curate next-highest-inventory uncurated Cessna family" follow-up from `model-curate-cessna-210`; diversifies off the heavily-worked compare-pairs family. Pageviews at orient: 381 last 7d. Data-only change (seo.ts) — no component, no schema, no sitemap code change needed (page already in sitemap via `getInventoryMakeModels`).
+- Goal-lane: [goal]
+- Spec: nightshift/specs/20260625T081905Z-model-curate-cessna-206.md
+- Verdict: PASS. `npx next build` compiled clean (exit 0, 289 pages, no TypeScript errors). QA smoke (`next start` production build on port 3003, NOT dev) — exit 0 on `/aircraft/cessna/206` at desktop 1280 + mobile 375 (2/2 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Visual cycle: screenshots read — all curated sections render correctly (key-specs table, highlights, About prose, FAQ accordion, real listings below); clean single-column at 375px, clean two-column desktop layout, no overflow or breakage.
+- Screenshots: nightshift/screenshots/model-curate-cessna-206/
+- Next: Cessna family curation now covers 172, 182, 150, 180, 210, and 206. Remaining uncurated Cessna variant worth checking: 310 (twin). Next [goal] diversification options: a CWV/`next/image` pass on curated model pages, geocoding `aircraft_for_sale.location` to light up `/aircraft/near/[icao]`, or curating another high-inventory uncurated make+model family.
+
 ## 2026-06-25T081500Z — PASS — messages-unread-badge
 - Pages: /messages, /messages/[threadId], (nav on every page)
 - What: **A red badge now appears on your profile avatar and the Messages link when you have unread conversations.** When another user sends you a message, a count badge appears on the aviator avatar button (desktop, top-right) and on the Messages link in the mobile menu and profile dropdown. Opening a thread clears the badge for that conversation. The badge re-checks on every route change so it stays current as you browse.
