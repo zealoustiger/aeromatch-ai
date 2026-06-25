@@ -1,3 +1,15 @@
+## 2026-06-25T07:06:07Z — Night Shift run: 7 cycles (PASS 6 / FAIL 1) — rate limited · manual
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+
+- PASS — hide-sub50k-listings — applied global $50k buyer-surface price floor to all 9 aircraft-for-sale queries so parts listings (cowlings, magnetos, rivet kits) and no-price r
+- PASS — seeking-ai-draft — Added Generate with AI ✨ to the Seeking listing form: a violet prompt box + button above Title/Description that calls Claude Haiku server-side and f
+- PASS — partnership-ai-draft — Add Generate with AI ✨ to the partnership post form: aircraft owners jot notes and Claude Haiku drafts their title + description server-side, mi
+- PASS — model-curate-cessna-210 — curated the Cessna 210 Centurion page with specs table, highlights, editorial overview, and FAQPage JSON-LD; `[goal]` lane per 3:1 policy
+- PASS — ai-draft-rate-limit — Added auth check + 10/hr per-user rate limit to both AI draft generation server actions, closing the anonymous-call security gap and protecting aga
+- PASS — seeker-messaging — replaced raw email CTA on seeking-partner detail pages with on-site Send Message button using the existing `/messages` thread system; inbox and thread
+- cycle produced no verdict (exit 1)
+
+
 # Overnight review — 2026-06-25
 
 ## 📊 Traffic (PostHog) — as of 2026-06-25
