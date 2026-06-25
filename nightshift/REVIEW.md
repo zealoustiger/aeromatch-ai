@@ -1,3 +1,11 @@
+## 2026-06-25T13:35:56Z — Night Shift run: 3 cycles (PASS 2 / FAIL 1) — night ended
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+
+- PASS — financial-calculators-ship — shipped standalone `/tools/cost-calculator` + `/tools/earnings-calculator` pages from `feat/financial-calculators` (PR #17), plus compact Ea
+- cycle produced no verdict (exit 124)
+- PASS — searches-page-seeker-label — Saved Searches now badges pilot-seeker searches as Pilot Seekers with a seeker-specific description instead of mislabeling them Partnerships
+
+
 ## 2026-06-25T12:31:47Z — Night Shift run: 1 cycles (PASS 0 / FAIL 1) — rate limited
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 
