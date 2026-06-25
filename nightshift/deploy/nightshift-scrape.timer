@@ -1,0 +1,13 @@
+# /etc/systemd/system/nightshift-scrape.timer
+# Fires the daily inventory scrape at 06:40 Pacific — after the drain's 06:15 stop
+# (and any final cycle finishing) and before the 07:15 digest, so the morning
+# report includes the fresh inventory. Pacific via the systemd TZ suffix.
+[Unit]
+Description=Fire the ClubHanger Night Shift daily inventory scrape
+
+[Timer]
+OnCalendar=*-*-* 06:40:00 America/Los_Angeles
+Persistent=false
+
+[Install]
+WantedBy=timers.target

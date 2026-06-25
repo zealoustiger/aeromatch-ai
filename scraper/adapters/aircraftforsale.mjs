@@ -93,10 +93,19 @@ function parseDetail(html, id) {
   return { asking_price, ttaf, year }
 }
 
-export async function fetchListings({ maxListings = 700, log = console.log } = {}) {
+export async function fetchListings({ maxListings = 1600, log = console.log } = {}) {
   const xml = await fetchHtml(SITEMAP)
-  const urls = parseSitemapLocs(xml).filter((u) => /for-sale-\d+\/?$/.test(u)).slice(0, maxListings)
-  log(`  ${urls.length} listings in sitemap`)
+  const idOf = (u) => {
+    const m = u.match(/for-sale-(\d+)\/?$/)
+    return m ? parseInt(m[1], 10) : 0
+  }
+  // Sitemap order isn't newest-first, so a plain head-slice re-scrapes the same
+  // stale window every run and misses new inventory. Sort by listing id DESC
+  // (ids are monotonic) so the cap keeps the NEWEST listings.
+  const all = parseSitemapLocs(xml).filter((u) => /for-sale-\d+\/?$/.test(u))
+  all.sort((a, b) => idOf(b) - idOf(a))
+  const urls = all.slice(0, maxListings)
+  log(`  ${all.length} listings in sitemap, taking newest ${urls.length}`)
 
   let done = 0
   const rows = await mapPool(urls, 6, async (url) => {
