@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T12:31:39Z — DRAIN SUMMARY
+- Cycles this run: 4 (PASS 3 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Stopped because: rate limited
+- Run: 20260625T113504Z
+
 ## 2026-06-25T124200Z — PASS — seeker-matching-partnerships
 - Pages: /partnerships/seeking/[id]
 - What: **Seeker detail pages now show up to 4 open partnerships near the pilot's airport.** When an aircraft owner (or the seeker themselves) visits a seeker's listing, a new "Partnerships near {airport}" section appears at the bottom showing real active partnerships that match the seeker's location and — if they listed exactly one preferred aircraft make — that make too. Airport-first match; falls back to state if the airport yields zero results. Budget filter applied when `max_buy_in` is set. Section self-suppresses entirely when no match exists (no empty state). Each card links to the full partnership detail page. A "Browse all partnerships near {airport}" link at the bottom goes to `/partnerships?airport={ICAO}`. 1 file: `src/app/partnerships/seeking/[id]/page.tsx` — new `getMatchingPartnerships()` helper + `PartnershipCard` grid section.
