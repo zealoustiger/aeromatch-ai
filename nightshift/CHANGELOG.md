@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-25T13:35:56Z — DRAIN SUMMARY
+- Cycles this run: 3 (PASS 2 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Stopped because: night ended
+- Run: 20260625T130003Z
+
 ## 2026-06-25T133500Z — PASS — searches-page-seeker-label
 - Pages: /searches
 - What: **Saved Searches now labels and describes pilot-seeker searches correctly.** A saved search from `/partnerships/seeking` previously showed a misleading "Partnerships" badge with a partnership-flavored description that ignored the seeker filters. It now shows a **"Pilot Seekers"** badge and a seeker-specific summary line that reads the real seeker params — make ("Cessna seekers"), home airport ("near KPAO"), ratings ("PPL,IFR"), and minimum hours ("250+ hrs"), falling back to "All seeker listings" when no filters are set. Aircraft searches ("Planes for Sale") and legacy/partnership searches ("Partnerships") are unchanged. Also restored an opening curly quote in the aircraft search `q` display that a prior edit had accidentally corrupted.
