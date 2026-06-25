@@ -75,22 +75,57 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     .slice(0, maxListings)
   log(`  ${ids.length} active listings in sitemap`)
 
-  // Hangar67 rate-limits aggressively (HTTP 429) on bursts — concurrency 8
-  // tripped an IP throttle that took ~70% of fetches down and then blocked
-  // even the sitemap. Keep this gentle (concurrency 3 + jitter); a partial run
-  // is fine because the 7-day sold grace means missed listings aren't dropped,
-  // and successive daily runs accumulate full coverage. fetchJson retries with
-  // backoff on top of this.
+  // Hangar67 rate-limits aggressively (HTTP 429) on bursts. The throttle is
+  // IP-WIDE, so when it trips, per-request retries don't help — every worker
+  // just keeps hammering and they all fail together (~60% loss at concurrency 3).
+  // Fix: a SHARED adaptive gate. On a 429 we set a global `pauseUntil` that ALL
+  // workers respect, honoring the server's Retry-After, so the whole pool backs
+  // off in unison and lets the throttle reset before resuming. Concurrency 2 +
+  // jitter keeps us under the burst threshold in the first place. A partial run
+  // is still safe (7-day sold grace), but this should push us toward full
+  // coverage in a single pass.
+  let pauseUntil = 0
+  let throttleHits = 0
+  const waitForGate = async () => {
+    const wait = pauseUntil - Date.now()
+    if (wait > 0) await sleep(wait + Math.floor(Math.random() * 250))
+  }
+  const tripThrottle = (ms) => {
+    throttleHits++
+    pauseUntil = Math.max(pauseUntil, Date.now() + ms)
+  }
+
+  const fetchFeed = async (id) => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await waitForGate()
+      try {
+        return await fetchJson(`${BASE}/feed/aircraft/${id}`, { retries: 0 })
+      } catch (e) {
+        if (e?.status === 429 || e?.status === 503) {
+          // Global cooldown — escalates 2s,4s,8s… capped, honoring Retry-After.
+          tripThrottle(Math.min(e.retryAfter ?? 2000 * 2 ** attempt, 30000))
+          continue
+        }
+        // Transient (network/timeout/5xx): short local backoff, a couple tries.
+        if (attempt < 2) { await sleep(500 * 2 ** attempt + Math.floor(Math.random() * 300)); continue }
+        return null
+      }
+    }
+    return null
+  }
+
   let done = 0
   let ok = 0
-  const rows = await mapPool(ids, 3, async (id) => {
-    await sleep(100 + (id.charCodeAt(id.length - 1) % 10) * 20)
-    const d = await fetchJson(`${BASE}/feed/aircraft/${id}`).catch(() => null)
+  const rows = await mapPool(ids, 2, async (id) => {
+    await sleep(80 + (id.charCodeAt(id.length - 1) % 10) * 20)
+    const d = await fetchFeed(id).catch(() => null)
     if (d && !d.error) ok++
     if (++done % 250 === 0) log(`  fetched ${done}/${ids.length} (${ok} ok)`)
     return toRow(d)
   })
-  log(`  ${ok}/${ids.length} feeds OK`)
+  const rate = ids.length ? Math.round((ok / ids.length) * 100) : 0
+  log(`  ${ok}/${ids.length} feeds OK (${rate}%${throttleHits ? `, ${throttleHits} throttle pauses` : ''})`)
+  if (rate < 80) log(`  ⚠ low success rate — source likely throttling; next daily run will fill gaps (7-day sold grace protects active listings)`)
 
   return rows.filter(Boolean)
 }
