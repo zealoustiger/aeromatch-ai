@@ -63,24 +63,30 @@ export default function AircraftRailCard({
         )}
       </div>
 
-      {/* Details */}
-      <div className="p-4">
-        <p className="text-lg font-bold text-slate-900">
-          {p.asking_price
-            ? formatPrice(p.asking_price)
-            : p.price_text
-              ? <span className="text-base capitalize">{p.price_text}</span>
-              : <span className="text-base text-slate-400">Contact for price</span>}
-        </p>
-        <p className="mt-1 truncate text-sm font-semibold text-slate-800 group-hover:text-sky-700">
-          {label}
-        </p>
-        {p.location && (
-          <p className="mt-1 flex items-center gap-1 truncate text-sm text-slate-500">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-            <span className="truncate">{p.location}</span>
+      {/* Details — fixed height so cards align regardless of whether location is present */}
+      <div className="flex h-24 flex-col justify-between p-4">
+        <div>
+          <p className="text-lg font-bold text-slate-900">
+            {p.asking_price
+              ? formatPrice(p.asking_price)
+              : p.price_text
+                ? <span className="text-base capitalize">{p.price_text}</span>
+                : <span className="text-base text-slate-400">Contact for price</span>}
           </p>
-        )}
+          <p className="mt-1 truncate text-sm font-semibold text-slate-800 group-hover:text-sky-700">
+            {label}
+          </p>
+        </div>
+        <p className="flex items-center gap-1 truncate text-sm text-slate-500">
+          {p.location ? (
+            <>
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">{p.location}</span>
+            </>
+          ) : (
+            <span className="text-slate-300">—</span>
+          )}
+        </p>
       </div>
     </Link>
   )
