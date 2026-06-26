@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-26T08:23:36Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 0 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Stopped because: rate limited
+- Run: 20260626T082322Z
+
 ## 2026-06-26T074138Z — PASS — aircraft-mission-twin-stol
 - Pages: /aircraft/mission/twin-engine, /aircraft/mission/stol, /aircraft
 - What: **Two new curated mission landing pages added to the `/aircraft/mission/` family.** `/aircraft/mission/twin-engine` targets "twin engine aircraft for sale" — unique editorial guidance on multi-engine aircraft (piston twins, co-ownership economics, MEI rating requirement), a 4-question FAQ accordion with FAQPage JSON-LD, and the live grid of real twin-engine listings (DA42, Cessna 310, Cessna 421, Baron, etc.). `/aircraft/mission/stol` targets "STOL aircraft for sale" and "short takeoff aircraft" — unique editorial guidance on short-field/backcountry flying (CubCrafters Carbon Cub, Kitfox, modified Super Cubs, tundra tires), a 4-question FAQ accordion with FAQPage JSON-LD, and the live grid of real STOL/backcountry listings. Both chips added to `AircraftChipBar` on `/aircraft` for internal linking from the hub. 2 files: `src/lib/missions.ts` + `src/components/AircraftChipBar.tsx`.
