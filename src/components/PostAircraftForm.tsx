@@ -1,10 +1,10 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
-import { createAircraftListing } from '@/app/actions'
+import { createAircraftListing, generateAircraftDraft } from '@/app/actions'
 
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
 
@@ -74,6 +74,34 @@ export default function PostAircraftForm() {
     if (state) handleResult(Boolean(state.ok))
   }, [state, handleResult])
 
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [isGenerating, startGenerating] = useTransition()
+
+  function handleGenerate() {
+    setAiError(null)
+    startGenerating(async () => {
+      try {
+        const result = await generateAircraftDraft(aiPrompt)
+        const form = formRef.current
+        if (form) {
+          const titleInput = form.querySelector<HTMLInputElement>('[name="title"]')
+          const descTextarea = form.querySelector<HTMLTextAreaElement>('[name="description"]')
+          if (titleInput) {
+            titleInput.value = result.title
+            titleInput.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+          if (descTextarea) {
+            descTextarea.value = result.description
+            descTextarea.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+        }
+      } catch (e) {
+        setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
+      }
+    })
+  }
+
   return (
     <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-8">
       <div className="flex justify-end">
@@ -83,7 +111,7 @@ export default function PostAircraftForm() {
       </div>
 
       {/* Aircraft details */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Aircraft Details</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -117,9 +145,33 @@ export default function PostAircraftForm() {
       </section>
 
       {/* Listing content */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Listing Details</SectionHeader>
         <div className="space-y-4">
+          {/* AI draft generator */}
+          <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
+            <p className="mb-2 text-xs font-semibold text-violet-800">Generate with AI ✨</p>
+            <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about your aircraft — the AI will draft a title and description for you.</p>
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              rows={3}
+              placeholder="e.g. 2006 Cessna 182T, G1000 glass panel, 2450 TTAF, 600 SMOH, good paint/interior, based at KAUS. Selling because upgrading to a twin. Fresh annual March 2026."
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            />
+            {aiError && (
+              <p className="mt-1.5 text-xs text-red-600">{aiError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={!aiPrompt.trim() || isGenerating}
+              className="mt-2 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
+            >
+              {isGenerating ? 'Generating…' : 'Generate with AI ✨'}
+            </button>
+          </div>
+
           <div>
             <Label required>Title</Label>
             <Input name="title" placeholder="e.g. 2006 Cessna 182T Skylane — G1000, 2,450 TTAF" required />
@@ -138,7 +190,7 @@ export default function PostAircraftForm() {
       </section>
 
       {/* Price + location */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Price &amp; Location</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
