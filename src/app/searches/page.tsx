@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
-import { Bookmark, Search, ExternalLink } from 'lucide-react'
+import { Bookmark, Search, ExternalLink, Bell } from 'lucide-react'
 import Link from 'next/link'
 import DeleteSearchButton from '@/components/DeleteSearchButton'
 import RenameSavedSearch from '@/components/RenameSavedSearch'
@@ -105,6 +105,13 @@ export default async function SearchesPage() {
         <p className="mt-1 text-slate-500">
           We'll notify you when new listings match your criteria.
         </p>
+        <Link
+          href="/account"
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
+        >
+          <Bell className="h-4 w-4" />
+          Manage email notification settings
+        </Link>
       </div>
 
       {!searches?.length ? (
