@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
-import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail } from '@/lib/email'
+import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail, buildSeedInquiryEmail } from '@/lib/email'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { CONCIERGE_EMAIL, SEED_INQUIRY_EMAIL } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
@@ -653,7 +654,7 @@ async function notifyMessageRecipient(threadId: string, senderId: string): Promi
     const admin = createAdminClient()
     const { data: thread } = await admin
       .from('threads')
-      .select('owner_id, inquirer_id')
+      .select('owner_id, inquirer_id, partnership_id')
       .eq('id', threadId)
       .single()
     if (!thread) return
@@ -666,7 +667,31 @@ async function notifyMessageRecipient(threadId: string, senderId: string): Promi
     if (!recipient?.email) return
 
     const threadUrl = `${SITE_URL}/messages/${threadId}`
-    await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email })
+
+    // Seed/concierge listing? Route a rich, context-carrying alert to the operator
+    // inbox (the concierge mailbox is unmonitored). Includes the inquirer's email,
+    // the message body, and the listing so the operator can act without logging in.
+    const isConcierge = recipient.email.toLowerCase() === CONCIERGE_EMAIL.toLowerCase()
+    if (isConcierge && thread.partnership_id) {
+      const [{ data: listing }, { data: { user: inquirer } }, { data: lastMsg }] = await Promise.all([
+        admin.from('partnerships').select('title, contact_name').eq('id', thread.partnership_id).single(),
+        admin.auth.admin.getUserById(senderId),
+        admin.from('messages').select('body').eq('thread_id', threadId).order('created_at', { ascending: false }).limit(1).single(),
+      ])
+      await sendEmail({
+        ...buildSeedInquiryEmail({
+          personaName: listing?.contact_name ?? 'Seed listing',
+          listingTitle: listing?.title ?? 'a partnership listing',
+          listingUrl: `${SITE_URL}/partnerships/${thread.partnership_id}`,
+          threadUrl,
+          inquirerEmail: inquirer?.email ?? null,
+          body: lastMsg?.body ?? '',
+        }),
+        to: SEED_INQUIRY_EMAIL,
+      })
+    } else {
+      await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email })
+    }
 
     // Record successful send time so subsequent messages in this thread are suppressed.
     MESSAGE_NOTIFY_LAST.set(threadId, Date.now())

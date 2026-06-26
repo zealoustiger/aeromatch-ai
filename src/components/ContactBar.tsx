@@ -15,6 +15,9 @@ interface Props {
   contactPhone: string | null
   contactMethod: string
   contactName: string | null
+  /** Seed/concierge persona: messaging only (the email/phone are dead demo
+   *  contacts), and the button is labelled with the persona's first name. */
+  isSeed?: boolean
 }
 
 export default function ContactBar({
@@ -25,6 +28,7 @@ export default function ContactBar({
   contactPhone,
   contactMethod,
   contactName,
+  isSeed = false,
 }: Props) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
@@ -53,9 +57,12 @@ export default function ContactBar({
     })
   }
 
-  const showEmail = contactMethod === 'email' || contactMethod === 'both'
-  const showPhone = (contactMethod === 'phone' || contactMethod === 'both') && contactPhone
+  // Seed personas: messaging only (dead demo email/phone are suppressed).
+  const showEmail = !isSeed && (contactMethod === 'email' || contactMethod === 'both')
+  const showPhone = !isSeed && (contactMethod === 'phone' || contactMethod === 'both') && contactPhone
   const showMessage = !!posterId && user?.id !== posterId
+  const firstName = contactName?.trim().split(/\s+/)[0]
+  const messageLabel = isSeed && firstName ? `Message ${firstName}` : 'Message'
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-safe shadow-lg backdrop-blur-sm lg:hidden">
@@ -73,7 +80,7 @@ export default function ContactBar({
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
             >
               <MessageCircle className="h-4 w-4" />
-              {isPending ? 'Opening…' : 'Message'}
+              {isPending ? 'Opening…' : messageLabel}
             </button>
           )}
           {showEmail && (

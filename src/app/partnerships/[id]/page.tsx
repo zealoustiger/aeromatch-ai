@@ -9,6 +9,9 @@ import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
+import MessageOwnerButton from '@/components/MessageOwnerButton'
+import AviatorAvatar from '@/components/AviatorAvatar'
+import { isSeedProfile, personaFromPartnership } from '@/lib/seedProfiles'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import SaveListingButton from '@/components/SaveListingButton'
@@ -114,6 +117,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   if (!p) notFound()
 
   const isOwner = await isListingOwner(p.poster_id)
+
+  // Seed/demo persona (e.g. "Marcus T.") — owned by the concierge house account,
+  // so it gets the on-site "Message {name}" flow + a member profile link instead
+  // of a dead mailto. `persona` shapes the public-facing member identity.
+  const seed = isSeedProfile(p)
+  const persona = seed ? personaFromPartnership(p) : null
 
   // Fetch the current user's saved row for this partnership so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
@@ -361,18 +370,47 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
 
             {/* Contact card — desktop only (mobile uses sticky bar) */}
             <div className="hidden rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm lg:block">
-              <h2 className="mb-1 text-sm font-semibold text-sky-800">Interested?</h2>
-              {p.contact_name && (
-                <p className="mb-3 text-sm text-sky-700">Contact {p.contact_name}</p>
+              <h2 className="mb-3 text-sm font-semibold text-sky-800">Interested?</h2>
+              {seed && persona ? (
+                <>
+                  {/* Member identity — avatar + name link to the profile, so the
+                      persona reads as a real ClubHanger member you message on-site. */}
+                  <Link
+                    href={`/members/${persona.id}`}
+                    className="group mb-4 flex items-center gap-3"
+                  >
+                    <AviatorAvatar seed={persona.avatarSeed} size={48} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-sky-700">
+                        {persona.name}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {persona.homeAirport ? `Based at ${persona.homeAirport}` : 'View profile'}
+                      </p>
+                    </div>
+                  </Link>
+                  <MessageOwnerButton
+                    listingId={p.id}
+                    posterId={p.poster_id}
+                    label={`Message ${persona.firstName}`}
+                    returnPath={`/partnerships/${p.id}`}
+                  />
+                </>
+              ) : (
+                <>
+                  {p.contact_name && (
+                    <p className="mb-3 text-sm text-sky-700">Contact {p.contact_name}</p>
+                  )}
+                  <ContactButtons
+                    listingId={p.id}
+                    title={p.title}
+                    contactEmail={p.contact_email}
+                    contactPhone={p.contact_phone}
+                    contactMethod={p.contact_method}
+                    posterId={p.poster_id}
+                  />
+                </>
               )}
-              <ContactButtons
-                listingId={p.id}
-                title={p.title}
-                contactEmail={p.contact_email}
-                contactPhone={p.contact_phone}
-                contactMethod={p.contact_method}
-                posterId={p.poster_id}
-              />
             </div>
 
             <div className="text-center">
@@ -399,6 +437,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         contactPhone={p.contact_phone}
         contactMethod={p.contact_method}
         contactName={p.contact_name}
+        isSeed={seed}
       />
     </>
   )
