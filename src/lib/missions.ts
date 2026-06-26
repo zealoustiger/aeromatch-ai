@@ -309,6 +309,39 @@ export const MISSIONS: Mission[] = [
     ],
     filters: { q: 'turboprop' },
   },
+  {
+    slug: 'floatplane',
+    label: 'Floatplane',
+    h1: 'Floatplane & Amphib Aircraft for Sale',
+    metaTitle: 'Floatplane & Amphibious Aircraft for Sale | ClubHanger',
+    metaDescription:
+      'Browse floatplanes and amphibious aircraft for sale — seaplanes, aircraft on floats, and amphibians for flying into lakes, rivers, and remote backcountry. Aggregated from across the web.',
+    blurb: 'Seaplanes, aircraft on floats, and amphibians for water operations.',
+    intro: [
+      'Floatplanes and amphibious aircraft are a world of their own within general aviation. A straight-float aircraft lands and takes off from water only — it cannot use a conventional runway without a ground-handling dolly. An amphibious aircraft adds retractable wheels so it operates from both water and paved or grass runways, making it far more practical for pilots who want versatility. Common types you\'ll find on the market include Cessna 172s and 182s on Edo or Wipaire floats, Cessna 180s and 185s (the workhorses of Alaskan bush flying), Piper Super Cubs and PA-18s on EDO 2000s, De Havilland Beavers and Otters (the classic high-capacity bush haulers), the Lake Amphibian series (a purpose-built amphib in the light-aircraft category), and newer designs like the ICON A5. Maule aircraft on floats are also popular in the lower-48 backcountry.',
+      'Flying floatplanes requires a separate FAA rating — the Single-Engine Sea (SES) add-on to a Private or Commercial certificate — which typically takes 5–20 hours of dual instruction depending on prior experience. The rating is earned on a specific type of float-equipped aircraft and covers water taxi, docking, takeoff and landing technique, and the regulations specific to seaplane operations. Float time does not count toward land-aircraft ratings, and seaplane training schools cluster where the aircraft are most popular: the Pacific Northwest (Washington, Oregon, British Columbia), Alaska, Maine, Minnesota\'s lake country, and Florida\'s coastal areas. Ownership follows a similar geography — if there is no suitable water within practical range of your home airport, the utility drops significantly.',
+      'Pre-purchase inspection on a floatplane is specialized work. Beyond the airframe inspection you\'d do on any used aircraft, a float-experienced A&P should check float skin condition for corrosion and impact damage, the watertight integrity of all compartments (a float log shows the history of repairs), keel and step condition, water-rudder cables, strut seals, and the hardware that attaches the float to the aircraft. Salt-water operations accelerate corrosion dramatically and should be noted in the logs. Ask where the aircraft has been based and whether it\'s been on salt water. A pre-buy from a shop that routinely works seaplanes — ideally one familiar with the specific type and float system — is worth more than a standard annual-style review on a water-based aircraft.',
+    ],
+    faqs: [
+      {
+        q: 'What is the difference between a floatplane and an amphibian?',
+        a: 'A floatplane has fixed floats and can only operate from water — it cannot use a conventional runway without a ground handling dolly. An amphibious aircraft has retractable landing gear built into the floats (or into the hull, for flying-boat designs) so it operates from both water and paved or grass runways. Amphibians cost more to purchase and maintain but give far more operational flexibility. A straight-float aircraft is generally lighter and less expensive; most working bush planes in Alaska and Canada are straight-float.',
+      },
+      {
+        q: 'Do I need a special rating to fly a floatplane?',
+        a: 'Yes. Flying a seaplane requires a Single-Engine Sea (SES) or Multi-Engine Sea (MES) add-on rating to your existing pilot certificate. The training covers water taxi, docking and beaching, takeoff and landing technique on water, wake avoidance, and seaplane regulations. Most pilots earn the SES add-on in 5–20 hours of dual instruction at a seaplane school, and the rating is written into your pilot certificate as a separate class. You cannot legally fly a seaplane on a land-only certificate.',
+      },
+      {
+        q: 'What are the main maintenance concerns on a floatplane?',
+        a: 'Float skin condition is the first thing a float-experienced A&P checks: corrosion, impact dents, and watertight integrity of all compartments. The keel and step take the most structural stress and should be examined carefully. Water-rudder cables corrode and bind; strut seals between the spreader bars and floats need regular inspection. Salt-water operations are dramatically harder on all of these components than fresh water, so the logbooks should show where the aircraft has been based. Budget for a pre-purchase inspection from a shop that regularly works the specific float system (EDO, Wipaire, Floatair, etc.) and the airframe type — the specialist knowledge matters.',
+      },
+      {
+        q: 'Where in the US are floatplanes most popular?',
+        a: 'Floatplane operations cluster where suitable water is accessible and the terrain rewards them. Alaska is the largest seaplane market in the US by a wide margin — floatplanes are working transportation to lakeside lodges, remote villages, and fishing camps with no road access. The Pacific Northwest (Washington State and Oregon) has active seaplane communities centered on Puget Sound and the San Juan Islands. Maine, with its thousands of lakes and ponds, has a strong float culture and several seaplane training schools. Minnesota\'s Boundary Waters area and Florida\'s coast (particularly around Key West) also have active communities. In the lower-48, practical float flying usually requires living within a short drive of a suitable lake or waterway.',
+      },
+    ],
+    filters: { q: 'float' },
+  },
 ]
 
 /** Look up a mission by slug. Returns undefined for unknown slugs (→ 404). */
