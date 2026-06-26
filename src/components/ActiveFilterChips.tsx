@@ -143,6 +143,17 @@ export default function ActiveFilterChips({
     })
   }
 
+  // Airport — show the ICAO code as a chip ("Near KSFO"). Removing it clears only
+  // the airport param; the state filter (if also active) is left intact.
+  const airport = params.airport?.trim().toUpperCase()
+  if (airport) {
+    chips.push({
+      key: 'airport',
+      label: `Near ${airport}`,
+      href: buildHref(params, (p) => p.delete('airport')),
+    })
+  }
+
   // Price range
   const minPrice = num(params.min_price)
   const maxPrice = num(params.max_price)
