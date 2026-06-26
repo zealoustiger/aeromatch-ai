@@ -23,7 +23,8 @@ export default async function ThreadPage({
     .select(`
       id, inquirer_id, owner_id,
       partnership:partnerships(id, title, make, model, year, home_airport, city, state),
-      seeker:partnership_seekers(id, title)
+      seeker:partnership_seekers(id, title),
+      aircraft:aircraft_for_sale(id, title, year, make, model, registration)
     `)
     .eq('id', threadId)
     .single()
@@ -44,6 +45,9 @@ export default async function ThreadPage({
     year: number | null; home_airport: string; city: string | null; state: string | null
   } | null
   const sk = thread.seeker as unknown as { id: string; title: string } | null
+  const ac = thread.aircraft as unknown as {
+    id: string; title: string; year: number | null; make: string | null; model: string | null; registration: string | null
+  } | null
 
   return (
     <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-2xl flex-col px-0 sm:px-4 sm:py-6">
@@ -70,6 +74,15 @@ export default async function ThreadPage({
             <Link href={`/partnerships/seeking/${sk.id}`} className="min-w-0 flex-1 hover:opacity-80">
               <p className="truncate font-semibold text-slate-900">{sk.title}</p>
               <p className="truncate text-xs text-slate-500">Pilot seeking partnership</p>
+            </Link>
+          ) : ac ? (
+            <Link href={`/aircraft/listing/${ac.id}`} className="min-w-0 flex-1 hover:opacity-80">
+              <p className="truncate font-semibold text-slate-900">{ac.title}</p>
+              <p className="flex items-center gap-1 truncate text-xs text-slate-500">
+                <MapPin className="h-3 w-3 shrink-0" />
+                {aircraftLabel(ac.make ?? '', ac.model ?? '', ac.year)}
+                {ac.registration && ` · ${ac.registration}`}
+              </p>
             </Link>
           ) : (
             <p className="text-sm font-medium text-slate-500">Deleted listing</p>

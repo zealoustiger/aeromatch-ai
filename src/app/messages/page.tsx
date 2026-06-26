@@ -18,6 +18,7 @@ export default async function MessagesPage() {
       id, created_at, inquirer_id, owner_id,
       partnership:partnerships(id, title, make, model, year, home_airport),
       seeker:partnership_seekers(id, title),
+      aircraft:aircraft_for_sale(id, title, year, make, model, registration),
       messages(id, body, created_at, sender_id)
     `)
     .order('created_at', { ascending: false })
@@ -50,14 +51,17 @@ export default async function MessagesPage() {
           {sorted.map((thread) => {
             const p = thread.partnership as unknown as { id: string; title: string; make: string; model: string; year: number | null; home_airport: string } | null
             const sk = thread.seeker as unknown as { id: string; title: string } | null
+            const ac = thread.aircraft as unknown as { id: string; title: string; year: number | null; make: string | null; model: string | null; registration: string | null } | null
             const msgs = (thread.messages ?? []) as Message[]
             const last = msgs.at(-1)
 
-            const threadTitle = p?.title ?? sk?.title ?? 'Deleted listing'
+            const threadTitle = p?.title ?? sk?.title ?? ac?.title ?? 'Deleted listing'
             const threadSub = p
               ? `${aircraftLabel(p.make, p.model, p.year)} · ${p.home_airport}`
               : sk
               ? 'Pilot seeking partnership'
+              : ac
+              ? `${aircraftLabel(ac.make ?? '', ac.model ?? '', ac.year)}${ac.registration ? ` · ${ac.registration}` : ''}`
               : (thread.owner_id === user.id ? 'Inquiry about your listing' : 'Your inquiry')
 
             return (
