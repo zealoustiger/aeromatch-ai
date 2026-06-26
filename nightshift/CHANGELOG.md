@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-26T13:16:24Z — DRAIN SUMMARY
+- Cycles this run: 4 (PASS 4 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Stopped because: night ended
+- Run: 20260626T122322Z
+
 ## 2026-06-26T131500Z — PASS — aerobatic-mission-page
 - Pages: /aircraft/mission/aerobatic, /aircraft
 - What: **New "Aerobatic Aircraft for Sale" mission landing page added.** `/aircraft/mission/aerobatic` is the 10th curated mission page in the family, targeting "aerobatic aircraft for sale", "Pitts Special for sale", "Extra 300 for sale", and related buyer queries. It has a unique H1, three paragraphs of editorial buyer guidance (aerobatic certification and popular types — Pitts, Extra 300/330, Decathlon, Citabria, Great Lakes, Edge 540; training requirements including FAR 91.303/91.307 and IAC; pre-purchase inspection considerations including G-log, airframe stress history, control rigging, prop strikes), a 4-question FAQ accordion with matching FAQPage JSON-LD (what makes an aircraft aerobatic certified, FAA rating requirements, popular used types, pre-purchase inspection), and the live listing grid filtered by `q=aerobatic` (honest empty-state if no matching inventory, though several listings DID match on production data). An "Aerobatic" chip was also added to `AircraftChipBar` on `/aircraft`, providing an internal link from the hub into the new page. 2 files: `src/lib/missions.ts` + `src/components/AircraftChipBar.tsx`. Mission family now has 10 members.
