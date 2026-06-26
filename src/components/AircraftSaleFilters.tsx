@@ -6,6 +6,7 @@ import { ChevronDown } from 'lucide-react'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
 import { groupModelVariants } from '@/lib/modelGroups'
 import SaveSearchButton from './SaveSearchButton'
+import AirportAutocompleteInput from './AirportAutocompleteInput'
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -346,27 +347,19 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
 
         {showMore && (
           <div className="mt-4 space-y-5">
-            {/* Airport (ICAO) — resolved server-side to the airport's state, so buyers
-                can filter by "near KSFO" without knowing the state. */}
+            {/* Airport — resolved server-side to the airport's state (shows aircraft
+                based in that state). Autocomplete accepts city/name/ICAO/IATA. */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Near airport (ICAO)
+                Near airport
               </label>
-              <input
-                type="text"
-                placeholder="e.g. KSFO, KHWD"
-                maxLength={4}
-                defaultValue={initialValues.airport ?? ''}
-                onBlur={(e) => updateFilter('airport', e.target.value.toUpperCase().trim())}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const v = (e.target as HTMLInputElement).value.toUpperCase().trim()
-                    updateFilter('airport', v)
-                  }
-                }}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 font-mono text-sm uppercase focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              <AirportAutocompleteInput
+                key={initialValues.airport ?? ''}
+                placeholder="City, airport name, or ICAO code"
+                initialValue={initialValues.airport ?? ''}
+                onSelect={(icao) => updateFilter('airport', icao)}
               />
-              <p className="mt-1 text-xs text-slate-400">4-letter ICAO code — shows aircraft based in that airport&apos;s state</p>
+              <p className="mt-1 text-xs text-slate-400">Shows aircraft based in that airport&apos;s state</p>
             </div>
 
             {/* State */}

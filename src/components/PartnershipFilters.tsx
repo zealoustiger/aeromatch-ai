@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useTransition } from 'react'
 import { X } from 'lucide-react'
 import SaveSearchButton from './SaveSearchButton'
+import AirportAutocompleteInput from './AirportAutocompleteInput'
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -75,8 +76,6 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
   const airportCodes = parseAirportCodes(
     initialValues.airports ?? initialValues.airport ?? ''
   )
-  const [airportDraft, setAirportDraft] = useState('')
-
   const setAirports = useCallback(
     (codes: string[]) => {
       pushParams((params) => {
@@ -88,17 +87,6 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
     },
     [pushParams]
   )
-
-  // Add whatever codes the draft text holds (split on comma/space), deduped against
-  // the current list; clears the input. No-op when the draft yields nothing new.
-  const commitAirportDraft = useCallback(() => {
-    const additions = parseAirportCodes(airportDraft)
-    setAirportDraft('')
-    if (!additions.length) return
-    const next = [...airportCodes]
-    for (const code of additions) if (!next.includes(code)) next.push(code)
-    if (next.length !== airportCodes.length) setAirports(next)
-  }, [airportDraft, airportCodes, setAirports])
 
   const removeAirport = useCallback(
     (code: string) => setAirports(airportCodes.filter((c) => c !== code)),
@@ -113,11 +101,11 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
 
   return (
     <div className="space-y-5">
-      {/* Home airport(s) — multi-select. Type a code and press Enter/comma/space (or
-          blur) to add it as a chip; airports entered here are OR'd in the results. */}
+      {/* Home airport(s) — multi-select autocomplete. Type city/name/ICAO and pick
+          from the dropdown; each picked airport is added as a chip (OR'd in results). */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Home Airport (ICAO)
+          Home Airport
           {airportCodes.length > 0 && (
             <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
               · {airportCodes.length} selected
@@ -140,20 +128,17 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
             ))}
           </div>
         )}
-        <input
-          type="text"
-          inputMode="text"
-          placeholder="e.g. KAUS, KDAL — Enter to add"
-          value={airportDraft}
-          onChange={(e) => setAirportDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ',') {
-              e.preventDefault()
-              commitAirportDraft()
-            }
+        <AirportAutocompleteInput
+          placeholder="City, airport name, or ICAO code"
+          clearAfterSelect
+          onSelect={(icao) => {
+            if (!icao) return
+            const codes = parseAirportCodes(icao)
+            if (!codes.length) return
+            const next = [...airportCodes]
+            for (const code of codes) if (!next.includes(code)) next.push(code)
+            if (next.length !== airportCodes.length) setAirports(next)
           }}
-          onBlur={commitAirportDraft}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-mono uppercase focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
         />
       </div>
 
