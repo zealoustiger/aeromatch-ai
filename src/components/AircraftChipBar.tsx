@@ -28,7 +28,7 @@ const PRICE_CHIPS: Chip[] = [
 
 // Mission chips → deep-link to the curated `/aircraft/mission/[slug]` landing pages
 // (editorial buyer guidance + the live matching grid), NOT an in-place `q=` filter.
-// Slugs map 1:1 to the curated set in `src/lib/missions.ts`; this also adds four
+// Slugs map 1:1 to the curated set in `src/lib/missions.ts`; this also adds five
 // internal links from the high-traffic /aircraft hub into that family.
 interface MissionChip {
   /** Mission slug under /aircraft/mission/ (must match src/lib/missions.ts). */
@@ -42,6 +42,7 @@ const MISSION_CHIPS: MissionChip[] = [
   { slug: 'glass-cockpit', label: 'Glass cockpit', icon: Compass },
   { slug: 'tailwheel', label: 'Tailwheel', icon: Compass },
   { slug: 'low-time', label: 'Low time', icon: Compass },
+  { slug: 'experimental', label: 'Experimental', icon: Compass },
 ]
 
 const MAX_MAKE_CHIPS = 5
