@@ -68,6 +68,7 @@ export async function createPartnership(formData: FormData) {
 
   const ratingsRaw = formData.get('ratings_required') as string
   const ratings = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
+  const photoUrls = (formData.getAll('photo_url') as string[]).filter(Boolean)
 
   // The post form now asks only for the ICAO (frictionless) — derive the airport
   // name / city / state from the authoritative `airports` table so the location is
@@ -106,6 +107,10 @@ export async function createPartnership(formData: FormData) {
     contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
     poster_id: user.id,
+    images: photoUrls.length > 0 ? photoUrls : [],
+    // Real user uploads are not placeholders — clear the flag so the gallery
+    // shows them without the "Not actual plane photo" badge and OG uses them.
+    ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
   }
 
   const { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()

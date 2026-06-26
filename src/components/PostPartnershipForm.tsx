@@ -6,6 +6,7 @@ import { createPartnership, generatePartnershipDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
+import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex']
@@ -166,6 +167,15 @@ export default function PostPartnershipForm() {
             <p className="mt-1 text-xs text-slate-400">Optional — helps verify the aircraft, but leave it blank if you'd rather not.</p>
           </div>
         </div>
+      </section>
+
+      {/* Photos — optional, but dramatically improve listing quality. */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <SectionHeader>Photos <span className="text-xs font-normal text-slate-400">(optional)</span></SectionHeader>
+        <p className="mb-3 text-xs text-slate-500">
+          Add up to 5 photos of the aircraft. Real photos make your listing far more compelling.
+        </p>
+        <PartnershipPhotoUpload />
       </section>
 
       {/* Listing content — moved up so the headline + description (what pilots read
