@@ -94,6 +94,12 @@ function parseCategory(html, make) {
     const year = extractYear(title, desc)
     const model = extractModel(title, make)
 
+    // Extract listing photos from block. Barnstormers embeds thumbnails directly
+    // in category-page blocks for listings that have uploaded photos. Logos
+    // (/media/logos/) and banner ads (/media/barnbann/) are filtered out.
+    const imgMatches = [...block.matchAll(/<img[^>]+src=["']([^"']*media\/listing_images[^"']+)["']/gi)]
+    const images = imgMatches.map(m => m[1].replace(/\?[^"']*$/, '')).filter(Boolean)
+
     rows.push({
       source_id: sourceId,
       source_url: sourceUrl,
@@ -106,6 +112,7 @@ function parseCategory(html, make) {
       price_text: priceText ?? null,
       location: location ?? null,
       state: state ?? null,
+      images: images.length > 0 ? images : [],
     })
   }
   return rows
