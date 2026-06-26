@@ -819,3 +819,46 @@ Do not invent facts not present in the prompt; if key details are missing, use n
   if (!f.title || !f.description) throw new Error('Incomplete draft generated.')
   return { title: f.title.slice(0, 200), description: f.description }
 }
+
+export async function generateAircraftDraft(prompt: string): Promise<{ title: string; description: string }> {
+  await checkAiDraftAccess()
+  const text = prompt.trim()
+  if (!text) throw new Error('Prompt is required.')
+  if (text.length > 2000) throw new Error('Prompt is too long.')
+
+  const client = new Anthropic()
+  const res = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: `You help pilots and aircraft owners write "Aircraft for Sale" listings for ClubHanger, an aircraft marketplace.
+
+Given the seller's stream-of-consciousness notes about their aircraft, produce:
+1. title: A concise, specific listing title (max 120 chars) — include year + make + model and the single most compelling detail (e.g. avionics suite, low hours, fresh annual). Example: "2006 Cessna 182T Skylane — G1000, 2,450 TTAF, Fresh Annual".
+2. description: A compelling 150–300 word write-up covering the aircraft (year, make, model, avionics, engine/prop times, paint/interior condition, damage history if any), maintenance highlights (annual, recent work), and any extras or reasons for selling. End with a brief "Why you'll love it" sentence.
+
+Do not invent facts not present in the prompt; if key details are missing, use natural placeholders like "[X]-hour engine." Write in a direct, informative seller voice — factual and welcoming.`,
+    tools: [
+      {
+        name: 'draft_listing',
+        description: 'Output the drafted listing title and description.',
+        input_schema: {
+          type: 'object' as const,
+          properties: {
+            title: { type: 'string', description: 'Concise listing title, max 120 characters' },
+            description: { type: 'string', description: 'Listing description, 150–300 words, seller voice' },
+          },
+          required: ['title', 'description'],
+          additionalProperties: false,
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'draft_listing' },
+    messages: [{ role: 'user', content: text }],
+  })
+
+  const saleBlock = res.content.find((b) => b.type === 'tool_use')
+  if (!saleBlock || saleBlock.type !== 'tool_use') throw new Error('No draft generated.')
+  const sale = saleBlock.input as { title: string; description: string }
+  if (!sale.title || !sale.description) throw new Error('Incomplete draft generated.')
+  return { title: sale.title.slice(0, 200), description: sale.description }
+}
