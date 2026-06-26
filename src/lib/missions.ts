@@ -177,6 +177,39 @@ export const MISSIONS: Mission[] = [
     ],
     filters: { max_tt: '1500' },
   },
+  {
+    slug: 'experimental',
+    label: 'Experimental',
+    h1: 'Experimental Aircraft for Sale',
+    metaTitle: 'Experimental Aircraft for Sale | ClubHanger',
+    metaDescription:
+      'Browse experimental amateur-built and kit-built aircraft for sale — Van\'s RV, CubCrafters, Kitfox, Zenith, and more. Aggregated from across the web.',
+    blurb: 'Amateur-built and kit aircraft — Van\'s RV, CubCrafters, Kitfox, and more.',
+    intro: [
+      'Experimental Amateur-Built is an FAA certificate category for aircraft built from kits or scratch by individual builders rather than certified factories. It is the largest and fastest-growing part of general aviation by new registrations: Van\'s Aircraft RV series alone has produced more than ten thousand flying examples, and the category also includes CubCrafters EX and FX models, Kitfox, Zenith, Rans, Glastar, and hundreds of other designs. Many are powered by the same Lycoming and Continental engines found in certified aircraft; others run Rotax or even turbine powerplants that would never pass certified-category approval.',
+      'The ownership case for experimental aircraft is built around two advantages: flexibility and maintenance access. Under FAR Part 43, the original builder of an amateur-built aircraft may obtain a Repairman Certificate and perform essentially all of their own maintenance and inspections — a benefit that can cut annual costs dramatically compared to taking a certified aircraft to an A&P for every squawk. Experimental aircraft can also run non-certified avionics such as the Garmin G3X or MGL glass suites at a fraction of the certified-equipment price, and they can be modified without an STC. The trade-off is that the aircraft cannot be used commercially, and insurance underwriters price the category somewhat differently from certified makes.',
+      'The listings below are the aircraft in our inventory whose title or description includes the word "experimental." This captures the majority of experimental-category aircraft — most classified listings note the category in the title or body — but always confirm on the source listing and review the aircraft\'s airworthiness certificate. For a used experimental, the builder\'s log is the most important document: it records the entire construction with photos, signatures, and inspection sign-offs, and its completeness tells you a great deal about how carefully the aircraft was built.',
+    ],
+    faqs: [
+      {
+        q: 'What is an experimental amateur-built aircraft?',
+        a: 'It is an aircraft certificated by the FAA under the Experimental Amateur-Built category, meaning it was built from a kit or plans by an individual rather than a certified manufacturer. The category covers a vast range — from two-seat sport planes like Van\'s RV-7 to four-seat cross-country aircraft like the RV-10 or CubCrafters Carbon Cub FX. The aircraft carries an "Experimental" airworthiness certificate rather than a Standard one and cannot be operated commercially.',
+      },
+      {
+        q: 'What is a builder\'s log and why does it matter?',
+        a: 'The builder\'s log is the construction record the builder maintained throughout the build — photos, notes, and inspection sign-offs at each major stage. It is the primary document that shows the aircraft was built correctly and that the builder did the majority of the work (a legal requirement for the Amateur-Built designation). A complete, well-documented log is a strong positive signal; large gaps or missing sections are a red flag to take seriously during a prepurchase inspection.',
+      },
+      {
+        q: 'Can I maintain an experimental aircraft myself?',
+        a: 'The original builder can apply for a Repairman Certificate, which allows them to perform essentially all maintenance and condition inspections on their specific aircraft. When an experimental is sold, the Repairman Certificate does not transfer — the new owner can petition for one (requiring FAA approval and a demonstration of building skills), but it is not guaranteed. That said, the A&P maintenance requirements for experimental aircraft are generally less restrictive than for certified makes, and many owners work with A&Ps who are comfortable with the category.',
+      },
+      {
+        q: 'How is buying an experimental different from buying a certified aircraft?',
+        a: 'The review process is similar — logbooks, annual condition inspection status, engine times — but the builder\'s log review is a step that does not exist for certified aircraft, and you should ideally have the inspection done by someone experienced with both the type and the experimental category. Insurance may be slightly more expensive or require more experience from the pilot, and the aircraft cannot be used for commercial operations. On the plus side, avionics and equipment options are wider and often cheaper, and maintenance costs can be lower with the right repairman arrangement.',
+      },
+    ],
+    filters: { q: 'experimental' },
+  },
 ]
 
 /** Look up a mission by slug. Returns undefined for unknown slugs (→ 404). */
