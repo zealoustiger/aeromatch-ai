@@ -179,6 +179,48 @@ export async function createSeekerListing(formData: FormData) {
   redirect(`/partnerships/seeking/${data.id}`)
 }
 
+export async function createAircraftListing(formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth?next=/aircraft/new')
+
+  const asking_price = formData.get('asking_price') ? parseInt(formData.get('asking_price') as string) : null
+  const state = ((formData.get('state') as string) || '').toUpperCase().slice(0, 2) || null
+
+  const payload = {
+    // User-posted listings live alongside scraped inventory; source distinguishes
+    // them and source_id stays null (the unique(source, source_id) constraint
+    // treats NULLs as distinct, so many user posts coexist).
+    source: 'user',
+    source_id: null,
+    source_url: null,
+    make: (formData.get('make') as string) || null,
+    model: (formData.get('model') as string) || null,
+    year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
+    registration: (formData.get('registration') as string) || null,
+    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
+    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    title: formData.get('title') as string,
+    description: (formData.get('description') as string) || null,
+    asking_price,
+    price_text: asking_price ? `$${asking_price.toLocaleString('en-US')}` : null,
+    location: (formData.get('location') as string) || null,
+    state,
+    status: 'active',
+    poster_id: user.id,
+    images: [],
+    image_is_placeholder: true,
+  }
+
+  const { data, error } = await supabase.from('aircraft_for_sale').insert(payload).select('id').single()
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/aircraft')
+  redirect(`/aircraft?posted=${data.id}`)
+}
+
 export async function joinWaitlist(email: string, searchParams: string) {
   if (!email || !email.includes('@')) {
     return { error: 'Please enter a valid email address.' }

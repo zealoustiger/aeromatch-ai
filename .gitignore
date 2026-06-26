@@ -44,3 +44,8 @@ next-env.d.ts
 # Google service-account keys (GSC) — never commit
 *gsc*key*.json
 *service-account*.json
+tests/e2e/.auth/
+/test-results/
+/playwright-report/
+/blob-report/
+/.last-run.json
