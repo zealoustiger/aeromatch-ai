@@ -32,7 +32,8 @@ const args = process.argv.slice(2)
 const arg = (k, d) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d }
 const GRADE = (arg('grade', 'A') || 'A').toUpperCase() // A | B | C | ALL
 const LIMIT = parseInt(arg('limit', '100000'), 10)
-const CONCURRENCY = Math.max(1, parseInt(arg('concurrency', '3'), 10))
+const CONCURRENCY = Math.max(1, parseInt(arg('concurrency', '2'), 10))
+const DELAY = parseInt(arg('delay', '600'), 10) // base ms between listings per worker
 const MAX_PHOTOS = parseInt(arg('max-photos', '12'), 10)
 const DRY = args.includes('--dry-run')
 const UA =
@@ -187,7 +188,7 @@ async function worker(id, queue, browser, stats) {
       stats.errors++
       log(`[w${id}] ERROR ${row.source_id}: ${String(e.message).slice(0, 100)}`)
     }
-    await sleep(400 + Math.floor(Math.random() * 600)) // be polite
+    await sleep(DELAY + Math.floor(Math.random() * 600)) // be polite — avoid tripping Cloudflare
   }
   await ctx.close()
 }

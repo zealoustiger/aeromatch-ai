@@ -116,19 +116,23 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
 
   // Fetch listing page HTML and return full-size photo URLs.
   // Hangar67 photo thumbnails: /photos/{id}/{hash}_t.jpg  → full: strip _t suffix.
+  // Photos are opportunistic — if rate-limited for >30s or the fetch times out,
+  // we return [] and rely on the next daily run to fill them in.
   const fetchPhotos = async (url) => {
     await sleep(300 + Math.floor(Math.random() * 200))
-    for (let attempt = 0; attempt < 3; attempt++) {
+    // Skip rather than freeze if the global throttle gate is backed up.
+    if (pauseUntil - Date.now() > 30_000) return []
+    for (let attempt = 0; attempt < 2; attempt++) {
       await waitForGate()
       try {
-        const html = await fetchHtml(url, { retries: 0 })
+        const html = await fetchHtml(url, { retries: 0, timeoutMs: 8000 })
         // Photos use absolute src= URLs; lazy-loaded similar-listing thumbs use data-src=.
         // Matching only src= (not data-src=) gives us just this listing's photos.
         const matches = [...html.matchAll(/<img[^>]+\bsrc=["'](https:\/\/www\.hangar67\.com\/photos\/[^"']+)["']/gi)]
         return [...new Set(matches.map(m => m[1].replace(/_t\./, '.')))]
       } catch (e) {
         if (e?.status === 429 || e?.status === 503) {
-          tripThrottle(Math.min(e.retryAfter ?? 2000 * 2 ** attempt, 30000))
+          tripThrottle(Math.min(e.retryAfter ?? 2000 * 2 ** attempt, 15000))
           continue
         }
         return []
