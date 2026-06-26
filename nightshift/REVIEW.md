@@ -1,3 +1,9 @@
+## 2026-06-26T09:00:07Z — Night Shift run: 1 cycles (PASS 0 / FAIL 1) — rate limited
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+
+- cycle produced no verdict (exit 1)
+
+
 ## 2026-06-26T08:23:36Z — Night Shift run: 1 cycles (PASS 0 / FAIL 1) — rate limited
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 
