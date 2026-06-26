@@ -41,6 +41,12 @@ async function personaListings(p: Partnership): Promise<Partnership[]> {
     const rows = (data ?? []).filter((r) => isSeedProfile(r))
     // Ensure the current listing is present and first even if the filter is sparse.
     const withSelf = rows.some((r) => r.id === p.id) ? rows : [p, ...rows]
+    // Scrub synthetic demo contacts so they never reach the PartnershipCard client
+    // payload (filter above already used contact_email, so scrub after).
+    for (const r of withSelf) {
+      r.contact_email = ''
+      r.contact_phone = null
+    }
     return withSelf
   } catch {
     return [p]

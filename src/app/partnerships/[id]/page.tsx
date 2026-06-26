@@ -124,6 +124,14 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const seed = isSeedProfile(p)
   const persona = seed ? personaFromPartnership(p) : null
 
+  // Scrub the synthetic demo contact so it never reaches the page payload / client
+  // props (seed personas are contacted on-site only). Keeps the "real member"
+  // surface clean even in view-source; the contact card branches on `seed` anyway.
+  if (seed) {
+    p.contact_email = ''
+    p.contact_phone = null
+  }
+
   // Fetch the current user's saved row for this partnership so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
   // (b) render the note editor if the user has saved this listing.
