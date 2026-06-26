@@ -1,0 +1,12 @@
+# /etc/systemd/system/nightshift-harvest.timer
+# Fires the photo harvest at 07:45 Pacific — after the 06:40 daily scrape (and the
+# 07:15 digest), so the day's newly-scraped hidden hangar67 listings get photos.
+[Unit]
+Description=Fire the ClubHanger Night Shift hangar67 photo harvest
+
+[Timer]
+OnCalendar=*-*-* 07:45:00 America/Los_Angeles
+Persistent=false
+
+[Install]
+WantedBy=timers.target

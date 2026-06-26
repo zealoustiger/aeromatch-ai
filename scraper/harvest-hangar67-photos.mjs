@@ -23,7 +23,6 @@
  * Env (.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 import os from 'node:os'
-import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
 import { loadEnvLocal } from './lib/ingest-core.mjs'
 
@@ -316,7 +315,9 @@ async function main() {
   // Steady heartbeat even if a worker is mid-listing (so "running" stays fresh).
   const heartbeat = setInterval(() => updateRun(stats), 15000)
 
-  const browser = USE_UNLOCKER ? null : await chromium.launch({ headless: true })
+  // Playwright is only needed for the local-browser path — lazy-load it so the
+  // Web Unlocker path (e.g. on the VPS) has zero browser dependency.
+  const browser = USE_UNLOCKER ? null : await (await import('playwright')).chromium.launch({ headless: true })
   try {
     await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => worker(i + 1, queue, browser, stats)))
   } finally {
