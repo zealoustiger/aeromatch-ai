@@ -79,6 +79,9 @@ export default function PostAircraftForm() {
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
+  const [isLookingUp, setIsLookingUp] = useState(false)
+  const [lookupStatus, setLookupStatus] = useState<string | null>(null)
+
   function handleGenerate() {
     setAiError(null)
     startGenerating(async () => {
@@ -101,6 +104,44 @@ export default function PostAircraftForm() {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
       }
     })
+  }
+
+  async function handleLookup() {
+    const form = formRef.current
+    if (!form) return
+    const regInput = form.querySelector<HTMLInputElement>('[name="registration"]')
+    const nRaw = regInput?.value.trim() ?? ''
+    if (!nRaw) return
+    setIsLookingUp(true)
+    setLookupStatus(null)
+    try {
+      const res = await fetch(`/api/faa-lookup?n=${encodeURIComponent(nRaw)}`)
+      const data = await res.json()
+      if (data.found) {
+        const makeSelect = form.querySelector<HTMLSelectElement>('[name="make"]')
+        const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
+        const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
+        if (makeSelect && data.make) {
+          makeSelect.value = data.make
+          makeSelect.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        if (modelInput && data.model) {
+          modelInput.value = data.model
+          modelInput.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        if (yearInput && data.year) {
+          yearInput.value = String(data.year)
+          yearInput.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        setLookupStatus(`Found: ${[data.year, data.make, data.model].filter(Boolean).join(' ')}`)
+      } else {
+        setLookupStatus('Not found — fill in manually')
+      }
+    } catch {
+      setLookupStatus('FAA lookup unavailable — fill in manually')
+    } finally {
+      setIsLookingUp(false)
+    }
   }
 
   return (
@@ -132,7 +173,22 @@ export default function PostAircraftForm() {
           </div>
           <div>
             <Label>N-Number (Registration)</Label>
-            <Input name="registration" placeholder="e.g. N12345" className="font-mono uppercase" />
+            <div className="flex gap-2">
+              <Input name="registration" placeholder="e.g. N12345" className="font-mono uppercase" />
+              <button
+                type="button"
+                onClick={handleLookup}
+                disabled={isLookingUp}
+                className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                {isLookingUp ? '…' : 'Look up →'}
+              </button>
+            </div>
+            {lookupStatus && (
+              <p className={cn('mt-1 text-xs', lookupStatus.startsWith('Found') ? 'text-green-600' : 'text-slate-500')}>
+                {lookupStatus}
+              </p>
+            )}
           </div>
           <div>
             <Label>Total Time (TTAF, hrs)</Label>
