@@ -188,6 +188,13 @@ export default async function AircraftPage({
           <Suspense>
             <SaveSearchButton basePath="/aircraft" />
           </Suspense>
+          <Link
+            href="/aircraft/new"
+            className="inline-flex items-center gap-1.5 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+          >
+            <Plane className="h-4 w-4" />
+            Sell your aircraft
+          </Link>
         </div>
       </div>
 

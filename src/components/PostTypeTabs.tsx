@@ -1,18 +1,17 @@
 import Link from 'next/link'
-import { Handshake, UserSearch } from 'lucide-react'
+import { Handshake, UserSearch, Plane } from 'lucide-react'
 import type { ComponentType } from 'react'
 
-export type PostType = 'partnership' | 'seeking'
+export type PostType = 'partnership' | 'seeking' | 'aircraft'
 
-// The posting flows that actually exist today. A third "post a plane for sale"
-// flow is on the backlog but has no page yet — adding it here would 404, so it's
-// deliberately omitted until that route ships.
+// The posting flows that exist today.
 const TABS: {
   key: PostType
   label: string
   href: string
   icon: ComponentType<{ className?: string }>
 }[] = [
+  { key: 'aircraft', label: 'Sell an aircraft', href: '/aircraft/new', icon: Plane },
   { key: 'partnership', label: 'Post a partnership', href: '/partnerships/new', icon: Handshake },
   { key: 'seeking', label: 'Seeking a partnership', href: '/partnerships/seeking/new', icon: UserSearch },
 ]
@@ -27,7 +26,7 @@ export default function PostTypeTabs({ active }: { active: PostType }) {
   return (
     <nav
       aria-label="What do you want to post?"
-      className="mb-6 inline-flex w-full max-w-md gap-1 rounded-full border border-[var(--ch-border)] bg-white p-1 shadow-sm sm:w-auto"
+      className="mb-6 inline-flex w-full max-w-xl gap-1 rounded-full border border-[var(--ch-border)] bg-white p-1 shadow-sm sm:w-auto"
     >
       {TABS.map((t) => {
         const isActive = t.key === active
