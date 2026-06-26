@@ -248,12 +248,16 @@ export default function AircraftSaleCard({
 
           {/* Footer */}
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
-            {p.location && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                <span className="font-medium text-slate-600">{p.location}</span>
-              </span>
-            )}
+            <span className="flex items-center gap-1">
+              {p.location ? (
+                <>
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="font-medium text-slate-600">{p.location}</span>
+                </>
+              ) : (
+                <span className="text-slate-300">—</span>
+              )}
+            </span>
             {p.ttaf != null && (
               <span className="flex items-center gap-1">
                 <Gauge className="h-3.5 w-3.5" />
