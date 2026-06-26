@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
 import { createAircraftListing, generateAircraftDraft } from '@/app/actions'
+import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
 
@@ -142,6 +143,15 @@ export default function PostAircraftForm() {
             <Input name="smoh" type="number" placeholder="e.g. 600" min={0} />
           </div>
         </div>
+      </section>
+
+      {/* Photos — optional, but dramatically improve listing quality. */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <SectionHeader>Photos <span className="text-xs font-normal text-slate-400">(optional)</span></SectionHeader>
+        <p className="mb-4 text-sm text-slate-500">
+          Add up to 5 photos of the aircraft. Real photos make your listing far more compelling.
+        </p>
+        <PartnershipPhotoUpload endpoint="/api/upload-aircraft-photo" />
       </section>
 
       {/* Listing content */}
