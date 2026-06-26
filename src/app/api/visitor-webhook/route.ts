@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 403 })
   }
 
-  let body: { sessionId?: string; event?: string; path?: string; props?: Record<string, unknown> }
+  let body: { sessionId?: string; event?: string; path?: string; referrer?: string | null; props?: Record<string, unknown> }
   try {
     body = await request.json()
   } catch {
@@ -111,6 +111,15 @@ export async function POST(request: NextRequest) {
   const event = body.event || '$pageview'
   const path = body.path || '/'
   const props = body.props || {}
+  const rawReferrer = body.referrer || null
+  // Strip to just the hostname, and ignore self-referrals (internal navigation).
+  const referrerHost = (() => {
+    if (!rawReferrer) return null
+    try {
+      const host = new URL(rawReferrer).hostname.replace(/^www\./, '')
+      return host && !host.includes('clubhanger') ? host : null
+    } catch { return null }
+  })()
   if (!sessionId || boring(path)) return NextResponse.json({ ok: true })
 
   // We no longer drop bot hits — they're tagged below and still posted, so the
@@ -153,9 +162,10 @@ export async function POST(request: NextRequest) {
       const provider = org ? org.replace(/,?\s*(LLC|Inc\.?|Ltd\.?|GmbH|S\.?A\.?S?\.?|B\.?V\.?).*$/i, '').trim() : null
       const botReason = cloudBot ? provider || 'datacenter' : uaBot ? 'bot user-agent' : null
 
+      const via = referrerHost ? ` · via ${referrerHost}` : ''
       const headline = isBot
         ? `🤖 *Bot* — ${botReason} · ${loc} · ${device}`
-        : `🟢 *New visitor* — ${loc} · ${device}`
+        : `🟢 *New visitor* — ${loc} · ${device}${via}`
       const root = await slack('chat.postMessage', {
         channel: CHANNEL,
         text: `${headline}\n${isBot ? 'hit' : 'landed on'} \`${path}\``,

@@ -23,7 +23,13 @@ export function notifyVisitor(event: string, props?: Record<string, unknown>) {
     fetch('/api/visitor-webhook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: getSessionId(), event, path: location.pathname, props }),
+      body: JSON.stringify({
+        sessionId: getSessionId(),
+        event,
+        path: location.pathname,
+        referrer: document.referrer || null,
+        props,
+      }),
       keepalive: true,
     }).catch(() => {})
   } catch {
