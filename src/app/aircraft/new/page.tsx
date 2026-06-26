@@ -19,15 +19,17 @@ export default async function NewAircraftPage() {
   if (!user) redirect('/auth?next=/aircraft/new')
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
-      <PostTypeTabs active="aircraft" />
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Sell Your Aircraft</h1>
-        <p className="mt-2 text-slate-500">
-          List your aircraft for sale for free. Reach pilots and buyers across the country.
-        </p>
+    <div className="ch-surface min-h-screen">
+      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+        <PostTypeTabs active="aircraft" />
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Sell Your Aircraft</h1>
+          <p className="mt-2 text-slate-500">
+            List your aircraft for sale for free. Reach pilots and buyers across the country.
+          </p>
+        </div>
+        <PostAircraftForm />
       </div>
-      <PostAircraftForm />
     </div>
   )
 }

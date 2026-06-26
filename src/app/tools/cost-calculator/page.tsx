@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 
 export default function CostCalculatorPage() {
   return (
+    <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -55,6 +56,7 @@ export default function CostCalculatorPage() {
           .
         </p>
       </div>
+    </div>
     </div>
   )
 }

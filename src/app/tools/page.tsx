@@ -65,6 +65,7 @@ export default function ToolsHubPage() {
   }
 
   return (
+    <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <Breadcrumbs
         items={[
@@ -113,6 +114,7 @@ export default function ToolsHubPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
       />
+    </div>
     </div>
   )
 }
