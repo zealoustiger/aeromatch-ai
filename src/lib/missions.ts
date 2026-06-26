@@ -342,6 +342,39 @@ export const MISSIONS: Mission[] = [
     ],
     filters: { q: 'float' },
   },
+  {
+    slug: 'aerobatic',
+    label: 'Aerobatic',
+    h1: 'Aerobatic Aircraft for Sale',
+    metaTitle: 'Aerobatic Aircraft for Sale | ClubHanger',
+    metaDescription:
+      'Browse aerobatic aircraft for sale — Pitts Special, Extra 300, Decathlon, Citabria, Great Lakes, and more. Purpose-built and approved aerobatic planes from across the web.',
+    blurb: 'Purpose-built and approved aerobatic aircraft for competition and recreational flight.',
+    intro: [
+      'Aerobatic aircraft are purpose-built or factory-certified for intentional flight outside normal attitudes — loops, rolls, spins, hammerheads, and the sustained inverted and negative-G maneuvers that utility-category or normal-category aircraft are not approved for. The key document is the aircraft\'s Type Certificate Data Sheet and data plate: a true aerobatic aircraft carries the "Aerobatic" category (or a combined "Normal/Utility/Aerobatic") and includes an approved G-load envelope, usually +6 G / −3 G or higher for competition types. Common types on the used market include the Pitts Special S-1S and S-2C (the benchmark of North American competition aerobatics), the Extra 300 and Extra 330 (the dominant German factory designs in IAC unlimited), the Christen Eagle (a homebuilt biplane), the American Champion Decathlon and Super Decathlon (the choice of many aerobatic instructors), the Citabria 7GCBC (a lighter, more accessible step-in), the Great Lakes 2T-1A (an open-cockpit biplane still popular on the air-show circuit), and high-end European imports like the Sukhoi Su-26 and Zivko Edge 540 that appear occasionally in the US market. Homebuilt aerobats (Steen Skybolt, Stolp Starduster) also trade regularly.',
+      'No separate FAA rating is required to fly aerobatics, but training matters enormously for safety. The International Aerobatic Club (IAC, an EAA chapter organization) offers a structured progression from primary through unlimited competition and sponsors aerobatic training at affiliated clubs across the US. FAR 91.303 prohibits aerobatics over populated areas, in controlled airspace, in Class B/C/D/E surface areas, within Federal airways, below 1,500 feet AGL, or when flight visibility is below three miles. FAR 91.307 requires a parachute for each occupant whenever intentional aerobatics are performed — this is the rule that makes aerobatic training in a two-seat aircraft straightforward (both seats carry chutes) but adds a recurring equipment cost. Upset Recovery Training (UPRT) programs, distinct from competition aerobatics, use aerobatic-capable aircraft to teach recovery from unusual attitudes and are increasingly required by airlines for commercial pilots.',
+      'Pre-purchase inspection on an aerobatic aircraft should go beyond the standard annual-equivalent check. The most important document is the airframe\'s G-load history, sometimes called a "G-log" — some owners and clubs maintain one voluntarily, though no FAR requires it. Ask the seller about the aircraft\'s competition and air-show history: hard negative-G maneuvers and sustained positive-G loads put stress on the engine mount, wing attach fittings, and control system hardware that routine cross-country flying does not. A pre-buy by an A&P experienced with the specific type (Pitts shops in particular are scattered but well-known in the aerobatic community) should include a careful control-cable and rigging inspection, a check of the inverted oil and fuel system if present, a spin-recovery check, and a close look at the engine mount and firewall. Aerobatic aircraft typically have lower airframe times than touring aircraft of the same age but can have high engine time from training use — verify time since major overhaul and the prop strike history independently.',
+    ],
+    faqs: [
+      {
+        q: 'What makes an aircraft "aerobatic certified"?',
+        a: 'An aircraft is aerobatic certified when its Type Certificate Data Sheet (TCDS) includes the Aerobatic category, which requires a positive-G limit of at least +6 G and a negative-G limit at or below −3 G for the certificated weight. The data plate on the aircraft identifies the category. Normal-category aircraft (certified to +3.8 G / −1.52 G) and utility-category aircraft (+4.4 G / −1.76 G) are NOT approved for intentional aerobatics — spins, loops, and rolls in those aircraft are an illegal and potentially fatal misuse of the design. Always check the data plate and TCDS before performing aerobatics in an unfamiliar aircraft.',
+      },
+      {
+        q: 'Do I need a special FAA rating to fly aerobatics?',
+        a: 'No separate rating is required, but the FAA imposes location and equipment rules. FAR 91.303 prohibits aerobatics over populated areas, in controlled airspace surface areas, within federal airways, below 1,500 feet AGL, or in less than 3-mile visibility. FAR 91.307 requires a parachute for each occupant when intentional aerobatics are performed. Practical aerobatic training through the International Aerobatic Club (IAC) or an experienced aerobatic instructor is the standard path — the IAC offers a structured curriculum from Primary (basic loops, rolls) through Unlimited (any maneuver, unrestricted sequence). Training is a safety necessity rather than a regulatory formality.',
+      },
+      {
+        q: 'What are the most popular aerobatic aircraft on the used market?',
+        a: 'The Pitts Special S-1S (single-seat biplane) and S-2C (two-seat factory version) are the most iconic North American aerobatic designs and the benchmark for IAC competition. The Extra 300 and 330 series are the dominant European types at intermediate and unlimited levels. For training and entry-level aerobatics, the American Champion Decathlon and Super Decathlon are the most common two-seat aerobatic trainers in the US — comfortable, honest, and well-supported. The Citabria 7GCBC is a step below the Decathlon in G-limit but widely available and a good introduction. Great Lakes 2T-1A biplanes remain popular on the air-show circuit. At the high end, the Zivko Edge 540 and Sukhoi Su-26 appear occasionally and offer near-unlimited G-envelope performance.',
+      },
+      {
+        q: 'What should I inspect before buying an aerobatic aircraft?',
+        a: 'Start with the data plate and TCDS to confirm the Aerobatic category is certificated. Ask for the G-log (voluntary, but many competition aircraft have one) and the full competition and air-show history — hard negative-G maneuvers and repeated high-G pulls stress the engine mount, wing attach fittings, and control hardware beyond what a standard annual catches. Have an A&P experienced with the specific type (Pitts, Extra, and Decathlon each have specialist shops) inspect control-cable rigging, the inverted fuel and oil system if equipped, the prop for strike history, and the engine mount and firewall. Verify time since major overhaul and confirm no prop strikes are hiding undisclosed engine-shock-load history in the logbooks.',
+      },
+    ],
+    filters: { q: 'aerobatic' },
+  },
 ]
 
 /** Look up a mission by slug. Returns undefined for unknown slugs (→ 404). */

@@ -47,6 +47,7 @@ const MISSION_CHIPS: MissionChip[] = [
   { slug: 'stol', label: 'STOL / Backcountry', icon: Compass },
   { slug: 'turboprop', label: 'Turboprop', icon: Compass },
   { slug: 'floatplane', label: 'Floatplane', icon: Compass },
+  { slug: 'aerobatic', label: 'Aerobatic', icon: Compass },
 ]
 
 const MAX_MAKE_CHIPS = 5
