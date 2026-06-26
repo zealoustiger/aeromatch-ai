@@ -40,6 +40,16 @@ const DRY = args.includes('--dry-run')
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
+// Bright Data Web Unlocker: when a token is set, we fetch listing HTML through
+// Bright Data's API (which solves Cloudflare server-side and uses residential
+// exits) instead of driving a local browser. This needs NO local browser and a
+// clean residential IP, so it can run unattended — including on the VPS.
+//   BRIGHTDATA_API_TOKEN = <account API token>
+//   BRIGHTDATA_ZONE      = <your Web Unlocker zone name>  (default: web_unlocker1)
+const BD_TOKEN = process.env.BRIGHTDATA_API_TOKEN || ''
+const BD_ZONE = process.env.BRIGHTDATA_ZONE || 'web_unlocker1'
+const USE_UNLOCKER = !!BD_TOKEN
+
 const supa = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
@@ -168,6 +178,47 @@ async function extractPhotos(page, row) {
   return choosePhotos(sid, og, srcs).slice(0, MAX_PHOTOS)
 }
 
+// ── Bright Data Web Unlocker path (no local browser; Cloudflare solved by BD) ──
+async function fetchUnlocker(url, retries = 2) {
+  let lastErr
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch('https://api.brightdata.com/request', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${BD_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zone: BD_ZONE, url, format: 'raw' }),
+      })
+      if (res.ok) return res.text()
+      lastErr = new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 120)}`)
+    } catch (e) {
+      lastErr = e
+    }
+    await sleep(1500 * (i + 1))
+  }
+  throw lastErr
+}
+
+// Parse Unlocker-returned HTML for og:image + <img> sources (regex; no DOM).
+function parseHtmlForImages(html) {
+  const ogm =
+    html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
+  const srcs = []
+  for (const m of html.matchAll(/<img\b[^>]*?\b(?:src|data-src)=["']([^"']+)["']/gi)) srcs.push(m[1])
+  return { og: ogm ? ogm[1] : '', srcs }
+}
+
+async function discoverUnlocker(row) {
+  const html = await fetchUnlocker(row.source_url)
+  const { og, srcs } = parseHtmlForImages(html)
+  return choosePhotos(String(row.source_id), og, srcs).slice(0, MAX_PHOTOS)
+}
+
+// Single entry point: Web Unlocker API when a token is set, else the local browser.
+async function getPhotos(row, page) {
+  return USE_UNLOCKER ? discoverUnlocker(row) : extractPhotos(page, row)
+}
+
 const okImage = async (u) => {
   try {
     const r = await fetch(u, { headers: { 'User-Agent': UA, Range: 'bytes=0-0' } })
@@ -189,14 +240,15 @@ async function pickServable(photos) {
 }
 
 async function worker(id, queue, browser, stats) {
-  let ctx = await makeContext(browser)
-  let page = await ctx.newPage()
+  // Browser only in local-browser mode; Web Unlocker mode needs no browser.
+  let ctx = USE_UNLOCKER ? null : await makeContext(browser)
+  let page = ctx ? await ctx.newPage() : null
   for (;;) {
     if (stats.aborted) break
     const row = queue.shift()
     if (!row) break
     try {
-      const photos = await extractPhotos(page, row)
+      const photos = await getPhotos(row, page)
       const servable = await pickServable(photos)
       if (servable.length) {
         stats.withPhotos++
@@ -218,22 +270,23 @@ async function worker(id, queue, browser, stats) {
       stats.errors++
       log(`[w${id}] ERROR ${row.source_id}: ${String(e.message).slice(0, 100)}`)
       // A crashed/closed context kills every remaining listing in this worker —
-      // rebuild it so an unattended run survives a chromium hiccup.
-      if (/closed|crash|Target page|Target closed/i.test(String(e.message))) {
+      // rebuild it so an unattended run survives a chromium hiccup (browser mode).
+      if (!USE_UNLOCKER && /closed|crash|Target page|Target closed/i.test(String(e.message))) {
         try { await ctx.close() } catch {}
         try { ctx = await makeContext(browser); page = await ctx.newPage() } catch { break }
       }
     }
     stats.lastId = row.source_id
     await updateRun(stats)
-    await sleep(DELAY + Math.floor(Math.random() * 600)) // be polite — avoid tripping Cloudflare
+    await sleep(DELAY + Math.floor(Math.random() * 600)) // be polite
   }
-  try { await ctx.close() } catch {}
+  if (ctx) { try { await ctx.close() } catch {} }
 }
 
 async function main() {
   const rows = await loadHidden()
-  log(`Hangar67 photo harvest — grade ${GRADE}: ${rows.length} hidden listings${DRY ? ' (DRY RUN)' : ''}, concurrency ${CONCURRENCY}, delay ${DELAY}ms`)
+  log(`Hangar67 photo harvest — grade ${GRADE}: ${rows.length} hidden listings${DRY ? ' (DRY RUN)' : ''}, ` +
+      `mode ${USE_UNLOCKER ? `Bright Data Web Unlocker (zone ${BD_ZONE})` : 'local browser'}, concurrency ${CONCURRENCY}, delay ${DELAY}ms`)
   if (!rows.length) return
   const queue = [...rows]
   const stats = { total: rows.length, done: 0, withPhotos: 0, noPhotos: 0, errors: 0, totalPhotos: 0, lastId: null, runId: null, aborted: false }
@@ -263,12 +316,12 @@ async function main() {
   // Steady heartbeat even if a worker is mid-listing (so "running" stays fresh).
   const heartbeat = setInterval(() => updateRun(stats), 15000)
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = USE_UNLOCKER ? null : await chromium.launch({ headless: true })
   try {
     await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => worker(i + 1, queue, browser, stats)))
   } finally {
     clearInterval(heartbeat)
-    try { await browser.close() } catch {}
+    if (browser) { try { await browser.close() } catch {} }
   }
   await updateRun(stats, { status: 'done', finished_at: new Date().toISOString() })
   log(
