@@ -1,3 +1,12 @@
+## 2026-06-26T13:16:24Z — Night Shift run: 4 cycles (PASS 4 / FAIL 0) — night ended
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+
+- PASS — aircraft-threads-in-inbox — messages inbox and thread view now surface aircraft Message seller conversations (query fix so aircraft_for_sale threads appear and show list
+- PASS — aircraft-airport-filter — Added Near airport (ICAO) filter to `/aircraft` browse: type KSFO, get California listings; active chip appears; server-side ICAO→state looku
+- PASS — airport-autocomplete-filter — buyers can now type a city, airport name, or IATA code in the browse filters instead of memorizing ICAO codes; new `AirportAutocompleteInpu
+- PASS — aerobatic-mission-page — new `/aircraft/mission/aerobatic` editorial page (10th mission; Pitts/Extra 300/Decathlon buyer guidance + FAQPage JSON-LD + Aerobatic chip on `
+
+
 ## 2026-06-26T09:00:07Z — Night Shift run: 1 cycles (PASS 0 / FAIL 1) — rate limited
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 
