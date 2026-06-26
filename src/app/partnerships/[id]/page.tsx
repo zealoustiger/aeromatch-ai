@@ -371,6 +371,7 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 contactEmail={p.contact_email}
                 contactPhone={p.contact_phone}
                 contactMethod={p.contact_method}
+                posterId={p.poster_id}
               />
             </div>
 
