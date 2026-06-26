@@ -26,7 +26,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export const ROOT = join(__dirname, '..', '..')
 
 export const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+// Full browser header set — reduces Cloudflare/WAF blocking on VPS IPs.
+// Only User-Agent was previously sent; missing Accept/Sec-Fetch headers trigger
+// 520s (Cloudflare) and 405s on sites that fingerprint request headers.
+export const BROWSER_HEADERS = {
+  'User-Agent': UA,
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'max-age=0',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Sec-Ch-Ua': '"Chromium";v="120", "Google Chrome";v="120", "Not-A.Brand";v="99"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"macOS"',
+}
 
 // ── env ───────────────────────────────────────────────────────────────────────
 export function loadEnvLocal() {
@@ -67,7 +86,7 @@ export async function fetchHtml(url, { retries = 2, timeoutMs = 20000 } = {}) {
   for (let i = 0; i <= retries; i++) {
     try {
       const signal = typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(timeoutMs) : undefined
-      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal })
+      const res = await fetch(url, { headers: BROWSER_HEADERS, signal })
       if (res.ok) return res.text()
       const err = new Error(`HTTP ${res.status}`)
       err.status = res.status
