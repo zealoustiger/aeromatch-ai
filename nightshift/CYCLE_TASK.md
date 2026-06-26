@@ -26,17 +26,22 @@ entries** (what's already done + the last lane). Optionally glance at the scoreb
 ## 1. Pick THIS cycle's ONE item (allocation policy from GOAL.md)
 
 - **Blocker first (uncapped):** if the most recent CHANGELOG entry is a **FAIL**, or there's
-  a known broken page / console error / CWV regression → fix that. Otherwise:
-- **Weight `[want]` over `[goal]` ~3:1** (≈75% features / 25% SEO — the `roadmap:goal = 3:1`
-  knob in GOAL.md): look at the recent *non-bug* CHANGELOG entries — pull `[goal]` only when
-  the last **3** non-bug cycles were all `[want]` (≈ every 4th non-bug cycle is SEO/page work);
-  otherwise pull `[want]`. Pick the highest-value item in that lane (P1 first; `[P1][want]`
-  preempts). `[goal]` = a `[goal]` backlog item or an SEO experiment you invent (and append to
-  BACKLOG as `[agent]`); `[want]` = the top human-wanted feature/fix.
-- **If the chosen lane is empty, fall through to the other; if both human lanes are empty,
-  default to `[goal]`** (invent the next SEO experiment). The backlog never truly empties.
-- Obey GOAL.md guardrails (no thin/doorway pages, no analytics gaming, never regress Core
-  Web Vitals). Record the lane + item in the CHANGELOG `Goal:` line.
+  a known broken page / console error / CWV regression → fix that. A broken **post or signup
+  flow** is a P0 blocker (it directly defeats the activation goal). Otherwise:
+- **ACTIVATION pivot (2026-06-26):** pull the highest-value **`[P1]`** slice from
+  **"⭐ ACTIVATION (pivot focus)"** in BACKLOG.md, and **rotate across the three pillars**
+  (frictionless posting / frictionless signup / proprietary buyer-analysis) so none stalls —
+  check the recent CHANGELOG `Goal:` lines and pick a pillar that hasn't gone in the last 1-2
+  cycles. `[goal]` now means "advances an activation pillar," NOT SEO.
+- **SEO is PARKED:** do NOT invent SEO experiments or build new programmatic page families.
+  The `[PARKED]` sections in BACKLOG are off-limits except to fix a `[bug]` (broken canonical,
+  404 on an indexed page, busted sitemap, CWV/structured-data regression).
+- **If the activation queue is somehow empty,** invent the next activation slice (tag
+  `[agent][goal]` + which pillar + the friction it removes), append to BACKLOG, build the
+  smallest valuable increment. The backlog never truly empties.
+- Obey GOAL.md guardrails (honesty-gated analysis — never fabricate; don't remove data
+  integrity when removing posting friction; never regress Core Web Vitals/mobile). Record the
+  pillar + item in the CHANGELOG `Goal:` line.
 
 If — and only if — you are certain there is genuinely nothing safe to do, output exactly
 `ABORT — none — nothing eligible` and stop.

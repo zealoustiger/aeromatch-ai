@@ -35,16 +35,32 @@ Work like a tight PM → Eng → QA → PM loop, all in this single run.
 - **Read `nightshift/FEEDBACK.md`** — the human's reactions to the morning report. Treat it as top steering: honor any "kill / deprioritize / fix-this-first" directives even if they aren't in the backlog yet. (Claude normally converts feedback into tagged BACKLOG items; if fresh feedback isn't reflected there, follow the feedback.)
 - If the most recent CHANGELOG entry was a **QA failure**, your task this cycle is to fix it — do not start something new.
 
-### 2. PM — pick & spec (goal-driven)
-The north star is **GOAL.md: maximize pageviews** (lever: SEO), but allocate by lane — the metric is the tiebreaker, not the dictator. Pick exactly ONE task using **GOAL.md's allocation policy**:
+### 2. PM — pick & spec (goal-driven) — ACTIVATION pivot 2026-06-26
+The north star is **GOAL.md: ACTIVATION** — three pillars: frictionless listing posting,
+frictionless signup/auth, and proprietary honest buyer-analysis on listing pages. **SEO is
+PARKED.** Pick exactly ONE task using **GOAL.md's allocation policy**:
 
-1. **Blockers first, uncapped.** If the last cycle FAILED, or there's a known broken page / console error / Core Web Vitals regression → fix it this cycle. A broken site repels the traffic you're growing.
-2. **Else alternate `[want]` ↔ `[goal]` ~1:1.** Check the most recent *non-bug* entry in `CHANGELOG.md`: if it pulled the **`[want]`** lane (a human-wanted feature), do **`[goal]`** this cycle; if it pulled **`[goal]`** (SEO), do **`[want]`**. Within the chosen lane pick the highest-value item (P1 first; a `[P1][want]` always preempts). Tag inference for untagged items: SEO/content → `[goal]`, "BUG/broken" → `[bug]`, any other feature → `[want]`.
-   - **`[goal]` lane** = a `[goal]` backlog item OR an SEO experiment you invent (new quality indexable page family — make+model, model, city, airport; better titles/meta/schema/canonical; internal linking; sitemap; page-speed; useful content). When you invent one, append it to `BACKLOG.md` under Ideas with an `[agent]` tag + a one-line "why this grows pageviews," then build the smallest valuable slice.
-   - **`[want]` lane** = the highest-value human-wanted feature/fix in `BACKLOG.md` (bias toward what the human marked as inspiration).
-3. **If the chosen lane is empty, fall through to the other.** If both human lanes are empty → **default to `[goal]`** and invent an SEO experiment. Never idle for lack of ideas.
+1. **Blockers first, uncapped.** If the last cycle FAILED, or there's a known broken page /
+   console error / CWV regression → fix it. A broken **post or signup flow** is a P0 blocker
+   (it defeats the activation goal directly).
+2. **Else pull the highest-value `[P1]` slice from "⭐ ACTIVATION (pivot focus)"** in
+   `BACKLOG.md`, **rotating across the three pillars** so none stalls: check recent CHANGELOG
+   `Goal:` lines and pick a pillar not advanced in the last 1-2 cycles. `[goal]` now means
+   "advances an activation pillar," not SEO. Within a pillar, P1 first; `[P1]` preempts.
+   - **SEO is PARKED** — do NOT invent SEO experiments or build new programmatic page
+     families. The `[PARKED]` BACKLOG sections are off-limits **except** to fix a `[bug]`
+     (broken canonical / 404 on an indexed page / busted sitemap / CWV / structured-data).
+   - **`[want]` lane** = a human-wanted feature outside the three pillars; built when clearly
+     high-value/P1, but the pillars win ties.
+3. **If the activation queue is somehow empty,** invent the next activation slice (tag
+   `[agent][goal]` + pillar + the friction it removes), append to `BACKLOG.md`, build the
+   smallest valuable increment. Never idle for lack of ideas.
 
-**Obey GOAL.md's guardrails** — no doorway/thin/duplicate pages, no keyword stuffing, no analytics gaming, never regress Core Web Vitals/mobile. A page-count win that breaks these is a LOSS. Honesty rule: SEO lift lags weeks, so judge a `[goal]` cycle by leading indicators (new quality indexable page live + in sitemap, valid unique metadata, internal links, speed), not tonight's pageview delta.
+**Obey GOAL.md's guardrails** — analysis must be honesty-gated (never fabricate a number;
+say "not enough data"); cutting posting friction must not remove data integrity; never
+regress Core Web Vitals/mobile. **Honesty rule:** conversions are low-volume (cold start),
+so judge a cycle by leading indicators (fields/steps removed, a gate deferred, an auth method
+added, a new honest analysis module live), not tonight's signup/post count.
 
 Write a short spec to `nightshift/specs/<UTC-timestamp>-<slug>.md` with:
 - **Goal** (one sentence)
@@ -91,7 +107,7 @@ Append one entry to `nightshift/CHANGELOG.md` (newest first). **The `Pages` line
 ## <UTC timestamp> — <PASS|FAIL> — <slug>
 - Pages: </route>, </route>   ← user-facing routes affected (required)
 - What: <one plain-language line a non-engineer can read>
-- Goal: <lever pulled toward GOAL.md (e.g. "SEO breadth: new model pages" / "perf" / "feature depth") + the pageview number from the scoreboard at orient>
+- Goal: <which activation pillar this advanced — "posting" / "signup" / "buyer-analysis" — + the slice (e.g. "posting: N-number autofill"); name the friction removed or module shipped, not a pageview number>
 - Spec: nightshift/specs/<file>
 - Verdict: <why pass/fail; QA notes>
 - Screenshots: nightshift/screenshots/<slug>/

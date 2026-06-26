@@ -53,8 +53,10 @@ leaves a stale lock that the next fire reclaims after 70 min.
 - For `nightshift/CHANGELOG.md` (it's long and grows nightly), **read only the recent tail —
   `head -40 nightshift/CHANGELOG.md`** (entries are newest-first). That's all you need for
   "what's already done / last cycle's verdict". Never read the whole CHANGELOG.
-- **Read the scoreboard once:** `node nightshift/bin/scoreboard.mjs`. This is the
-  goal (pageviews) the whole night moves. Keep it in mind when picking work.
+- **Read the scoreboard once:** `node nightshift/bin/scoreboard.mjs`. Since the 2026-06-26
+  pivot the night optimizes **ACTIVATION**, not pageviews — read the GSC funnel as *background*
+  (SEO is parked), and weight PostHog activation events (signup / *_posted / contact_initiated)
+  week-over-week. Keep the three pillars (posting / signup / buyer-analysis) in mind when picking.
 - **Token discipline (you hold these in context — don't re-read them):** after this orient,
   do NOT re-Read GOAL/RUNBOOK/FREEZE/BACKLOG mid-loop — you already have them. Each cycle, the
   only fresh read you need is the CHANGELOG **tail** (`head -15`) to see the last verdict/lane;
@@ -65,22 +67,23 @@ leaves a stale lock that the next fire reclaims after 70 min.
 Repeat until a stop condition (section 3) fires:
 
 1. **Heartbeat:** `touch /tmp/clubhanger-nightshift.drain.lock`.
-2. **Pick the next item** per **GOAL.md's allocation policy** (lanes, not greedy
-   pageview-chasing):
-   - **Blockers first, uncapped:** if the most recent CHANGELOG entry is a **FAIL**,
-     or there's a known broken page / console error / CWV regression → fix it.
-   - **Else weight `[want]` over `[goal]` ~3:1** (≈75% features / 25% SEO — the
-     `roadmap:goal = 3:1` knob in GOAL.md): look at the recent *non-bug* CHANGELOG
-     entries — pull `[goal]` only when the last **3** non-bug cycles were all `[want]`
-     (≈ every 4th non-bug cycle is SEO/page-improvement); otherwise pull `[want]`. Pick
-     the highest-value item in that lane (P1 first; `[P1][want]` preempts). `[goal]` = a
-     `[goal]` backlog item or an SEO experiment the worker invents (and appends to BACKLOG
-     `[agent]`); `[want]` = the top human-wanted feature/fix.
-   - **If the chosen lane is empty, fall through to the other; if both human lanes are
-     empty, default to `[goal]`.** The backlog never truly empties — the worker
-     generates the next SEO experiment. Only stop on the night/usage/time limits in
-     section 3. Obey GOAL.md guardrails (no thin/doorway pages, no analytics gaming,
-     never regress Core Web Vitals).
+2. **Pick the next item** per **GOAL.md's allocation policy** — ACTIVATION pivot 2026-06-26
+   (rotate pillars, not greedy metric-chasing):
+   - **Blockers first, uncapped:** if the most recent CHANGELOG entry is a **FAIL**, or
+     there's a known broken page / console error / CWV regression → fix it. A broken **post
+     or signup flow** is a P0 blocker (it defeats the activation goal directly).
+   - **Else pull the highest-value `[P1]` slice from "⭐ ACTIVATION (pivot focus)"** in
+     BACKLOG, **rotating across the three pillars** (posting / signup / buyer-analysis) so
+     none stalls — check recent CHANGELOG `Goal:` lines and pick a pillar not done in the
+     last 1-2 cycles. `[goal]` now = "advances an activation pillar," not SEO.
+   - **SEO is PARKED:** do NOT invent SEO experiments or build new programmatic page
+     families. The `[PARKED]` BACKLOG sections are off-limits except to fix a `[bug]`
+     (broken canonical / 404 on an indexed page / busted sitemap / CWV regression).
+   - **If the activation queue is somehow empty,** the worker invents the next activation
+     slice (`[agent][goal]` + pillar + friction removed) and appends to BACKLOG. The
+     backlog never truly empties. Only stop on the night/usage/time limits in section 3.
+     Obey GOAL.md guardrails (honesty-gated analysis — never fabricate; keep data integrity
+     when cutting posting friction; never regress Core Web Vitals/mobile).
    Pass the chosen lane + item to the worker so its CHANGELOG `Goal:` line records it.
 3. **Dispatch ONE worker** with the **Task tool** (a fresh subagent). Its prompt:
 

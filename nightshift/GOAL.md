@@ -1,125 +1,110 @@
 # Night Shift — North-Star Goal
 
-**Goal: maximize organic search traffic — clicks from Google.** The real metric is
-the **Google Search Console funnel: indexed → impressions → clicks**, each gating the
-next (a page can't get impressions until it's indexed, or clicks until it has
-impressions). On-site pageviews (PostHog) are a *secondary* signal — they include you,
-the team, and direct visits, so they don't tell you if SEO is working. (We optimize
-search traffic, not signups, on purpose: signups can't grow until the top of the funnel does.)
+> **PIVOT 2026-06-26 (human-set): activation over SEO.** We've already done heavy
+> on-page SEO and are now *waiting for Google to index/rank* — that lag is weeks, and
+> there is little more on-page work worth doing right now. So **SEO is PARKED** (see
+> "SEO is parked" below) and the loop's mission moves to **product activation**. The
+> previous SEO-centric goal is preserved verbatim in `GOAL-seo-parked.md` for when we
+> un-park it.
 
-**Read the current score every cycle:**
-```bash
-node nightshift/bin/scoreboard.mjs   # leads with the GSC funnel + STAGE, then on-site pageviews
-```
-The scoreboard computes a **STAGE** that tells you what to prioritize *right now*:
-- **INDEXING** (indexed ≈ 0 — where we are): get pages *indexed* — indexability, internal
-  linking, sitemap freshness, page quality, request-indexing. Do NOT just build more pages
-  Google can't index yet. (Backlinks — a human lever — accelerate indexing the most.)
-- **VISIBILITY** (indexing, few impressions): build more quality pages targeting real
-  queries; improve titles/H1s/internal links on families already showing up.
-- **CTR** (impressions but few clicks): improve titles/meta/structured data on
-  high-impression / low-click pages to win the click.
-- **SCALING**: scale what works; push almost-ranking pages (position 5-15) to page one.
+**Goal: make ClubHanger effortless to act on.** Three pillars, equal weight:
 
-Always mine the scoreboard's **top queries** for page ideas (queries you almost rank for → new pages).
-GSC + PostHog both fail soft if unconfigured (see `GSC_SETUP.md`).
+1. **Frictionless listing posting** — posting a partnership, an aircraft for sale, or a
+   pilot-seeking listing should take as few steps, fields, and decisions as humanly
+   possible. The ideal is "paste what you have → we draft the rest → publish in one
+   screen." Every required field, every extra click, every dead-end is a target to remove.
+2. **Frictionless signup / auth** — never make someone create an account before they get
+   value. Defer the gate to the moment of value (save / message / publish), and when we do
+   ask, make it one tap (Google) or one field (magic link). Cut the signup form to the bone.
+3. **Proprietary, useful buyer analysis on listing pages** — give shoppers decision-making
+   insight they **cannot get on Controller / Barnstormers / Trade-A-Plane**: synthesized
+   from our own data (the **ClubHanger Estimate** is the template). Every listing page
+   should answer "is this a good buy, and what will it really cost me?" with honest,
+   data-grounded analysis — not a spec dump.
 
-## Priority pages — get THESE indexed first (human-set, 2026-06-20)
-We're in the **INDEXING** stage, so concentrate indexing / quality / internal-linking /
-metadata effort on this specific seed set before building more. Get each one genuinely
-complete, uniquely titled (title / H1 / meta / canonical / OG / JSON-LD), richly
-internally linked, in the sitemap, and request-indexed:
+These three ARE the goal. Build the highest-value slice of one of them every cycle.
 
-1. `/` — homepage
-2. `/aircraft`
-3. `/partnerships`
-4. `/partnerships/seeking`  ← currently thin/blank; needs real content to be index-worthy
-5. `/partnerships/make/cessna`
-6. `/partnerships/make/cirrus`
-7. `/partnerships/make/piper`
-8. `/partnerships/state/ca`
-9. `/partnerships/state/tx`
-10. `/partnerships/state/fl`
-11. `/tools/cost-calculator`
-12. `/guides/aircraft-co-ownership`
+## Why these, and how to judge a cycle (the honesty rule)
+We are a cold-start marketplace: signups and posts are **low-volume**, so a single
+night's conversion delta is noise — **do not judge a cycle by tonight's signup/post
+count.** Judge by **leading indicators of friction removed and value added**:
+- **Posting:** required fields cut, steps collapsed, a new prefill/import path, autosave,
+  a gate removed. Measure: count the clicks/fields to publish before vs after — fewer wins.
+- **Signup:** a gate deferred, an auth method added (Google/magic-link), the form shortened,
+  intent preserved across the redirect.
+- **Analysis:** a new proprietary module live on the listing page that's honest and
+  data-grounded (uses real columns, says "unknown" when data is missing, never fabricates).
 
-These are the hub/seed set — nailing their quality, metadata, and internal links first
-bootstraps crawl of everything else. New programmatic pages are still welcome, but never
-at the expense of getting these 12 right. Treat work on them as the top `[goal]` priority.
+Track conversions (PostHog `signup`, `partnership_posted`, `aircraft_posted`,
+`seeker_posted`, `contact_initiated`) **week-over-week** as the lagging confirmation —
+not as the nightly scoreboard. `node nightshift/bin/scoreboard.mjs` still runs; read the
+GSC funnel as *background* (we're parked there), and prefer PostHog activation events.
 
-## Allocation policy — how cycles are split across work types
-The pageview metric is the **tiebreaker and the default, not the dictator.** Bug
-fixes and human-wanted features carry value the metric can't see (a working site;
-product bets that pay off later). So allocate by lane, don't greedily chase pageviews.
-
-**Every backlog item carries an intent tag** (set by the human, or inferred):
-- `[bug]` — broken behavior, regression, console error, perf/mobile/CWV regression.
-- `[want]` — the human wants it for product reasons, regardless of pageview impact.
-- `[goal]` — expected to grow pageviews (SEO/content/speed). Default for agent-invented work.
-- *Untagged defaults:* an item under an SEO/content heading → `[goal]`; an item that
-  says BUG/broken/regression → `[bug]`; any other feature/idea → `[want]`.
+## Allocation — how cycles are split (replaces the old SEO 3:1 knob)
+Every backlog item still carries an intent tag (`[bug]` / `[want]` / `[goal]`), but the
+meanings shift under the pivot:
+- **`[goal]` now means "advances one of the three activation pillars."** (It no longer
+  means SEO.) Default for agent-invented work — invent activation experiments, not SEO ones.
+- **`[want]`** — a human-wanted product feature outside the three pillars.
+- **`[bug]`** — broken behavior, regression, console error, CWV/mobile regression.
 
 **Lane order, every cycle:**
-1. **Blockers first, uncapped.** If the last cycle FAILED, or there's a known
-   broken page / console error / CWV regression, fix it before anything else.
-2. **Then weight `[want]` over `[goal]` ~3:1 (≈75% features / 25% SEO).** Look at the
-   most recent *non-bug* cycles in `CHANGELOG.md`: pull **`[goal]`** only when the last
-   **3** non-bug cycles were all `[want]` (so roughly every 4th non-bug cycle is an
-   SEO / page-improvement cycle); otherwise pull **`[want]`**. Pick the highest-value
-   item in that lane (P1 first; `[P1][want]` always preempts). This is the knob:
-   **`roadmap:goal ratio = 3:1`** — change this line to retune (e.g. `1:1` = balanced,
-   `1:3` = goal-heavy). *(Set 3:1 on 2026-06-24: SEO lift lags by weeks and we've already
-   done heavy on-page optimization, so weight toward features/roadmap for now — revisit
-   the ratio once indexing/traffic starts moving.)*
-3. **If the chosen lane is empty, fall through to the other**; if both human lanes
-   are empty, **default to `[goal]`** and invent an SEO experiment. The night never idles.
+1. **Blockers first, uncapped.** Last cycle FAILED, or a known broken page / console error /
+   CWV regression → fix it before anything else. (A broken post or signup flow is a P0 here —
+   it directly defeats the goal.)
+2. **Then pull the highest-value activation slice.** Prefer `[P1]` pillar items in
+   `BACKLOG.md` under "ACTIVATION (pivot focus)". Rotate across the three pillars so none
+   stalls — don't spend a week only on analysis modules while posting friction sits.
+3. **`[want]` features** that aren't pillar work are still built when they're clearly
+   high-value or P1, but the three pillars take precedence on ties.
+4. **The night never idles.** If the pillar queue is somehow empty, invent the next
+   activation slice (tag `[agent][goal]` + a one-line "which pillar / what friction this
+   removes" rationale), append to `BACKLOG.md`, build the smallest valuable increment.
 
-The CHANGELOG `Goal:` line records which lane each cycle pulled, so the 3:1 mix is
-self-tracking and the human can see the actual ratio each morning and retune it.
+## SEO is parked (do NOT pull these)
+- **Do not invent new SEO experiments.** Do not build new programmatic page families
+  (`/aircraft/compare/...`, new state/make/model hubs, new guide pages) for SEO reasons.
+- **Do not pull `[goal]` items that are SEO/content** — those are now parked; the SEO
+  sections in `BACKLOG.md` are marked PARKED. Leave them; don't delete them.
+- **The ONE exception: SEO *bugs*.** A broken canonical, a 404/500 on an indexed page, a
+  busted sitemap, a CWV/mobile regression, broken structured data → still fix as a `[bug]`
+  (we don't want to lose ground Google has already crawled). That's maintenance, not new SEO.
+- Existing programmatic pages keep working and keep their metadata — just don't *expand* the surface.
 
-## Primary lever: SEO breadth + quality
-This is a niche marketplace with programmatic landing pages already in place
-(`/partnerships/state/[state]`, `/partnerships/make/[make]`, `/airports/[icao]`).
-The fastest path to more pageviews is **more genuinely-useful indexable pages and
-better-ranked existing ones.** Fair game for the PM to pick OR invent:
-- New programmatic page families with real, unique data: make+model pages, model
-  pages, city pages, airport detail pages, "Cessna 172 partnerships near me", etc.
-- Better on-page SEO: titles, meta descriptions, H1s, structured data (schema.org),
-  canonical tags, Open Graph for shareable listing pages.
-- Internal linking + breadcrumbs so crawlers (and humans) reach more pages.
-- A fresh, complete sitemap.xml + robots; fast indexing.
-- Core Web Vitals / page speed (a Google ranking factor) — faster = ranks better.
-- Genuinely useful content: buyer/partnership guides, cost explainers, FAQs that
-  target real search intent.
+## Guardrails — what makes each pillar a real win, not a gamed one
+- **Posting friction removed must not remove trust or data integrity.** Cutting a required
+  field is good; silently publishing garbage is not. Keep listings honest and complete
+  *enough* — push optional fields to progressive disclosure / post-publish enrichment, don't
+  delete them from the model. A listing a buyer can't evaluate is friction moved, not removed.
+- **A deferred signup gate must still capture the user at the value moment** — don't let
+  someone do real work (post, save, message) and then lose it because there was no account.
+  Persist intent across auth (the `?next=` pattern) so nothing is dropped.
+- **Analysis must be PROPRIETARY and HONEST.** It has to be synthesized from our data in a
+  way the big sites don't offer — and it must never fabricate. Use real columns
+  (`ttaf`, `smoh`, `engine_type`, `asking_price`, comps, `previous_price`); when the input
+  is missing, say "not enough data" rather than inventing a number. A confident-but-wrong
+  estimate is a LOSS — it destroys the exact trust this pillar is meant to build. Reuse the
+  existing honesty floors (min comps / dead-band) from the ClubHanger Estimate as the bar.
+- **Never regress Core Web Vitals / mobile** (375px). Analysis modules must be fast and not
+  block render — compute server-side from data we already have where possible.
+- **Don't activate any paid network / monetization** — build UI only (see `FREEZE.md`).
+- Stay inside `FREEZE.md` and the taste notes in `BACKLOG.md` (mobile-first, cleaner-than-
+  Controller, warm Etsy×Airbnb feel; major nav/IA reordering still asks a human).
 
-## The honesty rule (don't fool yourself with the metric)
-**Pageview lift from SEO LAGS indexing by weeks.** Do NOT judge an SEO cycle by
-tonight's pageview delta — you won't see it yet. Judge each cycle by **leading
-indicators**: new quality indexable pages live + in the sitemap, valid unique
-metadata/canonical, internal links added, Lighthouse SEO/perf score, no crawl
-errors. Track the `scoreboard.mjs` number **week-over-week**, not night-over-night.
-
-## Guardrails — these make the goal real instead of gamed
-A change that grows the page count but violates these is a **LOSS**, not a win:
-- **No doorway / thin / near-duplicate pages.** Every new page must carry real,
-  substantively unique value (actual listings, real airport/aircraft data, genuine
-  content). Auto-generating empty or near-identical pages to inflate the count gets
-  the whole site penalized by Google — the opposite of the goal.
-- **No keyword stuffing, cloaking, hidden text, or fake/AI-slop content.**
-- **No analytics manipulation** (self-pageview loops, bot traffic). The metric must
-  reflect real humans.
-- **Don't count admin/internal routes** (`/admin/*`, `/api/*`) toward the goal.
-- **Never regress Core Web Vitals / mobile.** A page-speed or 375px regression is a loss.
-- **Canonicalize** to avoid duplicate-content sprawl across the programmatic pages.
-- Stay inside `FREEZE.md` and the taste notes in `BACKLOG.md` (mobile-first,
-  cleaner-than-Controller; branding/palette is open for experimentation — human reviews post-cycle).
+## Source material the analysis pillar can build on (already in the codebase/DB)
+- **Extracted specs** (new, 2026-06-26): `ttaf`, `smoh`, `engine_type`, `avionics[]`,
+  `annual_due`, `damage_history` now populated from descriptions → enough to compute
+  engine-life-remaining, overhaul-reserve, equipment-completeness, condition signals.
+- **ClubHanger Estimate / Deal Check** (`src/lib/aircraftComps.ts`, family comp queries in
+  `aircraftForSale.ts`) — the template for proprietary, honesty-gated value analysis.
+- **Cost calculator** (`/tools/cost-calculator`, `src/lib/calculators.ts`) — bring it ONTO
+  the listing page, prefilled with the listing's real make/model/hours/price.
+- **Price history** (`previous_price`, `price_changed_at`) — days-on-market + drop trend.
+- **Partnership cross-sell** — "split this into N shares → $X each" using buy-in math.
 
 ## How the PM uses this
-Each cycle: read the scoreboard, then pick the work with the **highest expected
-pageview impact per cycle** — whether that's a `BACKLOG.md` item or an SEO
-experiment you invent. When you invent one, append it to `BACKLOG.md` under Ideas
-with an `[agent]` tag + a one-line "why this should grow pageviews" rationale, then
-build the smallest valuable slice. Non-SEO backlog items (features, fixes) still get
-built — they make the pages worth visiting and sharing — but when nothing else is
-clearly higher-value, default to the goal: ship another quality indexable page or
-make an existing one rank better.
+Each cycle: skim the scoreboard for blockers, then pick the **highest-value activation
+slice** across the three pillars (rotate so none stalls). Slice big items — one shippable
+increment per cycle, note the next slice in `CHANGELOG.md`. Tag invented work
+`[agent][goal]` with the pillar + the friction it removes. The `Goal:` line in the
+CHANGELOG should name which pillar each cycle advanced, so the human can see the rotation.

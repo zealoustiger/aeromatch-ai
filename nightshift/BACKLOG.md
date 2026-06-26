@@ -4,10 +4,15 @@ This is the steering wheel. The overnight loop reads this file every cycle and
 picks the highest-value unblocked item. Keep it current — what's here is what
 gets built while you sleep.
 
-**North star: `nightshift/GOAL.md` — maximize pageviews (lever: SEO).** The PM now
-picks by expected pageview impact and may *invent* SEO experiments (tagged
-`[agent]`) when they beat the backlog, so this list never runs dry. Items below are
-still built — they make pages worth visiting — but the goal breaks ties.
+**North star: `nightshift/GOAL.md` — ACTIVATION (pivot 2026-06-26).** Three pillars:
+(1) frictionless listing posting, (2) frictionless signup/auth, (3) proprietary,
+honest buyer analysis on listing pages (the ClubHanger Estimate is the template).
+**SEO is PARKED** — do NOT invent SEO experiments or build new programmatic page
+families; the SEO sections below are tagged `[PARKED]`, touch them only to fix a
+`[bug]`. Each cycle, pull the highest-value slice from **"ACTIVATION (pivot focus)"**
+just below, rotating across the three pillars so none stalls. `[goal]` now means
+"advances an activation pillar," not SEO. The previous SEO goal is preserved verbatim
+in `GOAL-seo-parked.md` for when we un-park it.
 
 ## How to add an idea
 - Drop it under **Ideas** with a one-line description.
@@ -15,10 +20,10 @@ still built — they make pages worth visiting — but the goal breaks ties.
   *exactly what you like*. Specific likes → on-brand results; "make it nicer" → slop.
 - Mark priority with `[P1]` (do first) / `[P2]` / `[P3]`.
 - **Mark intent so the allocation policy can route it** (see `GOAL.md`):
-  `[want]` = you want it for product reasons · `[bug]` = something's broken ·
-  `[goal]` = expected to grow pageviews (SEO/content). Untagged → inferred
-  (SEO/content=goal, "BUG"=bug, other features=want). The loop alternates
-  `[want]`↔`[goal]` ~1:1, with `[bug]`/blockers always first.
+  `[want]` = a product feature outside the 3 pillars · `[bug]` = something's broken ·
+  `[goal]` = advances an activation pillar (posting / signup / buyer-analysis). Since
+  the 2026-06-26 pivot, `[goal]` is ACTIVATION, not SEO; the loop pulls the highest-value
+  activation slice each cycle (rotating pillars), with `[bug]`/blockers always first.
 - Big items (map, AI search, comparison) must be **sliced** into shippable
   increments across multiple cycles — one slice per cycle.
 
@@ -47,7 +52,75 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
-### Agent-invented SEO experiments
+## ⭐ ACTIVATION (pivot focus — 2026-06-26) — PULL FROM HERE FIRST
+The three north-star pillars. Each cycle, build the highest-value **`[P1]`** slice and
+**rotate across the pillars** so none stalls (don't spend a week only on analysis). All
+items are `[goal]` under the pivot (activation), and `[bug]`s in posting/signup flows are
+P0 (a broken flow defeats the goal). Slice big items — one shippable increment per cycle.
+When you ship one, mark it ✅ and note the next slice in the CHANGELOG.
+
+### Pillar 1 — Frictionless listing posting
+Target: cut every step/field/decision between "I want to list" and "it's published."
+Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`
+(server actions in `src/app/actions.ts`; AI draft already exists for partnership/seeker).
+- **[P1][goal] N-number autofill on the aircraft post form.** A `/api/faa-lookup` route
+  already exists — wire it into `/aircraft/new`: type the registration → auto-fill make /
+  model / year / serial (editable). One field replaces four. *Friction removed: 3-4 fields.*
+- **[P1][goal] "Paste & prefill" the whole form.** Extend the existing AI-draft
+  (`generatePartnershipDraft` / aircraft draft) so a pasted listing blob OR a source URL
+  maps into *every* field (make, model, year, price, hours, airport, share terms), not just
+  title+description. Human reviews the prefilled form, edits, publishes. *Friction: a whole
+  form → a paste + a glance.*
+- **[P1][goal] Collapse the post flow to one smart screen.** Reduce required fields to the
+  irreducible set (make/model · airport ICAO · price-or-share · contact); push everything
+  else to optional/progressive disclosure. ICAO already auto-derives airport/city/state —
+  lean on that. Measure clicks-to-publish before vs after.
+- **[P1][goal] Autosave the draft (localStorage) + restore.** A half-filled form must
+  survive a reload or the auth redirect — never lose someone's typing. Pairs with Pillar 2's
+  deferred gate (post first, sign in to publish, draft intact).
+- **[P2][goal] Photo upload polish.** Drag-drop + paste + multi-file on the post forms
+  (upload routes `/api/upload-aircraft-photo`, `/api/upload-partnership-photo` exist). Make
+  adding photos a non-event.
+
+### Pillar 2 — Frictionless signup / auth
+Target: never gate value behind an account; when we must ask, one tap or one field.
+- **[P1][goal] "Continue with Google" (OAuth).** Supabase supports it — the single biggest
+  signup-friction killer. Add to `/auth`, preserve `?next=`. (Magic-link/passwordless email
+  is the close second — do it as the next slice.)
+- **[P1][goal] Defer the gate to the value moment.** Audit every forced-signup point (home
+  search gate, save, post, message) and move the ask to the moment of value: let people
+  browse, filter, and build a draft first; sign in only to *save/publish/message*. Device-
+  saves already merge on signup (`mergeDeviceSaves`) — extend that pattern so nothing is lost.
+- **[P2][goal] Shorten the signup form to email-only.** Collect name/profile *after* the
+  account exists (or lazily, when first needed). Every field on the signup screen is friction.
+
+### Pillar 3 — Proprietary buyer analysis on listing pages
+Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
+with honest, data-grounded analysis the big sites don't offer. Honesty-gated: when an input
+is missing, say "not enough data" — NEVER fabricate (a confident-wrong number is a LOSS).
+Build on: extracted specs (`ttaf`/`smoh`/`engine_type`/`avionics`/`annual_due`/`damage_history`),
+the ClubHanger Estimate (`src/lib/aircraftComps.ts`), the cost calculator (`src/lib/calculators.ts`),
+price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
+- **[P1][goal] Engine life & overhaul reserve.** From `smoh` + `engine_type` → a curated
+  TBO table (per engine family) → "≈ X hrs / ~Y yrs to overhaul; budget ~$Z reserve."
+  Render only when smoh + engine are known. Proprietary because it fuses our extracted specs
+  with a TBO/reserve model no listing site shows.
+- **[P1][goal] Cost-to-own, on the listing.** Bring the cost calculator onto the detail
+  page, prefilled with the listing's real make/model/price/hours → annual fixed + per-hour +
+  reserve, with a share-split toggle ("as a 1/3 partner: ~$X each + ~$Y/mo"). Turns a static
+  price into a real ownership cost.
+- **[P1][goal] Deal Score panel.** Synthesize the signals we already have into one honest
+  verdict: comp value (ClubHanger Estimate) + days-on-market + price drops + spec completeness
+  → a transparent "how this stacks up" with the *reasons* shown (not a black-box score).
+  Reuse the Estimate's min-comps / dead-band honesty floors.
+- **[P2][goal] Market position + days-on-market.** "N comparable {make} {model} listed,
+  median $X — this is P% below/above; listed N days ago" using `getFamilyComps` +
+  `first_seen_at`/`previous_price`. Honest, sourced, proprietary.
+
+---
+
+### Agent-invented SEO experiments  `[PARKED 2026-06-26]`
+> PARKED — do not pull. SEO is on hold (waiting for Google to index); fix only as `[bug]`.
 - **[agent][goal] Aircraft comparison pages (`/aircraft/compare/[a-vs-b]`).** ✅ SHIPPED
   2026-06-24 (`aircraft-compare-pages`). A new indexable family targeting the very
   high-volume "{model} vs {model}" buyer query class (e.g. "Cessna 172 vs Cirrus SR22"),
@@ -452,7 +525,8 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 - **[P1][want] (orig) Seed pilot-seeking listings from FAA records.** ✅ **GREENLIT (option b) by human 2026-06-22** — proceed with the FAA-derived, anonymized approach below; the human accepted the flagged risk. (Still surface a one-line "FAA-derived seed data" note in the CHANGELOG when built so the human reviews before promoting to prod.) Populate empty pilot-seeking / partnership pages so every page shows ~6-10 results. Owner-chosen approach: pull from the public **FAA airman registry** — use **first name + last initial only**, include **ratings**, **cartoon avatars**, and **NO contact information**. Write varied, personality-driven "what aircraft I'm looking for" descriptions (first aircraft, upgrade, time-building, experimental-for-fun, etc.). Keep "post your own" prominent. Slice: (1) data pull + anonymization (first name + last-initial, ratings, aircraft type; strip addresses/contact); (2) cartoon avatar generation; (3) generated descriptions + render with "post your own" CTA.
   - **Owner approved this over a flagged concern** (raised twice): attributing fabricated seeking-intent to real-derived identities can misrepresent real people, may deceive visitors, and touches publicity-rights / FAA-data-use considerations. Mitigations baked in: last-initial only, no contact, avatars. **Recommend a quick legal gut-check on FAA airman-data use + publicity rights before this goes live**, and surface it in the CHANGELOG when built so the owner reviews before promoting to prod.
 
-### SEO breadth — keyword-researched (brainstorm 2026-06-19)
+### SEO breadth — keyword-researched (brainstorm 2026-06-19)  `[PARKED 2026-06-26]`
+> PARKED — do not pull; SEO is on hold (see GOAL.md pivot). Fix only as `[bug]`.
 Keyword signal (Google autocomplete, 2026-06-19): demand centers on **make+model +
 "for sale"** (`cessna 172 for sale` → `+california` / `+near me` / `+under $50,000` /
 `+used` / `+price`), **geo** (`aircraft for sale california` outranks even `near me`;
@@ -554,7 +628,9 @@ Slice it:
 Backlinks deferred by human. So: (A) make existing pages genuinely index-worthy, and
 (B) UX so users save listings + post themselves as seeking. Do A and B both; alternate.
 
-#### A. Page quality / crawl-efficiency (get the 1,252 live pages indexed)
+#### A. Page quality / crawl-efficiency (get the 1,252 live pages indexed)  `[PARKED 2026-06-26]`
+> PARKED — pure-SEO crawl work is on hold (GOAL.md pivot). Fix only as `[bug]` (broken
+> canonical / 404 on indexed page / busted sitemap / CWV regression).
 - **[P1][goal] Self-crawl audit.** Script fetches every URL in the live sitemap and flags any that 404, redirect, are `noindex`, or have a duplicate/missing `<title>`/canonical. Output a report to `nightshift/`. Diagnostic — catches what's silently blocking indexing. *(1 cycle)*
 - **[P1][goal] Thin-page pruning.** make/model/state/airport pages with fewer than ~3 real listings get `noindex,follow` + a canonical to their parent, so Google's crawl budget concentrates on the ~200 pages worth indexing instead of being diluted across ~1,000 thin ones. Slice: (1) aircraft make/model/state families; (2) partnership/airport families. *(2 cycles)*
 - **[P1][goal] Unique content depth on programmatic pages.** Each make/model/state page gets genuinely unique prose (model history, what it's good for, typical price range in words) so it isn't templated boilerplate Google skips. No fabricated stats. Slice by family. — **slice 1 ✅ SHIPPED 2026-06-22** ("About {Make}" 2-paragraph prose on the 8 curated `/aircraft/[make]` hubs, distinct from the make FAQs; see Done + CHANGELOG 2026-06-22T07:06Z). — **slice 2 ✅ SHIPPED 2026-06-22** ("About the {Make} {Model}" 2-paragraph prose on all 20 curated `/aircraft/[make]/[model]` for-sale pages, distinct from the specs/cost-to-own + per-model FAQs; see Done + CHANGELOG 2026-06-22T07:19Z). — **slice 3 ✅ SHIPPED 2026-06-22** ("Buying an aircraft in {State}" 2-paragraph market-overview intro on the 6 curated `/aircraft/for-sale/[state]` pages — ca/tx/fl/az/co/wa — distinct in wording from the per-state buying FAQs; `FORSALE_STATE_OVERVIEWS` + `getForSaleStateOverview` in `seo.ts`; see Done + CHANGELOG 2026-06-22T08:11Z). — **slice 4 ✅ SHIPPED 2026-06-22** ("About co-owning a {Make}" 2-paragraph prose on the 8 curated `/partnerships/make/[make]` hubs — the partnership-side counterpart to slice 1, co-ownership angle, distinct from the partnership FAQs; `PARTNERSHIP_MAKE_OVERVIEWS` + `getPartnershipMakeOverview` in `seo.ts`; see Done + CHANGELOG 2026-06-22T08:29Z). Next slices: partnership STATE hub prose (`/partnerships/state/[state]`), airport-page overviews, model-level prose for high-inventory *dynamic* combos, or curate more for-sale states (NY/IL/GA/NC). *(ongoing)*
