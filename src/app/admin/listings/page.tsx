@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff } from 'lucide-react'
+import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff, Camera, Loader2 } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage } from '@/lib/adminScrapers'
+import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage, getHarvestStatus } from '@/lib/adminScrapers'
+import HarvestRefresh from '@/components/HarvestRefresh'
 import { moderateListing } from './actions'
 
 export const metadata = { title: 'Review Listings', robots: { index: false } }
@@ -90,6 +91,7 @@ export default async function ReviewListingsTab({
   ])
   const freshness = viewingHidden ? null : await getListingFreshness(admin)
   const photoCoverage = viewingHidden ? null : await getPhotoCoverage(admin)
+  const harvest = viewingHidden ? null : await getHarvestStatus(admin)
 
   // "Last new" is stale (scraper likely not running) if older than yesterday.
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
@@ -261,6 +263,77 @@ export default async function ReviewListingsTab({
           </div>
         </div>
       )}
+
+      {/* Hangar67 photo harvest — live status of the residential harvester. */}
+      {harvest && (() => {
+        const r = harvest.run
+        const agoSec = r ? Math.round((Date.now() - Date.parse(r.updated_at)) / 1000) : 0
+        const ago = agoSec < 90 ? `${agoSec}s ago` : agoSec < 5400 ? `${Math.round(agoSec / 60)}m ago` : `${Math.round(agoSec / 3600)}h ago`
+        const stalled = !!r && r.status === 'running' && !harvest.live
+        const badge = harvest.live
+          ? { t: 'Running', c: 'bg-sky-50 text-sky-700 ring-sky-200' }
+          : stalled
+            ? { t: 'Stalled', c: 'bg-amber-50 text-amber-700 ring-amber-200' }
+            : r?.status === 'done'
+              ? { t: 'Idle — last run finished', c: 'bg-slate-100 text-slate-600 ring-slate-200' }
+              : r?.status === 'stopped'
+                ? { t: 'Stopped', c: 'bg-slate-100 text-slate-600 ring-slate-200' }
+                : { t: 'Never run', c: 'bg-slate-100 text-slate-500 ring-slate-200' }
+        const Stat = ({ label, value, tone }: { label: string; value: number; tone: string }) => (
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
+            <div className={`text-lg font-semibold tabular-nums ${tone}`}>{value.toLocaleString()}</div>
+            <div className="text-[11px] text-slate-400">{label}</div>
+          </div>
+        )
+        return (
+          <div className="mb-8">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                <Camera className="h-4 w-4" /> Hangar67 photo harvest
+              </h3>
+              <HarvestRefresh live={harvest.live} />
+            </div>
+            <p className="mb-3 mt-0.5 text-xs text-slate-400">
+              Runs on a residential machine — the VPS&apos;s datacenter IP is Cloudflare-blocked. Recovers photos for hidden
+              hangar67 listings so they can show on the marketplace.
+            </p>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${badge.c}`}>
+                  {harvest.live && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {badge.t}
+                </span>
+                {r && (
+                  <span className="text-slate-500">
+                    {r.processed.toLocaleString()}/{r.total.toLocaleString()} processed · {r.with_photos.toLocaleString()} with photos · {r.total_photos.toLocaleString()} images · {r.errors.toLocaleString()} errors
+                  </span>
+                )}
+                {r && (
+                  <span className="text-slate-400">
+                    {r.grade ? `grade ${r.grade} · ` : ''}heartbeat {ago}{r.host ? ` · ${r.host}` : ''}
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Stat label="Recovered (have photos)" value={harvest.recovered} tone="text-emerald-600" />
+                <Stat label="Remaining (still hidden)" value={harvest.remaining} tone="text-rose-600" />
+                <Stat label="Grade A remaining" value={harvest.remainingByGrade.A} tone="text-slate-700" />
+                <Stat label="Grade B / C remaining" value={harvest.remainingByGrade.B + harvest.remainingByGrade.C} tone="text-slate-700" />
+              </div>
+              {stalled && (
+                <p className="mt-3 flex items-start gap-1.5 text-xs text-amber-600">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Marked running but no heartbeat for {ago} — the process likely died. Restart it on the laptop.
+                </p>
+              )}
+              {!harvest.live && harvest.remaining > 0 && (
+                <p className="mt-3 text-xs text-slate-400">
+                  Not running. Start on the laptop: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">node scraper/harvest-hangar67-photos.mjs --grade=A --concurrency=1 --delay=5000</code>
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Photo coverage × grade — how much active inventory is hidden purely for
           lack of a photo, broken down by listing grade. */}

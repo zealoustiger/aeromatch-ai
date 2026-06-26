@@ -141,6 +141,58 @@ export async function getListingFreshness(admin: SupabaseClient): Promise<Source
   return out.sort((a, b) => b.activeTotal - a.activeTotal)
 }
 
+export type HarvestRun = {
+  id: string
+  status: string
+  grade: string | null
+  host: string | null
+  total: number
+  processed: number
+  with_photos: number
+  total_photos: number
+  errors: number
+  last_source_id: string | null
+  created_at: string
+  updated_at: string
+  finished_at: string | null
+}
+export type HarvestStatus = {
+  run: HarvestRun | null
+  live: boolean // status running AND heartbeat fresh (<90s)
+  recovered: number // hangar67 active listings that now have a photo
+  remaining: number // hangar67 active listings still hidden (no photo)
+  remainingByGrade: { A: number; B: number; C: number }
+}
+
+/** Live status of the residential hangar67 photo harvester: the latest run row
+ *  (heartbeat-backed) plus the ground-truth recovered/remaining counts straight
+ *  from aircraft_for_sale — so the admin sees both "is it running + rate" and
+ *  "how many photos so far / what's left", even between runs. */
+export async function getHarvestStatus(admin: SupabaseClient): Promise<HarvestStatus> {
+  const count = async (build: (q: any) => any): Promise<number> => {
+    const { count } = await build(admin.from('aircraft_for_sale').select('id', { count: 'exact', head: true }))
+    return count ?? 0
+  }
+  const hidden = (q: any) => q.eq('source', 'hangar67').eq('status', 'active').eq('images', '[]')
+
+  const [{ data: runs }, recovered, remaining, remA, remB] = await Promise.all([
+    admin.from('photo_harvest_runs').select('*').order('created_at', { ascending: false }).limit(1),
+    count((q) => q.eq('source', 'hangar67').eq('status', 'active').not('images', 'eq', '[]')),
+    count((q) => hidden(q)),
+    count((q) => hidden(q).gte('quality_score', 78)),
+    count((q) => hidden(q).gte('quality_score', 50).lt('quality_score', 78)),
+  ])
+  const run = (runs?.[0] as HarvestRun) ?? null
+  const live = !!run && run.status === 'running' && Date.now() - Date.parse(run.updated_at) < 90_000
+  return {
+    run,
+    live,
+    recovered,
+    remaining,
+    remainingByGrade: { A: remA, B: remB, C: Math.max(0, remaining - remA - remB) },
+  }
+}
+
 export type RealListing = {
   id: string
   kind: 'aircraft' | 'partnership' | 'seeker'
