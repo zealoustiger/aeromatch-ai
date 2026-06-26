@@ -614,6 +614,31 @@ export async function getOrCreateSeekerThread(seekerId: string, seekerOwnerId: s
   return { threadId: data.id }
 }
 
+export async function getOrCreateAircraftThread(aircraftId: string, ownerId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (user.id === ownerId) return { error: 'Cannot message your own listing' }
+
+  const { data: existing } = await supabase
+    .from('threads')
+    .select('id')
+    .eq('aircraft_for_sale_id', aircraftId)
+    .eq('inquirer_id', user.id)
+    .maybeSingle()
+
+  if (existing) return { threadId: existing.id }
+
+  const { data, error } = await supabase
+    .from('threads')
+    .insert({ aircraft_for_sale_id: aircraftId, inquirer_id: user.id, owner_id: ownerId })
+    .select('id')
+    .single()
+
+  if (error) return { error: 'Failed to start conversation.' }
+  return { threadId: data.id }
+}
+
 // Look up the thread's OTHER participant and send them a new-message email.
 // Throttled to at most one email per thread per hour to avoid spamming active
 // conversations. Resolves (never throws) so the caller can fire-and-forget safely.
