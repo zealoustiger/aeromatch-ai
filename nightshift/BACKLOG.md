@@ -116,6 +116,17 @@ completed, delete its screenshot object from `backlog-shots` to reclaim storage.
   profile/account page (`/account`) — so a user managing saved searches can jump
   straight to controlling their email alerts for them. (No screenshot.)
 
+- **[P2][want] Detail page + inquiry routing for USER-posted aircraft.** The new
+  user post-a-plane flow (`/aircraft/new` → `createAircraftListing`, `source='user'`)
+  inserts rows with `source_url = null`. Scraped listings link out to their source,
+  but user-posted ones have no destination → their marketplace card currently links to
+  `#` (a dead link). Build an internal `/aircraft/[id]` detail page (mirror the
+  partnership detail page) that renders the listing and routes buyer inquiries through
+  the platform via `poster_id` (reuse the existing partnership messaging/threads, which
+  already key off `poster_id`) instead of an external link. Make the card href point to
+  `/aircraft/[id]` when `source='user'` (keep the external `source_url` for scraped
+  rows). Without this, user-posted aircraft are effectively un-clickable. (No screenshot.)
+
 - **[P2][want] Optional note when saving a listing.** When a user saves a listing,
   let them attach an **optional free-text note** (e.g. "great panel — ask about damage
   history"). If a note exists, display it **(a)** on the listing page and **(b)** on the

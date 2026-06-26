@@ -1,0 +1,26 @@
+# /etc/systemd/system/nightshift-smoke.service
+# Runs a queued production smoke test (admin "Run smoke tests" button). Oneshot —
+# systemd won't start a second instance while one is running, so runs never overlap.
+[Unit]
+Description=ClubHanger Night Shift smoke-test runner
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=900
+ExecStart=/usr/bin/docker run --rm \
+  --name clubhanger-nightshift-smoke \
+  --memory=3g --cpus=2 \
+  -e NS_STATE_DIR=/home/night/state \
+  -e TZ=America/Los_Angeles \
+  -v /opt/nightshift/repo:/app \
+  -v /opt/nightshift/claude:/home/night/.claude \
+  -v /opt/nightshift/state:/home/night/state \
+  -v /opt/nightshift/ssh:/home/night/.ssh:ro \
+  -v /opt/nightshift/ms-playwright:/home/night/.cache/ms-playwright \
+  --entrypoint /app/nightshift/bin/run-smoke.sh \
+  clubhanger-nightshift:latest
+
+[Install]
+WantedBy=multi-user.target
