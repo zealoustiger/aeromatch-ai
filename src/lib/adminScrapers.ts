@@ -62,6 +62,53 @@ export type SourceFreshness = {
   reseenRate: number // reseenLastRun / activeTotal (0..1)
 }
 
+export type GradeCoverage = { grade: 'A' | 'B' | 'C'; active: number; shown: number; hidden: number }
+export type SourcePhotoCoverage = {
+  source: string
+  active: number
+  shown: number // has a real photo → appears on the marketplace
+  hidden: number // no photo → filtered out of every public list
+  hiddenPct: number
+  grades: GradeCoverage[]
+}
+
+/** Per-source photo coverage × listing grade. A listing is HIDDEN from every
+ *  public surface when its `images` array is empty — the marketplace/SEO queries
+ *  all filter `images != '[]'`. This shows, per source and per quality grade
+ *  (A≥78 / B≥50 / C<50 on the generated quality_score), how many active listings
+ *  show vs are hidden purely for lack of a photo — so a pile of high-grade,
+ *  photo-less inventory is visible and actionable. */
+export async function getPhotoCoverage(admin: SupabaseClient): Promise<SourcePhotoCoverage[]> {
+  const count = async (build: (q: any) => any): Promise<number> => {
+    const { count } = await build(admin.from('aircraft_for_sale').select('id', { count: 'exact', head: true }))
+    return count ?? 0
+  }
+  // Quality-grade bands on the generated quality_score column (never null).
+  const band = (q: any, grade: 'A' | 'B' | 'C') =>
+    grade === 'A'
+      ? q.gte('quality_score', 78)
+      : grade === 'B'
+        ? q.gte('quality_score', 50).lt('quality_score', 78)
+        : q.lt('quality_score', 50)
+
+  const out: SourcePhotoCoverage[] = []
+  for (const source of SCRAPER_SOURCES) {
+    const grades = await Promise.all(
+      (['A', 'B', 'C'] as const).map(async (g) => {
+        const active = await count((q) => band(q.eq('source', source).eq('status', 'active'), g))
+        // "shown" uses the EXACT marketplace gate: a non-empty images array.
+        const shown = await count((q) => band(q.eq('source', source).eq('status', 'active').not('images', 'eq', '[]'), g))
+        return { grade: g, active, shown, hidden: active - shown }
+      }),
+    )
+    const active = grades.reduce((n, x) => n + x.active, 0)
+    const shown = grades.reduce((n, x) => n + x.shown, 0)
+    const hidden = active - shown
+    out.push({ source, active, shown, hidden, hiddenPct: active ? hidden / active : 0, grades })
+  }
+  return out.sort((a, b) => b.hidden - a.hidden)
+}
+
 /** Per-source freshness: how much of each source's active inventory the latest
  *  scrape actually re-saw (coverage), how many active listings are going stale
  *  (not seen recently), and how many have been auto-marked sold. A low re-seen
