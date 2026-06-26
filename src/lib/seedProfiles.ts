@@ -1,24 +1,14 @@
 // Seed/demo partnership personas (e.g. "Marcus T.") — the hand-seeded listings
 // used to bootstrap the marketplace before organic supply arrives. They are owned
-// by the ClubHanger "concierge" house account (see scripts/create-concierge.mjs),
-// so the normal in-site messaging flow works against them and inquiries reach the
-// operator. These helpers identify such listings and shape a lightweight public
+// by the operator's own account (zealoustiger@gmail.com), so the normal in-site
+// messaging flow works against them and inquiries land in the operator's inbox +
+// /messages. These helpers identify such listings and shape a lightweight public
 // "member" persona from the listing fields.
 
 import type { Partnership } from '@/lib/types'
 
 /** Synthetic contact-email domains used only by hand-seeded demo listings. */
 const SYNTHETIC_DOMAINS = ['@example.com', '@aeromatch-demo.com']
-
-/** Email of the concierge house account that owns the seed listings. */
-export const CONCIERGE_EMAIL =
-  process.env.SEED_CONCIERGE_EMAIL || 'concierge@clubhanger.com'
-
-/** Where seed-listing inquiries are forwarded (operator's real inbox). */
-export const SEED_INQUIRY_EMAIL =
-  process.env.SEED_INQUIRY_EMAIL ||
-  (process.env.ADMIN_EMAILS || '').split(',')[0].trim() ||
-  'brian@iterative.vc'
 
 type SeedShape = Pick<Partnership, 'contact_email' | 'source_url'>
 
