@@ -91,6 +91,9 @@ export interface AircraftForSale {
   // the source had none or isn't yet supported → fall back to a make placeholder.
   images: string[]
   image_is_placeholder: boolean
+
+  // Set on user-posted listings (source='user'); null for scraped rows.
+  poster_id: string | null
 }
 
 export interface Airport {

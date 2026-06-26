@@ -42,6 +42,7 @@ import ShareListingButton from '@/components/ShareListingButton'
 import SimilarAircraft from '@/components/SimilarAircraft'
 import SavedListingNote from '@/components/SavedListingNote'
 import ListingCompletenessPanel from '@/components/ListingCompletenessPanel'
+import AircraftContactButton from '@/components/AircraftContactButton'
 
 const DAY_MS = 86_400_000
 
@@ -488,25 +489,40 @@ export default async function AircraftListingDetailPage({
             {/* Listing completeness — shows buyers which key signals are present. */}
             <ListingCompletenessPanel p={p} />
 
-            {/* Source CTA — keeps the outbound path the cards used to provide. */}
-            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
-              <h2 className="mb-1 text-sm font-semibold text-sky-800">View the original listing</h2>
-              <p className="mb-3 text-sm text-sky-700">
-                This aircraft is listed on {source}. Contact and full details are on the source site.
-              </p>
-              {p.source_url ? (
-                <a
-                  href={p.source_url}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener noreferrer' : undefined}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
-                >
-                  {isExternal ? `View on ${source}` : 'View listing'} <ExternalLink className="h-4 w-4" />
-                </a>
-              ) : (
-                <p className="text-sm text-sky-700">No source link available.</p>
-              )}
-            </div>
+            {/* Contact CTA — for user-posted aircraft with a poster, show Message button;
+                for scraped listings, show the outbound source link. */}
+            {p.source === 'user' && p.poster_id ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="mb-1 text-sm font-semibold text-slate-800">Contact the seller</h2>
+                <p className="mb-3 text-sm text-slate-500">
+                  This aircraft is listed directly on ClubHanger. Message the seller to ask questions or arrange a viewing.
+                </p>
+                <AircraftContactButton
+                  aircraftId={p.id}
+                  posterId={p.poster_id}
+                  listingPath={`/aircraft/listing/${p.id}`}
+                />
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
+                <h2 className="mb-1 text-sm font-semibold text-sky-800">View the original listing</h2>
+                <p className="mb-3 text-sm text-sky-700">
+                  This aircraft is listed on {source}. Contact and full details are on the source site.
+                </p>
+                {p.source_url ? (
+                  <a
+                    href={p.source_url}
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener noreferrer' : undefined}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+                  >
+                    {isExternal ? `View on ${source}` : 'View listing'} <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-sky-700">No source link available.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -530,3 +530,9 @@ alter table threads add column if not exists owner_read_at           timestamptz
 
 create policy "threads_participant_update" on threads
   for update using (auth.uid() = inquirer_id or auth.uid() = owner_id);
+
+-- threads: can now target an aircraft_for_sale listing (migration: threads_aircraft_support)
+-- ⚠️ Human: apply in Supabase SQL editor before this feature goes live.
+alter table threads add column if not exists aircraft_for_sale_id uuid references aircraft_for_sale(id) on delete cascade;
+-- + partial unique index threads_aircraft_inquirer_uniq (aircraft_for_sale_id, inquirer_id)
+create unique index if not exists threads_aircraft_inquirer_uniq on threads (aircraft_for_sale_id, inquirer_id) where aircraft_for_sale_id is not null;
