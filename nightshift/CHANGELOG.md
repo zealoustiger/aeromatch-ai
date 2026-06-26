@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-26T102800Z — PASS — partnership-desktop-message-button
+- Pages: /partnerships/[id]
+- What: **Desktop users can now message a partnership owner directly from the listing page.** Previously, the desktop "Interested?" sidebar card showed only "Send Email" + phone. Mobile had the "Message" button in the sticky bar. Now the desktop sidebar card also shows a dark "Message" button (above Email/phone) — clicking it creates or opens a thread at `/messages/[threadId]` when signed in, redirects to auth when not. The button is hidden when viewing your own listing or when the listing has no `poster_id` (scraped listings without a ClubHanger account), matching mobile behavior exactly. 2 files: `ContactButtons.tsx` (add `posterId` prop, auth state, message handler — mirrors `ContactBar`); `partnerships/[id]/page.tsx` (pass `posterId={p.poster_id}` to `ContactButtons`).
+- Goal: feature depth / on-site engagement — `[want]` lane (last 3 non-bug cycles: aircraft-mission-twin-stol [goal], cream-surface-sweep [want], aircraft-for-sale-ai-draft [want] — not all 3 [want], so [want] owed per 3:1 policy). Completes the on-site messaging feature for desktop — the desktop/mobile asymmetry was the only remaining gap in the messaging story. Pageviews at orient: 404 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING).
+- Goal-lane: [want]
+- Spec: nightshift/specs/20260626T101603Z-partnership-desktop-message-button.md
+- Verdict: PASS. `npx next build` compiled clean (322 static pages, exit 0, no TypeScript errors). QA smoke (`next start` production build on port 3022, NOT dev) exit 0 on `/partnerships` + `/partnerships/[id]` at desktop 1280 + mobile 375 (4/4 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Visual cycle: screenshots read — partnership detail page renders cleanly at both viewports; "Interested?" sidebar card looks correct (this seeded listing has no poster_id so the Message button is correctly suppressed; the card renders with "Contact Levi C." + "Send Email" button as expected); mobile sticky bar shows Email button; similar partnerships rail and layout intact. Message button will appear on user-posted listings with a real poster_id.
+- Screenshots: nightshift/screenshots/partnership-desktop-message-button/
+- Next: (1) When a user posts a partnership via /partnerships/new, their listing will show the Message button to other users on desktop — verifiable once a real user-posted listing exists. (2) Consider adding a desktop message button to the seeker contact flow on /partnerships/seeking/[id] (currently has SeekerContactBar for mobile — verify desktop parity). (3) The "Send Email" button still exposes the poster's email directly; once messaging is adopted, consider making it secondary/collapsed behind a "Prefer email?" toggle.
+
 ## 2026-06-26T103000Z — PASS — searches-email-settings-link
 - Pages: /searches
 - What: **Saved Searches now has a clear link to email notification settings.** A "Manage email notification settings" link with a Bell icon appears in the `/searches` page header, below the subheading — visible whether the user has any saved searches or not. Clicking it goes to `/account` (the email-alerts hub). Closes the `[P3][want]` backlog item.
