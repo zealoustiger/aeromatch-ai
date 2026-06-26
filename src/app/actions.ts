@@ -225,6 +225,7 @@ export async function createAircraftListing(formData: FormData) {
 
   const asking_price = formData.get('asking_price') ? parseInt(formData.get('asking_price') as string) : null
   const state = ((formData.get('state') as string) || '').toUpperCase().slice(0, 2) || null
+  const photoUrls = (formData.getAll('photo_url') as string[]).filter(Boolean)
 
   const payload = {
     // User-posted listings live alongside scraped inventory; source distinguishes
@@ -247,8 +248,8 @@ export async function createAircraftListing(formData: FormData) {
     state,
     status: 'active',
     poster_id: user.id,
-    images: [],
-    image_is_placeholder: true,
+    images: photoUrls.length > 0 ? photoUrls : [],
+    image_is_placeholder: photoUrls.length === 0,
   }
 
   const { data, error } = await supabase.from('aircraft_for_sale').insert(payload).select('id').single()

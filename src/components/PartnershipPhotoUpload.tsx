@@ -16,7 +16,11 @@ type PhotoEntry = {
   error: string | null
 }
 
-export default function PartnershipPhotoUpload() {
+export default function PartnershipPhotoUpload({
+  endpoint = '/api/upload-partnership-photo',
+}: {
+  endpoint?: string
+}) {
   const [photos, setPhotos] = useState<PhotoEntry[]>([])
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -43,7 +47,7 @@ export default function PartnershipPhotoUpload() {
         try {
           const fd = new FormData()
           fd.append('file', file)
-          const res = await fetch('/api/upload-partnership-photo', { method: 'POST', body: fd })
+          const res = await fetch(endpoint, { method: 'POST', body: fd })
           const json = await res.json()
           if (!res.ok || !json.url) {
             setPhotos((prev) =>
