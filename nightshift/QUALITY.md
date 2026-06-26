@@ -3,6 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-26T07:50:33Z — aircraft-mission-twin-stol — score 4/5
+- Strengths: Pure data-driven extension — two `Mission` entries appended to `MISSIONS[]` with no new route code, exactly as spec intended; entries conform 1:1 to the `Mission` interface and mirror the established editorial formula (unique H1/meta, 3 substantive intro paragraphs, 4 evergreen FAQs, "the listings below are…" closer); chip slugs `twin-engine`/`stol` correctly resolve to the new missions; the STOL intro honestly cross-links to experimental/tailwheel pages, acknowledging its own filter won't catch every backcountry type — exactly the "keep these honest" judgment the file header asks for.
+- Weaknesses / risks: `filters: { q: 'stol' }` keyword match likely yields a sparse/empty live grid (few listings literally say "STOL"), and `q: 'twin'` is broad enough to admit some false positives; both are honestly disclosed in the editorial so neither reads as a doorway page, but grid quality on /stol is the soft spot.
+- Follow-up: none
 ## 2026-06-26T07:17:56Z — aircraft-for-sale-ai-draft — score 5/5
 - Strengths: Textbook parity feature — `generateAircraftDraft` mirrors `generatePartnershipDraft`/`generateSeekerDraft` (same `checkAiDraftAccess()` gate, empty/length guards, `draft_listing` tool with `tool_choice`, Haiku model id, incomplete-draft check), and the form's `handleGenerate` is byte-for-byte aligned with the sibling forms' `useTransition` + DOM-ref `dispatchEvent('input')` fill; aircraft-tailored system prompt is well-crafted; all 6 acceptance criteria met with inline error + "Generating…" loading state; bonus `p-4 sm:p-6` tightening applied consistently across all three sections.
 - Weaknesses / risks: none material — minor: `title.slice(0, 200)` exceeds the prompt's 120-char guidance, but this faithfully copies the sibling convention so consistency wins.
