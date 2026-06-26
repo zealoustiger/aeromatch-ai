@@ -19,6 +19,10 @@ interface Filters {
   /** optional ilike pattern to exclude (e.g. keep SR22 distinct from SR22T). */
   notModelPattern?: string
   state?: string
+  /** ICAO airport code (e.g. KSFO). Resolved server-side to the airport's state
+   *  and applied as an additional `.eq('state', …)` constraint. Falls back to
+   *  no-op (shows all) when the code isn't in our airports table. */
+  airport?: string
   min_price?: string
   max_price?: string
   min_year?: string
@@ -442,6 +446,17 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .not('title', 'ilike', '%wheelpant%')
       .not('title', 'ilike', '%wheel pant%')
       .not('title', 'ilike', '% assembly%')
+
+    // Airport → state: resolve the ICAO code to a US state, then filter by it.
+    // Falls back to no-op when the code isn't in our airports table (shows all).
+    if (filters.airport) {
+      const { data: apt } = await supabase
+        .from('airports')
+        .select('state')
+        .eq('icao', filters.airport.toUpperCase().trim())
+        .maybeSingle()
+      if (apt?.state) query = query.eq('state', apt.state)
+    }
 
     if (filters.photoOnly) query = query.eq('image_is_placeholder', false)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)

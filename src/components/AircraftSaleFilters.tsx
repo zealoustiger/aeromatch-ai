@@ -106,10 +106,10 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
   const hasFilters = Object.values(initialValues).some(Boolean)
 
   // Core buying criteria (Price / Year / Total Time) now lead the panel, always
-  // visible under Make → Model. Only State stays behind the progressive-disclosure
-  // "More filters" toggle, which auto-opens when State is already active so an
+  // visible under Make → Model. State and Airport stay behind the progressive-
+  // disclosure "More filters" toggle, which auto-opens when either is active so an
   // active filter is never hidden.
-  const SECONDARY_KEYS = ['state'] as const
+  const SECONDARY_KEYS = ['state', 'airport'] as const
   const secondaryActive = SECONDARY_KEYS.some((k) => initialValues[k])
   const [showMore, setShowMore] = useState(secondaryActive)
 
@@ -346,6 +346,29 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
 
         {showMore && (
           <div className="mt-4 space-y-5">
+            {/* Airport (ICAO) — resolved server-side to the airport's state, so buyers
+                can filter by "near KSFO" without knowing the state. */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Near airport (ICAO)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. KSFO, KHWD"
+                maxLength={4}
+                defaultValue={initialValues.airport ?? ''}
+                onBlur={(e) => updateFilter('airport', e.target.value.toUpperCase().trim())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const v = (e.target as HTMLInputElement).value.toUpperCase().trim()
+                    updateFilter('airport', v)
+                  }
+                }}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 font-mono text-sm uppercase focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+              <p className="mt-1 text-xs text-slate-400">4-letter ICAO code — shows aircraft based in that airport&apos;s state</p>
+            </div>
+
             {/* State */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
