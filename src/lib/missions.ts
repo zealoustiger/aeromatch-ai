@@ -276,6 +276,39 @@ export const MISSIONS: Mission[] = [
     ],
     filters: { q: 'stol' },
   },
+  {
+    slug: 'turboprop',
+    label: 'Turboprop',
+    h1: 'Turboprop Aircraft for Sale',
+    metaTitle: 'Turboprop Aircraft for Sale | ClubHanger',
+    metaDescription:
+      'Browse turboprop aircraft for sale — single-engine and twin turboprops including TBM, Pilatus PC-12, King Air, and Piper Meridian. Aggregated from across the web.',
+    blurb: 'Single- and twin-engine turboprop aircraft for high-speed, high-altitude travel.',
+    intro: [
+      'A turboprop aircraft uses a gas-turbine engine to drive a propeller — the defining characteristic that separates this class from both piston singles and pure jets. The turbine\'s reliability record is significantly better than a reciprocating engine of similar power, and turboprops cruise faster and higher than piston aircraft, often at FL250–FL280 with TAS in the 250–340-knot range. Single-engine turboprops like the Daher TBM 700/850/900/940, the Pilatus PC-12, and the Piper Meridian (PA-46-500TP) have become the gold standard for owner-flown business aviation; twin-turboprops like the Beechcraft King Air C90, B200, and 350 dominate corporate and charter operations. The appeal is simple: turbine reliability, cabin altitude in the mid-flight levels, and range measured in multi-state trips rather than local hops.',
+      'The financial reality is its own story. Turboprop aircraft are expensive to acquire — entry-level TBM 700s and PC-12 Alphas start in the low seven figures — and the engine maintenance costs are the largest line item in the operating budget. A PT6A overhaul on a King Air or TBM runs $200,000–$600,000 depending on the variant, and hot-section inspections are required every 1,200–3,600 hours depending on the engine and operating environment. Insurance costs reflect both the aircraft\'s value and the risk profile of a high-performance turbine, so underwriters typically require a turbine type rating, significant time in type, and often a simulator recurrency check before issuing favorable terms. Co-ownership is how most private pilots actually afford and operate these aircraft — splitting the acquisition cost, the overhaul reserve, and the fixed insurance and hangar expense across two to four partners brings the monthly number from "impossible" to "ambitious but achievable."',
+      'The listings below are the aircraft in our inventory whose title or description mentions turboprop, turbine, or a turboprop-specific type name. Because turboprop classified listings often lead with the model name (TBM, PC-12, King Air, Meridian) rather than the category word, not every turboprop in the database may appear here — cross-reference the make and model pages for your specific type. Always confirm the engine model and variant, the time since hot section and overhaul, the prop condition, and the avionics certification status on the source listing and in the maintenance logs before making an offer, and budget for a pre-purchase inspection by a shop that specializes in the type.',
+    ],
+    faqs: [
+      {
+        q: 'What is a turboprop aircraft?',
+        a: 'A turboprop uses a gas-turbine engine — the same basic technology as a jet — to drive a propeller, rather than burning fuel in cylinders like a piston engine. The combustion happens continuously in the turbine rather than in repeating strokes, which is why turboprops are more reliable, start at much wider temperature ranges, and run on Jet-A fuel rather than avgas. The propeller converts the turbine\'s shaft power into thrust, which is why turboprops cruise slower than turbofan jets but faster than piston aircraft, and they excel in the 200–300-knot cruise / FL200–FL280 altitude range where they offer the best mix of speed, economy, and payload.',
+      },
+      {
+        q: 'Do I need a type rating to fly a turboprop?',
+        a: 'It depends on the aircraft\'s maximum certificated takeoff weight. Aircraft over 12,500 pounds require a type rating regardless of engine type. Most single-engine turboprops — TBM series, Pilatus PC-12, Piper Meridian — are certificated below 12,500 pounds and require only a high-performance and complex endorsement at the FAA level, though insurance underwriters almost universally require formal turbine transition training and a minimum number of hours in type before they will issue a policy. Twin turboprops like the King Air B200 and 350 exceed 12,500 pounds and require a formal multi-engine type rating.',
+      },
+      {
+        q: 'How much does a turboprop engine overhaul cost?',
+        a: 'Engine overhaul is the largest and most predictable line item in a turboprop\'s operating budget. Common PT6A variants (used in TBM and King Air) run $200,000–$600,000 per engine at overhaul; the TPE331 (found in the MU-2 and some Commander/Merlin variants) is similar. Hot-section inspections — a partial disassembly of the turbine section required on a fixed-hour cycle, typically every 1,200–3,600 hours depending on operating temperature profile — cost $30,000–$100,000. Engine ownership programs (like Pratt\'s ESP Gold) cap your cost exposure but require a monthly commitment. When evaluating a turboprop purchase, understand how many hours remain to the next hot section and to overhaul, and confirm whether an engine program is in force.',
+      },
+      {
+        q: 'Is co-owning a turboprop practical?',
+        a: 'Yes — co-ownership is how most private pilots actually afford a turboprop. The acquisition cost, the engine overhaul reserve, and the fixed costs (hangar, insurance, annual inspection) all divide cleanly across two to four partners. A two-way split on a well-maintained TBM 700 or PC-12 Alpha can bring the total monthly cost into the range many instrument-rated pilots can justify for the capability gain. The keys are aligned missions (everyone wants cross-country IFR travel, not local sightseeing), a written partnership agreement that spells out the engine reserve contribution, and partners who maintain their instrument and turbine currency. ClubHanger\'s cost calculator can model the numbers for your specific share.',
+      },
+    ],
+    filters: { q: 'turboprop' },
+  },
 ]
 
 /** Look up a mission by slug. Returns undefined for unknown slugs (→ 404). */
