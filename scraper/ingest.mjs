@@ -14,6 +14,7 @@
  */
 
 import { loadEnvLocal, runIngest } from './lib/ingest-core.mjs'
+import { runExtractSpecs } from './lib/extract-specs.mjs'
 import * as barnstormers from './adapters/barnstormers.mjs'
 import * as hangar67 from './adapters/hangar67.mjs'
 import * as aircraftforsale from './adapters/aircraftforsale.mjs'
@@ -69,6 +70,18 @@ async function main() {
   for (const s of summary) {
     console.log(`  ${s.source.padEnd(18)} ${s.scraped} listings`)
   }
+
+  // Post-ingest: extract structured specs (TTAF/SMOH/engine/avionics/…) from the
+  // free-text descriptions of newly-changed listings. No-op without ANTHROPIC_API_KEY;
+  // only touches listings whose description changed since the last extraction, so it's
+  // cheap on daily runs. Never throws — a failure here must not fail the scrape.
+  console.log('\n▸ Spec extraction')
+  try {
+    await runExtractSpecs({ source: only, dryRun, log: console.log })
+  } catch (e) {
+    console.log(`  spec-extract error (non-fatal): ${e.message}`)
+  }
+
   console.log(`\nDone${dryRun ? ' (dry run)' : ''}.`)
 }
 

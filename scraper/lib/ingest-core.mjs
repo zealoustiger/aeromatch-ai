@@ -238,7 +238,7 @@ export function contentHash(row) {
   return createHash('sha1').update(basis).digest('hex')
 }
 
-function adminClient() {
+export function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
