@@ -1,0 +1,12 @@
+# /etc/systemd/system/nightshift-smoke.timer
+# Polls for queued smoke runs every minute. The runner exits instantly when the
+# queue is empty, so this is cheap; latency from clicking "Run" to start is ≤1 min.
+[Unit]
+Description=Poll for queued ClubHanger smoke-test runs
+
+[Timer]
+OnCalendar=minutely
+Persistent=false
+
+[Install]
+WantedBy=timers.target
