@@ -105,6 +105,30 @@ function cleanHours(n) {
   return Math.round(n)
 }
 
+// annual_due is a DATE column, but listings state it as a month/year ("November
+// 2025", "Nov 2025", "11/2025", "2025-11"). Parse to an ISO date (first of the
+// stated month) so the write is valid; return null when it can't be parsed to a
+// real month+year, so we never fail the row update on an unparseable string.
+const MONTHS = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
+  september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+}
+function parseAnnualDate(raw) {
+  if (typeof raw !== 'string') return null
+  const s = raw.trim().toLowerCase()
+  // "November 2025" / "nov 2025"
+  let m = s.match(/\b([a-z]{3,9})\.?\s+(\d{4})\b/)
+  if (m && MONTHS[m[1]]) return `${m[2]}-${String(MONTHS[m[1]]).padStart(2, '0')}-01`
+  // "2025-11" or "2025/11"
+  m = s.match(/\b(\d{4})[-/](\d{1,2})\b/)
+  if (m && +m[2] >= 1 && +m[2] <= 12) return `${m[1]}-${String(+m[2]).padStart(2, '0')}-01`
+  // "11/2025"
+  m = s.match(/\b(\d{1,2})[-/](\d{4})\b/)
+  if (m && +m[1] >= 1 && +m[1] <= 12) return `${m[2]}-${String(+m[1]).padStart(2, '0')}-01`
+  return null
+}
+
 function cleanAvionics(arr) {
   if (!Array.isArray(arr)) return null
   const out = [...new Set(arr.map((x) => String(x).trim()).filter((x) => x && x.length <= 60))]
@@ -134,8 +158,9 @@ async function extractOne(client, row) {
     if (v) patch.engine_type = v
   }
   if (row.avionics == null) { const v = cleanAvionics(out.avionics); if (v) patch.avionics = v }
-  if (row.annual_due == null && typeof out.annual_due === 'string' && out.annual_due.trim()) {
-    patch.annual_due = out.annual_due.trim().slice(0, 60)
+  if (row.annual_due == null) {
+    const d = parseAnnualDate(out.annual_due)
+    if (d) patch.annual_due = d
   }
   if (row.damage_history == null && typeof out.damage_history === 'boolean') {
     patch.damage_history = out.damage_history
@@ -164,26 +189,38 @@ export async function runExtractSpecs({
   const supa = adminClient()
   const fingerprint = (r) => `${EXTRACT_VERSION}:${r.content_hash ?? ''}`
 
-  // Candidates: active, real description, at least one spec column still null, and
-  // not already extracted at this content_hash+version.
-  let q = supa
-    .from('aircraft_for_sale')
-    .select('id, source, title, description, content_hash, ttaf, smoh, engine_type, avionics, annual_due, damage_history, spec_extracted_hash')
-    .eq('status', 'active')
-    .not('description', 'is', null)
-    .or('ttaf.is.null,smoh.is.null,engine_type.is.null,avionics.is.null,annual_due.is.null,damage_history.is.null')
-    .limit(limit)
-  if (source) q = q.eq('source', source)
-
-  const { data, error } = await q
-  if (error) { log(`  spec-extract: query error: ${error.message}`); return { candidates: 0, extracted: 0, updated: 0, skipped: 0 } }
-
-  // Filter out rows whose description is too thin to be worth a call, and rows
-  // already extracted at this fingerprint (cheap client-side guard; the column
-  // also lets a future SQL-only check skip them).
-  const rows = (data ?? []).filter(
-    (r) => (r.description || '').trim().length >= 40 && r.spec_extracted_hash !== fingerprint(r)
-  )
+  // Candidates: active listings with a real description, at least one spec column
+  // still null, and not already extracted at this content_hash+version. Paginate in
+  // 1000-row batches — PostgREST caps a single response at ~1000 rows, so without
+  // this the unstamped candidates that fall past the first page are never seen and
+  // the backfill can't converge. We stop early once we've collected `limit` rows
+  // that actually need work.
+  const cols =
+    'id, source, title, description, content_hash, ttaf, smoh, engine_type, avionics, annual_due, damage_history, spec_extracted_hash'
+  const PAGE = 1000
+  const rows = []
+  for (let from = 0; rows.length < limit; from += PAGE) {
+    let q = supa
+      .from('aircraft_for_sale')
+      .select(cols)
+      .eq('status', 'active')
+      .not('description', 'is', null)
+      .or('ttaf.is.null,smoh.is.null,engine_type.is.null,avionics.is.null,annual_due.is.null,damage_history.is.null')
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (source) q = q.eq('source', source)
+    const { data, error } = await q
+    if (error) { log(`  spec-extract: query error: ${error.message}`); break }
+    if (!data || data.length === 0) break
+    // Skip thin descriptions and rows already extracted at this fingerprint.
+    for (const r of data) {
+      if ((r.description || '').trim().length >= 40 && r.spec_extracted_hash !== fingerprint(r)) {
+        rows.push(r)
+        if (rows.length >= limit) break
+      }
+    }
+    if (data.length < PAGE) break
+  }
   log(`  spec-extract: ${rows.length} candidate listing(s)${source ? ` (${source})` : ''}`)
   if (rows.length === 0) return { candidates: 0, extracted: 0, updated: 0, skipped: 0 }
 
@@ -211,7 +248,8 @@ export async function runExtractSpecs({
       // re-pay for this listing until its description changes.
       const update = { ...(patch ?? {}), spec_extracted_hash: fp }
       const { error: uErr } = await supa.from('aircraft_for_sale').update(update).eq('id', row.id)
-      if (!uErr && patch && Object.keys(patch).length) updated++
+      if (uErr) { skipped++; log(`  update error (${row.id}): ${uErr.message}`); return }
+      if (patch && Object.keys(patch).length) updated++
     } else if (patch && Object.keys(patch).length) {
       updated++
     }
