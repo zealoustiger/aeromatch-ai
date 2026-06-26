@@ -2,6 +2,16 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-26T103000Z — PASS — searches-email-settings-link
+- Pages: /searches
+- What: **Saved Searches now has a clear link to email notification settings.** A "Manage email notification settings" link with a Bell icon appears in the `/searches` page header, below the subheading — visible whether the user has any saved searches or not. Clicking it goes to `/account` (the email-alerts hub). Closes the `[P3][want]` backlog item.
+- Goal: feature depth / UX completeness — `[want]` lane (last 3 non-bug cycles: aircraft-mission-twin-stol [goal], cream-surface-sweep [want], aircraft-for-sale-ai-draft [want] → not all 3 [want], so [want] owed per the 3:1 policy). Pageviews at orient: 404 last 7d (PostHog secondary; GSC not configured; STAGE=INDEXING).
+- Goal-lane: [want]
+- Spec: nightshift/specs/20260626T082240Z-searches-email-settings-link.md
+- Verdict: PASS. `npx next build` compiled clean (322 static pages, exit 0, no TypeScript errors). QA smoke (`next start` production build on port 3011, NOT dev) exit 0 on `/searches` + `/account` at desktop 1280 + mobile 375 (4/4 — HTTP 200, zero app-origin console errors, zero horizontal overflow). Non-visual cycle (auth-gated content link) — screenshots saved for audit trail, not read. The link is verified by code review: `Bell` icon imported from `lucide-react`, `<Link href="/account">` with `text-sky-600 hover:text-sky-700` sky styling, rendered in the header above the conditional list/empty-state. NOTE: two prior cycles rate-limited immediately after writing the spec (08:22 and 09:00 runs); the implementation was already in the working tree; this cycle carried the changes onto the feature branch, built, and QA'd cleanly. Playwright browser workaround applied (1223 binary staged as 1228).
+- Screenshots: nightshift/screenshots/searches-email-settings-link/
+- Next: (1) The reverse link (`/account` → `/searches`) already exists per prior CHANGELOG. (2) A real persisted email on/off toggle per saved search (needs an additive `profiles` column) is the logical next step for this feature line. (3) Next [goal] cycle: turboprop or amphibian/floatplane mission page, or a "Browse by mission" section on /aircraft below the fold.
+
 ## 2026-06-26T09:00:07Z — DRAIN SUMMARY
 - Cycles this run: 1 (PASS 0 / FAIL 1 / ABORT 0)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
