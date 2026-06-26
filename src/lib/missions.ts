@@ -210,6 +210,72 @@ export const MISSIONS: Mission[] = [
     ],
     filters: { q: 'experimental' },
   },
+  {
+    slug: 'twin-engine',
+    label: 'Twin-engine',
+    h1: 'Twin-Engine Aircraft for Sale',
+    metaTitle: 'Twin-Engine Aircraft for Sale | ClubHanger',
+    metaDescription:
+      'Browse twin-engine general aviation aircraft for sale — piston and turbine twins for IFR, over-water, and high-performance travel. Aggregated from across the web.',
+    blurb: 'Multi-engine piston and turbine aircraft for high-performance travel and IFR.',
+    intro: [
+      'A twin-engine aircraft carries a second powerplant as both a safety margin and a performance upgrade. In practice that second engine buys you redundancy on long over-water, over-terrain, and single-pilot IFR legs — the ability to continue to a suitable airport if one engine fails rather than managing a forced landing. It also typically brings more horsepower, a faster cruise, higher useful load, and pressurization options that a comparably sized single cannot match. The classic piston twins — Cessna 310, 340, and 421; Beechcraft Baron and Duke; Piper Aztec and Seneca — remain popular on the used market for that combination of capability and relative affordability.',
+      'The trade-off is the cost equation. Two engines mean two overhauls, two sets of cylinder inspections, and higher insurance premiums. Multi-engine insurance underwriters look closely at total time, multi-engine time, and instrument currency, and the training requirement — at minimum a multi-engine rating, ideally a full instrument-proficiency check in type — is real. Modern diesel twins like the Diamond DA42 have narrowed the fuel-cost gap compared to avgas piston twins, but the fixed-cost math still pushes most twin owners toward co-ownership rather than solo ownership.',
+      'The listings below are the aircraft in our inventory whose title or description mentions a twin or multi-engine configuration. Always verify the engine model, times since overhaul, and propeller condition on the source listing and in the logs, and get a pre-buy inspection from someone experienced with the type before making an offer.',
+    ],
+    faqs: [
+      {
+        q: 'Do I need a multi-engine rating to fly a twin?',
+        a: 'Yes. A multi-engine rating (added to a Private or Commercial certificate) is required to act as pilot in command of a multi-engine aircraft. It is not a standalone certificate — you add it as a category and class rating. Most training programs run 10–20 hours in the aircraft plus ground study, and many insurers want additional time-in-type beyond the rating minimums before they will quote a twin.',
+      },
+      {
+        q: 'Is a twin actually safer than a high-performance single?',
+        a: 'It depends on the situation and the pilot. A twin gives you the option to continue flying on one engine if the other fails — but engine failures are rare, and a mishandled engine-out in a piston twin can be more dangerous than a well-flown forced landing in a single. The safety benefit is most real when you are flying IFR, over-water, or over-terrain where a forced landing would be hazardous, and when you maintain your engine-out proficiency with regular training.',
+      },
+      {
+        q: 'Why do most twin owners co-own rather than own solo?',
+        a: 'Two engines bring two overhaul reserves, two annuals\' worth of cylinder inspections, and higher insurance premiums that easily exceed what a single costs to own. Co-ownership spreads those fixed costs across a group so each partner pays a manageable monthly number while still accessing the capability of a twin. It is the standard way the math works for the piston-twin market.',
+      },
+      {
+        q: 'What is the difference between a piston twin and a turbine twin?',
+        a: 'Piston twins (Cessna 310, Baron, Seneca, DA42) use reciprocating engines and represent most of the used market accessible to private pilots — they are faster and more capable than singles but require no special operating certificates. Turbine twins (King Air, TBM-style twins, older Citations) use turboprop or jet engines, carry much higher acquisition and operating costs, and require a turbine type rating; they are a different class of aircraft and operator.',
+      },
+    ],
+    filters: { q: 'twin' },
+  },
+  {
+    slug: 'stol',
+    label: 'STOL / Backcountry',
+    h1: 'STOL and Backcountry Aircraft for Sale',
+    metaTitle: 'STOL Aircraft for Sale — Short Takeoff & Landing | ClubHanger',
+    metaDescription:
+      'Browse STOL and backcountry aircraft for sale — short-field specialists for bush strips, remote airstrips, and off-airport adventure flying. Aggregated from across the web.',
+    blurb: 'Short-field specialists for bush strips and off-airport adventure flying.',
+    intro: [
+      'STOL — Short Takeoff and Landing — aircraft are purpose-built or purpose-modified for operating from short, rough, and unimproved strips far off the paved-airport grid. High-lift wings (often with leading-edge cuffs, drooped ailerons, and large Fowler flaps), light and powerful airframes, and tundra tires or floats let these aircraft use strips measured in hundreds of feet rather than thousands. The category is dominated by types like the CubCrafters Carbon Cub, Kitfox, Zenith CH-750, and backcountry-modified Super Cubs — but also includes certified Piper Cubs, Cessna 180 and 185 Skywagon variants on big tires, and even Cessna 172s with STOL kits.',
+      'The backcountry community prizes three capabilities above all else: short-field performance (how little runway you really need), payload at that performance (how much gear you can carry), and rough-field durability (gear, prop, and airframe built to bounce through rocks and ruts). Tundra tires dramatically expand the operating envelope, but they also add drag and reduce cruise speed — most backcountry pilots consider that a worthy trade. If you plan to fly remote strips, study the specific performance numbers for the airplane and modification combination carefully: a modified stock 172 is a different animal from a factory Carbon Cub FX-3.',
+      'The listings below are the aircraft in our inventory whose title or description mentions STOL, backcountry, bush, or short-field capability. Because not every backcountry-capable aircraft uses those specific terms, browse the experimental and tailwheel mission pages as well — many Van\'s RV, Super Cub, and Kitfox listings appear there too.',
+    ],
+    faqs: [
+      {
+        q: 'What makes an aircraft a true STOL aircraft?',
+        a: 'True STOL aircraft combine high-lift wing designs (leading-edge cuffs, large flaps, drooped ailerons) with powerful engines and light airframes to achieve very short ground rolls — sometimes under 200 feet. The standard is demonstrated by the manufacturer or modifier, but in practice you want to see real-world short-field numbers from pilots who fly the specific type and modification combination, since spec-sheet figures assume an ideal strip.',
+      },
+      {
+        q: 'Do I need a special license to fly backcountry strips?',
+        a: 'No special certificate is required — a Private Pilot certificate is enough legally. But backcountry and bush flying involves real hazards: one-way strips, high terrain, density altitude, soft or rough surfaces, and limited abort options. Most experienced backcountry pilots recommend formal training at a backcountry-specific school before flying remote strips solo, regardless of total experience.',
+      },
+      {
+        q: 'Is a STOL aircraft good for anything besides backcountry flying?',
+        a: 'Yes. Short-field capability is useful at small airports with short runways, grass strips, and private airstrips that are inaccessible to most aircraft. Some backcountry types also make excellent aerial photography platforms and fire-patrol aircraft, and pilots who simply enjoy stick-and-rudder, low-and-slow flying often gravitate to the same types for the pure enjoyment of the flying.',
+      },
+      {
+        q: 'What are tundra tires and do I need them?',
+        a: 'Tundra tires are oversized, low-pressure tires (often 26–36 inches in diameter) that absorb the shock of rough surfaces and give much better flotation on soft or uneven ground. They are standard equipment for serious backcountry operations and come pre-fitted on most factory STOL aircraft. The trade-off is reduced cruise speed due to the added drag — typically 5–10 knots. On a grass-strip or paved-airport flier who never plans to use rough strips, they may not be worth it; on a real backcountry airplane, they are usually essential.',
+      },
+    ],
+    filters: { q: 'stol' },
+  },
 ]
 
 /** Look up a mission by slug. Returns undefined for unknown slugs (→ 404). */
