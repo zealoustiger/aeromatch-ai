@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Scale,
 } from 'lucide-react'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
 import {
   clubHangerEstimate,
@@ -39,6 +40,8 @@ import PhotoGallery from '@/components/PhotoGallery'
 import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
 import SimilarAircraft from '@/components/SimilarAircraft'
+import SavedListingNote from '@/components/SavedListingNote'
+import ListingCompletenessPanel from '@/components/ListingCompletenessPanel'
 
 const DAY_MS = 86_400_000
 
@@ -146,6 +149,44 @@ export default async function AircraftListingDetailPage({
   const p = await getAircraftForSaleById(id)
   if (!p) notFound()
 
+  // Fetch the current user's saved row for this listing so we can:
+  // (a) pass the real initialSaved state (eliminates the heart-state flash), and
+  // (b) render the note editor if the user has saved this listing.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let savedRowId: string | null = null
+  let savedNote: string | null = null
+  let notesEnabled = false
+
+  if (user) {
+    // Try to select with the note column; fall back gracefully when the column
+    // hasn't been migrated yet (same pattern as the /saved page).
+    const withNote = await supabase
+      .from('saved_listings')
+      .select('id, note')
+      .eq('user_id', user.id)
+      .eq('listing_id', p.id)
+      .eq('listing_type', 'aircraft')
+      .maybeSingle()
+
+    if (!withNote.error) {
+      notesEnabled = true
+      savedRowId = withNote.data?.id ?? null
+      savedNote = withNote.data?.note ?? null
+    } else {
+      // note column not yet migrated (42703) or other error — id-only fallback.
+      const fallback = await supabase
+        .from('saved_listings')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('listing_id', p.id)
+        .eq('listing_type', 'aircraft')
+        .maybeSingle()
+      savedRowId = fallback.data?.id ?? null
+    }
+  }
+
   const label = aircraftLabel(p)
   const source = sourceLabel(p.source)
   const isExternal = p.source !== 'user'
@@ -231,10 +272,15 @@ export default async function AircraftListingDetailPage({
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Crawlable breadcrumb trail (also emits BreadcrumbList JSON-LD). */}
         <Breadcrumbs items={crumbs} />
-        {/* Save / share */}
-        <div className="mb-6 flex items-center justify-end gap-2">
-          <ShareListingButton url={detailUrl} />
-          <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={false} variant="full" />
+        {/* Save / share + optional user note on this saved listing */}
+        <div className="mb-6">
+          <div className="flex items-center justify-end gap-2">
+            <ShareListingButton url={detailUrl} />
+            <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={!!savedRowId} variant="full" />
+          </div>
+          {notesEnabled && savedRowId && (
+            <SavedListingNote savedRowId={savedRowId} note={savedNote} />
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -438,6 +484,9 @@ export default async function AircraftListingDetailPage({
                 }
               />
             )}
+
+            {/* Listing completeness — shows buyers which key signals are present. */}
+            <ListingCompletenessPanel p={p} />
 
             {/* Source CTA — keeps the outbound path the cards used to provide. */}
             <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import PartnershipCard from '@/components/PartnershipCard'
 import AircraftSaleCard from '@/components/AircraftSaleCard'
 import DeviceSavedListings from '@/components/DeviceSavedListings'
+import SavedListingNote from '@/components/SavedListingNote'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 
@@ -31,11 +32,37 @@ export default async function SavedPage() {
   }
 
   // Saved listing ids in save order (newest first), split by listing type.
-  const { data: savedRows } = await supabase
+  // Select the optional `note` too; if that column hasn't been migrated yet,
+  // fall back to a note-less select so the page never breaks (notes stay dormant
+  // until the migration is applied — see schema.sql / CHANGELOG).
+  type SavedRow = { id: string; listing_id: string; listing_type: string; note: string | null }
+  let savedRows: SavedRow[] = []
+  const withNote = await supabase
     .from('saved_listings')
-    .select('listing_id, listing_type')
+    .select('id, listing_id, listing_type, note')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+  // `note` is dormant until the additive migration is applied (see schema.sql /
+  // CHANGELOG). When the column is missing we still render saves, but suppress the
+  // note affordance entirely so users never see a control that can't persist.
+  const notesEnabled = !withNote.error
+  if (withNote.error) {
+    const fallback = await supabase
+      .from('saved_listings')
+      .select('id, listing_id, listing_type')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+    savedRows = (fallback.data ?? []).map((r) => ({ ...r, note: null })) as SavedRow[]
+  } else {
+    savedRows = (withNote.data ?? []) as SavedRow[]
+  }
+
+  // Map each saved listing (by type+id) → its saved-row id + note, so we can
+  // render the note editor under the matching card.
+  const savedMeta = new Map<string, { savedRowId: string; note: string | null }>()
+  for (const r of savedRows) {
+    savedMeta.set(`${r.listing_type}:${r.listing_id}`, { savedRowId: r.id, note: r.note })
+  }
 
   const partnershipIds = (savedRows ?? [])
     .filter((r) => r.listing_type === 'partnership')
@@ -109,9 +136,17 @@ export default async function SavedPage() {
                 <span className="text-sm font-normal text-slate-400">({partnerships.length})</span>
               </h2>
               <div className="space-y-4">
-                {partnerships.map((p) => (
-                  <PartnershipCard key={p.id} p={p} saved />
-                ))}
+                {partnerships.map((p) => {
+                  const meta = savedMeta.get(`partnership:${p.id}`)
+                  return (
+                    <div key={p.id}>
+                      <PartnershipCard p={p} saved />
+                      {notesEnabled && meta && (
+                        <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </section>
           )}
@@ -123,9 +158,17 @@ export default async function SavedPage() {
                 <span className="text-sm font-normal text-slate-400">({aircraft.length})</span>
               </h2>
               <div className="space-y-4">
-                {aircraft.map((a) => (
-                  <AircraftSaleCard key={a.id} p={a} saved />
-                ))}
+                {aircraft.map((a) => {
+                  const meta = savedMeta.get(`aircraft:${a.id}`)
+                  return (
+                    <div key={a.id}>
+                      <AircraftSaleCard p={a} saved />
+                      {notesEnabled && meta && (
+                        <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </section>
           )}

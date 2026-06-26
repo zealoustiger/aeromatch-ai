@@ -1,10 +1,13 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft, Mail, Phone, Search, LogIn } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Search, Handshake, ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
-import { anonymizeName, formatPrice, formatShareType } from '@/lib/utils'
+import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/utils'
 import AviatorAvatar from '@/components/AviatorAvatar'
+import SeekerContactBar from '@/components/SeekerContactBar'
+import PartnershipCard from '@/components/PartnershipCard'
+import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -24,21 +27,32 @@ const USE_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
-/**
- * Is the current viewer a signed-in member? Used to gate a seeker's contact
- * details: their email/phone are private-by-default and never rendered into the
- * public (crawlable) HTML — only signed-in members see them. Mirrors the
- * mock-mode guard used elsewhere (logged-out default when Supabase is absent).
- * Read-only use of the frozen supabase-server client.
- */
-async function isViewerSignedIn(): Promise<boolean> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
-  if (!hasSupabase) return false
 
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return !!user
+const MATCH_LIMIT = 4
+
+/**
+ * Find up to 4 active partnerships that match this seeker's location and
+ * aircraft preference. Airport-first; falls back to state if the airport
+ * returns nothing. Self-suppresses (returns []) when no sensible match exists.
+ */
+async function getMatchingPartnerships(s: PartnershipSeeker) {
+  const make = s.preferred_makes?.length === 1 ? s.preferred_makes[0] : undefined
+  const buyin = s.max_buy_in != null ? String(s.max_buy_in) : undefined
+
+  const { listings } = await getPartnershipListings({
+    airport: s.home_airport,
+    ...(make ? { make } : {}),
+    ...(buyin ? { max_buyin: buyin } : {}),
+  })
+  if (listings.length > 0) return listings.slice(0, MATCH_LIMIT)
+
+  if (!s.state) return []
+  const { listings: byState } = await getPartnershipListings({
+    state: s.state,
+    ...(make ? { make } : {}),
+    ...(buyin ? { max_buyin: buyin } : {}),
+  })
+  return byState.slice(0, MATCH_LIMIT)
 }
 
 async function getSeeker(id: string): Promise<PartnershipSeeker | null> {
@@ -59,10 +73,11 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
   const s = await getSeeker(id)
   if (!s) notFound()
 
-  // Privacy-by-default: show the pilot as "First L." and only reveal contact
-  // details to signed-in members (never in the public/crawlable HTML).
+  const matches = await getMatchingPartnerships(s)
+
+  // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
+  // are handled client-side by SeekerContactBar so they're never in public HTML.
   const displayName = anonymizeName(s.contact_name)
-  const signedIn = await isViewerSignedIn()
 
   const aircraftWant = [
     s.preferred_makes?.join(', '),
@@ -112,7 +127,7 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
                 <MapPin className="h-4 w-4 text-slate-400" />
                 <strong className="font-semibold text-slate-700">{s.home_airport}</strong>
                 {s.city && ` · ${s.city}, ${s.state}`}
-                {s.willing_to_travel_nm && ` (willing to travel ±${s.willing_to_travel_nm} nm)`}
+                {s.willing_to_travel_nm && ` (willing to commute ${travelLabel(s.willing_to_travel_nm)})`}
               </span>
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4 text-slate-400" />
@@ -234,53 +249,45 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
             </div>
           )}
 
-          {/* Contact card — contact details are private by default and only
-              shown to signed-in members, so a pilot's email/phone are never
-              published to the open web (honors the post form's "not shown
-              publicly" promise). */}
-          <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
-            <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
-            {signedIn ? (
-              <>
-                {displayName && (
-                  <p className="mb-3 text-sm text-sky-700">Reach out to {displayName}</p>
-                )}
-                <div className="space-y-2">
-                  {(s.contact_method === 'email' || s.contact_method === 'both') && (
-                    <a
-                      href={`mailto:${s.contact_email}?subject=Re: ${encodeURIComponent(s.title)}`}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-                    >
-                      <Mail className="h-4 w-4" /> Send Email
-                    </a>
-                  )}
-                  {(s.contact_method === 'phone' || s.contact_method === 'both') && s.contact_phone && (
-                    <a
-                      href={`tel:${s.contact_phone}`}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-white py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
-                    >
-                      <Phone className="h-4 w-4" /> {s.contact_phone}
-                    </a>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="mb-3 text-sm text-sky-700">
-                  To protect pilots&apos; privacy, contact details are only shown to signed-in
-                  members. Sign in to reach out{displayName ? ` to ${displayName}` : ''}.
-                </p>
-                <Link
-                  href={`/auth?next=${encodeURIComponent(`/partnerships/seeking/${id}`)}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-                >
-                  <LogIn className="h-4 w-4" /> Sign in to contact this pilot
-                </Link>
-              </>
-            )}
-          </div>
+          {/* Contact card — client component handles auth so contact details
+              are never rendered in the public (crawlable) server HTML. */}
+          <SeekerContactBar
+            seekerId={s.id}
+            seekerOwnerId={s.poster_id}
+            seekerPath={`/partnerships/seeking/${id}`}
+            title={s.title}
+            displayName={displayName}
+            contactEmail={s.contact_email}
+            contactPhone={s.contact_phone}
+            contactMethod={s.contact_method}
+          />
         </div>
       </div>
+
+      {/* Matching partnerships — show up to 4 open partnerships near this
+          seeker's airport (or state as a fallback) that fit their preferences.
+          Self-suppresses entirely when no sensible match exists. */}
+      {matches.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <Handshake className="h-5 w-5 text-sky-600" />
+            Partnerships near {s.home_airport}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {matches.map((p) => (
+              <PartnershipCard key={p.id} p={p} />
+            ))}
+          </div>
+          <div className="mt-4">
+            <Link
+              href={`/partnerships?airport=${encodeURIComponent(s.home_airport)}`}
+              className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+            >
+              Browse all partnerships near {s.home_airport} <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

@@ -39,10 +39,18 @@ git fetch --quiet origin 2>/dev/null || true
 git checkout staging --quiet 2>/dev/null || true
 git pull --quiet --ff-only 2>/dev/null || true
 
-# 2) Ensure deps — first run installs @playwright/test + chromium into mounted
-#    volumes (node_modules in the repo, browsers in the cache), then it's cached.
+# 2) Ensure deps. node_modules lives in the mounted repo; browsers in the mounted
+#    cache — both persist across runs (pre-installed once). We DON'T run
+#    `playwright install` on the hot path: even when chromium is already present it
+#    contacts the CDN to validate, which stalls on this box's flaky CDN link. Instead
+#    a pure filesystem check (no network) decides whether a one-time install is needed.
 node -e "require.resolve('@playwright/test')" 2>/dev/null || { echo "installing @playwright/test…"; npm install --no-audit --no-fund >/dev/null 2>&1; }
-npx playwright install chromium >/dev/null 2>&1 || true
+if ls "${PLAYWRIGHT_BROWSERS_PATH}"/chromium-*/chrome-linux*/chrome >/dev/null 2>&1; then
+  echo "chromium present in cache — skipping install"
+else
+  echo "chromium missing — installing once…"
+  timeout 600 npx playwright install chromium >/dev/null 2>&1 || echo "chromium install failed/timed out — relying on cache"
+fi
 
 # 3) Run — the Supabase reporter writes per-test rows + the final run status.
 SMOKE_RUN_ID="$RUN_ID" SMOKE_BASE_URL="${SMOKE_BASE_URL:-https://clubhanger.com}" npx playwright test

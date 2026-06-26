@@ -5,11 +5,44 @@ import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
-import { sendEmail, buildAlertConfirmEmail } from '@/lib/email'
+import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail } from '@/lib/email'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_URL } from '@/lib/seo'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
 import Anthropic from '@anthropic-ai/sdk'
+
+// Simple in-process rate limiter for AI draft generation. Works correctly for
+// typical Vercel patterns where warm instances are reused for sequential requests
+// from the same session. Not distributed — for high-traffic, swap for Redis/KV;
+// at current traffic levels this is sufficient and requires no schema change.
+const AI_DRAFT_CALLS = new Map<string, { count: number; resetAt: number }>()
+const AI_DRAFT_MAX_PER_HOUR = 10
+
+// Per-thread throttle for new-message email notifications. Stores the timestamp
+// of the last email sent for each threadId. At most 1 notification per thread
+// per hour — prevents inbox spam in active back-and-forth conversations while
+// still delivering the first "you have a new message" nudge.
+const MESSAGE_NOTIFY_LAST = new Map<string, number>()
+const MESSAGE_NOTIFY_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
+
+async function checkAiDraftAccess(): Promise<string> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated.')
+
+  const now = Date.now()
+  const entry = AI_DRAFT_CALLS.get(user.id) ?? { count: 0, resetAt: now + 3_600_000 }
+  if (now > entry.resetAt) {
+    AI_DRAFT_CALLS.set(user.id, { count: 1, resetAt: now + 3_600_000 })
+  } else if (entry.count >= AI_DRAFT_MAX_PER_HOUR) {
+    throw new Error('Too many AI draft requests — please wait a bit before trying again.')
+  } else {
+    AI_DRAFT_CALLS.set(user.id, { count: entry.count + 1, resetAt: entry.resetAt })
+  }
+
+  return user.id
+}
 
 // Save the signed-in user's chosen aviator avatar to their profile. Upserts the
 // profile row (user_id is the PK / RLS key) so it works for users who haven't
@@ -382,6 +415,36 @@ export async function toggleSavedListing(
 }
 
 /**
+ * Attach (or clear) an optional free-text note on a saved listing. The note lives
+ * on the per-user saved_listings row, so users can remember why they saved a plane
+ * ("great panel — ask about damage history"). An empty/whitespace note clears it.
+ * Owner-scoped server-side (RLS + explicit user_id match). Degrades gracefully if
+ * the `note` column hasn't been migrated yet (returns a friendly error).
+ */
+export async function updateSavedNote(savedRowId: string, note: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const trimmed = note.trim().slice(0, 1000)
+
+  const { error } = await supabase
+    .from('saved_listings')
+    .update({ note: trimmed === '' ? null : trimmed })
+    .eq('id', savedRowId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    // 42703 = undefined_column — the note column isn't migrated yet.
+    if (error.code === '42703') return { error: 'Notes aren’t available yet — try again shortly.' }
+    return { error: 'Failed to save your note.' }
+  }
+
+  revalidatePath('/saved')
+  return { ok: true, note: trimmed }
+}
+
+/**
  * Slice 2 of soft-save: merge a logged-out visitor's device-only saves (held in
  * localStorage) into their real account once they sign in/up. Idempotent and
  * defensive — the payload comes straight from a client localStorage that could be
@@ -520,6 +583,67 @@ export async function getOrCreateThread(partnershipId: string, ownerId: string) 
   return { threadId: data.id }
 }
 
+export async function getOrCreateSeekerThread(seekerId: string, seekerOwnerId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (user.id === seekerOwnerId) return { error: 'Cannot message your own listing' }
+
+  const { data: existing } = await supabase
+    .from('threads')
+    .select('id')
+    .eq('seeker_id', seekerId)
+    .eq('inquirer_id', user.id)
+    .maybeSingle()
+
+  if (existing) return { threadId: existing.id }
+
+  const { data, error } = await supabase
+    .from('threads')
+    .insert({ seeker_id: seekerId, inquirer_id: user.id, owner_id: seekerOwnerId })
+    .select('id')
+    .single()
+
+  if (error) return { error: 'Failed to start conversation.' }
+  return { threadId: data.id }
+}
+
+// Look up the thread's OTHER participant and send them a new-message email.
+// Throttled to at most one email per thread per hour to avoid spamming active
+// conversations. Resolves (never throws) so the caller can fire-and-forget safely.
+async function notifyMessageRecipient(threadId: string, senderId: string): Promise<void> {
+  try {
+    // Throttle: skip if we already sent a notification for this thread recently.
+    const now = Date.now()
+    const lastSent = MESSAGE_NOTIFY_LAST.get(threadId) ?? 0
+    if (now - lastSent < MESSAGE_NOTIFY_INTERVAL_MS) return
+
+    // Service-role client: need to read thread + look up recipient email.
+    const admin = createAdminClient()
+    const { data: thread } = await admin
+      .from('threads')
+      .select('owner_id, inquirer_id')
+      .eq('id', threadId)
+      .single()
+    if (!thread) return
+
+    const recipientId =
+      thread.inquirer_id === senderId ? thread.owner_id : thread.inquirer_id
+    if (!recipientId || recipientId === senderId) return
+
+    const { data: { user: recipient } } = await admin.auth.admin.getUserById(recipientId)
+    if (!recipient?.email) return
+
+    const threadUrl = `${SITE_URL}/messages/${threadId}`
+    await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email })
+
+    // Record successful send time so subsequent messages in this thread are suppressed.
+    MESSAGE_NOTIFY_LAST.set(threadId, Date.now())
+  } catch {
+    // Non-fatal — message is already saved; email is best-effort.
+  }
+}
+
 export async function sendMessage(threadId: string, body: string) {
   const trimmed = body.trim()
   if (!trimmed || trimmed.length > 2000) return { error: 'Invalid message.' }
@@ -533,7 +657,37 @@ export async function sendMessage(threadId: string, body: string) {
     .insert({ thread_id: threadId, sender_id: user.id, body: trimmed })
 
   if (error) return { error: 'Failed to send message.' }
+
+  // Stamp the thread so the unread-badge query can check cheaply (no join needed).
+  await supabase
+    .from('threads')
+    .update({ last_message_at: new Date().toISOString(), last_message_sender_id: user.id })
+    .eq('id', threadId)
+
+  // Fire-and-forget: notify the other participant by email (no-op when RESEND_API_KEY absent).
+  void notifyMessageRecipient(threadId, user.id)
+
   return { ok: true }
+}
+
+export async function markThreadRead(threadId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: thread } = await supabase
+    .from('threads')
+    .select('id, inquirer_id, owner_id')
+    .eq('id', threadId)
+    .single()
+
+  if (!thread) return
+
+  const field = thread.inquirer_id === user.id ? 'inquirer_read_at' : 'owner_read_at'
+  await supabase
+    .from('threads')
+    .update({ [field]: new Date().toISOString() })
+    .eq('id', threadId)
 }
 
 export async function deleteSavedSearch(id: string) {
@@ -581,6 +735,7 @@ export async function renameSavedSearch(id: string, name: string) {
 }
 
 export async function generatePartnershipDraft(prompt: string): Promise<{ title: string; description: string }> {
+  await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
   if (text.length > 2000) throw new Error('Prompt is too long.')
@@ -623,6 +778,7 @@ Do not invent facts not present in the prompt; if key details are missing, use n
 }
 
 export async function generateSeekerDraft(prompt: string): Promise<{ title: string; description: string }> {
+  await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
   if (text.length > 2000) throw new Error('Prompt is too long.')

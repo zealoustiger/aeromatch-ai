@@ -68,7 +68,10 @@ function parseCategory(html, make) {
     const href = headerMatch[1]
     const title = decode(headerMatch[2])
     if (!title || title.length < 3) continue
-    if (/\b(parts?|engine only|prop only|avionics only|wanted)\b/i.test(title)) continue
+    // Drop parts listings and wanted ads by title keyword. "parts?" catches both
+    // "part" and "parts"; the expanded set covers the most common slip-throughs
+    // (wing assembly, wheelpants, cowling, fairing, for-parts, accepting-orders).
+    if (/\b(parts?|engine\s+only|prop\s+only|avionics?\s+only|wanted|assembly|wheel\s*pants?|wheelpants?|cowling|fairing|for\s+parts|accepting\s+orders|wtb)\b/i.test(title)) continue
 
     const sourceUrl = href.startsWith('http')
       ? href
@@ -82,10 +85,20 @@ function parseCategory(html, make) {
     desc = desc.replace(/^[\s·•-]+/, '').trim()
     desc = desc.split(/Auction Dates:/i)[0].trim().slice(0, 1500)
 
+    // Drop wanted ads whose marker appears in the description but not the title
+    // (e.g. "CIRRUS SR22 NON TURBO" with body text "WANTED: …").
+    if (/\b(wanted|wtb|accepting\s+orders)\b/i.test(desc.slice(0, 300))) continue
+
     const { price, priceText } = extractPrice(text)
     const { location, state } = extractLocation(text)
     const year = extractYear(title, desc)
     const model = extractModel(title, make)
+
+    // Extract listing photos from block. Barnstormers embeds thumbnails directly
+    // in category-page blocks for listings that have uploaded photos. Logos
+    // (/media/logos/) and banner ads (/media/barnbann/) are filtered out.
+    const imgMatches = [...block.matchAll(/<img[^>]+src=["']([^"']*media\/listing_images[^"']+)["']/gi)]
+    const images = imgMatches.map(m => m[1].replace(/\?[^"']*$/, '')).filter(Boolean)
 
     rows.push({
       source_id: sourceId,
@@ -99,6 +112,7 @@ function parseCategory(html, make) {
       price_text: priceText ?? null,
       location: location ?? null,
       state: state ?? null,
+      images: images.length > 0 ? images : [],
     })
   }
   return rows

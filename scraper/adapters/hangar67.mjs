@@ -114,6 +114,29 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     return null
   }
 
+  // Fetch listing page HTML and return full-size photo URLs.
+  // Hangar67 photo thumbnails: /photos/{id}/{hash}_t.jpg  → full: strip _t suffix.
+  const fetchPhotos = async (url) => {
+    await sleep(300 + Math.floor(Math.random() * 200))
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await waitForGate()
+      try {
+        const html = await fetchHtml(url, { retries: 0 })
+        // Photos use absolute src= URLs; lazy-loaded similar-listing thumbs use data-src=.
+        // Matching only src= (not data-src=) gives us just this listing's photos.
+        const matches = [...html.matchAll(/<img[^>]+\bsrc=["'](https:\/\/www\.hangar67\.com\/photos\/[^"']+)["']/gi)]
+        return [...new Set(matches.map(m => m[1].replace(/_t\./, '.')))]
+      } catch (e) {
+        if (e?.status === 429 || e?.status === 503) {
+          tripThrottle(Math.min(e.retryAfter ?? 2000 * 2 ** attempt, 30000))
+          continue
+        }
+        return []
+      }
+    }
+    return []
+  }
+
   let done = 0
   let ok = 0
   const rows = await mapPool(ids, 2, async (id) => {
@@ -121,7 +144,11 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     const d = await fetchFeed(id).catch(() => null)
     if (d && !d.error) ok++
     if (++done % 250 === 0) log(`  fetched ${done}/${ids.length} (${ok} ok)`)
-    return toRow(d)
+    const row = toRow(d)
+    if (!row) return null
+    const photos = await fetchPhotos(row.source_url)
+    row.images = photos.length > 0 ? photos : []
+    return row
   })
   const rate = ids.length ? Math.round((ok / ids.length) * 100) : 0
   log(`  ${ok}/${ids.length} feeds OK (${rate}%${throttleHits ? `, ${throttleHits} throttle pauses` : ''})`)

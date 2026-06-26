@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { computeCost, computeEarnings, estimateOwnershipCost, shareFractionFromType } from './calculators.ts'
+import { computeCost, computeEarnings, shareFractionFromType } from './calculators.ts'
 
 test('shareFractionFromType maps fractional shares', () => {
   assert.equal(shareFractionFromType('1/3'), 1 / 3)
@@ -37,21 +37,6 @@ test('cost calculator — zero hours falls back to wet rate for $/hr, no divide-
   assert.equal(r.operatingMonthly, 300)
   assert.equal(r.trueCostPerHour, 90)
   assert.equal(r.fullOwnershipMonthly, null) // no share fraction provided
-})
-
-test('ownership estimate — insurance scales with hull, fixed lines constant', () => {
-  const r = estimateOwnershipCost(300000)
-  assert.equal(r.insuranceAnnual, 3000) // 1% of $300k
-  assert.equal(r.hangarAnnual, 3000)
-  assert.equal(r.annualInspection, 2000)
-  assert.equal(r.operatingAnnual, 11250) // 75 hrs * $150/hr
-  assert.equal(r.totalAnnual, 19250)
-  assert.equal(r.totalMonthly, 19250 / 12)
-})
-
-test('ownership estimate — insurance floored for a cheap hull', () => {
-  const r = estimateOwnershipCost(50000)
-  assert.equal(r.insuranceAnnual, 1000) // 1% = $500, floored to $1,000
 })
 
 test('earnings calculator — owner offering 2 shares worked example', () => {

@@ -261,16 +261,16 @@ export default function PostSeekerListingForm() {
             </p>
           </div>
           <div>
-            <Label>Willing to Travel</Label>
+            <Label>Max commute distance</Label>
             <Select name="willing_to_travel_nm">
               <option value="">Home airport only</option>
-              <option value="25">Up to 25 nm</option>
-              <option value="50">Up to 50 nm</option>
-              <option value="100">Up to 100 nm</option>
-              <option value="150">Up to 150 nm</option>
-              <option value="200">Up to 200 nm</option>
+              <option value="25">~30 min drive</option>
+              <option value="40">~45 min drive</option>
+              <option value="50">~1 hr drive</option>
+              <option value="75">~1.5 hr drive</option>
+              <option value="100">~2 hr drive</option>
             </Select>
-            <p className="mt-1 text-xs text-slate-400">How far from your home airport you&apos;d commute</p>
+            <p className="mt-1 text-xs text-slate-400">How far you&apos;d commute from your home airport</p>
           </div>
         </div>
       </section>
@@ -413,8 +413,8 @@ export default function PostSeekerListingForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>Your Name</Label>
-            <Input name="contact_name" placeholder="e.g. Brian Ma" />
-            <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly (e.g. Brian M.).</p>
+            <Input name="contact_name" placeholder="e.g. Jay C." />
+            <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly (e.g. Jay C.).</p>
           </div>
           <div>
             <Label required>Email</Label>

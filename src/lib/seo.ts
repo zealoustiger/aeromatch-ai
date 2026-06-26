@@ -779,6 +779,30 @@ export const SEO_MAKE_MODELS: SeoMakeModel[] = [
     specs: 'Six-seat retractable high-wing single, ~285 hp, ~174 kt cruise, cantilever wing — the Centurion is one of the highest-performing high-wing singles ever built.',
     costToOwn: 'A complex, capable airplane with a matching maintenance bill — retractable gear, fuel injection, and (on turbo and pressurized models) additional systems. Co-ownership is the classic way to make a Centurion pencil out, splitting the reserves and the annual.',
   },
+  {
+    makeSlug: 'cessna', modelSlug: '206', make: 'Cessna', model: '206',
+    modelPattern: '206%',
+    specs: 'Six-seat fixed-gear high-wing hauler, 300 hp Continental IO-520-F, ~150 kt cruise, ~1,800 lb useful load — the Stationair is one of the most capable load-carrying singles ever built.',
+    costToOwn: 'Fixed gear keeps maintenance simpler than the 210, but a Continental IO-520 overhaul reserve is still the biggest line item. Co-ownership spreads the reserves and the hangar so partners can share one of the most capable piston workhorses in general aviation.',
+  },
+  {
+    makeSlug: 'cessna', modelSlug: '421', make: 'Cessna', model: '421',
+    modelPattern: '421%',
+    specs: 'Pressurized six-seat cabin-class twin, 2× Continental GTSIO-520 (375 hp each), ~195 kt cruise — a small pressurized twin with stand-up-in-the-door comfort at a piston price point.',
+    costToOwn: 'Two turbocharged geared engines make the 421 one of the more expensive pistons to run — co-ownership is almost universal in the type. A group spreads two overhaul reserves, the hangar, and insurance across owners, turning a capable pressurized twin into a sensible monthly share.',
+  },
+  {
+    makeSlug: 'cubcrafters', modelSlug: 'carbon', make: 'CubCrafters', model: 'Carbon Cub',
+    modelPattern: 'carbon%',
+    specs: 'Two-seat tandem taildragger, 180 hp Lycoming O-360, STOL-optimized, carbon-fiber-and-aluminum composite construction — built for backcountry and off-airport operations.',
+    costToOwn: 'A purpose-built STOL machine with a premium price to match. Partnerships work especially well here because most Carbon Cub owners fly it hard in short bursts — weekend fly-ins, hunting/fishing trips, remote strip access — and sharing keeps the hangar and insurance manageable between adventures.',
+  },
+  {
+    makeSlug: 'cessna', modelSlug: '310', make: 'Cessna', model: '310',
+    modelPattern: '%310%',
+    specs: 'Classic five/six-seat light twin, 2× Continental IO-520 (285 hp each on the 310R), ~185 kt cruise — a legendary piston twin with distinctive wingtip tanks and a real IFR cabin.',
+    costToOwn: 'Two engines mean two overhaul reserves plus higher insurance — exactly why co-ownership is the norm in the type. Splitting the fixed costs across a group keeps a capable, well-supported twin within reach.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -910,6 +934,26 @@ const MODEL_FAQS: Record<string, { q: string; a: string }[]> = {
     { q: 'How much does a Cessna 210 cost to own?', a: 'More than most fixed-gear singles — the retractable gear, fuel injection, and (on turbo and pressurized variants) additional systems raise the annual inspection and maintenance bill. The reserve for the Continental IO-520 overhaul is the largest line item. Co-ownership is the classic way to make a Centurion realistic, splitting the fixed costs across partners.' },
     { q: 'Is the Cessna 210 a good aircraft for co-ownership?', a: 'Yes — its complexity and running costs are exactly why so many 210s are shared. A well-maintained Centurion rewards partners with genuine six-seat, IFR cross-country capability at a cruise close to 170 kt; splitting the hangar, the annual, and the engine reserve makes those numbers work.' },
   ],
+  'cessna/206': [
+    { q: 'What is the Cessna 206 Stationair?', a: 'The Cessna 206 Stationair is a six-seat, fixed-gear, high-wing single powered by a 300 hp Continental IO-520-F. It is built around exceptional useful load — often close to 1,800 lb — giving it the ability to carry six occupants plus baggage, carry cargo, or take off from rough strips on big tires. Widely used in bush flying, island hopping, and utility operations, it is the working airplane of the Cessna line.' },
+    { q: 'How much does a Cessna 206 cost to own?', a: 'Less complex than the retractable-gear 210, but the Continental IO-520 overhaul reserve is still the largest single cost — plan on setting aside a meaningful amount per hour from the first flight. Fixed gear keeps the annual inspection simpler and eliminates the gear-related insurance premium. Co-ownership spreads those reserves and the hangar across partners, making the 206 one of the most affordable ways to access a genuine six-seat, utility-capable single.' },
+    { q: 'Is the Cessna 206 good for co-ownership?', a: 'Very — the 206 is one of the most practical partnership aircraft. Its fixed gear keeps maintenance predictable, its Continental engine is well-supported everywhere, and its cavernous cabin hauls real loads for all the partners. Groups that fly family trips, camping runs, or frequent short-field operations find that a shared 206 is a remarkably cost-effective answer.' },
+  ],
+  'cessna/421': [
+    { q: 'What is the Cessna 421 Golden Eagle?', a: 'The Cessna 421 Golden Eagle is a pressurized, twin-engine cabin-class aircraft produced by Cessna from 1967 to 1985. It seats up to six passengers in a pressurized stand-up cabin powered by two Continental GTSIO-520 geared, turbocharged engines producing 375 hp each. The 421 occupies the niche between unpressurized piston twins and turboprops — a genuinely comfortable long-range IFR machine at a piston price point.' },
+    { q: 'How much does a Cessna 421 cost to own?', a: 'More than almost any other piston twin — two turbocharged geared engines with shorter overhaul intervals are the biggest cost driver, and pressurization system maintenance adds another layer on top. The fixed costs (two engine reserves, hangar, insurance on a complex pressurized twin) are precisely why virtually every 421 is co-owned. A well-structured partnership splits those reserves and the hangar across owners, making the airplane manageable.' },
+    { q: 'Is the Cessna 421 a good aircraft for co-ownership?', a: 'It is — and co-ownership is practically the only way most pilots access one. The two engine overhaul reserves alone justify sharing the airplane, and the 421\'s pressurized cabin, ~195 kt cruise, and real IFR range reward a group of pilots who want to go places efficiently. A partnership that agrees on maintenance standards and scheduling has access to one of the most capable pistons ever built at a fraction of the solo cost.' },
+  ],
+  'cubcrafters/carbon': [
+    { q: 'What is the CubCrafters Carbon Cub?', a: 'The Carbon Cub is a modern two-seat tandem taildragger built by CubCrafters in Yakima, Washington. Inspired by the Piper Super Cub but using carbon-fiber-and-aluminum composite construction, it is considerably lighter than its predecessor and purpose-built for STOL and off-airport operations. It comes in two main forms: the EX (Experimental Amateur-Built kit) and the FX (Experimental Exhibition, factory-completed).' },
+    { q: 'What makes the Carbon Cub good for backcountry flying?', a: 'The Carbon Cub\'s low empty weight (lighter than a Super Cub), high-lift wing, and 180 hp Lycoming O-360 combine to produce STOL performance that opens up strips other airplanes cannot safely use. Fitted with tundra tires, it can land and take off from gravel bars and mountain meadows that would challenge much more expensive purpose-built bush planes.' },
+    { q: 'Is the Carbon Cub a good aircraft to co-own?', a: 'Yes — most Carbon Cub missions are seasonal and trip-specific: a hunting flight in October, a fishing trip in summer, a fly-in over a long weekend. That natural burst usage pattern makes it one of the cleanest fits for shared ownership: partners divide the hangar and insurance evenly and each gets the airplane when they actually need it.' },
+  ],
+  'cessna/310': [
+    { q: 'What is the Cessna 310?', a: 'The Cessna 310 is a twin-engine, five- to six-seat piston aircraft produced by Cessna from 1954 to 1980. It is known for its distinctive wingtip fuel tanks, comfortable cabin, and reliable Continental engines. The 310R, the most common late-model variant, runs two Continental IO-520-M engines producing 285 hp each. With well over 5,000 examples built across all variants, the 310 is one of the most widely owned light twins in general aviation.' },
+    { q: 'How much does a Cessna 310 cost to own?', a: 'The biggest cost drivers are the two engine overhaul reserves — each Continental IO-520 carries a recommended TBO, so a co-ownership group typically sets aside a per-hour reserve for both engines as they fly. Add hangar, insurance on a light twin, and the annual inspection, and the 310 is a significant monthly commitment for a solo owner. Splitting those fixed costs across two to four partners is how most 310s are kept flying today.' },
+    { q: 'Is the Cessna 310 a good aircraft to co-own?', a: 'It is one of the classic co-ownership airplanes in general aviation. Two engines, a comfortable cabin, and genuine IFR range make it a compelling traveling machine; two engine overhaul reserves and the insurance premium for a light twin make sharing the costs almost essential. The 310 is also common enough that finding parts, type-experienced mechanics, and new partners is easier than with many other light twins.' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -1020,6 +1064,22 @@ const MODEL_OVERVIEWS: Record<string, string[]> = {
   'cessna/210': [
     'The Cessna 210 Centurion is one of the most capable piston singles Cessna ever built — a six-seat high-wing retractable with a cantilever wing (no external struts), a fuel-injected Continental engine, and a roomy, stand-up-in-the-door cabin that puts it firmly in the IFR cross-country class. Produced from 1957 through 1985, the line grew steadily in power and sophistication, and its later normally-aspirated and turbocharged variants became a benchmark for pilots who needed genuine six-seat range and speed from a high-wing single.',
     'That capability comes with a matching maintenance budget. The retractable gear, fuel injection, and (on turbo and pressurized variants) the added systems raise the annual and the reserves well above a fixed-gear Cessna. The Continental IO-520 overhaul is the biggest periodic cost, and knowledgeable avionics support matters on a complex, aging fleet. Co-ownership is the time-tested answer: a Centurion partnership shares the hangar, the annual, the reserves, and the expertise — so a group of partners can fly a genuinely capable IFR single at a sensible cost per month.',
+  ],
+  'cessna/206': [
+    'The Cessna 206 Stationair is the hauler of the Cessna family. Where the 172 and 182 optimized for four-seat touring, Cessna built the 206 around a single priority: put as much as possible inside a high-wing single and get it off a short, rough strip. The result is a six-seat, fixed-gear airplane with a useful load that approaches or exceeds 1,800 lb on many variants — more than almost any other piston single — and a cabin wide enough to fit a cargo pod under the belly or take floats for water operations.',
+    'That utility profile is why the 206 has been a workhorse in Alaska, the Pacific Islands, the Caribbean, and anywhere a reliable piston single needs to carry people and freight into airstrips that challenge anything with retractable gear. For co-owners, it is one of the most practical shares in general aviation: the fixed gear keeps the annual and insurance straightforward, the Continental IO-520-F is well-supported everywhere, and the big cabin genuinely hauls everyone in the group. Splitting the engine reserve and the hangar across partners makes a 206 surprisingly affordable relative to what it delivers.',
+  ],
+  'cessna/421': [
+    'The Cessna 421 Golden Eagle occupies a unique position in general aviation: a pressurized, twin-engine cabin-class aircraft that sits between the unpressurized piston twins and the entry turboprops. Cessna built the 421 with a full stand-up cabin, two turbocharged Continental geared engines, and the kind of range and cruise altitude that let a group travel at the flight levels — above most weather — in genuine comfort. Produced from 1967 through 1985, the line evolved through three variants (421A, 421B, and the redesigned wet-wing 421C) and became the benchmark small pressurized twin of its era.',
+    'The economics of the 421 are why partnerships are so deeply embedded in the type. Two turbocharged geared engines each running on their own overhaul clock, a pressurization system that needs periodic attention, and the insurance bill for a complex multi-engine pressurized aircraft all add up quickly for a solo owner. A co-ownership group distributes those costs cleanly — each partner pays their share of a sensible monthly fixed expense rather than absorbing the whole bill alone — and keeps the airplane flying often enough that everyone stays current in a machine that genuinely rewards proficiency.',
+  ],
+  'cubcrafters/carbon': [
+    'The CubCrafters Carbon Cub is the modern answer to the Piper Super Cub — a two-seat tandem taildragger built in Yakima, Washington, using carbon-fiber-and-aluminum composite construction that shaves hundreds of pounds off the original formula while keeping the high-lift wing and conventional gear that define the Cub bloodline. CubCrafters offers it in kit form as the EX (Experimental Amateur-Built) and factory-built as the FX (Experimental Exhibition), with major variants including the EX-3 and FX-3 and the earlier SS. All share the same mission: get in and out of places no other airplane can reach.',
+    'That mission has made the Carbon Cub the standard-bearer for the backcountry movement — the airplane most commonly spotted on gravel bars in Alaska, mountain meadows in the Rockies, and remote hunting and fishing strips across the West. With tundra tires or amphibious floats, a skilled pilot, and a 180 hp Lycoming, it opens up terrain that would be off-limits to certified fixed-gear singles. Co-ownership fits the Carbon Cub naturally: mission flying tends to be seasonal and trip-specific, so partners rarely conflict on scheduling, and splitting the hangar and insurance across two or three owners keeps the yearly fixed cost well below what the adventure is worth.',
+  ],
+  'cessna/310': [
+    'The Cessna 310 is one of the defining light twins of the general-aviation era — a five- to six-seat aircraft that Cessna built in large numbers from 1954 through 1980, producing well over 5,000 examples across the base 310 and the turbocharged T310. Instantly recognizable by the teardrop wingtip fuel tanks that became its signature, the 310 offered business and personal travelers a genuine IFR cabin-class twin at a piston price. The later 310R, powered by 285 hp Continental IO-520-M engines and fitted with refined systems and interior, is the variant most commonly seen in today\'s market and the standard against which earlier 310s are measured.',
+    'Two Continental engines bring two overhaul reserves, two insurance lines, and a maintenance bill that accumulates with every hundred hours — and that reality has always made the 310 a natural co-ownership airplane. A partnership group shares not only the cash cost but the scheduling and proficiency motivation that comes with a type that rewards regular flying. Well-maintained 310Rs are durable, widely supported, and valued for the combination of cabin room, true IFR range, and respectable single-engine performance that made them a first-choice business twin in their day.',
   ],
 }
 
@@ -1271,6 +1331,47 @@ const MODEL_SPECS: Record<string, { label: string; value: string }[]> = {
     { label: 'Fuel (usable)', value: '90 gal' },
     { label: 'Landing gear', value: 'Retractable tricycle' },
   ],
+  'cessna/206': [
+    { label: 'Seats', value: '6' },
+    { label: 'Engine', value: 'Continental IO-520-F (U206G)' },
+    { label: 'Horsepower', value: '300 hp' },
+    { label: 'Cruise speed', value: '~150 kt' },
+    { label: 'Range', value: '~850 nm' },
+    { label: 'Useful load', value: '~1,800 lb' },
+    { label: 'Fuel (usable)', value: '84 gal' },
+    { label: 'Landing gear', value: 'Fixed tricycle' },
+  ],
+  'cessna/421': [
+    { label: 'Seats', value: '6–8' },
+    { label: 'Engines', value: '2× Continental GTSIO-520-L (421C)' },
+    { label: 'Horsepower', value: '375 hp each' },
+    { label: 'Cruise speed', value: '~195 kt' },
+    { label: 'Range', value: '~1,100 nm' },
+    { label: 'Useful load', value: '~1,800 lb' },
+    { label: 'Fuel (usable)', value: '~204 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+    { label: 'Pressurization', value: '~4.2 psi differential' },
+  ],
+  'cubcrafters/carbon': [
+    { label: 'Seats', value: '2 (tandem)' },
+    { label: 'Engine', value: 'Lycoming O-360-C1G' },
+    { label: 'Horsepower', value: '180 hp' },
+    { label: 'Cruise speed', value: '~108 kt' },
+    { label: 'Airframe', value: 'Carbon fiber and aluminum composite' },
+    { label: 'Landing gear', value: 'Conventional (tailwheel)' },
+    { label: 'Design intent', value: 'STOL / off-airport / backcountry' },
+    { label: 'Available as', value: 'EX (kit-built) or FX (factory-built)' },
+  ],
+  'cessna/310': [
+    { label: 'Seats', value: '5–6' },
+    { label: 'Engines', value: '2× Continental IO-520-M (310R)' },
+    { label: 'Horsepower', value: '285 hp each (570 hp total)' },
+    { label: 'Cruise speed', value: '~185 kt' },
+    { label: 'Range', value: '~1,000 nm' },
+    { label: 'Useful load', value: '~1,750 lb' },
+    { label: 'Fuel (usable)', value: '~100 gal' },
+    { label: 'Landing gear', value: 'Retractable tricycle' },
+  ],
 }
 
 // Short "what's different about this model" differentiator bullets — 3 per curated
@@ -1398,6 +1499,26 @@ const MODEL_HIGHLIGHTS: Record<string, string[]> = {
     'A six-seat retractable high-wing single with a cantilever wing (no struts) and a fuel-injected Continental — one of the most capable piston singles Cessna ever built, with a ~174 kt cruise and genuine IFR range.',
     'Suits a pilot or group that wants real six-seat, cross-country, IFR capability from a high-wing airframe and is ready to manage a complex, mature aircraft.',
     'Higher maintenance than a fixed-gear Cessna — retractable gear, fuel injection, and a Continental IO-520 overhaul reserve are the main costs; co-ownership is the classic answer for keeping a Centurion affordable.',
+  ],
+  'cessna/206': [
+    'Exceptional useful load — close to 1,800 lb on many variants — lets it carry six adults, cargo, or heavy gear off short and rough strips where other six-seaters cannot go.',
+    'Fixed gear makes it far simpler and cheaper to insure and maintain than the retractable 210; the Continental IO-520-F is widely supported and every A&P knows it.',
+    'Float conversion and cargo-pod options make it one of the most versatile platforms in piston aviation — a genuine working airplane, not just a hauler.',
+  ],
+  'cessna/421': [
+    'A pressurized cabin at a piston-twin price: the 421 flies at the flight levels with ~195 kt cruise, genuine six-seat comfort, and a stand-up cabin that makes it feel like a small airliner.',
+    'Two turbocharged geared engines with their own overhaul clocks make the 421 one of the more expensive pistons to run solo — co-ownership is virtually universal in the type for exactly this reason.',
+    'The 421C\'s wet-wing redesign added integral fuel tanks and structural improvements; it is the most sought-after variant and the benchmark against which earlier 421s are measured.',
+  ],
+  'cubcrafters/carbon': [
+    'Carbon fiber and aluminum composite construction makes the Carbon Cub significantly lighter than a Super Cub, translating directly into better STOL performance — shorter ground rolls and better useful load from marginal strips.',
+    'Purpose-built for off-airport operations: the high-lift wing, tundra-tire compatibility, and powerful engine open up gravel bars, mountain meadows, and remote strips that challenge any certified fixed-gear single.',
+    'Available as an EX (Experimental Amateur-Built kit) or FX (factory-completed) — both are experimental-category aircraft, which allows owner maintenance but means each ship\'s airworthiness history matters more than in certified types.',
+  ],
+  'cessna/310': [
+    'One of the most widely built and supported light twins in general aviation — well over 5,000 produced, giving the type a deep parts supply, a large community of type-experienced mechanics, and steady demand at resale.',
+    'Two Continental IO-520 engines deliver genuine twin redundancy, a ~185 kt cruise, and real IFR range; two engine overhaul reserves and a light-twin insurance bill make co-ownership the standard way to own one.',
+    'The 310R is the refined late-model benchmark: improved single-engine performance, better systems, and the iconic wingtip-tank look that makes it the most sought-after variant and the easiest to sell when a partner moves on.',
   ],
 }
 

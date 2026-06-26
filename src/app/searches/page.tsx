@@ -8,7 +8,9 @@ import type { SavedSearch } from '@/lib/types'
 
 // Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
 function marketplaceLabel(path: string): string {
-  return path === '/aircraft' ? 'Planes for Sale' : 'Partnerships'
+  if (path === '/aircraft') return 'Planes for Sale'
+  if (path === '/partnerships/seeking') return 'Pilot Seekers'
+  return 'Partnerships'
 }
 
 function describeAircraftSearch(p: URLSearchParams): string {
@@ -56,9 +58,30 @@ function describePartnershipSearch(p: URLSearchParams): string {
   return parts.length > 0 ? parts.join(' · ') : 'All partnerships'
 }
 
+function describeSeekerSearch(p: URLSearchParams): string {
+  const parts: string[] = []
+  const airports = p.get('airports')
+  const airport = p.get('airport')
+  const make = p.get('make')
+  const rating = p.get('rating')
+  const minHours = p.get('min_hours')
+  const shareType = p.get('share_type')
+
+  if (make) parts.push(`${make} seekers`)
+  if (airports) parts.push(`near ${airports.toUpperCase()}`)
+  else if (airport) parts.push(`near ${airport.toUpperCase()}`)
+  if (rating) parts.push(rating.toUpperCase())
+  if (minHours && Number.isFinite(Number(minHours))) parts.push(`${Number(minHours).toLocaleString()}+ hrs`)
+  if (shareType) parts.push(shareType)
+
+  return parts.length > 0 ? parts.join(' · ') : 'All seeker listings'
+}
+
 function describeSearch(params: string, path: string): string {
   const p = new URLSearchParams(params)
-  return path === '/aircraft' ? describeAircraftSearch(p) : describePartnershipSearch(p)
+  if (path === '/aircraft') return describeAircraftSearch(p)
+  if (path === '/partnerships/seeking') return describeSeekerSearch(p)
+  return describePartnershipSearch(p)
 }
 
 export default async function SearchesPage() {

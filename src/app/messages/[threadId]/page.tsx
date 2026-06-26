@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ChevronLeft, MapPin } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { aircraftLabel } from '@/lib/utils'
+import { markThreadRead } from '@/app/actions'
 import MessageThread from '@/components/MessageThread'
 import type { Message } from '@/lib/types'
 
@@ -21,12 +22,16 @@ export default async function ThreadPage({
     .from('threads')
     .select(`
       id, inquirer_id, owner_id,
-      partnership:partnerships(id, title, make, model, year, home_airport, city, state)
+      partnership:partnerships(id, title, make, model, year, home_airport, city, state),
+      seeker:partnership_seekers(id, title)
     `)
     .eq('id', threadId)
     .single()
 
   if (!thread) notFound()
+
+  // Mark the thread as read for this participant on every view.
+  await markThreadRead(threadId)
 
   const { data: initialMessages } = await supabase
     .from('messages')
@@ -38,6 +43,7 @@ export default async function ThreadPage({
     id: string; title: string; make: string; model: string
     year: number | null; home_airport: string; city: string | null; state: string | null
   } | null
+  const sk = thread.seeker as unknown as { id: string; title: string } | null
 
   return (
     <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-2xl flex-col px-0 sm:px-4 sm:py-6">
@@ -59,6 +65,11 @@ export default async function ThreadPage({
                 {p.home_airport && ` · ${p.home_airport}`}
                 {p.city && `, ${p.city} ${p.state}`}
               </p>
+            </Link>
+          ) : sk ? (
+            <Link href={`/partnerships/seeking/${sk.id}`} className="min-w-0 flex-1 hover:opacity-80">
+              <p className="truncate font-semibold text-slate-900">{sk.title}</p>
+              <p className="truncate text-xs text-slate-500">Pilot seeking partnership</p>
             </Link>
           ) : (
             <p className="text-sm font-medium text-slate-500">Deleted listing</p>

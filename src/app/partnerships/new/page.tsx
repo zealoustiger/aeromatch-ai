@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import PostPartnershipForm from '@/components/PostPartnershipForm'
 import PostTypeTabs from '@/components/PostTypeTabs'
+import EarningsCalculator from '@/components/EarningsCalculator'
 
 export const metadata: Metadata = {
   title: 'Post an Aircraft Partnership — Free Listing',
@@ -20,6 +21,13 @@ export default function NewPartnershipPage() {
         </p>
       </div>
       <PostPartnershipForm />
+
+      <div className="mt-10 border-t border-slate-100 pt-8">
+        <p className="mb-3 text-sm text-slate-500">
+          Not sure how to price it? Estimate what offering shares could offset on your monthly costs.
+        </p>
+        <EarningsCalculator variant="compact" />
+      </div>
     </div>
   )
 }

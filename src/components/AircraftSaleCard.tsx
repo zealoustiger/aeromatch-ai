@@ -144,7 +144,7 @@ export default function AircraftSaleCard({
                 Not actual plane photo
               </span>
             )}
-            {!isPlaceholder && p.images.length > 1 && (
+            {!isPlaceholder && (p.images?.length ?? 0) > 1 && (
               <span className="absolute bottom-2 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
                 +{p.images.length - 1} photos
               </span>

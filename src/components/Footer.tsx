@@ -131,6 +131,14 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
+            <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Tools</h3>
+            <ul className="space-y-2">
+              {toolLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-slate-500 hover:text-sky-600">{label}</Link>
+                </li>
+              ))}
+            </ul>
             <h3 className="mb-3 mt-6 text-sm font-semibold text-slate-900">Company</h3>
             <ul className="space-y-2">
               {companyLinks.map(({ href, label }) => (

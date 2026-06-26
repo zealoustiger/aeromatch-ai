@@ -121,6 +121,43 @@ Unsubscribe: ${opts.unsubscribeUrl}`
   return { subject, html, text }
 }
 
+/**
+ * Build the "you have a new message" notification email for on-site messaging.
+ * `threadUrl` is the full absolute URL to the thread (e.g. https://clubhanger.com/messages/{id}).
+ * Returns subject + html + text ready for `sendEmail`.
+ */
+export function buildNewMessageEmail(opts: {
+  threadUrl: string
+}): { subject: string; html: string; text: string } {
+  const subject = 'New message on ClubHanger'
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">You have a new message</h1>
+      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
+        Someone sent you a message on ClubHanger. Click below to read it and reply.
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${escapeAttr(opts.threadUrl)}"
+           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
+          Read message
+        </a>
+      </p>
+      <p style="font-size:13px;line-height:1.6;color:#64748b;margin:0;">
+        You&rsquo;re receiving this because you have an active conversation on ClubHanger.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `You have a new message on ClubHanger.
+
+Read and reply: ${opts.threadUrl}`
+
+  return { subject, html, text }
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')

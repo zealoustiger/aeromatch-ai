@@ -434,6 +434,14 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .select('*', { count: 'exact' })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+      // Suppress known parts/wanted patterns that slip through the ingest filter
+      // on existing rows. Narrow, high-confidence patterns only — no false positives
+      // on real aircraft titles (e.g. "assembly" → "wing assembly"; "wheelpant" is
+      // only ever a part; "wanted" is only ever a buyer-seeking ad).
+      .not('title', 'ilike', '%wanted%')
+      .not('title', 'ilike', '%wheelpant%')
+      .not('title', 'ilike', '%wheel pant%')
+      .not('title', 'ilike', '% assembly%')
 
     if (filters.photoOnly) query = query.eq('image_is_placeholder', false)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)

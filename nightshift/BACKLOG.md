@@ -140,6 +140,18 @@ completed, delete its screenshot object from `backlog-shots` to reclaim storage.
   edit affordance once saved); (2) render the note on `/saved`; (3) render the note on
   the listing detail page when present (optionally on the listing card too). Applies to
   both aircraft-for-sale saves and partnership saves.
+  — **note column + `/saved` editor ✅ SHIPPED 2026-06-25T085625Z** (`saved-listing-note`):
+  additive `note text` column on `saved_listings` (in `schema.sql`); new owner-scoped
+  `updateSavedNote` action; inline `SavedListingNote` editor under each card on `/saved`
+  (add → textarea → Save; amber sticky note + pencil to edit; clear+save removes). Covers
+  the edit-affordance variant of slice 1 + slice 2. **⚠️ Needs the human to apply the
+  additive migration in the Supabase SQL editor** (`alter table saved_listings add column
+  if not exists note text;`) — the loop can't run DDL; until then the affordance
+  self-suppresses (dormant, no regression). **Remaining: slice 3** — render the note on the
+  listing detail page (`/aircraft/listing/[id]`) + partnership detail, and optionally on
+  browse cards; and the inline-on-save variant (needs SaveButton restructuring). **When
+  slice 3 lands and the item is fully done, delete the `backlog-shots/save-note-listing/`
+  screenshot object to reclaim storage** (left in place for now — item not yet complete).
 
 
 Theme: make ClubHanger feel like a polished Zillow/Redfin for aircraft, and stop
