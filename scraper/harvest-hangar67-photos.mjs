@@ -22,6 +22,7 @@
  *
  * Env (.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
+import os from 'node:os'
 import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
 import { loadEnvLocal } from './lib/ingest-core.mjs'
@@ -44,6 +45,40 @@ const supa = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPA
 })
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const log = (...a) => console.log(...a)
+
+// Heartbeat the run row so the admin page can show live status (running? rate?
+// how many photos? what's left?). Writes the in-memory aggregate snapshot — with
+// concurrency 1 there's no race; at higher concurrency it converges (last write).
+async function updateRun(stats, extra = {}) {
+  if (!stats.runId || DRY) return
+  try {
+    await supa
+      .from('photo_harvest_runs')
+      .update({
+        processed: stats.done,
+        with_photos: stats.withPhotos,
+        total_photos: stats.totalPhotos,
+        errors: stats.errors,
+        last_source_id: stats.lastId ?? null,
+        updated_at: new Date().toISOString(),
+        ...extra,
+      })
+      .eq('id', stats.runId)
+  } catch {
+    /* status reporting is best-effort — never let it break the harvest */
+  }
+}
+
+async function makeContext(browser) {
+  const ctx = await browser.newContext({ userAgent: UA, viewport: { width: 1366, height: 900 } })
+  // Block heavy assets we don't need (fonts/media) but KEEP images so the gallery renders.
+  await ctx.route('**/*', (route) => {
+    const t = route.request().resourceType()
+    if (t === 'media' || t === 'font') return route.abort()
+    return route.continue()
+  })
+  return ctx
+}
 
 // hangar67-native thumbnail → full-size: strip `_t` before the extension.
 const toFull = (u) => u.replace(/_t(\.\w+)(?=$|\?)/i, '$1')
@@ -154,15 +189,10 @@ async function pickServable(photos) {
 }
 
 async function worker(id, queue, browser, stats) {
-  const ctx = await browser.newContext({ userAgent: UA, viewport: { width: 1366, height: 900 } })
-  // Block heavy assets we don't need (fonts/media) but KEEP images so the gallery renders.
-  await ctx.route('**/*', (route) => {
-    const t = route.request().resourceType()
-    if (t === 'media' || t === 'font') return route.abort()
-    return route.continue()
-  })
-  const page = await ctx.newPage()
+  let ctx = await makeContext(browser)
+  let page = await ctx.newPage()
   for (;;) {
+    if (stats.aborted) break
     const row = queue.shift()
     if (!row) break
     try {
@@ -187,21 +217,60 @@ async function worker(id, queue, browser, stats) {
     } catch (e) {
       stats.errors++
       log(`[w${id}] ERROR ${row.source_id}: ${String(e.message).slice(0, 100)}`)
+      // A crashed/closed context kills every remaining listing in this worker —
+      // rebuild it so an unattended run survives a chromium hiccup.
+      if (/closed|crash|Target page|Target closed/i.test(String(e.message))) {
+        try { await ctx.close() } catch {}
+        try { ctx = await makeContext(browser); page = await ctx.newPage() } catch { break }
+      }
     }
+    stats.lastId = row.source_id
+    await updateRun(stats)
     await sleep(DELAY + Math.floor(Math.random() * 600)) // be polite — avoid tripping Cloudflare
   }
-  await ctx.close()
+  try { await ctx.close() } catch {}
 }
 
 async function main() {
   const rows = await loadHidden()
-  log(`Hangar67 photo harvest — grade ${GRADE}: ${rows.length} hidden listings${DRY ? ' (DRY RUN)' : ''}, concurrency ${CONCURRENCY}`)
+  log(`Hangar67 photo harvest — grade ${GRADE}: ${rows.length} hidden listings${DRY ? ' (DRY RUN)' : ''}, concurrency ${CONCURRENCY}, delay ${DELAY}ms`)
   if (!rows.length) return
   const queue = [...rows]
-  const stats = { total: rows.length, done: 0, withPhotos: 0, noPhotos: 0, errors: 0, totalPhotos: 0 }
+  const stats = { total: rows.length, done: 0, withPhotos: 0, noPhotos: 0, errors: 0, totalPhotos: 0, lastId: null, runId: null, aborted: false }
+
+  // Register the run so the admin page can show live status.
+  if (!DRY) {
+    const { data } = await supa
+      .from('photo_harvest_runs')
+      .insert({ status: 'running', grade: GRADE, host: os.hostname(), total: rows.length })
+      .select('id')
+      .single()
+    stats.runId = data?.id ?? null
+  }
+
+  // Mark the run stopped on Ctrl-C / kill so the admin doesn't show a ghost "running".
+  let stopping = false
+  const onSignal = async () => {
+    if (stopping) return
+    stopping = true
+    stats.aborted = true
+    await updateRun(stats, { status: 'stopped', finished_at: new Date().toISOString() })
+    process.exit(0)
+  }
+  process.on('SIGINT', onSignal)
+  process.on('SIGTERM', onSignal)
+
+  // Steady heartbeat even if a worker is mid-listing (so "running" stays fresh).
+  const heartbeat = setInterval(() => updateRun(stats), 15000)
+
   const browser = await chromium.launch({ headless: true })
-  await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => worker(i + 1, queue, browser, stats)))
-  await browser.close()
+  try {
+    await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => worker(i + 1, queue, browser, stats)))
+  } finally {
+    clearInterval(heartbeat)
+    try { await browser.close() } catch {}
+  }
+  await updateRun(stats, { status: 'done', finished_at: new Date().toISOString() })
   log(
     `\nDone. ${stats.withPhotos}/${stats.total} got photos (${stats.totalPhotos} images total), ` +
       `${stats.noPhotos} had none, ${stats.errors} errors.${DRY ? ' (dry run — no writes)' : ''}`,
