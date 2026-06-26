@@ -413,8 +413,8 @@ export default function PostSeekerListingForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>Your Name</Label>
-            <Input name="contact_name" placeholder="e.g. Brian Ma" />
-            <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly (e.g. Brian M.).</p>
+            <Input name="contact_name" placeholder="e.g. Jay C." />
+            <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly (e.g. Jay C.).</p>
           </div>
           <div>
             <Label required>Email</Label>
