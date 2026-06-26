@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { getScraperHealth, getRealListings, getListingFreshness } from '@/lib/adminScrapers'
+import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage } from '@/lib/adminScrapers'
 import { moderateListing } from './actions'
 
 export const metadata = { title: 'Review Listings', robots: { index: false } }
@@ -81,6 +81,7 @@ export default async function ReviewListingsTab({
     viewingHidden ? Promise.resolve(null) : getRealListings(admin),
   ])
   const freshness = viewingHidden ? null : await getListingFreshness(admin)
+  const photoCoverage = viewingHidden ? null : await getPhotoCoverage(admin)
 
   // "Last new" is stale (scraper likely not running) if older than yesterday.
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
@@ -250,6 +251,68 @@ export default async function ReviewListingsTab({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Photo coverage × grade — how much active inventory is hidden purely for
+          lack of a photo, broken down by listing grade. */}
+      {photoCoverage && (
+        <div className="mb-8">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <ImageOff className="h-4 w-4" /> Photo coverage &amp; grade — what&apos;s hidden
+          </h3>
+          <p className="mb-3 mt-0.5 text-xs text-slate-400">
+            Active listings with an empty photo set are filtered out of every public list (marketplace + SEO). Per source
+            and grade (A≥78 / B≥50 / C&lt;50), this shows how many <strong>show</strong> vs are <strong>hidden only for
+            lack of a photo</strong>. High-grade hidden rows are the cheapest inventory to recover.
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[680px] text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-slate-400">
+                  <th className="px-3 py-2 font-semibold">Source</th>
+                  <th className="px-3 py-2 text-right font-medium">Active</th>
+                  <th className="px-3 py-2 text-right font-medium">Shown</th>
+                  <th className="px-3 py-2 text-right font-medium">Hidden — no photo</th>
+                  <th className="px-3 py-2 text-right font-medium">Grade A</th>
+                  <th className="px-3 py-2 text-right font-medium">Grade B</th>
+                  <th className="px-3 py-2 text-right font-medium">Grade C</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {photoCoverage.map((c) => {
+                  const byGrade = Object.fromEntries(c.grades.map((g) => [g.grade, g])) as Record<
+                    'A' | 'B' | 'C',
+                    (typeof c.grades)[number]
+                  >
+                  const pct = Math.round(c.hiddenPct * 100)
+                  return (
+                    <tr key={c.source}>
+                      <td className="px-3 py-2 font-medium text-slate-700">{c.source}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-600">{c.active.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{c.shown.toLocaleString()}</td>
+                      <td className={`px-3 py-2 text-right font-semibold tabular-nums ${c.hidden > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                        {c.hidden.toLocaleString()}{c.active ? ` (${pct}%)` : ''}
+                      </td>
+                      {(['A', 'B', 'C'] as const).map((g) => {
+                        const gd = byGrade[g]
+                        return (
+                          <td key={g} className="px-3 py-2 text-right tabular-nums">
+                            <span className="text-slate-500">{gd.active.toLocaleString()}</span>
+                            {gd.hidden > 0 && <span className="ml-1 text-rose-500">({gd.hidden.toLocaleString()} hidden)</span>}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Grade cells show the active count, with hidden-for-no-photo in red. Adding photos to high-grade hidden rows
+            is the fastest way to grow visible inventory.
+          </p>
         </div>
       )}
 

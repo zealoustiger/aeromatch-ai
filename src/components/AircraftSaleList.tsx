@@ -168,6 +168,7 @@ export async function countMakeModel(
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+      .not('images', 'eq', '[]')
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
     if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
@@ -201,6 +202,7 @@ export async function countMakeModelState(
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+      .not('images', 'eq', '[]')
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
       .eq('state', code)
@@ -228,6 +230,7 @@ export async function countForSaleState(code: string): Promise<number> {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+      .not('images', 'eq', '[]')
       .eq('state', code)
     if (error) return 0
     return count ?? 0
@@ -252,6 +255,7 @@ export async function countForSale(make?: string): Promise<number> {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+      .not('images', 'eq', '[]')
     const m = make?.trim()
     if (m) query = query.ilike('make', `%${m}%`)
     const { count, error } = await query
@@ -438,6 +442,7 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .select('*', { count: 'exact' })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+      .not('images', 'eq', '[]')
       // Suppress known parts/wanted patterns that slip through the ingest filter
       // on existing rows. Narrow, high-confidence patterns only — no false positives
       // on real aircraft titles (e.g. "assembly" → "wing assembly"; "wheelpant" is

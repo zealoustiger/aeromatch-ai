@@ -97,8 +97,15 @@ function parseCategory(html, make) {
     // Extract listing photos from block. Barnstormers embeds thumbnails directly
     // in category-page blocks for listings that have uploaded photos. Logos
     // (/media/logos/) and banner ads (/media/barnbann/) are filtered out.
+    // The embedded URL is the tiny `thumbnail/thumbnail_image_` variant (~3KB,
+    // grainy when shown larger than a chip); rewrite to the full-res
+    // `large/large_image_` variant (~340KB, same S3 key otherwise) so cards and
+    // detail pages show a crisp photo. (The unprefixed `listing_image_`/`image_`
+    // paths 403; only `large/` is publicly readable.)
     const imgMatches = [...block.matchAll(/<img[^>]+src=["']([^"']*media\/listing_images[^"']+)["']/gi)]
-    const images = imgMatches.map(m => m[1].replace(/\?[^"']*$/, '')).filter(Boolean)
+    const images = imgMatches
+      .map(m => m[1].replace(/\?[^"']*$/, '').replace('/thumbnail/thumbnail_image_', '/large/large_image_'))
+      .filter(Boolean)
 
     rows.push({
       source_id: sourceId,

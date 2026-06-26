@@ -132,6 +132,7 @@ export async function getSimilarAircraftForSale(
       .neq('id', current.id)
       .ilike('make', `%${make}%`)
       .gte('asking_price', SITEMAP_PRICE_FLOOR)
+      .not('images', 'eq', '[]')
       .limit(40)
     if (error || !data) return []
     return rankSimilar(current, data).slice(0, limit)
