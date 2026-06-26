@@ -172,7 +172,7 @@ export default function PostSeekerListingForm() {
       </div>
 
       {/* Aircraft preferences */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Aircraft Preferences</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -213,7 +213,7 @@ export default function PostSeekerListingForm() {
       </section>
 
       {/* Budget */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Budget</SectionHeader>
         <p className="mb-4 text-xs text-slate-500">Setting a budget helps owners find compatible partners. Leave blank if flexible.</p>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -244,7 +244,7 @@ export default function PostSeekerListingForm() {
       </section>
 
       {/* Location */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Base Location</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -276,7 +276,7 @@ export default function PostSeekerListingForm() {
       </section>
 
       {/* Pilot profile */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Your Pilot Profile</SectionHeader>
         <p className="mb-4 text-xs text-slate-500">Help owners know who they&apos;re talking to. This information is shown on your listing.</p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -315,7 +315,7 @@ export default function PostSeekerListingForm() {
       </section>
 
       {/* Partnership preferences */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Partnership Preferences</SectionHeader>
         <div>
           <Label>Preferred Share Types</Label>
@@ -332,7 +332,7 @@ export default function PostSeekerListingForm() {
       </section>
 
       {/* Listing content */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Listing Details</SectionHeader>
         <div className="space-y-4">
           {/* AI draft generator */}
@@ -353,7 +353,7 @@ export default function PostSeekerListingForm() {
               type="button"
               disabled={!aiPrompt.trim() || isGenerating}
               onClick={handleGenerate}
-              className="mt-2 flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
             >
               {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {isGenerating ? 'Generating…' : 'Generate with AI ✨'}
@@ -408,7 +408,7 @@ export default function PostSeekerListingForm() {
       </section>
 
       {/* Contact */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Contact Information</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 
 export default function NewPartnershipPage() {
   return (
+    <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
       <PostTypeTabs active="partnership" />
       <div className="mb-8">
@@ -28,6 +29,7 @@ export default function NewPartnershipPage() {
         </p>
         <EarningsCalculator variant="compact" />
       </div>
+    </div>
     </div>
   )
 }

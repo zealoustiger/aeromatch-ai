@@ -142,7 +142,7 @@ export default function PostPartnershipForm() {
       </div>
 
       {/* Aircraft details */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Aircraft Details</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -170,7 +170,7 @@ export default function PostPartnershipForm() {
 
       {/* Listing content — moved up so the headline + description (what pilots read
           first) come right after the aircraft, not at the very bottom of the form. */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Listing Details</SectionHeader>
         <div className="space-y-4">
           {/* AI draft generator */}
@@ -191,7 +191,7 @@ export default function PostPartnershipForm() {
               type="button"
               disabled={!aiPrompt.trim() || isGenerating}
               onClick={handleGenerate}
-              className="mt-2 flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
             >
               {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {isGenerating ? 'Generating…' : 'Generate with AI ✨'}
@@ -220,7 +220,7 @@ export default function PostPartnershipForm() {
 
       {/* Location — just the ICAO. The airport name, city, and state are implied by
           the identifier, so we derive them server-side instead of asking again. */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Home Airport</SectionHeader>
         <div className="sm:max-w-xs">
           <Label required>ICAO Code</Label>
@@ -238,7 +238,7 @@ export default function PostPartnershipForm() {
       </section>
 
       {/* Partnership structure */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Partnership Structure</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -267,7 +267,7 @@ export default function PostPartnershipForm() {
       </section>
 
       {/* Costs */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Costs</SectionHeader>
         <p className="mb-4 flex items-start gap-1.5 text-xs text-slate-500">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -311,7 +311,7 @@ export default function PostPartnershipForm() {
       </section>
 
       {/* Contact */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Contact Information</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
