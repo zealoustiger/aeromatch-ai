@@ -6,10 +6,39 @@ import { createClient } from '@/lib/supabase'
 import { Plane, Mail, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
+interface AuthContext {
+  heading: string
+  subtext: string
+}
+
+function deriveAuthContext(next: string): AuthContext {
+  const p = next.split('?')[0]
+  if (p === '/aircraft/new') {
+    return { heading: 'Sign in to post your aircraft listing', subtext: "We'll email you a magic link — then you're right back on the form." }
+  }
+  if (p === '/partnerships/new') {
+    return { heading: 'Sign in to post your partnership', subtext: "We'll email you a magic link — then you're right back on the form." }
+  }
+  if (p === '/partnerships/seeking/new') {
+    return { heading: 'Sign in to post your seeking listing', subtext: "We'll email you a magic link — then you're right back on the form." }
+  }
+  if (p.startsWith('/aircraft/listing/')) {
+    return { heading: 'Sign in to contact the seller', subtext: "We'll email you a magic link — takes 30 seconds." }
+  }
+  if (p.startsWith('/partnerships/') && p !== '/partnerships' && !p.startsWith('/partnerships/seeking/') && !p.startsWith('/partnerships/make/') && !p.startsWith('/partnerships/state/') && !p.startsWith('/partnerships/near/') && !p.startsWith('/partnerships/browse')) {
+    return { heading: 'Sign in to contact the owner', subtext: "We'll email you a magic link — takes 30 seconds." }
+  }
+  if (p === '/saved') {
+    return { heading: 'Sign in to sync your saved listings', subtext: "We'll email you a magic link — your saves come with you." }
+  }
+  return { heading: 'Sign in to ClubHanger', subtext: "We'll email you a magic link — no password needed." }
+}
+
 function AuthForm() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/searches'
   const hasError = searchParams.get('error') === 'auth_failed'
+  const ctx = deriveAuthContext(next)
 
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -80,10 +109,8 @@ function AuthForm() {
 
   return (
     <>
-      <h1 className="text-xl font-bold text-slate-900">Sign in to ClubHanger</h1>
-      <p className="mt-2 text-slate-500">
-        We'll email you a magic link — no password needed.
-      </p>
+      <h1 className="text-xl font-bold text-slate-900">{ctx.heading}</h1>
+      <p className="mt-2 text-slate-500">{ctx.subtext}</p>
 
       {hasError && (
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
