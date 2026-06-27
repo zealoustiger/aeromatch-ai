@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AircraftForSale } from '@/lib/types'
 import { resolveMakeModelFamily } from '@/lib/seo'
+import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
 
 /**
  * Single for-sale aircraft fetch by id. Mirrors `getPartnershipById` in
@@ -57,11 +58,15 @@ export async function getForSaleListingSitemapRows(): Promise<
     const PAGE = 1000
     const rows: Row[] = []
     for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
+      let pageQuery = supabase
         .from('aircraft_for_sale')
         .select('id, last_seen_at, created_at, price_changed_at')
         .eq('status', 'active')
         .gte('asking_price', SITEMAP_PRICE_FLOOR)
+      for (const pattern of PARTS_TITLE_PATTERNS) {
+        pageQuery = pageQuery.not('title', 'ilike', pattern)
+      }
+      const { data, error } = await pageQuery
         .order('id', { ascending: true })
         .range(from, from + PAGE - 1)
       if (error || !data || data.length === 0) break
@@ -125,7 +130,7 @@ export async function getSimilarAircraftForSale(
 
   try {
     const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase
+    let simQuery = supabase
       .from('aircraft_for_sale')
       .select('*')
       .eq('status', 'active')
@@ -133,7 +138,10 @@ export async function getSimilarAircraftForSale(
       .ilike('make', `%${make}%`)
       .gte('asking_price', SITEMAP_PRICE_FLOOR)
       .not('images', 'eq', '[]')
-      .limit(40)
+    for (const pattern of PARTS_TITLE_PATTERNS) {
+      simQuery = simQuery.not('title', 'ilike', pattern)
+    }
+    const { data, error } = await simQuery.limit(40)
     if (error || !data) return []
     return rankSimilar(current, data).slice(0, limit)
   } catch {
