@@ -5,6 +5,7 @@ import { minScoreForGrade, GRADE_CUTOFFS, type Grade } from '@/lib/listingQualit
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
 import { buildFamilyPriceMap, compVsMarket, familyKey, priceStats, type CompResult, type PriceStats } from '@/lib/aircraftComps'
 import { clubHangerDealVerdict, type ClubHangerDealVerdict, type DealComp } from '@/lib/aircraftEstimate'
+import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -447,14 +448,9 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
       .not('images', 'eq', '[]')
-      // Suppress known parts/wanted patterns that slip through the ingest filter
-      // on existing rows. Narrow, high-confidence patterns only — no false positives
-      // on real aircraft titles (e.g. "assembly" → "wing assembly"; "wheelpant" is
-      // only ever a part; "wanted" is only ever a buyer-seeking ad).
-      .not('title', 'ilike', '%wanted%')
-      .not('title', 'ilike', '%wheelpant%')
-      .not('title', 'ilike', '%wheel pant%')
-      .not('title', 'ilike', '% assembly%')
+    for (const pattern of PARTS_TITLE_PATTERNS) {
+      query = query.not('title', 'ilike', pattern)
+    }
 
     // Airport → state: resolve the ICAO code to a US state, then filter by it.
     // Falls back to no-op when the code isn't in our airports table (shows all).
