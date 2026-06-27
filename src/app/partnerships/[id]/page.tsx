@@ -23,6 +23,8 @@ import SimilarListings from '@/components/SimilarListings'
 import CostCalculator from '@/components/CostCalculator'
 import ShareListingButton from '@/components/ShareListingButton'
 import { shareFractionFromType } from '@/lib/calculators'
+import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
+import { partnershipBuyInComp, PartnerCompResult } from '@/lib/partnershipComps'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
 // `/compare` view uses the same source of truth — no duplicated query).
@@ -169,6 +171,30 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
       savedRowId = fallback.data?.id ?? null
     }
   }
+  // Fetch buy-in prices of other active same-make partnerships for the market check.
+  // Fails soft (comp = null) when Supabase is unavailable or make is missing.
+  let partnerComp: PartnerCompResult | null = null
+  if (p.make && p.buy_in_price) {
+    try {
+      const { data: comps } = await supabase
+        .from('partnerships')
+        .select('buy_in_price')
+        .eq('status', 'active')
+        .eq('make', p.make)
+        .neq('id', p.id)
+        .not('buy_in_price', 'is', null)
+        .limit(200)
+      if (comps && comps.length > 0) {
+        const otherBuyIns = comps
+          .map((c: { buy_in_price: number | null }) => c.buy_in_price)
+          .filter((v: number | null): v is number => v !== null && v > 0)
+        partnerComp = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
+      }
+    } catch {
+      partnerComp = null
+    }
+  }
+
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -325,6 +351,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 )}
               </dl>
             </div>
+
+            {/* Partnership market check — buy-in vs. same-make median. Self-suppresses
+                when buy_in_price is null or fewer than 4 same-make comps exist. */}
+            {partnerComp && (
+              <PartnershipMarketCheck comp={partnerComp} make={p.make} />
+            )}
 
             {/* Compact cost estimator — pre-filled from this listing's real
                 numbers where available; degrades to sensible defaults when a
