@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import PostSeekerListingForm from '@/components/PostSeekerListingForm'
 import PostTypeTabs from '@/components/PostTypeTabs'
 
@@ -8,7 +9,12 @@ export const metadata: Metadata = {
     'Tell aircraft owners what you are looking for: aircraft type, budget, home airport, and ratings. Post a free seeking listing and let partnerships find you.',
 }
 
-export default function NewSeekerListingPage() {
+export default async function NewSeekerListingPage() {
+  // Show the form to everyone — auth is deferred to submission so users can fill
+  // the form before being asked to sign in. The server action guards the insert.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
@@ -20,7 +26,7 @@ export default function NewSeekerListingPage() {
             and let them come to you.
           </p>
         </div>
-        <PostSeekerListingForm />
+        <PostSeekerListingForm isLoggedIn={!!user} />
       </div>
     </div>
   )

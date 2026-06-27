@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTECTED_PATHS = ['/partnerships/new', '/partnerships/seeking/new', '/searches', '/messages']
+const PROTECTED_PATHS = ['/searches', '/messages']
 
 function isProtected(path: string) {
   return PROTECTED_PATHS.some((p) => path.startsWith(p))

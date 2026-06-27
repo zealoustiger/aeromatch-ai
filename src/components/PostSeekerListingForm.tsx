@@ -1,10 +1,33 @@
 'use client'
 
 import { useActionState, useEffect, useTransition, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
 import { createSeekerListing, generateSeekerDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
+
+const DRAFT_KEY = 'ch:draft:seeker-new'
+
+function forceSaveDraft(form: HTMLFormElement) {
+  try {
+    const data: Record<string, string> = {}
+    for (const el of Array.from(form.elements)) {
+      const e = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      if (e.name && e.value &&
+          !['file', 'password', 'submit', 'button', 'reset', 'hidden', 'checkbox', 'radio'].includes(
+            (e as HTMLInputElement).type ?? ''
+          )) {
+        data[e.name] = e.value
+      }
+    }
+    if (Object.keys(data).length) {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+    }
+  } catch {
+    /* storage unavailable — best effort */
+  }
+}
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex', 'Multi-Engine']
@@ -116,7 +139,8 @@ function DraftIndicator({ status }: { status: DraftStatus }) {
   }
 }
 
-export default function PostSeekerListingForm() {
+export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedIn?: boolean }) {
+  const router = useRouter()
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       try {
@@ -129,7 +153,7 @@ export default function PostSeekerListingForm() {
     null
   )
 
-  const { formRef, status, handleSubmit, handleResult } = useFormDraft('ch:draft:seeker-new')
+  const { formRef, status, handleSubmit, handleResult } = useFormDraft(DRAFT_KEY)
 
   // Clear the saved draft on a successful post; restore it after a failed submit
   // (React resets the uncontrolled form once the action resolves).
@@ -165,8 +189,23 @@ export default function PostSeekerListingForm() {
     })
   }
 
+  function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (!isLoggedIn) {
+      e.preventDefault()
+      if (formRef.current) forceSaveDraft(formRef.current)
+      router.push('/auth?next=/partnerships/seeking/new')
+      return
+    }
+    handleSubmit()
+  }
+
   return (
-    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-8">
+    <form ref={formRef} action={action} onSubmit={onFormSubmit} className="space-y-8">
+      {!isLoggedIn && (
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          Sign in to publish — your progress saves automatically on this device.
+        </div>
+      )}
       <div className="flex justify-end">
         <DraftIndicator status={status} />
       </div>
@@ -447,7 +486,7 @@ export default function PostSeekerListingForm() {
         disabled={pending}
         className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
-        {pending ? 'Submitting…' : 'Post Seeking Listing'}
+        {pending ? 'Submitting…' : isLoggedIn ? 'Post Seeking Listing' : 'Sign in to Publish →'}
       </button>
 
       {/* Sync checkbox groups to hidden inputs before submit */}

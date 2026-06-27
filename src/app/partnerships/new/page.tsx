@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import PostPartnershipForm from '@/components/PostPartnershipForm'
 import PostTypeTabs from '@/components/PostTypeTabs'
 import EarningsCalculator from '@/components/EarningsCalculator'
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function NewPartnershipPage() {
+export default async function NewPartnershipPage() {
+  // Show the form to everyone — auth is deferred to submission so users can fill
+  // the form before being asked to sign in. The server action guards the insert.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
@@ -21,7 +27,7 @@ export default function NewPartnershipPage() {
           List your aircraft partnership for free. Reach pilots searching in your area.
         </p>
       </div>
-      <PostPartnershipForm />
+      <PostPartnershipForm isLoggedIn={!!user} />
 
       <div className="mt-10 border-t border-slate-100 pt-8">
         <p className="mb-3 text-sm text-slate-500">
