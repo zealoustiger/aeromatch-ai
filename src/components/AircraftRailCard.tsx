@@ -23,11 +23,15 @@ function aircraftTitle(p: AircraftForSale): string {
 export default function AircraftRailCard({
   p,
   discountPct,
+  compVerdict,
 }: {
   p: AircraftForSale
   /** When set (deals rail), shows an emerald "~X% below average" pill on the
    *  photo. Same wording as the full-card `CompPill` so the two stay in sync. */
   discountPct?: number
+  /** When set (similar-aircraft rail), shows a "Good deal" or "Priced high" chip
+   *  derived from the family-median estimate. Ignored when discountPct is set. */
+  compVerdict?: 'below' | 'above'
 }) {
   const label = aircraftTitle(p)
   // Real harvested photo when present (homepage rails pass photoOnly, so on the
@@ -51,11 +55,19 @@ export default function AircraftRailCard({
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="256px"
         />
-        {discountPct != null && (
+        {discountPct != null ? (
           <span className="absolute left-2 top-2 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
             ~{discountPct}% below average
           </span>
-        )}
+        ) : compVerdict === 'below' ? (
+          <span className="absolute left-2 top-2 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            Good deal
+          </span>
+        ) : compVerdict === 'above' ? (
+          <span className="absolute left-2 top-2 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+            Priced high
+          </span>
+        ) : null}
         {isPlaceholder && (
           <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
             Not actual plane photo
