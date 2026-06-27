@@ -18,6 +18,9 @@ interface Filters {
   modelPattern?: string
   /** optional ilike pattern to exclude (e.g. keep SR22 distinct from SR22T). */
   notModelPattern?: string
+  /** URL-safe family model match from the smart search box, e.g. `sr22` → ilike
+   *  `sr22%`. Unlike `modelPattern` this is carried in pager hrefs + chips. */
+  model_like?: string
   state?: string
   /** ICAO airport code (e.g. KSFO). Resolved server-side to the airport's state
    *  and applied as an additional `.eq('state', …)` constraint. Falls back to
@@ -474,6 +477,9 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
     }
     if (filters.modelPattern) query = query.ilike('model', filters.modelPattern)
     if (filters.notModelPattern) query = query.not('model', 'ilike', filters.notModelPattern)
+    // Smart-search family match (URL-safe): `sr22` → ilike `sr22%` (catches the
+    // messy SR22 / SR22T / SR22-G6 variants that exact `model` can't).
+    if (filters.model_like) query = query.ilike('model', `${filters.model_like.replace(/[%,]/g, '')}%`)
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.min_price) query = query.gte('asking_price', parseInt(filters.min_price))
     if (filters.max_price) query = query.lte('asking_price', parseInt(filters.max_price))

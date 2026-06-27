@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
+import { parseAircraftSearch, parsedToParams } from '@/lib/parseAircraftSearch'
 
 import { Plane, SlidersHorizontal, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
@@ -92,6 +94,20 @@ export default async function AircraftPage({
   searchParams: Promise<SearchParams>
 }) {
   const params = await searchParams
+
+  // Smart search: when a free-text `q` arrives with no structured filters yet
+  // ("cirrus sr22 near khwd"), parse it into real filters and redirect to the
+  // canonical URL — so the search box fills filters instead of one literal
+  // keyword match (which matched nothing). Leftover words stay as `q`.
+  const STRUCTURED = ['make', 'model', 'model_like', 'airport', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt', 'grade', 'min_grade']
+  if (params.q && !STRUCTURED.some((k) => params[k])) {
+    const parsed = parseAircraftSearch(params.q)
+    if (parsed.matched) {
+      const qs = parsedToParams(parsed).toString()
+      redirect(qs ? `/aircraft?${qs}` : '/aircraft')
+    }
+  }
+
   const activeFilterCount = Object.values(params).filter(Boolean).length
   const facets = await getAircraftFacets()
 

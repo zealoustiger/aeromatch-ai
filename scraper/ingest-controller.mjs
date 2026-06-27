@@ -21,8 +21,9 @@ import { unlockerFetch, hasUnlocker } from './lib/unlocker.mjs'
 loadEnvLocal()
 const args = process.argv.slice(2)
 const arg = (k, d) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d }
+const START_PAGE = parseInt(arg('start-page', '1'), 10)
 const MAX_PAGES = parseInt(arg('max-pages', '400'), 10)
-const DETAIL_CONC = Math.max(1, parseInt(arg('concurrency', '5'), 10))
+const DETAIL_CONC = Math.max(1, parseInt(arg('concurrency', '6'), 10))
 const DRY = args.includes('--dry-run')
 
 const supa = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
@@ -96,70 +97,84 @@ async function pool(items, n, fn) {
 
 async function main() {
   if (!hasUnlocker()) { console.error('BRIGHTDATA_API_TOKEN not set — Controller needs the Web Unlocker.'); process.exit(1) }
-  log(`Controller Bay-Area ingest ${DRY ? '(DRY RUN)' : ''} — up to ${MAX_PAGES} pages`)
+  log(`Controller Bay-Area ingest ${DRY ? '(DRY RUN)' : ''} — pages ${START_PAGE}..${MAX_PAGES}`)
 
   const { data: reg } = await supa.from('aircraft_for_sale').select('registration').not('registration', 'is', null).limit(50000)
   const known = new Set((reg || []).map((r) => normReg(r.registration)).filter((x) => x.length >= 4))
-  log(`Known registrations on file (dedup against): ${known.size}`)
+  const { data: existing } = await supa.from('aircraft_for_sale').select('source_id, first_seen_at').eq('source', 'controller')
+  const firstSeen = new Map((existing || []).map((r) => [r.source_id, r.first_seen_at]))
+  const stored = new Set((existing || []).map((r) => r.source_id))
+  log(`Dedup against ${known.size} registrations; ${stored.size} Controller rows already stored`)
 
-  // 1) Crawl search pages → Bay-Area candidates (cheap; JSON-LD only)
-  const bay = []
-  const seen = new Set()
-  let page = 1, empty = 0
-  for (; page <= MAX_PAGES; page++) {
-    let offers = []
-    try { offers = parseSearchOffers(await unlockerFetch(`${SEARCH}?page=${page}`, { retries: 3, minBytes: 20000 })) }
-    catch (e) { log(`  page ${page} failed: ${e.message}`) }
-    if (!offers.length) { if (++empty >= 3) break; continue }
-    empty = 0
-    let added = 0
-    for (const o of offers) {
-      if (!o.id || seen.has(o.id)) continue
-      seen.add(o.id)
-      if (o.region === 'California' && BAY.has((o.zip || '').slice(0, 3))) { bay.push(o); added++ }
+  const nowIso = new Date().toISOString()
+  let upserted = 0, dupes = 0, noN = 0, fail = 0, skipStored = 0
+  const buffer = []
+  // Incremental upsert so progress persists even if the long run is interrupted.
+  const flush = async () => {
+    if (DRY || !buffer.length) return
+    const rows = buffer.splice(0)
+    for (let i = 0; i < rows.length; i += 200) {
+      const slice = rows.slice(i, i + 200)
+      const { error } = await supa.from('aircraft_for_sale').upsert(slice, { onConflict: 'source,source_id' })
+      if (error) log('  upsert error:', error.message)
+      else upserted += slice.length
     }
-    if (page % 25 === 0 || added) log(`  page ${page}: ${offers.length} listings, +${added} Bay Area (total ${bay.length})`)
-    await sleep(150)
   }
-  log(`\nScanned ${seen.size} listings / ${page - 1} pages → ${bay.length} Bay-Area candidates`)
 
-  // 2) Detail-fetch Bay-Area candidates → N-number + photos, dedup by N-number
-  const net = []
-  let dupes = 0, noN = 0, fail = 0
-  await pool(bay, DETAIL_CONC, async (c) => {
+  // Detail-fetch one Bay candidate → buffer a net-new admin-only row.
+  const handle = async (c) => {
+    if (stored.has(c.id)) { skipStored++; return } // already have it — cheap re-runs
     try {
-      const h = await unlockerFetch(c.url, { retries: 3, minBytes: 30000 })
+      const h = await unlockerFetch(c.url, { retries: 2, minBytes: 30000 })
       const n = pickN(h)
       if (!n) { noN++; return }
       if (known.has(normReg(n))) { dupes++; return }
+      known.add(normReg(n)); stored.add(c.id)
       const photos = detailPhotos(h)
       const area = BAY_AREA[(c.zip || '').slice(0, 3)] || 'Bay Area'
-      net.push({
-        source: 'controller', source_id: c.id, source_url: c.url,
+      const title = titleCase(c.name) || [yearOf(c.name), c.make, c.model].filter(Boolean).join(' ') || 'Aircraft'
+      buffer.push({
+        source: 'controller', source_id: c.id, source_url: c.url, title,
         make: titleCase(c.make), model: titleCase(c.model), year: yearOf(c.name),
         registration: n, asking_price: c.price, price_text: c.price ? `$${c.price.toLocaleString('en-US')}` : null,
         location: `${area}, CA ${c.zip}`, state: 'CA',
         images: photos, image_is_placeholder: photos.length === 0,
+        status: 'admin', first_seen_at: firstSeen.get(c.id) ?? nowIso, last_seen_at: nowIso,
       })
     } catch { fail++ }
-  })
-  log(`Bay-Area detail: ${net.length} NET-NEW | ${dupes} already-in-inventory | ${noN} no-N | ${fail} fetch-fail`)
-
-  if (DRY) {
-    log('\nDRY RUN — sample net-new:')
-    net.slice(0, 10).forEach((r) => log(`  ${[r.year, r.make, r.model].filter(Boolean).join(' ')} | ${r.registration} | ${r.location} | ${r.price_text || 'call'} | ${r.images.length} photos`))
-    return
   }
 
-  // 3) Upsert net-new as ADMIN-ONLY (status='admin' → hidden from public active gate)
-  const nowIso = new Date().toISOString()
-  const { data: existing } = await supa.from('aircraft_for_sale').select('source_id, first_seen_at').eq('source', 'controller')
-  const firstSeen = new Map((existing || []).map((r) => [r.source_id, r.first_seen_at]))
-  const rows = net.map((r) => ({ ...r, status: 'admin', first_seen_at: firstSeen.get(r.source_id) ?? nowIso, last_seen_at: nowIso }))
-  for (let i = 0; i < rows.length; i += 200) {
-    const { error } = await supa.from('aircraft_for_sale').upsert(rows.slice(i, i + 200), { onConflict: 'source,source_id' })
-    if (error) throw new Error('upsert failed: ' + error.message)
+  // Crawl pages in CONCURRENT batches (sequential page fetches were ~80s/page).
+  // Detail-fetch + flush per batch so partial/interrupted runs persist.
+  const PAGE_CONC = Math.max(2, DETAIL_CONC)
+  const seen = new Set()
+  let total = null, base = START_PAGE, emptyStreak = 0, bayTotal = 0, lastPage = START_PAGE
+  for (; base <= MAX_PAGES; base += PAGE_CONC) {
+    const pages = []
+    for (let p = base; p < base + PAGE_CONC && p <= MAX_PAGES; p++) pages.push(p)
+    lastPage = pages[pages.length - 1]
+    const results = await Promise.all(pages.map(async (p) => {
+      try { return await unlockerFetch(`${SEARCH}?page=${p}`, { retries: 2, minBytes: 20000 }) } catch { return '' }
+    }))
+    let batchOffers = 0
+    const bayBatch = []
+    for (const html of results) {
+      if (total === null && html) { const m = html.match(/([\d,]+)\s+Listings/); if (m) total = +m[1].replace(/,/g, '') }
+      const offers = html ? parseSearchOffers(html) : []
+      batchOffers += offers.length
+      for (const o of offers) {
+        if (!o.id || seen.has(o.id)) continue
+        seen.add(o.id)
+        if (o.region === 'California' && BAY.has((o.zip || '').slice(0, 3))) bayBatch.push(o)
+      }
+    }
+    if (!batchOffers) { if ((emptyStreak += PAGE_CONC) >= 16) break } else emptyStreak = 0
+    if (bayBatch.length) { bayTotal += bayBatch.length; await pool(bayBatch, DETAIL_CONC, handle); await flush() }
+    log(`  pages ${pages[0]}..${lastPage}: seen ${seen.size}${total ? '/' + total : ''}, +${bayBatch.length} Bay (net-new ${upserted}, dupes ${dupes}, skip ${skipStored})`)
+    if (total && seen.size >= total) { log('  reached catalog end'); break }
   }
-  log(`\nDone. Upserted ${rows.length} admin-only Controller (Bay Area) listings.`)
+  await flush()
+  log(`\nDone (pages ${START_PAGE}..${lastPage}). Scanned ${seen.size} listings, ${bayTotal} Bay candidates → ` +
+      `upserted ${upserted} admin-only net-new (${dupes} dupes, ${skipStored} already stored, ${noN} no-N, ${fail} fetch-fail).`)
 }
 main().catch((e) => { console.error(e); process.exit(1) })
