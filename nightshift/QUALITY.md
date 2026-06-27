@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T14:52:00Z — crosssell-model-level — score 3/5
+- Strengths: Clean two-query fallback pattern (model-first, make fallback) with correct mock/live parity; `modelLevel` flag cleanly decouples data-level from display logic; scoped to exactly the two files the spec named; TypeScript return type updated correctly.
+- Weaknesses / risks: AC#1 explicitly states CTA must link to `/partnerships?make=Cessna&model=172` when model-level, but the link always stays at `/partnerships?make=Cessna` — so a buyer clicking "Browse Cessna 172 partnerships" lands on all-Cessna results, the same friction the spec was trying to fix; the comment rationalizes this as "not supported yet" but that's a spec deviation, not a scoping judgment.
+- Follow-up: Either add `model` query param support to the `/partnerships` page (so the CTA URL works as specified) or change the CTA label back to make-only when `model` param can't be honored — the current label/URL mismatch is the worse outcome.
+
 ## 2026-06-27T14:23:57Z — partnership-crosssell-listing — score 4/5
 - Strengths: Clean self-suppression logic, correct mock/live parity, graceful catch→null DB error handling, make properly encoded in CTA URL, co-located component as spec required.
 - Weaknesses / risks: CTA text reads "Browse {make} partnerships" instead of spec's "Browse N [Make] partnerships" (count N missing); `.limit(200)` on the count query means both count displayed and minBuyIn could be wrong if a popular make ever exceeds 200 active shares (no ORDER BY, so cheapest rows not guaranteed to be in the result set).
