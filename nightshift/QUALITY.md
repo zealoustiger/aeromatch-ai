@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T09:15:00Z — seeking-post-one-screen — score 4/5
+- Strengths: All 8 AC delivered cleanly — AI prefill elevated to top, 3-field "The basics" section, native `<details>` disclosure closed by default, comprehensive auto-open heuristic (broader than the partnership cycle's, now includes contact/travel fields), server action auto-generates title and falls back to `user.email`; faithful mirror of the partnership-post-one-screen pattern with dead constants (`RATINGS`, `MAKES`) correctly removed.
+- Weaknesses / risks: `result.title` remains in the `hasMoreDetails` auto-open guard even though `title` moved to "The basics" (outside the disclosure) — AI filling only a title triggers the disclosure to open for no reason; `contact_email: ... || ''` could persist an empty string to the DB if `user.email` is also null/undefined on an incomplete account.
+- Follow-up: none
+
 ## 2026-06-27T08:42:11Z — partnership-post-one-screen — score 4/5
 - Strengths: Spec delivered cleanly — AI prefill elevated to top, five-field Essentials section, native `<details>` collapsible with ref-based auto-open on AI fill, `user.email` server-side fallback in actions.ts; net −170 line restructure that makes the form genuinely less intimidating without losing any required-field functionality.
 - Weaknesses / risks: `scheduling_system` field silently dropped — it was in the old form, absent from the spec's more-details list AND the out-of-scope list, so it's an unacknowledged regression; auto-open heuristic also misses AI-filled contact fields (only checks year/registration/title/description/costs), so the drawer stays closed if only those populate.
