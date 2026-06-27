@@ -19,9 +19,11 @@ import {
   Wallet,
   ArrowRight,
   Scale,
+  AlertTriangle,
 } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
+import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import {
   clubHangerEstimate,
   clubHangerDealVerdict,
@@ -251,6 +253,11 @@ export default async function AircraftListingDetailPage({
   const changedDate = formatDate(p.price_changed_at)
   const listedDate = formatDate(p.first_seen_at)
 
+  // Engine life & overhaul reserve — proprietary panel using extracted smoh +
+  // engine_type. Self-suppresses (returns null) when either field is missing or the
+  // engine type can't be matched to a known piston-GA TBO family.
+  const engineLife = computeEngineLife({ smoh: p.smoh, engineType: p.engine_type })
+
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
   const specs: { icon: ReactNode; label: string; value: string }[] = []
@@ -375,6 +382,10 @@ export default async function AircraftListingDetailPage({
                 </dl>
               </div>
             )}
+
+            {/* Engine life & overhaul reserve — renders only when smoh + engine_type
+                are present AND the engine type is a recognised piston-GA family. */}
+            {engineLife && <EngineLifePanel life={engineLife} />}
 
             {/* Price history — only when a real recorded change exists. */}
             {changedFrom != null && priceDelta != null && (
@@ -532,6 +543,65 @@ export default async function AircraftListingDetailPage({
         <div className="mt-10">
           <SimilarAircraft current={p} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+function EngineLifePanel({ life }: { life: EngineLifeResult }) {
+  const pct = Math.max(0, Math.min(100, Math.round((life.remainingHours / life.tboHours) * 100)))
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Wrench className="h-4 w-4" /> Engine Life
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Based on {life.smoh.toLocaleString()} hrs since overhaul (SMOH) and the published{' '}
+        {life.tboHours.toLocaleString()} hr TBO for the {life.family}.
+      </p>
+
+      {life.beyondTbo ? (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          <div>
+            <p className="font-semibold text-amber-800">Engine is beyond published TBO</p>
+            <p className="mt-0.5 text-sm text-amber-700">
+              This engine has {Math.abs(life.remainingHours).toLocaleString()} hrs past the{' '}
+              {life.tboHours.toLocaleString()} hr TBO. Ask the seller about the engine
+              inspection history and any overhauled-beyond-TBO authorization.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-2xl font-extrabold text-slate-900">
+              {life.remainingHours.toLocaleString()} hrs
+            </span>
+            <span className="text-sm text-slate-500">to TBO</span>
+          </div>
+          {/* Progress bar — remaining / TBO */}
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full ${pct > 40 ? 'bg-emerald-400' : pct > 15 ? 'bg-amber-400' : 'bg-red-400'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-slate-400">{pct}% of TBO remaining</p>
+        </div>
+      )}
+
+      <div className="mt-4 border-t border-slate-100 pt-4">
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="text-slate-500">Engine reserve budget</span>
+          <span className="font-semibold text-slate-800">
+            ~{money(life.reservePerYear)}/yr · ~{money(life.reservePerHour)}/hr
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">
+          Estimated overhaul cost ({money(life.overhaulCostUsd)}) spread over{' '}
+          {life.tboHours.toLocaleString()} hr TBO at 100 hrs/yr — a rule of thumb, not a quote.
+        </p>
       </div>
     </div>
   )
