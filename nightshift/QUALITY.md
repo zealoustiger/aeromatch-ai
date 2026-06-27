@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T13:19:33Z — homerails-deal-chips — score 5/5
+- Strengths: All 6 ACs met; single Promise.all over unique families is correct, no N+1; self-exclusion, null-price guard, and 'fair' suppression all handled; local types declared at module scope (avoids the style nit from similar-aircraft cycle); exactly 1 file changed as scoped.
+- Weaknesses / risks: none material
+- Follow-up: none
+
 ## 2026-06-27T11:30:00Z — engine-time-rail-chips — score 4/5
 - Strengths: All 7 ACs met cleanly — ternary chain correctly handles placeholder/null/chip ordering, color thresholds match browse-card spec exactly, avionics chip unaffected, zero TypeScript errors.
 - Weaknesses / risks: Three helpers (`formatHrsRemaining`, `engineChipStyle`, `EngineOverlayChip`) are near-verbatim copies of `AircraftSaleCard`'s equivalents with a different component name than the spec dictated (`EngineTimeChip`); duplication is spec-acknowledged but will compound if a third card type ever gains engine data.
