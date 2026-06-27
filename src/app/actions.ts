@@ -206,10 +206,14 @@ export async function createSeekerListing(formData: FormData) {
     preferred_scheduling: (formData.get('preferred_scheduling') as string) || null,
     intended_use,
     hours_per_month: formData.get('hours_per_month') ? parseInt(formData.get('hours_per_month') as string) : null,
-    title: formData.get('title') as string,
+    title: (formData.get('title') as string)?.trim() ||
+      (() => {
+        const makePart = preferred_makes?.length ? preferred_makes.join('/') + ' ' : ''
+        return `Pilot seeking ${makePart}partnership near ${home_airport}`
+      })(),
     description: (formData.get('description') as string) || null,
     contact_name: (formData.get('contact_name') as string) || null,
-    contact_email: formData.get('contact_email') as string,
+    contact_email: (formData.get('contact_email') as string) || user.email || '',
     contact_method: (formData.get('contact_method') as string) || 'email',
     contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
