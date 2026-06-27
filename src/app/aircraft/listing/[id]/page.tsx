@@ -19,9 +19,11 @@ import {
   Scale,
   AlertTriangle,
   ArrowRight,
+  Users,
 } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
+import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import {
@@ -380,6 +382,10 @@ export default async function AircraftListingDetailPage({
       : null
   const familyLabel = family ? `${family.make} ${family.model}` : null
 
+  // Co-ownership cross-sell: how many active ClubHanger partnerships match this make.
+  // Self-suppresses (returns null) when make is unknown or no partnerships found.
+  const crossSell = p.make ? await getPartnershipCrossSell(p.make) : null
+
   // Structured data — a single Product/Offer for this listing. Real harvested
   // photo only (never our per-make placeholder or the site-logo OG fallback).
   const detailUrl = `${SITE_URL}/aircraft/listing/${p.id}`
@@ -652,6 +658,17 @@ export default async function AircraftListingDetailPage({
                 familyHref={
                   family ? `/aircraft/${family.makeSlug}/${family.modelSlug}` : undefined
                 }
+              />
+            )}
+
+            {/* Co-ownership cross-sell — surface partnership alternatives when active
+                ClubHanger shares exist for the same make. Proprietary: no other listing
+                site shows you co-ownership options alongside a for-sale listing. */}
+            {crossSell && p.make && (
+              <PartnershipCrossSellPanel
+                make={p.make}
+                count={crossSell.count}
+                minBuyIn={crossSell.minBuyIn}
               />
             )}
 
@@ -949,6 +966,44 @@ const SIGNAL_COLORS: Record<DealSignalKind, { dot: string; label: string }> = {
   positive: { dot: 'bg-emerald-400', label: 'text-emerald-700' },
   neutral:  { dot: 'bg-slate-300',   label: 'text-slate-700'   },
   negative: { dot: 'bg-amber-400',   label: 'text-amber-700'   },
+}
+
+// ─── Partnership Cross-Sell Panel ────────────────────────────────────────────
+
+function PartnershipCrossSellPanel({
+  make,
+  count,
+  minBuyIn,
+}: {
+  make: string
+  count: number
+  minBuyIn: number | null
+}) {
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+  const makeEncoded = encodeURIComponent(make)
+  return (
+    <div className="ch-panel p-5">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Users className="h-4 w-4" /> Co-ownership available
+      </h2>
+      <p className="text-sm font-medium text-slate-800">
+        {count === 1 ? '1 co-ownership share' : `${count} co-ownership shares`} listed for{' '}
+        {make} aircraft on ClubHanger.
+      </p>
+      {minBuyIn != null && (
+        <p className="mt-1 text-sm text-slate-500">
+          From <span className="font-semibold text-slate-700">{fmt(minBuyIn)}</span> buy-in — split the fixed costs with a partner instead of owning outright.
+        </p>
+      )}
+      <Link
+        href={`/partnerships?make=${makeEncoded}`}
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+      >
+        Browse {make} partnerships <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  )
 }
 
 function DealScorePanel({ rows }: { rows: DealSignalRow[] }) {

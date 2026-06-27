@@ -211,6 +211,43 @@ export async function countActivePartnerships(make?: string): Promise<number> {
 }
 
 /**
+ * Cross-sell data for aircraft listing detail pages: count + minimum buy-in of
+ * active partnerships for the same make (case-insensitive substring match, same
+ * as the make hub pages). Returns null when there are no matches or when make is
+ * blank — callers suppress the panel in that case.
+ */
+export async function getPartnershipCrossSell(
+  make: string,
+): Promise<{ count: number; minBuyIn: number | null } | null> {
+  const m = make.trim()
+  if (!m) return null
+
+  if (!hasSupabase()) {
+    const matches = MOCK_PARTNERSHIPS.filter((p) =>
+      p.make.toLowerCase().includes(m.toLowerCase()),
+    )
+    if (!matches.length) return null
+    const prices = matches.map((p) => p.buy_in_price).filter((n): n is number => n != null)
+    return { count: matches.length, minBuyIn: prices.length ? Math.min(...prices) : null }
+  }
+
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('partnerships')
+      .select('id, buy_in_price')
+      .eq('status', 'active')
+      .ilike('make', `%${m}%`)
+      .limit(200)
+    if (error || !data || !data.length) return null
+    const prices = data.map((p) => p.buy_in_price).filter((n): n is number => n != null)
+    return { count: data.length, minBuyIn: prices.length ? Math.min(...prices) : null }
+  } catch {
+    return null
+  }
+}
+
+/**
  * Distinct aircraft makes that have active partnerships, ordered by listing count
  * (most-listed first). Read-time aggregation over the existing `make` column — no
  * schema, no extra tables — mirroring `getAircraftFacets`'s make logic. Used by the
