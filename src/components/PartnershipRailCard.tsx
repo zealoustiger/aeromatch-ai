@@ -2,8 +2,32 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin } from 'lucide-react'
 import { Partnership } from '@/lib/types'
-import { formatPrice, aircraftLabel } from '@/lib/utils'
+import { formatPrice, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
+import { classifyAvionics } from '@/lib/avionicsClassify'
+import type { AvionicsCap } from '@/lib/avionicsClassify'
+
+const AVIONICS_CHIP_STYLE: Record<string, string> = {
+  glass: 'bg-violet-50 text-violet-700 ring-violet-200',
+  adsb: 'bg-sky-50 text-sky-700 ring-sky-200',
+  autopilot: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  waas: 'bg-sky-50 text-sky-700 ring-sky-200',
+  gps: 'bg-slate-50 text-slate-600 ring-slate-200',
+}
+
+function AvionicsOverlayChip({ cap }: { cap: AvionicsCap }) {
+  return (
+    <span
+      className={cn(
+        'absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
+        AVIONICS_CHIP_STYLE[cap.key] ?? 'bg-slate-50 text-slate-600 ring-slate-200'
+      )}
+      title={cap.hint}
+    >
+      {cap.label}
+    </span>
+  )
+}
 
 /**
  * Compact, photo-forward rail card for a co-ownership partnership — the partnership
@@ -26,6 +50,10 @@ export default function PartnershipRailCard({
   const realPhoto = pickRealPhoto(p.images)
   const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
   const isPlaceholder = !realPhoto
+  const descPhrases = p.description
+    ? p.description.split(/[,;\n/]+/).map((s) => s.trim()).filter(Boolean)
+    : null
+  const topAvionicsCap = classifyAvionics(descPhrases)?.caps[0] ?? null
 
   return (
     <Link
@@ -56,6 +84,7 @@ export default function PartnershipRailCard({
             Not actual plane photo
           </span>
         )}
+        {topAvionicsCap && <AvionicsOverlayChip cap={topAvionicsCap} />}
       </div>
 
       {/* Details */}
