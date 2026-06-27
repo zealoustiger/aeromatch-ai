@@ -1,7 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Sources we expect a scraper to refresh. Extend as new scrapers come online.
+// Public scrapers whose inventory shows on the marketplace.
 export const SCRAPER_SOURCES = ['barnstormers', 'hangar67', 'aircraftforsale']
+// Admin-only sources (e.g. Controller, Bay-Area dedup-first) — kept off the public
+// marketplace via status='admin', but still monitored for health/freshness.
+export const ADMIN_SOURCES = ['controller']
+export const MONITORED_SOURCES = [...SCRAPER_SOURCES, ...ADMIN_SOURCES]
+// A source's "live" status: admin-only sources use 'admin' (the public gate is 'active').
+export const activeStatus = (source: string) => (ADMIN_SOURCES.includes(source) ? 'admin' : 'active')
 
 const day = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : null)
 
@@ -36,7 +42,7 @@ export async function getScraperHealth(admin: SupabaseClient, daysBack = 10): Pr
 
   const map = new Map<string, SourceHealth>()
   const ensure = (s: string) => map.get(s) ?? map.set(s, { source: s, perDay: {}, recentTotal: 0, lastNew: null }).get(s)!
-  for (const s of SCRAPER_SOURCES) ensure(s) // always show known scrapers, even if silent
+  for (const s of MONITORED_SOURCES) ensure(s) // always show known sources, even if silent
   for (const r of data ?? []) {
     const s = (r.source as string) || '(unknown)'
     const d = day(r.first_seen_at as string) || day(r.created_at as string)
@@ -119,7 +125,9 @@ export async function getListingFreshness(admin: SupabaseClient): Promise<Source
     return count ?? 0
   }
   const out: SourceFreshness[] = []
-  for (const source of SCRAPER_SOURCES) {
+  for (const source of MONITORED_SOURCES) {
+    // Admin-only sources (Controller) live under status='admin'; public ones 'active'.
+    const live = activeStatus(source)
     const { data: latest } = await admin
       .from('aircraft_for_sale').select('last_seen_at').eq('source', source)
       .not('last_seen_at', 'is', null).order('last_seen_at', { ascending: false }).limit(1)
@@ -128,9 +136,9 @@ export async function getListingFreshness(admin: SupabaseClient): Promise<Source
     const staleCut = new Date(Date.now() - 2 * 864e5).toISOString()
 
     const [activeTotal, reseenLastRun, staleActive, sold] = await Promise.all([
-      count((q) => q.eq('source', source).eq('status', 'active')),
-      reseenWindow ? count((q) => q.eq('source', source).eq('status', 'active').gte('last_seen_at', reseenWindow)) : Promise.resolve(0),
-      count((q) => q.eq('source', source).eq('status', 'active').lt('last_seen_at', staleCut)),
+      count((q) => q.eq('source', source).eq('status', live)),
+      reseenWindow ? count((q) => q.eq('source', source).eq('status', live).gte('last_seen_at', reseenWindow)) : Promise.resolve(0),
+      count((q) => q.eq('source', source).eq('status', live).lt('last_seen_at', staleCut)),
       count((q) => q.eq('source', source).eq('status', 'sold')),
     ])
     out.push({

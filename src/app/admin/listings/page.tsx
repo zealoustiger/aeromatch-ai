@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff, Camera, Loader2 } from 'lucide-react'
+import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff, Camera, Loader2, Lock } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage, getHarvestStatus } from '@/lib/adminScrapers'
 import HarvestRefresh from '@/components/HarvestRefresh'
@@ -263,6 +263,30 @@ export default async function ReviewListingsTab({
           </div>
         </div>
       )}
+
+      {/* Admin-only sources (Controller, Bay Area dedup-first) — never public. */}
+      {freshness && (() => {
+        const ctrl = freshness.find((f) => f.source === 'controller')
+        return (
+          <div className="mb-8">
+            <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+              <Lock className="h-4 w-4" /> Admin-only inventory
+            </h3>
+            <Link
+              href="/admin/listings/sample?source=controller&status=admin"
+              className="mt-2 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm transition-colors hover:bg-amber-50"
+            >
+              <span className="text-slate-700">
+                <span className="font-semibold">Controller — Bay Area</span>{' '}
+                <span className="text-slate-500">(dedup-first; not shown publicly; links to source)</span>
+              </span>
+              <span className="flex items-center gap-2 font-semibold text-amber-700">
+                {(ctrl?.activeTotal ?? 0).toLocaleString()} listings <ExternalLink className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+          </div>
+        )
+      })()}
 
       {/* Hangar67 photo harvest — live status of the residential harvester. */}
       {harvest && (() => {
