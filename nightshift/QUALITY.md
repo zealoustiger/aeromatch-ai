@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T14:23:57Z — partnership-crosssell-listing — score 4/5
+- Strengths: Clean self-suppression logic, correct mock/live parity, graceful catch→null DB error handling, make properly encoded in CTA URL, co-located component as spec required.
+- Weaknesses / risks: CTA text reads "Browse {make} partnerships" instead of spec's "Browse N [Make] partnerships" (count N missing); `.limit(200)` on the count query means both count displayed and minBuyIn could be wrong if a popular make ever exceeds 200 active shares (no ORDER BY, so cheapest rows not guaranteed to be in the result set).
+- Follow-up: Add count to CTA label (`Browse ${count} ${make} partnerships →`) and replace `.limit(200)` with a `.select('id, buy_in_price').limit(500)` or use a separate aggregate query for count.
+
 ## 2026-06-27T13:45:31Z — share-cost-toggle — score 4/5
 - Strengths: All 7 spec ACs met; clean Client Component extraction; `?? rows[0]` fallback is good defensive coding; `flex-wrap` on button strip and links section handles mobile overflow correctly.
 - Weaknesses / risks: `TOGGLE_LABELS` duplicates labels already carried in `row.label` from the calculator (parallel map with no single source of truth); toggle buttons missing `type="button"` and `aria-pressed` (a11y gap — could misfire as submit inside any future form wrapper); `money()` copied from page.tsx rather than moved to a shared util.
