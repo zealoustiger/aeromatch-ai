@@ -291,7 +291,7 @@ export async function createAircraftListing(formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/aircraft')
-  redirect(`/aircraft?posted=${data.id}`)
+  redirect(`/aircraft/listing/${data.id}?posted=1`)
 }
 
 export async function joinWaitlist(email: string, searchParams: string) {

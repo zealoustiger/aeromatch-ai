@@ -297,10 +297,14 @@ export async function generateMetadata({
 
 export default async function AircraftListingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams?: Promise<Record<string, string | undefined>>
 }) {
   const { id } = await params
+  const sp = searchParams ? await searchParams : {}
+  const justPosted = sp.posted === '1'
   const p = await getAircraftForSaleById(id)
   if (!p) notFound()
 
@@ -445,6 +449,20 @@ export default async function AircraftListingDetailPage({
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Crawlable breadcrumb trail (also emits BreadcrumbList JSON-LD). */}
         <Breadcrumbs items={crumbs} />
+
+        {/* Post-success confirmation — shown once when redirected from the post form */}
+        {justPosted && (
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+            <p className="font-semibold text-emerald-800">Your listing is live!</p>
+            <p className="mt-0.5 text-sm text-emerald-700">
+              Buyers can now find and message you about {p.title}.{' '}
+              <a href="/listings" className="font-medium underline hover:text-emerald-900">
+                View all my listings →
+              </a>
+            </p>
+          </div>
+        )}
+
         {/* Save / share + optional user note on this saved listing */}
         <div className="mb-6">
           <div className="flex items-center justify-end gap-2">
