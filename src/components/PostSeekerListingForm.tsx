@@ -1,8 +1,8 @@
 'use client'
 
-import { useActionState, useEffect, useTransition, useState } from 'react'
+import { useActionState, useEffect, useTransition, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { createSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
@@ -31,8 +31,13 @@ function forceSaveDraft(form: HTMLFormElement) {
 }
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
-const RATINGS = ['PPL', 'IFR', 'CPL', 'ATP', 'CFI', 'Cirrus Transition', 'High Performance', 'Complex', 'Multi-Engine']
-const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
+const AIRCRAFT_CATEGORIES = [
+  { value: 'any', label: 'Any / Open' },
+  { value: 'sel', label: 'Single-Engine Land' },
+  { value: 'mel', label: 'Multi-Engine' },
+  { value: 'turboprop', label: 'Turboprop' },
+  { value: 'jet', label: 'Jet' },
+]
 const INTENDED_USE_OPTIONS = [
   { value: 'personal_travel', label: 'Personal Travel' },
   { value: 'weekend_trips', label: 'Weekend Trips' },
@@ -41,34 +46,24 @@ const INTENDED_USE_OPTIONS = [
   { value: 'training', label: 'Training / Hours Building' },
   { value: 'other', label: 'Other' },
 ]
-const AIRCRAFT_CATEGORIES = [
-  { value: 'any', label: 'Any / Open' },
-  { value: 'sel', label: 'Single-Engine Land' },
-  { value: 'mel', label: 'Multi-Engine' },
-  { value: 'turboprop', label: 'Turboprop' },
-  { value: 'jet', label: 'Jet' },
-]
 
-// Plain-language guidance shown beside the Description field so the box isn't a
-// blank-page barrier. Tips + two genuine example write-ups (a first-time buyer and
-// an experienced IFR time-builder) — purely static content, no client state.
 const DESCRIPTION_TIPS = [
   'Lead with who you are — your ratings, total hours, and how current you are.',
   'Say how you actually fly: typical missions, hours per month, day/night/IFR.',
   'Be clear on what you want — share size, budget, based airport, and timeline.',
-  'Show you’ll be a good partner: how you treat aircraft, fund reserves, and communicate.',
+  "Show you’ll be a good partner: how you treat aircraft, fund reserves, and communicate.",
 ]
 
 const DESCRIPTION_EXAMPLES = [
   {
     label: 'First-time buyer',
     text:
-      'Private pilot, 240 hours, recently instrument-rated and flying about 8 hours a month out of KAUS. Looking for a 1/3 or 1/4 share in a well-maintained IFR single (Cessna 182 or Cirrus SR20/22) for weekend trips around Texas and the occasional cross-country to see family. I’m meticulous about squawks and logbooks, happy to fund a healthy engine/maintenance reserve, and I prefer a scheduling app so everyone has fair access. Hoping to join in the next 1–2 months.',
+      "Private pilot, 240 hours, recently instrument-rated and flying about 8 hours a month out of KAUS. Looking for a 1/3 or 1/4 share in a well-maintained IFR single (Cessna 182 or Cirrus SR20/22) for weekend trips around Texas and the occasional cross-country to see family. I'm meticulous about squawks and logbooks, happy to fund a healthy engine/maintenance reserve, and I prefer a scheduling app so everyone has fair access. Hoping to join in the next 1–2 months.",
   },
   {
     label: 'Experienced time-builder',
     text:
-      'Commercial pilot, 1,400 hours, CFI/CFII building toward the airlines. Fly 15–20 hours a month and want a 1/2 share in a glass-panel SR22 or similar near KPAO for instrument currency and cross-country work. I keep aircraft hangared and spotless, pay reserves on time, and I’m an easy, communicative partner. Open to a leaseback structure if it works for the group. Ready to move quickly for the right airplane.',
+      "Commercial pilot, 1,400 hours, CFI/CFII building toward the airlines. Fly 15–20 hours a month and want a 1/2 share in a glass-panel SR22 or similar near KPAO for instrument currency and cross-country work. I keep aircraft hangared and spotless, pay reserves on time, and I'm an easy, communicative partner. Open to a leaseback structure if it works for the group. Ready to move quickly for the right airplane.",
   },
 ]
 
@@ -155,9 +150,8 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
   )
 
   const { formRef, status, handleSubmit, handleResult } = useFormDraft(DRAFT_KEY)
+  const detailsRef = useRef<HTMLDetailsElement>(null)
 
-  // Clear the saved draft on a successful post; restore it after a failed submit
-  // (React resets the uncontrolled form once the action resolves).
   useEffect(() => {
     if (state) handleResult(Boolean(state.ok))
   }, [state, handleResult])
@@ -197,6 +191,15 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
           if (result.total_hours) fillFormField(form, '[name="total_hours"]', result.total_hours)
           if (result.ratings_held) fillFormField(form, '[name="ratings_held"]', result.ratings_held)
           if (result.hours_per_month) fillFormField(form, '[name="hours_per_month"]', result.hours_per_month)
+          // If AI fills anything that lives in the "More details" section, open it
+          const hasMoreDetails = result.preferred_makes || result.preferred_models ||
+            result.aircraft_category || result.min_year || result.max_year ||
+            result.max_monthly || result.max_hourly || result.total_hours ||
+            result.ratings_held || result.hours_per_month || result.willing_to_travel_nm ||
+            result.title || result.description
+          if (hasMoreDetails && detailsRef.current) {
+            detailsRef.current.open = true
+          }
         }
       } catch (e) {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
@@ -215,7 +218,7 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={onFormSubmit} className="space-y-8">
+    <form ref={formRef} action={action} onSubmit={onFormSubmit} className="space-y-5">
       {!isLoggedIn && (
         <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
           Sign in to publish — your progress saves automatically on this device.
@@ -225,82 +228,35 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
         <DraftIndicator status={status} />
       </div>
 
-      {/* Aircraft preferences */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Aircraft Preferences</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Preferred Makes</Label>
-            <Input
-              name="preferred_makes"
-              placeholder="e.g. Cessna, Piper, Cirrus"
-            />
-            <p className="mt-1 text-xs text-slate-400">Comma-separated. Leave blank if open to any.</p>
-          </div>
-          <div>
-            <Label>Preferred Models</Label>
-            <Input
-              name="preferred_models"
-              placeholder="e.g. 172, 182, PA-28, SR22"
-            />
-            <p className="mt-1 text-xs text-slate-400">Free text — be as specific or broad as you like.</p>
-          </div>
-          <div>
-            <Label>Aircraft Category</Label>
-            <Select name="aircraft_category">
-              {AIRCRAFT_CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Min Year</Label>
-              <Input name="min_year" type="number" placeholder="e.g. 1995" min={1940} max={new Date().getFullYear()} />
-            </div>
-            <div>
-              <Label>Max Year</Label>
-              <Input name="max_year" type="number" placeholder="Any" min={1940} max={new Date().getFullYear()} />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* AI prefill — first thing on the form */}
+      <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
+        <p className="mb-1 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
+        <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will prefill the whole form (aircraft preferences, budget, location, pilot profile, title, and description).</p>
+        <textarea
+          value={aiPrompt}
+          onChange={(e) => setAiPrompt(e.target.value)}
+          rows={3}
+          placeholder="e.g. IFR-rated, 450 hours, fly 10–12 hrs/month out of KPAO. Looking for a 1/4 share in an IFR single, prefer a Cessna 182 or Piper Archer. Budget around $20k buy-in, $400/mo fixed…"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+        />
+        {aiError && (
+          <p className="mt-1.5 text-xs text-red-600">{aiError}</p>
+        )}
+        <button
+          type="button"
+          disabled={!aiPrompt.trim() || isGenerating}
+          onClick={handleGenerate}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
+        >
+          {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          {isGenerating ? 'Prefilling…' : 'Prefill from your notes ✨'}
+        </button>
+      </div>
 
-      {/* Budget */}
+      {/* The basics — only what's needed to publish */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Budget</SectionHeader>
-        <p className="mb-4 text-xs text-slate-500">Setting a budget helps owners find compatible partners. Leave blank if flexible.</p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <Label>Max Buy-In</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="max_buy_in" type="number" placeholder="25000" className="pl-7" min={0} />
-            </div>
-          </div>
-          <div>
-            <Label>Max Monthly Cost</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="max_monthly" type="number" placeholder="500" className="pl-7" min={0} />
-            </div>
-            <p className="mt-1 text-xs text-slate-400">Hangar, insurance, etc.</p>
-          </div>
-          <div>
-            <Label>Max Wet Rate</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="max_hourly" type="number" placeholder="120" className="pl-7" min={0} />
-            </div>
-            <p className="mt-1 text-xs text-slate-400">Per hour, fuel included</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Location */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Base Location</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <SectionHeader>The basics</SectionHeader>
+        <div className="space-y-4">
           <div>
             <Label required>Home Airport</Label>
             <AirportFormInput
@@ -308,120 +264,164 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
               required
               placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
             />
-            <p className="mt-1 text-xs text-slate-400">
-              Type a city, IATA code, or 4-letter ICAO — we&apos;ll fill in the airport name, city, and state from it.
-            </p>
+            <p className="mt-1 text-xs text-slate-400">Type a city or airport code — name, city, and state fill in automatically.</p>
           </div>
           <div>
-            <Label>Max commute distance</Label>
-            <Select name="willing_to_travel_nm">
-              <option value="">Home airport only</option>
-              <option value="25">~30 min drive</option>
-              <option value="40">~45 min drive</option>
-              <option value="50">~1 hr drive</option>
-              <option value="75">~1.5 hr drive</option>
-              <option value="100">~2 hr drive</option>
-            </Select>
-            <p className="mt-1 text-xs text-slate-400">How far you&apos;d commute from your home airport</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Pilot profile */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Your Pilot Profile</SectionHeader>
-        <p className="mb-4 text-xs text-slate-500">Help owners know who they&apos;re talking to. This information is shown on your listing.</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Total Flight Hours</Label>
-            <Input name="total_hours" type="number" placeholder="e.g. 300" min={0} />
+            <Label>Max Buy-In <span className="font-normal text-slate-400">(optional)</span></Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+              <Input name="max_buy_in" type="number" placeholder="e.g. 25000" className="pl-7" min={0} />
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Your maximum buy-in — helps owners find compatible partners.</p>
           </div>
           <div>
-            <Label>Ratings &amp; Endorsements You Hold</Label>
-            <Input
-              name="ratings_held"
-              placeholder="e.g. PPL, IFR, Complex"
-            />
-            <p className="mt-1 text-xs text-slate-400">Comma-separated</p>
-          </div>
-          <div>
-            <Label>Estimated Hours per Month</Label>
-            <Input name="hours_per_month" type="number" placeholder="e.g. 15" min={1} max={200} />
-            <p className="mt-1 text-xs text-slate-400">How many hours you expect to fly</p>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <Label>Intended Use</Label>
-          <div className="mt-2 flex flex-wrap gap-2" id="intended-use-group">
-            {INTENDED_USE_OPTIONS.map(({ value, label }) => (
-              <label key={value} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                <input type="checkbox" name="intended_use_check" value={value} className="sr-only" />
-                {label}
-              </label>
-            ))}
-          </div>
-          <input type="hidden" name="intended_use" id="intended_use_hidden" />
-          <p className="mt-1.5 text-xs text-slate-400">Select all that apply</p>
-        </div>
-      </section>
-
-      {/* Partnership preferences */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Partnership Preferences</SectionHeader>
-        <div>
-          <Label>Preferred Share Types</Label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {SHARE_TYPES.map((t) => (
-              <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
-                {t}
-              </label>
-            ))}
-          </div>
-          <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
-        </div>
-      </section>
-
-      {/* Listing content */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Listing Details</SectionHeader>
-        <div className="space-y-4">
-          {/* AI draft generator */}
-          <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
-            <p className="mb-2 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
-            <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will prefill the whole form (aircraft preferences, budget, location, pilot profile, title, and description).</p>
-            <textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              rows={3}
-              placeholder="e.g. IFR-rated, 450 hours, fly 10–12 hrs/month out of KPAO. Looking for a 1/4 share in an IFR single, prefer a Cessna 182 or Piper Archer. Budget around $20k buy-in, $400/mo fixed…"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            />
-            {aiError && (
-              <p className="mt-1.5 text-xs text-red-600">{aiError}</p>
-            )}
-            <button
-              type="button"
-              disabled={!aiPrompt.trim() || isGenerating}
-              onClick={handleGenerate}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
-            >
-              {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {isGenerating ? 'Prefilling…' : 'Prefill from your notes ✨'}
-            </button>
-          </div>
-          <div>
-            <Label required>Title</Label>
+            <Label>Title <span className="font-normal text-slate-400">(optional)</span></Label>
             <Input
               name="title"
               placeholder="e.g. IFR pilot seeking 1/3 share near Austin (KAUS)"
-              required
             />
-            <p className="mt-1 text-xs text-slate-400">Be specific — include your location, ratings, and what you&apos;re looking for.</p>
+            <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from your location and preferences.</p>
           </div>
+        </div>
+      </section>
+
+      {/* More details — everything optional, collapsed by default */}
+      <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 sm:px-6">
+          <span className="text-sm font-semibold text-slate-700">More details <span className="font-normal text-slate-400">(optional)</span></span>
+          <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
+        </summary>
+
+        <div className="space-y-6 border-t border-slate-100 px-4 pb-6 pt-4 sm:px-6">
+
+          {/* Aircraft preferences */}
           <div>
-            <Label>Description</Label>
+            <p className="mb-3 text-sm font-medium text-slate-700">Aircraft Preferences</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Preferred Makes</Label>
+                <Input name="preferred_makes" placeholder="e.g. Cessna, Piper, Cirrus" />
+                <p className="mt-1 text-xs text-slate-400">Comma-separated. Leave blank if open to any.</p>
+              </div>
+              <div>
+                <Label>Preferred Models</Label>
+                <Input name="preferred_models" placeholder="e.g. 172, 182, PA-28, SR22" />
+                <p className="mt-1 text-xs text-slate-400">Be as specific or broad as you like.</p>
+              </div>
+              <div>
+                <Label>Aircraft Category</Label>
+                <Select name="aircraft_category">
+                  {AIRCRAFT_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Min Year</Label>
+                  <Input name="min_year" type="number" placeholder="e.g. 1995" min={1940} max={new Date().getFullYear()} />
+                </div>
+                <div>
+                  <Label>Max Year</Label>
+                  <Input name="max_year" type="number" placeholder="Any" min={1940} max={new Date().getFullYear()} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Budget */}
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">Budget</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Max Monthly Cost</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                  <Input name="max_monthly" type="number" placeholder="500" className="pl-7" min={0} />
+                </div>
+                <p className="mt-1 text-xs text-slate-400">Hangar, insurance, etc.</p>
+              </div>
+              <div>
+                <Label>Max Wet Rate</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                  <Input name="max_hourly" type="number" placeholder="120" className="pl-7" min={0} />
+                </div>
+                <p className="mt-1 text-xs text-slate-400">Per hour, fuel included</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Location extras */}
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">Location</p>
+            <div>
+              <Label>Max commute distance</Label>
+              <Select name="willing_to_travel_nm">
+                <option value="">Home airport only</option>
+                <option value="25">~30 min drive</option>
+                <option value="40">~45 min drive</option>
+                <option value="50">~1 hr drive</option>
+                <option value="75">~1.5 hr drive</option>
+                <option value="100">~2 hr drive</option>
+              </Select>
+              <p className="mt-1 text-xs text-slate-400">How far you&apos;d commute from your home airport</p>
+            </div>
+          </div>
+
+          {/* Pilot profile */}
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">Your Pilot Profile</p>
+            <p className="mb-3 text-xs text-slate-500">Helps owners know who they&apos;re talking to — shown on your listing.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Total Flight Hours</Label>
+                <Input name="total_hours" type="number" placeholder="e.g. 300" min={0} />
+              </div>
+              <div>
+                <Label>Ratings &amp; Endorsements You Hold</Label>
+                <Input name="ratings_held" placeholder="e.g. PPL, IFR, Complex" />
+                <p className="mt-1 text-xs text-slate-400">Comma-separated</p>
+              </div>
+              <div>
+                <Label>Estimated Hours per Month</Label>
+                <Input name="hours_per_month" type="number" placeholder="e.g. 15" min={1} max={200} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <Label>Intended Use</Label>
+              <div className="mt-2 flex flex-wrap gap-2" id="intended-use-group">
+                {INTENDED_USE_OPTIONS.map(({ value, label }) => (
+                  <label key={value} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
+                    <input type="checkbox" name="intended_use_check" value={value} className="sr-only" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <input type="hidden" name="intended_use" id="intended_use_hidden" />
+            </div>
+          </div>
+
+          {/* Partnership preferences */}
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">Partnership Preferences</p>
+            <div>
+              <Label>Preferred Share Types</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {SHARE_TYPES.map((t) => (
+                  <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
+                    <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
+                    {t}
+                  </label>
+                ))}
+              </div>
+              <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">Description</p>
             <div className="mb-2 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
               <p className="text-xs font-semibold text-sky-800">How to write a great description</p>
               <ul className="mt-1.5 space-y-1">
@@ -440,10 +440,8 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
                 <div className="mt-2 space-y-2">
                   {DESCRIPTION_EXAMPLES.map((ex) => (
                     <div key={ex.label} className="rounded-md border border-slate-200 bg-white p-2.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                        {ex.label}
-                      </p>
-                      <p className="mt-1 text-xs italic leading-relaxed text-slate-600">“{ex.text}”</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{ex.label}</p>
+                      <p className="mt-1 text-xs italic leading-relaxed text-slate-600">&ldquo;{ex.text}&rdquo;</p>
                     </div>
                   ))}
                 </div>
@@ -456,37 +454,38 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
               className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
             />
           </div>
-        </div>
-      </section>
 
-      {/* Contact */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <SectionHeader>Contact Information</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Contact info */}
           <div>
-            <Label>Your Name</Label>
-            <Input name="contact_name" placeholder="e.g. Jay C." />
-            <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly (e.g. Jay C.).</p>
+            <p className="mb-3 text-sm font-medium text-slate-700">Contact Information</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Your Name</Label>
+                <Input name="contact_name" placeholder="e.g. Jay C." />
+                <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly.</p>
+              </div>
+              <div>
+                <Label>Email <span className="font-normal text-slate-400">(optional)</span></Label>
+                <Input name="contact_email" type="email" placeholder="you@example.com" />
+                <p className="mt-1 text-xs text-slate-400">Defaults to your account email. Not shown publicly.</p>
+              </div>
+              <div>
+                <Label>Preferred Contact Method</Label>
+                <Select name="contact_method">
+                  <option value="email">Email only</option>
+                  <option value="phone">Phone only</option>
+                  <option value="both">Email or phone</option>
+                </Select>
+              </div>
+              <div>
+                <Label>Phone <span className="font-normal text-slate-400">(optional)</span></Label>
+                <Input name="contact_phone" type="tel" placeholder="(555) 000-0000" />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label required>Email</Label>
-            <Input name="contact_email" type="email" placeholder="you@example.com" required />
-            <p className="mt-1 text-xs text-slate-400">Not shown publicly — inquiries routed through us.</p>
-          </div>
-          <div>
-            <Label>Preferred Contact Method</Label>
-            <Select name="contact_method">
-              <option value="email">Email only</option>
-              <option value="phone">Phone only</option>
-              <option value="both">Email or phone</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Phone (optional)</Label>
-            <Input name="contact_phone" type="tel" placeholder="(555) 000-0000" />
-          </div>
+
         </div>
-      </section>
+      </details>
 
       {state && !state.ok && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
