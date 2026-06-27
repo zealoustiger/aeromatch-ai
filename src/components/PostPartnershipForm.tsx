@@ -260,13 +260,12 @@ export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?
             </button>
           </div>
           <div>
-            <Label required>Title</Label>
+            <Label>Title <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
             <Input
               name="title"
               placeholder="e.g. 1/3 Share Available — 2004 C172S, Austin TX (KAUS)"
-              required
             />
-            <p className="mt-1 text-xs text-slate-400">Be specific — include aircraft, share type, and airport.</p>
+            <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from make and model. Add share type and airport if you&apos;d like a more specific headline.</p>
           </div>
           <div>
             <Label>Description</Label>
