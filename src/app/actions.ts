@@ -225,8 +225,24 @@ export async function createAircraftListing(formData: FormData) {
   if (!user) redirect('/auth?next=/aircraft/new')
 
   const asking_price = formData.get('asking_price') ? parseInt(formData.get('asking_price') as string) : null
-  const state = ((formData.get('state') as string) || '').toUpperCase().slice(0, 2) || null
   const photoUrls = (formData.getAll('photo_url') as string[]).filter(Boolean)
+
+  // The form now asks for the ICAO airport code (frictionless) — derive location
+  // string and state from the airports table, same pattern as partnership/seeker actions.
+  const homeAirportRaw = ((formData.get('home_airport') as string) || '').trim().toUpperCase()
+  let location: string | null = null
+  let state: string | null = null
+  if (homeAirportRaw) {
+    const { data: airport } = await supabase
+      .from('airports')
+      .select('city, state')
+      .eq('icao', homeAirportRaw)
+      .single()
+    if (airport?.city) {
+      location = airport.state ? `${airport.city}, ${airport.state}` : airport.city
+      state = airport.state ?? null
+    }
+  }
 
   const payload = {
     // User-posted listings live alongside scraped inventory; source distinguishes
@@ -245,7 +261,7 @@ export async function createAircraftListing(formData: FormData) {
     description: (formData.get('description') as string) || null,
     asking_price,
     price_text: asking_price ? `$${asking_price.toLocaleString('en-US')}` : null,
-    location: (formData.get('location') as string) || null,
+    location,
     state,
     status: 'active',
     poster_id: user.id,
@@ -1013,8 +1029,7 @@ export interface AircraftDraft {
   ttaf?: number
   smoh?: number
   asking_price?: number
-  location?: string
-  state?: string
+  home_airport?: string
 }
 
 export async function generateAircraftDraft(prompt: string): Promise<AircraftDraft> {
@@ -1039,8 +1054,7 @@ Given the seller's notes or a pasted listing, do TWO things:
    - ttaf: total airframe hours as integer — or omit
    - smoh: hours since major overhaul as integer — or omit
    - asking_price: integer dollars (no $ sign, no commas) — or omit
-   - location: city and/or state as a string, e.g. "Austin, TX" — or omit
-   - state: US 2-letter state code, e.g. "TX" — or omit
+   - home_airport: 4-letter ICAO airport code where the aircraft is based, e.g. "KAUS" — or omit if not mentioned
 
 2. Draft the listing:
    - title: concise, specific (max 120 chars) — include year + make + model and the top selling point
@@ -1063,8 +1077,7 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
             ttaf: { type: 'integer', description: 'Total time airframe, hours' },
             smoh: { type: 'integer', description: 'Hours since major overhaul' },
             asking_price: { type: 'integer', description: 'Asking price in USD, no $ or commas' },
-            location: { type: 'string', description: 'City and/or state, e.g. "Austin, TX"' },
-            state: { type: 'string', description: 'US 2-letter state code, e.g. TX' },
+            home_airport: { type: 'string', description: '4-letter ICAO airport code where aircraft is based, e.g. "KAUS"' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -1089,7 +1102,6 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
     ttaf: sale.ttaf,
     smoh: sale.smoh,
     asking_price: sale.asking_price,
-    location: sale.location,
-    state: sale.state,
+    home_airport: sale.home_airport ? sale.home_airport.toUpperCase().slice(0, 4) : undefined,
   }
 }

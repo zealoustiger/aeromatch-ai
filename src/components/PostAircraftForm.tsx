@@ -7,6 +7,7 @@ import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
 import { createAircraftListing, generateAircraftDraft, type AircraftDraft } from '@/app/actions'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
+import AirportFormInput from '@/components/AirportFormInput'
 
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
 
@@ -142,8 +143,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
           if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
           if (result.asking_price) fillFormField(form, '[name="asking_price"]', result.asking_price)
-          if (result.location) fillFormField(form, '[name="location"]', result.location)
-          if (result.state) fillFormField(form, '[name="state"]', result.state?.toUpperCase().slice(0, 2))
+          if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
         }
       } catch (e) {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
@@ -308,7 +308,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
       {/* Price + location */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Price &amp; Location</SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>Asking Price</Label>
             <div className="relative">
@@ -318,13 +318,12 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <p className="mt-1 text-xs text-slate-400">Leave blank for &ldquo;contact for price.&rdquo;</p>
           </div>
           <div>
-            <Label>Location</Label>
-            <Input name="location" placeholder="e.g. Austin, TX" />
-          </div>
-          <div>
-            <Label>State</Label>
-            <Input name="state" placeholder="TX" maxLength={2} className="uppercase" />
-            <p className="mt-1 text-xs text-slate-400">2-letter code — powers the state search pages.</p>
+            <Label>Based at <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
+            <AirportFormInput
+              name="home_airport"
+              placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
+            />
+            <p className="mt-1 text-xs text-slate-400">Type a city or airport code — city and state fill in automatically.</p>
           </div>
         </div>
       </section>
