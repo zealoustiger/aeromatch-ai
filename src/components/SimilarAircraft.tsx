@@ -1,8 +1,8 @@
 import { Layers } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
-import { getSimilarAircraftForSale, getFamilyAskingPrices } from '@/lib/aircraftForSale'
+import { getSimilarAircraftForSale, getFamilyCompsForBatch } from '@/lib/aircraftForSale'
 import { resolveMakeModelFamily } from '@/lib/seo'
-import { clubHangerEstimate } from '@/lib/aircraftEstimate'
+import { clubHangerDealVerdict } from '@/lib/aircraftEstimate'
 import AircraftRailCard from './AircraftRailCard'
 import RailScroller from './RailScroller'
 
@@ -19,12 +19,12 @@ import RailScroller from './RailScroller'
  * curated rails via `RailScroller` — the "more like this" Option-B rail. Fetches
  * up to 12 so the rail is worth scrolling; cards stay server-rendered children.
  *
- * Each card shows an honest "Good deal" or "Priced high" chip when the listing's
- * asking price is outside the ±5% dead band of its family-wide median (same
- * honesty floors as the ClubHanger Estimate: ≥4 comps required, no chip for thin
- * data). Family prices are batch-fetched per unique make+model family to avoid
- * N+1 queries — most similar aircraft share the same make so there are 1-3 unique
- * families at most.
+ * Each card shows a "Good deal" or "Priced high" chip using the year+hours-controlled
+ * `clubHangerDealVerdict` (same as browse cards) — only when ≥4 same-family comps
+ * fall within ±5 yr and ±1 000 hrs (or ±35%) of the subject listing, and the gap
+ * clears the ±5% dead band. Listings without year or ttaf receive no chip. Comps are
+ * batch-fetched per unique make+model family to avoid N+1 queries; each listing
+ * self-excludes from its own comp set in JS.
  */
 export default async function SimilarAircraft({ current }: { current: AircraftForSale }) {
   const similar = await getSimilarAircraftForSale(current, 12)
@@ -48,28 +48,38 @@ export default async function SimilarAircraft({ current }: { current: AircraftFo
     listingFamily.set(p.id, key)
   }
 
-  // Batch-fetch asking prices for each unique family in parallel.
+  // Batch-fetch comps (id + price + year + ttaf) for each unique family in parallel.
+  // One read per family; each similar listing self-excludes in JS below so there's no
+  // N+1 query problem. Uses the year+hours-controlled deal verdict (same as browse cards)
+  // rather than the whole-family estimate — a listing 20 years newer than the median
+  // won't falsely show "Good deal" just because it's cheaper than a newer family.
   const familyEntries = [...familyMap.entries()]
-  const priceArrays = await Promise.all(
+  type BatchComp = { id: string; asking_price: number | null; year: number | null; ttaf: number | null }
+  const compArrays = await Promise.all(
     familyEntries.map(([, spec]) =>
-      getFamilyAskingPrices(spec.make, spec.modelPattern, spec.notModelPattern)
+      getFamilyCompsForBatch(spec.make, spec.modelPattern, spec.notModelPattern)
     )
   )
-  const familyPricesMap = new Map<FamilyKey, number[]>()
-  familyEntries.forEach(([key], i) => familyPricesMap.set(key, priceArrays[i]))
+  const familyCompsMap = new Map<FamilyKey, BatchComp[]>()
+  familyEntries.forEach(([key], i) => familyCompsMap.set(key, compArrays[i]))
 
-  // Compute per-listing verdict — only signal outliers (below/above); skip 'around'
-  // to reduce noise. Honesty floors (≥4 comps, ±5% dead band) enforced by
-  // clubHangerEstimate itself, which returns null on thin data.
+  // Compute per-listing deal verdict — only signal 'good' or 'high'; suppress 'fair'
+  // to reduce noise. Honesty floors (≥4 similar-year + similar-hours comps, ±5% dead
+  // band) enforced by clubHangerDealVerdict itself (returns null on thin/uncontrolled data).
+  // Listings without year or ttaf never receive a verdict — correct self-suppression.
   const verdicts = new Map<string, 'below' | 'above'>()
   for (const p of similar) {
     const key = listingFamily.get(p.id)
-    if (!key) continue
-    const prices = familyPricesMap.get(key)
-    if (!prices) continue
-    const est = clubHangerEstimate(p.asking_price, prices)
-    if (est && est.verdict !== 'around') {
-      verdicts.set(p.id, est.verdict)
+    if (!key || !p.asking_price) continue
+    const allComps = familyCompsMap.get(key) ?? []
+    // Exclude the listing from its own comp set to avoid self-comparison bias.
+    const comps = allComps.filter((c) => c.id !== p.id)
+    const verdict = clubHangerDealVerdict(
+      { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf },
+      comps
+    )
+    if (verdict && verdict.verdict !== 'fair') {
+      verdicts.set(p.id, verdict.verdict === 'good' ? 'below' : 'above')
     }
   }
 
