@@ -48,6 +48,157 @@ import AircraftContactButton from '@/components/AircraftContactButton'
 
 const DAY_MS = 86_400_000
 
+// ─── Deal Score — "How this stacks up" synthesis panel ───────────────────────
+// Synthesizes the buyer-relevant signals already computed on this page
+// (price positioning, days on market, price history, spec completeness) into
+// one scannable card. No composite number — shows transparent reasons only.
+
+type DealSignalKind = 'positive' | 'neutral' | 'negative'
+
+interface DealSignalRow {
+  kind: DealSignalKind
+  label: string
+  detail: string
+}
+
+function computeDealSignals(
+  p: AircraftForSale,
+  estimate: ClubHangerEstimate | null,
+  dealVerdict: ClubHangerDealVerdict | null,
+): DealSignalRow[] {
+  const rows: DealSignalRow[] = []
+  const makeModel = [p.make, p.model].filter(Boolean).join(' ')
+
+  // 1. Price positioning — prefer deal verdict (year+hours controlled), fall back to estimate
+  if (dealVerdict) {
+    const absDelta = formatPrice(Math.abs(dealVerdict.deltaDollars))
+    const dir = dealVerdict.deltaDollars < 0 ? 'below' : 'above'
+    if (dealVerdict.verdict === 'good') {
+      rows.push({
+        kind: 'positive',
+        label: 'Good deal',
+        detail: `${absDelta} (${dealVerdict.deltaPct}%) ${dir} the median of ${dealVerdict.compCount} similar-year, similar-hours${makeModel ? ` ${makeModel}` : ''} listings`,
+      })
+    } else if (dealVerdict.verdict === 'fair') {
+      rows.push({
+        kind: 'neutral',
+        label: 'Fair price',
+        detail: `Near the going rate for similar-year, similar-hours${makeModel ? ` ${makeModel}` : ''} listings (${dealVerdict.compCount} comps)`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: 'Priced high',
+        detail: `${absDelta} (${dealVerdict.deltaPct}%) ${dir} the median of ${dealVerdict.compCount} similar-year, similar-hours${makeModel ? ` ${makeModel}` : ''} listings`,
+      })
+    }
+  } else if (estimate) {
+    const absDelta = formatPrice(Math.abs(estimate.deltaDollars))
+    const dir = estimate.deltaDollars < 0 ? 'below' : 'above'
+    if (estimate.verdict === 'below') {
+      rows.push({
+        kind: 'positive',
+        label: 'Below market',
+        detail: `${absDelta} (${estimate.deltaPct}%) ${dir} the family-wide median of ${estimate.compCount}${makeModel ? ` ${makeModel}` : ''} listings (year & hours not controlled)`,
+      })
+    } else if (estimate.verdict === 'around') {
+      rows.push({
+        kind: 'neutral',
+        label: 'Around market',
+        detail: `Near the family-wide median asking price of ${estimate.compCount}${makeModel ? ` ${makeModel}` : ''} listings`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: 'Above market',
+        detail: `${absDelta} (${estimate.deltaPct}%) ${dir} the family-wide median of ${estimate.compCount}${makeModel ? ` ${makeModel}` : ''} listings`,
+      })
+    }
+  }
+
+  // 2. Days on market
+  if (p.first_seen_at) {
+    const days = Math.floor((Date.now() - new Date(p.first_seen_at).getTime()) / DAY_MS)
+    if (days >= 90) {
+      const months = Math.floor(days / 30)
+      rows.push({
+        kind: 'positive',
+        label: `Listed ${months} months ago`,
+        detail: 'Long listing cycle — seller may have flexibility on price',
+      })
+    } else if (days >= 30) {
+      const months = Math.floor(days / 30)
+      rows.push({
+        kind: 'neutral',
+        label: `Listed ${months} month${months > 1 ? 's' : ''} ago`,
+        detail: 'On the market for a month or more — worth asking about negotiating room',
+      })
+    } else if (days <= 3) {
+      rows.push({
+        kind: 'neutral',
+        label: days === 0 ? 'Listed today' : `Listed ${days} day${days === 1 ? '' : 's'} ago`,
+        detail: 'Fresh to market — early in the listing cycle',
+      })
+    } else {
+      rows.push({
+        kind: 'neutral',
+        label: `Listed ${days} days ago`,
+        detail: 'Relatively recently listed',
+      })
+    }
+  }
+
+  // 3. Price history — only when a real recorded change exists
+  if (p.previous_price != null && p.asking_price != null && p.previous_price !== p.asking_price) {
+    const delta = p.asking_price - p.previous_price
+    const pct = Math.abs(Math.round((delta / p.previous_price) * 100))
+    if (delta < 0) {
+      rows.push({
+        kind: 'positive',
+        label: `Price reduced ${formatPrice(Math.abs(delta))}`,
+        detail: `Down ${pct}% from the original ${formatPrice(p.previous_price)} — a seller motivation signal`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: `Price increased ${formatPrice(delta)}`,
+        detail: `Up ${pct}% from ${formatPrice(p.previous_price)}`,
+      })
+    }
+  }
+
+  // 4. Spec completeness — key buyer-evaluation fields
+  const keyPresent = [
+    p.year != null,
+    p.ttaf != null,
+    p.smoh != null,
+    !!p.engine_type,
+    !!p.registration?.trim(),
+  ].filter(Boolean).length
+  const keyTotal = 5
+  if (keyPresent === keyTotal) {
+    rows.push({
+      kind: 'positive',
+      label: 'Well documented',
+      detail: `All ${keyTotal} key fields (year, total time, engine hours, engine type, registration) are provided`,
+    })
+  } else if (keyPresent >= 3) {
+    rows.push({
+      kind: 'neutral',
+      label: `${keyPresent}/${keyTotal} key specs`,
+      detail: 'Most key specs are provided; verify any missing details with the seller',
+    })
+  } else {
+    rows.push({
+      kind: 'negative',
+      label: `${keyPresent}/${keyTotal} key specs`,
+      detail: 'Key information is missing — ask the seller about hours, engine time, and registration',
+    })
+  }
+
+  return rows
+}
+
 // Human-friendly labels for known aggregation sources (mirrors AircraftSaleCard).
 const SOURCE_LABELS: Record<string, string> = {
   barnstormers: 'Barnstormers',
@@ -263,6 +414,10 @@ export default async function AircraftListingDetailPage({
     ? estimateShareCosts(p.asking_price, engineLife?.reservePerYear ?? 0)
     : null
 
+  // Deal Score synthesis — "How this stacks up" panel in the main column.
+  // Computes from already-fetched data only; no new DB reads.
+  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict)
+
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
   const specs: { icon: ReactNode; label: string; value: string }[] = []
@@ -387,6 +542,11 @@ export default async function AircraftListingDetailPage({
                 </dl>
               </div>
             )}
+
+            {/* Deal Score — "How this stacks up" synthesis: price positioning,
+                days on market, price history, spec completeness. Self-suppresses
+                when fewer than 2 actionable signals are available. */}
+            <DealScorePanel rows={dealSignalRows} />
 
             {/* Engine life & overhaul reserve — renders only when smoh + engine_type
                 are present AND the engine type is a recognised piston-GA family. */}
@@ -774,6 +934,43 @@ function EstimatePanel({
       <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
         Compares this asking price to all {familyLabel} listings — actual value also depends on
         year, hours, and avionics. An estimate, not an appraisal or an offer.
+      </p>
+    </div>
+  )
+}
+
+// ─── Deal Score Panel ────────────────────────────────────────────────────────
+
+const SIGNAL_COLORS: Record<DealSignalKind, { dot: string; label: string }> = {
+  positive: { dot: 'bg-emerald-400', label: 'text-emerald-700' },
+  neutral:  { dot: 'bg-slate-300',   label: 'text-slate-700'   },
+  negative: { dot: 'bg-amber-400',   label: 'text-amber-700'   },
+}
+
+function DealScorePanel({ rows }: { rows: DealSignalRow[] }) {
+  if (rows.length < 2) return null
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        How this stacks up
+      </h2>
+      <ul className="space-y-3">
+        {rows.map((row, i) => {
+          const { dot, label } = SIGNAL_COLORS[row.kind]
+          return (
+            <li key={i} className="flex items-start gap-3">
+              <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
+              <div>
+                <p className={`text-sm font-semibold ${label}`}>{row.label}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{row.detail}</p>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
+        This summary draws on signals shown in detail below — price comps, listing age, and key specs.
+        Read each section for full context. Not an appraisal.
       </p>
     </div>
   )
