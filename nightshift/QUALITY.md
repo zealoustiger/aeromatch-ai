@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T11:30:00Z — engine-time-rail-chips — score 4/5
+- Strengths: All 7 ACs met cleanly — ternary chain correctly handles placeholder/null/chip ordering, color thresholds match browse-card spec exactly, avionics chip unaffected, zero TypeScript errors.
+- Weaknesses / risks: Three helpers (`formatHrsRemaining`, `engineChipStyle`, `EngineOverlayChip`) are near-verbatim copies of `AircraftSaleCard`'s equivalents with a different component name than the spec dictated (`EngineTimeChip`); duplication is spec-acknowledged but will compound if a third card type ever gains engine data.
+- Follow-up: Extract the three helpers into a shared util (e.g. `src/lib/engineChip.tsx`) so future card types import rather than copy.
+
 ## 2026-06-27T10:30:00Z — avionics-partnership-detail — score 3/5
 - Strengths: Core chips render correctly on both detail page and RailCard, self-suppression works, placement is right, description-split workaround is pragmatic (Partnership type has no `avionics` column despite spec claiming otherwise).
 - Weaknesses / risks: AC1's "raw equipment list in a 2-column bullet grid" is entirely absent from AvionicsPanel — only chips render; `CAP_COLORS`/`AVIONICS_CHIP_STYLE` maps are duplicated across `page.tsx` and `PartnershipRailCard.tsx` (with a minor `gps` shade mismatch); description-split regex is copied verbatim into both files instead of living in the shared lib.
