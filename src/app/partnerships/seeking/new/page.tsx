@@ -26,7 +26,11 @@ export default async function NewSeekerListingPage() {
             and let them come to you.
           </p>
         </div>
-        <PostSeekerListingForm isLoggedIn={!!user} />
+        <PostSeekerListingForm
+          isLoggedIn={!!user}
+          userEmail={user?.email}
+          userName={user?.user_metadata?.full_name}
+        />
       </div>
     </div>
   )

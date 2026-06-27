@@ -135,7 +135,15 @@ function DraftIndicator({ status }: { status: DraftStatus }) {
   }
 }
 
-export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedIn?: boolean }) {
+export default function PostSeekerListingForm({
+  isLoggedIn = true,
+  userEmail,
+  userName,
+}: {
+  isLoggedIn?: boolean
+  userEmail?: string
+  userName?: string
+}) {
   const router = useRouter()
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
@@ -461,13 +469,17 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Your Name</Label>
-                <Input name="contact_name" placeholder="e.g. Jay C." />
+                <Input name="contact_name" placeholder="e.g. Jay C." defaultValue={userName ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly.</p>
               </div>
               <div>
                 <Label>Email <span className="font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_email" type="email" placeholder="you@example.com" />
-                <p className="mt-1 text-xs text-slate-400">Defaults to your account email. Not shown publicly.</p>
+                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
+                <p className="mt-1 text-xs text-slate-400">
+                  {userEmail
+                    ? 'Pre-filled from your account — edit if needed. Not shown publicly.'
+                    : 'Defaults to your account email. Not shown publicly.'}
+                </p>
               </div>
               <div>
                 <Label>Preferred Contact Method</Label>

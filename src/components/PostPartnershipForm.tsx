@@ -103,7 +103,15 @@ function DraftIndicator({ status }: { status: DraftStatus }) {
   }
 }
 
-export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?: boolean }) {
+export default function PostPartnershipForm({
+  isLoggedIn = true,
+  userEmail,
+  userName,
+}: {
+  isLoggedIn?: boolean
+  userEmail?: string
+  userName?: string
+}) {
   const router = useRouter()
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
@@ -389,13 +397,15 @@ export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Your Name</Label>
-                <Input name="contact_name" placeholder="First name or handle" />
+                <Input name="contact_name" placeholder="First name or handle" defaultValue={userName ?? ''} />
               </div>
               <div>
                 <Label>Email</Label>
-                <Input name="contact_email" type="email" placeholder="you@example.com" />
+                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
-                  Leave blank to use your account email. Not shown publicly — inquiries routed through us.
+                  {userEmail
+                    ? 'Pre-filled from your account — edit if needed. Not shown publicly.'
+                    : 'Leave blank to use your account email. Not shown publicly — inquiries routed through us.'}
                 </p>
               </div>
               <div>

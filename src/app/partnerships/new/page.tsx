@@ -27,7 +27,11 @@ export default async function NewPartnershipPage() {
           List your aircraft partnership for free. Reach pilots searching in your area.
         </p>
       </div>
-      <PostPartnershipForm isLoggedIn={!!user} />
+      <PostPartnershipForm
+        isLoggedIn={!!user}
+        userEmail={user?.email}
+        userName={user?.user_metadata?.full_name}
+      />
 
       <div className="mt-10 border-t border-slate-100 pt-8">
         <p className="mb-3 text-sm text-slate-500">
