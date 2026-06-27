@@ -883,7 +883,21 @@ Do not invent facts not present in the prompt; if key details are missing, use n
   return { title: f.title.slice(0, 200), description: f.description }
 }
 
-export async function generateAircraftDraft(prompt: string): Promise<{ title: string; description: string }> {
+export interface AircraftDraft {
+  title: string
+  description: string
+  make?: string
+  model?: string
+  year?: number
+  registration?: string
+  ttaf?: number
+  smoh?: number
+  asking_price?: number
+  location?: string
+  state?: string
+}
+
+export async function generateAircraftDraft(prompt: string): Promise<AircraftDraft> {
   await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
@@ -892,23 +906,45 @@ export async function generateAircraftDraft(prompt: string): Promise<{ title: st
   const client = new Anthropic()
   const res = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    system: `You help pilots and aircraft owners write "Aircraft for Sale" listings for ClubHanger, an aircraft marketplace.
+    max_tokens: 1500,
+    system: `You help pilots and aircraft owners post "Aircraft for Sale" listings on ClubHanger.
 
-Given the seller's stream-of-consciousness notes about their aircraft, produce:
-1. title: A concise, specific listing title (max 120 chars) — include year + make + model and the single most compelling detail (e.g. avionics suite, low hours, fresh annual). Example: "2006 Cessna 182T Skylane — G1000, 2,450 TTAF, Fresh Annual".
-2. description: A compelling 150–300 word write-up covering the aircraft (year, make, model, avionics, engine/prop times, paint/interior condition, damage history if any), maintenance highlights (annual, recent work), and any extras or reasons for selling. End with a brief "Why you'll love it" sentence.
+Given the seller's notes or a pasted listing, do TWO things:
 
-Do not invent facts not present in the prompt; if key details are missing, use natural placeholders like "[X]-hour engine." Write in a direct, informative seller voice — factual and welcoming.`,
+1. Extract every structured fact present in the input (do NOT invent facts):
+   - make: one of "Cessna","Piper","Beechcraft","Cirrus","Mooney","Van's","Diamond","Grumman","Other" — or omit if not clear
+   - model: model string, e.g. "182T Skylane" or "SR22 G6" — or omit
+   - year: 4-digit integer — or omit
+   - registration: FAA N-number, e.g. "N12345" — or omit
+   - ttaf: total airframe hours as integer — or omit
+   - smoh: hours since major overhaul as integer — or omit
+   - asking_price: integer dollars (no $ sign, no commas) — or omit
+   - location: city and/or state as a string, e.g. "Austin, TX" — or omit
+   - state: US 2-letter state code, e.g. "TX" — or omit
+
+2. Draft the listing:
+   - title: concise, specific (max 120 chars) — include year + make + model and the top selling point
+   - description: 150–300 word seller write-up — cover specs, avionics, engine/prop times, maintenance, condition, reason for selling. End with a "Why you'll love it" sentence.
+
+Rules: never invent numbers or facts not in the input. Use natural placeholders like "[X]-hour engine" only in the description if a detail is clearly implied but the number is missing. Omit structured fields entirely when they aren't in the input.`,
     tools: [
       {
         name: 'draft_listing',
-        description: 'Output the drafted listing title and description.',
+        description: 'Output the drafted listing with all extracted structured fields.',
         input_schema: {
           type: 'object' as const,
           properties: {
             title: { type: 'string', description: 'Concise listing title, max 120 characters' },
             description: { type: 'string', description: 'Listing description, 150–300 words, seller voice' },
+            make: { type: 'string', enum: ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other'], description: 'Aircraft manufacturer — must be one of the enum values' },
+            model: { type: 'string', description: 'Aircraft model, e.g. "182T Skylane"' },
+            year: { type: 'integer', description: 'Model year, e.g. 2006' },
+            registration: { type: 'string', description: 'FAA N-number, e.g. N12345' },
+            ttaf: { type: 'integer', description: 'Total time airframe, hours' },
+            smoh: { type: 'integer', description: 'Hours since major overhaul' },
+            asking_price: { type: 'integer', description: 'Asking price in USD, no $ or commas' },
+            location: { type: 'string', description: 'City and/or state, e.g. "Austin, TX"' },
+            state: { type: 'string', description: 'US 2-letter state code, e.g. TX' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -921,7 +957,19 @@ Do not invent facts not present in the prompt; if key details are missing, use n
 
   const saleBlock = res.content.find((b) => b.type === 'tool_use')
   if (!saleBlock || saleBlock.type !== 'tool_use') throw new Error('No draft generated.')
-  const sale = saleBlock.input as { title: string; description: string }
+  const sale = saleBlock.input as AircraftDraft
   if (!sale.title || !sale.description) throw new Error('Incomplete draft generated.')
-  return { title: sale.title.slice(0, 200), description: sale.description }
+  return {
+    title: sale.title.slice(0, 200),
+    description: sale.description,
+    make: sale.make,
+    model: sale.model,
+    year: sale.year,
+    registration: sale.registration,
+    ttaf: sale.ttaf,
+    smoh: sale.smoh,
+    asking_price: sale.asking_price,
+    location: sale.location,
+    state: sale.state,
+  }
 }
