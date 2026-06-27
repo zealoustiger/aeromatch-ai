@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
+import AirportFormInput from '@/components/AirportFormInput'
 
 const DRAFT_KEY = 'ch:draft:partnership-new'
 
@@ -284,16 +285,14 @@ export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>Home Airport</SectionHeader>
         <div className="sm:max-w-xs">
-          <Label required>ICAO Code</Label>
-          <Input
+          <Label required>Home Airport</Label>
+          <AirportFormInput
             name="home_airport"
-            placeholder="e.g. KAUS"
             required
-            maxLength={4}
-            className="font-mono uppercase"
+            placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
           />
           <p className="mt-1 text-xs text-slate-400">
-            4-letter identifier (e.g. KAUS, KDAL, KFXE). We&apos;ll fill in the airport name, city, and state for you.
+            Type a city, IATA code, or 4-letter ICAO — we&apos;ll fill in the airport name, city, and state for you.
           </p>
         </div>
       </section>

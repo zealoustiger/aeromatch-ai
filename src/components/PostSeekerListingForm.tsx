@@ -6,6 +6,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { createSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
+import AirportFormInput from '@/components/AirportFormInput'
 
 const DRAFT_KEY = 'ch:draft:seeker-new'
 
@@ -301,16 +302,14 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
         <SectionHeader>Base Location</SectionHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label required>Home Airport (ICAO)</Label>
-            <Input
+            <Label required>Home Airport</Label>
+            <AirportFormInput
               name="home_airport"
-              placeholder="e.g. KAUS"
               required
-              maxLength={4}
-              className="font-mono uppercase"
+              placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
             />
             <p className="mt-1 text-xs text-slate-400">
-              Just the 4-letter ICAO code — we&apos;ll fill in the airport name, city, and state from it.
+              Type a city, IATA code, or 4-letter ICAO — we&apos;ll fill in the airport name, city, and state from it.
             </p>
           </div>
           <div>
