@@ -34,7 +34,12 @@ JUDGE_MODEL="${NS_JUDGE_MODEL:-opus}"         # strong model, used to grade PASS
 JUDGE_PCT="${NS_JUDGE_PCT:-25}"                          # % of PASS cycles to spot-check
 mname() { case "$1" in *sonnet*) echo sonnet;; *opus*) echo opus;; *haiku*) echo haiku;; *) echo "$1";; esac; }
 
-if [ "${NS_FORCE:-0}" = "1" ]; then
+if [ -n "${NS_RUN_UNTIL:-}" ]; then
+  # Run from NOW until an absolute epoch deadline (e.g. 8am), ignoring the nightly
+  # window + cycle cap — used for a manual "keep going until X" drain.
+  MAX_CYCLES="${NS_MAX_CYCLES:-1000}"
+  DEADLINE="$NS_RUN_UNTIL"
+elif [ "${NS_FORCE:-0}" = "1" ]; then
   MAX_CYCLES="${NS_FORCE_WORKERS:-6}"
   DEADLINE=$(( $(date +%s) + 60 * ${NS_FORCE_MINUTES:-55} ))
 else
@@ -60,8 +65,8 @@ git fetch --quiet origin 2>/dev/null || true
 git checkout staging --quiet 2>/dev/null || true
 git pull --quiet --ff-only 2>/dev/null || true
 
-# Scheduled run outside the night window → clean no-op.
-if [ "${NS_FORCE:-0}" != "1" ] && ! in_window; then
+# Scheduled run outside the night window → clean no-op. (NS_RUN_UNTIL / NS_FORCE bypass.)
+if [ -z "${NS_RUN_UNTIL:-}" ] && [ "${NS_FORCE:-0}" != "1" ] && ! in_window; then
   printf '{"state":"idle","last_run_id":"%s","last_started":"%s","last_ended":"%s","last_outcome":"ok","note":"outside night window — no-op"}\n' \
     "$RUN_ID" "$RUN_TS" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATUS"
   echo "outside night window — no-op"; exit 0
@@ -123,7 +128,9 @@ while : ; do
   # Graceful stop request ($STATE/stop, e.g. Forge's Stop button) ends cleanly at the boundary.
   [ -f "$STATE/stop" ] && { stop_reason="stopped by Brian"; rm -f "$STATE/stop"; break; }
   [ "$n" -ge "$MAX_CYCLES" ] && { stop_reason="safety cap ($MAX_CYCLES)"; break; }
-  if [ "${NS_FORCE:-0}" = "1" ]; then
+  if [ -n "${NS_RUN_UNTIL:-}" ]; then
+    [ "$(date +%s)" -ge "$DEADLINE" ] && { stop_reason="reached run-until"; break; }
+  elif [ "${NS_FORCE:-0}" = "1" ]; then
     [ "$(date +%s)" -ge "$DEADLINE" ] && { stop_reason="time box"; break; }
   else
     in_window || { stop_reason="night ended"; break; }
