@@ -6,6 +6,7 @@ import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import type { AvionicsCap } from '@/lib/avionicsClassify'
+import { lookupEngineTbo } from '@/lib/engineLife'
 
 const AVIONICS_CHIP_STYLE: Record<string, string> = {
   'glass-panel': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -25,6 +26,39 @@ function AvionicsOverlayChip({ cap }: { cap: AvionicsCap }) {
       title={cap.hint}
     >
       {cap.label}
+    </span>
+  )
+}
+
+function formatHrsRemaining(hrs: number): string {
+  const rounded = Math.round(hrs / 50) * 50
+  if (rounded >= 1000) {
+    const k = Math.round(rounded / 100) / 10
+    return `~${k}k hrs to TBO`
+  }
+  return `~${rounded} hrs to TBO`
+}
+
+function engineChipStyle(remaining: number, tbo: number): string {
+  if (remaining < 0) return 'bg-amber-50 text-amber-700 ring-amber-200'
+  const frac = remaining / tbo
+  if (frac > 0.5) return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+  if (frac > 0.15) return 'bg-sky-50 text-sky-700 ring-sky-200'
+  return 'bg-amber-50 text-amber-700 ring-amber-200'
+}
+
+function EngineOverlayChip({ smoh, engineType }: { smoh: number; engineType: string }) {
+  const entry = lookupEngineTbo(engineType)
+  if (!entry) return null
+  const remaining = entry.tboHours - smoh
+  const label = remaining <= 0 ? 'Beyond TBO' : formatHrsRemaining(remaining)
+  const style = engineChipStyle(remaining, entry.tboHours)
+  return (
+    <span
+      className={cn('absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1', style)}
+      title={`${entry.family} · TBO ${entry.tboHours.toLocaleString()} hrs · ${smoh.toLocaleString()} hrs since overhaul`}
+    >
+      {label}
     </span>
   )
 }
@@ -94,11 +128,13 @@ export default function AircraftRailCard({
             Priced high
           </span>
         ) : null}
-        {isPlaceholder && (
+        {isPlaceholder ? (
           <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
             Not actual plane photo
           </span>
-        )}
+        ) : p.smoh != null && p.engine_type ? (
+          <EngineOverlayChip smoh={p.smoh} engineType={p.engine_type} />
+        ) : null}
         {topAvionicsCap && <AvionicsOverlayChip cap={topAvionicsCap} />}
       </div>
 
