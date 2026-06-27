@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Clock, Users, ExternalLink } from 'lucide-react'
+import { MapPin, Clock, Users, ExternalLink, LineChart } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -20,7 +20,16 @@ const shareColors: Record<string, string> = {
   other: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
 
-export default function PartnershipCard({ p, saved = false }: { p: Partnership; saved?: boolean }) {
+export default function PartnershipCard({
+  p,
+  saved = false,
+  compVerdict,
+}: {
+  p: Partnership
+  saved?: boolean
+  /** When set, shows a "Below market" or "Above market" chip from same-make buy-in median. */
+  compVerdict?: 'below' | 'above'
+}) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
   const realPhoto = pickRealPhoto(p.images)
@@ -68,6 +77,18 @@ export default function PartnershipCard({ p, saved = false }: { p: Partnership; 
                   </span>
                 )}
                 <TrustBadge p={p} variant="compact" />
+                {compVerdict === 'below' && (
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    <LineChart className="h-3 w-3" />
+                    Below market
+                  </span>
+                )}
+                {compVerdict === 'above' && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                    <LineChart className="h-3 w-3" />
+                    Above market
+                  </span>
+                )}
                 {/* Compare toggle — only renders inside a CompareProvider (i.e.
                     on /partnerships); a no-op everywhere else. */}
                 <CompareToggle listingId={p.id} label={p.title} type="partnership" />
