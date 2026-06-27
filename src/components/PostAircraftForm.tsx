@@ -104,7 +104,8 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
     handleSubmit()
   }
 
-  const [aiPrompt, setAiPrompt] = useState('')
+  const aiPromptRef = useRef<HTMLTextAreaElement>(null)
+  const [hasAiPrompt, setHasAiPrompt] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
@@ -124,7 +125,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
     setAiError(null)
     startGenerating(async () => {
       try {
-        const result: AircraftDraft = await generateAircraftDraft(aiPrompt)
+        const result: AircraftDraft = await generateAircraftDraft(aiPromptRef.current?.value ?? '')
         const form = formRef.current
         if (form) {
           if (result.make) fillFormField(form, '[name="make"]', result.make, 'change')
@@ -211,8 +212,9 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           Paste your listing text or a few notes — the AI fills in make, model, year, hours, price, location, title, and description all at once. Edit anything before posting.
         </p>
         <textarea
-          value={aiPrompt}
-          onChange={(e) => setAiPrompt(e.target.value)}
+          ref={aiPromptRef}
+          defaultValue=""
+          onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
           placeholder="e.g. 2006 Cessna 182T, G1000 glass panel, 2450 TTAF, 600 SMOH, good paint/interior, based at KAUS. Selling because upgrading to a twin. Fresh annual March 2026."
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
@@ -223,7 +225,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={!aiPrompt.trim() || isGenerating}
+          disabled={!hasAiPrompt || isGenerating}
           className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 w-full sm:w-auto"
         >
           {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

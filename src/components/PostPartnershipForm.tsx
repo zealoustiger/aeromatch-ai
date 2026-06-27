@@ -137,7 +137,8 @@ export default function PostPartnershipForm({
     if (state) handleResult(Boolean(state.ok))
   }, [state, handleResult])
 
-  const [aiPrompt, setAiPrompt] = useState('')
+  const aiPromptRef = useRef<HTMLTextAreaElement>(null)
+  const [hasAiPrompt, setHasAiPrompt] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
   const [showBuyInInfo, setShowBuyInInfo] = useState(false)
@@ -155,7 +156,7 @@ export default function PostPartnershipForm({
     setAiError(null)
     startGenerating(async () => {
       try {
-        const result: PartnershipDraft = await generatePartnershipDraft(aiPrompt)
+        const result: PartnershipDraft = await generatePartnershipDraft(aiPromptRef.current?.value ?? '')
         const form = formRef.current
         if (form) {
           fillFormField(form, '[name="title"]', result.title)
@@ -213,8 +214,9 @@ export default function PostPartnershipForm({
           Paste your notes or an existing listing — AI fills in aircraft, share terms, costs, and description. Edit anything before posting.
         </p>
         <textarea
-          value={aiPrompt}
-          onChange={(e) => setAiPrompt(e.target.value)}
+          ref={aiPromptRef}
+          defaultValue=""
+          onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
           placeholder="e.g. 2004 Cessna 172S, G1000, based at KAUS. 1/3 share available, $15k buy-in, $300/mo fixed, $85/hr wet. Two current partners, good communicators, use Google Calendar. Looking for IFR-rated pilot who flies 10+ hrs/month…"
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
@@ -224,7 +226,7 @@ export default function PostPartnershipForm({
         )}
         <button
           type="button"
-          disabled={!aiPrompt.trim() || isGenerating}
+          disabled={!hasAiPrompt || isGenerating}
           onClick={handleGenerate}
           className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 w-full sm:w-auto"
         >

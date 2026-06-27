@@ -164,7 +164,8 @@ export default function PostSeekerListingForm({
     if (state) handleResult(Boolean(state.ok))
   }, [state, handleResult])
 
-  const [aiPrompt, setAiPrompt] = useState('')
+  const aiPromptRef = useRef<HTMLTextAreaElement>(null)
+  const [hasAiPrompt, setHasAiPrompt] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
@@ -181,7 +182,7 @@ export default function PostSeekerListingForm({
     setAiError(null)
     startGenerating(async () => {
       try {
-        const result: SeekerDraft = await generateSeekerDraft(aiPrompt)
+        const result: SeekerDraft = await generateSeekerDraft(aiPromptRef.current?.value ?? '')
         const form = formRef.current
         if (form) {
           fillFormField(form, '[name="title"]', result.title)
@@ -241,8 +242,9 @@ export default function PostSeekerListingForm({
         <p className="mb-1 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
         <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will prefill the whole form (aircraft preferences, budget, location, pilot profile, title, and description).</p>
         <textarea
-          value={aiPrompt}
-          onChange={(e) => setAiPrompt(e.target.value)}
+          ref={aiPromptRef}
+          defaultValue=""
+          onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
           placeholder="e.g. IFR-rated, 450 hours, fly 10–12 hrs/month out of KPAO. Looking for a 1/4 share in an IFR single, prefer a Cessna 182 or Piper Archer. Budget around $20k buy-in, $400/mo fixed…"
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
@@ -252,7 +254,7 @@ export default function PostSeekerListingForm({
         )}
         <button
           type="button"
-          disabled={!aiPrompt.trim() || isGenerating}
+          disabled={!hasAiPrompt || isGenerating}
           onClick={handleGenerate}
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
         >
