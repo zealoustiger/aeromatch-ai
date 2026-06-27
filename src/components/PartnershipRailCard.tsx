@@ -13,7 +13,15 @@ import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
  * `getPlaceholderPhoto` (make-keyed, badged "Not actual plane photo") for visual
  * cohesion with the aircraft rail. Presentational only — no DB read here.
  */
-export default function PartnershipRailCard({ p }: { p: Partnership }) {
+export default function PartnershipRailCard({
+  p,
+  compVerdict,
+}: {
+  p: Partnership
+  /** When set (similar-partnerships rail), shows a "Below market" or "Above market"
+   *  chip derived from the same-make buy-in median. */
+  compVerdict?: 'below' | 'above'
+}) {
   const label = aircraftLabel(p.make, p.model, p.year)
   const realPhoto = pickRealPhoto(p.images)
   const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
@@ -34,6 +42,15 @@ export default function PartnershipRailCard({ p }: { p: Partnership }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="256px"
         />
+        {compVerdict === 'below' ? (
+          <span className="absolute left-2 top-2 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            Below market
+          </span>
+        ) : compVerdict === 'above' ? (
+          <span className="absolute left-2 top-2 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+            Above market
+          </span>
+        ) : null}
         {isPlaceholder && (
           <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
             Not actual plane photo

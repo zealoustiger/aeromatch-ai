@@ -2,6 +2,7 @@ import { Layers } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
+import { partnershipBuyInComp } from '@/lib/partnershipComps'
 import PartnershipRailCard from './PartnershipRailCard'
 import RailScroller from './RailScroller'
 
@@ -64,6 +65,53 @@ export default async function SimilarListings({ current }: { current: Partnershi
   const similar = rank(current, candidates)
   if (similar.length === 0) return null
 
+  // Batch-fetch buy-in prices per unique make so we can show honest "Below market"
+  // / "Above market" chips on each card. One DB query per unique make (typically 1-2
+  // for a same-make similar set). Fails soft — verdicts stay empty on any error.
+  const verdicts = new Map<string, 'below' | 'above'>()
+  const uniqueMakes = [...new Set(similar.map((p) => p.make).filter(Boolean))] as string[]
+
+  if (uniqueMakes.length > 0 && hasSupabase()) {
+    try {
+      const supabase = await createServerSupabaseClient()
+      // Fetch all active buy-in prices for each unique make in parallel.
+      const priceResults = await Promise.all(
+        uniqueMakes.map((make) =>
+          supabase
+            .from('partnerships')
+            .select('id, buy_in_price')
+            .eq('status', 'active')
+            .eq('make', make)
+            .not('buy_in_price', 'is', null)
+            .limit(200)
+        )
+      )
+
+      // Build make → [{id, buy_in_price}] map.
+      const makeRows = new Map<string, { id: string; buy_in_price: number }[]>()
+      uniqueMakes.forEach((make, i) => {
+        const rows = (priceResults[i].data ?? [])
+          .filter((r): r is { id: string; buy_in_price: number } => r.buy_in_price != null && r.buy_in_price > 0)
+        makeRows.set(make, rows)
+      })
+
+      // Compute verdict for each similar listing with a buy-in price.
+      for (const p of similar) {
+        if (!p.buy_in_price || !p.make) continue
+        const rows = makeRows.get(p.make) ?? []
+        // Exclude this listing's own price from the comp set (honesty: don't
+        // compare a listing to itself). Use the fetched IDs for exact exclusion.
+        const otherBuyIns = rows.filter((r) => r.id !== p.id).map((r) => r.buy_in_price)
+        const result = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
+        if (result && result.kind !== 'near') {
+          verdicts.set(p.id, result.kind)
+        }
+      }
+    } catch {
+      // Verdicts stay empty — cards render without chips.
+    }
+  }
+
   return (
     <section>
       <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
@@ -73,7 +121,7 @@ export default async function SimilarListings({ current }: { current: Partnershi
       <RailScroller>
         {similar.map((p) => (
           <li key={p.id} className="shrink-0 snap-start">
-            <PartnershipRailCard p={p} />
+            <PartnershipRailCard p={p} compVerdict={verdicts.get(p.id)} />
           </li>
         ))}
       </RailScroller>
