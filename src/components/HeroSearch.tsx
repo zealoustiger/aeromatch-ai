@@ -6,8 +6,6 @@ import { Search, X, MapPin, Plane, Users, PlaneTakeoff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { createClient } from '@/lib/supabase'
-import type { User } from '@supabase/supabase-js'
-import SignUpGate from './SignUpGate'
 
 const RADIUS_OPTIONS = [25, 50, 100, 150, 200]
 
@@ -24,17 +22,6 @@ export default function HeroSearch() {
   // public, no-gate experience); "partnerships" keeps the airport/radius behavior.
   const [searchType, setSearchType] = useState<'partnerships' | 'forsale'>('forsale')
   const [forSaleQuery, setForSaleQuery] = useState('')
-
-  // Auth state — read-only, mirrors SaveListingButton. Signed-in users skip the gate.
-  const [user, setUser] = useState<User | null>(null)
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   // ── Partnerships: one smart box. Type a city/airport → pick from autocomplete,
   // which adds it as a chip (multi-airport stays possible, no ICAO memorizing). ──
@@ -125,17 +112,8 @@ export default function HeroSearch() {
       airports: codes.join(','),
       radius_miles: codes.length === 1 ? radiusMiles : undefined,
     })
-    if (user) {
-      router.push(`/partnerships?${params}`)
-      return
-    }
-    setPendingParams(params)
-    setShowGate(true)
+    router.push(`/partnerships?${params}`)
   }
-
-  // Sign-up gate
-  const [showGate, setShowGate] = useState(false)
-  const [pendingParams, setPendingParams] = useState('')
 
   // ── Planes-for-sale free-text search (public /aircraft, no gate) ──
   function searchForSale(term: string) {
@@ -303,7 +281,6 @@ export default function HeroSearch() {
         )}
       </div>
 
-      {showGate && <SignUpGate searchParams={pendingParams} onClose={() => setShowGate(false)} />}
     </>
   )
 }
