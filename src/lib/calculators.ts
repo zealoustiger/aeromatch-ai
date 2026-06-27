@@ -129,6 +129,54 @@ export function estimateOwnershipCost(askingPrice: number): OwnershipEstimate {
   }
 }
 
+export interface ShareCostRow {
+  /** Number of equal shares (1 = sole owner, 2 = half share, etc.). */
+  shares: number
+  label: string
+  /** Fixed costs allocated to this share per year (insurance + hangar + annual + engine reserve, ÷ shares). */
+  fixedPerShareAnnual: number
+  /** Variable operating costs per year — same for every partner since each flies the same hours. */
+  operatingAnnual: number
+  totalAnnual: number
+  totalMonthly: number
+}
+
+/**
+ * Returns per-share ownership cost rows for 1 (sole), 2, 3, and 4 equal partners.
+ *
+ * Fixed costs (insurance, hangar, annual inspection, optional engine reserve) are
+ * split equally; operating costs (fuel/oil) stay the same regardless of N partners
+ * because each partner flies the same assumed hours.
+ */
+export function estimateShareCosts(
+  askingPrice: number,
+  engineReservePerYear = 0
+): ShareCostRow[] {
+  const insuranceAnnual = Math.round(askingPrice * 0.01)
+  const hangarAnnual = 7_500
+  const annualInspection = 2_500
+  const fixedTotal = insuranceAnnual + hangarAnnual + annualInspection + Math.round(engineReservePerYear)
+  const operatingAnnual = 100 * 120 // 100 hrs/yr × $120/hr fuel+oil
+
+  return [
+    { shares: 1, label: 'Full ownership (sole)' },
+    { shares: 2, label: '1/2 share' },
+    { shares: 3, label: '1/3 share' },
+    { shares: 4, label: '1/4 share' },
+  ].map(({ shares, label }) => {
+    const fixedPerShareAnnual = Math.round(fixedTotal / shares)
+    const totalAnnual = fixedPerShareAnnual + operatingAnnual
+    return {
+      shares,
+      label,
+      fixedPerShareAnnual,
+      operatingAnnual,
+      totalAnnual,
+      totalMonthly: Math.round(totalAnnual / 12),
+    }
+  })
+}
+
 export interface EarningsInputs {
   /** Full aircraft monthly fixed cost the owner carries today (USD/mo). */
   monthlyFixedTotal: number
