@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
-import { Bookmark, Search, ExternalLink, Bell } from 'lucide-react'
+import { Bookmark, Search, ExternalLink, Bell, Plane, Users, PlusCircle, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import DeleteSearchButton from '@/components/DeleteSearchButton'
 import RenameSavedSearch from '@/components/RenameSavedSearch'
@@ -115,21 +115,67 @@ export default async function SearchesPage() {
       </div>
 
       {!searches?.length ? (
-        <div className="rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
-          <Search className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-          <p className="font-medium text-slate-600">No saved searches yet</p>
-          <p className="mt-1 text-sm text-slate-400">
-            Head to{' '}
-            <Link href="/partnerships" className="text-sky-600 hover:underline underline-offset-2">
-              partnerships
-            </Link>{' '}
-            or{' '}
-            <Link href="/aircraft" className="text-sky-600 hover:underline underline-offset-2">
-              planes for sale
-            </Link>
-            , set your filters, and click{' '}
-            <strong className="text-slate-600">Save this search</strong>.
-          </p>
+        <div className="space-y-6">
+          {/* Onboarding orientation — shown when no saved searches exist */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-base font-semibold text-slate-800">Welcome to ClubHanger</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Find aircraft for sale, connect with co-owners, or list your own plane or partnership — all in one place.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <Link
+                href="/aircraft"
+                className="group flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-sky-50"
+              >
+                <Plane className="h-5 w-5 text-sky-500" />
+                <span className="text-sm font-semibold text-slate-800 group-hover:text-sky-700">Browse aircraft for sale</span>
+                <span className="text-xs text-slate-500">Search 1,500+ listings with photos, specs, and deal analysis.</span>
+                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-sky-600">
+                  Explore <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
+              <Link
+                href="/partnerships"
+                className="group flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-emerald-200 hover:bg-emerald-50"
+              >
+                <Users className="h-5 w-5 text-emerald-500" />
+                <span className="text-sm font-semibold text-slate-800 group-hover:text-emerald-700">Browse partnerships</span>
+                <span className="text-xs text-slate-500">Find a co-owner near your home airport and split the costs.</span>
+                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                  Explore <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
+              <Link
+                href="/partnerships/new"
+                className="group flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-violet-200 hover:bg-violet-50"
+              >
+                <PlusCircle className="h-5 w-5 text-violet-500" />
+                <span className="text-sm font-semibold text-slate-800 group-hover:text-violet-700">Post a listing</span>
+                <span className="text-xs text-slate-500">List your aircraft for sale or offer a partnership share.</span>
+                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-violet-600">
+                  Get started <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Saved-search instruction */}
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 py-10 text-center">
+            <Search className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+            <p className="font-medium text-slate-600">No saved searches yet</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Head to{' '}
+              <Link href="/partnerships" className="text-sky-600 hover:underline underline-offset-2">
+                partnerships
+              </Link>{' '}
+              or{' '}
+              <Link href="/aircraft" className="text-sky-600 hover:underline underline-offset-2">
+                planes for sale
+              </Link>
+              , set your filters, and click{' '}
+              <strong className="text-slate-600">Save this search</strong>.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
