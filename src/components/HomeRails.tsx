@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { fetchAircraftPage } from '@/components/AircraftSaleList'
+import { getFamilyCompsForBatch } from '@/lib/aircraftForSale'
+import { resolveMakeModelFamily } from '@/lib/seo'
+import { clubHangerDealVerdict } from '@/lib/aircraftEstimate'
 import { AircraftForSale } from '@/lib/types'
 import AircraftRailCard from './AircraftRailCard'
 import RailScroller from './RailScroller'
@@ -75,6 +78,10 @@ interface ResolvedRail {
   listings: AircraftForSale[]
 }
 
+type FamilyKey = string
+interface FamilySpec { make: string; modelPattern: string; notModelPattern?: string }
+type BatchComp = { id: string; asking_price: number | null; year: number | null; ttaf: number | null }
+
 export default async function HomeRails() {
   // Fetch every candidate rail in parallel via the marketplace's own helper.
   const resolved = await Promise.all(
@@ -90,6 +97,53 @@ export default async function HomeRails() {
   // Drop empty/thin rails; de-dup is not needed (each rail is its own row).
   const rails = resolved.filter((r): r is ResolvedRail => r !== null)
   if (rails.length === 0) return null
+
+  // Collect all unique make+model families across all rail listings so we can
+  // batch-fetch comps in parallel (one query per family, not per listing).
+  const familyMap = new Map<FamilyKey, FamilySpec>()
+  const listingFamilyKey = new Map<string, FamilyKey>()
+
+  for (const rail of rails) {
+    for (const p of rail.listings) {
+      if (!p.asking_price) continue
+      const fam = resolveMakeModelFamily(p.make, p.model)
+      if (!fam) continue
+      const key: FamilyKey = `${fam.make}||${fam.modelPattern}||${fam.notModelPattern ?? ''}`
+      if (!familyMap.has(key)) {
+        familyMap.set(key, { make: fam.make, modelPattern: fam.modelPattern, notModelPattern: fam.notModelPattern })
+      }
+      listingFamilyKey.set(p.id, key)
+    }
+  }
+
+  // Fetch comps for every unique family in one parallel Promise.all — no N+1 queries.
+  const familyEntries = [...familyMap.entries()]
+  const compArrays = await Promise.all(
+    familyEntries.map(([, spec]) =>
+      getFamilyCompsForBatch(spec.make, spec.modelPattern, spec.notModelPattern)
+    )
+  )
+  const familyCompsMap = new Map<FamilyKey, BatchComp[]>()
+  familyEntries.forEach(([key], i) => familyCompsMap.set(key, compArrays[i]))
+
+  // Compute year+hours-controlled deal verdict per listing (same logic as browse cards
+  // and Similar aircraft rail). Suppress 'fair' to reduce noise — only 'good'/'high'.
+  const verdicts = new Map<string, 'below' | 'above'>()
+  for (const rail of rails) {
+    for (const p of rail.listings) {
+      const key = listingFamilyKey.get(p.id)
+      if (!key || !p.asking_price) continue
+      const allComps = familyCompsMap.get(key) ?? []
+      const comps = allComps.filter((c) => c.id !== p.id)
+      const verdict = clubHangerDealVerdict(
+        { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf },
+        comps
+      )
+      if (verdict && verdict.verdict !== 'fair') {
+        verdicts.set(p.id, verdict.verdict === 'good' ? 'below' : 'above')
+      }
+    }
+  }
 
   return (
     <section className="ch-surface border-t border-slate-100 py-16">
@@ -124,7 +178,7 @@ export default async function HomeRails() {
               <RailScroller>
                 {rail.listings.map((p) => (
                   <li key={p.id} className="shrink-0 snap-start">
-                    <AircraftRailCard p={p} />
+                    <AircraftRailCard p={p} compVerdict={verdicts.get(p.id)} />
                   </li>
                 ))}
               </RailScroller>
