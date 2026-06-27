@@ -271,7 +271,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <Label required>Make</Label>
             <Select name="make" required>
@@ -284,9 +284,29 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <Input name="model" placeholder="e.g. 182T Skylane" required />
           </div>
         </div>
+
+        {/* Price + location — always visible so sellers fill the most-important fields */}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label>Asking Price <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+              <Input name="asking_price" type="number" placeholder="285000" className="pl-7" min={0} />
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Leave blank for &ldquo;contact for price.&rdquo;</p>
+          </div>
+          <div>
+            <Label>Based at <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
+            <AirportFormInput
+              name="home_airport"
+              placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
+            />
+            <p className="mt-1 text-xs text-slate-400">Type a city or airport code — city and state fill in automatically.</p>
+          </div>
+        </div>
       </section>
 
-      {/* More details — everything optional, collapsed by default */}
+      {/* More details — aircraft specs, photos, title & description */}
       <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
           <span className="text-sm font-semibold text-slate-700">More details <span className="font-normal text-slate-400">(optional)</span></span>
@@ -340,29 +360,6 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
                   placeholder="Avionics, engine/prop times, damage history, paint/interior, why you're selling, anything a buyer should know…"
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                 />
-              </div>
-            </div>
-          </div>
-
-          {/* Price + location */}
-          <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Price &amp; location</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Asking Price</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                  <Input name="asking_price" type="number" placeholder="285000" className="pl-7" min={0} />
-                </div>
-                <p className="mt-1 text-xs text-slate-400">Leave blank for &ldquo;contact for price.&rdquo;</p>
-              </div>
-              <div>
-                <Label>Based at <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <AirportFormInput
-                  name="home_airport"
-                  placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
-                />
-                <p className="mt-1 text-xs text-slate-400">Type a city or airport code — city and state fill in automatically.</p>
               </div>
             </div>
           </div>
