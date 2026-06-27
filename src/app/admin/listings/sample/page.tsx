@@ -21,13 +21,14 @@ export default async function ListingSamplePage({
   const source = sp.source ?? ''
   const grade = (sp.grade ?? '').toUpperCase()
   const photo = sp.photo ?? ''
+  const statusParam = sp.status ?? 'active' // 'active' (public) | 'admin' (Controller) | 'sold'
   const admin = createAdminClient()
 
   // Same predicates the coverage table + marketplace use, so the sample matches
   // the counts exactly. quality_score bands: A≥78 / B≥50 / C<50.
   const apply = (q: any) => {
     if (source) q = q.eq('source', source)
-    q = q.eq('status', 'active')
+    q = q.eq('status', statusParam)
     if (grade === 'A') q = q.gte('quality_score', 78)
     else if (grade === 'B') q = q.gte('quality_score', 50).lt('quality_score', 78)
     else if (grade === 'C') q = q.lt('quality_score', 50)
@@ -45,6 +46,7 @@ export default async function ListingSamplePage({
 
   const label = [
     source || 'all sources',
+    statusParam === 'admin' ? 'admin-only' : statusParam === 'sold' ? 'sold' : 'active',
     grade ? `grade ${grade}` : 'all grades',
     photo === 'hidden' ? 'no photo (hidden)' : photo === 'shown' ? 'has photo (shown)' : 'all photo states',
   ].join('  ·  ')
@@ -60,10 +62,16 @@ export default async function ListingSamplePage({
         <p className="mt-1 text-sm text-slate-500">
           {label} — showing {rows.length} of {(count ?? 0).toLocaleString()}.
         </p>
-        {photo === 'hidden' && (
+        {photo === 'hidden' && statusParam === 'active' && (
           <p className="mt-1 text-xs text-rose-600">
             These are hidden from the public marketplace because they have no photo. The cards below fall back to a make
             placeholder — that&apos;s what a real photo would replace.
+          </p>
+        )}
+        {statusParam === 'admin' && (
+          <p className="mt-1 text-xs text-amber-600">
+            Admin-only inventory (e.g. Controller, Bay Area) — never shown on the public marketplace. Cards link to the
+            source listing.
           </p>
         )}
       </div>

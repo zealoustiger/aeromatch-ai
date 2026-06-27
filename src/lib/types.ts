@@ -74,7 +74,9 @@ export interface AircraftForSale {
 
   location: string | null
   state: string | null
-  status: ListingStatus | 'sold'
+  // 'admin' = ingested but admin-only (e.g. Controller Bay-Area); hidden from the
+  // public marketplace, which gates on status='active'.
+  status: ListingStatus | 'sold' | 'admin'
 
   // Freshness + price history (Phase 2 ingestion)
   first_seen_at: string | null
