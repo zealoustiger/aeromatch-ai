@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
-import { createAircraftListing, generateAircraftDraft } from '@/app/actions'
+import { createAircraftListing, generateAircraftDraft, type AircraftDraft } from '@/app/actions'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 
 const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
@@ -117,23 +117,33 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   const [isLookingUp, setIsLookingUp] = useState(false)
   const [lookupStatus, setLookupStatus] = useState<string | null>(null)
 
+  function fillFormField(form: HTMLFormElement, selector: string, value: string | number | undefined, eventType = 'input') {
+    if (value === undefined || value === null) return
+    const el = form.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(selector)
+    if (el) {
+      el.value = String(value)
+      el.dispatchEvent(new Event(eventType, { bubbles: true }))
+    }
+  }
+
   function handleGenerate() {
     setAiError(null)
     startGenerating(async () => {
       try {
-        const result = await generateAircraftDraft(aiPrompt)
+        const result: AircraftDraft = await generateAircraftDraft(aiPrompt)
         const form = formRef.current
         if (form) {
-          const titleInput = form.querySelector<HTMLInputElement>('[name="title"]')
-          const descTextarea = form.querySelector<HTMLTextAreaElement>('[name="description"]')
-          if (titleInput) {
-            titleInput.value = result.title
-            titleInput.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-          if (descTextarea) {
-            descTextarea.value = result.description
-            descTextarea.dispatchEvent(new Event('input', { bubbles: true }))
-          }
+          fillFormField(form, '[name="title"]', result.title)
+          fillFormField(form, '[name="description"]', result.description)
+          if (result.make) fillFormField(form, '[name="make"]', result.make, 'change')
+          if (result.model) fillFormField(form, '[name="model"]', result.model)
+          if (result.year) fillFormField(form, '[name="year"]', result.year)
+          if (result.registration) fillFormField(form, '[name="registration"]', result.registration)
+          if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
+          if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
+          if (result.asking_price) fillFormField(form, '[name="asking_price"]', result.asking_price)
+          if (result.location) fillFormField(form, '[name="location"]', result.location)
+          if (result.state) fillFormField(form, '[name="state"]', result.state?.toUpperCase().slice(0, 2))
         }
       } catch (e) {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
@@ -256,8 +266,8 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         <div className="space-y-4">
           {/* AI draft generator */}
           <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
-            <p className="mb-2 text-xs font-semibold text-violet-800">Generate with AI ✨</p>
-            <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about your aircraft — the AI will draft a title and description for you.</p>
+            <p className="mb-2 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
+            <p className="mb-2 text-xs text-slate-500">Paste your listing text or a few notes about your aircraft — the AI will fill in make, model, year, hours, price, location, title, and description all at once.</p>
             <textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
