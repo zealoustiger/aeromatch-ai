@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T08:42:11Z — partnership-post-one-screen — score 4/5
+- Strengths: Spec delivered cleanly — AI prefill elevated to top, five-field Essentials section, native `<details>` collapsible with ref-based auto-open on AI fill, `user.email` server-side fallback in actions.ts; net −170 line restructure that makes the form genuinely less intimidating without losing any required-field functionality.
+- Weaknesses / risks: `scheduling_system` field silently dropped — it was in the old form, absent from the spec's more-details list AND the out-of-scope list, so it's an unacknowledged regression; auto-open heuristic also misses AI-filled contact fields (only checks year/registration/title/description/costs), so the drawer stays closed if only those populate.
+- Follow-up: none
+
 ## 2026-06-27T07:20:32Z — similar-aircraft-deal-chips — score 4/5
 - Strengths: All 5 acceptance criteria met cleanly; parallel family-price fetch avoids N+1 (1-3 unique families in practice); honesty floors (≥4 comps, ±5% dead band, 'around' filtered) correctly delegated to `clubHangerEstimate` rather than re-implemented; backward-compat for homepage deals rail preserved via `discountPct != null` taking precedence.
 - Weaknesses / risks: Emerald chip markup is copy-pasted verbatim between the `discountPct` and `compVerdict='below'` branches — minor DRY miss that will drift if the deal-chip style is ever updated; `interface FamilySpec` and `type FamilyKey` are declared inside the async function body instead of at module scope (style nit).
