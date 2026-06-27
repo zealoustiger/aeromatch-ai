@@ -1,3 +1,16 @@
+## 2026-06-27T06:26:01Z — Night Shift run: 8 cycles (PASS 7 / FAIL 1) — rate limited
+- Models: cycles on sonnet; 0 escalated to sonnet; 1 quality-judged on sonnet
+
+- PASS — engine-life-panel — new proprietary Engine Life panel on aircraft listing detail pages showing TBO remaining hours with progress bar and annual engine reserve budget, se
+- PASS — aircraft-post-deferred-gate — removed auth gate from `/aircraft/new` so guests can fill the form, with draft force-saved to localStorage before redirecting to `/auth?nex
+- PASS — aircraft-post-prefill-all-fields — AI draft on /aircraft/new now extracts and fills all 10 structured fields (make, model, year, registration, TTAF, SMOH, price, locatio
+- PASS — cost-to-own-share-split — aircraft listing pages now show a 4-row partnership share-split cost table (full / 1/2 / 1/3 / 1/4 share) with monthly + annual columns, engine
+- PASS — partnership-post-deferred-gate — deferred auth gate on `/partnerships/new` and `/partnerships/seeking/new` so guests can fill both forms before hitting sign-in
+- PASS — partnership-post-prefill-all-fields — partnership form AI box now prefills the whole form (make/model/year/N-number/airport/share type/costs/title/description) from past
+- PASS — deal-score-panel — How this stacks up buyer synthesis panel on aircraft listing pages (Pillar 3)
+- cycle produced no verdict (exit 1)
+
+
 # Overnight review — 2026-06-26
 
 ## 📊 Traffic (PostHog) — as of 2026-06-26
