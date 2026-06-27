@@ -2,8 +2,32 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
+import { classifyAvionics } from '@/lib/avionicsClassify'
+import type { AvionicsCap } from '@/lib/avionicsClassify'
+
+const AVIONICS_CHIP_STYLE: Record<string, string> = {
+  'glass-panel': 'bg-violet-50 text-violet-700 ring-violet-200',
+  'ads-b':       'bg-sky-50 text-sky-700 ring-sky-200',
+  'autopilot':   'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  'waas-gps':    'bg-sky-50 text-sky-700 ring-sky-200',
+  'gps-nav':     'bg-slate-50 text-slate-600 ring-slate-200',
+}
+
+function AvionicsOverlayChip({ cap }: { cap: AvionicsCap }) {
+  return (
+    <span
+      className={cn(
+        'absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
+        AVIONICS_CHIP_STYLE[cap.key] ?? 'bg-slate-50 text-slate-600 ring-slate-200'
+      )}
+      title={cap.hint}
+    >
+      {cap.label}
+    </span>
+  )
+}
 
 /**
  * Compact, photo-forward rail card for the homepage curated rails (slice 4).
@@ -39,6 +63,8 @@ export default function AircraftRailCard({
   const realPhoto = pickRealPhoto(p.images)
   const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make ?? '')
   const isPlaceholder = !realPhoto
+  // Top avionics capability chip — glass panel first, then ADS-B, autopilot.
+  const topAvionicsCap = classifyAvionics(p.avionics)?.caps[0] ?? null
 
   return (
     <Link
@@ -73,6 +99,7 @@ export default function AircraftRailCard({
             Not actual plane photo
           </span>
         )}
+        {topAvionicsCap && <AvionicsOverlayChip cap={topAvionicsCap} />}
       </div>
 
       {/* Details — fixed height so cards align regardless of whether location is present */}
