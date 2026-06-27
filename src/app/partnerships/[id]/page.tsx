@@ -25,6 +25,7 @@ import ShareListingButton from '@/components/ShareListingButton'
 import { shareFractionFromType } from '@/lib/calculators'
 import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
 import { partnershipBuyInComp, PartnerCompResult } from '@/lib/partnershipComps'
+import PartnershipDealSignals from '@/components/PartnershipDealSignals'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
 // `/compare` view uses the same source of truth — no duplicated query).
@@ -287,6 +288,10 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 </div>
               )}
             </div>
+
+            {/* "How this partnership stacks up" synthesis panel — mirrors the
+                aircraft DealScorePanel; uses partnerComp already fetched above. */}
+            <PartnershipDealSignals p={p} comp={partnerComp} />
 
             {/* Requirements */}
             {(p.min_hours || (p.ratings_required && p.ratings_required.length > 0)) && (
