@@ -109,7 +109,7 @@ export async function createPartnership(formData: FormData) {
     })(),
     description: (formData.get('description') as string) || null,
     contact_name: (formData.get('contact_name') as string) || null,
-    contact_email: formData.get('contact_email') as string,
+    contact_email: (formData.get('contact_email') as string) || user.email || '',
     contact_method: (formData.get('contact_method') as string) || 'email',
     contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
