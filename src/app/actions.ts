@@ -124,6 +124,14 @@ export async function createPartnership(formData: FormData) {
 
   if (error) throw new Error(error.message)
 
+  // Persist contact_name to user_metadata for future form pre-fills.
+  // Magic-link users have no full_name set (Google OAuth users do); saving it here
+  // means the next post form visit pre-fills their name via the contact-prefill logic.
+  const contactName = (formData.get('contact_name') as string)?.trim()
+  if (contactName && !user.user_metadata?.full_name) {
+    await supabase.auth.updateUser({ data: { full_name: contactName } })
+  }
+
   revalidatePath('/partnerships')
   redirect(`/partnerships/${data.id}`)
 }
@@ -223,6 +231,13 @@ export async function createSeekerListing(formData: FormData) {
   const { data, error } = await supabase.from('partnership_seekers').insert(payload).select('id').single()
 
   if (error) throw new Error(error.message)
+
+  // Same lazy-name-save as createPartnership — persist contact_name to user_metadata
+  // so future visits to any post form pre-fill the name field automatically.
+  const contactNameSeeker = (formData.get('contact_name') as string)?.trim()
+  if (contactNameSeeker && !user.user_metadata?.full_name) {
+    await supabase.auth.updateUser({ data: { full_name: contactNameSeeker } })
+  }
 
   revalidatePath('/partnerships/seeking')
   redirect(`/partnerships/seeking/${data.id}`)

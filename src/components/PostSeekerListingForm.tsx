@@ -470,7 +470,11 @@ export default function PostSeekerListingForm({
               <div>
                 <Label>Your Name</Label>
                 <Input name="contact_name" placeholder="e.g. Jay C." defaultValue={userName ?? ''} />
-                <p className="mt-1 text-xs text-slate-400">Only your first name + last initial is shown publicly.</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {isLoggedIn && !userName
+                    ? "We'll save your name for future listings."
+                    : 'Only your first name + last initial is shown publicly.'}
+                </p>
               </div>
               <div>
                 <Label>Email <span className="font-normal text-slate-400">(optional)</span></Label>

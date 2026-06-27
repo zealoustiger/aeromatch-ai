@@ -398,6 +398,9 @@ export default function PostPartnershipForm({
               <div>
                 <Label>Your Name</Label>
                 <Input name="contact_name" placeholder="First name or handle" defaultValue={userName ?? ''} />
+                {isLoggedIn && !userName && (
+                  <p className="mt-1 text-xs text-slate-400">We&apos;ll save your name for future listings.</p>
+                )}
               </div>
               <div>
                 <Label>Email</Label>
