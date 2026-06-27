@@ -797,7 +797,23 @@ export async function renameSavedSearch(id: string, name: string) {
   return { ok: true }
 }
 
-export async function generatePartnershipDraft(prompt: string): Promise<{ title: string; description: string }> {
+export interface PartnershipDraft {
+  title: string
+  description: string
+  make?: string
+  model?: string
+  year?: number
+  registration?: string
+  home_airport?: string
+  share_type?: string
+  total_shares?: number
+  shares_available?: number
+  buy_in_price?: number
+  monthly_fixed?: number
+  hourly_wet?: number
+}
+
+export async function generatePartnershipDraft(prompt: string): Promise<PartnershipDraft> {
   await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
@@ -806,23 +822,49 @@ export async function generatePartnershipDraft(prompt: string): Promise<{ title:
   const client = new Anthropic()
   const res = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 1500,
     system: `You help aircraft owners write "Partnership Available" listings for ClubHanger, a co-ownership marketplace.
 
-Given the owner's stream-of-consciousness notes about their aircraft and partnership, produce:
-1. title: A concise, specific listing title (max 120 chars) — include share type, year + make + model, and airport if mentioned (e.g. "1/3 Share — 2004 Cessna 172S, Austin TX (KAUS)").
-2. description: A compelling 200–350 word write-up covering the aircraft (condition, avionics, maintenance history), the partnership structure (current partners, scheduling, costs if mentioned), what makes this a great opportunity, and what you're looking for in a new partner (experience level, use patterns, communication style).
+Given the owner's notes or a pasted listing, do TWO things:
 
-Do not invent facts not present in the prompt; if key details are missing, use natural placeholders like "[X]-hour engine." Write in a direct, welcoming owner voice — warm but professional.`,
+1. Extract every structured fact present in the input (do NOT invent facts):
+   - make: one of "Cessna","Piper","Beechcraft","Cirrus","Mooney","Van's","Diamond","Grumman","Other" — or omit if not clear
+   - model: aircraft model string, e.g. "172S Skyhawk" — or omit
+   - year: 4-digit integer — or omit
+   - registration: FAA N-number, e.g. "N12345" — or omit
+   - home_airport: 4-letter ICAO code, e.g. "KAUS" — or omit
+   - share_type: one of "1/2","1/3","1/4","leaseback","dry_lease","other" — or omit
+   - total_shares: total number of shares in the partnership (integer) — or omit
+   - shares_available: number of shares being offered (integer) — or omit
+   - buy_in_price: buy-in cost in USD as integer (no $ or commas) — or omit
+   - monthly_fixed: monthly fixed cost per partner in USD as integer — or omit
+   - hourly_wet: wet rate per hour in USD as integer — or omit
+
+2. Draft the listing:
+   - title: concise, specific (max 120 chars) — include share type, year + make + model, and airport if mentioned
+   - description: compelling 200–350 word write-up covering aircraft (condition, avionics, maintenance), the partnership (costs, scheduling, current partners), and what you're looking for in a new partner. Write in a warm, direct owner voice.
+
+Rules: never invent facts not in the input. Omit structured fields entirely when they aren't mentioned. Use natural placeholders like "[X]-hour engine" only in the description if clearly implied.`,
     tools: [
       {
         name: 'draft_listing',
-        description: 'Output the drafted listing title and description.',
+        description: 'Output the drafted listing with all extracted structured fields.',
         input_schema: {
           type: 'object' as const,
           properties: {
             title: { type: 'string', description: 'Concise listing title, max 120 characters' },
             description: { type: 'string', description: 'Listing description, 200–350 words, owner voice' },
+            make: { type: 'string', enum: ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other'], description: 'Aircraft manufacturer — must be one of the enum values' },
+            model: { type: 'string', description: 'Aircraft model, e.g. "172S Skyhawk"' },
+            year: { type: 'integer', description: 'Model year, e.g. 2004' },
+            registration: { type: 'string', description: 'FAA N-number, e.g. N12345' },
+            home_airport: { type: 'string', description: '4-letter ICAO airport code, e.g. KAUS' },
+            share_type: { type: 'string', enum: ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other'], description: 'Share type offered' },
+            total_shares: { type: 'integer', description: 'Total number of shares in the partnership' },
+            shares_available: { type: 'integer', description: 'Number of shares being offered' },
+            buy_in_price: { type: 'integer', description: 'Buy-in price in USD, no $ or commas' },
+            monthly_fixed: { type: 'integer', description: 'Monthly fixed cost per partner in USD' },
+            hourly_wet: { type: 'integer', description: 'Wet rate per flight hour in USD' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -835,9 +877,23 @@ Do not invent facts not present in the prompt; if key details are missing, use n
 
   const block = res.content.find((b) => b.type === 'tool_use')
   if (!block || block.type !== 'tool_use') throw new Error('No draft generated.')
-  const f = block.input as { title: string; description: string }
+  const f = block.input as PartnershipDraft
   if (!f.title || !f.description) throw new Error('Incomplete draft generated.')
-  return { title: f.title.slice(0, 200), description: f.description }
+  return {
+    title: f.title.slice(0, 200),
+    description: f.description,
+    make: f.make,
+    model: f.model,
+    year: f.year,
+    registration: f.registration,
+    home_airport: f.home_airport ? f.home_airport.toUpperCase().slice(0, 4) : undefined,
+    share_type: f.share_type,
+    total_shares: f.total_shares,
+    shares_available: f.shares_available,
+    buy_in_price: f.buy_in_price,
+    monthly_fixed: f.monthly_fixed,
+    hourly_wet: f.hourly_wet,
+  }
 }
 
 export async function generateSeekerDraft(prompt: string): Promise<{ title: string; description: string }> {

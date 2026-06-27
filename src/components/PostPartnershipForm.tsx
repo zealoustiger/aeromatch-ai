@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Info, Check, Loader2 } from 'lucide-react'
-import { createPartnership, generatePartnershipDraft } from '@/app/actions'
+import { createPartnership, generatePartnershipDraft, type PartnershipDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
@@ -136,23 +136,35 @@ export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
+  function fillFormField(form: HTMLFormElement, selector: string, value: string | number | undefined, eventType = 'input') {
+    if (value === undefined || value === null) return
+    const el = form.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(selector)
+    if (el) {
+      el.value = String(value)
+      el.dispatchEvent(new Event(eventType, { bubbles: true }))
+    }
+  }
+
   function handleGenerate() {
     setAiError(null)
     startGenerating(async () => {
       try {
-        const result = await generatePartnershipDraft(aiPrompt)
+        const result: PartnershipDraft = await generatePartnershipDraft(aiPrompt)
         const form = formRef.current
         if (form) {
-          const titleInput = form.querySelector<HTMLInputElement>('[name="title"]')
-          const descTextarea = form.querySelector<HTMLTextAreaElement>('[name="description"]')
-          if (titleInput) {
-            titleInput.value = result.title
-            titleInput.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-          if (descTextarea) {
-            descTextarea.value = result.description
-            descTextarea.dispatchEvent(new Event('input', { bubbles: true }))
-          }
+          fillFormField(form, '[name="title"]', result.title)
+          fillFormField(form, '[name="description"]', result.description)
+          if (result.make) fillFormField(form, '[name="make"]', result.make, 'change')
+          if (result.model) fillFormField(form, '[name="model"]', result.model)
+          if (result.year) fillFormField(form, '[name="year"]', result.year)
+          if (result.registration) fillFormField(form, '[name="registration"]', result.registration)
+          if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
+          if (result.share_type) fillFormField(form, '[name="share_type"]', result.share_type, 'change')
+          if (result.total_shares) fillFormField(form, '[name="total_shares"]', result.total_shares)
+          if (result.shares_available) fillFormField(form, '[name="shares_available"]', result.shares_available)
+          if (result.buy_in_price) fillFormField(form, '[name="buy_in_price"]', result.buy_in_price)
+          if (result.monthly_fixed) fillFormField(form, '[name="monthly_fixed"]', result.monthly_fixed)
+          if (result.hourly_wet) fillFormField(form, '[name="hourly_wet"]', result.hourly_wet)
         }
       } catch (e) {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
@@ -224,8 +236,8 @@ export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?
         <div className="space-y-4">
           {/* AI draft generator */}
           <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
-            <p className="mb-2 text-xs font-semibold text-violet-800">Generate with AI ✨</p>
-            <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about your aircraft and partnership — the AI will draft a title and description for you.</p>
+            <p className="mb-2 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
+            <p className="mb-2 text-xs text-slate-500">Paste your notes or an existing listing — the AI will prefill the whole form (aircraft, share terms, costs, title, and description). Edit anything before submitting.</p>
             <textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
@@ -243,7 +255,7 @@ export default function PostPartnershipForm({ isLoggedIn = true }: { isLoggedIn?
               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
             >
               {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {isGenerating ? 'Generating…' : 'Generate with AI ✨'}
+              {isGenerating ? 'Prefilling…' : 'Prefill from your notes ✨'}
             </button>
           </div>
           <div>
