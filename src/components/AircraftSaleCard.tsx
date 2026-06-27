@@ -12,6 +12,7 @@ import { resolveMakeModelFamily } from '@/lib/seo'
 import type { CompResult } from '@/lib/aircraftComps'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import type { AvionicsCap } from '@/lib/avionicsClassify'
+import { lookupEngineTbo } from '@/lib/engineLife'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
 import AircraftTrustBadge from './AircraftTrustBadge'
@@ -121,6 +122,41 @@ function AvionicsChip({ cap }: { cap: AvionicsCap }) {
   )
 }
 
+// Compact label for remaining hours — rounded to nearest 50, abbreviated ≥ 1 000.
+function formatHrsRemaining(hrs: number): string {
+  const rounded = Math.round(hrs / 50) * 50
+  if (rounded >= 1000) {
+    const k = Math.round(rounded / 100) / 10
+    return `~${k}k hrs to TBO`
+  }
+  return `~${rounded} hrs to TBO`
+}
+
+// Returns chip style class based on fraction of TBO remaining.
+function engineChipStyle(remaining: number, tbo: number): string {
+  if (remaining < 0) return 'bg-amber-50 text-amber-700 ring-amber-200'
+  const frac = remaining / tbo
+  if (frac > 0.5) return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+  if (frac > 0.15) return 'bg-sky-50 text-sky-700 ring-sky-200'
+  return 'bg-amber-50 text-amber-700 ring-amber-200'
+}
+
+function EngineTimeChip({ smoh, engineType }: { smoh: number; engineType: string }) {
+  const entry = lookupEngineTbo(engineType)
+  if (!entry) return null
+  const remaining = entry.tboHours - smoh
+  const label = remaining <= 0 ? 'Beyond TBO' : formatHrsRemaining(remaining)
+  const style = engineChipStyle(remaining, entry.tboHours)
+  return (
+    <span
+      className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1', style)}
+      title={`${entry.family} · TBO ${entry.tboHours.toLocaleString()} hrs · ${smoh.toLocaleString()} hrs since overhaul`}
+    >
+      {label}
+    </span>
+  )
+}
+
 export default function AircraftSaleCard({
   p,
   saved = false,
@@ -213,6 +249,9 @@ export default function AircraftSaleCard({
                 {avionicsCaps.map((cap) => (
                   <AvionicsChip key={cap.key} cap={cap} />
                 ))}
+                {p.smoh != null && p.engine_type && (
+                  <EngineTimeChip smoh={p.smoh} engineType={p.engine_type} />
+                )}
                 {fresh && (
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
