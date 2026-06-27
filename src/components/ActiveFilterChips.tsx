@@ -133,6 +133,16 @@ export default function ActiveFilterChips({
     })
   }
 
+  // Smart-search family model (model_like, e.g. `sr22` → "SR22")
+  const modelLike = params.model_like?.trim()
+  if (modelLike) {
+    chips.push({
+      key: 'model_like',
+      label: modelLike.toUpperCase(),
+      href: buildHref(params, (p) => p.delete('model_like')),
+    })
+  }
+
   // State
   const state = params.state?.trim()
   if (state) {
