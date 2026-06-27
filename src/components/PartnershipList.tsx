@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { getPartnershipListings, type PartnershipFilters } from '@/lib/partnershipsQuery'
+import { partnershipBuyInComp } from '@/lib/partnershipComps'
 import PartnershipCard from './PartnershipCard'
 
 /**
@@ -22,12 +23,15 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
   }
 
   let savedIds = new Set<string>()
+  const verdicts = new Map<string, 'below' | 'above'>()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
   if (hasSupabase && listings.length > 0) {
+    const supabase = await createServerSupabaseClient()
+
+    // Saved-listings hydration (fills hearts on cards).
     try {
-      const supabase = await createServerSupabaseClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: saved } = await supabase
@@ -41,12 +45,54 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
     } catch {
       // Non-fatal: just render without filled hearts.
     }
+
+    // Comp verdict chips: batch-fetch buy-in prices per unique make so we can show
+    // "Below market" / "Above market" on cards that are clearly priced off median.
+    // One DB query per unique make (typically 1-4). Fails soft — no chips on error.
+    try {
+      const uniqueMakes = [
+        ...new Set(listings.filter((l) => l.buy_in_price && l.make).map((l) => l.make as string)),
+      ]
+      if (uniqueMakes.length > 0) {
+        const priceResults = await Promise.all(
+          uniqueMakes.map((make) =>
+            supabase
+              .from('partnerships')
+              .select('id, buy_in_price')
+              .eq('status', 'active')
+              .eq('make', make)
+              .not('buy_in_price', 'is', null)
+              .limit(200)
+          )
+        )
+        const makeRows = new Map<string, { id: string; buy_in_price: number }[]>()
+        uniqueMakes.forEach((make, i) => {
+          makeRows.set(
+            make,
+            (priceResults[i].data ?? []).filter(
+              (r): r is { id: string; buy_in_price: number } => r.buy_in_price != null && r.buy_in_price > 0
+            )
+          )
+        })
+        for (const p of listings) {
+          if (!p.buy_in_price || !p.make) continue
+          const rows = makeRows.get(p.make) ?? []
+          const otherBuyIns = rows.filter((r) => r.id !== p.id).map((r) => r.buy_in_price)
+          const result = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
+          if (result && result.kind !== 'near') {
+            verdicts.set(p.id, result.kind)
+          }
+        }
+      }
+    } catch {
+      // Non-fatal: cards render without comp chips.
+    }
   }
 
-  return renderList(listings, filters, airportList, savedIds)
+  return renderList(listings, filters, airportList, savedIds, verdicts)
 }
 
-function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set()) {
+function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set(), verdicts: Map<string, 'below' | 'above'> = new Map()) {
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
@@ -74,7 +120,7 @@ function renderList(listings: Partnership[], filters: PartnershipFilters, airpor
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
-          <PartnershipCard key={p.id} p={p} saved={savedIds.has(p.id)} />
+          <PartnershipCard key={p.id} p={p} saved={savedIds.has(p.id)} compVerdict={verdicts.get(p.id)} />
         ))}
       </div>
     </div>
