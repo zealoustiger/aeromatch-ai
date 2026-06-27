@@ -896,7 +896,25 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
   }
 }
 
-export async function generateSeekerDraft(prompt: string): Promise<{ title: string; description: string }> {
+export interface SeekerDraft {
+  title: string
+  description: string
+  preferred_makes?: string
+  preferred_models?: string
+  aircraft_category?: 'any' | 'sel' | 'mel' | 'turboprop' | 'jet'
+  min_year?: number
+  max_year?: number
+  max_buy_in?: number
+  max_monthly?: number
+  max_hourly?: number
+  home_airport?: string
+  willing_to_travel_nm?: number
+  total_hours?: number
+  ratings_held?: string
+  hours_per_month?: number
+}
+
+export async function generateSeekerDraft(prompt: string): Promise<SeekerDraft> {
   await checkAiDraftAccess()
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
@@ -905,23 +923,53 @@ export async function generateSeekerDraft(prompt: string): Promise<{ title: stri
   const client = new Anthropic()
   const res = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 1500,
     system: `You help pilots write "Seeking Aircraft Partnership" listings for ClubHanger, a co-ownership marketplace.
 
-Given the pilot's stream-of-consciousness notes, produce:
-1. title: A concise, specific listing title (max 120 chars) — include ratings, desired share type, aircraft type, and location or airport if mentioned.
-2. description: A compelling 200–350 word first-person write-up covering who they are (ratings, hours, currency), how they fly (missions, frequency), what they want (share/aircraft/budget/airport), and why they'd be a great partner (aircraft care, communication style, reserves).
+Given the pilot's stream-of-consciousness notes, do TWO things:
 
-Do not invent facts not present in the prompt; if key details are missing, use natural placeholders like "[X] hours total time". Write in a direct, professional but warm first-person voice.`,
+1. Extract every structured fact present in the input (do NOT invent facts):
+   - preferred_makes: comma-separated makes the pilot wants, e.g. "Cessna, Piper" — or omit if not mentioned
+   - preferred_models: free text models, e.g. "172, 182, SR22" — or omit
+   - aircraft_category: one of "any","sel","mel","turboprop","jet" — omit if unclear (default omit, not "any")
+   - min_year: earliest acceptable model year as integer — or omit
+   - max_year: latest acceptable model year as integer — or omit
+   - max_buy_in: maximum buy-in in USD as integer, no $ or commas — or omit
+   - max_monthly: maximum monthly fixed cost in USD as integer — or omit
+   - max_hourly: maximum wet rate per hour in USD as integer — or omit
+   - home_airport: 4-letter ICAO code if mentioned, e.g. "KPAO" — or omit
+   - willing_to_travel_nm: how far they'll commute in nautical miles; map drive times to: 25 (~30 min), 40 (~45 min), 50 (~1 hr), 75 (~1.5 hr), 100 (~2 hr) — or omit
+   - total_hours: total flight hours as integer — or omit
+   - ratings_held: comma-separated ratings, e.g. "PPL, IFR, Complex" — or omit
+   - hours_per_month: expected flying hours per month as integer — or omit
+
+2. Draft the listing:
+   - title: concise, specific (max 120 chars) — include ratings, desired share type, aircraft type, and airport if mentioned
+   - description: compelling 200–350 word first-person write-up covering who they are (ratings, hours, currency), how they fly (missions, frequency), what they want (share/aircraft/budget/airport), and why they'd be a great partner.
+
+Rules: never invent facts not in the input. Omit structured fields entirely when they aren't mentioned. Write in a direct, professional but warm first-person voice.`,
     tools: [
       {
         name: 'draft_listing',
-        description: 'Output the drafted listing title and description.',
+        description: 'Output the drafted listing with all extracted structured fields.',
         input_schema: {
           type: 'object' as const,
           properties: {
             title: { type: 'string', description: 'Concise listing title, max 120 characters' },
             description: { type: 'string', description: 'Listing description, 200–350 words, first-person' },
+            preferred_makes: { type: 'string', description: 'Comma-separated makes, e.g. "Cessna, Piper"' },
+            preferred_models: { type: 'string', description: 'Comma-separated models, e.g. "172, 182, SR22"' },
+            aircraft_category: { type: 'string', enum: ['any', 'sel', 'mel', 'turboprop', 'jet'], description: 'Aircraft category' },
+            min_year: { type: 'integer', description: 'Earliest acceptable model year' },
+            max_year: { type: 'integer', description: 'Latest acceptable model year' },
+            max_buy_in: { type: 'integer', description: 'Max buy-in in USD, integer only' },
+            max_monthly: { type: 'integer', description: 'Max monthly fixed cost in USD, integer only' },
+            max_hourly: { type: 'integer', description: 'Max wet rate per hour in USD, integer only' },
+            home_airport: { type: 'string', description: '4-letter ICAO airport code, e.g. KPAO' },
+            willing_to_travel_nm: { type: 'integer', enum: [25, 40, 50, 75, 100], description: 'Commute radius in nm: 25=~30min, 40=~45min, 50=~1hr, 75=~1.5hr, 100=~2hr' },
+            total_hours: { type: 'integer', description: 'Total flight hours' },
+            ratings_held: { type: 'string', description: 'Comma-separated ratings, e.g. "PPL, IFR, Complex"' },
+            hours_per_month: { type: 'integer', description: 'Expected flying hours per month' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -934,9 +982,25 @@ Do not invent facts not present in the prompt; if key details are missing, use n
 
   const block = res.content.find((b) => b.type === 'tool_use')
   if (!block || block.type !== 'tool_use') throw new Error('No draft generated.')
-  const f = block.input as { title: string; description: string }
+  const f = block.input as SeekerDraft
   if (!f.title || !f.description) throw new Error('Incomplete draft generated.')
-  return { title: f.title.slice(0, 200), description: f.description }
+  return {
+    title: f.title.slice(0, 200),
+    description: f.description,
+    preferred_makes: f.preferred_makes,
+    preferred_models: f.preferred_models,
+    aircraft_category: f.aircraft_category,
+    min_year: f.min_year,
+    max_year: f.max_year,
+    max_buy_in: f.max_buy_in,
+    max_monthly: f.max_monthly,
+    max_hourly: f.max_hourly,
+    home_airport: f.home_airport ? f.home_airport.toUpperCase().slice(0, 4) : undefined,
+    willing_to_travel_nm: f.willing_to_travel_nm,
+    total_hours: f.total_hours,
+    ratings_held: f.ratings_held,
+    hours_per_month: f.hours_per_month,
+  }
 }
 
 export interface AircraftDraft {

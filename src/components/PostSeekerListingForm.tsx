@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
-import { createSeekerListing, generateSeekerDraft } from '@/app/actions'
+import { createSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 
@@ -165,23 +165,37 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
+  function fillFormField(form: HTMLFormElement, selector: string, value: string | number | undefined, eventType = 'input') {
+    if (value === undefined || value === null) return
+    const el = form.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(selector)
+    if (el) {
+      el.value = String(value)
+      el.dispatchEvent(new Event(eventType, { bubbles: true }))
+    }
+  }
+
   function handleGenerate() {
     setAiError(null)
     startGenerating(async () => {
       try {
-        const result = await generateSeekerDraft(aiPrompt)
+        const result: SeekerDraft = await generateSeekerDraft(aiPrompt)
         const form = formRef.current
         if (form) {
-          const titleInput = form.querySelector<HTMLInputElement>('[name="title"]')
-          const descTextarea = form.querySelector<HTMLTextAreaElement>('[name="description"]')
-          if (titleInput) {
-            titleInput.value = result.title
-            titleInput.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-          if (descTextarea) {
-            descTextarea.value = result.description
-            descTextarea.dispatchEvent(new Event('input', { bubbles: true }))
-          }
+          fillFormField(form, '[name="title"]', result.title)
+          fillFormField(form, '[name="description"]', result.description)
+          if (result.preferred_makes) fillFormField(form, '[name="preferred_makes"]', result.preferred_makes)
+          if (result.preferred_models) fillFormField(form, '[name="preferred_models"]', result.preferred_models)
+          if (result.aircraft_category) fillFormField(form, '[name="aircraft_category"]', result.aircraft_category, 'change')
+          if (result.min_year) fillFormField(form, '[name="min_year"]', result.min_year)
+          if (result.max_year) fillFormField(form, '[name="max_year"]', result.max_year)
+          if (result.max_buy_in) fillFormField(form, '[name="max_buy_in"]', result.max_buy_in)
+          if (result.max_monthly) fillFormField(form, '[name="max_monthly"]', result.max_monthly)
+          if (result.max_hourly) fillFormField(form, '[name="max_hourly"]', result.max_hourly)
+          if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
+          if (result.willing_to_travel_nm) fillFormField(form, '[name="willing_to_travel_nm"]', result.willing_to_travel_nm, 'change')
+          if (result.total_hours) fillFormField(form, '[name="total_hours"]', result.total_hours)
+          if (result.ratings_held) fillFormField(form, '[name="ratings_held"]', result.ratings_held)
+          if (result.hours_per_month) fillFormField(form, '[name="hours_per_month"]', result.hours_per_month)
         }
       } catch (e) {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
@@ -376,8 +390,8 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
         <div className="space-y-4">
           {/* AI draft generator */}
           <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
-            <p className="mb-2 text-xs font-semibold text-violet-800">Generate with AI ✨</p>
-            <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will draft a title and description for you.</p>
+            <p className="mb-2 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
+            <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will prefill the whole form (aircraft preferences, budget, location, pilot profile, title, and description).</p>
             <textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
@@ -395,7 +409,7 @@ export default function PostSeekerListingForm({ isLoggedIn = true }: { isLoggedI
               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 sm:w-auto"
             >
               {isGenerating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {isGenerating ? 'Generating…' : 'Generate with AI ✨'}
+              {isGenerating ? 'Prefilling…' : 'Prefill from your notes ✨'}
             </button>
           </div>
           <div>
