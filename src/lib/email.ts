@@ -222,3 +222,54 @@ function escapeHtml(s: string): string {
 function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/"/g, '&quot;')
 }
+
+/**
+ * Build the weekly digest email for a confirmed alert subscriber.
+ * Sent when there are new matching listings since their last digest.
+ * Simple: count + link back to the page — no per-listing details.
+ */
+export function buildAlertDigestEmail(opts: {
+  context: string | null
+  count: number
+  listingsUrl: string
+  unsubscribeUrl: string
+}): { subject: string; html: string; text: string } {
+  const thing = (opts.context || '').trim()
+  const forThing = thing ? ` ${escapeHtml(thing)}` : ''
+  const forThingText = thing ? ` ${thing}` : ''
+  const countLabel = opts.count === 1 ? '1 new listing' : `${opts.count} new listings`
+  const countLabelText = countLabel
+  const subject = thing
+    ? `${countLabel} — ${thing} on ClubHanger`
+    : `${countLabel} on ClubHanger`
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">${escapeHtml(countLabel)}</h1>
+      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
+        There ${opts.count === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${escapeAttr(opts.listingsUrl)}"
+           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
+          View${forThing} listings
+        </a>
+      </p>
+      <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
+        You&rsquo;re receiving this because you signed up for${forThing} alerts on ClubHanger.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#94a3b8;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${countLabelText} matching your${forThingText} alert on ClubHanger.
+
+View listings: ${opts.listingsUrl}
+
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
