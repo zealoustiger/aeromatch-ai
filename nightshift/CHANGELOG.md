@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-27T15:05:15Z — DRAIN SUMMARY
+- Cycles this run: 39 (PASS 35 / FAIL 4 / ABORT 0)
+- Models: cycles on sonnet; 4 escalated to sonnet; 9 quality-judged on sonnet
+- Stopped because: reached run-until
+- Run: 20260627T065249Z
+
 ## 2026-06-27T145954Z — PASS — auth-context-headline
 - Pages: /auth
 - What: **The sign-in page now shows a context-specific headline when a user arrives mid-flow via a `?next=` redirect.** Previously the page always said "Sign in to ClubHanger" regardless of why you were there — a seller redirected from the aircraft post form would see the same generic prompt as someone clicking Sign In from the nav. Now: `/auth?next=/aircraft/new` → "Sign in to post your aircraft listing"; `/auth?next=/partnerships/new` → "Sign in to post your partnership"; `/auth?next=/partnerships/seeking/new` → "Sign in to post your seeking listing"; `/auth?next=/aircraft/listing/[id]` → "Sign in to contact the seller"; `/auth?next=/partnerships/[id]` → "Sign in to contact the owner"; `/auth?next=/saved` → "Sign in to sync your saved listings". The sub-copy also adapts (e.g. "then you're right back on the form" for post flows, "takes 30 seconds" for contact flows). Default/nav sign-in shows the existing "Sign in to ClubHanger / We'll email you a magic link — no password needed." unchanged. 1 file changed: `src/app/auth/page.tsx` (new `deriveAuthContext(next)` function + `ctx.heading`/`ctx.subtext` interpolated into the heading/subtext).
