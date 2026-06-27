@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T07:20:32Z — similar-aircraft-deal-chips — score 4/5
+- Strengths: All 5 acceptance criteria met cleanly; parallel family-price fetch avoids N+1 (1-3 unique families in practice); honesty floors (≥4 comps, ±5% dead band, 'around' filtered) correctly delegated to `clubHangerEstimate` rather than re-implemented; backward-compat for homepage deals rail preserved via `discountPct != null` taking precedence.
+- Weaknesses / risks: Emerald chip markup is copy-pasted verbatim between the `discountPct` and `compVerdict='below'` branches — minor DRY miss that will drift if the deal-chip style is ever updated; `interface FamilySpec` and `type FamilyKey` are declared inside the async function body instead of at module scope (style nit).
+- Follow-up: none
+
 ## 2026-06-27T06:30:00Z — partnership-post-prefill-all-fields — score 4/5
 - Strengths: Clean port of the established aircraft-post-prefill pattern — `PartnershipDraft` interface, extended tool schema, and `fillFormField` helper all mirror the sibling feature exactly; system prompt is well-structured (extraction rules separated from description rules, enum-constrained fields, explicit no-fabrication instruction); all spec acceptance criteria met including registration, total_shares, shares_available beyond the explicit AC1 list; `home_airport.toUpperCase().slice(0, 4)` normalization is a nice defensive touch.
 - Weaknesses / risks: Outer `if (result.buy_in_price)` / `if (result.total_shares)` etc. guards before `fillFormField` calls introduce a falsy-0 bug — a numeric field set to 0 would be silently skipped; `fillFormField` already handles `undefined`/`null` internally, making the outer guards redundant and harmful for integers; low practical risk (a $0 buy-in is nonsensical) but it's a latent trap if the pattern is copied to a domain where 0 is meaningful.
