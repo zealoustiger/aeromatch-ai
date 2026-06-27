@@ -289,9 +289,9 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           </div>
 
           <div>
-            <Label required>Title</Label>
-            <Input name="title" placeholder="e.g. 2006 Cessna 182T Skylane — G1000, 2,450 TTAF" required />
-            <p className="mt-1 text-xs text-slate-400">Be specific — include year, make/model, and a standout detail.</p>
+            <Label>Title <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
+            <Input name="title" placeholder="e.g. 2006 Cessna 182T Skylane — G1000, 2,450 TTAF" />
+            <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from make, model, and year. Add a standout detail if you have one.</p>
           </div>
           <div>
             <Label>Description</Label>

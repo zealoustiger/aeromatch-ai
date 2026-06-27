@@ -100,7 +100,13 @@ export async function createPartnership(formData: FormData) {
     min_hours: formData.get('min_hours') ? parseInt(formData.get('min_hours') as string) : null,
     ratings_required: ratings,
     scheduling_system: (formData.get('scheduling_system') as string) || null,
-    title: formData.get('title') as string,
+    title: (() => {
+      const t = ((formData.get('title') as string) || '').trim()
+      if (t) return t
+      const make = ((formData.get('make') as string) || '').trim()
+      const model = ((formData.get('model') as string) || '').trim()
+      return [make, model].filter(Boolean).join(' ') + ' Partnership'
+    })(),
     description: (formData.get('description') as string) || null,
     contact_name: (formData.get('contact_name') as string) || null,
     contact_email: formData.get('contact_email') as string,
@@ -257,7 +263,14 @@ export async function createAircraftListing(formData: FormData) {
     registration: (formData.get('registration') as string) || null,
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
-    title: formData.get('title') as string,
+    title: (() => {
+      const t = ((formData.get('title') as string) || '').trim()
+      if (t) return t
+      const year = formData.get('year') ? parseInt(formData.get('year') as string) : null
+      const make = ((formData.get('make') as string) || '').trim()
+      const model = ((formData.get('model') as string) || '').trim()
+      return [year, make, model].filter(Boolean).join(' ') || 'Aircraft for Sale'
+    })(),
     description: (formData.get('description') as string) || null,
     asking_price,
     price_text: asking_price ? `$${asking_price.toLocaleString('en-US')}` : null,
