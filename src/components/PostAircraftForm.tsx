@@ -156,7 +156,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
     if (!form) return
     const regInput = form.querySelector<HTMLInputElement>('[name="registration"]')
     const nRaw = regInput?.value.trim() ?? ''
-    if (!nRaw) return
+    if (!nRaw || isLookingUp) return
     setIsLookingUp(true)
     setLookupStatus(null)
     try {
@@ -231,9 +231,46 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         </button>
       </div>
 
-      {/* The basics — only the two required fields */}
+      {/* The basics — N-number at top for one-field auto-fill, then make/model */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="mb-4 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">The basics</h2>
+
+        {/* N-number autofill — one field replaces make/model/year */}
+        <div className="mb-4">
+          <Label>N-Number (Registration)</Label>
+          <div className="flex gap-2">
+            <Input
+              name="registration"
+              placeholder="e.g. N12345 — auto-fills make, model &amp; year"
+              className="font-mono uppercase"
+              onBlur={(e) => {
+                // Skip auto-trigger when the user clicked the "Look up →" button directly
+                // (the button's own onClick handles it; avoid double lookup)
+                const next = e.relatedTarget as HTMLElement | null
+                if (next?.dataset?.lookup) return
+                handleLookup()
+              }}
+            />
+            <button
+              type="button"
+              data-lookup="true"
+              onClick={handleLookup}
+              disabled={isLookingUp}
+              className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              {isLookingUp ? '…' : 'Look up →'}
+            </button>
+          </div>
+          {lookupStatus && (
+            <p className={cn('mt-1 text-xs', lookupStatus.startsWith('Found') ? 'text-green-600' : 'text-slate-500')}>
+              {lookupStatus}
+            </p>
+          )}
+          {!lookupStatus && (
+            <p className="mt-1 text-xs text-slate-400">Type your tail number — make, model, and year fill in automatically.</p>
+          )}
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label required>Make</Label>
@@ -265,25 +302,6 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
               <div>
                 <Label>Year</Label>
                 <Input name="year" type="number" placeholder="e.g. 2006" min={1940} max={new Date().getFullYear()} />
-              </div>
-              <div>
-                <Label>N-Number (Registration)</Label>
-                <div className="flex gap-2">
-                  <Input name="registration" placeholder="e.g. N12345" className="font-mono uppercase" />
-                  <button
-                    type="button"
-                    onClick={handleLookup}
-                    disabled={isLookingUp}
-                    className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    {isLookingUp ? '…' : 'Look up →'}
-                  </button>
-                </div>
-                {lookupStatus && (
-                  <p className={cn('mt-1 text-xs', lookupStatus.startsWith('Found') ? 'text-green-600' : 'text-slate-500')}>
-                    {lookupStatus}
-                  </p>
-                )}
               </div>
               <div>
                 <Label>Total Time (TTAF, hrs)</Label>
