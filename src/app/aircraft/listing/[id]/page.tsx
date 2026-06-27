@@ -30,7 +30,7 @@ import {
   type ClubHangerEstimate,
   type ClubHangerDealVerdict,
 } from '@/lib/aircraftEstimate'
-import { estimateOwnershipCost } from '@/lib/calculators'
+import { estimateShareCosts, type ShareCostRow } from '@/lib/calculators'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
@@ -200,8 +200,6 @@ export default async function AircraftListingDetailPage({
   const fresh = p.first_seen_at != null && Date.now() - new Date(p.first_seen_at).getTime() < 7 * DAY_MS
   const listed = listedAgo(p.first_seen_at)
 
-  // Rough cost-to-own estimate (only meaningful when we have a real asking price).
-  const ownership = p.asking_price ? estimateOwnershipCost(p.asking_price) : null
 
   // ClubHanger Estimate — this listing's asking price vs. the median of OTHER active
   // priced listings in the same make+model family (Zillow-Zestimate analog). Only
@@ -257,6 +255,13 @@ export default async function AircraftListingDetailPage({
   // engine_type. Self-suppresses (returns null) when either field is missing or the
   // engine type can't be matched to a known piston-GA TBO family.
   const engineLife = computeEngineLife({ smoh: p.smoh, engineType: p.engine_type })
+
+  // Cost-to-own breakdown — sole ownership vs. 1/2, 1/3, 1/4 partnership shares.
+  // Engine reserve is folded into fixed costs when the Engine Life panel is showing,
+  // keeping both panels numerically consistent.
+  const shareCosts = p.asking_price
+    ? estimateShareCosts(p.asking_price, engineLife?.reservePerYear ?? 0)
+    : null
 
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
@@ -426,44 +431,10 @@ export default async function AircraftListingDetailPage({
               </div>
             )}
 
-            {/* Estimated cost to own — transparent rule-of-thumb estimate. */}
-            {ownership && (
-              <div className="ch-panel p-6">
-                <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
-                  <Wallet className="h-4 w-4" /> Estimated cost to own
-                </h2>
-                <p className="mb-4 text-xs text-slate-400">
-                  A rough rule-of-thumb estimate for owning this aircraft outright — your actual costs
-                  will vary with insurance, location, and how much you fly.
-                </p>
-                <dl className="space-y-2 text-sm">
-                  <EstRow label={`Insurance (≈1% of hull value)`} value={`${money(ownership.insuranceAnnual)}/yr`} />
-                  <EstRow label="Hangar / tie-down (typical)" value={`${money(ownership.hangarAnnual)}/yr`} />
-                  <EstRow label="Annual inspection (typical)" value={`${money(ownership.annualInspection)}/yr`} />
-                  <EstRow
-                    label={`Operating @ ${ownership.hoursPerYear} hrs/yr (fuel + reserves, ~${money(
-                      ownership.operatingPerHour
-                    )}/hr)`}
-                    value={`${money(ownership.operatingAnnual)}/yr`}
-                  />
-                </dl>
-                <div className="mt-4 flex items-baseline justify-between border-t border-slate-100 pt-3">
-                  <span className="text-sm font-semibold text-slate-700">Estimated total</span>
-                  <span className="text-right">
-                    <span className="block text-2xl font-extrabold text-slate-900">
-                      {money(ownership.totalMonthly)}/mo
-                    </span>
-                    <span className="text-xs text-slate-400">≈ {money(ownership.totalAnnual)}/yr</span>
-                  </span>
-                </div>
-                <Link
-                  href="/tools/cost-calculator"
-                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
-                >
-                  Run your own numbers in the cost calculator <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            )}
+            {/* Cost to own — sole vs. partnership share breakdown.
+                Fixed costs (insurance, hangar, annual, engine reserve) split by N;
+                operating stays the same since each partner flies the same hours. */}
+            {shareCosts && <ShareCostPanel rows={shareCosts} withEngineReserve={!!engineLife} />}
           </div>
 
           {/* Sidebar — price + source CTA */}
@@ -602,6 +573,74 @@ function EngineLifePanel({ life }: { life: EngineLifeResult }) {
           Estimated overhaul cost ({money(life.overhaulCostUsd)}) spread over{' '}
           {life.tboHours.toLocaleString()} hr TBO at 100 hrs/yr — a rule of thumb, not a quote.
         </p>
+      </div>
+    </div>
+  )
+}
+
+function ShareCostPanel({
+  rows,
+  withEngineReserve,
+}: {
+  rows: ShareCostRow[]
+  withEngineReserve: boolean
+}) {
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Wallet className="h-4 w-4" /> Cost to own
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Rule-of-thumb estimates — insurance ≈ 1% of price, hangar $7,500/yr, annual
+        inspection $2,500/yr, 100 hrs/yr fuel + oil.
+        {withEngineReserve && ' Engine reserve from the panel above is folded into the split.'}
+        {' '}Your actual costs will vary.
+      </p>
+
+      {/* Share-split table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="pb-2 text-left text-xs font-medium text-slate-400">Ownership</th>
+              <th className="pb-2 text-right text-xs font-medium text-slate-400">Monthly</th>
+              <th className="pb-2 text-right text-xs font-medium text-slate-400">Annual</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {rows.map((row) => (
+              <tr key={row.shares} className={row.shares === 1 ? 'text-slate-700' : 'text-slate-600'}>
+                <td className="py-2.5 font-medium">{row.label}</td>
+                <td className={`py-2.5 text-right tabular-nums ${row.shares === 1 ? 'font-extrabold text-slate-900' : 'font-semibold'}`}>
+                  {money(row.totalMonthly)}/mo
+                </td>
+                <td className="py-2.5 text-right tabular-nums text-slate-400">
+                  {money(row.totalAnnual)}/yr
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 text-xs text-slate-400">
+        Fixed costs (insurance, hangar, inspection{withEngineReserve ? ', engine reserve' : ''}) split
+        equally by number of partners. Fuel/oil is per-pilot since each partner flies their own hours.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
+        <Link
+          href="/tools/cost-calculator"
+          className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+        >
+          Run your own numbers <ArrowRight className="h-4 w-4" />
+        </Link>
+        <Link
+          href="/partnerships"
+          className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+        >
+          Find a co-owner on ClubHanger <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     </div>
   )
