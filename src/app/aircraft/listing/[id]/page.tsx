@@ -24,6 +24,7 @@ import {
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
+import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import {
   clubHangerEstimate,
   clubHangerDealVerdict,
@@ -407,6 +408,11 @@ export default async function AircraftListingDetailPage({
   // engine type can't be matched to a known piston-GA TBO family.
   const engineLife = computeEngineLife({ smoh: p.smoh, engineType: p.engine_type })
 
+  // Avionics capability classification — converts the raw extracted avionics[]
+  // string list into structured capability chips (Glass Panel, ADS-B Out, Autopilot,
+  // WAAS GPS). Self-suppresses when avionics is null or empty.
+  const avionicsInfo = classifyAvionics(p.avionics)
+
   // Cost-to-own breakdown — sole ownership vs. 1/2, 1/3, 1/4 partnership shares.
   // Engine reserve is folded into fixed costs when the Engine Life panel is showing,
   // keeping both panels numerically consistent.
@@ -425,7 +431,6 @@ export default async function AircraftListingDetailPage({
   if (p.ttaf != null) specs.push({ icon: <Gauge className="h-4 w-4 text-slate-400" />, label: 'Total time (TTAF)', value: `${p.ttaf.toLocaleString()} hrs` })
   if (p.smoh != null) specs.push({ icon: <Wrench className="h-4 w-4 text-slate-400" />, label: 'Engine time (SMOH)', value: `${p.smoh.toLocaleString()} hrs` })
   if (p.engine_type) specs.push({ icon: <Cpu className="h-4 w-4 text-slate-400" />, label: 'Engine', value: p.engine_type })
-  if (p.avionics && p.avionics.length > 0) specs.push({ icon: <Radio className="h-4 w-4 text-slate-400" />, label: 'Avionics', value: p.avionics.join(', ') })
   if (p.annual_due) specs.push({ icon: <Calendar className="h-4 w-4 text-slate-400" />, label: 'Annual due', value: p.annual_due })
   if (p.damage_history != null) specs.push({ icon: <ShieldAlert className="h-4 w-4 text-slate-400" />, label: 'Damage history', value: p.damage_history ? 'Yes' : 'None reported' })
 
@@ -542,6 +547,10 @@ export default async function AircraftListingDetailPage({
                 </dl>
               </div>
             )}
+
+            {/* Avionics & panel — structured capability chips + full equipment list.
+                Self-suppresses when no avionics data was extracted from the description. */}
+            {avionicsInfo && <AvionicsPanel info={avionicsInfo} />}
 
             {/* Deal Score — "How this stacks up" synthesis: price positioning,
                 days on market, price history, spec completeness. Self-suppresses
@@ -734,6 +743,50 @@ function EngineLifePanel({ life }: { life: EngineLifeResult }) {
           {life.tboHours.toLocaleString()} hr TBO at 100 hrs/yr — a rule of thumb, not a quote.
         </p>
       </div>
+    </div>
+  )
+}
+
+const CAP_COLORS: Record<string, string> = {
+  glass: 'bg-violet-50 text-violet-700 ring-violet-200',
+  adsb: 'bg-sky-50 text-sky-700 ring-sky-200',
+  autopilot: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  waas: 'bg-sky-50 text-sky-700 ring-sky-200',
+  gps: 'bg-slate-100 text-slate-700 ring-slate-200',
+}
+
+function AvionicsPanel({ info }: { info: AvionicsInfo }) {
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Radio className="h-4 w-4" /> Avionics & panel
+      </h2>
+
+      {info.caps.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {info.caps.map((cap) => (
+            <span
+              key={cap.key}
+              title={cap.hint}
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${CAP_COLORS[cap.key] ?? 'bg-slate-100 text-slate-700 ring-slate-200'}`}
+            >
+              {cap.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <ul className="grid gap-x-4 gap-y-1 text-sm text-slate-600 sm:grid-cols-2">
+        {info.items.map((item, i) => (
+          <li key={i} className="flex items-center gap-1.5">
+            <span className="h-1 w-1 shrink-0 rounded-full bg-slate-300" />
+            {item}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-slate-400">
+        Equipment list extracted from the seller's description. Verify with logbooks before purchase.
+      </p>
     </div>
   )
 }
