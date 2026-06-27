@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T13:45:31Z — share-cost-toggle — score 4/5
+- Strengths: All 7 spec ACs met; clean Client Component extraction; `?? rows[0]` fallback is good defensive coding; `flex-wrap` on button strip and links section handles mobile overflow correctly.
+- Weaknesses / risks: `TOGGLE_LABELS` duplicates labels already carried in `row.label` from the calculator (parallel map with no single source of truth); toggle buttons missing `type="button"` and `aria-pressed` (a11y gap — could misfire as submit inside any future form wrapper); `money()` copied from page.tsx rather than moved to a shared util.
+- Follow-up: Add `type="button"` and `aria-pressed={selected === row.shares}` to toggle buttons; replace `TOGGLE_LABELS` map with `row.label` directly so the calculator is the sole label authority.
+
 ## 2026-06-27T13:19:33Z — homerails-deal-chips — score 5/5
 - Strengths: All 6 ACs met; single Promise.all over unique families is correct, no N+1; self-exclusion, null-price guard, and 'fair' suppression all handled; local types declared at module scope (avoids the style nit from similar-aircraft cycle); exactly 1 file changed as scoped.
 - Weaknesses / risks: none material
