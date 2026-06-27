@@ -1,3 +1,47 @@
+## 2026-06-27T15:05:15Z — Night Shift run: 39 cycles (PASS 35 / FAIL 4) — reached run-until
+- Models: cycles on sonnet; 4 escalated to sonnet; 9 quality-judged on sonnet
+
+- PASS — seeking-post-prefill-all-fields — Seeker listing form AI box now prefills the entire form (preferred makes/models, category, year range, budget, airport, commute, pilot 
+- PASS — similar-aircraft-deal-chips — honest Good deal / Priced high deal verdict chips added to Similar Aircraft rail cards on listing detail pages; batch-fetches family prices
+- PASS — post-airport-autocomplete — airport autocomplete (city/IATA/ICAO → suggestions → picks ICAO) on /partnerships/new and /partnerships/seeking/new, replacing the raw IC
+- PASS — partnership-market-check — ClubHanger Estimate analog for partnership buy-ins: a Partnership market check sidebar panel on `/partnerships/[id]` showing buyers whether th
+- PASS — aircraft-post-airport-autocomplete — replaced the free-text Location + State fields on /aircraft/new with a single airport autocomplete (Based at), consistent with partn
+- PASS — partnership-similar-deal-chips — Below market / Above market buy-in chips on the Similar Partnerships rail, mirroring what similar-aircraft-deal-chips did for aircraft l
+- PASS — post-title-autofill — Title field made optional on aircraft + partnership post forms; server auto-generates from make/model/year when left blank, removing the last requi
+- PASS — partnership-deal-signals — How this partnership stacks up synthesis panel added to partnership detail pages (Pillar 3 buyer-analysis)
+- PASS — partnership-post-one-screen — Partnership post form collapsed to one smart screen: AI prefill at top, 5 required fields in a single The basics section, all optional fiel
+- PASS — partnership-browse-comp-chips — comp price chips on /partnerships browse cards showing Below market / Above market buy-in badges using the same honesty-gated partnership
+- PASS — seeking-post-one-screen — collapse seeking post form to one smart screen (Pillar 1: AI prefill at top, 3-field The basics visible above the fold, 7 sections collapse int
+- cycle produced no verdict (exit 124)
+- PASS — aircraft-post-one-screen — collapse aircraft post form to one smart screen
+- PASS — avionics-panel — structured avionics & panel module on aircraft listing detail pages (Glass Panel / ADS-B Out / Autopilot / WAAS GPS capability chips + full equipment li
+- PASS — avionics-browse-chips — aircraft browse cards now show Glass panel / ADS-B Out / Autopilot chips so IFR buyers can filter at a glance without opening every listing
+- PASS — avionics-rail-chips — avionics capability chips now appear on AircraftRailCard (homepage curated rails + Similar aircraft rail on detail pages), completing coverage acro
+- cycle produced no verdict (exit 124)
+- PASS — my-listings-page — new `/listings` page gives sellers a post-publish home to find their aircraft and partnership listings, with My Listings added to both the profile dro
+- PASS — avionics-partnership-detail — Avionics capability chips (Glass panel, ADS-B Out, Autopilot) now appear on partnership detail pages and rail cards, classified from descri
+- cycle produced no verdict (exit 124)
+- PASS — aircraft-post-success-redirect — after posting an aircraft, sellers now land on their own listing detail page with a Your listing is live! confirmation instead of the ge
+- PASS — engine-time-browse-chips — engine TBO chips on aircraft browse cards: listings with SMOH + recognized engine type now show ~X hrs to TBO (or Beyond TBO) in the badge row
+- cycle produced no verdict (exit 124)
+- PASS — engine-time-rail-chips — engine TBO chips extended to homepage rails + Similar aircraft rail on listing detail pages, completing chip coverage across all aircraft card s
+- PASS — defer-partnership-search-gate — removed the sign-up modal from homepage partnership search so logged-out visitors go straight to results
+- PASS — deal-verdict-browse-chips — year+hours-controlled Good deal / Priced high chips on aircraft browse cards, falling back to CompPill when controlled comps are thin
+- PASS — parts-wanted-filter — strengthened parts/WANTED title filter: 4 patterns → 9, now applied consistently across browse, Similar aircraft rail, and sitemap (previously mi
+- PASS — alert-weekly-digest — weekly digest cron closes the email-alert loop: `GET /api/cron/alert-digest` (protected by `CRON_SECRET`, safe no-op without `RESEND_API_KEY`) pars
+- PASS — deal-verdict-rail-cards — upgraded Similar aircraft rail to year+hours-controlled deal verdict; browse cards and similar-aircraft rail now show the same honest chip at e
+- PASS — homerails-deal-chips — homepage curated rails now show year+hours-controlled Good deal / Priced high chips on aircraft cards, completing the deal verdict rollout across 
+- PASS — contact-prefill — pre-fill contact email/name from user account on Partnership and Seeking post forms
+- PASS — searches-onboarding-state — welcome onboarding state on /searches: new users landing after signup now see a 3-card orientation panel (Browse aircraft, Browse partnership
+- PASS — share-cost-toggle — interactive share-split toggle on the cost-to-own panel on `/aircraft/listing/[id]`
+- PASS — nnumber-autofill — moved N-number to top of aircraft post form with auto-trigger on blur, so typing a tail number and pressing Tab auto-fills Make/Model/Year without acc
+- PASS — lazy-name-save — magic-link users who post a partnership or seeking listing now have their contact name silently saved to `user_metadata.full_name`, so the existing cont
+- PASS — partnership-crosssell-listing — co-ownership cross-sell panel on aircraft listing detail pages: buyers viewing a for-sale aircraft now see a Co-ownership available sideb
+- PASS — aircraft-post-price-location — Asking Price and Based-at Airport promoted to the always-visible The basics section of `/aircraft/new`, so sellers who use N-number autofi
+- PASS — crosssell-model-level — Co-ownership available panel on aircraft listing detail pages now shows model-specific count (3 Cessna 172 partnerships) when same-model partners
+- PASS — auth-context-headline — auth page now shows context-specific Sign in to post your aircraft listing / Sign in to contact the seller etc. headlines when users arrive mid-f
+
+
 # Overnight review — 2026-06-27
 
 ## 📊 Traffic (PostHog) — as of 2026-06-27
