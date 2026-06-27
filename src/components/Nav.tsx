@@ -218,6 +218,18 @@ export default function Nav() {
           )}
           {user && (
             <Link
+              href="/listings"
+              className={cn(
+                'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+                pathname.startsWith('/listings') ? 'text-sky-700' : 'text-slate-700'
+              )}
+            >
+              <Plane className="h-4 w-4" />
+              My Listings
+            </Link>
+          )}
+          {user && (
+            <Link
               href="/searches"
               className={cn(
                 'flex items-center gap-2 py-4 text-base font-medium transition-colors',
