@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-27T10:30:00Z — avionics-partnership-detail — score 3/5
+- Strengths: Core chips render correctly on both detail page and RailCard, self-suppression works, placement is right, description-split workaround is pragmatic (Partnership type has no `avionics` column despite spec claiming otherwise).
+- Weaknesses / risks: AC1's "raw equipment list in a 2-column bullet grid" is entirely absent from AvionicsPanel — only chips render; `CAP_COLORS`/`AVIONICS_CHIP_STYLE` maps are duplicated across `page.tsx` and `PartnershipRailCard.tsx` (with a minor `gps` shade mismatch); description-split regex is copied verbatim into both files instead of living in the shared lib.
+- Follow-up: Add the 2-column equipment bullet grid to `AvionicsPanel` (missed AC); extract the color map and description-split helper into `avionicsClassify.ts` to eliminate the duplication.
+
 ## 2026-06-27T09:15:00Z — seeking-post-one-screen — score 4/5
 - Strengths: All 8 AC delivered cleanly — AI prefill elevated to top, 3-field "The basics" section, native `<details>` disclosure closed by default, comprehensive auto-open heuristic (broader than the partnership cycle's, now includes contact/travel fields), server action auto-generates title and falls back to `user.email`; faithful mirror of the partnership-post-one-screen pattern with dead constants (`RATINGS`, `MAKES`) correctly removed.
 - Weaknesses / risks: `result.title` remains in the `hasMoreDetails` auto-open guard even though `title` moved to "The basics" (outside the disclosure) — AI filling only a title triggers the disclosure to open for no reason; `contact_email: ... || ''` could persist an empty string to the DB if `user.email` is also null/undefined on an incomplete account.
