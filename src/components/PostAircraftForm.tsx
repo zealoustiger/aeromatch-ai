@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
@@ -51,7 +52,29 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function PostAircraftForm() {
+const DRAFT_KEY = 'ch:draft:aircraft-new'
+
+function forceSaveDraft(form: HTMLFormElement) {
+  try {
+    const data: Record<string, string> = {}
+    for (const el of Array.from(form.elements)) {
+      const e = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      if (e.name && e.value &&
+          !['file', 'password', 'submit', 'button', 'reset', 'hidden', 'checkbox', 'radio'].includes(
+            (e as HTMLInputElement).type ?? ''
+          )) {
+        data[e.name] = e.value
+      }
+    }
+    if (Object.keys(data).length) {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+    }
+  } catch {
+    /* storage unavailable — best effort */
+  }
+}
+
+export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: boolean }) {
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       try {
@@ -69,11 +92,23 @@ export default function PostAircraftForm() {
     null
   )
 
-  const { formRef, status, handleSubmit, handleResult } = useFormDraft('ch:draft:aircraft-new')
+  const router = useRouter()
+  const { formRef, status, handleSubmit, handleResult } = useFormDraft(DRAFT_KEY)
 
   useEffect(() => {
     if (state) handleResult(Boolean(state.ok))
   }, [state, handleResult])
+
+  function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (!isLoggedIn) {
+      e.preventDefault()
+      // Force-save the draft before navigating so it survives the auth redirect.
+      if (formRef.current) forceSaveDraft(formRef.current)
+      router.push('/auth?next=/aircraft/new')
+      return
+    }
+    handleSubmit()
+  }
 
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiError, setAiError] = useState<string | null>(null)
@@ -145,7 +180,12 @@ export default function PostAircraftForm() {
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-8">
+    <form ref={formRef} action={action} onSubmit={onFormSubmit} className="space-y-8">
+      {!isLoggedIn && (
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          Sign in to publish — your progress saves automatically on this device.
+        </div>
+      )}
       <div className="flex justify-end">
         <span className="text-xs text-slate-400">
           {status === 'saved' || status === 'restored' ? 'Draft saved' : 'Your progress autosaves on this device'}
@@ -290,7 +330,7 @@ export default function PostAircraftForm() {
         disabled={pending}
         className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
-        {pending ? 'Submitting…' : 'Post Aircraft for Sale'}
+        {pending ? 'Submitting…' : isLoggedIn ? 'Post Aircraft for Sale' : 'Sign in to Publish →'}
       </button>
     </form>
   )

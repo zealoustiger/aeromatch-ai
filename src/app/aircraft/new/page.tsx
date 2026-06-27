@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import PostAircraftForm from '@/components/PostAircraftForm'
 import PostTypeTabs from '@/components/PostTypeTabs'
@@ -12,11 +11,10 @@ export const metadata: Metadata = {
 }
 
 export default async function NewAircraftPage() {
-  // Posting requires an account — gate before rendering the form so the CTA
-  // routes through /auth and comes back here.
+  // Show the form to everyone — auth is deferred to submission so users can fill
+  // the form before being asked to sign in. The server action guards the insert.
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth?next=/aircraft/new')
 
   return (
     <div className="ch-surface min-h-screen">
@@ -28,7 +26,7 @@ export default async function NewAircraftPage() {
             List your aircraft for sale for free. Reach pilots and buyers across the country.
           </p>
         </div>
-        <PostAircraftForm />
+        <PostAircraftForm isLoggedIn={!!user} />
       </div>
     </div>
   )
