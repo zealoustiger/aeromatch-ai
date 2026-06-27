@@ -67,9 +67,10 @@ export default function PartnershipLaunchBanner({ visitorState, seekerCount, sou
   return (
     <section className="my-4 rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
       <p className="text-sm leading-relaxed text-slate-700">
-        <strong className="text-violet-700">{visitorCount.toLocaleString()}+ pilots</strong> are browsing {area} and{' '}
-        <strong className="text-violet-700">{displaySeekers} are actively seeking</strong> partnerships.
-        Get alerts and help launch your location.
+        We&apos;re in beta near <strong className="text-violet-700">{area}</strong>.
+        This month, we&apos;ve had <strong className="text-violet-700">{visitorCount.toLocaleString()}+ pilot visitors</strong> and{' '}
+        <strong className="text-violet-700">{displaySeekers} are actively seeking</strong> partnerships in this location.
+        Get email alerts when more post. Alert demand helps us prioritize next launch locations.
       </p>
 
       <form
