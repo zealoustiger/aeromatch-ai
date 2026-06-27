@@ -10,6 +10,7 @@ import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { resolveMakeModelFamily } from '@/lib/seo'
 import type { CompResult } from '@/lib/aircraftComps'
+import type { ClubHangerDealVerdict } from '@/lib/aircraftEstimate'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import type { AvionicsCap } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
@@ -141,6 +142,26 @@ function engineChipStyle(remaining: number, tbo: number): string {
   return 'bg-amber-50 text-amber-700 ring-amber-200'
 }
 
+// Deal Check chip — shows the year+hours-controlled verdict when available.
+// 'fair' is suppressed (no chip) to avoid noise; 'good' and 'high' carry signal.
+function DealCheckChip({ verdict }: { verdict: ClubHangerDealVerdict }) {
+  if (verdict.verdict === 'fair') return null
+  if (verdict.verdict === 'good') {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+        <LineChart className="h-3 w-3" />
+        Good deal
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+      <LineChart className="h-3 w-3" />
+      Priced high
+    </span>
+  )
+}
+
 function EngineTimeChip({ smoh, engineType }: { smoh: number; engineType: string }) {
   const entry = lookupEngineTbo(engineType)
   if (!entry) return null
@@ -161,10 +182,12 @@ export default function AircraftSaleCard({
   p,
   saved = false,
   comp = null,
+  dealVerdict = null,
 }: {
   p: AircraftForSale
   saved?: boolean
   comp?: CompResult | null
+  dealVerdict?: ClubHangerDealVerdict | null
 }) {
   const label = aircraftTitle(p)
   // Real harvested source photo when we have one; else a per-make placeholder.
@@ -245,7 +268,8 @@ export default function AircraftSaleCard({
                     Price drop {formatPrice(drop)}
                   </span>
                 )}
-                {comp && <CompPill comp={comp} />}
+                {dealVerdict && <DealCheckChip verdict={dealVerdict} />}
+                {!dealVerdict && comp && <CompPill comp={comp} />}
                 {avionicsCaps.map((cap) => (
                   <AvionicsChip key={cap.key} cap={cap} />
                 ))}

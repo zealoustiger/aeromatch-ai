@@ -4,6 +4,7 @@ import { AircraftForSale } from '@/lib/types'
 import { minScoreForGrade, GRADE_CUTOFFS, type Grade } from '@/lib/listingQuality'
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
 import { buildFamilyPriceMap, compVsMarket, familyKey, priceStats, type CompResult, type PriceStats } from '@/lib/aircraftComps'
+import { clubHangerDealVerdict, type ClubHangerDealVerdict, type DealComp } from '@/lib/aircraftEstimate'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -588,6 +589,40 @@ async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
   }
 }
 
+// Build a make+model FAMILY -> comp entries map for the Deal Check verdict.
+// Each entry carries id + asking_price + year + ttaf so `clubHangerDealVerdict`
+// can narrow to similar-year / similar-hours comps. One read, capped at 5 000;
+// non-fatal — on any failure we just fall back to CompPill (no regression).
+// Read-only, no schema change.
+type FamilyCompEntry = DealComp & { id: string }
+
+async function fetchFamilyCompMap(): Promise<Map<string, FamilyCompEntry[]>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return new Map()
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('id, make, model, asking_price, year, ttaf')
+      .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
+      .limit(5000)
+    if (error || !data) return new Map()
+    const map = new Map<string, FamilyCompEntry[]>()
+    for (const row of data) {
+      const key = familyKey(row)
+      if (!key) continue
+      const entries = map.get(key) ?? []
+      entries.push({ id: row.id, asking_price: row.asking_price, year: row.year, ttaf: row.ttaf })
+      map.set(key, entries)
+    }
+    return map
+  } catch {
+    return new Map()
+  }
+}
+
 /** A single under-market deal: the listing plus its (always `below`) comp result. */
 export interface AircraftDeal {
   listing: AircraftForSale
@@ -687,12 +722,13 @@ export default async function AircraftSaleList({ filters }: { filters: Filters }
     )
   }
 
-  const [savedIds, familyPriceMap] = await Promise.all([
+  const [savedIds, familyPriceMap, familyCompMap] = await Promise.all([
     fetchSavedAircraftIds(listings),
     fetchFamilyPriceMap(),
+    fetchFamilyCompMap(),
   ])
 
-  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap)
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap)
 }
 
 function renderList(
@@ -701,7 +737,8 @@ function renderList(
   totalCount: number | null,
   page: number,
   savedIds: Set<string> = new Set(),
-  familyPriceMap: Map<string, number[]> = new Map()
+  familyPriceMap: Map<string, number[]> = new Map(),
+  familyCompMap: Map<string, FamilyCompEntry[]> = new Map()
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -763,14 +800,24 @@ function renderList(
         )}
       </p>
       <div className="space-y-4">
-        {listings.map((p) => (
-          <AircraftSaleCard
-            key={p.id}
-            p={p}
-            saved={savedIds.has(p.id)}
-            comp={compVsMarket(p, familyPriceMap)}
-          />
-        ))}
+        {listings.map((p) => {
+          const key = familyKey(p)
+          const allFamilyComps = key ? (familyCompMap.get(key) ?? []) : []
+          const compsWithoutSelf = allFamilyComps.filter((c) => c.id !== p.id)
+          const dealVerdict = clubHangerDealVerdict(
+            { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf },
+            compsWithoutSelf
+          )
+          return (
+            <AircraftSaleCard
+              key={p.id}
+              p={p}
+              saved={savedIds.has(p.id)}
+              comp={dealVerdict ? null : compVsMarket(p, familyPriceMap)}
+              dealVerdict={dealVerdict}
+            />
+          )
+        })}
       </div>
 
       {showPager && (
