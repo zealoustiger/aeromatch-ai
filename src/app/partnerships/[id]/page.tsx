@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Radio } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
@@ -26,6 +26,7 @@ import { shareFractionFromType } from '@/lib/calculators'
 import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
 import { partnershipBuyInComp, PartnerCompResult } from '@/lib/partnershipComps'
 import PartnershipDealSignals from '@/components/PartnershipDealSignals'
+import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
 // `/compare` view uses the same source of truth — no duplicated query).
@@ -200,6 +201,16 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
+  // Classify avionics capabilities from the partnership description text.
+  // Partnerships don't have a structured avionics[] column; we split the description
+  // into phrases and run the same keyword classifier so IFR buyers get capability
+  // chips (Glass panel, ADS-B Out, Autopilot) without needing a DB schema change.
+  // Self-suppresses (null) when no capabilities are detected.
+  const descPhrases = p.description
+    ? p.description.split(/[,;\n/]+/).map((s) => s.trim()).filter(Boolean)
+    : null
+  const avionicsInfo = classifyAvionics(descPhrases)
+
   return (
     <>
       {/* Warm cream page surface (Etsy × Airbnb token sweep, slice 5). The sticky
@@ -288,6 +299,10 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
                 </div>
               )}
             </div>
+
+            {/* Avionics & panel — capability chips + full equipment list for the
+                shared aircraft. Self-suppresses when no avionics data was extracted. */}
+            {avionicsInfo && <AvionicsPanel info={avionicsInfo} />}
 
             {/* "How this partnership stacks up" synthesis panel — mirrors the
                 aircraft DealScorePanel; uses partnerComp already fetched above. */}
@@ -485,5 +500,40 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         isSeed={seed}
       />
     </>
+  )
+}
+
+const CAP_COLORS: Record<string, string> = {
+  glass: 'bg-violet-50 text-violet-700 ring-violet-200',
+  adsb: 'bg-sky-50 text-sky-700 ring-sky-200',
+  autopilot: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  waas: 'bg-sky-50 text-sky-700 ring-sky-200',
+  gps: 'bg-slate-100 text-slate-700 ring-slate-200',
+}
+
+function AvionicsPanel({ info }: { info: AvionicsInfo }) {
+  if (info.caps.length === 0) return null
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Radio className="h-4 w-4" /> Avionics & panel
+      </h2>
+
+      <div className="flex flex-wrap gap-2">
+        {info.caps.map((cap) => (
+          <span
+            key={cap.key}
+            title={cap.hint}
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${CAP_COLORS[cap.key] ?? 'bg-slate-100 text-slate-700 ring-slate-200'}`}
+          >
+            {cap.label}
+          </span>
+        ))}
+      </div>
+
+      <p className="mt-3 text-xs text-slate-400">
+        Capabilities mentioned in the listing description. Verify with logbooks before purchase.
+      </p>
+    </div>
   )
 }
