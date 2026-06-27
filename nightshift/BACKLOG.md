@@ -52,6 +52,19 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
+- **[P2][want] Empty-state CTA on partnerships/seeking.** When <3 seeking listings match
+  (or none near the visitor's search airport), show a full-width card: "Be the first pilot
+  seeking a partnership near {airport}. Post for free — owners will find you." The current
+  + Post button is small and top-right; this needs to be unmissable in the empty state.
+- **[P2][want] Cross-link aircraft search → partnerships.** When aircraft search results
+  include makes/models that also have partnership listings, show a banner in the results:
+  "Can't afford the whole plane? N {make} partnerships are available near {airport}."
+  Visitors already navigate to partnerships manually — meet them where they are.
+- **[P2][want] Dynamic-location seed seeking personas.** Make the seeded seeking profiles
+  (concierge@clubhanger.com) dynamically match airports near the visitor's search. Instead
+  of showing a Bay Area persona to a Texas visitor, render the same persona at an airport
+  near the visitor's search/location. Keeps the page from looking empty everywhere.
+
 ## ⭐ ACTIVATION (pivot focus — 2026-06-26) — PULL FROM HERE FIRST
 The three north-star pillars. Each cycle, build the highest-value **`[P1]`** slice and
 **rotate across the pillars** so none stalls (don't spend a week only on analysis). All

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 
 import { Users, SlidersHorizontal } from 'lucide-react'
 import PartnershipFilters from '@/components/PartnershipFilters'
@@ -7,6 +8,7 @@ import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterCh
 import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
 import { getPartnershipMakes, getPartnershipListings } from '@/lib/partnershipsQuery'
+import { getSeekerCount } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { countForSale, fetchAircraftPage } from '@/components/AircraftSaleList'
 import SaveSearchButton from '@/components/SaveSearchButton'
@@ -18,6 +20,7 @@ import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 import ModelFaq from '@/components/ModelFaq'
 import Link from 'next/link'
+import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -93,8 +96,13 @@ export default async function PartnershipsPage({
 }) {
   const params = await searchParams
 
+  const hdrs = await headers()
+  const visitorRegion = hdrs.get('x-vercel-ip-country-region')
+    ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
+    : null
+
   const activeFilterCount = Object.values(params).filter(Boolean).length
-  const makes = await getPartnershipMakes()
+  const [makes, seekerCount] = await Promise.all([getPartnershipMakes(), getSeekerCount()])
 
   // ItemList JSON-LD for the partnerships the visitor actually sees — fetched with
   // the SAME filters PartnershipList renders below, so the structured data matches
@@ -174,6 +182,12 @@ export default async function PartnershipsPage({
           partnerships half). Horizontally-scrolling chips that set existing
           filter URL params (make / share type / budget). Mirrors /aircraft. */}
       <PartnershipChipBar makes={makes} />
+
+      <PartnershipLaunchBanner
+        visitorState={visitorRegion}
+        seekerCount={seekerCount}
+        sourcePath="/partnerships"
+      />
 
       <div className="flex flex-col gap-8 lg:flex-row">
         {/* Filters sidebar — desktop only */}

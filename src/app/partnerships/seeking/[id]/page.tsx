@@ -1,6 +1,9 @@
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft, Search, Handshake, ArrowRight } from 'lucide-react'
+import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
+import { getSeekerCount } from '@/lib/seekersQuery'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/utils'
@@ -73,7 +76,11 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
   const s = await getSeeker(id)
   if (!s) notFound()
 
-  const matches = await getMatchingPartnerships(s)
+  const hdrs = await headers()
+  const visitorRegion = hdrs.get('x-vercel-ip-country-region')
+    ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
+    : null
+  const [matches, seekerCount] = await Promise.all([getMatchingPartnerships(s), getSeekerCount()])
 
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
@@ -288,6 +295,12 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
           </div>
         </section>
       )}
+
+      <PartnershipLaunchBanner
+        visitorState={visitorRegion}
+        seekerCount={seekerCount}
+        sourcePath={`/partnerships/seeking/${id}`}
+      />
     </div>
   )
 }

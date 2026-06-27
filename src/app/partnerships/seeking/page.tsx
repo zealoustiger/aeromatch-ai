@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { Search, ArrowRight, SlidersHorizontal } from 'lucide-react'
+import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
 import SeekerList from '@/components/SeekerList'
 import SeekerChipBar from '@/components/SeekerChipBar'
 import SeekerFilters from '@/components/SeekerFilters'
@@ -13,7 +15,7 @@ import ModelFaq from '@/components/ModelFaq'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
-import { getSeekerMakes } from '@/lib/seekersQuery'
+import { getSeekerMakes, getSeekerCount } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -80,6 +82,11 @@ export default async function SeekingPartnershipsPage({
 }) {
   const params = await searchParams
 
+  const hdrs = await headers()
+  const visitorRegion = hdrs.get('x-vercel-ip-country-region')
+    ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
+    : null
+
   // Fetch the available-partnerships rail once, here, so the page can both
   // (a) emit ItemList JSON-LD that matches the visible cards 1:1 and (b) hand the
   // same rows to SeekerList's empty state — no duplicate query, real data only.
@@ -98,7 +105,7 @@ export default async function SeekingPartnershipsPage({
   // The make hubs this page should reach so it isn't an internal dead-end.
   const makeLinks = SEO_MAKES.slice(0, 3)
   // Makes seekers actually want — feeds the chip bar + the make filter dropdown.
-  const seekerMakes = await getSeekerMakes()
+  const [seekerMakes, seekerCount] = await Promise.all([getSeekerMakes(), getSeekerCount()])
   const activeFilterCount = ['airports', 'airport', 'state', 'make', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   return (
@@ -145,6 +152,12 @@ export default async function SeekingPartnershipsPage({
         </div>
 
         <PartnershipTabs active="seeking" />
+
+        <PartnershipLaunchBanner
+          visitorState={visitorRegion}
+          seekerCount={seekerCount}
+          sourcePath="/partnerships/seeking"
+        />
 
         {/* Quick-filter chip bar (mirrors /aircraft + /partnerships). */}
         <SeekerChipBar makes={seekerMakes} />

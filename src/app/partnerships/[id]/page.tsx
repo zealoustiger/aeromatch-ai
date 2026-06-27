@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft, Radio } from 'lucide-react'
@@ -7,6 +8,8 @@ import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
+import { getSeekerCount } from '@/lib/seekersQuery'
 import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import MessageOwnerButton from '@/components/MessageOwnerButton'
@@ -119,6 +122,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
   const { id } = await params
   const p = await getPartnership(id)
   if (!p) notFound()
+
+  const hdrs = await headers()
+  const visitorRegion = hdrs.get('x-vercel-ip-country-region')
+    ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
+    : null
+  const seekerCount = await getSeekerCount()
 
   const isOwner = await isListingOwner(p.poster_id)
 
@@ -485,6 +494,12 @@ export default async function PartnershipDetailPage({ params }: { params: Promis
         <div className="mt-10">
           <SimilarListings current={p} />
         </div>
+
+        <PartnershipLaunchBanner
+          visitorState={visitorRegion}
+          seekerCount={seekerCount}
+          sourcePath={`/partnerships/${p.id}`}
+        />
         </div>
       </div>
 

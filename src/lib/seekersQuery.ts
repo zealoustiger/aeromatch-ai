@@ -127,3 +127,17 @@ export async function getSeekerMakes(): Promise<string[]> {
     return []
   }
 }
+
+export async function getSeekerCount(): Promise<number> {
+  if (!hasSupabase()) return MOCK_SEEKERS.length
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { count } = await supabase
+      .from('partnership_seekers')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}

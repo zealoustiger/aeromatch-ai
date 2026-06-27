@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { Plane, MapPin, Navigation, ArrowRight } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
 import {
   SEO_MAKES,
   STATE_CODES,
@@ -15,6 +17,7 @@ import {
   countPartnershipsByState,
 } from '@/lib/partnershipsQuery'
 import { getNearAirportHubs, NEAR_RADIUS_NM } from '@/lib/nearbyPartnerships'
+import { getSeekerCount } from '@/lib/seekersQuery'
 
 // This hub is a genuine navigation index, not a doorway page: every link below is
 // gated on a LIVE active-partnership count > 0 (makes/states) or the same
@@ -51,6 +54,12 @@ export const metadata: Metadata = {
 export const revalidate = 3600 // refresh hourly, matching the near-airport pages
 
 export default async function PartnershipsBrowsePage() {
+  const hdrs = await headers()
+  const visitorRegion = hdrs.get('x-vercel-ip-country-region')
+    ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
+    : null
+  const seekerCount = await getSeekerCount()
+
   // --- By make (the 8 curated SEO_MAKES, gated on live inventory) -------------
   const makeCounts = await Promise.all(
     SEO_MAKES.map((m) => countPartnershipsByMake(m.filter))
@@ -128,6 +137,12 @@ export default async function PartnershipsBrowsePage() {
             <a href="#by-airport" className="text-sky-600 hover:underline">Near an airport</a>
           </p>
         </header>
+
+        <PartnershipLaunchBanner
+          visitorState={visitorRegion}
+          seekerCount={seekerCount}
+          sourcePath="/partnerships/browse"
+        />
 
         {/* ---- By make ---- */}
         {makes.length > 0 && (
