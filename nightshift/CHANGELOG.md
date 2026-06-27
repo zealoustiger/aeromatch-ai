@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-27T06:26:01Z — DRAIN SUMMARY
+- Cycles this run: 8 (PASS 7 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to sonnet; 1 quality-judged on sonnet
+- Stopped because: rate limited
+- Run: 20260627T050850Z
+
 ## 2026-06-27T06:18:14Z — PASS — deal-score-panel
 - Pages: /aircraft/listing/[id]
 - What: **Aircraft listing pages now show a "How this stacks up" panel that synthesizes up to four buyer-relevant signals into one scannable card.** The panel appears in the main content column between the Specifications grid and the Engine Life panel. It shows: (1) price positioning — "Good deal / Fair price / Priced high" from the Deal Check (year+hours-controlled comps) or, when that's unavailable, the family-wide ClubHanger Estimate; (2) days on market — derived from `first_seen_at`, labelled "Fresh to market" (≤3 days), "Listed N days/months ago" (up to 30 days), or "Listed N months ago — seller may have flexibility" (≥90 days); (3) price history — "Price reduced $X — a seller motivation signal" or "Price increased $X" when a real recorded change exists; (4) spec completeness — "Well documented / N/5 key specs" based on presence of year, TTAF, SMOH, engine type, and registration. Each row has a colored dot (emerald for positive, slate for neutral, amber for negative), a bold label, and a plain-language detail line explaining what the signal means for a buyer. The panel self-suppresses when fewer than 2 signals are actionable. No new DB queries — everything derives from data already fetched on the page. 1 file changed (197 lines, `computeDealSignals` helper + `DealScorePanel` component).
