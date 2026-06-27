@@ -10,6 +10,8 @@ import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { resolveMakeModelFamily } from '@/lib/seo'
 import type { CompResult } from '@/lib/aircraftComps'
+import { classifyAvionics } from '@/lib/avionicsClassify'
+import type { AvionicsCap } from '@/lib/avionicsClassify'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
 import AircraftTrustBadge from './AircraftTrustBadge'
@@ -97,6 +99,28 @@ function CompPill({ comp }: { comp: CompResult }) {
   )
 }
 
+const AVIONICS_CHIP_STYLE: Record<string, string> = {
+  glass: 'bg-violet-50 text-violet-700 ring-violet-200',
+  adsb: 'bg-sky-50 text-sky-700 ring-sky-200',
+  autopilot: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  waas: 'bg-sky-50 text-sky-700 ring-sky-200',
+  gps: 'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
+function AvionicsChip({ cap }: { cap: AvionicsCap }) {
+  return (
+    <span
+      className={cn(
+        'rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1',
+        AVIONICS_CHIP_STYLE[cap.key] ?? 'bg-slate-100 text-slate-600 ring-slate-200'
+      )}
+      title={cap.hint}
+    >
+      {cap.label}
+    </span>
+  )
+}
+
 export default function AircraftSaleCard({
   p,
   saved = false,
@@ -122,6 +146,8 @@ export default function AircraftSaleCard({
   // Internal link to the make+model for-sale family page — only when a real page
   // exists for this listing's make+model (reuses SEO_MAKE_MODELS, never 404s).
   const family = resolveMakeModelFamily(p.make, p.model)
+  // Top 2 avionics capability chips — glass panel first, then ADS-B / autopilot.
+  const avionicsCaps = classifyAvionics(p.avionics)?.caps.slice(0, 2) ?? []
 
   return (
     <article className="ch-card group overflow-hidden bg-white">
@@ -184,6 +210,9 @@ export default function AircraftSaleCard({
                   </span>
                 )}
                 {comp && <CompPill comp={comp} />}
+                {avionicsCaps.map((cap) => (
+                  <AvionicsChip key={cap.key} cap={cap} />
+                ))}
                 {fresh && (
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
