@@ -382,9 +382,11 @@ export default async function AircraftListingDetailPage({
       : null
   const familyLabel = family ? `${family.make} ${family.model}` : null
 
-  // Co-ownership cross-sell: how many active ClubHanger partnerships match this make.
+  // Co-ownership cross-sell: how many active ClubHanger partnerships match this
+  // make/model. Tries model-level first (e.g. "3 Cessna 172 partnerships"); falls
+  // back to make-level ("6 Cessna partnerships") when no model match is found.
   // Self-suppresses (returns null) when make is unknown or no partnerships found.
-  const crossSell = p.make ? await getPartnershipCrossSell(p.make) : null
+  const crossSell = p.make ? await getPartnershipCrossSell(p.make, p.model) : null
 
   // Structured data — a single Product/Offer for this listing. Real harvested
   // photo only (never our per-make placeholder or the site-logo OG fallback).
@@ -667,6 +669,7 @@ export default async function AircraftListingDetailPage({
             {crossSell && p.make && (
               <PartnershipCrossSellPanel
                 make={p.make}
+                model={crossSell.modelLevel ? (p.model ?? null) : null}
                 count={crossSell.count}
                 minBuyIn={crossSell.minBuyIn}
               />
@@ -972,16 +975,23 @@ const SIGNAL_COLORS: Record<DealSignalKind, { dot: string; label: string }> = {
 
 function PartnershipCrossSellPanel({
   make,
+  model,
   count,
   minBuyIn,
 }: {
   make: string
+  model: string | null
   count: number
   minBuyIn: number | null
 }) {
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
   const makeEncoded = encodeURIComponent(make)
+  // When model-level data is available, show the specific model label ("Cessna 172");
+  // fall back to make-only ("Cessna"). CTA always links to the make-filtered
+  // partnerships page — a model filter param isn't supported yet, but make-level
+  // is still useful and the cards clearly show the model.
+  const label = model ? `${make} ${model}` : make
   return (
     <div className="ch-panel p-5">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
@@ -989,7 +999,7 @@ function PartnershipCrossSellPanel({
       </h2>
       <p className="text-sm font-medium text-slate-800">
         {count === 1 ? '1 co-ownership share' : `${count} co-ownership shares`} listed for{' '}
-        {make} aircraft on ClubHanger.
+        {label} aircraft on ClubHanger.
       </p>
       {minBuyIn != null && (
         <p className="mt-1 text-sm text-slate-500">
@@ -1000,7 +1010,7 @@ function PartnershipCrossSellPanel({
         href={`/partnerships?make=${makeEncoded}`}
         className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
       >
-        Browse {make} partnerships <ArrowRight className="h-4 w-4" />
+        Browse {label} partnerships <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
   )
