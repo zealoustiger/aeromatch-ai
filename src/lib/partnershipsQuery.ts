@@ -24,6 +24,7 @@ export interface PartnershipFilters {
   radius?: string
   state?: string
   make?: string
+  model?: string
   max_monthly?: string
   max_buyin?: string
   share_type?: string
@@ -89,6 +90,7 @@ export async function getPartnershipListings(
       if (airportList.length > 0 && !airportList.includes(p.home_airport)) return false
       if (filters.state && p.state !== filters.state) return false
       if (filters.make && !p.make.toLowerCase().includes(filters.make.toLowerCase())) return false
+      if (filters.model && !(p.model ?? '').toLowerCase().includes(filters.model.toLowerCase())) return false
       if (filters.share_type && p.share_type !== filters.share_type) return false
       if (filters.max_monthly && (p.monthly_fixed ?? 0) > parseInt(filters.max_monthly)) return false
       if (filters.max_buyin && (p.buy_in_price ?? 0) > parseInt(filters.max_buyin)) return false
@@ -113,6 +115,7 @@ export async function getPartnershipListings(
 
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
+    if (filters.model) query = query.ilike('model', `%${filters.model}%`)
     if (filters.share_type) query = query.eq('share_type', filters.share_type)
     if (filters.max_monthly) query = query.lte('monthly_fixed', parseInt(filters.max_monthly))
     if (filters.max_buyin) query = query.lte('buy_in_price', parseInt(filters.max_buyin))

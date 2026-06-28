@@ -987,11 +987,10 @@ function PartnershipCrossSellPanel({
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
   const makeEncoded = encodeURIComponent(make)
-  // When model-level data is available, show the specific model label ("Cessna 172");
-  // fall back to make-only ("Cessna"). CTA always links to the make-filtered
-  // partnerships page — a model filter param isn't supported yet, but make-level
-  // is still useful and the cards clearly show the model.
   const label = model ? `${make} ${model}` : make
+  const ctaHref = model
+    ? `/partnerships?make=${makeEncoded}&model=${encodeURIComponent(model)}`
+    : `/partnerships?make=${makeEncoded}`
   return (
     <div className="ch-panel p-5">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
@@ -1007,7 +1006,7 @@ function PartnershipCrossSellPanel({
         </p>
       )}
       <Link
-        href={`/partnerships?make=${makeEncoded}`}
+        href={ctaHref}
         className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
       >
         Browse {label} partnerships <ArrowRight className="h-4 w-4" />

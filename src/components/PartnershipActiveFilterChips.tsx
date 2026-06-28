@@ -109,6 +109,16 @@ export default function PartnershipActiveFilterChips({ params }: { params: Param
     })
   }
 
+  // Aircraft model
+  const model = params.model?.trim()
+  if (model) {
+    chips.push({
+      key: 'model',
+      label: model,
+      href: buildHref(params, (p) => p.delete('model')),
+    })
+  }
+
   // Share type
   const shareType = params.share_type?.trim()
   if (shareType) {

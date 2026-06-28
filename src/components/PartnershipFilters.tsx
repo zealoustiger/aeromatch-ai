@@ -188,6 +188,20 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
         />
       </div>
 
+      {/* Aircraft model */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Aircraft Model
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. 172, SR22"
+          defaultValue={initialValues.model ?? ''}
+          onChange={(e) => updateFilter('model', e.target.value)}
+          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        />
+      </div>
+
       {/* Max monthly */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
