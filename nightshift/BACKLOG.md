@@ -52,7 +52,7 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
 
 ## Ideas
 
-- **[P2][want] Empty-state CTA on partnerships/seeking.** When <3 seeking listings match
+~~- **[P2][want] Empty-state CTA on partnerships/seeking.**~~ ✅ SHIPPED via `seeking-content-depth` (2026-06-22) When <3 seeking listings match
   (or none near the visitor's search airport), show a full-width card: "Be the first pilot
   seeking a partnership near {airport}. Post for free — owners will find you." The current
   + Post button is small and top-right; this needs to be unmissable in the empty state.
@@ -88,10 +88,10 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   irreducible set (make/model · airport ICAO · price-or-share · contact); push everything
   else to optional/progressive disclosure. ICAO already auto-derives airport/city/state —
   lean on that. Measure clicks-to-publish before vs after.
-- **[P1][goal] Autosave the draft (localStorage) + restore.** A half-filled form must
+~~- **[P1][goal] Autosave the draft (localStorage) + restore.**~~ ✅ SHIPPED via `draft-start-over` (2026-06-28) A half-filled form must
   survive a reload or the auth redirect — never lose someone's typing. Pairs with Pillar 2's
   deferred gate (post first, sign in to publish, draft intact).
-- **[P2][goal] Photo upload polish.** Drag-drop + paste + multi-file on the post forms
+~~- **[P2][goal] Photo upload polish.**~~ ✅ SHIPPED via `aircraft-photo-upload` (2026-06-26) Drag-drop + paste + multi-file on the post forms
   (upload routes `/api/upload-aircraft-photo`, `/api/upload-partnership-photo` exist). Make
   adding photos a non-event.
 
@@ -100,7 +100,7 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
 - **[P1][goal] "Continue with Google" (OAuth).** Supabase supports it — the single biggest
   signup-friction killer. Add to `/auth`, preserve `?next=`. (Magic-link/passwordless email
   is the close second — do it as the next slice.)
-- **[P1][goal] Defer the gate to the value moment.** Audit every forced-signup point (home
+~~- **[P1][goal] Defer the gate to the value moment.**~~ ✅ SHIPPED via `defer-partnership-search-gate` (2026-06-27) Audit every forced-signup point (home
   search gate, save, post, message) and move the ask to the moment of value: let people
   browse, filter, and build a draft first; sign in only to *save/publish/message*. Device-
   saves already merge on signup (`mergeDeviceSaves`) — extend that pattern so nothing is lost.
@@ -114,7 +114,7 @@ is missing, say "not enough data" — NEVER fabricate (a confident-wrong number 
 Build on: extracted specs (`ttaf`/`smoh`/`engine_type`/`avionics`/`annual_due`/`damage_history`),
 the ClubHanger Estimate (`src/lib/aircraftComps.ts`), the cost calculator (`src/lib/calculators.ts`),
 price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
-- **[P1][goal] Engine life & overhaul reserve.** From `smoh` + `engine_type` → a curated
+~~- **[P1][goal] Engine life & overhaul reserve.**~~ ✅ SHIPPED via `partnership-engine-life` (2026-06-28) From `smoh` + `engine_type` → a curated
   TBO table (per engine family) → "≈ X hrs / ~Y yrs to overhaul; budget ~$Z reserve."
   Render only when smoh + engine are known. Proprietary because it fuses our extracted specs
   with a TBO/reserve model no listing site shows.
@@ -122,7 +122,7 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   page, prefilled with the listing's real make/model/price/hours → annual fixed + per-hour +
   reserve, with a share-split toggle ("as a 1/3 partner: ~$X each + ~$Y/mo"). Turns a static
   price into a real ownership cost.
-- **[P1][goal] Deal Score panel.** Synthesize the signals we already have into one honest
+~~- **[P1][goal] Deal Score panel.**~~ ✅ SHIPPED via `deal-score-signal-tally` (2026-06-28) Synthesize the signals we already have into one honest
   verdict: comp value (ClubHanger Estimate) + days-on-market + price drops + spec completeness
   → a transparent "how this stacks up" with the *reasons* shown (not a black-box score).
   Reuse the Estimate's min-comps / dead-band honesty floors.
@@ -197,7 +197,7 @@ Items the human captured from chat with a reference screenshot. Each links a
 screenshot in Supabase Storage (`backlog-shots` bucket). **When an item here is
 completed, delete its screenshot object from `backlog-shots` to reclaim storage.**
 
-- **[P3][want] Link to email settings from Saved Searches.** On the Saved Searches
+~~- **[P3][want] Link to email settings from Saved Searches.**~~ ✅ SHIPPED via `searches-email-settings-link` (2026-06-26) On the Saved Searches
   page (`/searches`), add a clear link/CTA to the email-notification settings on the
   profile/account page (`/account`) — so a user managing saved searches can jump
   straight to controlling their email alerts for them. (No screenshot.)
@@ -302,7 +302,7 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   thin/missing data. **Remaining:** optionally surface the verdict chip on the detail
   page's "Similar aircraft" cards + the browse `AircraftSaleCard`; consider accepting SMOH
   when TTAF is missing to widen coverage.
-- **[P2][want] Price history + "Price cut ↓$X" + days-on-market + "New" pills (Redfin).**
+~~- **[P2][want] Price history + "Price cut ↓$X" + days-on-market + "New" pills (Redfin).**~~ ✅ SHIPPED via `listing-cost-and-price-history` (2026-06-23)
   Data already stored (`previous_price`, `price_changed_at`, `first_seen_at`). Slice:
   (1) New + Price-cut pills on cards (extend existing `priceDrop`/`isNew`); (2)
   price-history mini-chart on the detail page; (3) days-on-market label.
@@ -320,7 +320,7 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
 
 #### Batch from chat — 2026-06-24 (posting/messaging/filter friction)
 
-- **[P2][want] Post-a-partnership: multi-photo drag-and-drop upload.** The "Post a
+~~- **[P2][want] Post-a-partnership: multi-photo drag-and-drop upload.**~~ ✅ SHIPPED via `aircraft-photo-upload` (2026-06-26) The "Post a
   partnership" page should let the user upload **multiple photos** via an easy
   **drag-and-drop** zone (with click-to-browse fallback), thumbnail previews,
   remove-before-submit, and reorder if cheap. Today the flow lacks an easy multi-image
@@ -437,18 +437,18 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   + the page's existing facets; no query/schema change. See CHANGELOG. **Remaining: (2) normalize
   stored variant casing in the DB (deferred — destructive-ish, ask-a-human); apply the same rollup
   to the partnerships/seeking model filters + their active-filter chips.**
-- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**
+~~- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**~~ ✅ SHIPPED via `filter-promote-core-fields` (2026-06-24)
   Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
   buying criteria. Surface them **higher and always-visible** in the main filter panel, and
   **remove "Listing quality"** as a filter. (Reordering already-present fields — not the
   deferred avionics/SMOH filters.) Screenshot:
   https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/filter-promote-core-fields/20260624-filter-promote-core-fields.png
-- **[P2][want] Filter: "Priced below market" checkbox.** Alongside "Price drops," add an
+~~- **[P2][want] Filter: "Priced below market" checkbox.**~~ ✅ SHIPPED via `aircraft-below-market-deals` (2026-06-23) Alongside "Price drops," add an
   **"Aircraft priced below market"** checkbox showing only listings under computed market
   value for their make/model. Depends on the **price-vs-market** comp calc already in the
   backlog (own-inventory comps, show only with ≥N comps). Slice: (1) reuse/finish the
   per-listing below-market flag; (2) checkbox + query; (3) badge parity in cards + filter.
-- **[P2][want] Filter: airport ICAO + distance radius (for-sale).** Add an **optional**
+~~- **[P2][want] Filter: airport ICAO + distance radius (for-sale).**~~ ✅ SHIPPED via `aircraft-airport-filter` (2026-06-26) Add an **optional**
   location filter to for-sale browse — enter an **airport ICAO** + a **distance** (e.g. within
   100/250/500 mi or custom) to show only aircraft in range, like the partnership browse
   centers on a home airport. Slice: (1) ICAO input + distance selector → geocode airport
@@ -480,7 +480,7 @@ reviews post-cycle, so try things; just keep each cycle cohesive and reversible.
 - ~~**[P1][want] Etsy × Airbnb visual refresh — slice 1: design tokens + reference surface.**~~ ✅ SHIPPED 2026-06-20 (see Done). Tokens (`--ch-surface` cream / `--ch-radius-card` rounded-2xl / soft + hover-lift shadows; `.ch-card`/`.ch-panel`/`.ch-surface`) live in `globals.css`, applied to the `/aircraft` reference surface. **Next slices use these tokens — start from `globals.css`.**
 - ~~**[P2][want] slice 2: listing-card redesign (Airbnb-style).**~~ ✅ SHIPPED 2026-06-20 (see Done). Both `AircraftSaleCard` + `PartnershipCard` now share `.ch-card` (rounded-2xl + soft shadow + hover-lift, no hard border), larger mobile photo (h-52), bold price (text-2xl extrabold), heart top-right, badges + location intact. QA PASS desktop + 375px on /aircraft and /partnerships. **Next slice = chip bar (slice 3).**
 - ~~**[P2][want] slice 3: category chip bar (Airbnb-style).**~~ ✅ FULLY SHIPPED — `/aircraft` (`AircraftChipBar`: top makes / price bands / mission keyword chips, commit 29f13aa) + **`/partnerships` 2026-06-22T08:02Z** (`PartnershipChipBar`: live makes / share types / budget bands; `getPartnershipMakes()` read-time make aggregation with junk-make filter; see Done). Horizontally-scrolling, 375px-first, reuses existing filter params; no new backend. **Next slice = homepage curated rails (slice 4).**
-- **[P2][want] slice 4: homepage curated rails (Etsy-style).** Add horizontally-scrolling "collection" rails of real listings on the homepage ("Time-builders under $100k", "Glass-panel singles", "Near you", "New this week"), each linking to the matching filtered search / SEO page.
+~~- **[P2][want] slice 4: homepage curated rails (Etsy-style).**~~ ✅ SHIPPED via `homerails-deal-chips` (2026-06-27) Add horizontally-scrolling "collection" rails of real listings on the homepage ("Time-builders under $100k", "Glass-panel singles", "Near you", "New this week"), each linking to the matching filtered search / SEO page.
 - **[P3][want] slice 5: token sweep.** Apply the design tokens to the remaining pages (listing detail, guides, tools, airport, partnerships) for consistency. One page-family per cycle. — **`/partnerships` search page ✅ SHIPPED 2026-06-22T08:35Z** (`.ch-surface` cream wrap + filter sidebar → `.ch-panel` + larger H1, mirroring `/aircraft`; see Done + CHANGELOG). — **partnership detail `/partnerships/[id]` ✅ SHIPPED 2026-06-22T08:49Z** (`ch-surface` wrap with ContactBar left outside; the 4 neutral listing/requirements/costs/structure panels → `.ch-panel`; sky "Interested?" card → rounded-2xl; see Done + CHANGELOG). — **airport detail `/airports/[icao]` ✅ SHIPPED 2026-06-22T13:35Z** (`ch-surface` cream wrap + larger H1; empty-state card → `.ch-panel`; near-CTA → rounded-2xl; presentational only; see CHANGELOG). Remaining families: guides, tools.
 
 ### From report feedback — 2026-06-20 (human review of first run)
@@ -550,10 +550,10 @@ adjacent query. Build each as a genuinely useful, unique page — obey GOAL.md (
 thin/doorway pages; real listings + real data per page).
 
 - **[P1][goal] Aircraft-for-sale make+model pages.** `/aircraft/[make]/[model]` (e.g. `/aircraft/cessna/172`): all matching for-sale aircraft + model specs + a cost-to-own blurb. Title `"{Make} {Model} for sale — {N} aircraft | ClubHanger"`. The #1 search pattern. Slice: (1) route + top ~20 make/model combos by inventory; (2) all combos with inventory + add to sitemap; (3) unique H1/meta + JSON-LD (Vehicle/Offer); (4) price & state variants (`{model} for sale under ${X}`, `{model} for sale in {state}`).
-- **[P1][goal] Geo "near [airport] / near me" pages.** Planes-for-sale AND partnerships near a location, keyed off the `airports` lat/lng — `/aircraft/near/KHWD`, `/partnerships/near/KHWD` ("partnerships near Hayward airport"). Slice: (1) `/partnerships/near/[icao]` for busiest airports; (2) for-sale variant; (3) a "near me" geolocation landing that routes to the nearest airport page; (4) sitemap + internal links from existing airport pages.
+~~- **[P1][goal] Geo "near [airport] / near me" pages.**~~ ✅ SHIPPED via `partnerships-near-og-parity` (2026-06-23) Planes-for-sale AND partnerships near a location, keyed off the `airports` lat/lng — `/aircraft/near/KHWD`, `/partnerships/near/KHWD` ("partnerships near Hayward airport"). Slice: (1) `/partnerships/near/[icao]` for busiest airports; (2) for-sale variant; (3) a "near me" geolocation landing that routes to the nearest airport page; (4) sitemap + internal links from existing airport pages.
 - **[P1][goal] State-level for-sale pages.** `/aircraft/for-sale/[state]` (`aircraft for sale california` is the single top autocomplete); extend the existing partnerships-by-state pattern to for-sale. Slice: (1) all 50 states with real listings; (2) unique titles/meta + sitemap; (3) cross-link make+model within each state.
-- **[P2][goal] Partnership tools + guides (content / linkbait).** Hit the informational seam: a free **partnership agreement template** page, a **cost-split tool** (ties to the calculators), and guides ("How aircraft co-ownership works", "How much does it cost to co-own a Cessna 172?"). High-intent, low-competition, earns links. Slice: one asset/guide per cycle.
-- **[P2][goal] Flying-club / "near me" angle.** `flying club near me` is real geo demand — a `/flying-clubs/near/[icao]` family (or positioning that surfaces partnerships + clubs by area). Slice: (1) page family off `airports`; (2) content explaining club vs partnership vs share.
+~~- **[P2][goal] Partnership tools + guides (content / linkbait).**~~ ✅ SHIPPED via `home-guides-tools-rail` (2026-06-22) Hit the informational seam: a free **partnership agreement template** page, a **cost-split tool** (ties to the calculators), and guides ("How aircraft co-ownership works", "How much does it cost to co-own a Cessna 172?"). High-intent, low-competition, earns links. Slice: one asset/guide per cycle.
+~~- **[P2][goal] Flying-club / "near me" angle.**~~ ✅ SHIPPED via `guide-flying-club-vs-co-ownership` (2026-06-24) `flying club near me` is real geo demand — a `/flying-clubs/near/[icao]` family (or positioning that surfaces partnerships + clubs by area). Slice: (1) page family off `airports`; (2) content explaining club vs partnership vs share.
 - **[P2][goal/want] Shareable listing pages (OG / Twitter cards).** Rich Open Graph + Twitter card + JSON-LD on every listing detail so shared links render with photo/price/specs → referral traffic. Add a "Share" button. Slice: (1) OG/twitter meta + a dynamic OG image; (2) share button + copy-link.
 
 ### Brainstorm round 2 (2026-06-19) — rank, convert, trust
@@ -585,7 +585,7 @@ Two confirmed gaps: (1) all 1,856 listings came from a **single manual ingest on
 
 ### Planes for Sale
 - **[P1] Filter UI overhaul.** Lead with **Make + Model** (the primary search path — Model options depend on selected Make). Then secondary filters: **avionics, total time (tach/Hobbs), engine time (SMOH), year, price, state.** Cleaner than Controller — surface the few that matter, progressive-disclose the rest. Must work at 375px.
-- **[P1][bug] real aircraft photos missing.** None of the sale listings show the actual plane photo. Diagnose the whole path: is the Barnstormers ingest capturing image URLs? Are they being re-hosted / stored on `aircraft_for_sale`? Is the card falling back to a placeholder when a real image exists? Fix so real photos render, with the "Not actual plane photo" badge only when genuinely a placeholder.
+~~- **[P1][bug] real aircraft photos missing.**~~ ✅ SHIPPED via `listing-completeness-panel` (2026-06-25) None of the sale listings show the actual plane photo. Diagnose the whole path: is the Barnstormers ingest capturing image URLs? Are they being re-hosted / stored on `aircraft_for_sale`? Is the card falling back to a placeholder when a real image exists? Fix so real photos render, with the "Not actual plane photo" badge only when genuinely a placeholder.
 
 ### Search & discovery
 - **[P2] AI natural-language search (beta).** A search box that takes "low-time IFR Cirrus under $400/mo near the Bay Area" → translates to structured filters via Claude (reuse the app's existing LLM/parse layer + `ANTHROPIC_API_KEY` — do not hardcode keys) → runs the query. Label clearly as **beta**. Slice it: (1) NL→filters endpoint, (2) wire to results, (3) polish.
@@ -654,7 +654,7 @@ Backlinks deferred by human. So: (A) make existing pages genuinely index-worthy,
 - _(Also: prioritize the existing **[P1][bug] real aircraft photos missing** — pages with no real photo are less index-worthy and less impressive to users. Top of the bug lane.)_
 
 #### B. Engagement — impress → save → sign up
-- **[P2][want] "Great Deals" view + homepage rail.** Surface listings priced well below market (reuse the price-vs-market comps) with real photos — "this Cessna 172 is ~30% under market." A concrete reason to save now. Slice: (1) deals rail on homepage; (2) a `/aircraft/deals` view. *(2 cycles)*
+~~- **[P2][want] "Great Deals" view + homepage rail.**~~ ✅ SHIPPED via `home-deals-rail` (2026-06-23) Surface listings priced well below market (reuse the price-vs-market comps) with real photos — "this Cessna 172 is ~30% under market." A concrete reason to save now. Slice: (1) deals rail on homepage; (2) a `/aircraft/deals` view. *(2 cycles)*
 - **[P1][want] Soft-save: push account, allow local fallback.** Logged-out heart-tap → first prompt pushes "Create a free account to save this + get alerts," but offers **"Skip — save on this device"** which stores locally with a clear notice: *"Saved on this device only. Without an account these aren't synced and you may lose them."* After a couple local saves, re-prompt to create an account to keep them. Tasteful, honest, strong nudge. Slice: ~~(1) local-save + notice + account prompt~~ ✅ SHIPPED 2026-06-22 (`SoftSavePrompt` modal + `lib/localSaves.ts`; logged-out heart opens the prompt instead of redirecting to /auth, "Skip — save on this device" persists to localStorage + survives reload, re-tap un-saves, logged-in unchanged; CHANGELOG 2026-06-22T06:43Z); ~~(2) merge local saves into the account on signup~~ ✅ SHIPPED 2026-06-22 (`mergeDeviceSaves` action + global `DeviceSaveSync.tsx` + `clearLocalSaves`; on sign-in/up the device saves merge into `saved_listings` idempotently, device store clears, confirmation toast; CHANGELOG 2026-06-22T07:08Z); ~~(3) surface device saves to logged-out visitors on /saved~~ ✅ SHIPPED 2026-06-22 (`hydrateDeviceSaves` read-only action + `DeviceSavedListings.tsx`; logged-out `/saved` no longer redirects to `/auth` — it renders this device's soft-saves with an honest "saved on this device only" notice + "Create a free account to keep these" CTA, empty-state with browse + sign-in prompt, live un-save removal; logged-in unchanged; CHANGELOG 2026-06-22T07:13Z). **This soft-save item is now fully shipped (all 3 slices).**
 - **[P2][want] Real social proof (no fabrication).** "Saved by N pilots" / "New today" / "Rare find — only N like this" chips, shown **only when genuinely true** from real saves/views/inventory. NEVER fabricate or inflate counts (FREEZE: no dark patterns; trust is the differentiator). Seed real engagement instead (team saves, FAA-seeded seekers). *(1 cycle)*
 - **[P1][want] Post-signup onboarding: "What are you looking for?"** One screen right after signup — aircraft type / home airport / budget → instantly creates a saved search + turns on alerts, and offers "Also post yourself as looking for a share?" Converts a signup into ongoing engagement + seeds the seeking side. *(2 cycles)*
