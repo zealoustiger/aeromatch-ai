@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff, Camera, Loader2, Lock } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage, getHarvestStatus } from '@/lib/adminScrapers'
+import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage, getHarvestStatus, getPartnershipScraperHealth, getPartnershipFreshness } from '@/lib/adminScrapers'
 import HarvestRefresh from '@/components/HarvestRefresh'
 import { moderateListing } from './actions'
 
@@ -92,6 +92,8 @@ export default async function ReviewListingsTab({
   const freshness = viewingHidden ? null : await getListingFreshness(admin)
   const photoCoverage = viewingHidden ? null : await getPhotoCoverage(admin)
   const harvest = viewingHidden ? null : await getHarvestStatus(admin)
+  const partnershipHealth = viewingHidden ? null : await getPartnershipScraperHealth(admin)
+  const partnershipFreshness = viewingHidden ? null : await getPartnershipFreshness(admin)
 
   // "Last new" is stale (scraper likely not running) if older than yesterday.
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
@@ -428,6 +430,114 @@ export default async function ReviewListingsTab({
           <p className="mt-2 text-xs text-slate-400">
             Grade cells show the active count, with hidden-for-no-photo in red. Adding photos to high-grade hidden rows
             is the fastest way to grow visible inventory.
+          </p>
+        </div>
+      )}
+
+      {/* Partnership scrapers — separate pipeline from aircraft for sale.
+          All partnership scraper rows are status='admin' (free-text classifieds
+          need extraction before they're trustworthy enough to show publicly). */}
+      {partnershipHealth && (
+        <div className="mb-8">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <Activity className="h-4 w-4" /> Partnership scrapers — new per day
+          </h3>
+          <p
+            className={`mb-3 mt-0.5 flex items-center gap-1.5 text-sm font-medium ${
+              partnershipHealth.todayTotal > 0 ? 'text-emerald-600' : 'text-amber-600'
+            }`}
+          >
+            {partnershipHealth.todayTotal > 0 ? (
+              <><CheckCircle2 className="h-4 w-4" /> {partnershipHealth.todayTotal.toLocaleString()} new partnership listings today.</>
+            ) : (
+              <><AlertTriangle className="h-4 w-4" /> No new partnership listings today — scrapers may not have run.</>
+            )}
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400">
+                  <th className="px-3 py-2 text-left font-semibold">Source</th>
+                  {partnershipHealth.days.map((d) => (
+                    <th key={d} className="px-2 py-2 text-center font-medium tabular-nums">{d.slice(5)}</th>
+                  ))}
+                  <th className="px-3 py-2 text-left font-semibold">Last new</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {partnershipHealth.sources.map((s) => {
+                  const stale = !s.lastNew || s.lastNew < yesterday
+                  return (
+                    <tr key={s.source}>
+                      <td className="px-3 py-2 font-medium text-slate-700">{s.source}</td>
+                      {partnershipHealth.days.map((d) => {
+                        const n = s.perDay[d] || 0
+                        return (
+                          <td key={d} className={`px-2 py-2 text-center tabular-nums ${n > 0 ? 'bg-emerald-50 font-semibold text-emerald-700' : 'text-slate-300'}`}>
+                            {n > 0 ? n : '·'}
+                          </td>
+                        )
+                      })}
+                      <td className={`px-3 py-2 ${stale ? 'font-medium text-amber-600' : 'text-slate-500'}`}>
+                        {s.lastNew ? (stale ? `${s.lastNew} ⚠` : s.lastNew) : 'never'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Partnership freshness — totals + last-scrape time per source. */}
+      {partnershipFreshness && (
+        <div className="mb-8">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <Lock className="h-4 w-4" /> Partnership inventory (admin-only)
+          </h3>
+          <p className="mb-3 mt-0.5 text-xs text-slate-400">
+            All partnership-scraper rows are <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px]">status=&apos;admin&apos;</code> —
+            hidden from the public marketplace until free-text extraction (buy-in, monthly, hourly) is trusted.
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-slate-400">
+                  <th className="px-3 py-2 font-semibold">Source</th>
+                  <th className="px-3 py-2 text-right font-medium">Active (admin)</th>
+                  <th className="px-3 py-2 text-right font-medium">Re-seen rate</th>
+                  <th className="px-3 py-2 text-right font-medium">Stale (&gt;2d)</th>
+                  <th className="px-3 py-2 font-medium">Last scrape</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {partnershipFreshness.map((f) => {
+                  const pct = Math.round(f.reseenRate * 100)
+                  const good = pct >= 85
+                  const scrapeStale = !f.lastScrape || Date.now() - Date.parse(f.lastScrape) > 36 * 3600e3
+                  return (
+                    <tr key={f.source}>
+                      <td className="px-3 py-2 font-medium text-slate-700">{f.source}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-600">{f.activeTotal.toLocaleString()}</td>
+                      <td className={`px-3 py-2 text-right font-semibold tabular-nums ${good ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {f.activeTotal ? `${pct}%` : '—'}
+                      </td>
+                      <td className={`px-3 py-2 text-right tabular-nums ${f.staleActive > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {f.staleActive.toLocaleString()}
+                      </td>
+                      <td className={`px-3 py-2 ${scrapeStale ? 'font-medium text-amber-600' : 'text-slate-500'}`}>
+                        {fmtDate(f.lastScrape)}{scrapeStale ? ' ⚠' : ''}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Run with <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px]">node scraper/ingest-partnerships.mjs</code>
+            {' '}(add <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px]">--source=barnstormers</code> to target one).
           </p>
         </div>
       )}

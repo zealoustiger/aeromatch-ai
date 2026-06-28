@@ -1,5 +1,5 @@
 export type ShareType = '1/2' | '1/3' | '1/4' | 'leaseback' | 'dry_lease' | 'other'
-export type ListingStatus = 'active' | 'pending' | 'closed'
+export type ListingStatus = 'active' | 'pending' | 'closed' | 'admin'
 export type ContactMethod = 'email' | 'phone' | 'both'
 export type AircraftCategory = 'sel' | 'mel' | 'turboprop' | 'jet' | 'any'
 

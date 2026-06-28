@@ -6,6 +6,14 @@ export const SCRAPER_SOURCES = ['barnstormers', 'hangar67', 'aircraftforsale']
 // marketplace via status='admin', but still monitored for health/freshness.
 export const ADMIN_SOURCES = ['controller']
 export const MONITORED_SOURCES = [...SCRAPER_SOURCES, ...ADMIN_SOURCES]
+
+// Partnership-side scrapers — all status='admin' for now (free-text classifieds
+// need extraction before they're trustworthy enough to show publicly).
+export const PARTNERSHIP_SOURCES = [
+  'barnstormers-partnerships',
+  'controller-partnerships',
+  'tap-partnerships',
+]
 // A source's "live" status: admin-only sources use 'admin' (the public gate is 'active').
 export const activeStatus = (source: string) => (ADMIN_SOURCES.includes(source) ? 'admin' : 'active')
 
@@ -241,4 +249,71 @@ export async function getRealListings(admin: SupabaseClient, limit = 25): Promis
   })
 
   return items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, limit)
+}
+
+// ── Partnerships scraper health (separated from aircraft so the admin can see
+// each pipeline at a glance). Mirrors getScraperHealth/getListingFreshness
+// but targets the `partnerships` table. All partnership scrapers store
+// status='admin' until we trust the free-text extraction enough to publish. ──
+
+/** Per-source × per-day count of NEW partnership listings (by first_seen_at). */
+export async function getPartnershipScraperHealth(
+  admin: SupabaseClient,
+  daysBack = 10,
+): Promise<ScraperHealth> {
+  const cutoff = new Date(Date.now() - (daysBack + 2) * 864e5).toISOString()
+  const { data } = await admin
+    .from('partnerships')
+    .select('source, first_seen_at, created_at')
+    .not('source', 'is', null)
+    .gte('first_seen_at', cutoff)
+    .limit(50000)
+
+  const days: string[] = []
+  for (let i = 0; i < daysBack; i++) days.push(new Date(Date.now() - i * 864e5).toISOString().slice(0, 10))
+  const today = days[0]
+
+  const map = new Map<string, SourceHealth>()
+  const ensure = (s: string) => map.get(s) ?? map.set(s, { source: s, perDay: {}, recentTotal: 0, lastNew: null }).get(s)!
+  for (const s of PARTNERSHIP_SOURCES) ensure(s)
+  for (const r of data ?? []) {
+    const s = (r.source as string) || '(unknown)'
+    const d = day(r.first_seen_at as string) || day(r.created_at as string)
+    if (!d) continue
+    const e = ensure(s)
+    e.perDay[d] = (e.perDay[d] || 0) + 1
+    e.recentTotal++
+    if (!e.lastNew || d > e.lastNew) e.lastNew = d
+  }
+  const sources = [...map.values()].sort((a, b) => b.recentTotal - a.recentTotal)
+  const todayTotal = sources.reduce((n, s) => n + (s.perDay[today] || 0), 0)
+  return { days, today, sources, todayTotal }
+}
+
+/** Per-source active count + last-scrape time for the partnerships pipeline. */
+export async function getPartnershipFreshness(admin: SupabaseClient): Promise<SourceFreshness[]> {
+  const count = async (build: (q: any) => any): Promise<number> => {
+    const { count } = await build(admin.from('partnerships').select('id', { count: 'exact', head: true }))
+    return count ?? 0
+  }
+  const out: SourceFreshness[] = []
+  for (const source of PARTNERSHIP_SOURCES) {
+    const { data: latest } = await admin
+      .from('partnerships').select('last_seen_at').eq('source', source)
+      .not('last_seen_at', 'is', null).order('last_seen_at', { ascending: false }).limit(1)
+    const lastScrape = latest?.[0]?.last_seen_at ?? null
+    const reseenWindow = lastScrape ? new Date(Date.parse(lastScrape) - 6 * 3600e3).toISOString() : null
+    const staleCut = new Date(Date.now() - 2 * 864e5).toISOString()
+    const [activeTotal, reseenLastRun, staleActive, sold] = await Promise.all([
+      count((q) => q.eq('source', source).eq('status', 'admin')),
+      reseenWindow ? count((q) => q.eq('source', source).eq('status', 'admin').gte('last_seen_at', reseenWindow)) : Promise.resolve(0),
+      count((q) => q.eq('source', source).eq('status', 'admin').lt('last_seen_at', staleCut)),
+      count((q) => q.eq('source', source).eq('status', 'closed')),
+    ])
+    out.push({
+      source, activeTotal, reseenLastRun, staleActive, sold, lastScrape,
+      reseenRate: activeTotal > 0 ? reseenLastRun / activeTotal : 0,
+    })
+  }
+  return out.sort((a, b) => b.activeTotal - a.activeTotal)
 }
