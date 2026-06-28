@@ -25,6 +25,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
 import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
+import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import {
   clubHangerEstimate,
@@ -68,9 +69,40 @@ function computeDealSignals(
   p: AircraftForSale,
   estimate: ClubHangerEstimate | null,
   dealVerdict: ClubHangerDealVerdict | null,
+  domContext: DaysOnMarketContext | null,
 ): DealSignalRow[] {
   const rows: DealSignalRow[] = []
   const makeModel = [p.make, p.model].filter(Boolean).join(' ')
+  // Proprietary, honest relative-recency phrasing built from our own first_seen_at across
+  // the active family (compared only against listings STILL for sale — no sold data, so no
+  // "how fast they sell" claim). Returns the generic fallback when the comp set is thin.
+  const comparable = `comparable${makeModel ? ` ${makeModel}` : ''} listings still for sale`
+  // Relative-recency detail for the days-on-market row. Renders at ANY absolute age (a
+  // fresh listing can still be staler/fresher than its comps), but only attaches the
+  // "seller-flexibility" inference — and the positive kind — when the listing is also
+  // ABSOLUTELY stale (>=30 days), since the flexibility read comes from real age, not
+  // merely out-aging an equally-fresh comp set. Returns null when the comp set is too
+  // thin (honesty floor) so the caller keeps its plain absolute copy.
+  const domDetail = (days: number): { detail: string; kind: DealSignalKind } | null => {
+    if (!domContext) return null
+    const stale = days >= 30
+    if (domContext.relative === 'longer') {
+      return {
+        kind: stale ? 'positive' : 'neutral',
+        detail: `Listed longer than ~${domContext.percentileLongerThan}% of the ${domContext.compCount} ${comparable}${stale ? ' — a seller-flexibility signal' : ''}`,
+      }
+    }
+    if (domContext.relative === 'shorter') {
+      return {
+        kind: 'neutral',
+        detail: `Listed more recently than ~${100 - domContext.percentileLongerThan}% of the ${domContext.compCount} ${comparable}`,
+      }
+    }
+    return {
+      kind: 'neutral',
+      detail: `On the market about as long as the typical one of ${domContext.compCount} ${comparable}`,
+    }
+  }
 
   // 1. Price positioning — prefer deal verdict (year+hours controlled), fall back to estimate
   if (dealVerdict) {
@@ -119,36 +151,28 @@ function computeDealSignals(
     }
   }
 
-  // 2. Days on market
+  // 2. Days on market — absolute label, with a proprietary relative-recency detail when
+  // we have a comparable active comp set (else the plain per-bucket fallback copy).
   if (p.first_seen_at) {
     const days = Math.floor((Date.now() - new Date(p.first_seen_at).getTime()) / DAY_MS)
+    let label: string
+    let fallback: { detail: string; kind: DealSignalKind }
     if (days >= 90) {
-      const months = Math.floor(days / 30)
-      rows.push({
-        kind: 'positive',
-        label: `Listed ${months} months ago`,
-        detail: 'Long listing cycle — seller may have flexibility on price',
-      })
+      label = `Listed ${Math.floor(days / 30)} months ago`
+      fallback = { kind: 'positive', detail: 'Long listing cycle — seller may have flexibility on price' }
     } else if (days >= 30) {
       const months = Math.floor(days / 30)
-      rows.push({
-        kind: 'neutral',
-        label: `Listed ${months} month${months > 1 ? 's' : ''} ago`,
-        detail: 'On the market for a month or more — worth asking about negotiating room',
-      })
+      label = `Listed ${months} month${months > 1 ? 's' : ''} ago`
+      fallback = { kind: 'neutral', detail: 'On the market for a month or more — worth asking about negotiating room' }
     } else if (days <= 3) {
-      rows.push({
-        kind: 'neutral',
-        label: days === 0 ? 'Listed today' : `Listed ${days} day${days === 1 ? '' : 's'} ago`,
-        detail: 'Fresh to market — early in the listing cycle',
-      })
+      label = days === 0 ? 'Listed today' : `Listed ${days} day${days === 1 ? '' : 's'} ago`
+      fallback = { kind: 'neutral', detail: 'Fresh to market — early in the listing cycle' }
     } else {
-      rows.push({
-        kind: 'neutral',
-        label: `Listed ${days} days ago`,
-        detail: 'Relatively recently listed',
-      })
+      label = `Listed ${days} days ago`
+      fallback = { kind: 'neutral', detail: 'Relatively recently listed' }
     }
+    const { detail, kind } = domDetail(days) ?? fallback
+    rows.push({ kind, label, detail })
   }
 
   // 3. Price history — only when a real recorded change exists
@@ -382,6 +406,17 @@ export default async function AircraftListingDetailPage({
       : null
   const familyLabel = family ? `${family.make} ${family.model}` : null
 
+  // Relative days-on-market — how long this listing has been for sale vs. comparable
+  // active listings in the same family. Reuses the already-fetched familyComps set (no
+  // extra DB read); the pure helper returns null on a thin comp set (honesty floor), so
+  // the deal signal falls back to its plain absolute copy. Compared only against listings
+  // STILL for sale — we have no sold data, so never a "how fast they sell" claim.
+  const domContext = computeDaysOnMarketContext(
+    p.first_seen_at,
+    familyComps.map((c) => c.first_seen_at),
+    Date.now(),
+  )
+
   // Co-ownership cross-sell: how many active ClubHanger partnerships match this
   // make/model. Tries model-level first (e.g. "3 Cessna 172 partnerships"); falls
   // back to make-level ("6 Cessna partnerships") when no model match is found.
@@ -434,7 +469,7 @@ export default async function AircraftListingDetailPage({
 
   // Deal Score synthesis — "How this stacks up" panel in the main column.
   // Computes from already-fetched data only; no new DB reads.
-  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict)
+  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext)
 
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
