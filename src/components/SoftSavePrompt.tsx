@@ -10,6 +10,9 @@ interface Props {
   deviceSaveCount: number
   /** Persist to this device + fill the heart. */
   onSkip: () => void
+  /** Persist to this device before leaving for /auth, so the listing the user is
+   *  signing up to save survives the round-trip and merges into the new account. */
+  onCreateAccount: () => void
   onClose: () => void
 }
 
@@ -19,7 +22,7 @@ interface Props {
  * device-only fallback so we never block the save behind a wall. Fixed centered
  * modal (mirrors SignUpGate) so it can't introduce horizontal overflow.
  */
-export default function SoftSavePrompt({ authNext, deviceSaveCount, onSkip, onClose }: Props) {
+export default function SoftSavePrompt({ authNext, deviceSaveCount, onSkip, onCreateAccount, onClose }: Props) {
   const returning = deviceSaveCount >= 1
 
   return (
@@ -71,6 +74,7 @@ export default function SoftSavePrompt({ authNext, deviceSaveCount, onSkip, onCl
 
         <Link
           href={`/auth?next=${encodeURIComponent(authNext)}`}
+          onClick={onCreateAccount}
           className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-lg bg-sky-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
         >
           Create a free account <ArrowRight className="h-4 w-4" />

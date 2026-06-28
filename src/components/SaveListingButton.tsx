@@ -114,6 +114,7 @@ export default function SaveListingButton({
       authNext={authNext}
       deviceSaveCount={deviceCount}
       onSkip={handleSkipToDevice}
+      onCreateAccount={() => addLocalSave(listingId, listingType)}
       onClose={() => setPromptOpen(false)}
     />
   ) : null
