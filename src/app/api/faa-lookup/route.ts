@@ -97,9 +97,22 @@ export async function GET(req: NextRequest): Promise<NextResponse<FaaLookupResul
     return NextResponse.json({ found: false, error: 'not-found' })
   }
 
-  const mfrRaw = extractField(html, 'Mfr Name') ?? extractField(html, 'MFR NAME') ?? ''
+  // FAA renamed the table labels mid-2026: "Mfr Name" → "Manufacturer Name",
+  // "Year Mfr" → "MFR Year". We try both so the lookup keeps working if they
+  // tweak the markup again.
+  const mfrRaw =
+    extractField(html, 'Manufacturer Name') ??
+    extractField(html, 'MANUFACTURER NAME') ??
+    extractField(html, 'Mfr Name') ??
+    extractField(html, 'MFR NAME') ??
+    ''
   const modelRaw = extractField(html, 'Model') ?? extractField(html, 'MODEL') ?? ''
-  const yearRaw = extractField(html, 'Year Mfr') ?? extractField(html, 'YEAR MFR') ?? ''
+  const yearRaw =
+    extractField(html, 'MFR Year') ??
+    extractField(html, 'Mfr Year') ??
+    extractField(html, 'Year Mfr') ??
+    extractField(html, 'YEAR MFR') ??
+    ''
   const typeRaw = extractField(html, 'Type') ?? ''
 
   if (!mfrRaw && !modelRaw) {
