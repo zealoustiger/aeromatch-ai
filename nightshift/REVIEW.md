@@ -1,3 +1,20 @@
+## 2026-06-28T22:25:05Z — Night Shift run: 12 cycles (PASS 4 / FAIL 8) — stopped by Brian
+- Models: cycles on opus; 5 escalated to opus; 1 quality-judged on opus
+
+- PASS — post-photos-survive-auth — logged-out aircraft sellers' uploaded photos now survive the Sign in to Publish redirect and reloads (opt-in localStorage persist/restore gate
+- cycle produced no verdict (exit 124)
+- PASS — days-on-market-vs-comps — listing pages now show how long a listing has been for sale vs comparable active same-make/model listings (honesty-gated, never fabricated)
+- cycle produced no verdict (exit 124)
+- PASS — aircraft-model-suggestions — the aircraft Sell your Aircraft form's Model field now offers make-aware curated suggestions (free text still allowed)
+- cycle produced no verdict (exit 124)
+- cycle produced no verdict (exit 124)
+- cycle produced no verdict (exit 124)
+- cycle produced no verdict (exit 124)
+- PASS — airframe-utilization-read — listing pages now show an honest avg-hours-flown-per-year Airframe time read (TTAF ÷ age) with two-sided buyer guidance
+- cycle produced no verdict (exit 124)
+- cycle produced no verdict (exit 124)
+
+
 # Overnight review — 2026-06-28
 
 ## 📊 Traffic (PostHog) — as of 2026-06-28
