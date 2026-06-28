@@ -1,6 +1,7 @@
 import { getAdminDoc } from '@/lib/adminDocs'
 import AdminMarkdown from '@/components/AdminMarkdown'
 import ReportFeedback from '@/components/ReportFeedback'
+import VisitorAnalytics from '@/components/VisitorAnalytics'
 import { createAdminClient } from '@/lib/supabase-admin'
 
 export const metadata = { title: 'Daily Report', robots: { index: false } }
@@ -45,6 +46,8 @@ export default async function DailyReportTab() {
           <p className="text-sm text-slate-500">No report yet — the overnight digest runs at 7am.</p>
         )}
       </section>
+
+      <VisitorAnalytics />
 
       <ReportFeedback entries={feedback ?? []} stagingUrl={stagingUrl} />
     </>
