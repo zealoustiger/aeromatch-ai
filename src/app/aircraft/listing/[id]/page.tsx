@@ -25,6 +25,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
 import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
+import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import {
@@ -455,6 +456,11 @@ export default async function AircraftListingDetailPage({
   // engine type can't be matched to a known piston-GA TBO family.
   const engineLife = computeEngineLife({ smoh: p.smoh, engineType: p.engine_type })
 
+  // Airframe utilization — average hours flown per year over the aircraft's life
+  // (ttaf ÷ age). Honesty-gated: self-suppresses when ttaf or year is missing. A
+  // life-average rule of thumb, distinct from the SMOH-based Engine Life panel above.
+  const airframeUsage = computeAirframeUsage({ ttaf: p.ttaf, year: p.year })
+
   // Avionics capability classification — converts the raw extracted avionics[]
   // string list into structured capability chips (Glass Panel, ADS-B Out, Autopilot,
   // WAAS GPS). Self-suppresses when avionics is null or empty.
@@ -621,6 +627,10 @@ export default async function AircraftListingDetailPage({
             {/* Engine life & overhaul reserve — renders only when smoh + engine_type
                 are present AND the engine type is a recognised piston-GA family. */}
             {engineLife && <EngineLifePanel life={engineLife} />}
+
+            {/* Airframe time — average hrs/year over the aircraft's life, with honest
+                two-sided guidance. Renders only when ttaf + year are both known. */}
+            {airframeUsage && <AirframeUsagePanel usage={airframeUsage} />}
 
             {/* Price history — only when a real recorded change exists. */}
             {changedFrom != null && priceDelta != null && (
@@ -816,6 +826,45 @@ function EngineLifePanel({ life }: { life: EngineLifeResult }) {
           {life.tboHours.toLocaleString()} hr TBO at 100 hrs/yr — a rule of thumb, not a quote.
         </p>
       </div>
+    </div>
+  )
+}
+
+// Per-band accent for the airframe utilization read. Neutral-to-informative by design:
+// "low" is amber (a thing to ask about — sitting risk), not a green win.
+const USAGE_META: Record<AirframeUsageResult['band'], { label: string; chip: string }> = {
+  low:     { label: 'Low time',  chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  typical: { label: 'Typical',   chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  high:    { label: 'High time', chip: 'bg-sky-50 text-sky-700 ring-sky-200' },
+}
+
+function AirframeUsagePanel({ usage }: { usage: AirframeUsageResult }) {
+  const meta = USAGE_META[usage.band]
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Plane className="h-4 w-4" /> Airframe time
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Average over the aircraft&apos;s life — {usage.ttaf.toLocaleString()} hrs total time
+        across ~{usage.ageYears} years. A rule of thumb, not a guarantee.
+      </p>
+
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-2xl font-extrabold text-slate-900">
+          ≈{usage.hoursPerYear.toLocaleString()} hrs/yr
+        </span>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${meta.chip}`}
+        >
+          {meta.label}
+        </span>
+      </div>
+      <p className="mt-1 text-sm font-semibold text-slate-700">{usage.headline}</p>
+
+      <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
+        {usage.detail}
+      </p>
     </div>
   )
 }
