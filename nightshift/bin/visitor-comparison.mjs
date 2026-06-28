@@ -84,24 +84,39 @@ function countBy(rows, key, from, to) {
   return out
 }
 
-function compare(cur, prev, topN = 8) {
-  const keys = new Set([...cur.keys(), ...prev.keys()])
+// Build one combined row set per key: yesterday + its d/d delta, and last-7d + its
+// w/w delta. Sorted by the 7-day figure (the steadier signal), then yesterday.
+function combined(rows, keyFn, t0, t1, t2, t7, t14, topN = 10) {
+  const yest = countBy(rows, keyFn, t1, t0)
+  const prevD = countBy(rows, keyFn, t2, t1)
+  const wk = countBy(rows, keyFn, t7, t0)
+  const prevW = countBy(rows, keyFn, t14, t7)
+  const keys = new Set([...yest.keys(), ...prevD.keys(), ...wk.keys(), ...prevW.keys()])
   return [...keys]
-    .map((label) => ({ label, cur: cur.get(label) ?? 0, prev: prev.get(label) ?? 0 }))
-    .sort((a, b) => b.cur - a.cur || b.prev - a.prev || a.label.localeCompare(b.label))
+    .map((label) => {
+      const y = yest.get(label) ?? 0
+      const w = wk.get(label) ?? 0
+      return { label, yest: y, dod: y - (prevD.get(label) ?? 0), week: w, wow: w - (prevW.get(label) ?? 0) }
+    })
+    .sort((a, b) => b.week - a.week || b.yest - a.yest || a.label.localeCompare(b.label))
     .slice(0, topN)
 }
 
-function delta(cur, prev) {
-  const d = cur - prev
+function delta(d) {
   if (d === 0) return '—'
   return d > 0 ? `▲ +${d}` : `▼ −${Math.abs(d)}`
 }
 
-function table(dim, curLabel, prevLabel, rows) {
-  if (rows.length === 0) return [`_No visitors in this window._`, '']
-  const out = [`| ${dim} | ${curLabel} | ${prevLabel} | Δ |`, '|---|--:|--:|:--|']
-  for (const r of rows) out.push(`| ${r.label} | ${r.cur} | ${r.prev} | ${delta(r.cur, r.prev)} |`)
+// One table that folds both windows together: current value + delta for each.
+function table(dim, rows) {
+  if (rows.length === 0) return ['_No visitors in this window._', '']
+  const out = [
+    `| ${dim} | Yesterday | Δ d/d | Last 7d | Δ w/w |`,
+    '|---|--:|:--|--:|:--|',
+  ]
+  for (const r of rows) {
+    out.push(`| ${r.label} | ${r.yest} | ${delta(r.dod)} | ${r.week} | ${delta(r.wow)} |`)
+  }
   out.push('')
   return out
 }
@@ -138,10 +153,8 @@ try {
   const prev7 = total(t14, t7)
 
   const pageKey = (r) => r.first_path || '/'
-  const cityDoD = compare(countBy(rows, cityLabel, t1, t0), countBy(rows, cityLabel, t2, t1))
-  const cityWoW = compare(countBy(rows, cityLabel, t7, t0), countBy(rows, cityLabel, t14, t7))
-  const pageDoD = compare(countBy(rows, pageKey, t1, t0), countBy(rows, pageKey, t2, t1))
-  const pageWoW = compare(countBy(rows, pageKey, t7, t0), countBy(rows, pageKey, t14, t7))
+  const cityRows = combined(rows, cityLabel, t0, t1, t2, t7, t14)
+  const pageRows = combined(rows, pageKey, t0, t1, t2, t7, t14)
 
   const out = []
   out.push('## 🧭 Visitors — day-over-day & week-over-week')
@@ -152,18 +165,12 @@ try {
     `- **Totals:** ${yesterday} yesterday _(vs ${dayBefore} the day before)_ · ${last7} last 7 days _(vs ${prev7} the prior 7)_`
   )
   out.push('')
-  out.push('**By city — day over day** (yesterday vs. the day before)')
+  out.push('**Visitors by city**  ·  _Δ d/d = yesterday vs. the day before · Δ w/w = last 7 days vs. the prior 7_')
   out.push('')
-  out.push(...table('City', 'Yest.', 'Prev', cityDoD))
-  out.push('**By city — week over week** (last 7 days vs. the prior 7)')
+  out.push(...table('City', cityRows))
+  out.push('**Top landing pages**')
   out.push('')
-  out.push(...table('City', 'Last 7d', 'Prev 7d', cityWoW))
-  out.push('**Top landing pages — day over day**')
-  out.push('')
-  out.push(...table('Page', 'Yest.', 'Prev', pageDoD))
-  out.push('**Top landing pages — week over week**')
-  out.push('')
-  out.push(...table('Page', 'Last 7d', 'Prev 7d', pageWoW))
+  out.push(...table('Page', pageRows))
   console.log(out.join('\n'))
 } catch (e) {
   soft(String(e.message || e))

@@ -71,19 +71,32 @@ function countBy(
   return out
 }
 
-type CmpRow = { label: string; cur: number; prev: number }
+type CmpRow = { label: string; yest: number; dod: number; week: number; wow: number }
 
-// Merge two period maps into sorted comparison rows (current period desc).
-function compare(cur: Map<string, number>, prev: Map<string, number>, topN = 8): CmpRow[] {
-  const keys = new Set([...cur.keys(), ...prev.keys()])
+// Build one combined row set per key: yesterday + its d/d delta, and last-7d + its
+// w/w delta. Sorted by the 7-day figure (steadier signal), then yesterday.
+function combined(
+  rows: Row[],
+  key: (r: Row) => string,
+  b: { t0: number; t1: number; t2: number; t7: number; t14: number },
+  topN = 10
+): CmpRow[] {
+  const yest = countBy(rows, key, b.t1, b.t0)
+  const prevD = countBy(rows, key, b.t2, b.t1)
+  const wk = countBy(rows, key, b.t7, b.t0)
+  const prevW = countBy(rows, key, b.t14, b.t7)
+  const keys = new Set([...yest.keys(), ...prevD.keys(), ...wk.keys(), ...prevW.keys()])
   return [...keys]
-    .map((label) => ({ label, cur: cur.get(label) ?? 0, prev: prev.get(label) ?? 0 }))
-    .sort((a, b) => b.cur - a.cur || b.prev - a.prev || a.label.localeCompare(b.label))
+    .map((label) => {
+      const y = yest.get(label) ?? 0
+      const w = wk.get(label) ?? 0
+      return { label, yest: y, dod: y - (prevD.get(label) ?? 0), week: w, wow: w - (prevW.get(label) ?? 0) }
+    })
+    .sort((a, b2) => b2.week - a.week || b2.yest - a.yest || a.label.localeCompare(b2.label))
     .slice(0, topN)
 }
 
-function Delta({ cur, prev }: { cur: number; prev: number }) {
-  const d = cur - prev
+function Delta({ d }: { d: number }) {
   if (d === 0) return <span className="text-slate-300">—</span>
   const up = d > 0
   return (
@@ -93,47 +106,44 @@ function Delta({ cur, prev }: { cur: number; prev: number }) {
   )
 }
 
-function CmpTable({
-  rows,
-  curLabel,
-  prevLabel,
-  dim,
-}: {
-  rows: CmpRow[]
-  curLabel: string
-  prevLabel: string
-  dim: string
-}) {
+// One table that folds both windows together: current value + delta for each.
+function CmpTable({ rows, dim }: { rows: CmpRow[]; dim: string }) {
   if (rows.length === 0) {
     return <p className="px-1 py-3 text-xs text-slate-400">No visitors in this window.</p>
   }
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="border-b border-slate-100 text-left text-xs font-medium text-slate-400">
-          <th className="py-1.5 pr-2 font-medium">{dim}</th>
-          <th className="px-2 py-1.5 text-right font-medium">{curLabel}</th>
-          <th className="px-2 py-1.5 text-right font-medium">{prevLabel}</th>
-          <th className="py-1.5 pl-2 text-right font-medium">Δ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.label} className="border-b border-slate-50 last:border-0">
-            <td className="py-1.5 pr-2 text-slate-700">
-              <span className="block max-w-[16rem] truncate" title={r.label}>
-                {r.label}
-              </span>
-            </td>
-            <td className="px-2 py-1.5 text-right font-semibold text-slate-900">{r.cur}</td>
-            <td className="px-2 py-1.5 text-right text-slate-400">{r.prev}</td>
-            <td className="py-1.5 pl-2 text-right tabular-nums">
-              <Delta cur={r.cur} prev={r.prev} />
-            </td>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-100 text-xs font-medium text-slate-400">
+            <th className="py-1.5 pr-2 text-left font-medium">{dim}</th>
+            <th className="px-2 py-1.5 text-right font-medium">Yest.</th>
+            <th className="px-2 py-1.5 text-right font-medium">Δ d/d</th>
+            <th className="px-2 py-1.5 text-right font-medium">Last 7d</th>
+            <th className="py-1.5 pl-2 text-right font-medium">Δ w/w</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-b border-slate-50 last:border-0">
+              <td className="py-1.5 pr-2 text-slate-700">
+                <span className="block max-w-[18rem] truncate" title={r.label}>
+                  {r.label}
+                </span>
+              </td>
+              <td className="px-2 py-1.5 text-right font-semibold text-slate-900">{r.yest}</td>
+              <td className="px-2 py-1.5 text-right tabular-nums">
+                <Delta d={r.dod} />
+              </td>
+              <td className="px-2 py-1.5 text-right font-semibold text-slate-900">{r.week}</td>
+              <td className="py-1.5 pl-2 text-right tabular-nums">
+                <Delta d={r.wow} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -177,14 +187,10 @@ export default async function VisitorAnalytics() {
   const last7 = total(t7, t0)
   const prev7 = total(t14, t7)
 
-  // City comparisons.
-  const cityDoD = compare(countBy(rows, cityLabel, t1, t0), countBy(rows, cityLabel, t2, t1))
-  const cityWoW = compare(countBy(rows, cityLabel, t7, t0), countBy(rows, cityLabel, t14, t7))
-
-  // Landing-page comparisons.
-  const pageKey = (r: Row) => r.first_path || '/'
-  const pageDoD = compare(countBy(rows, pageKey, t1, t0), countBy(rows, pageKey, t2, t1))
-  const pageWoW = compare(countBy(rows, pageKey, t7, t0), countBy(rows, pageKey, t14, t7))
+  // Combined comparisons (each folds day-over-day + week-over-week into one table).
+  const bounds = { t0, t1, t2, t7, t14 }
+  const cityRows = combined(rows, cityLabel, bounds)
+  const pageRows = combined(rows, (r: Row) => r.first_path || '/', bounds)
 
   return (
     <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -198,39 +204,18 @@ export default async function VisitorAnalytics() {
         </p>
       </div>
 
+      <p className="mb-3 text-xs text-slate-400">
+        <span className="font-medium text-slate-500">Δ d/d</span> = yesterday vs. the day before ·{' '}
+        <span className="font-medium text-slate-500">Δ w/w</span> = last 7 days vs. the prior 7
+      </p>
+
       {/* By city */}
       <h3 className="mb-2 text-sm font-semibold text-slate-700">Visitors by city</h3>
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-            Day over day
-          </p>
-          <CmpTable rows={cityDoD} curLabel="Yest." prevLabel="Prev" dim="City" />
-        </div>
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-            Week over week
-          </p>
-          <CmpTable rows={cityWoW} curLabel="Last 7d" prevLabel="Prev 7d" dim="City" />
-        </div>
-      </div>
+      <CmpTable rows={cityRows} dim="City" />
 
       {/* Top pages */}
       <h3 className="mb-2 mt-6 text-sm font-semibold text-slate-700">Top landing pages</h3>
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-            Day over day
-          </p>
-          <CmpTable rows={pageDoD} curLabel="Yest." prevLabel="Prev" dim="Page" />
-        </div>
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-            Week over week
-          </p>
-          <CmpTable rows={pageWoW} curLabel="Last 7d" prevLabel="Prev 7d" dim="Page" />
-        </div>
-      </div>
+      <CmpTable rows={pageRows} dim="Page" />
     </section>
   )
 }

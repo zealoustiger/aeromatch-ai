@@ -56,15 +56,15 @@ async function q(hogql, fallback = []) {
 }
 
 const PV = "event = '$pageview'"
-const CITY = "coalesce(properties.$geoip_city_name, '(unknown)')"
 
 try {
   const [allTime] = await q(`SELECT count(DISTINCT person_id) AS v, count() AS pv FROM events WHERE ${PV}`, [[0, 0]])
   const [last7] = await q(`SELECT count(DISTINCT person_id) AS v, count() AS pv FROM events WHERE ${PV} AND timestamp > now() - INTERVAL 7 DAY`, [[0, 0]])
-  const cities = await q(`SELECT ${CITY} AS city, count(DISTINCT person_id) AS v, count() AS pv FROM events WHERE ${PV} GROUP BY city ORDER BY v DESC, pv DESC LIMIT 12`)
   const [nonLocal] = await q(`SELECT count(DISTINCT person_id) AS v FROM events WHERE ${PV} AND (properties.$geoip_city_name != 'Oakland' OR properties.$geoip_city_name IS NULL)`, [[0]])
-  const pages = await q(`SELECT coalesce(properties.$pathname, '/') AS path, count() AS pv FROM events WHERE ${PV} GROUP BY path ORDER BY pv DESC LIMIT 10`)
 
+  // Per-city and per-page breakdowns now live in the first-party day/week
+  // comparison block (visitor-comparison.mjs) — this block stays a high-level
+  // PostHog summary so the two aren't redundant.
   const today = new Date().toISOString().slice(0, 10)
   const out = []
   out.push(`## 📊 Traffic (PostHog) — as of ${today}`)
@@ -76,18 +76,6 @@ try {
   out.push(
     `- **Not from Oakland:** ${nonLocal?.[0] ?? 0} visitors _(early on, most non-local hits are crawlers/bots, not real users)_`
   )
-  out.push('')
-  out.push('**By city**')
-  out.push('')
-  out.push('| City | Visitors | Pageviews |')
-  out.push('|---|--:|--:|')
-  for (const c of cities) out.push(`| ${c[0]} | ${c[1]} | ${c[2]} |`)
-  out.push('')
-  out.push('**Top pages**')
-  out.push('')
-  out.push('| Page | Pageviews |')
-  out.push('|---|--:|')
-  for (const p of pages) out.push(`| ${p[0]} | ${p[1]} |`)
   out.push('')
   console.log(out.join('\n'))
 } catch (e) {
