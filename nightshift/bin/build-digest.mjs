@@ -61,6 +61,22 @@ const FAMILIES = [
   [/^\/airports\/[^/]+$/, '/airports/[icao]', 'Airport pages'],
   [/^\/guides\/.+$/, '/guides/[guide]', 'Guide pages'],
 ]
+
+// Per-family fallback examples — when every route a cycle touched is a literal
+// "[param]"-bearing token (the spec quoted the abstract route, not a real URL),
+// substitute one of these so the section still gets a clickable `[open ↗]`.
+// Picked from high-inventory combos; refresh annually if a combo dies out.
+const FAMILY_EXAMPLES = {
+  '/aircraft/[make]/[model]/[state]': '/aircraft/cessna/182/ca',
+  '/aircraft/[make]/[model]': '/aircraft/cessna/182',
+  '/aircraft/for-sale/[state]': '/aircraft/for-sale/ca',
+  '/aircraft/[make]': '/aircraft/cessna',
+  '/partnerships/near/[airport]': '/partnerships/near/khwd',
+  '/partnerships/state/[state]': '/partnerships/state/ca',
+  '/partnerships/make/[make]': '/partnerships/make/cessna',
+  '/airports/[icao]': '/airports/khwd',
+  '/guides/[guide]': '/guides',
+}
 const STATIC = {
   '/aircraft': 'Planes for Sale (marketplace)',
   '/partnerships': 'Browse partnerships',
@@ -138,8 +154,11 @@ out.push('')
 const pageCountTotal = pagesSorted.length
 for (const [key, label, example, cs] of pagesSorted) {
   const heading = label ? `${key} — ${label}` : key
-  // Only link when we have a real (non-placeholder) example URL.
-  const link = example && !example.includes('[') ? `  ·  [open ↗](${BASE}${example})` : ''
+  // Only link when we have a real (non-placeholder) example URL. If every
+  // concrete example was a literal "[param]"-bearing route, fall back to a
+  // per-family curated URL so the section still gets a clickable open-link.
+  const realExample = example && !example.includes('[') ? example : FAMILY_EXAMPLES[key]
+  const link = realExample ? `  ·  [open ↗](${BASE}${realExample})` : ''
   out.push('---')
   out.push('')
   out.push(`## ${heading}${link}`)
