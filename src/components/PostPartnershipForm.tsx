@@ -142,6 +142,47 @@ export default function PostPartnershipForm({
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
   const [showBuyInInfo, setShowBuyInInfo] = useState(false)
+  const [isLookingUp, setIsLookingUp] = useState(false)
+  const [lookupStatus, setLookupStatus] = useState<string | null>(null)
+
+  async function handleLookup() {
+    const form = formRef.current
+    if (!form) return
+    const regInput = form.querySelector<HTMLInputElement>('[name="registration"]')
+    const nRaw = regInput?.value.trim() ?? ''
+    if (!nRaw || isLookingUp) return
+    setIsLookingUp(true)
+    setLookupStatus(null)
+    try {
+      const res = await fetch(`/api/faa-lookup?n=${encodeURIComponent(nRaw)}`)
+      const data = await res.json()
+      if (data.found) {
+        const makeSelect = form.querySelector<HTMLSelectElement>('[name="make"]')
+        const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
+        const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
+        if (makeSelect && data.make) {
+          makeSelect.value = data.make
+          makeSelect.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        if (modelInput && data.model) {
+          modelInput.value = data.model
+          modelInput.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        if (yearInput && data.year) {
+          yearInput.value = String(data.year)
+          yearInput.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        setLookupStatus(`Found: ${[data.year, data.make, data.model].filter(Boolean).join(' ')}`)
+        if (detailsRef.current) detailsRef.current.open = true
+      } else {
+        setLookupStatus('Not found — fill in manually')
+      }
+    } catch {
+      setLookupStatus('FAA lookup unavailable — fill in manually')
+    } finally {
+      setIsLookingUp(false)
+    }
+  }
 
   function fillFormField(form: HTMLFormElement, selector: string, value: string | number | undefined, eventType = 'input') {
     if (value === undefined || value === null) return
@@ -238,6 +279,40 @@ export default function PostPartnershipForm({
       {/* Essentials — all required fields in one compact section */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <SectionHeader>The basics</SectionHeader>
+
+        {/* N-number autofill — one field fills make, model, and year */}
+        <div className="mb-4">
+          <Label>N-Number (Registration)</Label>
+          <div className="flex gap-2">
+            <Input
+              name="registration"
+              placeholder="e.g. N12345 — auto-fills make, model &amp; year"
+              className="font-mono uppercase"
+              onBlur={(e) => {
+                const next = e.relatedTarget as HTMLElement | null
+                if (next?.dataset?.lookup) return
+                handleLookup()
+              }}
+            />
+            <button
+              type="button"
+              data-lookup="true"
+              onClick={handleLookup}
+              disabled={isLookingUp}
+              className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              {isLookingUp ? '…' : 'Look up →'}
+            </button>
+          </div>
+          {lookupStatus ? (
+            <p className={cn('mt-1 text-xs', lookupStatus.startsWith('Found') ? 'text-green-600' : 'text-slate-500')}>
+              {lookupStatus}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-slate-400">Optional — type your tail number and we&apos;ll fill in make, model, and year.</p>
+          )}
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label required>Make</Label>
@@ -301,19 +376,12 @@ export default function PostPartnershipForm({
         </summary>
 
         <div className="space-y-6 px-4 pb-6 pt-2 sm:px-6">
-          {/* Year + N-Number */}
+          {/* Year */}
           <div>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Aircraft</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Year</Label>
-                <Input name="year" type="number" placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
-              </div>
-              <div>
-                <Label>N-Number (Registration)</Label>
-                <Input name="registration" placeholder="e.g. N12345" className="font-mono uppercase" />
-                <p className="mt-1 text-xs text-slate-400">Optional — helps buyers verify the aircraft.</p>
-              </div>
+            <div className="max-w-xs">
+              <Label>Year</Label>
+              <Input name="year" type="number" placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
             </div>
           </div>
 
