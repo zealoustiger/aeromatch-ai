@@ -325,7 +325,16 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         </div>
       </section>
 
-      {/* More details — aircraft specs, photos, title & description */}
+      {/* Photos — always visible; the highest-value element of a listing */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Photos</h3>
+        <p className="mb-3 text-xs text-slate-500">
+          Real photos make your listing far more compelling. Add up to 5.
+        </p>
+        <PartnershipPhotoUpload endpoint="/api/upload-aircraft-photo" />
+      </section>
+
+      {/* More details — aircraft specs, title & description */}
       <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
           <span className="text-sm font-semibold text-slate-700">More details <span className="font-normal text-slate-400">(optional)</span></span>
@@ -351,15 +360,6 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
                 <Input name="smoh" type="number" placeholder="e.g. 600" min={0} />
               </div>
             </div>
-          </div>
-
-          {/* Photos */}
-          <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Photos</h3>
-            <p className="mb-3 text-xs text-slate-500">
-              Real photos make your listing far more compelling. Add up to 5.
-            </p>
-            <PartnershipPhotoUpload endpoint="/api/upload-aircraft-photo" />
           </div>
 
           {/* Listing details */}
