@@ -1033,11 +1033,39 @@ function PartnershipCrossSellPanel({
 
 function DealScorePanel({ rows }: { rows: DealSignalRow[] }) {
   if (rows.length < 2) return null
+  // At-a-glance tally — counts ONLY the signals already listed below; neutral/context
+  // rows are excluded so the summary never overstates the case either way. No score,
+  // no new claim — purely a synthesis of the honest rows the panel already shows.
+  const favorable = rows.filter((r) => r.kind === 'positive').length
+  const watchOuts = rows.filter((r) => r.kind === 'negative').length
+  const summary: { text: string; chip: string }[] = []
+  if (favorable > 0)
+    summary.push({
+      text: `${favorable} in this listing's favor`,
+      chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    })
+  if (watchOuts > 0)
+    summary.push({
+      text: `${watchOuts} to ask about`,
+      chip: 'bg-amber-50 text-amber-700 ring-amber-200',
+    })
   return (
     <div className="ch-panel p-6">
       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
         How this stacks up
       </h2>
+      {summary.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {summary.map((s) => (
+            <span
+              key={s.text}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ring-1 ${s.chip}`}
+            >
+              {s.text}
+            </span>
+          ))}
+        </div>
+      )}
       <ul className="space-y-3">
         {rows.map((row, i) => {
           const { dot, label } = SIGNAL_COLORS[row.kind]
