@@ -22,9 +22,6 @@ mkdir -p "$RUNDIR"
 LEDGER="$STATE/usage.jsonl"
 STATUS="$STATE/status.json"
 
-# Bounds. NS_FORCE=1 = authorized manual run, ignores the night window + uses a time box.
-PER_CYCLE_TIMEOUT="${NS_CYCLE_TIMEOUT:-1200}"     # 20 min hard cap per cycle
-
 # Model policy (override any via env). Aliases resolve to the latest of each tier
 # (sonnet→4.6, opus→4.8) and are accepted across CLI versions. Set NS_CYCLE_MODEL=opus
 # to put every cycle back on Opus.
@@ -33,6 +30,18 @@ ESCALATE_MODEL="${NS_ESCALATE_MODEL:-opus}"  # strong model, used on a FAIL retr
 JUDGE_MODEL="${NS_JUDGE_MODEL:-opus}"         # strong model, used to grade PASSes
 JUDGE_PCT="${NS_JUDGE_PCT:-25}"                          # % of PASS cycles to spot-check
 mname() { case "$1" in *sonnet*) echo sonnet;; *opus*) echo opus;; *haiku*) echo haiku;; *) echo "$1";; esac; }
+
+# Bounds. NS_FORCE=1 = authorized manual run, ignores the night window + uses a time box.
+# The per-cycle hard cap is MODEL-AWARE: Opus reasons ~2-3x slower per turn than
+# Sonnet, so a 20-min cap (fine for Sonnet) kills most Opus cycles mid-work with
+# exit 124 — wasted spend. cycle_timeout() returns the cap for the model actually
+# being invoked, so the cap fits BOTH a normal cycle AND a FAIL→Opus escalation
+# retry (which runs Opus under what used to be the Sonnet cap). An explicit
+# NS_CYCLE_TIMEOUT overrides everything. (Tune per measured drain throughput.)
+cycle_timeout() {
+  [ -n "${NS_CYCLE_TIMEOUT:-}" ] && { echo "$NS_CYCLE_TIMEOUT"; return; }
+  case "$(mname "$1")" in opus) echo 2400;; haiku) echo 900;; *) echo 1200;; esac
+}
 
 if [ -n "${NS_RUN_UNTIL:-}" ]; then
   # Run from NOW until an absolute epoch deadline (e.g. 8am), ignoring the nightly
@@ -79,15 +88,16 @@ rm -f "$STATE/stop" 2>/dev/null   # clear any stale stop request from a prior ru
 # Run ONE claude cycle. $1 = model, $2 = escalated (0|1). Sets globals: verdict, rline,
 # rsafe, slug, apierr. Writes a ledger row (with model + escalated) and bumps counters.
 exec_cycle() {
-  local model="$1" esc="$2" crc RL vals in_t out_t cr_t cc_t cost
+  local model="$1" esc="$2" crc RL vals in_t out_t cr_t cc_t cost tmo
   n=$((n+1))
+  tmo=$(cycle_timeout "$model")   # cap fits the model actually being run this cycle
   CYCLE_OUT="$RUNDIR/cycle-$n.jsonl"
   CYCLE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   printf '{"state":"running","run_id":"%s","started":"%s","active_worker":"runs/%s/cycle-%s.jsonl","cycle":%s,"model":"%s","escalated":%s,"stop_by":%s}\n' \
     "$RUN_ID" "$RUN_TS" "$RUN_ID" "$n" "$n" "$(mname "$model")" "$esc" "$DEADLINE" > "$STATUS"
 
   # Feed the prompt via STDIN, not as a -p arg: the prompt begins with "---" (frontmatter).
-  printf '%s' "$CYCLE_PROMPT" | timeout --signal=INT "$PER_CYCLE_TIMEOUT" \
+  printf '%s' "$CYCLE_PROMPT" | timeout --signal=INT "$tmo" \
     claude --dangerously-skip-permissions --model "$model" --output-format stream-json --verbose -p \
     > "$CYCLE_OUT" 2> "$RUNDIR/cycle-$n.stderr"
   crc=${PIPESTATUS[1]}
