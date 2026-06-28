@@ -157,7 +157,13 @@ export default function PostSeekerListingForm({
     null
   )
 
-  const { formRef, status, handleSubmit, handleResult } = useFormDraft(DRAFT_KEY)
+  const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
+
+  function handleStartOver() {
+    if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+      reset()
+    }
+  }
   const detailsRef = useRef<HTMLDetailsElement>(null)
 
   useEffect(() => {
@@ -233,7 +239,16 @@ export default function PostSeekerListingForm({
           Sign in to publish — your progress saves automatically on this device.
         </div>
       )}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {(status === 'saved' || status === 'restored') && (
+          <button
+            type="button"
+            onClick={handleStartOver}
+            className="text-xs text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline"
+          >
+            Start over
+          </button>
+        )}
         <DraftIndicator status={status} />
       </div>
 
