@@ -47,6 +47,9 @@ function Select({ className, children, ...props }: React.SelectHTMLAttributes<HT
 }
 
 const DRAFT_KEY = 'ch:draft:aircraft-new'
+// Uploaded photo URLs persist alongside the text draft so they survive the
+// deferred-auth redirect / a reload (see PartnershipPhotoUpload persistKey).
+const PHOTOS_KEY = `${DRAFT_KEY}:photos`
 
 function forceSaveDraft(form: HTMLFormElement) {
   try {
@@ -89,6 +92,9 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   const router = useRouter()
   const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
   const detailsRef = useRef<HTMLDetailsElement>(null)
+  // Bumped on "Start over" to remount the photo uploader so its thumbnails clear too
+  // (reset() only clears the form's DOM fields, not the uploader's React state).
+  const [photoMountKey, setPhotoMountKey] = useState(0)
 
   useEffect(() => {
     if (state) handleResult(Boolean(state.ok))
@@ -97,6 +103,12 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   function handleStartOver() {
     if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
       reset()
+      try {
+        window.localStorage.removeItem(PHOTOS_KEY)
+      } catch {
+        /* storage unavailable — uploader remount below still clears the thumbnails */
+      }
+      setPhotoMountKey((k) => k + 1)
     }
   }
 
@@ -346,7 +358,12 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         <p className="mb-3 text-xs text-slate-500">
           Real photos make your listing far more compelling. Add up to 5.
         </p>
-        <PartnershipPhotoUpload endpoint="/api/upload-aircraft-photo" />
+        <PartnershipPhotoUpload
+          key={photoMountKey}
+          endpoint="/api/upload-aircraft-photo"
+          persistKey={PHOTOS_KEY}
+          restoreGateKey={DRAFT_KEY}
+        />
       </section>
 
       {/* More details — aircraft specs, title & description */}
