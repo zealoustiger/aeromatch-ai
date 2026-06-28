@@ -87,12 +87,18 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   )
 
   const router = useRouter()
-  const { formRef, status, handleSubmit, handleResult } = useFormDraft(DRAFT_KEY)
+  const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
   const detailsRef = useRef<HTMLDetailsElement>(null)
 
   useEffect(() => {
     if (state) handleResult(Boolean(state.ok))
   }, [state, handleResult])
+
+  function handleStartOver() {
+    if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+      reset()
+    }
+  }
 
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
@@ -216,7 +222,16 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           Sign in to publish — your progress saves automatically on this device.
         </div>
       )}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {(status === 'saved' || status === 'restored') && (
+          <button
+            type="button"
+            onClick={handleStartOver}
+            className="text-xs text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline"
+          >
+            Start over
+          </button>
+        )}
         <span className="text-xs text-slate-400">
           {status === 'saved' || status === 'restored' ? 'Draft saved' : 'Your progress autosaves on this device'}
         </span>

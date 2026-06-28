@@ -125,6 +125,19 @@ export function useFormDraft(storageKey: string) {
     clear()
   }, [clear])
 
+  // Call from a "Start over" control: empty the form, drop the saved draft, and
+  // return to the idle state. Uses the native form.reset() (restores fields to
+  // their HTML defaults — e.g. prefilled contact name/email stay) and clears
+  // storage; reset doesn't fire input/change, so autosave won't re-arm.
+  const reset = useCallback(() => {
+    const form = formRef.current
+    if (timer.current) clearTimeout(timer.current)
+    snapshot.current = null
+    clear()
+    if (form) form.reset()
+    setStatus('idle')
+  }, [clear])
+
   // Call once the server action result is known. On success: discard the
   // snapshot. On failure: React has reset the uncontrolled form, so restore the
   // pre-submit values and re-arm the draft so nothing is lost.
@@ -146,5 +159,5 @@ export function useFormDraft(storageKey: string) {
     [clear, writeStore]
   )
 
-  return { formRef, status, handleSubmit, handleResult }
+  return { formRef, status, handleSubmit, handleResult, reset }
 }
