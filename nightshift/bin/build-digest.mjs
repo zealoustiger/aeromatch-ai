@@ -135,12 +135,25 @@ try {
   traffic = '## 📊 Traffic\n\n_Traffic numbers unavailable this run._'
 }
 
+// First-party day-over-day / week-over-week comparison (by city + landing page),
+// from visitor_threads — same source as the live /admin card, so the digest matches.
+let comparison = ''
+try {
+  comparison = execSync('node nightshift/bin/visitor-comparison.mjs', { cwd: root }).toString().trim()
+} catch {
+  comparison = '## 🧭 Visitors — day-over-day & week-over-week\n\n_Comparison unavailable this run._'
+}
+
 const today = new Date().toISOString().slice(0, 10)
 const pageCount = groups.size
 const out = []
 out.push(`# Overnight review — ${today}`)
 out.push('')
 out.push(traffic)
+out.push('')
+out.push('---')
+out.push('')
+out.push(comparison)
 out.push('')
 out.push('---')
 out.push('')
@@ -210,7 +223,7 @@ out.push('')
 
 if (cycles.length === 0) {
   out.length = 0
-  out.push(`# Overnight review — ${today}`, '', traffic, '', '---', '', '_No new cycles landed on staging since the last promote._', '')
+  out.push(`# Overnight review — ${today}`, '', traffic, '', '---', '', comparison, '', '---', '', '_No new cycles landed on staging since the last promote._', '')
 }
 
 writeFileSync(join(root, 'nightshift/REVIEW.md'), out.join('\n'))
