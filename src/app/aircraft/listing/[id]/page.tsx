@@ -26,6 +26,7 @@ import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@
 import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
+import { computeAnnualStatus, formatAnnualDueLabel, type AnnualStatusResult } from '@/lib/annualStatus'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import {
@@ -461,6 +462,14 @@ export default async function AircraftListingDetailPage({
   // life-average rule of thumb, distinct from the SMOH-based Engine Life panel above.
   const airframeUsage = computeAirframeUsage({ ttaf: p.ttaf, year: p.year })
 
+  // Annual-inspection status — turns the normalized `annual_due` date into a buyer
+  // read (months of annual remaining / due soon / may be overdue). Honesty-gated:
+  // self-suppresses on an unparseable or implausibly out-of-range value, and reasons
+  // at month granularity (the source only states month/year). Proprietary — listing
+  // sites print the raw date; we synthesize the "is a fresh annual an imminent cost?"
+  // decision a shopper actually wants.
+  const annualStatus = computeAnnualStatus(p.annual_due, new Date())
+
   // Avionics capability classification — converts the raw extracted avionics[]
   // string list into structured capability chips (Glass Panel, ADS-B Out, Autopilot,
   // WAAS GPS). Self-suppresses when avionics is null or empty.
@@ -484,7 +493,7 @@ export default async function AircraftListingDetailPage({
   if (p.ttaf != null) specs.push({ icon: <Gauge className="h-4 w-4 text-slate-400" />, label: 'Total time (TTAF)', value: `${p.ttaf.toLocaleString()} hrs` })
   if (p.smoh != null) specs.push({ icon: <Wrench className="h-4 w-4 text-slate-400" />, label: 'Engine time (SMOH)', value: `${p.smoh.toLocaleString()} hrs` })
   if (p.engine_type) specs.push({ icon: <Cpu className="h-4 w-4 text-slate-400" />, label: 'Engine', value: p.engine_type })
-  if (p.annual_due) specs.push({ icon: <Calendar className="h-4 w-4 text-slate-400" />, label: 'Annual due', value: p.annual_due })
+  if (p.annual_due) specs.push({ icon: <Calendar className="h-4 w-4 text-slate-400" />, label: 'Annual due', value: formatAnnualDueLabel(p.annual_due) })
   if (p.damage_history != null) specs.push({ icon: <ShieldAlert className="h-4 w-4 text-slate-400" />, label: 'Damage history', value: p.damage_history ? 'Yes' : 'None reported' })
 
   return (
@@ -631,6 +640,11 @@ export default async function AircraftListingDetailPage({
             {/* Airframe time — average hrs/year over the aircraft's life, with honest
                 two-sided guidance. Renders only when ttaf + year are both known. */}
             {airframeUsage && <AirframeUsagePanel usage={airframeUsage} />}
+
+            {/* Annual inspection status — months-of-annual-remaining / due-soon /
+                may-be-overdue read off the normalized annual_due date. Self-suppresses
+                when the date can't be parsed or is implausibly out of range. */}
+            {annualStatus && <AnnualStatusPanel status={annualStatus} />}
 
             {/* Price history — only when a real recorded change exists. */}
             {changedFrom != null && priceDelta != null && (
@@ -864,6 +878,45 @@ function AirframeUsagePanel({ usage }: { usage: AirframeUsageResult }) {
 
       <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
         {usage.detail}
+      </p>
+    </div>
+  )
+}
+
+// Per-state accent for the annual-inspection read. "current" is a green reassurance;
+// "soon"/"overdue" are amber prompts to ask/budget — never alarmist red, since we only
+// know the listing's stated date, not the aircraft's true logbook status.
+const ANNUAL_META: Record<AnnualStatusResult['state'], { label: string; chip: string }> = {
+  current: { label: 'Current',   chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  soon:    { label: 'Due soon',  chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  overdue: { label: 'Verify',    chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+}
+
+function AnnualStatusPanel({ status }: { status: AnnualStatusResult }) {
+  const meta = ANNUAL_META[status.state]
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Calendar className="h-4 w-4" /> Annual inspection
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Required every 12 calendar months. Read off the listing&apos;s stated annual-due date —
+        confirm against the logbooks.
+      </p>
+
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-2xl font-extrabold text-slate-900">{status.dueLabel}</span>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${meta.chip}`}
+        >
+          {status.state !== 'current' && <AlertTriangle className="h-3 w-3" />}
+          {meta.label}
+        </span>
+      </div>
+      <p className="mt-1 text-sm font-semibold text-slate-700">{status.headline}</p>
+
+      <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
+        {status.detail}
       </p>
     </div>
   )
