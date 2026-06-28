@@ -385,6 +385,15 @@ export default function PostPartnershipForm({
         </div>
       </section>
 
+      {/* Photos — always visible; the highest-value element of a listing */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Photos</h3>
+        <p className="mb-3 text-xs text-slate-500">
+          Real photos make your listing far more compelling. Add up to 5.
+        </p>
+        <PartnershipPhotoUpload />
+      </section>
+
       {/* More details — collapsible, closed by default */}
       <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
@@ -400,15 +409,6 @@ export default function PostPartnershipForm({
               <Label>Year</Label>
               <Input name="year" type="number" placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
             </div>
-          </div>
-
-          {/* Photos */}
-          <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Photos</h3>
-            <p className="mb-3 text-xs text-slate-500">
-              Real photos make your listing far more compelling. Add up to 5.
-            </p>
-            <PartnershipPhotoUpload />
           </div>
 
           {/* Title + Description */}
