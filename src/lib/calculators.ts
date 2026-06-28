@@ -133,6 +133,8 @@ export interface ShareCostRow {
   /** Number of equal shares (1 = sole owner, 2 = half share, etc.). */
   shares: number
   label: string
+  /** One-time capital to buy into this share = asking price ÷ shares (whole USD). */
+  buyInPerShare: number
   /** Fixed costs allocated to this share per year (insurance + hangar + annual + engine reserve, ÷ shares). */
   fixedPerShareAnnual: number
   /** Variable operating costs per year — same for every partner since each flies the same hours. */
@@ -169,6 +171,7 @@ export function estimateShareCosts(
     return {
       shares,
       label,
+      buyInPerShare: Math.round(askingPrice / shares),
       fixedPerShareAnnual,
       operatingAnnual,
       totalAnnual,
