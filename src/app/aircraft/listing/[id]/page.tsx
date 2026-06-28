@@ -931,6 +931,18 @@ function EstimatePanel({
       ? `Asking price is around the median for ${familyLabel} listings.`
       : `Asking ${formatPrice(Math.abs(estimate.deltaDollars))} (${estimate.deltaPct}%) ${dir} the median ${familyLabel} listing.`
 
+  // Visual low–high spread bar — only when there's a real range (high > low).
+  // Positions derive purely from values already shown: the comp low/high/median and
+  // this listing's own asking price (recovered as median + signed delta). The subject's
+  // own price is excluded from the comp set, so it can fall at/beyond an endpoint —
+  // clamp the marker to the track (consistent with the "priced below/above all" copy).
+  const hasRange = estimate.high > estimate.low
+  const askingPrice = estimate.median + estimate.deltaDollars
+  const onBar = (value: number) =>
+    Math.max(0, Math.min(100, ((value - estimate.low) / (estimate.high - estimate.low)) * 100))
+  const medianPos = onBar(estimate.median)
+  const subjectPos = onBar(askingPrice)
+
   return (
     <div className="ch-panel p-5">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
@@ -962,6 +974,48 @@ function EstimatePanel({
           </>
         )}
       </p>
+      {hasRange && (
+        <div className="mt-3">
+          <div
+            className="relative h-2 rounded-full bg-gradient-to-r from-emerald-200 via-slate-200 to-amber-200"
+            role="img"
+            aria-label={`This listing is priced ${
+              estimate.percentile === 0
+                ? 'below all'
+                : estimate.percentile === 100
+                  ? 'above all'
+                  : `above ${estimate.percentile}% of`
+            } comparable ${familyLabel} listings, which range ${formatPrice(estimate.low)} to ${formatPrice(
+              estimate.high
+            )} (median ${formatPrice(estimate.median)}).`}
+          >
+            {/* median tick */}
+            <div
+              className="absolute top-1/2 h-3.5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded bg-slate-400"
+              style={{ left: `${medianPos}%` }}
+            />
+            {/* this listing */}
+            <div
+              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-sky-600 shadow"
+              style={{ left: `${subjectPos}%` }}
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
+            <span>{formatPrice(estimate.low)}</span>
+            <span>{formatPrice(estimate.high)}</span>
+          </div>
+          <div className="mt-1 flex items-center gap-3 text-[11px] text-slate-500">
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block h-2.5 w-2.5 rounded-full border border-white bg-sky-600 shadow-sm" />
+              this listing
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block h-3 w-0.5 rounded bg-slate-400" />
+              median
+            </span>
+          </div>
+        </div>
+      )}
       {deal && <DealCheck deal={deal} familyLabel={familyLabel} />}
       {familyHref && (
         <Link
