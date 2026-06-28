@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useTransition } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Phone, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateThread } from '@/app/actions'
@@ -31,8 +31,10 @@ export default function ContactBar({
   isSeed = false,
 }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [isPending, startTransition] = useTransition()
+  const didAutoContact = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -43,10 +45,25 @@ export default function ContactBar({
     return () => subscription.unsubscribe()
   }, [])
 
+  // Auto-open thread when returning from auth with ?contact=1
+  useEffect(() => {
+    if (searchParams.get('contact') !== '1') return
+    if (!user || !posterId || user.id === posterId) return
+    if (didAutoContact.current) return
+    didAutoContact.current = true
+    const url = new URL(window.location.href)
+    url.searchParams.delete('contact')
+    window.history.replaceState({}, '', url.toString())
+    startTransition(async () => {
+      const result = await getOrCreateThread(listingId, posterId)
+      if ('threadId' in result) router.push(`/messages/${result.threadId}`)
+    })
+  }, [user, searchParams, listingId, posterId, router])
+
   function handleMessage() {
     if (!posterId) return
     if (!user) {
-      router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}`)}`)
+      router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}?contact=1`)}`)
       return
     }
     startTransition(async () => {

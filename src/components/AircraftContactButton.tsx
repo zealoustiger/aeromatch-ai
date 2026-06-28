@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useTransition } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateAircraftThread } from '@/app/actions'
@@ -17,9 +17,11 @@ export default function AircraftContactButton({
   listingPath: string
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const didAutoContact = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -29,6 +31,23 @@ export default function AircraftContactButton({
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Auto-open thread when returning from auth with ?contact=1
+  useEffect(() => {
+    if (searchParams.get('contact') !== '1') return
+    if (!user || user.id === posterId) return
+    if (didAutoContact.current) return
+    didAutoContact.current = true
+    const url = new URL(window.location.href)
+    url.searchParams.delete('contact')
+    window.history.replaceState({}, '', url.toString())
+    setErrorMsg(null)
+    startTransition(async () => {
+      const result = await getOrCreateAircraftThread(aircraftId, posterId)
+      if ('threadId' in result) router.push(`/messages/${result.threadId}`)
+      else setErrorMsg(result.error ?? 'Could not open conversation.')
+    })
+  }, [user, searchParams, aircraftId, posterId, router])
 
   // Viewer is the poster — show a neutral "your listing" note.
   if (user?.id === posterId) {
@@ -41,7 +60,7 @@ export default function AircraftContactButton({
 
   function handleMessage() {
     if (!user) {
-      router.push(`/auth?next=${encodeURIComponent(listingPath)}`)
+      router.push(`/auth?next=${encodeURIComponent(listingPath + '?contact=1')}`)
       return
     }
     setErrorMsg(null)
