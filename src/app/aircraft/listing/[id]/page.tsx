@@ -943,8 +943,18 @@ function EstimatePanel({
       </span>
       <p className="mt-3 text-sm font-medium leading-relaxed text-slate-700">{headline}</p>
       <p className="mt-2 text-xs text-slate-500">
-        Based on the median asking price ({formatPrice(estimate.median)}) of {estimate.compCount}{' '}
-        other {familyLabel} listing{estimate.compCount === 1 ? '' : 's'} for sale now.
+        {estimate.high > estimate.low ? (
+          <>
+            {estimate.compCount} other {familyLabel} listing{estimate.compCount === 1 ? '' : 's'} for
+            sale now range {formatPrice(estimate.low)}–{formatPrice(estimate.high)} (median{' '}
+            {formatPrice(estimate.median)}).
+          </>
+        ) : (
+          <>
+            Based on the median asking price ({formatPrice(estimate.median)}) of {estimate.compCount}{' '}
+            other {familyLabel} listing{estimate.compCount === 1 ? '' : 's'} for sale now.
+          </>
+        )}
       </p>
       {deal && <DealCheck deal={deal} familyLabel={familyLabel} />}
       {familyHref && (
