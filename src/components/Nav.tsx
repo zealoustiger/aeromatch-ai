@@ -35,11 +35,25 @@ export default function Nav() {
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
   // Preserve the current page across the sign-in round trip so a logged-out
-  // visitor returns to where they were instead of the homepage default. Only the
-  // pathname is preserved (no useSearchParams — that would force this layout-level
-  // nav, and thus every page, into client rendering). Skip on the homepage.
+  // visitor returns to where they were instead of the homepage default. The href
+  // below is a pathname-only SSR / no-JS / new-tab fallback (no useSearchParams —
+  // that would force this layout-level nav, and thus every page, into client
+  // rendering). Skip on the homepage.
   const signInHref =
     pathname && pathname !== '/' ? `/auth?next=${encodeURIComponent(pathname)}` : '/auth'
+
+  // On a plain left-click, upgrade the fallback href to the FULL current URL —
+  // including active query-string filters — read straight from window.location at
+  // click time. This keeps a logged-out shopper's filters across auth without
+  // pulling useSearchParams into the layout (which would change its render mode).
+  // Modified clicks (new tab, etc.) fall through to the native pathname-only href.
+  function handleSignInClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
+    setMenuOpen(false)
+    const full = window.location.pathname + window.location.search
+    router.push(full && full !== '/' ? `/auth?next=${encodeURIComponent(full)}` : '/auth')
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -128,6 +142,7 @@ export default function Nav() {
             ) : (
               <Link
                 href={signInHref}
+                onClick={handleSignInClick}
                 className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
                 <LogIn className="h-3.5 w-3.5" />
@@ -283,6 +298,7 @@ export default function Nav() {
             ) : (
               <Link
                 href={signInHref}
+                onClick={handleSignInClick}
                 className="flex items-center gap-2 text-base font-medium text-slate-700"
               >
                 <LogIn className="h-4 w-4" />
