@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-28T12:36:51Z — deal-score-signal-tally — score 4/5
+- Strengths: Exactly to spec — counts positive/negative only, neutral excluded, honest descriptive copy, chip colors match existing SIGNAL_COLORS palette, all-neutral/empty cases render no header, suppression unchanged; well-scoped single-file additive change.
+- Weaknesses / risks: Chip color tokens are hardcoded literals rather than derived from the central SIGNAL_COLORS map (minor duplication); two filter passes over rows (negligible).
+- Follow-up: none
+
 ## 2026-06-27T14:52:00Z — crosssell-model-level — score 3/5
 - Strengths: Clean two-query fallback pattern (model-first, make fallback) with correct mock/live parity; `modelLevel` flag cleanly decouples data-level from display logic; scoped to exactly the two files the spec named; TypeScript return type updated correctly.
 - Weaknesses / risks: AC#1 explicitly states CTA must link to `/partnerships?make=Cessna&model=172` when model-level, but the link always stays at `/partnerships?make=Cessna` — so a buyer clicking "Browse Cessna 172 partnerships" lands on all-Cessna results, the same friction the spec was trying to fix; the comment rationalizes this as "not supported yet" but that's a spec deviation, not a scoping judgment.
