@@ -34,6 +34,13 @@ export default function Nav() {
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
+  // Preserve the current page across the sign-in round trip so a logged-out
+  // visitor returns to where they were instead of the homepage default. Only the
+  // pathname is preserved (no useSearchParams — that would force this layout-level
+  // nav, and thus every page, into client rendering). Skip on the homepage.
+  const signInHref =
+    pathname && pathname !== '/' ? `/auth?next=${encodeURIComponent(pathname)}` : '/auth'
+
   useEffect(() => {
     const supabase = createClient()
     // Load the user's chosen aviator config so the nav matches their /account pick
@@ -120,7 +127,7 @@ export default function Nav() {
               <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} unreadCount={unreadCount} />
             ) : (
               <Link
-                href="/auth"
+                href={signInHref}
                 className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
                 <LogIn className="h-3.5 w-3.5" />
@@ -275,7 +282,7 @@ export default function Nav() {
               </button>
             ) : (
               <Link
-                href="/auth"
+                href={signInHref}
                 className="flex items-center gap-2 text-base font-medium text-slate-700"
               >
                 <LogIn className="h-4 w-4" />
