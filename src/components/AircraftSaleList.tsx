@@ -40,6 +40,10 @@ interface Filters {
   /** comma-joined multi-select subset of A/B/C (any combo). Empty == all. */
   grade?: string
   sort?: string
+  /** "1" → drops the `images != '[]'` photo gate so visitors can browse listings
+   *  where the seller didn't upload any photos (card falls back to the make
+   *  silhouette). Off by default since photoless cards convert worse. */
+  include_no_photo?: string
   drops?: string
   page?: string
   /** route the pager links live under (default /aircraft). Used by the
@@ -422,7 +426,16 @@ export interface AircraftPage {
  * without duplicating the query. The component itself now calls this — single
  * source of truth, no behavior change.
  */
-export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage> {
+/** Visitor's IP-geolocated coordinates, populated from Vercel's
+ *  `x-vercel-ip-latitude`/`x-vercel-ip-longitude` request headers by the
+ *  /aircraft page. Used as the fallback distance-sort center when no airport
+ *  filter is set; null in local dev or when geo headers aren't present. */
+export type VisitorCoords = { lat: number; lng: number } | null
+
+export async function fetchAircraftPage(
+  filters: Filters,
+  visitorCoords?: VisitorCoords,
+): Promise<AircraftPage> {
   let listings: AircraftForSale[] = []
   // Total number of listings matching the active filters (may exceed the rows
   // shown). null = unknown/not applicable, fall back to the displayed length.
@@ -442,26 +455,69 @@ export async function fetchAircraftPage(filters: Filters): Promise<AircraftPage>
 
   try {
     const supabase = await createServerSupabaseClient()
+
+    // Resolve the distance-sort center: prefer the filter's airport coords,
+    // then visitor's IP geo. If sort=distance is requested but neither is
+    // available, we silently fall back to the default newest-first sort.
+    let centerLat: number | null = null
+    let centerLng: number | null = null
+    let airportState: string | null = null
+    if (filters.airport) {
+      const { data: apt } = await supabase
+        .from('airports')
+        .select('state, lat, lng')
+        .eq('icao', filters.airport.toUpperCase().trim())
+        .maybeSingle()
+      if (apt?.state) airportState = apt.state
+      if (apt?.lat != null && apt?.lng != null) { centerLat = apt.lat; centerLng = apt.lng }
+    }
+    if (centerLat == null && visitorCoords) {
+      centerLat = visitorCoords.lat
+      centerLng = visitorCoords.lng
+    }
+
+    // Distance sort takes the RPC path — server-side haversine with proper
+    // pagination. We only branch when we have a real center; otherwise the
+    // PostgREST path below handles every other sort consistently.
+    if (filters.sort === 'distance' && centerLat != null && centerLng != null) {
+      const includeNoPhoto = filters.include_no_photo === '1'
+      const state = filters.state || airportState || null
+      const { data, error: rpcErr } = await supabase.rpc('aircraft_by_distance', {
+        p_lat: centerLat,
+        p_lng: centerLng,
+        p_state: state,
+        p_make: filters.make || null,
+        p_model: filters.model || null,
+        p_min_price: filters.min_price ? parseInt(filters.min_price) : null,
+        p_max_price: filters.max_price ? parseInt(filters.max_price) : null,
+        p_min_year: filters.min_year ? parseInt(filters.min_year) : null,
+        p_max_year: filters.max_year ? parseInt(filters.max_year) : null,
+        p_include_no_photo: includeNoPhoto,
+        p_buyer_price_floor: BUYER_PRICE_FLOOR,
+        p_limit: PAGE_SIZE,
+        p_offset: from,
+      })
+      if (rpcErr) {
+        error = true
+      } else {
+        listings = (data ?? []).map((r: { listing: AircraftForSale }) => r.listing)
+        totalCount = data?.[0]?.total_count ?? listings.length
+      }
+      return { listings, totalCount, page, error }
+    }
+
     let query = supabase
       .from('aircraft_for_sale')
       .select('*', { count: 'exact' })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
-      .not('images', 'eq', '[]')
+    if (filters.include_no_photo !== '1') {
+      query = query.not('images', 'eq', '[]')
+    }
     for (const pattern of PARTS_TITLE_PATTERNS) {
       query = query.not('title', 'ilike', pattern)
     }
-
-    // Airport → state: resolve the ICAO code to a US state, then filter by it.
-    // Falls back to no-op when the code isn't in our airports table (shows all).
-    if (filters.airport) {
-      const { data: apt } = await supabase
-        .from('airports')
-        .select('state')
-        .eq('icao', filters.airport.toUpperCase().trim())
-        .maybeSingle()
-      if (apt?.state) query = query.eq('state', apt.state)
-    }
+    if (airportState) query = query.eq('state', airportState)
 
     if (filters.photoOnly) query = query.eq('image_is_placeholder', false)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
@@ -703,8 +759,11 @@ export async function fetchUnderMarketDeals(limit = 48, photoOnly = false): Prom
   }
 }
 
-export default async function AircraftSaleList({ filters }: { filters: Filters }) {
-  const { listings, totalCount, page, error } = await fetchAircraftPage(filters)
+export default async function AircraftSaleList({
+  filters,
+  visitorCoords,
+}: { filters: Filters; visitorCoords?: VisitorCoords }) {
+  const { listings, totalCount, page, error } = await fetchAircraftPage(filters, visitorCoords)
 
   // An offset past the end of the result set makes PostgREST return a
   // "range not satisfiable" error. Page 1 (offset 0) is always satisfiable,

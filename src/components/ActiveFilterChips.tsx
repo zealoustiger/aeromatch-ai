@@ -261,6 +261,15 @@ export default function ActiveFilterChips({
     })
   }
 
+  // "Show without photos" toggle — off-by-default expand of the catalog.
+  if (params.include_no_photo) {
+    chips.push({
+      key: 'include_no_photo',
+      label: 'Inc. no-photo',
+      href: buildHref(params, (p) => p.delete('include_no_photo')),
+    })
+  }
+
   if (chips.length === 0) return null
 
   return (

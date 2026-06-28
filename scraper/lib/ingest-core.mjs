@@ -316,6 +316,18 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
     if (error) throw new Error(`upsert failed: ${error.message}`)
   }
 
+  // Backfill lat/lng on any rows missing them, by matching the row's
+  // "City, State" against the airports table. Idempotent — only touches rows
+  // where lat IS NULL, so re-runs are cheap. Powers the distance-sort UX.
+  // (Same logic as migration 20260628_aircraft_for_sale_geo.sql.)
+  try {
+    await supabase.rpc('backfill_aircraft_coords_for_source', { p_source: source })
+  } catch (e) {
+    // Non-fatal — the marketplace still works without coords; we just sort by
+    // newest until the next backfill.
+    console.warn(`coord backfill skipped: ${e.message ?? e}`)
+  }
+
   // Sold-detection: anything from this source not touched this run is gone.
   const { data: sold, error: soldErr } = await supabase
     .from('aircraft_for_sale')

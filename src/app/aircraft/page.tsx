@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { parseAircraftSearch, parsedToParams } from '@/lib/parseAircraftSearch'
 
@@ -111,6 +112,17 @@ export default async function AircraftPage({
   const activeFilterCount = Object.values(params).filter(Boolean).length
   const facets = await getAircraftFacets()
 
+  // Vercel populates `x-vercel-ip-latitude`/`x-vercel-ip-longitude` from the
+  // visitor's IP. We pass them to fetchAircraftPage as the distance-sort
+  // fallback center when no airport filter is set. Absent in local dev and
+  // on private/proxy IPs — the RPC silently falls through to newest-first.
+  const hdrs = await headers()
+  const latRaw = hdrs.get('x-vercel-ip-latitude')
+  const lngRaw = hdrs.get('x-vercel-ip-longitude')
+  const visitorCoords = latRaw && lngRaw
+    ? { lat: parseFloat(latRaw), lng: parseFloat(lngRaw) }
+    : null
+
   // Filter-aware email-alert context + reproducible source path. The route-based
   // for-sale pages carry their scope in the URL path; `/aircraft` carries it in
   // the query string, so we preserve the active query on the source path and
@@ -126,7 +138,7 @@ export default async function AircraftPage({
   // visible cards 1:1 (mirrors the make/model/state sub-family pages, which already
   // emit ItemList; this closes the gap on the /aircraft hub, priority seed page #2).
   // The helper returns null (renders nothing) when no priced/valid rows qualify.
-  const { listings: itemListListings } = await fetchAircraftPage(params)
+  const { listings: itemListListings } = await fetchAircraftPage(params, visitorCoords)
   const itemListJsonLd = buildAircraftItemListJsonLd(itemListListings, {
     name: aircraftTitle,
     url: `${SITE_URL}/aircraft`,
@@ -238,7 +250,7 @@ export default async function AircraftPage({
           {/* Active-filter chips — removable, one per active filter. */}
           <ActiveFilterChips params={params} facets={facets} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
-            <AircraftSaleList filters={params} />
+            <AircraftSaleList filters={params} visitorCoords={visitorCoords} />
           </Suspense>
 
           {/* Aggregation disclosure */}
