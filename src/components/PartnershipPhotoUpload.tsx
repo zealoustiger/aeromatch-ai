@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImagePlus, X, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -90,16 +90,57 @@ export default function PartnershipPhotoUpload({
     }
   }
 
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (canAddMore) setDragOver(true)
+  }
+
+  const onDragLeave = (e: React.DragEvent) => {
+    // Only clear when the pointer truly leaves the component, not when it moves
+    // between child thumbnails (which would otherwise flicker the highlight).
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false)
+  }
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
     if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files)
   }
 
+  // Paste an image from the clipboard anywhere on the page — except while typing in
+  // a text field (so it never hijacks the "Prefill from your notes" textarea or any
+  // other input). Adds any image files the clipboard carries, respecting MAX_PHOTOS.
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const ae = document.activeElement as HTMLElement | null
+      const tag = ae?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || ae?.isContentEditable) return
+      const files = e.clipboardData?.files
+      if (!files?.length) return
+      const images = Array.from(files).filter((f) => f.type.startsWith('image/'))
+      if (images.length) {
+        e.preventDefault()
+        addFiles(images)
+      }
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [addFiles])
+
   const successPhotos = photos.filter((p) => p.url)
 
   return (
-    <div className="space-y-3">
+    <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={cn(
+        'space-y-3 rounded-xl transition',
+        // Show a drop-highlight ring once photos exist (the empty state has its own
+        // big dashed zone); keeps drag-drop discoverable for adding more photos.
+        dragOver && photos.length > 0 && 'ring-2 ring-sky-300 ring-offset-2'
+      )}
+    >
       {/* Thumbnails */}
       {photos.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -149,12 +190,10 @@ export default function PartnershipPhotoUpload({
         </div>
       )}
 
-      {/* Drop zone — only shown when no photos yet */}
+      {/* Drop zone — only shown when no photos yet. Drag/drop for the with-photos
+          state is handled by the outer container (see onDragOver/onDrop above). */}
       {photos.length === 0 && (
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 text-center transition',
             dragOver
@@ -168,7 +207,7 @@ export default function PartnershipPhotoUpload({
         >
           <ImagePlus className="mb-2 h-8 w-8 text-slate-300" />
           <p className="text-sm font-medium text-slate-600">
-            Drag photos here, or <span className="text-sky-600 underline">browse</span>
+            Drag or paste photos here, or <span className="text-sky-600 underline">browse</span>
           </p>
           <p className="mt-1 text-xs text-slate-400">
             JPEG, PNG, or WebP · max 5 MB each · up to {MAX_PHOTOS} photos
@@ -195,7 +234,7 @@ export default function PartnershipPhotoUpload({
       {photos.length > 0 && (
         <p className="text-xs text-slate-400">
           {successPhotos.length}/{photos.length} uploaded
-          {photos.length < MAX_PHOTOS && ` · up to ${MAX_PHOTOS} photos`}
+          {canAddMore && ` · drag, paste, or tap + to add more (up to ${MAX_PHOTOS})`}
         </p>
       )}
     </div>
