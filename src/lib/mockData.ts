@@ -36,6 +36,9 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     source_url: null,
     image_is_placeholder: true,
     posted_at: null,
+    ttaf: 3200,
+    smoh: 650,
+    engine_type: 'Lycoming IO-360',
   },
   {
     id: 'mock-2',
@@ -72,6 +75,9 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     source_url: null,
     image_is_placeholder: true,
     posted_at: null,
+    ttaf: 2800,
+    smoh: 1100,
+    engine_type: 'Lycoming O-360',
   },
   {
     id: 'mock-3',
@@ -108,6 +114,9 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     source_url: null,
     image_is_placeholder: true,
     posted_at: null,
+    ttaf: 2100,
+    smoh: null,
+    engine_type: null,
   },
   {
     id: 'mock-4',
@@ -144,6 +153,9 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     source_url: null,
     image_is_placeholder: true,
     posted_at: null,
+    ttaf: 380,
+    smoh: 380,
+    engine_type: 'Lycoming IO-360',
   },
 ]
 

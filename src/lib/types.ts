@@ -44,6 +44,10 @@ export interface Partnership {
   contact_method: ContactMethod
   contact_phone: string | null
 
+  ttaf: number | null
+  smoh: number | null
+  engine_type: string | null
+
   status: ListingStatus
   poster_id: string | null
 }
