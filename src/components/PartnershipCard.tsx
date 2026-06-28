@@ -27,8 +27,10 @@ export default function PartnershipCard({
 }: {
   p: Partnership
   saved?: boolean
-  /** When set, shows a "Below market" or "Above market" chip from same-make buy-in median. */
-  compVerdict?: 'below' | 'above'
+  /** When set, shows a "~X% below/above market" chip from the same-make buy-in median.
+   *  `pct` is the whole-number percent distance from that median (always ≥1; the
+   *  ±5% dead-band "near" case is filtered out upstream so it never renders here). */
+  compVerdict?: { kind: 'below' | 'above'; pct: number }
 }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
@@ -77,16 +79,16 @@ export default function PartnershipCard({
                   </span>
                 )}
                 <TrustBadge p={p} variant="compact" />
-                {compVerdict === 'below' && (
+                {compVerdict?.kind === 'below' && (
                   <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                     <LineChart className="h-3 w-3" />
-                    Below market
+                    ~{compVerdict.pct}% below market
                   </span>
                 )}
-                {compVerdict === 'above' && (
+                {compVerdict?.kind === 'above' && (
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <LineChart className="h-3 w-3" />
-                    Above market
+                    ~{compVerdict.pct}% above market
                   </span>
                 )}
                 {/* Compare toggle — only renders inside a CompareProvider (i.e.
