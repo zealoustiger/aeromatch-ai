@@ -133,7 +133,7 @@ export async function createPartnership(formData: FormData) {
   }
 
   revalidatePath('/partnerships')
-  redirect(`/partnerships/${data.id}`)
+  redirect(`/partnerships/${data.id}?posted=1`)
 }
 
 export async function submitFeedback(input: {
@@ -240,7 +240,7 @@ export async function createSeekerListing(formData: FormData) {
   }
 
   revalidatePath('/partnerships/seeking')
-  redirect(`/partnerships/seeking/${data.id}`)
+  redirect(`/partnerships/seeking/${data.id}?posted=1`)
 }
 
 export async function createAircraftListing(formData: FormData) {

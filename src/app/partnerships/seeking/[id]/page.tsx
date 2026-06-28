@@ -71,8 +71,16 @@ async function getSeeker(id: string): Promise<PartnershipSeeker | null> {
   return data
 }
 
-export default async function SeekerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SeekerDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<Record<string, string | undefined>>
+}) {
   const { id } = await params
+  const sp = searchParams ? await searchParams : {}
+  const justPosted = sp.posted === '1'
   const s = await getSeeker(id)
   if (!s) notFound()
 
@@ -99,6 +107,22 @@ export default async function SeekerDetailPage({ params }: { params: Promise<{ i
       >
         <ChevronLeft className="h-4 w-4" /> Back to Seeking Listings
       </Link>
+
+      {/* Post-publish confirmation — shown once when redirected from the seeking post form */}
+      {justPosted && (
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+          <p className="font-semibold text-emerald-800">Your seeking listing is live!</p>
+          <p className="mt-0.5 text-sm text-emerald-700">
+            Aircraft owners looking for partners can now find you.{' '}
+            <Link
+              href={`/partnerships${s.home_airport ? `?airport=${s.home_airport}` : ''}`}
+              className="font-medium underline hover:text-emerald-900"
+            >
+              Browse partnerships{s.home_airport ? ` near ${s.home_airport}` : ''} →
+            </Link>
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
