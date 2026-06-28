@@ -28,6 +28,9 @@ test('below market — priced clearly below the family median', () => {
   assert.equal(e!.compCount, 5)
   assert.equal(e!.deltaDollars, -60_000)
   assert.equal(e!.deltaPct, 18)
+  // Range = min/max of the OTHER comps (300k–380k), not including the 280k subject.
+  assert.equal(e!.low, 300_000)
+  assert.equal(e!.high, 380_000)
 })
 
 test('above market — clearly above the family median', () => {

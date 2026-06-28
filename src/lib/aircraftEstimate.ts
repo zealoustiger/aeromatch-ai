@@ -43,6 +43,10 @@ export interface ClubHangerEstimate {
   verdict: EstimateVerdict
   /** Median asking price of the OTHER family comps, in whole dollars. */
   median: number
+  /** Lowest asking price among the OTHER family comps, in whole dollars. */
+  low: number
+  /** Highest asking price among the OTHER family comps, in whole dollars. */
+  high: number
   /** Number of OTHER same-family priced comps the estimate was computed from. */
   compCount: number
   /** Signed distance from the median in whole dollars (negative = below market). */
@@ -95,11 +99,16 @@ export function clubHangerEstimate(
   const median = Math.round(medianOfSorted(others))
   if (median <= 0) return null
 
+  // The honest low–high asking-price spread of the SAME comp set used for the median
+  // (others is sorted ascending). Whole dollars, no fabrication — these are real listings.
+  const low = Math.round(others[0])
+  const high = Math.round(others[others.length - 1])
+
   const deltaDollars = Math.round(askingPrice - median)
   const delta = (askingPrice - median) / median
 
   if (Math.abs(delta) < ESTIMATE_DEAD_BAND) {
-    return { verdict: 'around', median, compCount: others.length, deltaDollars, deltaPct: 0 }
+    return { verdict: 'around', median, low, high, compCount: others.length, deltaDollars, deltaPct: 0 }
   }
   // A delta just outside the dead-band can still round to 0; clamp to >= 1 so the
   // label always reads a real, non-zero percentage.
@@ -107,6 +116,8 @@ export function clubHangerEstimate(
   return {
     verdict: delta < 0 ? 'below' : 'above',
     median,
+    low,
+    high,
     compCount: others.length,
     deltaDollars,
     deltaPct,
