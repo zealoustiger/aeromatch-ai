@@ -18,12 +18,60 @@ type PhotoEntry = {
 
 export default function PartnershipPhotoUpload({
   endpoint = '/api/upload-partnership-photo',
+  persistKey,
+  restoreGateKey,
 }: {
   endpoint?: string
+  // When set, mirror the successfully-uploaded photo URLs to localStorage[persistKey]
+  // so they survive a reload or the deferred-auth redirect (the URLs are already in
+  // storage before submit — only the references need to persist). Restored on mount.
+  persistKey?: string
+  // Only restore persisted photos when localStorage[restoreGateKey] exists (the form's
+  // text-draft key). Ties photo lifetime to the draft's: photos come back exactly when
+  // the draft does, and are dropped (no stale photos) once the draft is gone — e.g.
+  // after a successful publish clears it.
+  restoreGateKey?: string
 }) {
   const [photos, setPhotos] = useState<PhotoEntry[]>([])
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Restore persisted photos on mount, gated on the draft key (see prop docs).
+  useEffect(() => {
+    if (!persistKey) return
+    try {
+      const draftPresent = restoreGateKey ? !!window.localStorage.getItem(restoreGateKey) : true
+      if (!draftPresent) {
+        window.localStorage.removeItem(persistKey)
+        return
+      }
+      const raw = window.localStorage.getItem(persistKey)
+      if (!raw) return
+      const urls = JSON.parse(raw) as unknown
+      if (!Array.isArray(urls)) return
+      const restored: PhotoEntry[] = urls
+        .filter((u): u is string => typeof u === 'string' && u.length > 0)
+        .slice(0, MAX_PHOTOS)
+        .map((url, i) => ({ key: `restored-${i}-${url}`, url, preview: url, uploading: false, error: null }))
+      if (restored.length) setPhotos(restored)
+    } catch {
+      /* corrupt/unavailable storage — start clean */
+    }
+    // Run once on mount; persistKey/restoreGateKey are stable per form instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Mirror the current set of successfully-uploaded URLs to storage as they change.
+  useEffect(() => {
+    if (!persistKey) return
+    try {
+      const urls = photos.filter((p) => p.url && !p.uploading && !p.error).map((p) => p.url)
+      if (urls.length) window.localStorage.setItem(persistKey, JSON.stringify(urls))
+      else window.localStorage.removeItem(persistKey)
+    } catch {
+      /* storage unavailable/full — best effort */
+    }
+  }, [photos, persistKey])
 
   const canAddMore = photos.length < MAX_PHOTOS
 
