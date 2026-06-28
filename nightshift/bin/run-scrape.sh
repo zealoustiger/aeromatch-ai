@@ -34,7 +34,13 @@ ingest_rc=$?
 cat "$STATE/scrape.out" 2>/dev/null
 [ "$ingest_rc" -ne 0 ] && { echo "ingest stderr:"; tail -20 "$STATE/scrape.err" 2>/dev/null; }
 
-# 2) Match-and-send alert digests for any NEW listings (skips sends if no
+# 2) Partnership scrape — Barnstormers + Controller (+ TAP if non-empty). All
+#    rows land status='admin' so nothing leaks publicly until extraction is trusted.
+echo "=== daily scrape: partnerships ==="
+node scraper/ingest-partnerships.mjs --max-pages=3 >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
+tail -20 "$STATE/scrape.out" 2>/dev/null
+
+# 3) Match-and-send alert digests for any NEW listings (skips sends if no
 #    RESEND_API_KEY — baseline-first, so it never blasts the back-catalog).
 echo "=== daily scrape: alerts ==="
 node scraper/send-alerts.mjs >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
