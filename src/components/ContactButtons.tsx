@@ -40,7 +40,9 @@ export default function ContactButtons({
     if (!posterId) return
     const pid = posterId
     if (!user) {
-      router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}`)}`)
+      // Preserve contact intent across auth: the ?contact=1 signal is auto-opened
+      // by the always-mounted ContactBar on this page (single trigger, no dup thread).
+      router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}?contact=1`)}`)
       return
     }
     startTransition(async () => {

@@ -127,6 +127,7 @@ export default async function MemberProfilePage({
               posterId={p.poster_id}
               label={`Message ${persona.firstName}`}
               returnPath={`/members/${p.id}`}
+              autoContactOnReturn
             />
           </div>
         </div>
