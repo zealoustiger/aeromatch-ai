@@ -27,9 +27,23 @@ function extractField(html: string, label: string): string | null {
   return null
 }
 
-// Map the FAA's uppercase make names to our MAKES dropdown values.
+// Title-case a raw FAA manufacturer name and drop a trailing corporate suffix so the
+// stored make stays clean ("MAULE" → "Maule", "AVIAT AIRCRAFT INC" → "Aviat Aircraft").
+// We never invent a name — this is the registry's own value, just cased.
+function cleanMakeName(raw: string): string {
+  const trimmed = raw.trim().replace(/\s+/g, ' ').replace(/[.,]+$/, '')
+  if (!trimmed) return ''
+  const titled = trimmed.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase())
+  return titled.replace(/\s+(Inc|Incorporated|Corp|Corporation|Co|Company|Llc|Ltd)$/i, '').trim()
+}
+
+// Map the FAA's uppercase make names to our canonical MAKES dropdown values where we
+// can; otherwise fall back to the registry's own make name in clean Title Case so the
+// form can still fill the required Make field (the post form injects an option for
+// makes outside its preset list). Returns '' only when the FAA gave us no make at all.
 function matchMake(faaName: string): string {
   const n = faaName.trim().toUpperCase()
+  if (!n) return ''
   if (n.startsWith('CESSNA')) return 'Cessna'
   if (n.startsWith('PIPER')) return 'Piper'
   if (n.startsWith('BEECHCRAFT') || n.startsWith('BEECH') || n === 'RAYTHEON') return 'Beechcraft'
@@ -38,7 +52,7 @@ function matchMake(faaName: string): string {
   if (n.startsWith("VAN'S") || n.startsWith('VANS ') || n === 'VANS') return "Van's"
   if (n.startsWith('DIAMOND')) return 'Diamond'
   if (n.startsWith('GRUMMAN')) return 'Grumman'
-  return ''
+  return cleanMakeName(faaName)
 }
 
 // Normalise registrant type to a short, human-readable label.

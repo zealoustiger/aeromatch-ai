@@ -157,13 +157,9 @@ export default function PostPartnershipForm({
       const res = await fetch(`/api/faa-lookup?n=${encodeURIComponent(nRaw)}`)
       const data = await res.json()
       if (data.found) {
-        const makeSelect = form.querySelector<HTMLSelectElement>('[name="make"]')
         const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
         const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
-        if (makeSelect && data.make) {
-          makeSelect.value = data.make
-          makeSelect.dispatchEvent(new Event('change', { bubbles: true }))
-        }
+        if (data.make) fillMakeSelect(form, data.make)
         if (modelInput && data.model) {
           modelInput.value = data.model
           modelInput.dispatchEvent(new Event('input', { bubbles: true }))
@@ -193,6 +189,27 @@ export default function PostPartnershipForm({
     }
   }
 
+  // Set the Make <select>, injecting an <option> for makes outside the preset list.
+  // The FAA lookup and AI prefill can return makes (Maule, Aviat, Bellanca, …) that
+  // aren't in MAKES; setting a <select> to a value with no matching option is a no-op,
+  // which would silently leave this required field blank. Injecting the option keeps
+  // the real make (better data, not "Other") and fills the field.
+  function fillMakeSelect(form: HTMLFormElement, make: string) {
+    const sel = form.querySelector<HTMLSelectElement>('[name="make"]')
+    if (!sel || !make) return
+    const exists = Array.from(sel.options).some((o) => o.value === make)
+    if (!exists) {
+      const opt = document.createElement('option')
+      opt.value = make
+      opt.textContent = make
+      const other = Array.from(sel.options).find((o) => o.value === 'Other')
+      if (other) sel.insertBefore(opt, other)
+      else sel.add(opt)
+    }
+    sel.value = make
+    sel.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+
   function handleGenerate() {
     setAiError(null)
     startGenerating(async () => {
@@ -202,7 +219,7 @@ export default function PostPartnershipForm({
         if (form) {
           fillFormField(form, '[name="title"]', result.title)
           fillFormField(form, '[name="description"]', result.description)
-          if (result.make) fillFormField(form, '[name="make"]', result.make, 'change')
+          if (result.make) fillMakeSelect(form, result.make)
           if (result.model) fillFormField(form, '[name="model"]', result.model)
           if (result.year) fillFormField(form, '[name="year"]', result.year)
           if (result.registration) fillFormField(form, '[name="registration"]', result.registration)
