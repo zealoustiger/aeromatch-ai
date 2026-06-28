@@ -947,7 +947,13 @@ function EstimatePanel({
           <>
             {estimate.compCount} other {familyLabel} listing{estimate.compCount === 1 ? '' : 's'} for
             sale now range {formatPrice(estimate.low)}–{formatPrice(estimate.high)} (median{' '}
-            {formatPrice(estimate.median)}).
+            {formatPrice(estimate.median)}) — this one is{' '}
+            {estimate.percentile === 0
+              ? 'priced below all of them'
+              : estimate.percentile === 100
+                ? 'priced above all of them'
+                : `priced above ${estimate.percentile}% of them`}
+            .
           </>
         ) : (
           <>

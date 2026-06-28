@@ -31,6 +31,8 @@ test('below market — priced clearly below the family median', () => {
   // Range = min/max of the OTHER comps (300k–380k), not including the 280k subject.
   assert.equal(e!.low, 300_000)
   assert.equal(e!.high, 380_000)
+  // 280k is below all 5 others (300/320/340/360/380) → percentile 0 (the cheapest).
+  assert.equal(e!.percentile, 0)
 })
 
 test('above market — clearly above the family median', () => {
@@ -40,6 +42,16 @@ test('above market — clearly above the family median', () => {
   assert.equal(e!.verdict, 'above')
   assert.equal(e!.deltaDollars, 80_000)
   assert.equal(e!.deltaPct, 24)
+  // 420k is above all 5 others (300/320/340/360/380) → percentile 100 (the priciest).
+  assert.equal(e!.percentile, 100)
+})
+
+test('percentile — subject in the middle of the spread', () => {
+  // Others sorted: 300/320/340/360/380. Subject 350k sits above 300/320/340 (3 of 5)
+  // → round(3/5*100) = 60.
+  const e = clubHangerEstimate(350_000, [350_000, 300_000, 320_000, 340_000, 360_000, 380_000])
+  assert.ok(e)
+  assert.equal(e!.percentile, 60)
 })
 
 test('around market — within the dead band of the median, pct 0', () => {
