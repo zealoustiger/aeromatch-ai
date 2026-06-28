@@ -49,6 +49,10 @@ export interface ClubHangerEstimate {
   high: number
   /** Number of OTHER same-family priced comps the estimate was computed from. */
   compCount: number
+  /** Where this listing sits within the OTHER comps' asking-price spread: the whole
+   *  percent of OTHER comps priced strictly below it (0 = cheapest, ~100 = priciest).
+   *  Honest position signal — computed only from the real comp prices. */
+  percentile: number
   /** Signed distance from the median in whole dollars (negative = below market). */
   deltaDollars: number
   /** Absolute whole-number percent distance from the median (>= 1 for non-fair). */
@@ -104,11 +108,20 @@ export function clubHangerEstimate(
   const low = Math.round(others[0])
   const high = Math.round(others[others.length - 1])
 
+  // Position within the real spread: share of OTHER comps priced strictly below this
+  // listing, as a whole percent (0 = cheapest, ~100 = priciest). No fabrication —
+  // it's just a count over the same comp set used for the median/range.
+  let below = 0
+  for (const p of others) {
+    if (p < askingPrice) below++
+  }
+  const percentile = Math.round((below / others.length) * 100)
+
   const deltaDollars = Math.round(askingPrice - median)
   const delta = (askingPrice - median) / median
 
   if (Math.abs(delta) < ESTIMATE_DEAD_BAND) {
-    return { verdict: 'around', median, low, high, compCount: others.length, deltaDollars, deltaPct: 0 }
+    return { verdict: 'around', median, low, high, compCount: others.length, percentile, deltaDollars, deltaPct: 0 }
   }
   // A delta just outside the dead-band can still round to 0; clamp to >= 1 so the
   // label always reads a real, non-zero percentage.
@@ -119,6 +132,7 @@ export function clubHangerEstimate(
     low,
     high,
     compCount: others.length,
+    percentile,
     deltaDollars,
     deltaPct,
   }
