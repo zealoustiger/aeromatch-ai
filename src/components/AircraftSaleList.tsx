@@ -494,6 +494,7 @@ export async function fetchAircraftPage(
         p_max_year: filters.max_year ? parseInt(filters.max_year) : null,
         p_include_no_photo: includeNoPhoto,
         p_buyer_price_floor: BUYER_PRICE_FLOOR,
+        p_parts_patterns: [...PARTS_TITLE_PATTERNS],
         p_limit: PAGE_SIZE,
         p_offset: from,
       })
