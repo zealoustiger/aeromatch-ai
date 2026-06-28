@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Bookmark, CheckCircle, ArrowRight } from 'lucide-react'
@@ -8,6 +8,11 @@ import { createClient } from '@/lib/supabase'
 import { saveSearch } from '@/app/actions'
 import { autoNameSearch } from '@/lib/savedSearchName'
 import type { User } from '@supabase/supabase-js'
+
+// Marker appended to the post-auth `next=` URL so a logged-out user's "save this
+// search" intent survives the sign-in round trip and auto-completes on return —
+// mirrors the ?contact=1 pattern the message buttons use to auto-open a thread.
+const SAVE_INTENT_PARAM = 'saveSearch'
 
 export default function SaveSearchButton({
   basePath = '/partnerships',
@@ -27,6 +32,7 @@ export default function SaveSearchButton({
   const [done, setDone] = useState<null | { already: boolean }>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, startTransition] = useTransition()
+  const didAutoSave = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -37,21 +43,21 @@ export default function SaveSearchButton({
     return () => subscription.unsubscribe()
   }, [])
 
-  const paramsStr = searchParams.toString()
-  if (!paramsStr) return null
+  // Active filters minus our auth round-trip marker — this is what we actually save
+  // and auto-name from (the marker must never leak into the stored search query).
+  const cleanParams = (() => {
+    const sp = new URLSearchParams(searchParams.toString())
+    sp.delete(SAVE_INTENT_PARAM)
+    return sp.toString()
+  })()
 
-  // One click: auto-name from the active filters and save immediately. No naming
-  // step — the user renames later on /searches (slice 2). Signed-out → auth, then
-  // back to this exact filtered search.
-  function handleSaveClick() {
-    if (!user) {
-      router.push(`/auth?next=${encodeURIComponent(basePath + '?' + paramsStr)}`)
-      return
-    }
+  // One-shot save: auto-name from the active filters and persist. Shared by the
+  // click handler and the post-auth auto-trigger.
+  function runSave() {
     setErrorMsg('')
-    const name = autoNameSearch(paramsStr, basePath)
+    const name = autoNameSearch(cleanParams, basePath)
     startTransition(async () => {
-      const result = await saveSearch(name, paramsStr, basePath)
+      const result = await saveSearch(name, cleanParams, basePath)
       if (result.error) {
         // A same-name collision means this exact search is already saved — treat as
         // success (still point them to where it lives) rather than a scary error.
@@ -61,6 +67,35 @@ export default function SaveSearchButton({
         setDone({ already: false })
       }
     })
+  }
+
+  // Returning from auth with the save-search intent marker → complete the save the
+  // user originally clicked, once, then strip the marker from the URL so a reload
+  // won't re-fire it and the saved filters stay clean (mirrors ContactBar's
+  // ?contact=1 auto-open).
+  useEffect(() => {
+    if (searchParams.get(SAVE_INTENT_PARAM) !== '1') return
+    if (!user || !cleanParams || didAutoSave.current) return
+    didAutoSave.current = true
+    const url = new URL(window.location.href)
+    url.searchParams.delete(SAVE_INTENT_PARAM)
+    window.history.replaceState({}, '', url.toString())
+    runSave()
+  }, [user, searchParams, cleanParams]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!cleanParams) return null
+
+  // One click: auto-name from the active filters and save immediately. No naming
+  // step — the user renames later on /searches (slice 2). Signed-out → auth with an
+  // intent marker, then back to this exact filtered search where the save
+  // auto-completes (above).
+  function handleSaveClick() {
+    if (!user) {
+      const next = `${basePath}?${cleanParams}&${SAVE_INTENT_PARAM}=1`
+      router.push(`/auth?next=${encodeURIComponent(next)}`)
+      return
+    }
+    runSave()
   }
 
   if (done) {
