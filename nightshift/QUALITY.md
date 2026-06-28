@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-28T21:44:47Z — airframe-utilization-read — score 4/5
+- Strengths: Faithfully meets every acceptance criterion — pure honesty-gated helper (null on missing ttaf/year, ttaf≤0, age<1), genuinely two-sided copy (low-time surfaces sitting/corrosion risk in amber, not a green win), distinct from the SMOH Engine Life panel, and mirrors its `ch-panel`/Plane-icon style; solid unit tests cover gating, all three bands, rounding, and ttaf echo.
+- Weaknesses / risks: Minor — the chip `label` ("Low time") and band `headline` ("Low-time for its age") are near-duplicate strings shown together; band thresholds (40/120) are reasonable but un-sourced magic constants. None material.
+- Follow-up: none
+
 ## 2026-06-28T12:36:51Z — deal-score-signal-tally — score 4/5
 - Strengths: Exactly to spec — counts positive/negative only, neutral excluded, honest descriptive copy, chip colors match existing SIGNAL_COLORS palette, all-neutral/empty cases render no header, suppression unchanged; well-scoped single-file additive change.
 - Weaknesses / risks: Chip color tokens are hardcoded literals rather than derived from the central SIGNAL_COLORS map (minor duplication); two filter passes over rows (negligible).
