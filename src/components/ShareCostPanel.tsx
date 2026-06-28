@@ -71,6 +71,19 @@ export default function ShareCostPanel({
             </span>
             <span className="text-sm text-sky-600">{money(selectedRow.totalAnnual)}/yr</span>
           </div>
+          <p className="mt-2 border-t border-sky-100 pt-2 text-sm text-sky-700">
+            {selected === 1 ? (
+              <>
+                <span className="font-semibold text-sky-900">{money(selectedRow.buyInPerShare)}</span>{' '}
+                to buy (the asking price)
+              </>
+            ) : (
+              <>
+                ≈ <span className="font-semibold text-sky-900">{money(selectedRow.buyInPerShare)}</span>{' '}
+                one-time to buy in (asking price ÷ {selected})
+              </>
+            )}
+          </p>
         </div>
       )}
 
@@ -80,6 +93,7 @@ export default function ShareCostPanel({
           <thead>
             <tr className="border-b border-slate-100">
               <th className="pb-2 text-left text-xs font-medium text-slate-400">Ownership</th>
+              <th className="pb-2 text-right text-xs font-medium text-slate-400">Buy-in</th>
               <th className="pb-2 text-right text-xs font-medium text-slate-400">Monthly</th>
               <th className="pb-2 text-right text-xs font-medium text-slate-400">Annual</th>
             </tr>
@@ -96,6 +110,9 @@ export default function ShareCostPanel({
                 }`}
               >
                 <td className="py-2.5 font-medium">{row.label}</td>
+                <td className="py-2.5 text-right tabular-nums text-slate-500">
+                  {money(row.buyInPerShare)}
+                </td>
                 <td
                   className={`py-2.5 text-right tabular-nums ${
                     row.shares === selected
@@ -115,9 +132,10 @@ export default function ShareCostPanel({
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
-        Fixed costs (insurance, hangar, inspection
-        {withEngineReserve ? ', engine reserve' : ''}) split equally by number of
-        partners. Fuel/oil is per-pilot since each partner flies their own hours.
+        Buy-in is the asking price split evenly across partners — what you'd each pay to
+        acquire the aircraft (the real figure is negotiated). Fixed costs (insurance, hangar,
+        inspection{withEngineReserve ? ', engine reserve' : ''}) split equally by number of
+        partners; fuel/oil is per-pilot since each partner flies their own hours.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
