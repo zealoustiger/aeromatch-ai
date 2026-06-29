@@ -9,8 +9,21 @@ import { track } from '@/lib/analytics'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
+import { SEO_MAKE_MODELS } from '@/lib/seo'
 
 const DRAFT_KEY = 'ch:draft:partnership-new'
+
+// Curated model-name suggestions reused from the existing SEO make/model table —
+// no new or fabricated data. Grouped by a normalized make key so the Model field
+// can suggest only the picked make's models (datalist; free text still allowed).
+// Mirrors PostAircraftForm so partnership listings keep model values consistent.
+const normMake = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+const MODELS_BY_MAKE: Record<string, string[]> = SEO_MAKE_MODELS.reduce((acc, m) => {
+  const key = normMake(m.make)
+  ;(acc[key] ??= []).push(m.model)
+  return acc
+}, {} as Record<string, string[]>)
+const ALL_MODELS = Array.from(new Set(SEO_MAKE_MODELS.map((m) => m.model)))
 
 function forceSaveDraft(form: HTMLFormElement) {
   try {
@@ -132,6 +145,25 @@ export default function PostPartnershipForm({
 
   const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
   const detailsRef = useRef<HTMLDetailsElement>(null)
+
+  // Mirror the (uncontrolled) Make <select> so the Model field can suggest only that
+  // make's curated models. Stays uncontrolled — the FAA/AI autofill sets make via a
+  // dispatched 'change' event (fillMakeSelect), which still fires this onChange.
+  const [selectedMake, setSelectedMake] = useState('')
+  const makeKey = normMake(selectedMake)
+  const modelSuggestions =
+    makeKey && MODELS_BY_MAKE[makeKey]
+      ? MODELS_BY_MAKE[makeKey]
+      : selectedMake && selectedMake !== 'Other'
+        ? [] // a make with no curated models (e.g. FAA-injected) — free text only
+        : ALL_MODELS // no make picked yet — fall back to the full curated list
+
+  // Sync the make once after mount in case a restored draft set it before this ran.
+  useEffect(() => {
+    const sel = formRef.current?.querySelector<HTMLSelectElement>('[name="make"]')
+    if (sel?.value) setSelectedMake(sel.value)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleStartOver() {
     if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
@@ -348,14 +380,26 @@ export default function PostPartnershipForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label required>Make</Label>
-            <Select name="make" required>
+            <Select name="make" required onChange={(e) => setSelectedMake(e.target.value)}>
               <option value="">Select make</option>
               {MAKES.map((m) => <option key={m} value={m}>{m}</option>)}
             </Select>
           </div>
           <div>
             <Label required>Model</Label>
-            <Input name="model" placeholder="e.g. 172S Skyhawk" required />
+            <Input
+              name="model"
+              placeholder="e.g. 172S Skyhawk"
+              required
+              list="partnership-model-suggestions"
+              autoComplete="off"
+            />
+            <datalist id="partnership-model-suggestions">
+              {modelSuggestions.map((m) => <option key={m} value={m} />)}
+            </datalist>
+            {modelSuggestions.length > 0 && (
+              <p className="mt-1 text-xs text-slate-400">Start typing to pick a common model, or enter your own.</p>
+            )}
           </div>
           <div className="sm:col-span-2">
             <Label required>Home Airport</Label>
