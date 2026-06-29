@@ -5,6 +5,7 @@ import { Plane, Handshake, PlusCircle, ExternalLink, UserSearch } from 'lucide-r
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { formatPrice, formatShareType } from '@/lib/utils'
 import type { AircraftForSale, Partnership } from '@/lib/types'
+import DeactivateListingButton from '@/components/DeactivateListingButton'
 
 type SeekerRow = {
   id: string
@@ -139,12 +140,20 @@ export default async function MyListingsPage() {
                       {formatDate(p.first_seen_at ?? p.created_at)}
                     </p>
                   </div>
-                  <Link
-                    href={`/aircraft/listing/${p.id}`}
-                    className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
-                  >
-                    View <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <Link
+                      href={`/aircraft/listing/${p.id}`}
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                    >
+                      View <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                    <DeactivateListingButton
+                      type="aircraft"
+                      id={p.id}
+                      label="Mark as sold"
+                      confirmMessage="Mark as sold? Your listing will be removed from ClubHanger."
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -172,12 +181,20 @@ export default async function MyListingsPage() {
                       {formatDate(p.posted_at ?? p.created_at)}
                     </p>
                   </div>
-                  <Link
-                    href={`/partnerships/${p.id}`}
-                    className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
-                  >
-                    View <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <Link
+                      href={`/partnerships/${p.id}`}
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                    >
+                      View <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                    <DeactivateListingButton
+                      type="partnership"
+                      id={p.id}
+                      label="Close listing"
+                      confirmMessage="Close this partnership listing? It will be removed from ClubHanger."
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -210,12 +227,20 @@ export default async function MyListingsPage() {
                         {formatDate(s.created_at)}
                       </p>
                     </div>
-                    <Link
-                      href={`/partnerships/seeking/${s.id}`}
-                      className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
-                    >
-                      View <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <Link
+                        href={`/partnerships/seeking/${s.id}`}
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                      >
+                        View <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                      <DeactivateListingButton
+                        type="seeker"
+                        id={s.id}
+                        label="Deactivate"
+                        confirmMessage="Deactivate this seeking listing? It will be removed from ClubHanger."
+                      />
+                    </div>
                   </li>
                 )
               })}
