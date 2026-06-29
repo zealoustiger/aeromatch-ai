@@ -186,10 +186,17 @@ export default function PostPartnershipForm({
         ? [] // a make with no curated models (e.g. FAA-injected) — free text only
         : ALL_MODELS // no make picked yet — fall back to the full curated list
 
-  // Sync the make once after mount in case a restored draft set it before this ran.
+  // Track the selected contact method so we can hide the email field when platform
+  // messaging is chosen (the email address is irrelevant / never shown in that case).
+  const [contactMethod, setContactMethod] = useState('platform')
+
+  // Sync make + contact method once after mount in case a restored draft set them
+  // before this ran (mirrors the selectedMake pattern above).
   useEffect(() => {
-    const sel = formRef.current?.querySelector<HTMLInputElement>('[name="make"]')
-    if (sel?.value) setSelectedMake(sel.value)
+    const makeEl = formRef.current?.querySelector<HTMLInputElement>('[name="make"]')
+    if (makeEl?.value) setSelectedMake(makeEl.value)
+    const methodEl = formRef.current?.querySelector<HTMLSelectElement>('[name="contact_method"]')
+    if (methodEl?.value) setContactMethod(methodEl.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -607,7 +614,7 @@ export default function PostPartnershipForm({
                   <p className="mt-1 text-xs text-slate-400">We&apos;ll save your name for future listings.</p>
                 )}
               </div>
-              <div>
+              <div className={contactMethod === 'platform' ? 'hidden' : undefined}>
                 <Label>Email</Label>
                 <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
@@ -618,7 +625,10 @@ export default function PostPartnershipForm({
               </div>
               <div>
                 <Label>Preferred Contact Method</Label>
-                <Select name="contact_method">
+                <Select
+                  name="contact_method"
+                  onChange={(e) => setContactMethod(e.target.value)}
+                >
                   <option value="platform">Message through ClubHanger (default)</option>
                   <option value="email">Email only</option>
                   <option value="phone">Phone only</option>

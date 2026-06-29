@@ -182,8 +182,11 @@ export default function PostSeekerListingForm({
   const [ratingsHeld, setRatingsHeld] = useState('')
   // Same mirror pattern for the "Preferred Models" field.
   const [preferredModels, setPreferredModels] = useState('')
+  // Track the selected contact method so we can hide the email field when platform
+  // messaging is chosen (the email address is irrelevant / never shown in that case).
+  const [contactMethod, setContactMethod] = useState('platform')
 
-  // Sync once after mount in case a restored draft set the field before this ran
+  // Sync mirrors once after mount in case a restored draft set the fields before this ran
   // (mirrors PostAircraftForm's selectedMake sync).
   useEffect(() => {
     const input = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_makes"]')
@@ -192,6 +195,8 @@ export default function PostSeekerListingForm({
     if (ratingsInput?.value) setRatingsHeld(ratingsInput.value)
     const modelsInput = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_models"]')
     if (modelsInput?.value) setPreferredModels(modelsInput.value)
+    const methodEl = formRef.current?.querySelector<HTMLSelectElement>('[name="contact_method"]')
+    if (methodEl?.value) setContactMethod(methodEl.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -657,7 +662,7 @@ export default function PostSeekerListingForm({
                     : 'Only your first name + last initial is shown publicly.'}
                 </p>
               </div>
-              <div>
+              <div className={contactMethod === 'platform' ? 'hidden' : undefined}>
                 <Label>Email <span className="font-normal text-slate-400">(optional)</span></Label>
                 <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
@@ -668,7 +673,10 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Preferred Contact Method</Label>
-                <Select name="contact_method">
+                <Select
+                  name="contact_method"
+                  onChange={(e) => setContactMethod(e.target.value)}
+                >
                   <option value="platform">Message through ClubHanger (default)</option>
                   <option value="email">Email only</option>
                   <option value="phone">Phone only</option>
