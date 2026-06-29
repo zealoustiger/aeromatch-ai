@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T08:20:19Z — seeker-airport-or-filter — score 4/5
+- Strengths: Tight single-file change that nails the spec — PostgREST `.or(home_airport.in.(…),additional_airports.ov.{…})` correctly expresses the home-OR-additional match, mock path mirrors it with consistent uppercase normalization, and the pre-migration fallback reuses the exact `error.message.includes('additional_airports')` pattern from createSeekerListing. All 6 ACs met; gate green.
+- Weaknesses / risks: Fallback path re-builds the makes/ratings/share_type/min_hours chain verbatim (~7 duplicated lines) instead of a shared helper — two sites that can drift; also airport codes are interpolated into the `.or()` string unquoted (safe for A-Z0-9 ICAOs, but no sanitization).
+- Follow-up: none
+
 ## 2026-06-29T08:11:51Z — listing-age-context — score 4/5
 - Strengths: Correct, well-scoped single-file change — reuses already-computed `listed`/`domContext` and `familyComps` (no new queries), self-suppresses via `listed && domContext &&`, and correctly gates the "seller may have flexibility" inference behind the same `daysOnMarket >= 30` dual-threshold the Deal Score tally uses, so the honesty floor holds. All 7 ACs met; build + tsc clean per gate.
 - Weaknesses / risks: The relative-recency phrasing is hand-rolled a second time as an inline JSX ternary, duplicating `domDetail`'s longer/shorter/typical branching with slightly reworded copy ("seller may have flexibility" vs "a seller-flexibility signal"; "similar … for sale now" vs "comparable … still for sale") — two render sites that can drift, and AC#2's "matching the language already used in the tally" is only loosely honored.
