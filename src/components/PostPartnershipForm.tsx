@@ -460,7 +460,7 @@ export default function PostPartnershipForm({
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="text-sm font-medium text-slate-700">Buy-In Price <span className="text-red-500">*</span></span>
+              <span className="text-sm font-medium text-slate-700">Buy-In Price <span className="text-xs font-normal text-slate-400">(optional)</span></span>
               <button
                 type="button"
                 onClick={() => setShowBuyInInfo(!showBuyInInfo)}
@@ -472,13 +472,14 @@ export default function PostPartnershipForm({
             </div>
             {showBuyInInfo && (
               <p className="mb-1.5 text-xs text-slate-500 rounded-lg bg-slate-50 px-3 py-2">
-                The one-time share price a new partner pays to join. Partnerships vary widely — enter what you&apos;re asking for.
+                The one-time share price a new partner pays to join. Partnerships vary widely — enter what you&apos;re asking for, or leave blank if the price is negotiable.
               </p>
             )}
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="buy_in_price" type="number" placeholder="15000" className="pl-7" min={0} required />
+              <Input name="buy_in_price" type="number" placeholder="15000" className="pl-7" min={0} />
             </div>
+            <p className="mt-1 text-xs text-slate-400">Leave blank if price is negotiable — describe the terms in your listing.</p>
           </div>
         </div>
       </section>
