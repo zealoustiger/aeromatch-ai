@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Wallet, ArrowRight } from 'lucide-react'
-import type { ShareCostRow } from '@/lib/calculators'
+import { ASSUMED_HOURS_PER_YEAR, type ShareCostRow } from '@/lib/calculators'
 
 const money = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
@@ -71,6 +71,14 @@ export default function ShareCostPanel({
             </span>
             <span className="text-sm text-sky-600">{money(selectedRow.totalAnnual)}/yr</span>
           </div>
+          <p className="mt-1.5 text-sm text-sky-700">
+            ≈ <span className="font-semibold text-sky-900">{money(selectedRow.costPerHour)}</span> per
+            flight hour{' '}
+            <span className="text-sky-600">
+              at {ASSUMED_HOURS_PER_YEAR} hrs/yr — flying fewer hours raises this (fixed costs
+              spread over fewer hours)
+            </span>
+          </p>
           <p className="mt-2 border-t border-sky-100 pt-2 text-sm text-sky-700">
             {selected === 1 ? (
               <>
