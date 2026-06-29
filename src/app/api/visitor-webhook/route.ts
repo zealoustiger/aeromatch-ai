@@ -158,9 +158,41 @@ export async function POST(request: NextRequest) {
       const org = await ipOrg(ip)
       const uaBot = BOT_RE.test(ua)
       const cloudBot = !!org && CLOUD_RE.test(org)
-      const isBot = uaBot || cloudBot
+
+      // Residential-proxy burst detection: a scraper renting a residential
+      // proxy network (BrightData, Soax, etc.) gets a Comcast/Cox/etc. exit IP
+      // that passes the CLOUD_RE check, so the UA + IP-org filters miss it.
+      // But the SAME scraper sweeping a URL from many exits shows up as a burst
+      // of "different visitors" with the IDENTICAL user-agent string, landing
+      // on the same first_path within minutes. Threshold ≥2 prior matches in
+      // the last 6h flags this run as a bot. A 20-byte UA is too short to be
+      // diagnostic; skip the burst check then. Capped lookup so a popular URL
+      // doesn't slow the beacon. Safe: a real burst of 3+ humans on the same
+      // page would have varied UAs (different browsers / versions / mobile mix).
+      let burstBot = false
+      let burstCount = 0
+      if (path && ua && ua.length >= 20) {
+        const sinceIso = new Date(Date.now() - 6 * 3600_000).toISOString()
+        const { count } = await admin
+          .from('visitor_threads')
+          .select('session_id', { count: 'exact', head: true })
+          .eq('first_path', path)
+          .eq('user_agent', ua)
+          .neq('session_id', sessionId)
+          .gte('created_at', sinceIso)
+        burstCount = count ?? 0
+        if (burstCount >= 2) burstBot = true
+      }
+
+      const isBot = uaBot || cloudBot || burstBot
       const provider = org ? org.replace(/,?\s*(LLC|Inc\.?|Ltd\.?|GmbH|S\.?A\.?S?\.?|B\.?V\.?).*$/i, '').trim() : null
-      const botReason = cloudBot ? provider || 'datacenter' : uaBot ? 'bot user-agent' : null
+      const botReason = cloudBot
+        ? provider || 'datacenter'
+        : uaBot
+          ? 'bot user-agent'
+          : burstBot
+            ? `UA burst (${burstCount + 1} hits on this URL)`
+            : null
 
       const via = referrerHost ? ` · via ${referrerHost}` : ''
       const headline = isBot
