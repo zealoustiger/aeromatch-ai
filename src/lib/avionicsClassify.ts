@@ -125,3 +125,51 @@ export function classifyAvionics(avionics: string[] | null): AvionicsInfo | null
 
   return { caps, items: avionics }
 }
+
+// ─── IFR suitability synthesis ───────────────────────────────────────────────
+// Turns the detected capability chips into a single honest "can I file IFR, and
+// how capable is this panel?" buyer read. Tiers cascade from the richest combo
+// (glass + WAAS + autopilot) down to a bare ADS-B mention; each sub-line states
+// what is present and explicitly defers to the owner/logbooks for anything not
+// detected — never asserting a certification we can't see. Returns null when no
+// IFR-meaningful capability was detected, so callers self-suppress rather than
+// render a fabricated read from an ambiguous equipment list. Pure — no React.
+export type IfrTier = 'full' | 'capable' | 'equipped' | 'basic'
+
+export interface IfrSuitability {
+  tier: IfrTier
+  headline: string
+  sub: string
+}
+
+export function computeIfrSuitability(caps: AvionicsCap[]): IfrSuitability | null {
+  if (caps.length === 0) return null
+  const keys = new Set(caps.map((c) => c.key))
+  const glass = keys.has('glass')
+  const waas = keys.has('waas')
+  const gps = keys.has('gps')
+  const ap = keys.has('autopilot')
+  const adsb = keys.has('adsb')
+
+  if (glass && waas && ap)
+    return { tier: 'full', headline: 'Full IFR touring setup', sub: 'Glass panel, WAAS GPS, and autopilot — everything needed for instrument cross-country flying.' }
+  if (glass && waas)
+    return { tier: 'full', headline: 'IFR-capable with glass panel', sub: 'Glass avionics and WAAS GPS for LPV/LNAV+V approaches. No autopilot detected — ask the owner.' }
+  if (glass && ap)
+    return { tier: 'capable', headline: 'Glass panel with autopilot', sub: 'Integrated glass display and autopilot. Verify WAAS GPS details with the owner for precision approaches.' }
+  if (waas && ap)
+    return { tier: 'capable', headline: 'IFR-capable: WAAS GPS + autopilot', sub: 'WAAS GPS for precision approaches and autopilot for cross-country — a solid IFR panel.' }
+  if (glass)
+    return { tier: 'capable', headline: 'Glass panel', sub: 'Integrated glass display. Verify WAAS GPS and autopilot details with the owner for IFR use.' }
+  if (waas)
+    return { tier: 'capable', headline: 'WAAS GPS — IFR-capable', sub: 'WAAS GPS navigator for LPV precision approaches. No autopilot or glass panel detected in the listing.' }
+  if (gps && ap)
+    return { tier: 'equipped', headline: 'IFR-equipped: GPS + autopilot', sub: 'GPS navigator and autopilot; WAAS capability not specified — verify with owner for LPV approaches.' }
+  if (gps)
+    return { tier: 'equipped', headline: 'GPS navigator installed', sub: 'GPS navigator listed. Verify WAAS capability and IFR certification with the owner.' }
+  if (ap)
+    return { tier: 'equipped', headline: 'Autopilot installed', sub: 'Autopilot listed but no GPS navigator detected. Ask the owner about the full IFR navigation suite.' }
+  if (adsb)
+    return { tier: 'basic', headline: 'ADS-B compliant', sub: 'ADS-B Out equipped. No glass, GPS, or autopilot found in the listing — ask the owner about the full panel.' }
+  return null
+}
