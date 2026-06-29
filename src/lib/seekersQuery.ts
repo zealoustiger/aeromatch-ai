@@ -58,7 +58,10 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
   if (!hasSupabase()) {
     let r = MOCK_SEEKERS
     const codes = parseMulti(f.airports ?? f.airport).map((c) => c.toUpperCase())
-    if (codes.length) r = r.filter((s) => codes.includes((s.home_airport ?? '').toUpperCase()))
+    if (codes.length) r = r.filter((s) =>
+      codes.includes((s.home_airport ?? '').toUpperCase()) ||
+      (s.additional_airports ?? []).some((a) => codes.includes(a.toUpperCase()))
+    )
     else if (f.state) r = r.filter((s) => s.state === f.state!.toUpperCase())
     if (makes.length) {
       const wanted = new Set(makes.map((m) => m.toLowerCase()))
@@ -84,7 +87,12 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
   // expanded by radius) wins over a plain state.
   const airportIcaos = await resolveSeekerAirports(f)
   if (airportIcaos.length) {
-    query = query.in('home_airport', airportIcaos)
+    // OR: match primary home_airport OR any entry in additional_airports (requires the
+    // seeker_additional_airports migration; graceful fallback below if absent).
+    const airportList = airportIcaos.join(',')
+    query = query.or(
+      `home_airport.in.(${airportList}),additional_airports.ov.{${airportList}}`
+    )
   } else if (f.state?.trim()) {
     query = query.eq('state', f.state.trim().toUpperCase())
   }
@@ -99,7 +107,28 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
     if (Number.isFinite(n) && n > 0) query = query.gte('total_hours', n)
   }
 
-  const { data } = await query
+  const { data, error } = await query
+
+  // Graceful degradation: if additional_airports column not yet migrated, retry with
+  // home_airport-only (same pattern as createSeekerListing in actions.ts).
+  if (error?.message?.includes('additional_airports') && airportIcaos.length) {
+    let retry = supabase
+      .from('partnership_seekers')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .in('home_airport', airportIcaos)
+    if (makes.length) retry = retry.overlaps('preferred_makes', makes)
+    if (ratings.length) retry = retry.overlaps('ratings_held', ratings)
+    if (f.share_type?.trim()) retry = retry.contains('preferred_share_types', [f.share_type.trim()])
+    if (f.min_hours) {
+      const n = parseInt(f.min_hours, 10)
+      if (Number.isFinite(n) && n > 0) retry = retry.gte('total_hours', n)
+    }
+    const { data: fallback } = await retry
+    return (fallback as PartnershipSeeker[]) ?? []
+  }
+
   return (data as PartnershipSeeker[]) ?? []
 }
 
