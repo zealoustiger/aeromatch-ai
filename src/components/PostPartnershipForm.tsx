@@ -50,7 +50,23 @@ function forceSaveDraft(form: HTMLFormElement) {
 }
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
-const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
+
+// Common makes kept as one-tap suggestions. The Make field is free text (datalist),
+// so a partner posting any make can type it in — no "Other" dead-end that would lose the
+// real make and break the buyer-side comp / Estimate / model-family matching. Mirrors
+// PostAircraftForm.
+const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman']
+
+// Make suggestions = dedup union (by normalized key) of the common makes above and the
+// distinct makes already in SEO_MAKE_MODELS (adds Bellanca, Robinson, CubCrafters, …) —
+// every suggestion is a make already present in the codebase, none fabricated. Canonical
+// spelling from MAKES wins on a tie (e.g. "Van's" over "Vans"). Sorted for the dropdown.
+const MAKE_SUGGESTIONS: string[] = (() => {
+  const byKey = new Map<string, string>()
+  for (const m of SEO_MAKE_MODELS) byKey.set(normMake(m.make), m.make)
+  for (const m of MAKES) byKey.set(normMake(m), m) // MAKES last → its spelling wins
+  return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b))
+})()
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -158,9 +174,9 @@ export default function PostPartnershipForm({
   // or re-persist the just-cleared draft. Mirrors PostAircraftForm.
   const fillTokenRef = useRef(0)
 
-  // Mirror the (uncontrolled) Make <select> so the Model field can suggest only that
-  // make's curated models. Stays uncontrolled — the FAA/AI autofill sets make via a
-  // dispatched 'change' event (fillMakeSelect), which still fires this onChange.
+  // Mirror the (uncontrolled) Make input so the Model field can suggest only that make's
+  // curated models. Stays uncontrolled — the FAA/AI autofill sets make via fillFormField's
+  // dispatched 'input' event, which still fires this onChange.
   const [selectedMake, setSelectedMake] = useState('')
   const makeKey = normMake(selectedMake)
   const modelSuggestions =
@@ -172,7 +188,7 @@ export default function PostPartnershipForm({
 
   // Sync the make once after mount in case a restored draft set it before this ran.
   useEffect(() => {
-    const sel = formRef.current?.querySelector<HTMLSelectElement>('[name="make"]')
+    const sel = formRef.current?.querySelector<HTMLInputElement>('[name="make"]')
     if (sel?.value) setSelectedMake(sel.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -226,7 +242,7 @@ export default function PostPartnershipForm({
       if (data.found) {
         const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
         const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
-        if (data.make) fillMakeSelect(form, data.make)
+        if (data.make) fillFormField(form, '[name="make"]', data.make)
         if (modelInput && data.model) {
           modelInput.value = data.model
           modelInput.dispatchEvent(new Event('input', { bubbles: true }))
@@ -256,27 +272,6 @@ export default function PostPartnershipForm({
     }
   }
 
-  // Set the Make <select>, injecting an <option> for makes outside the preset list.
-  // The FAA lookup and AI prefill can return makes (Maule, Aviat, Bellanca, …) that
-  // aren't in MAKES; setting a <select> to a value with no matching option is a no-op,
-  // which would silently leave this required field blank. Injecting the option keeps
-  // the real make (better data, not "Other") and fills the field.
-  function fillMakeSelect(form: HTMLFormElement, make: string) {
-    const sel = form.querySelector<HTMLSelectElement>('[name="make"]')
-    if (!sel || !make) return
-    const exists = Array.from(sel.options).some((o) => o.value === make)
-    if (!exists) {
-      const opt = document.createElement('option')
-      opt.value = make
-      opt.textContent = make
-      const other = Array.from(sel.options).find((o) => o.value === 'Other')
-      if (other) sel.insertBefore(opt, other)
-      else sel.add(opt)
-    }
-    sel.value = make
-    sel.dispatchEvent(new Event('change', { bubbles: true }))
-  }
-
   function handleGenerate() {
     setAiError(null)
     const token = fillTokenRef.current
@@ -290,7 +285,7 @@ export default function PostPartnershipForm({
         if (form) {
           fillFormField(form, '[name="title"]', result.title)
           fillFormField(form, '[name="description"]', result.description)
-          if (result.make) fillMakeSelect(form, result.make)
+          if (result.make) fillFormField(form, '[name="make"]', result.make)
           if (result.model) fillFormField(form, '[name="model"]', result.model)
           if (result.year) fillFormField(form, '[name="year"]', result.year)
           if (result.registration) fillFormField(form, '[name="registration"]', result.registration)
@@ -413,10 +408,17 @@ export default function PostPartnershipForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label required>Make</Label>
-            <Select name="make" required onChange={(e) => setSelectedMake(e.target.value)}>
-              <option value="">Select make</option>
-              {MAKES.map((m) => <option key={m} value={m}>{m}</option>)}
-            </Select>
+            <Input
+              name="make"
+              placeholder="e.g. Cessna, Maule, Bellanca"
+              required
+              list="partnership-make-suggestions"
+              autoComplete="off"
+              onChange={(e) => setSelectedMake(e.target.value)}
+            />
+            <datalist id="partnership-make-suggestions">
+              {MAKE_SUGGESTIONS.map((m) => <option key={m} value={m} />)}
+            </datalist>
           </div>
           <div>
             <Label required>Model</Label>
