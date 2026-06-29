@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T08:47:46Z — seeker-on-listings-page — score 4/5
+- Strengths: All 5 functional ACs met cleanly — the new "Pilots seeking" section reuses the page's own `StatusBadge`/`formatDate` helpers and mirrors the aircraft/partnership section markup, the query correctly filters `poster_id` + active/pending and orders desc, the section self-hides when empty (AC3), and edge cases are handled gracefully (null title → sensible derived label with home airport, null `home_airport` → "Any airport", `preferred_makes` truncated to 2 with an ellipsis). Banner links added identically to both detail pages, matching the aircraft banner.
+- Weaknesses / risks: Minor — a local `SeekerRow` type is declared rather than reusing/`Pick`-ing the existing `PartnershipSeeker` interface in `lib/types`, though that interface lacks `title`/`status`/`poster_id` so a narrow local type is defensible; the internal `/partnerships/seeking/[id]` "View" link uses the `ExternalLink` icon, a slight semantic quibble. Nothing material.
+- Follow-up: none
+
 ## 2026-06-29T08:20:19Z — seeker-airport-or-filter — score 4/5
 - Strengths: Tight single-file change that nails the spec — PostgREST `.or(home_airport.in.(…),additional_airports.ov.{…})` correctly expresses the home-OR-additional match, mock path mirrors it with consistent uppercase normalization, and the pre-migration fallback reuses the exact `error.message.includes('additional_airports')` pattern from createSeekerListing. All 6 ACs met; gate green.
 - Weaknesses / risks: Fallback path re-builds the makes/ratings/share_type/min_hours chain verbatim (~7 duplicated lines) instead of a shared helper — two sites that can drift; also airport codes are interpolated into the `.or()` string unquoted (safe for A-Z0-9 ICAOs, but no sanitization).
