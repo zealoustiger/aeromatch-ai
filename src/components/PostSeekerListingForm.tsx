@@ -7,6 +7,7 @@ import { createSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/ap
 import { cn } from '@/lib/utils'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 import AirportFormInput from '@/components/AirportFormInput'
+import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
 
 const DRAFT_KEY = 'ch:draft:seeker-new'
 
@@ -31,6 +32,11 @@ function forceSaveDraft(form: HTMLFormElement) {
 }
 
 const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
+// One-tap common makes for the multi-value "Preferred Makes" field. Same set the
+// aircraft/partnership post forms suggest — every value is a make already used in the
+// codebase, none fabricated. Chips toggle entries in the comma-separated value; the
+// field stays free text so a seeker open to any other make can still type it in.
+const PREFERRED_MAKE_CHIPS = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman']
 const AIRCRAFT_CATEGORIES = [
   { value: 'any', label: 'Any / Open' },
   { value: 'sel', label: 'Single-Engine Land' },
@@ -158,6 +164,31 @@ export default function PostSeekerListingForm({
   )
 
   const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
+
+  // Mirror the (uncontrolled) free-text "Preferred Makes" value so the one-tap make
+  // chips can show which makes are currently selected. Stays uncontrolled — typing,
+  // the AI prefill, and chip toggles all set the input and dispatch 'input', which
+  // fires the onChange that updates this mirror.
+  const [preferredMakes, setPreferredMakes] = useState('')
+
+  // Sync once after mount in case a restored draft set the field before this ran
+  // (mirrors PostAircraftForm's selectedMake sync).
+  useEffect(() => {
+    const input = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_makes"]')
+    if (input?.value) setPreferredMakes(input.value)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function togglePreferredMake(make: string) {
+    const input = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_makes"]')
+    if (!input) return
+    const next = toggleCsvItem(input.value, make)
+    input.value = next
+    // Dispatch 'input' so autosave re-arms and the onChange mirror updates.
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    setPreferredMakes(next)
+  }
+
   // Monotonic token bumped on "Start over". The async AI prefill captures it before its
   // await and bails on resolve if it has advanced — so a prefill still in flight when the
   // user clears the form can't re-populate or re-persist the cleared draft. Mirrors
@@ -171,6 +202,7 @@ export default function PostSeekerListingForm({
       fillTokenRef.current += 1
       setAiError(null)
       reset()
+      setPreferredMakes('')
     }
   }
   const detailsRef = useRef<HTMLDetailsElement>(null)
@@ -338,8 +370,33 @@ export default function PostSeekerListingForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Preferred Makes</Label>
-                <Input name="preferred_makes" placeholder="e.g. Cessna, Piper, Cirrus" />
-                <p className="mt-1 text-xs text-slate-400">Comma-separated. Leave blank if open to any.</p>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {PREFERRED_MAKE_CHIPS.map((make) => {
+                    const active = hasCsvItem(preferredMakes, make)
+                    return (
+                      <button
+                        key={make}
+                        type="button"
+                        onClick={() => togglePreferredMake(make)}
+                        aria-pressed={active}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                          active
+                            ? 'border-sky-400 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        )}
+                      >
+                        {make}
+                      </button>
+                    )
+                  })}
+                </div>
+                <Input
+                  name="preferred_makes"
+                  placeholder="e.g. Cessna, Piper, Cirrus"
+                  onChange={(e) => setPreferredMakes(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-400">Tap a make to add it, or type your own — comma-separated. Leave blank if open to any.</p>
               </div>
               <div>
                 <Label>Preferred Models</Label>
