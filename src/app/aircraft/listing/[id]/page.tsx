@@ -39,7 +39,7 @@ import {
 } from '@/lib/aircraftEstimate'
 import { estimateShareCosts } from '@/lib/calculators'
 import { AircraftForSale } from '@/lib/types'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatPriceK } from '@/lib/utils'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -923,6 +923,21 @@ export default async function AircraftListingDetailPage({
                   <p className="text-3xl font-extrabold tracking-tight text-slate-900">{formatPrice(p.asking_price)}</p>
                   {drop != null && (
                     <p className="mt-1 text-sm text-slate-400 line-through">{formatPrice(p.previous_price)}</p>
+                  )}
+                  {estimate && (
+                    <p className={`mt-2 text-xs font-medium ${
+                      estimate.verdict === 'below' ? 'text-emerald-700' :
+                      estimate.verdict === 'above' ? 'text-amber-700' :
+                      'text-slate-500'
+                    }`}>
+                      {estimate.verdict === 'below'
+                        ? `~${estimate.deltaPct}% below market`
+                        : estimate.verdict === 'above'
+                        ? `~${estimate.deltaPct}% above market`
+                        : 'Around market'
+                      }
+                      {' · '}{formatPriceK(estimate.median)} median{' · '}{estimate.compCount} comps
+                    </p>
                   )}
                 </div>
               ) : p.price_text ? (
