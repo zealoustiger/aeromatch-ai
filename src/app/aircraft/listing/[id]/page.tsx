@@ -27,6 +27,7 @@ import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
 import { computeAnnualStatus, formatAnnualDueLabel, type AnnualStatusResult } from '@/lib/annualStatus'
+import { computeDamageHistory, type DamageHistoryResult } from '@/lib/damageHistory'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import {
@@ -470,6 +471,12 @@ export default async function AircraftListingDetailPage({
   // decision a shopper actually wants.
   const annualStatus = computeAnnualStatus(p.annual_due, new Date())
 
+  // Damage-history read — turns the extracted `damage_history` boolean into a buyer
+  // decision (what the flag means + what to ask), tied to our pre-buy guide. Honesty-
+  // gated: self-suppresses when the flag is unknown (null) — never asserts "no damage"
+  // from a missing flag — and never fabricates a cost from a boolean.
+  const damage = computeDamageHistory(p.damage_history)
+
   // Avionics capability classification — converts the raw extracted avionics[]
   // string list into structured capability chips (Glass Panel, ADS-B Out, Autopilot,
   // WAAS GPS). Self-suppresses when avionics is null or empty.
@@ -645,6 +652,10 @@ export default async function AircraftListingDetailPage({
                 may-be-overdue read off the normalized annual_due date. Self-suppresses
                 when the date can't be parsed or is implausibly out of range. */}
             {annualStatus && <AnnualStatusPanel status={annualStatus} />}
+
+            {/* Damage history — what the extracted flag means + what to ask, linked to
+                the pre-buy guide. Self-suppresses when damage_history is unknown (null). */}
+            {damage && <DamageHistoryPanel damage={damage} />}
 
             {/* Price history — only when a real recorded change exists. */}
             {changedFrom != null && priceDelta != null && (
@@ -918,6 +929,50 @@ function AnnualStatusPanel({ status }: { status: AnnualStatusResult }) {
       <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
         {status.detail}
       </p>
+    </div>
+  )
+}
+
+// Per-state accent for the damage read. "clean" (none reported) is a green
+// reassurance; "reported" is an amber prompt to ask/verify — never alarmist red,
+// since the flag reflects the listing's wording, not a verified logbook fact.
+const DAMAGE_META: Record<DamageHistoryResult['state'], { chip: string }> = {
+  clean:    { chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  reported: { chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+}
+
+function DamageHistoryPanel({ damage }: { damage: DamageHistoryResult }) {
+  const meta = DAMAGE_META[damage.state]
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <ShieldAlert className="h-4 w-4" /> Damage history
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Reported in the listing — confirm against the airframe and engine logbooks.
+      </p>
+
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-lg font-extrabold text-slate-900">{damage.headline}</span>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${meta.chip}`}
+        >
+          {damage.state === 'reported' && <AlertTriangle className="h-3 w-3" />}
+          {damage.label}
+        </span>
+      </div>
+
+      <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
+        {damage.detail}
+      </p>
+
+      <Link
+        href="/guides/aircraft-pre-purchase-inspection"
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:text-sky-900"
+      >
+        Pre-purchase inspection guide
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </div>
   )
 }
