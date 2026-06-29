@@ -1,6 +1,7 @@
 import type { Partnership } from '@/lib/types'
 import type { PartnerCompResult } from '@/lib/partnershipComps'
 import type { ImpliedValueResult } from '@/lib/partnershipImpliedValue'
+import type { EngineLifeResult } from '@/lib/engineLife'
 import { formatPrice } from '@/lib/utils'
 
 const DAY_MS = 86_400_000
@@ -28,6 +29,7 @@ function computeSignals(
   p: Partnership,
   comp: PartnerCompResult | null,
   impliedValue: ImpliedValueResult | null,
+  engineLife: EngineLifeResult | null,
 ): SignalRow[] {
   const rows: SignalRow[] = []
 
@@ -143,26 +145,86 @@ function computeSignals(
     })
   }
 
+  // 5. Engine life vs TBO — reuse the engineLife result already computed on the page.
+  // Bands mirror the aircraft DealScorePanel so both surfaces always agree.
+  // Self-suppresses (engineLife is null) when smoh or engine_type is missing / unrecognised.
+  if (engineLife) {
+    const tboHrs = engineLife.tboHours.toLocaleString()
+    if (engineLife.beyondTbo) {
+      rows.push({
+        kind: 'negative',
+        label: 'Engine past TBO',
+        detail: `${Math.abs(engineLife.remainingHours).toLocaleString()} hrs beyond the ${tboHrs}-hr recommended TBO for the ${engineLife.family} — budget for an overhaul (~${formatPrice(engineLife.overhaulCostUsd)}) or ask about its current inspection status`,
+      })
+    } else {
+      const pct = Math.round((engineLife.remainingHours / engineLife.tboHours) * 100)
+      const remHrs = engineLife.remainingHours.toLocaleString()
+      if (pct > 40) {
+        rows.push({
+          kind: 'positive',
+          label: 'Engine has life left',
+          detail: `${remHrs} hrs to TBO (${pct}% of the ${tboHrs}-hr ${engineLife.family} interval remaining) — an overhaul is well down the road`,
+        })
+      } else if (pct > 15) {
+        rows.push({
+          kind: 'neutral',
+          label: 'Mid-time engine',
+          detail: `${remHrs} hrs to TBO (${pct}% remaining) — a healthy mid-life engine; factor the ~${formatPrice(engineLife.reservePerYear)}/yr overhaul reserve into your budget`,
+        })
+      } else {
+        rows.push({
+          kind: 'negative',
+          label: 'Approaching TBO',
+          detail: `Only ${remHrs} hrs to TBO (${pct}% remaining) — an overhaul (~${formatPrice(engineLife.overhaulCostUsd)}) is on the horizon; ask about engine condition and factor it into your offer`,
+        })
+      }
+    }
+  }
+
+  // 6. Spec completeness — whether key engine/airframe fields are on the listing.
+  // When specs are present the engine-life and airframe panels below are active;
+  // when missing, buyers get a clear "what to ask" prompt. Never negative — missing
+  // data is normal on many listings, not a red flag.
+  const hasEngineSpecs = p.smoh != null && !!p.engine_type
+  const hasAirframeSpecs = p.ttaf != null
+  if (hasEngineSpecs) {
+    const airframeClause = hasAirframeSpecs ? ' and airframe time (TTAF)' : ''
+    rows.push({
+      kind: 'positive',
+      label: 'Engine specs on listing',
+      detail: `SMOH and engine type${airframeClause} are provided — the Engine Life analysis below reflects the actual engine data`,
+    })
+  } else {
+    rows.push({
+      kind: 'neutral',
+      label: 'Engine/airframe specs not on listing',
+      detail: 'Ask the owner for SMOH, engine type, and TTAF — these unlock the Engine Life and Airframe Time analysis panels',
+    })
+  }
+
   return rows
 }
 
 /**
  * "How this partnership stacks up" — synthesis panel for partnership detail pages.
  *
- * Renders up to four signals (buy-in vs partnership comps, implied aircraft value vs
- * for-sale family median, days listed, cost transparency). Self-suppresses when fewer
+ * Renders up to six signals: buy-in vs partnership comps, implied aircraft value vs
+ * for-sale family median, days listed, cost transparency, engine life (when smoh +
+ * engine_type resolve a TBO family), and spec completeness. Self-suppresses when fewer
  * than 2 signals are actionable — never shows a thin or misleading verdict.
  */
 export default function PartnershipDealSignals({
   p,
   comp,
   impliedValue = null,
+  engineLife = null,
 }: {
   p: Partnership
   comp: PartnerCompResult | null
   impliedValue?: ImpliedValueResult | null
+  engineLife?: EngineLifeResult | null
 }) {
-  const rows = computeSignals(p, comp, impliedValue)
+  const rows = computeSignals(p, comp, impliedValue, engineLife)
   if (rows.length < 2) return null
 
   return (
