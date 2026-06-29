@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { AircraftForSale } from '@/lib/types'
 import { resolveMakeModelFamily } from '@/lib/seo'
 import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
@@ -22,6 +23,33 @@ export async function getAircraftForSaleById(id: string): Promise<AircraftForSal
       .from('aircraft_for_sale')
       .select('*')
       .eq('id', id)
+      .single()
+    return data
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch a SOLD (or otherwise non-active) listing by id via the service-role
+ * client, bypassing the `status='active'` RLS read policy. Used only by the
+ * detail route's sold-state fallback: a hangar67/Barnstormers listing that has
+ * since sold would otherwise return null to the anon key → a bare 404 on a URL
+ * Google already indexed. With this we can render a proper "this aircraft has
+ * sold" page (200 + noindex) with similar active inventory instead. Returns null
+ * for a genuinely missing id (→ real 404). Server-only.
+ */
+export async function getSoldAircraftForSaleById(id: string): Promise<AircraftForSale | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return null
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('aircraft_for_sale')
+      .select('*')
+      .eq('id', id)
+      .neq('status', 'active') // active rows go through the normal public path
       .single()
     return data
   } catch {

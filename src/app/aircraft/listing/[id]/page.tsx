@@ -22,7 +22,7 @@ import {
   Users,
 } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
+import { getAircraftForSaleById, getSoldAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@/lib/aircraftForSale'
 import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
@@ -285,14 +285,98 @@ const money = (n: number) =>
     Math.round(n)
   )
 
+// ─── Sold-listing landing page ───────────────────────────────────────────────
+// Rendered (HTTP 200, but noindex via generateMetadata) when a listing's row
+// exists but is no longer active — typically a scraped plane that sold. The URL
+// was indexed by Google while the plane was for sale, so a bare 404 wastes the
+// inbound click. Instead we acknowledge the sale and pivot the visitor to live
+// inventory: the same `SimilarAircraft` rail the active page uses, plus a link
+// to the make+model family page. Keeps the buyer on-site instead of bouncing.
+async function SoldListingPage({ p }: { p: AircraftForSale }) {
+  const label = aircraftLabel(p)
+  const family = resolveMakeModelFamily(p.make, p.model)
+  const soldDate = formatDate(p.removed_at) ?? formatDate(p.last_seen_at)
+
+  const crumbs: Crumb[] = [
+    { label: 'Home', href: '/' },
+    { label: 'Planes for Sale', href: '/aircraft' },
+    ...(family
+      ? [{ label: `${family.make} ${family.model}`, href: `/aircraft/${family.makeSlug}/${family.modelSlug}` }]
+      : []),
+    { label: `${label} (sold)` },
+  ]
+
+  return (
+    <div className="ch-surface min-h-screen">
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        <Breadcrumbs items={crumbs} />
+
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-6 sm:p-8">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+                This {label} is no longer for sale
+              </h1>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                The listing has been removed{soldDate ? ` (last seen ${soldDate})` : ''} — it likely sold.
+                {family
+                  ? ` Browse other ${family.make} ${family.model} aircraft for sale below, or see the full selection.`
+                  : ' Browse similar aircraft for sale below.'}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {family && (
+                  <Link
+                    href={`/aircraft/${family.makeSlug}/${family.modelSlug}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+                  >
+                    See {family.make} {family.model} for sale <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+                <Link
+                  href="/aircraft"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+                >
+                  Browse all planes for sale
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Same "more like this" rail the active page uses — real, live listings
+            only (self-excludes this sold one). Fails soft to nothing. */}
+        <div className="mt-10">
+          <SimilarAircraft current={p} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const p = await getAircraftForSaleById(id)
-  if (!p) return { title: 'Listing not found' }
+  const active = await getAircraftForSaleById(id)
+  if (!active) {
+    // Sold/removed listing → a real "sold" landing page, marked noindex so Google
+    // de-indexes the URL over time (it was indexed while the plane was for sale).
+    const sold = await getSoldAircraftForSaleById(id)
+    if (sold) {
+      const label = aircraftLabel(sold)
+      return {
+        title: `${label} — sold | ${SITE_NAME}`,
+        description: `This ${label} is no longer listed for sale. Browse similar aircraft for sale on ClubHanger.`,
+        robots: { index: false, follow: true },
+        alternates: { canonical: `${SITE_URL}/aircraft/listing/${sold.id}` },
+      }
+    }
+    return { title: 'Listing not found' }
+  }
+  const p = active
 
   const label = aircraftLabel(p)
   const priceBit = p.asking_price ? ` — ${formatPrice(p.asking_price)}` : ''
@@ -336,7 +420,14 @@ export default async function AircraftListingDetailPage({
   const sp = searchParams ? await searchParams : {}
   const justPosted = sp.posted === '1'
   const p = await getAircraftForSaleById(id)
-  if (!p) notFound()
+  if (!p) {
+    // Not active. If the row exists but sold/removed, render a sold landing page
+    // (200 + noindex via generateMetadata) that keeps the visitor on-site with
+    // similar live inventory — instead of a dead 404 on a Google-indexed URL.
+    const sold = await getSoldAircraftForSaleById(id)
+    if (sold) return <SoldListingPage p={sold} />
+    notFound()
+  }
 
   // Fetch the current user's saved row for this listing so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
