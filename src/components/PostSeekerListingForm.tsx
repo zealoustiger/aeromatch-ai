@@ -37,6 +37,11 @@ const SHARE_TYPES = ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other']
 // codebase, none fabricated. Chips toggle entries in the comma-separated value; the
 // field stays free text so a seeker open to any other make can still type it in.
 const PREFERRED_MAKE_CHIPS = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman']
+// One-tap common ratings/endorsements for the multi-value "Ratings & Endorsements" field.
+// Same chip/csvList toggle pattern as PREFERRED_MAKE_CHIPS — active chip highlights which
+// abbreviations are already in the comma-separated value; the field stays free text so any
+// unlisted rating can still be typed. Ordered most-common first.
+const RATINGS_CHIPS = ['PPL', 'IFR', 'Complex', 'High Performance', 'Multi-Engine', 'Tailwheel', 'CFI', 'ATP']
 const AIRCRAFT_CATEGORIES = [
   { value: 'any', label: 'Any / Open' },
   { value: 'sel', label: 'Single-Engine Land' },
@@ -170,12 +175,16 @@ export default function PostSeekerListingForm({
   // the AI prefill, and chip toggles all set the input and dispatch 'input', which
   // fires the onChange that updates this mirror.
   const [preferredMakes, setPreferredMakes] = useState('')
+  // Same mirror pattern for the "Ratings & Endorsements" field.
+  const [ratingsHeld, setRatingsHeld] = useState('')
 
   // Sync once after mount in case a restored draft set the field before this ran
   // (mirrors PostAircraftForm's selectedMake sync).
   useEffect(() => {
     const input = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_makes"]')
     if (input?.value) setPreferredMakes(input.value)
+    const ratingsInput = formRef.current?.querySelector<HTMLInputElement>('[name="ratings_held"]')
+    if (ratingsInput?.value) setRatingsHeld(ratingsInput.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -187,6 +196,15 @@ export default function PostSeekerListingForm({
     // Dispatch 'input' so autosave re-arms and the onChange mirror updates.
     input.dispatchEvent(new Event('input', { bubbles: true }))
     setPreferredMakes(next)
+  }
+
+  function toggleRating(rating: string) {
+    const input = formRef.current?.querySelector<HTMLInputElement>('[name="ratings_held"]')
+    if (!input) return
+    const next = toggleCsvItem(input.value, rating)
+    input.value = next
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    setRatingsHeld(next)
   }
 
   // Monotonic token bumped on "Start over". The async AI prefill captures it before its
@@ -203,6 +221,7 @@ export default function PostSeekerListingForm({
       setAiError(null)
       reset()
       setPreferredMakes('')
+      setRatingsHeld('')
     }
   }
   const detailsRef = useRef<HTMLDetailsElement>(null)
@@ -475,8 +494,33 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Ratings &amp; Endorsements You Hold</Label>
-                <Input name="ratings_held" placeholder="e.g. PPL, IFR, Complex" />
-                <p className="mt-1 text-xs text-slate-400">Comma-separated</p>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {RATINGS_CHIPS.map((rating) => {
+                    const active = hasCsvItem(ratingsHeld, rating)
+                    return (
+                      <button
+                        key={rating}
+                        type="button"
+                        onClick={() => toggleRating(rating)}
+                        aria-pressed={active}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                          active
+                            ? 'border-sky-400 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        )}
+                      >
+                        {rating}
+                      </button>
+                    )
+                  })}
+                </div>
+                <Input
+                  name="ratings_held"
+                  placeholder="e.g. PPL, IFR, Complex"
+                  onChange={(e) => setRatingsHeld(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-400">Tap to add, or type any rating — comma-separated</p>
               </div>
               <div>
                 <Label>Estimated Hours per Month</Label>
