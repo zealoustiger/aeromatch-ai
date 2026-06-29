@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
-import { formatPrice, cn } from '@/lib/utils'
+import { formatPrice, formatPriceK, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
@@ -79,27 +79,38 @@ function aircraftTitle(p: AircraftForSale): string {
 // The comp count is shown as a secondary denominator ("· 15 comps") so buyers
 // scanning the grid immediately see the market depth behind the claim.
 function CompPill({ comp }: { comp: CompResult }) {
-  const countSuffix = ` · ${comp.count} comps`
+  const medianK = formatPriceK(comp.median)
+  const suffix = ` · ${medianK} · ${comp.count} comps`
+  const titleAttr = `vs. median ${formatPrice(comp.median)}`
   if (comp.kind === 'near') {
     return (
-      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+      <span
+        className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200"
+        title={titleAttr}
+      >
         <LineChart className="h-3 w-3" />
-        Near avg{countSuffix}
+        Near avg{suffix}
       </span>
     )
   }
   if (comp.kind === 'below') {
     return (
-      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+      <span
+        className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
+        title={titleAttr}
+      >
         <LineChart className="h-3 w-3" />
-        ~{comp.pct}% below avg{countSuffix}
+        ~{comp.pct}% below avg{suffix}
       </span>
     )
   }
   return (
-    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+    <span
+      className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200"
+      title={titleAttr}
+    >
       <LineChart className="h-3 w-3" />
-      ~{comp.pct}% above avg{countSuffix}
+      ~{comp.pct}% above avg{suffix}
     </span>
   )
 }
