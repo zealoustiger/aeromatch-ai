@@ -218,6 +218,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           if (result.registration) fillFormField(form, '[name="registration"]', result.registration)
           if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
           if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
+          if (result.engine_type) fillFormField(form, '[name="engine_type"]', result.engine_type)
           if (result.asking_price) fillFormField(form, '[name="asking_price"]', result.asking_price)
           if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
           fillFormField(form, '[name="title"]', result.title)
@@ -225,7 +226,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
 
           // Auto-open "More details" if the AI filled any optional fields inside it
           const hasOptional = result.year || result.registration || result.ttaf || result.smoh ||
-            result.asking_price || result.home_airport || result.title || result.description
+            result.engine_type || result.asking_price || result.home_airport || result.title || result.description
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }
@@ -451,6 +452,11 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
               <div>
                 <Label>SMOH (hrs since overhaul)</Label>
                 <Input name="smoh" type="number" placeholder="e.g. 600" min={0} />
+              </div>
+              <div>
+                <Label>Engine</Label>
+                <Input name="engine_type" placeholder="e.g. Lycoming IO-360, Continental IO-550" />
+                <p className="mt-1 text-xs text-slate-400">Make + designation. Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
               </div>
             </div>
           </div>
