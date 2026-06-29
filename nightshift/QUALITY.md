@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-06-29T07:44:23Z — partner-cost-engine-reserve — score 4/5
+## 2026-06-29T08:11:51Z — listing-age-context — score 4/5
+- Strengths: Correct, well-scoped single-file change — reuses already-computed `listed`/`domContext` and `familyComps` (no new queries), self-suppresses via `listed && domContext &&`, and correctly gates the "seller may have flexibility" inference behind the same `daysOnMarket >= 30` dual-threshold the Deal Score tally uses, so the honesty floor holds. All 7 ACs met; build + tsc clean per gate.
+- Weaknesses / risks: The relative-recency phrasing is hand-rolled a second time as an inline JSX ternary, duplicating `domDetail`'s longer/shorter/typical branching with slightly reworded copy ("seller may have flexibility" vs "a seller-flexibility signal"; "similar … for sale now" vs "comparable … still for sale") — two render sites that can drift, and AC#2's "matching the language already used in the tally" is only loosely honored.
+- Follow-up: none
 - Strengths: Tight, well-scoped change — adds two optional props and one reactive `reserveAnnual` line; correctly uses the flat `reservePerHour` (overhaulCostUsd/tboHours) so `× hrsPerYear` is dimensionally sound and immune to the beyond-TBO branch; deliberately kept OUT of `annualTotal` (with an explanatory comment) to avoid double-counting; null/0 self-suppresses; reuses the dl/dt/dd + `money()` conventions and signals "estimate" via amber + dashed divider. All 7 ACs met; page passes `engineLife?.reservePerHour`/`?.family` correctly.
 - Weaknesses / risks: Caveat subtext uses `text-slate-300` (very light grey on white) — fails WCAG AA contrast for the one line buyers most need to read; label wording ("Engine reserve est.") also drifts slightly from the spec's literal "Engine reserve (est.)" — both cosmetic.
 - Follow-up: Bump the "Verify if included in monthly fixed above" subtext from `text-slate-300` to at least `text-slate-500` for readable contrast.
