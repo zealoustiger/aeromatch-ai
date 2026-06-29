@@ -42,6 +42,11 @@ export interface CompResult {
   /** Whole-number percent distance from the family median (>= 1 for below/above;
    *  0 for "near"). Rounded — no decimals. */
   pct: number
+  /** Number of OTHER same-family priced listings the comparison was drawn from.
+   *  Always >= MIN_OTHER_COMPS — compVsMarket returns null below that threshold. */
+  count: number
+  /** Median asking price of the comp set (whole dollars). */
+  median: number
 }
 
 /** Stable family key for a listing, or null when it doesn't resolve to a known
@@ -167,11 +172,12 @@ export function compVsMarket(
   const median = medianOfSorted(others) // `others` stays ascending (filtered from sorted)
   if (median <= 0) return null
 
+  const count = others.length
   const delta = (price - median) / median
-  if (Math.abs(delta) < DEAD_BAND) return { kind: 'near', pct: 0 }
+  if (Math.abs(delta) < DEAD_BAND) return { kind: 'near', pct: 0, count, median: Math.round(median) }
 
   const pct = Math.round(Math.abs(delta) * 100)
   // A delta just outside the dead-band can still round to 0; clamp to >= 1 so the
   // label always reads a real, non-zero percentage.
-  return { kind: delta < 0 ? 'below' : 'above', pct: Math.max(1, pct) }
+  return { kind: delta < 0 ? 'below' : 'above', pct: Math.max(1, pct), count, median: Math.round(median) }
 }
