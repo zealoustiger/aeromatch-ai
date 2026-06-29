@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
-import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
+import { formatPrice, formatShareType, aircraftLabel, formatPriceK } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
 import { getFamilyAskingPrices } from '@/lib/aircraftForSale'
@@ -472,6 +472,19 @@ export default async function PartnershipDetailPage({
                   <div>
                     <dt className="text-xs text-slate-400">Buy-In</dt>
                     <dd className="text-2xl font-bold text-slate-900">{formatPrice(p.buy_in_price)}</dd>
+                    {partnerComp && (
+                      <p className={`mt-1 text-xs font-semibold ${
+                        partnerComp.kind === 'below'
+                          ? 'text-emerald-600'
+                          : partnerComp.kind === 'above'
+                            ? 'text-amber-600'
+                            : 'text-slate-500'
+                      }`}>
+                        {partnerComp.kind === 'near'
+                          ? `Around market · ${formatPriceK(partnerComp.median)} median · ${partnerComp.count} comps`
+                          : `~${partnerComp.pct}% ${partnerComp.kind} market · ${formatPriceK(partnerComp.median)} median · ${partnerComp.count} comps`}
+                      </p>
+                    )}
                   </div>
                 )}
                 {p.monthly_fixed && (
