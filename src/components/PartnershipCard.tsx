@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin, Clock, Users, ExternalLink, LineChart } from 'lucide-react'
 import { Partnership } from '@/lib/types'
-import { formatPrice, formatShareType, aircraftLabel, cn } from '@/lib/utils'
+import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import SaveListingButton from './SaveListingButton'
@@ -27,10 +27,11 @@ export default function PartnershipCard({
 }: {
   p: Partnership
   saved?: boolean
-  /** When set, shows a "~X% below/above market" chip from the same-make buy-in median.
-   *  `pct` is the whole-number percent distance from that median (always ≥1; the
-   *  ±5% dead-band "near" case is filtered out upstream so it never renders here). */
-  compVerdict?: { kind: 'below' | 'above'; pct: number }
+  /** When set, shows a "~X% below/above market · $Xk · N comps" chip.
+   *  `pct` is the whole-number percent distance from the buy-in median (always ≥1;
+   *  ±5% dead-band "near" case is filtered out upstream so it never renders here).
+   *  `median` and `count` provide the absolute dollar anchor and market depth. */
+  compVerdict?: { kind: 'below' | 'above'; pct: number; median: number; count: number }
 }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
@@ -80,15 +81,21 @@ export default function PartnershipCard({
                 )}
                 <TrustBadge p={p} variant="compact" />
                 {compVerdict?.kind === 'below' && (
-                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  <span
+                    className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
+                    title={`vs. median buy-in ${formatPrice(compVerdict.median)}`}
+                  >
                     <LineChart className="h-3 w-3" />
-                    ~{compVerdict.pct}% below market
+                    ~{compVerdict.pct}% below market · {formatPriceK(compVerdict.median)} · {compVerdict.count} comps
                   </span>
                 )}
                 {compVerdict?.kind === 'above' && (
-                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                  <span
+                    className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+                    title={`vs. median buy-in ${formatPrice(compVerdict.median)}`}
+                  >
                     <LineChart className="h-3 w-3" />
-                    ~{compVerdict.pct}% above market
+                    ~{compVerdict.pct}% above market · {formatPriceK(compVerdict.median)} · {compVerdict.count} comps
                   </span>
                 )}
                 {/* Compare toggle — only renders inside a CompareProvider (i.e.
