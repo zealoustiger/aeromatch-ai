@@ -100,6 +100,9 @@ export async function createPartnership(formData: FormData) {
     min_hours: formData.get('min_hours') ? parseInt(formData.get('min_hours') as string) : null,
     ratings_required: ratings,
     scheduling_system: (formData.get('scheduling_system') as string) || null,
+    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
+    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
     title: (() => {
       const t = ((formData.get('title') as string) || '').trim()
       if (t) return t
@@ -860,6 +863,9 @@ export interface PartnershipDraft {
   buy_in_price?: number
   monthly_fixed?: number
   hourly_wet?: number
+  ttaf?: number
+  smoh?: number
+  engine_type?: string
 }
 
 export async function generatePartnershipDraft(prompt: string): Promise<PartnershipDraft> {
@@ -888,6 +894,9 @@ Given the owner's notes or a pasted listing, do TWO things:
    - buy_in_price: buy-in cost in USD as integer (no $ or commas) — or omit
    - monthly_fixed: monthly fixed cost per partner in USD as integer — or omit
    - hourly_wet: wet rate per hour in USD as integer — or omit
+   - ttaf: total airframe hours as integer — or omit
+   - smoh: hours since major overhaul as integer — or omit
+   - engine_type: engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550" — or omit
 
 2. Draft the listing:
    - title: concise, specific (max 120 chars) — include share type, year + make + model, and airport if mentioned
@@ -914,6 +923,9 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
             buy_in_price: { type: 'integer', description: 'Buy-in price in USD, no $ or commas' },
             monthly_fixed: { type: 'integer', description: 'Monthly fixed cost per partner in USD' },
             hourly_wet: { type: 'integer', description: 'Wet rate per flight hour in USD' },
+            ttaf: { type: 'integer', description: 'Total time airframe, hours' },
+            smoh: { type: 'integer', description: 'Hours since major overhaul' },
+            engine_type: { type: 'string', description: 'Engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550"' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -942,6 +954,9 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
     buy_in_price: f.buy_in_price,
     monthly_fixed: f.monthly_fixed,
     hourly_wet: f.hourly_wet,
+    ttaf: f.ttaf,
+    smoh: f.smoh,
+    engine_type: f.engine_type,
   }
 }
 

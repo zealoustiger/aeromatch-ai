@@ -297,9 +297,13 @@ export default function PostPartnershipForm({
           if (result.monthly_fixed) fillFormField(form, '[name="monthly_fixed"]', result.monthly_fixed)
           if (result.hourly_wet) fillFormField(form, '[name="hourly_wet"]', result.hourly_wet)
 
+          if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
+          if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
+          if (result.engine_type) fillFormField(form, '[name="engine_type"]', result.engine_type)
           // Auto-open "More details" if the AI filled any optional fields inside it
           const hasOptional = result.year || result.registration || result.title ||
-            result.description || result.monthly_fixed || result.hourly_wet
+            result.description || result.monthly_fixed || result.hourly_wet ||
+            result.ttaf || result.smoh || result.engine_type
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }
@@ -500,12 +504,27 @@ export default function PostPartnershipForm({
         </summary>
 
         <div className="space-y-6 px-4 pb-6 pt-2 sm:px-6">
-          {/* Year */}
+          {/* Aircraft specs */}
           <div>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Aircraft</h3>
-            <div className="max-w-xs">
-              <Label>Year</Label>
-              <Input name="year" type="number" placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Year</Label>
+                <Input name="year" type="number" placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
+              </div>
+              <div>
+                <Label>Total Time (TTAF, hrs)</Label>
+                <Input name="ttaf" type="number" placeholder="e.g. 2450" min={0} />
+              </div>
+              <div>
+                <Label>SMOH (hrs since overhaul)</Label>
+                <Input name="smoh" type="number" placeholder="e.g. 600" min={0} />
+              </div>
+              <div>
+                <Label>Engine</Label>
+                <Input name="engine_type" placeholder="e.g. Lycoming IO-360, Continental IO-550" />
+                <p className="mt-1 text-xs text-slate-400">Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
+              </div>
             </div>
           </div>
 

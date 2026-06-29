@@ -572,3 +572,13 @@ alter table outreach_targets enable row level security;
 alter table outreach_targets add column if not exists confirmed_base text;
 alter table outreach_targets add column if not exists base_checked_at timestamptz;
 alter table outreach_targets add column if not exists adsb_summary text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: partnership_add_spec_fields
+-- Adds TTAF/SMOH/engine_type to partnerships so the Engine Life, Airframe Time, and
+-- Overhaul Timeline analysis panels on /partnerships/[id] can fire for user-posted listings.
+-- Apply in the Supabase SQL editor BEFORE partnerships with these fields are submitted.
+-- Until applied, submitting a form with TTAF/SMOH/Engine filled will fail server-side
+-- (these are in the collapsed "More details" section so most users won't encounter this).
+alter table partnerships add column if not exists ttaf integer;
+alter table partnerships add column if not exists smoh integer;
+alter table partnerships add column if not exists engine_type text;
