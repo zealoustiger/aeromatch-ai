@@ -74,6 +74,8 @@ function computeDealSignals(
   estimate: ClubHangerEstimate | null,
   dealVerdict: ClubHangerDealVerdict | null,
   domContext: DaysOnMarketContext | null,
+  annualStatus: AnnualStatusResult | null,
+  damage: DamageHistoryResult | null,
 ): DealSignalRow[] {
   const rows: DealSignalRow[] = []
   const makeModel = [p.make, p.model].filter(Boolean).join(' ')
@@ -198,7 +200,54 @@ function computeDealSignals(
     }
   }
 
-  // 4. Spec completeness — key buyer-evaluation fields
+  // 4. Annual-inspection status — reuse the honesty-gated read already computed for the
+  //    AnnualStatusPanel; condensed into one tally row so the headline verdict reflects
+  //    near-term inspection cost. Self-suppresses upstream (annualStatus is null) when
+  //    annual_due is missing/unparseable/outside the plausible annual window — never a
+  //    fabricated status, and month-granular (no fabricated day count).
+  if (annualStatus) {
+    if (annualStatus.state === 'current') {
+      rows.push({
+        kind: 'positive',
+        label: 'Annual current',
+        detail: `The listing states the next annual is due ${annualStatus.dueLabel} — about ${annualStatus.monthsFromNow} months of inspection time remaining`,
+      })
+    } else if (annualStatus.state === 'soon') {
+      rows.push({
+        kind: 'neutral',
+        label: 'Annual due soon',
+        detail: `The listing states the next annual is due ${annualStatus.dueLabel} — budget for a fresh annual soon after purchase, or ask whether it has already been done`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: 'Annual may be overdue',
+        detail: `The listing states the annual was due ${annualStatus.dueLabel} — confirm the aircraft has a current annual before you commit`,
+      })
+    }
+  }
+
+  // 5. Damage history — reuse the honesty-gated read already computed for the
+  //    DamageHistoryPanel. Self-suppresses upstream (damage is null) when the flag was
+  //    never extracted — we never infer "no damage" from an absent flag. Framed as the
+  //    listing's claim, not a verified logbook fact, and quantifies nothing.
+  if (damage) {
+    if (damage.state === 'clean') {
+      rows.push({
+        kind: 'positive',
+        label: 'No damage reported',
+        detail: `The listing reports no prior damage — the seller's description, not the logbooks, so confirm it at a pre-buy`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: 'Prior damage reported',
+        detail: `The listing reports prior damage — ask for the repair records and focus the pre-buy on the repaired area`,
+      })
+    }
+  }
+
+  // 6. Spec completeness — key buyer-evaluation fields
   const keyPresent = [
     p.year != null,
     p.ttaf != null,
@@ -595,7 +644,7 @@ export default async function AircraftListingDetailPage({
 
   // Deal Score synthesis — "How this stacks up" panel in the main column.
   // Computes from already-fetched data only; no new DB reads.
-  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext)
+  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext, annualStatus, damage)
 
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
@@ -1457,7 +1506,7 @@ function DealScorePanel({ rows }: { rows: DealSignalRow[] }) {
         })}
       </ul>
       <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
-        This summary draws on signals shown in detail below — price comps, listing age, and key specs.
+        This summary draws on signals shown in detail below — price comps, listing age, maintenance status, and key specs.
         Read each section for full context. Not an appraisal.
       </p>
     </div>
