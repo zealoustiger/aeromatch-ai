@@ -612,13 +612,14 @@ export default function PostPartnershipForm({
                 <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
                   {userEmail
-                    ? 'Pre-filled from your account — edit if needed. Not shown publicly.'
-                    : 'Leave blank to use your account email. Not shown publicly — inquiries routed through us.'}
+                    ? 'Pre-filled from your account. Only shared when you select email contact above.'
+                    : 'Leave blank to use your account email. Only shared when you select email contact above.'}
                 </p>
               </div>
               <div>
                 <Label>Preferred Contact Method</Label>
                 <Select name="contact_method">
+                  <option value="platform">Message through ClubHanger (default)</option>
                   <option value="email">Email only</option>
                   <option value="phone">Phone only</option>
                   <option value="both">Email or phone</option>
