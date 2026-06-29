@@ -976,6 +976,11 @@ export default async function AircraftListingDetailPage({
                   posterId={p.poster_id}
                   listingPath={`/aircraft/listing/${p.id}`}
                 />
+                {p.contact_phone && (
+                  <p className="mt-3 text-sm text-slate-500">
+                    Or call / text: <a href={`tel:${p.contact_phone}`} className="font-medium text-slate-700 hover:text-sky-700">{p.contact_phone}</a>
+                  </p>
+                )}
               </div>
             ) : (
               <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
