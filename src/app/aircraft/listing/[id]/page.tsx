@@ -566,7 +566,9 @@ export default async function AircraftListingDetailPage({
   const drop = priceDrop(p)
   const fresh = p.first_seen_at != null && Date.now() - new Date(p.first_seen_at).getTime() < 7 * DAY_MS
   const listed = listedAgo(p.first_seen_at)
-
+  const daysOnMarket = p.first_seen_at
+    ? Math.max(0, Math.floor((Date.now() - new Date(p.first_seen_at).getTime()) / DAY_MS))
+    : null
 
   // ClubHanger Estimate — this listing's asking price vs. the median of OTHER active
   // priced listings in the same make+model family (Zillow-Zestimate analog). Only
@@ -924,6 +926,9 @@ export default async function AircraftListingDetailPage({
                 familyHref={
                   family ? `/aircraft/${family.makeSlug}/${family.modelSlug}` : undefined
                 }
+                listed={listed}
+                daysOnMarket={daysOnMarket}
+                domContext={domContext}
               />
             )}
 
@@ -1330,11 +1335,17 @@ function EstimatePanel({
   deal,
   familyLabel,
   familyHref,
+  listed,
+  daysOnMarket,
+  domContext,
 }: {
   estimate: ClubHangerEstimate
   deal?: ClubHangerDealVerdict | null
   familyLabel: string
   familyHref?: string
+  listed?: string | null
+  daysOnMarket?: number | null
+  domContext?: DaysOnMarketContext | null
 }) {
   const meta = ESTIMATE_META[estimate.verdict]
   const dir = estimate.deltaDollars < 0 ? 'below' : 'above'
@@ -1437,10 +1448,24 @@ function EstimatePanel({
           See all {familyLabel} for sale <ArrowRight className="h-4 w-4" />
         </Link>
       )}
-      <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
-        Compares this asking price to all {familyLabel} listings — actual value also depends on
-        year, hours, and avionics. An estimate, not an appraisal or an offer.
-      </p>
+      <div className="mt-3 border-t border-slate-100 pt-3 space-y-1">
+        <p className="text-xs text-slate-400">
+          Compares this asking price to all {familyLabel} listings — actual value also depends on
+          year, hours, and avionics. An estimate, not an appraisal or an offer.
+        </p>
+        {listed && (
+          <p className="text-xs text-slate-500">
+            <span className="font-medium">{listed}</span>
+            {domContext && (
+              domContext.relative === 'longer'
+                ? ` — on the market longer than ~${domContext.percentileLongerThan}% of the ${domContext.compCount} similar ${familyLabel} listings for sale now${(daysOnMarket ?? 0) >= 30 ? ' — seller may have flexibility' : ''}`
+                : domContext.relative === 'shorter'
+                  ? ` — listed more recently than ~${100 - domContext.percentileLongerThan}% of the ${domContext.compCount} similar ${familyLabel} listings for sale now`
+                  : ` — on the market about as long as the typical ${familyLabel} listing`
+            )}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
