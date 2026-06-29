@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-29T13:24:52Z — DRAIN SUMMARY
+- Cycles this run: 2 (PASS 2 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Stopped because: night ended
+- Run: 20260629T131007Z
+
 ## 2026-06-29T132500Z — PASS — aircraft-price-inline-market
 - Pages: /aircraft/listing/[id] (aircraft listing detail page — Price sidebar card)
 - What: **Aircraft listing detail pages now show a compact inline market hint directly under the asking price in the sidebar Price card.** Before, a buyer who saw "$72,000" in the price card had to scroll down to the EstimatePanel to learn it was "~42% below market." Now the one-liner appears immediately: "~42% below market · $125k median · 66 comps" (emerald for below market), "Around market · $125k median · 66 comps" (slate for near market), or "~13% above market · $529k median · 201 comps" (amber for above market). Self-suppresses when fewer than 4 same-family comps exist (honesty floor). The full EstimatePanel below the Price card is unchanged — the inline hint is additive, giving buyers the key market signal at the price before they read the full analysis.
