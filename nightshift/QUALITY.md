@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T07:32:15Z — partnership-buyin-optional — score 5/5
+- Strengths: Tight 4-line diff that does exactly what the spec asked — drops `required`, adds "(optional)" using the *identical* `text-xs font-normal text-slate-400` span the form already uses for Title/Phone optionals, plus clear helper text; server action (actions.ts:97) already coerced empty → null, so no over-reach into backend/schema.
+- Weaknesses / risks: none material — helper text + updated tooltip both mention the negotiable path (minor copy overlap, intentional progressive-disclosure).
+- Follow-up: none
+
 ## 2026-06-29T06:20:59Z — partnership-implied-value — score 5/5
 - Strengths: Clean pure helper mirroring aircraftComps/partnershipComps honesty philosophy — guards (buyIn>0, shares>=2, >=4 comps, median>0), ±10% dead-band, 14 unit tests; page fail-soft try/catch + pre-DB share guard avoids needless query; component renders all three kinds with "ask what's included" caveats exactly as spec'd; existing rows untouched.
 - Weaknesses / risks: none material — detail copy says "comparable {make} aircraft" (make-only) though comps are model-family-filtered, so the label slightly understates specificity; cosmetic, not misleading.
