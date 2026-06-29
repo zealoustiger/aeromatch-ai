@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T13:02:41Z — partner-buyin-inline-market — score 5/5
+- Strengths: Textbook minimal slice — 14 lines, single file, reuses the already-computed `partnerComp` with zero new queries/components; the emerald/amber/slate variant ternary and `formatPriceK` helper match existing file conventions exactly, copy reads naturally for all three `kind` branches, and self-suppression falls out of `partnerComp && (...)` for free. PartnershipMarketCheck panel untouched as scoped.
+- Weaknesses / risks: none material — slight semantic redundancy with the full market panel below, but that proximity-at-the-price-moment is precisely the spec's stated intent; the colored label is also backed by literal "below/above/Around market" text, so it's not color-only for a11y.
+- Follow-up: none
+
 ## 2026-06-29T12:43:03Z — partnership-comp-pill-enriched — score 4/5
 - Strengths: Clean, minimal parity wire-through — `median`/`count` threaded consistently through the prop type, the verdicts `Map`, and the `renderList` default param; both below/above branches gain the `· $Xk · N comps` suffix via the shared `formatPriceK` helper plus a full-figure `title` tooltip; honesty floor and ±5% dead-band suppression untouched, `partnershipComps.ts` math left alone exactly as scoped.
 - Weaknesses / risks: none material — the below/above chip markup is duplicated rather than factored, but that duplication pre-existed this cycle and matches the file convention.
