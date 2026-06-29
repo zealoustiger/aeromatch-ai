@@ -11,7 +11,10 @@ import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
 
-const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman', 'Other']
+// Common makes kept as one-tap suggestions. The Make field is free text (datalist),
+// so a seller of any make can type it in — no "Other" dead-end that would lose their
+// real make and break the buyer-side comp / Estimate / model-family matching.
+const MAKES = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney', "Van's", 'Diamond', 'Grumman']
 
 // Curated model-name suggestions reused from the existing SEO make/model table —
 // no new or fabricated data. Grouped by a normalized make key so the Model field
@@ -23,6 +26,17 @@ const MODELS_BY_MAKE: Record<string, string[]> = SEO_MAKE_MODELS.reduce((acc, m)
   return acc
 }, {} as Record<string, string[]>)
 const ALL_MODELS = Array.from(new Set(SEO_MAKE_MODELS.map((m) => m.model)))
+
+// Make suggestions = dedup union (by normalized key) of the common makes above and the
+// distinct makes already in SEO_MAKE_MODELS (adds Bellanca, Robinson, CubCrafters, …) —
+// every suggestion is a make already present in the codebase, none fabricated. Canonical
+// spelling from MAKES wins on a tie (e.g. "Van's" over "Vans"). Sorted for the dropdown.
+const MAKE_SUGGESTIONS: string[] = (() => {
+  const byKey = new Map<string, string>()
+  for (const m of SEO_MAKE_MODELS) byKey.set(normMake(m.make), m.make)
+  for (const m of MAKES) byKey.set(normMake(m), m) // MAKES last → its spelling wins
+  return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b))
+})()
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -41,20 +55,6 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
       )}
       {...props}
     />
-  )
-}
-
-function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      className={cn(
-        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </select>
   )
 }
 
@@ -131,7 +131,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
 
   // Sync the make once after mount in case a restored draft set it before this ran.
   useEffect(() => {
-    const sel = formRef.current?.querySelector<HTMLSelectElement>('[name="make"]')
+    const sel = formRef.current?.querySelector<HTMLInputElement>('[name="make"]')
     if (sel?.value) setSelectedMake(sel.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -180,27 +180,6 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
     }
   }
 
-  // Set the Make <select>, injecting an <option> for makes outside the preset list.
-  // The FAA lookup and AI prefill can return makes (Maule, Aviat, Bellanca, …) that
-  // aren't in MAKES; setting a <select> to a value with no matching option is a no-op,
-  // which would silently leave this required field blank. Injecting the option keeps
-  // the real make (better data, not "Other") and fills the field.
-  function fillMakeSelect(form: HTMLFormElement, make: string) {
-    const sel = form.querySelector<HTMLSelectElement>('[name="make"]')
-    if (!sel || !make) return
-    const exists = Array.from(sel.options).some((o) => o.value === make)
-    if (!exists) {
-      const opt = document.createElement('option')
-      opt.value = make
-      opt.textContent = make
-      const other = Array.from(sel.options).find((o) => o.value === 'Other')
-      if (other) sel.insertBefore(opt, other)
-      else sel.add(opt)
-    }
-    sel.value = make
-    sel.dispatchEvent(new Event('change', { bubbles: true }))
-  }
-
   function handleGenerate() {
     setAiError(null)
     const token = fillTokenRef.current
@@ -212,7 +191,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         if (token !== fillTokenRef.current) return
         const form = formRef.current
         if (form) {
-          if (result.make) fillMakeSelect(form, result.make)
+          if (result.make) fillFormField(form, '[name="make"]', result.make)
           if (result.model) fillFormField(form, '[name="model"]', result.model)
           if (result.year) fillFormField(form, '[name="year"]', result.year)
           if (result.registration) fillFormField(form, '[name="registration"]', result.registration)
@@ -235,10 +214,10 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           // make/model/year, verify against the authoritative FAA registry and backfill
           // only the gaps — so "Selling N739WL, $180k" still yields a complete listing.
           // onlyEmpty so the registry never clobbers a value the AI already extracted.
-          const makeSel = form.querySelector<HTMLSelectElement>('[name="make"]')
+          const makeInput = form.querySelector<HTMLInputElement>('[name="make"]')
           const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
           const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
-          const missingCore = !makeSel?.value || !modelInput?.value || !yearInput?.value
+          const missingCore = !makeInput?.value || !modelInput?.value || !yearInput?.value
           if (result.registration && missingCore) {
             await handleLookup({ onlyEmpty: true })
           }
@@ -270,10 +249,10 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
       // (or re-arm autosave on) the cleared form.
       if (token !== fillTokenRef.current) return
       if (data.found) {
-        const makeSel = form.querySelector<HTMLSelectElement>('[name="make"]')
+        const makeInput = form.querySelector<HTMLInputElement>('[name="make"]')
         const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
         const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
-        if (data.make && !(onlyEmpty && makeSel?.value)) fillMakeSelect(form, data.make)
+        if (data.make && !(onlyEmpty && makeInput?.value)) fillFormField(form, '[name="make"]', data.make)
         if (modelInput && data.model && !(onlyEmpty && modelInput.value)) {
           modelInput.value = data.model
           modelInput.dispatchEvent(new Event('input', { bubbles: true }))
@@ -388,10 +367,17 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <Label required>Make</Label>
-            <Select name="make" required onChange={(e) => setSelectedMake(e.target.value)}>
-              <option value="">Select make</option>
-              {MAKES.map((m) => <option key={m} value={m}>{m}</option>)}
-            </Select>
+            <Input
+              name="make"
+              placeholder="e.g. Cessna, Maule, Bellanca"
+              required
+              list="aircraft-make-suggestions"
+              autoComplete="off"
+              onChange={(e) => setSelectedMake(e.target.value)}
+            />
+            <datalist id="aircraft-make-suggestions">
+              {MAKE_SUGGESTIONS.map((m) => <option key={m} value={m} />)}
+            </datalist>
           </div>
           <div>
             <Label required>Model</Label>
