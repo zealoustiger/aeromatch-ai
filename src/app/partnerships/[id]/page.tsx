@@ -30,7 +30,7 @@ import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
 import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import { partnershipBuyInComp, PartnerCompResult } from '@/lib/partnershipComps'
 import PartnershipDealSignals from '@/components/PartnershipDealSignals'
-import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
+import { classifyAvionics, computeIfrSuitability, type AvionicsInfo, type IfrTier } from '@/lib/avionicsClassify'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
 import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/overhaulTimeline'
@@ -672,13 +672,34 @@ const CAP_COLORS: Record<string, string> = {
   gps: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
 
+// IFR-verdict badge colors per tier (mirrors the aircraft detail page's IFR_CHIP).
+const IFR_CHIP: Record<IfrTier, string> = {
+  full:     'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  capable:  'bg-sky-50 text-sky-700 ring-sky-200',
+  equipped: 'bg-amber-50 text-amber-700 ring-amber-200',
+  basic:    'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
 function AvionicsPanel({ info }: { info: AvionicsInfo }) {
   if (info.caps.length === 0) return null
+  const ifr = computeIfrSuitability(info.caps)
   return (
     <div className="ch-panel p-6">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
         <Radio className="h-4 w-4" /> Avionics & panel
       </h2>
+
+      {/* IFR suitability verdict — synthesized from the capability chips below.
+          Same honesty-gated read as the aircraft detail page; self-suppresses
+          when no IFR-meaningful caps were detected. */}
+      {ifr && (
+        <div className="mb-4">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ring-1 ${IFR_CHIP[ifr.tier]}`}>
+            {ifr.headline}
+          </span>
+          <p className="mt-2 text-sm font-medium text-slate-700">{ifr.sub}</p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {info.caps.map((cap) => (

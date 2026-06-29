@@ -30,7 +30,7 @@ import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/over
 import { computeAnnualStatus, formatAnnualDueLabel, type AnnualStatusResult } from '@/lib/annualStatus'
 import { computeDamageHistory, type DamageHistoryResult } from '@/lib/damageHistory'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
-import { classifyAvionics, type AvionicsInfo, type AvionicsCap } from '@/lib/avionicsClassify'
+import { classifyAvionics, computeIfrSuitability, type AvionicsInfo, type IfrTier } from '@/lib/avionicsClassify'
 import {
   clubHangerEstimate,
   clubHangerDealVerdict,
@@ -1226,50 +1226,9 @@ const CAP_COLORS: Record<string, string> = {
   gps: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
 
-// IFR suitability tiers — synthesized from already-classified caps.
-// Tells the buyer in plain English what the avionics implies for IFR capability.
-// Self-suppresses (returns null) when no capability chips were detected — no
-// fabricated read from an ambiguous equipment list.
-type IfrTier = 'full' | 'capable' | 'equipped' | 'basic'
-
-interface IfrSuitability {
-  tier: IfrTier
-  headline: string
-  sub: string
-}
-
-function computeIfrSuitability(caps: AvionicsCap[]): IfrSuitability | null {
-  if (caps.length === 0) return null
-  const keys = new Set(caps.map((c) => c.key))
-  const glass = keys.has('glass')
-  const waas = keys.has('waas')
-  const gps = keys.has('gps')
-  const ap = keys.has('autopilot')
-  const adsb = keys.has('adsb')
-
-  if (glass && waas && ap)
-    return { tier: 'full', headline: 'Full IFR touring setup', sub: 'Glass panel, WAAS GPS, and autopilot — everything needed for instrument cross-country flying.' }
-  if (glass && waas)
-    return { tier: 'full', headline: 'IFR-capable with glass panel', sub: 'Glass avionics and WAAS GPS for LPV/LNAV+V approaches. No autopilot detected — ask the owner.' }
-  if (glass && ap)
-    return { tier: 'capable', headline: 'Glass panel with autopilot', sub: 'Integrated glass display and autopilot. Verify WAAS GPS details with the owner for precision approaches.' }
-  if (waas && ap)
-    return { tier: 'capable', headline: 'IFR-capable: WAAS GPS + autopilot', sub: 'WAAS GPS for precision approaches and autopilot for cross-country — a solid IFR panel.' }
-  if (glass)
-    return { tier: 'capable', headline: 'Glass panel', sub: 'Integrated glass display. Verify WAAS GPS and autopilot details with the owner for IFR use.' }
-  if (waas)
-    return { tier: 'capable', headline: 'WAAS GPS — IFR-capable', sub: 'WAAS GPS navigator for LPV precision approaches. No autopilot or glass panel detected in the listing.' }
-  if (gps && ap)
-    return { tier: 'equipped', headline: 'IFR-equipped: GPS + autopilot', sub: 'GPS navigator and autopilot; WAAS capability not specified — verify with owner for LPV approaches.' }
-  if (gps)
-    return { tier: 'equipped', headline: 'GPS navigator installed', sub: 'GPS navigator listed. Verify WAAS capability and IFR certification with the owner.' }
-  if (ap)
-    return { tier: 'equipped', headline: 'Autopilot installed', sub: 'Autopilot listed but no GPS navigator detected. Ask the owner about the full IFR navigation suite.' }
-  if (adsb)
-    return { tier: 'basic', headline: 'ADS-B compliant', sub: 'ADS-B Out equipped. No glass, GPS, or autopilot found in the listing — ask the owner about the full panel.' }
-  return null
-}
-
+// IFR suitability synthesis now lives in `@/lib/avionicsClassify` (shared with the
+// partnership detail page). IFR_CHIP is the page-local presentation map (mirrors the
+// per-page CAP_COLORS pattern).
 const IFR_CHIP: Record<IfrTier, string> = {
   full:     'bg-emerald-50 text-emerald-700 ring-emerald-200',
   capable:  'bg-sky-50 text-sky-700 ring-sky-200',
