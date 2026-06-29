@@ -20,6 +20,8 @@ interface Props {
   monthlyFixed: number | null
   hourlyWet: number | null
   shareType: string | null
+  reservePerHour?: number | null
+  engineFamily?: string | null
 }
 
 export default function PartnerShareCostPanel({
@@ -27,6 +29,8 @@ export default function PartnerShareCostPanel({
   monthlyFixed,
   hourlyWet,
   shareType,
+  reservePerHour,
+  engineFamily,
 }: Props) {
   const [hrsPerYear, setHrsPerYear] = useState<HrsPerYear>(100)
 
@@ -42,6 +46,11 @@ export default function PartnerShareCostPanel({
   const annualTotal = annualFixed + annualVariable
   const perHour = hrsPerYear > 0 ? Math.round(annualTotal / hrsPerYear) : 0
   const monthlyTotal = Math.round(annualTotal / 12)
+
+  // Engine reserve — shown as an informational line, NOT added to annualTotal
+  // because some partnerships already include a reserve in their monthly fixed.
+  const reserveAnnual =
+    reservePerHour && reservePerHour > 0 ? Math.round(reservePerHour * hrsPerYear) : null
 
   // Buy-in break-even vs. renting at the reference rate.
   const rentingAnnual = REFERENCE_RENTAL_RATE * hrsPerYear
@@ -105,6 +114,15 @@ export default function PartnerShareCostPanel({
           <div className="flex justify-between">
             <dt className="text-slate-500">Flying ({hrsPerYear} hrs × {money(wet)}/hr)</dt>
             <dd className="font-medium text-slate-700">{money(annualVariable)}/yr</dd>
+          </div>
+        )}
+        {reserveAnnual !== null && (
+          <div className="flex justify-between border-t border-dashed border-slate-100 pt-2">
+            <dt className="text-slate-400">
+              Engine reserve est.{engineFamily ? ` (${engineFamily})` : ''}
+              <span className="block text-xs text-slate-300">Verify if included in monthly fixed above</span>
+            </dt>
+            <dd className="font-medium text-amber-600">+{money(reserveAnnual)}/yr</dd>
           </div>
         )}
       </dl>

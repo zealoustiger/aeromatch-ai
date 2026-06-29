@@ -474,6 +474,8 @@ export default async function PartnershipDetailPage({
               monthlyFixed={p.monthly_fixed}
               hourlyWet={p.hourly_wet}
               shareType={p.share_type}
+              reservePerHour={engineLife?.reservePerHour}
+              engineFamily={engineLife?.family}
             />
 
             {/* Structure card */}
