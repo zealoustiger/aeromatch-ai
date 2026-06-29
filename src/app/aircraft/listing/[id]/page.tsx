@@ -76,6 +76,7 @@ function computeDealSignals(
   domContext: DaysOnMarketContext | null,
   annualStatus: AnnualStatusResult | null,
   damage: DamageHistoryResult | null,
+  engineLife: EngineLifeResult | null,
 ): DealSignalRow[] {
   const rows: DealSignalRow[] = []
   const makeModel = [p.make, p.model].filter(Boolean).join(' ')
@@ -247,7 +248,47 @@ function computeDealSignals(
     }
   }
 
-  // 6. Spec completeness — key buyer-evaluation fields
+  // 6. Engine life vs TBO — reuse the honesty-gated read already computed for the
+  //    EngineLifePanel; condense its SMOH-vs-TBO position into one tally row so the
+  //    headline verdict reflects how much engine life remains before an overhaul.
+  //    Self-suppresses upstream (engineLife is null) when smoh or engine_type is missing,
+  //    or the engine can't be matched to a known TBO family — never a fabricated TBO. The
+  //    bands mirror the EngineLifePanel progress-bar thresholds (>40% green, >15% amber,
+  //    else concern) so this chip and the bar a buyer sees right below it always agree.
+  if (engineLife) {
+    const tboHrs = engineLife.tboHours.toLocaleString()
+    if (engineLife.beyondTbo) {
+      rows.push({
+        kind: 'negative',
+        label: 'Engine past TBO',
+        detail: `${Math.abs(engineLife.remainingHours).toLocaleString()} hrs beyond the ${tboHrs}-hr recommended TBO for the ${engineLife.family} — budget for an overhaul (~${formatPrice(engineLife.overhaulCostUsd)}) or ask about its inspection status`,
+      })
+    } else {
+      const pct = Math.round((engineLife.remainingHours / engineLife.tboHours) * 100)
+      const remHrs = engineLife.remainingHours.toLocaleString()
+      if (pct > 40) {
+        rows.push({
+          kind: 'positive',
+          label: 'Engine has life left',
+          detail: `${remHrs} hrs to TBO (${pct}% of the ${tboHrs}-hr ${engineLife.family} interval remaining) — an overhaul is well down the road`,
+        })
+      } else if (pct > 15) {
+        rows.push({
+          kind: 'neutral',
+          label: 'Mid-time engine',
+          detail: `${remHrs} hrs to TBO (${pct}% remaining) — a healthy mid-life engine; factor the ~${formatPrice(engineLife.reservePerYear)}/yr overhaul reserve into your budget`,
+        })
+      } else {
+        rows.push({
+          kind: 'negative',
+          label: 'Approaching TBO',
+          detail: `Only ${remHrs} hrs to TBO (${pct}% remaining) — an overhaul (~${formatPrice(engineLife.overhaulCostUsd)}) is on the horizon; ask about engine condition and factor it into your offer`,
+        })
+      }
+    }
+  }
+
+  // 7. Spec completeness — key buyer-evaluation fields
   const keyPresent = [
     p.year != null,
     p.ttaf != null,
@@ -644,7 +685,7 @@ export default async function AircraftListingDetailPage({
 
   // Deal Score synthesis — "How this stacks up" panel in the main column.
   // Computes from already-fetched data only; no new DB reads.
-  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext, annualStatus, damage)
+  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext, annualStatus, damage, engineLife)
 
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
@@ -1506,7 +1547,7 @@ function DealScorePanel({ rows }: { rows: DealSignalRow[] }) {
         })}
       </ul>
       <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
-        This summary draws on signals shown in detail below — price comps, listing age, maintenance status, and key specs.
+        This summary draws on signals shown in detail below — price comps, listing age, maintenance and engine status, and key specs.
         Read each section for full context. Not an appraisal.
       </p>
     </div>
