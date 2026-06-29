@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T06:20:59Z — partnership-implied-value — score 5/5
+- Strengths: Clean pure helper mirroring aircraftComps/partnershipComps honesty philosophy — guards (buyIn>0, shares>=2, >=4 comps, median>0), ±10% dead-band, 14 unit tests; page fail-soft try/catch + pre-DB share guard avoids needless query; component renders all three kinds with "ask what's included" caveats exactly as spec'd; existing rows untouched.
+- Weaknesses / risks: none material — detail copy says "comparable {make} aircraft" (make-only) though comps are model-family-filtered, so the label slightly understates specificity; cosmetic, not misleading.
+- Follow-up: none
+
 ## 2026-06-29T02:29:10Z — partnership-airframe-time — score 5/5
 - Strengths: Exact-to-spec port — byte-identical AirframeUsagePanel + USAGE_META, reuses the unit-tested pure computeAirframeUsage, honesty-gating self-suppresses correctly; clear comments, tight 53-line diff.
 - Weaknesses / risks: none material — panel/USAGE_META are now duplicated across two pages, but that mirrors the existing EngineLifePanel convention so drift risk is pre-existing, not introduced.
