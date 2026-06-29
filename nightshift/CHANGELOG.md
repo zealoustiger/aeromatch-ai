@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-06-29T05:00:31Z — DRAIN SUMMARY
+- Cycles this run: 17 (PASS 16 / FAIL 1 / ABORT 0)
+- Models: cycles on opus; 1 escalated to opus; 2 quality-judged on opus
+- Stopped because: reached run-until
+- Run: 20260628T233141Z
+
 ## 2026-06-29T045549Z — PASS — deal-score-engine-life
 - Pages: /aircraft/listing/[id] (the "How this stacks up" Deal Score panel on aircraft for-sale detail pages)
 - What: **The aircraft listing's "How this stacks up" verdict now also reflects how much engine life is left before an overhaul — not just price, listing age, annual status, damage, and spec completeness.** Before, the engine's hours-since-overhaul vs. its published TBO lived only in the Engine Life panel further down the page; now it also rolls up into the at-a-glance tally at the top. A buyer scanning the summary immediately sees, e.g., "Engine has life left — 1,680 hrs to TBO (84% of the 2,000-hr Continental IO-550 interval remaining)" as a point in the listing's favor, "Mid-time engine" as a neutral note, or "Engine past TBO" / "Approaching TBO" as something to ask about — and the "N in this listing's favor / N to ask about" chips count it automatically.
