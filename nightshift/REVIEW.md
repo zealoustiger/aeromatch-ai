@@ -1,3 +1,25 @@
+## 2026-06-29T05:00:31Z — Night Shift run: 17 cycles (PASS 16 / FAIL 1) — reached run-until
+- Models: cycles on opus; 1 escalated to opus; 2 quality-judged on opus
+
+- PASS — start-over-cancels-autofill — Start over on the aircraft post form now cancels any in-flight FAA lookup / AI prefill so it can't re-fill or re-save the just-cleared draf
+- PASS — annual-inspection-status — aircraft detail pages now show an honest Annual inspection status (months remaining / due soon / may-be-overdue, with the ~$2,500 cost) synthe
+- PASS — partnership-model-suggestions — the Post a Partnership form's Model field now autocompletes common models for the chosen make (reusing the curated table, free text still
+- PASS — damage-history-read — Turned the buried `damage_history` flag into an honest Pillar-3 buyer panel on the aircraft listing page (what it means + what to ask, linked to th
+- PASS — start-over-autofill-guard-siblings — Start over on the partnership & pilot-seeking post forms now cancels any in-flight FAA lookup / AI prefill so it can't silently re-f
+- cycle produced no verdict (exit 124)
+- PASS — aircraft-post-engine-type — Added an optional Engine field to the Sell-your-Aircraft post form (manual + AI-prefill) so user-posted listings now persist engine_type and 
+- PASS — partnership-photos-survive-auth — partnership post-form photos now survive the sign-in redirect instead of being silently dropped (Pillar 1 parity with the aircraft form
+- PASS — partnership-airframe-time — partnership listing pages now show an honest Airframe time (avg hrs/yr over the aircraft's life) buyer-analysis panel, matching the planes-fo
+- PASS — ai-prefill-faa-backfill — Aircraft post form now verifies the pasted N-number against the FAA registry to backfill make/model/year the AI couldn't extract
+- PASS — engine-overhaul-timeline — Engine Life panel now shows ≈ N years to overhaul at its historical pace by fusing hours-to-TBO with the aircraft's own flying rate, honesty
+- PASS — aircraft-make-freetext-datalist — the Sell Your Aircraft form's Make field is now type-anything with curated suggestions instead of a 9-brand dropdown that forced non-li
+- PASS — cost-per-flight-hour — aircraft listings' Cost-to-own panel now shows the true cost per flight hour
+- PASS — partnership-make-freetext-datalist — Make field on /partnerships/new is now type-anything with suggestions (no more Other dead-end), matching the aircraft form
+- PASS — deal-score-maintenance-signals — aircraft listing How this stacks up Deal Score now folds in annual-inspection status and reported-damage as honest tally rows (Pillar 3)
+- PASS — seeker-make-chips — added one-tap common-make chips above the Preferred Makes field on the seeking-listing post form (Pillar 1, frictionless posting); tap to add/remove 
+- PASS — deal-score-engine-life — The aircraft listing's How this stacks up Deal Score tally now includes an honesty-gated engine-life-vs-TBO signal (fresh / mid-time / approachi
+
+
 ## 2026-06-28T22:25:05Z — Night Shift run: 12 cycles (PASS 4 / FAIL 8) — stopped by Brian
 - Models: cycles on opus; 5 escalated to opus; 1 quality-judged on opus
 
