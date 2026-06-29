@@ -30,7 +30,7 @@ import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/over
 import { computeAnnualStatus, formatAnnualDueLabel, type AnnualStatusResult } from '@/lib/annualStatus'
 import { computeDamageHistory, type DamageHistoryResult } from '@/lib/damageHistory'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
-import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
+import { classifyAvionics, type AvionicsInfo, type AvionicsCap } from '@/lib/avionicsClassify'
 import {
   clubHangerEstimate,
   clubHangerDealVerdict,
@@ -77,6 +77,7 @@ function computeDealSignals(
   annualStatus: AnnualStatusResult | null,
   damage: DamageHistoryResult | null,
   engineLife: EngineLifeResult | null,
+  avionicsInfo: AvionicsInfo | null,
 ): DealSignalRow[] {
   const rows: DealSignalRow[] = []
   const makeModel = [p.make, p.model].filter(Boolean).join(' ')
@@ -288,7 +289,22 @@ function computeDealSignals(
     }
   }
 
-  // 7. Spec completeness — key buyer-evaluation fields
+  // 7. Avionics IFR suitability — a positive signal for full/capable IFR setups.
+  //    Only fires for the top two tiers (glass, WAAS, autopilot combinations) so
+  //    the row is genuinely positive — not a neutral noise item. Self-suppresses
+  //    entirely when avionics is absent or no IFR-meaningful caps were detected.
+  if (avionicsInfo) {
+    const ifr = computeIfrSuitability(avionicsInfo.caps)
+    if (ifr && (ifr.tier === 'full' || ifr.tier === 'capable')) {
+      rows.push({
+        kind: 'positive',
+        label: ifr.headline,
+        detail: ifr.sub,
+      })
+    }
+  }
+
+  // 8. Spec completeness — key buyer-evaluation fields (always last)
   const keyPresent = [
     p.year != null,
     p.ttaf != null,
@@ -687,7 +703,7 @@ export default async function AircraftListingDetailPage({
 
   // Deal Score synthesis — "How this stacks up" panel in the main column.
   // Computes from already-fetched data only; no new DB reads.
-  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext, annualStatus, damage, engineLife)
+  const dealSignalRows = computeDealSignals(p, estimate, dealVerdict, domContext, annualStatus, damage, engineLife, avionicsInfo)
 
   // Spec rows — only the fields we actually have; missing ones are omitted so the
   // grid never shows a "null"/empty row.
@@ -1210,12 +1226,75 @@ const CAP_COLORS: Record<string, string> = {
   gps: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
 
+// IFR suitability tiers — synthesized from already-classified caps.
+// Tells the buyer in plain English what the avionics implies for IFR capability.
+// Self-suppresses (returns null) when no capability chips were detected — no
+// fabricated read from an ambiguous equipment list.
+type IfrTier = 'full' | 'capable' | 'equipped' | 'basic'
+
+interface IfrSuitability {
+  tier: IfrTier
+  headline: string
+  sub: string
+}
+
+function computeIfrSuitability(caps: AvionicsCap[]): IfrSuitability | null {
+  if (caps.length === 0) return null
+  const keys = new Set(caps.map((c) => c.key))
+  const glass = keys.has('glass')
+  const waas = keys.has('waas')
+  const gps = keys.has('gps')
+  const ap = keys.has('autopilot')
+  const adsb = keys.has('adsb')
+
+  if (glass && waas && ap)
+    return { tier: 'full', headline: 'Full IFR touring setup', sub: 'Glass panel, WAAS GPS, and autopilot — everything needed for instrument cross-country flying.' }
+  if (glass && waas)
+    return { tier: 'full', headline: 'IFR-capable with glass panel', sub: 'Glass avionics and WAAS GPS for LPV/LNAV+V approaches. No autopilot detected — ask the owner.' }
+  if (glass && ap)
+    return { tier: 'capable', headline: 'Glass panel with autopilot', sub: 'Integrated glass display and autopilot. Verify WAAS GPS details with the owner for precision approaches.' }
+  if (waas && ap)
+    return { tier: 'capable', headline: 'IFR-capable: WAAS GPS + autopilot', sub: 'WAAS GPS for precision approaches and autopilot for cross-country — a solid IFR panel.' }
+  if (glass)
+    return { tier: 'capable', headline: 'Glass panel', sub: 'Integrated glass display. Verify WAAS GPS and autopilot details with the owner for IFR use.' }
+  if (waas)
+    return { tier: 'capable', headline: 'WAAS GPS — IFR-capable', sub: 'WAAS GPS navigator for LPV precision approaches. No autopilot or glass panel detected in the listing.' }
+  if (gps && ap)
+    return { tier: 'equipped', headline: 'IFR-equipped: GPS + autopilot', sub: 'GPS navigator and autopilot; WAAS capability not specified — verify with owner for LPV approaches.' }
+  if (gps)
+    return { tier: 'equipped', headline: 'GPS navigator installed', sub: 'GPS navigator listed. Verify WAAS capability and IFR certification with the owner.' }
+  if (ap)
+    return { tier: 'equipped', headline: 'Autopilot installed', sub: 'Autopilot listed but no GPS navigator detected. Ask the owner about the full IFR navigation suite.' }
+  if (adsb)
+    return { tier: 'basic', headline: 'ADS-B compliant', sub: 'ADS-B Out equipped. No glass, GPS, or autopilot found in the listing — ask the owner about the full panel.' }
+  return null
+}
+
+const IFR_CHIP: Record<IfrTier, string> = {
+  full:     'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  capable:  'bg-sky-50 text-sky-700 ring-sky-200',
+  equipped: 'bg-amber-50 text-amber-700 ring-amber-200',
+  basic:    'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
 function AvionicsPanel({ info }: { info: AvionicsInfo }) {
+  const ifr = computeIfrSuitability(info.caps)
   return (
     <div className="ch-panel p-6">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
         <Radio className="h-4 w-4" /> Avionics & panel
       </h2>
+
+      {/* IFR suitability verdict — synthesized from the capability chips above.
+          Self-suppresses when no capability chips were detected. */}
+      {ifr && (
+        <div className="mb-4">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ring-1 ${IFR_CHIP[ifr.tier]}`}>
+            {ifr.headline}
+          </span>
+          <p className="mt-2 text-sm font-medium text-slate-700">{ifr.sub}</p>
+        </div>
+      )}
 
       {info.caps.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
