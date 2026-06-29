@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T12:43:03Z — partnership-comp-pill-enriched — score 4/5
+- Strengths: Clean, minimal parity wire-through — `median`/`count` threaded consistently through the prop type, the verdicts `Map`, and the `renderList` default param; both below/above branches gain the `· $Xk · N comps` suffix via the shared `formatPriceK` helper plus a full-figure `title` tooltip; honesty floor and ±5% dead-band suppression untouched, `partnershipComps.ts` math left alone exactly as scoped.
+- Weaknesses / risks: none material — the below/above chip markup is duplicated rather than factored, but that duplication pre-existed this cycle and matches the file convention.
+- Follow-up: none
+
 ## 2026-06-29T12:17:18Z — platform-contact-email-hide — score 5/5
 - Strengths: Hits all 7 ACs precisely with a minimal, idiomatic diff — `contactMethod` state defaults to `'platform'` so email is hidden by default, the `Select`'s `onChange` toggles it, and the field uses the CSS `hidden` class (not conditional mount) so the value survives method switches (AC5); the post-mount `useEffect` draft-sync correctly mirrors the existing `selectedMake` pattern and reads `[name="contact_method"]` (AC6); applied identically to both forms; the local `Select` spreads `...props`, so `onChange` forwards cleanly.
 - Weaknesses / risks: none material — select stays uncontrolled (relies on first option being the default), but that matches the file's established convention.
