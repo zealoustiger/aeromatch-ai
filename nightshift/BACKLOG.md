@@ -76,9 +76,7 @@ When you ship one, mark it ✅ and note the next slice in the CHANGELOG.
 Target: cut every step/field/decision between "I want to list" and "it's published."
 Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`
 (server actions in `src/app/actions.ts`; AI draft already exists for partnership/seeker).
-- **[P1][goal] N-number autofill on the aircraft post form.** A `/api/faa-lookup` route
-  already exists — wire it into `/aircraft/new`: type the registration → auto-fill make /
-  model / year / serial (editable). One field replaces four. *Friction removed: 3-4 fields.*
+~~- **[P1][goal] N-number autofill on the aircraft post form.**~~ ✅ SHIPPED (earlier in this drain) The `/api/faa-lookup` route is wired into `/aircraft/new`: type the registration → auto-fills make / model / year (editable); "Look up →" button + blur trigger; AI prefill also chains a registry backfill when make/model/year are missing.
 - **[P1][goal] "Paste & prefill" the whole form.** Extend the existing AI-draft
   (`generatePartnershipDraft` / aircraft draft) so a pasted listing blob OR a source URL
   maps into *every* field (make, model, year, price, hours, airport, share terms), not just
@@ -362,9 +360,10 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   a "How to write a great description" tips panel (4 bullets) + a native `<details>` "See two example
   descriptions" disclosure (first-time buyer + experienced time-builder) around the Description textarea
   on `/partnerships/seeking/new`. Static/presentational only — no new fields, no schema, no change to
-  `createSeekerListing`. See CHANGELOG. **Remaining: slice 3 — shared autosave + "Saving…/Saved" indicator
-  (pairs with the deferred post-partnership autosave slice) + 375px micro-polish; plus the still-open
-  field changes (1) multiple base airports and (2) "willing to travel" → drive-time.**
+  `createSeekerListing`. See CHANGELOG.
+  — **slice 3 (autosave + "Saving…/Saved") ✅ SHIPPED (earlier in this drain)**: seeker form now uses `useFormDraft(DRAFT_KEY)` with the `DraftIndicator` component — full Saving/Saved/Restored cycle, "Start over" confirm, `forceSaveDraft` on auth redirect, draft key `ch:draft:seeker-new`.
+  — **field change (2) "willing to travel" → drive time ✅ SHIPPED**: the seeker form's `willing_to_travel_nm` select already uses "~30 min drive / ~45 min drive / ~1 hr drive / ~1.5 hr drive / ~2 hr drive" labels.
+  — **field change (1) multiple base airports ✅ SHIPPED 2026-06-29 via `seeker-additional-airports`**: seeker form "The basics" section now has an optional "Also flying from" `AirportFormInput`; stored as `additional_airports text[]` in DB (migration required: see schema.sql `seeker_additional_airports`); displayed on the seeker detail page; graceful fallback if column not yet applied.
 - **[P2][want] "Generate with AI" for title + description (all post flows).** ✅ SHIPPED slice 1
   2026-06-25T060247Z (`seeking-ai-draft`). Seeking form (`/partnerships/seeking/new`) now has
   a violet "Generate with AI ✨" box above Title/Description — user types stream-of-consciousness

@@ -582,3 +582,11 @@ alter table outreach_targets add column if not exists adsb_summary text;
 alter table partnerships add column if not exists ttaf integer;
 alter table partnerships add column if not exists smoh integer;
 alter table partnerships add column if not exists engine_type text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: seeker_additional_airports
+-- Adds additional_airports to partnership_seekers so pilots can specify up to 1 extra
+-- airport they'd fly from. Column is optional (text[]); existing seekers unaffected.
+-- Apply in the Supabase SQL editor. Until applied, the new "Also flying from" field on
+-- /partnerships/seeking/new still submits successfully — additional airports are
+-- silently dropped (graceful fallback in createSeekerListing), so no user-facing error.
+alter table partnership_seekers add column if not exists additional_airports text[];

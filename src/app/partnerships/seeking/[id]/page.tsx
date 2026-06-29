@@ -158,6 +158,9 @@ export default async function SeekerDetailPage({
                 <MapPin className="h-4 w-4 text-slate-400" />
                 <strong className="font-semibold text-slate-700">{s.home_airport}</strong>
                 {s.city && ` · ${s.city}, ${s.state}`}
+                {s.additional_airports && s.additional_airports.length > 0 && (
+                  <span className="text-slate-400"> · also: {s.additional_airports.join(', ')}</span>
+                )}
                 {s.willing_to_travel_nm && ` (willing to commute ${travelLabel(s.willing_to_travel_nm)})`}
               </span>
               <span className="flex items-center gap-1.5">

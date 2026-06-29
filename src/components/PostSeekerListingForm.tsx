@@ -373,6 +373,14 @@ export default function PostSeekerListingForm({
             <p className="mt-1 text-xs text-slate-400">Type a city or airport code — name, city, and state fill in automatically.</p>
           </div>
           <div>
+            <Label>Also flying from <span className="font-normal text-slate-400">(optional)</span></Label>
+            <AirportFormInput
+              name="additional_airport_2"
+              placeholder="Second airport, if you fly from multiple (e.g. KNUQ)"
+            />
+            <p className="mt-1 text-xs text-slate-400">Based near two airports? Add the second so owners at either can find you.</p>
+          </div>
+          <div>
             <Label>Max Buy-In <span className="font-normal text-slate-400">(optional)</span></Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>

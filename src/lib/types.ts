@@ -165,6 +165,7 @@ export interface PartnershipSeeker {
   city: string | null
   state: string | null
   willing_to_travel_nm: number | null
+  additional_airports?: string[] | null
 
   total_hours: number | null
   ratings_held: string[] | null

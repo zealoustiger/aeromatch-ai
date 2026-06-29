@@ -197,7 +197,14 @@ export async function createSeekerListing(formData: FormData) {
     .eq('icao', home_airport)
     .maybeSingle()
 
-  const payload = {
+  // Optional additional airport — store as text[] when non-empty.
+  // Requires the `seeker_additional_airports` migration (add column if not exists).
+  // Graceful fallback: if the column doesn't exist yet, we retry without it so the
+  // listing still goes live without error (the additional airport is silently dropped).
+  const extraRaw = ((formData.get('additional_airport_2') as string) || '').trim().toUpperCase()
+  const additional_airports = extraRaw ? [extraRaw] : null
+
+  const basePayload = {
     preferred_makes,
     preferred_models: (formData.get('preferred_models') as string) || null,
     min_year: formData.get('min_year') ? parseInt(formData.get('min_year') as string) : null,
@@ -231,7 +238,20 @@ export async function createSeekerListing(formData: FormData) {
     poster_id: user.id,
   }
 
-  const { data, error } = await supabase.from('partnership_seekers').insert(payload).select('id').single()
+  const payload = additional_airports
+    ? { ...basePayload, additional_airports }
+    : basePayload
+
+  let { data, error } = await supabase.from('partnership_seekers').insert(payload).select('id').single()
+
+  // If the additional_airports column hasn't been migrated yet, retry without it so
+  // the listing still goes live (graceful self-suppression, same pattern as partnership
+  // spec fields). The column error message contains "additional_airports".
+  if (error && additional_airports && error.message?.includes('additional_airports')) {
+    const retry = await supabase.from('partnership_seekers').insert(basePayload).select('id').single()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) throw new Error(error.message)
 
@@ -243,7 +263,7 @@ export async function createSeekerListing(formData: FormData) {
   }
 
   revalidatePath('/partnerships/seeking')
-  redirect(`/partnerships/seeking/${data.id}?posted=1`)
+  redirect(`/partnerships/seeking/${data!.id}?posted=1`)
 }
 
 export async function createAircraftListing(formData: FormData) {
