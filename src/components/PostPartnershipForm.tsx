@@ -307,9 +307,10 @@ export default function PostPartnershipForm({
           if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
           if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
           if (result.engine_type) fillFormField(form, '[name="engine_type"]', result.engine_type)
-          // Auto-open "More details" if the AI filled any optional fields inside it
+          // Auto-open "More details" if the AI filled any optional fields still inside it
+          // (description is now outside <details>, so it doesn't trigger auto-open)
           const hasOptional = result.year || result.registration || result.title ||
-            result.description || result.monthly_fixed || result.hourly_wet ||
+            result.monthly_fixed || result.hourly_wet ||
             result.ttaf || result.smoh || result.engine_type
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
@@ -504,6 +505,18 @@ export default function PostPartnershipForm({
         />
       </section>
 
+      {/* About this partnership — description visible by default so posters are prompted to write one */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <h2 className="mb-1 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">About this partnership</h2>
+        <p className="mb-3 text-xs text-slate-500">Tell prospective partners about the aircraft, the current group, how scheduling works, and what you&apos;re looking for in a partner. A compelling description is the single biggest factor in getting a serious inquiry.</p>
+        <textarea
+          name="description"
+          rows={5}
+          placeholder="e.g. 1/3 share in a 2004 Cessna 172S based at KAUS. 3-pilot group, all instrument-rated, great camaraderie. Scheduling via FlyingClub app, rarely a conflict. TTAF 3,200, fresh annual Jan 2026. Looking for a pilot with 200+ hours who wants to fly 15+ hrs/month."
+          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        />
+      </section>
+
       {/* More details — collapsible, closed by default */}
       <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
@@ -536,7 +549,7 @@ export default function PostPartnershipForm({
             </div>
           </div>
 
-          {/* Title + Description */}
+          {/* Title */}
           <div>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Listing details</h3>
             <div className="space-y-4">
@@ -547,15 +560,6 @@ export default function PostPartnershipForm({
                   placeholder="e.g. 1/3 Share Available — 2004 C172S, Austin TX (KAUS)"
                 />
                 <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from make and model.</p>
-              </div>
-              <div>
-                <Label>Description</Label>
-                <textarea
-                  name="description"
-                  rows={5}
-                  placeholder="Tell prospective partners about the aircraft, the current group, how scheduling works, and what you're looking for in a partner..."
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
               </div>
             </div>
           </div>
