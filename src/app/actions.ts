@@ -282,6 +282,7 @@ export async function createAircraftListing(formData: FormData) {
     registration: (formData.get('registration') as string) || null,
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
     title: (() => {
       const t = ((formData.get('title') as string) || '').trim()
       if (t) return t
@@ -1060,6 +1061,7 @@ export interface AircraftDraft {
   registration?: string
   ttaf?: number
   smoh?: number
+  engine_type?: string
   asking_price?: number
   home_airport?: string
 }
@@ -1085,6 +1087,7 @@ Given the seller's notes or a pasted listing, do TWO things:
    - registration: FAA N-number, e.g. "N12345" — or omit
    - ttaf: total airframe hours as integer — or omit
    - smoh: hours since major overhaul as integer — or omit
+   - engine_type: engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550" — or omit
    - asking_price: integer dollars (no $ sign, no commas) — or omit
    - home_airport: 4-letter ICAO airport code where the aircraft is based, e.g. "KAUS" — or omit if not mentioned
 
@@ -1108,6 +1111,7 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
             registration: { type: 'string', description: 'FAA N-number, e.g. N12345' },
             ttaf: { type: 'integer', description: 'Total time airframe, hours' },
             smoh: { type: 'integer', description: 'Hours since major overhaul' },
+            engine_type: { type: 'string', description: 'Engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550"' },
             asking_price: { type: 'integer', description: 'Asking price in USD, no $ or commas' },
             home_airport: { type: 'string', description: '4-letter ICAO airport code where aircraft is based, e.g. "KAUS"' },
           },
@@ -1133,6 +1137,7 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
     registration: sale.registration,
     ttaf: sale.ttaf,
     smoh: sale.smoh,
+    engine_type: sale.engine_type,
     asking_price: sale.asking_price,
     home_airport: sale.home_airport ? sale.home_airport.toUpperCase().slice(0, 4) : undefined,
   }
