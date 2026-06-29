@@ -23,7 +23,7 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
   }
 
   let savedIds = new Set<string>()
-  const verdicts = new Map<string, { kind: 'below' | 'above'; pct: number }>()
+  const verdicts = new Map<string, { kind: 'below' | 'above'; pct: number; median: number; count: number }>()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
@@ -80,7 +80,7 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
           const otherBuyIns = rows.filter((r) => r.id !== p.id).map((r) => r.buy_in_price)
           const result = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
           if (result && result.kind !== 'near') {
-            verdicts.set(p.id, { kind: result.kind, pct: result.pct })
+            verdicts.set(p.id, { kind: result.kind, pct: result.pct, median: result.median, count: result.count })
           }
         }
       }
@@ -92,7 +92,7 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
   return renderList(listings, filters, airportList, savedIds, verdicts)
 }
 
-function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set(), verdicts: Map<string, { kind: 'below' | 'above'; pct: number }> = new Map()) {
+function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set(), verdicts: Map<string, { kind: 'below' | 'above'; pct: number; median: number; count: number }> = new Map()) {
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
