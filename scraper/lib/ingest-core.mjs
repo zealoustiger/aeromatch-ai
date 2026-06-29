@@ -273,10 +273,12 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
 
   const supabase = adminClient()
 
-  // Pull existing rows for this source to diff prices and preserve first_seen_at.
+  // Pull existing rows for this source to diff prices, preserve first_seen_at, and
+  // protect already-harvested photos (see the images-preservation note in the
+  // upsert map below).
   const { data: existingRows, error: exErr } = await supabase
     .from('aircraft_for_sale')
-    .select('source_id, asking_price, content_hash, previous_price, price_changed_at, first_seen_at')
+    .select('source_id, asking_price, content_hash, previous_price, price_changed_at, first_seen_at, images')
     .eq('source', source)
   if (exErr) throw new Error(`fetch existing failed: ${exErr.message}`)
   const existing = new Map((existingRows ?? []).map((e) => [e.source_id, e]))
@@ -301,6 +303,19 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
         out.price_changed_at = nowIso
         if (a < b) stats.priceDrops++
         else stats.priceRises++
+      }
+      // PRESERVE harvested photos: never let a scrape that came back with no
+      // photos overwrite images we already have. Sources whose photos require a
+      // separate fetch (hangar67 — Cloudflare-blocks the VPS, so its per-listing
+      // photo fetch returns []) would otherwise clobber, every single day, the
+      // photos the residential Bright Data harvester collected. If the incoming
+      // row has an empty image set but the stored row has photos, keep the stored
+      // ones. (A scrape that DOES bring photos still updates them normally.)
+      const incomingImgs = Array.isArray(r.images) ? r.images : []
+      const prevImgs = Array.isArray(prev.images) ? prev.images : []
+      if (incomingImgs.length === 0 && prevImgs.length > 0) {
+        out.images = prev.images
+        out.image_is_placeholder = false
       }
     }
     return out
