@@ -10,6 +10,17 @@ export function formatPrice(cents: number | null, fallback = 'Contact for price'
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cents)
 }
 
+/** Compact price label for use inside badges/chips: "$118k" or "$1.2M".
+ *  Rounds to nearest $1k for values under $1M, nearest $100k for $1M+. */
+export function formatPriceK(dollars: number): string {
+  if (dollars >= 1_000_000) {
+    const m = Math.round(dollars / 100_000) / 10
+    return `$${m}M`
+  }
+  const k = Math.round(dollars / 1_000)
+  return `$${k}k`
+}
+
 export function formatShareType(type: string): string {
   const labels: Record<string, string> = {
     '1/2': '1/2 Share',
