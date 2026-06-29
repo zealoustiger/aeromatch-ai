@@ -1,3 +1,10 @@
+## 2026-06-29T13:24:52Z — Night Shift run: 2 cycles (PASS 2 / FAIL 0) — night ended
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+
+- PASS — partnership-description-above-fold — description textarea moved above fold on the partnership post form so every poster sees the prompt without expanding More details
+- PASS — aircraft-price-inline-market — aircraft listing detail pages now show ~X% below/above market · $Xk median · N comps inline in the Price card, mirroring the partnership
+
+
 ## 2026-06-29T05:00:31Z — Night Shift run: 17 cycles (PASS 16 / FAIL 1) — reached run-until
 - Models: cycles on opus; 1 escalated to opus; 2 quality-judged on opus
 
