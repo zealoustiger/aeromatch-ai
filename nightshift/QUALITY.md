@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T11:14:12Z — ifr-badge-browse-cards — score 4/5
+- Strengths: All 5 ACs met cleanly in the single scoped file — `IfrCardBadge` reuses the shared `computeIfrSuitability`, emerald (full) / sky (capable) colors map correctly, and the `showIfrBadge` gate cleanly routes non-qualifying tiers (equipped/basic/null) back to the unchanged 2-cap chip path, so AC3 no-regression and AC5 empty-caps self-suppression both hold. Naming and `cn`/ring styling mirror the sibling `AvionicsChip`/`EngineTimeChip` chips; honest sub-line copy preserved.
+- Weaknesses / risks: `computeIfrSuitability(caps)` runs twice per card (once for `ifrTier` in the body, again inside `IfrCardBadge`) instead of computing once and passing the result down; the `IFR_CARD_CHIP` map carries unreachable `equipped`/`basic` keys (badge returns null for them); and `title={ifr.sub}` adds hover text that the spec listed as explicitly out of scope. All immaterial.
+- Follow-up: none
+
 ## 2026-06-29T10:32:08Z — avionics-ifr-land — score 4/5
 - Strengths: Textbook DRY refactor — lifts `computeIfrSuitability` + `IfrTier`/`IfrSuitability` verbatim into the shared `avionicsClassify.ts` (next to the `AvionicsCap` data it operates on), deletes the aircraft page's now-duplicate copy and re-imports it (behaviour byte-identical), and adds the badge to the partnership `AvionicsPanel` above the chips. Honesty floor intact (empty caps → `null` → no badge; every sub-line defers to the owner for undetected gear). 12 focused unit tests cover tier precedence, the empty-cap self-suppression, and that each tier yields non-empty copy. Tidy comments, naming matches conventions; merge-commit landed cleanly post env-cache fix.
 - Weaknesses / risks: The 4-line `IFR_CHIP` color map is now copy-pasted into both detail pages — a deliberate mirror of the existing per-page `CAP_COLORS` pattern, so defensible, but it's a second presentation site that can drift from the shared tier enum. Nothing material.
