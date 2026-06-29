@@ -1,14 +1,23 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plane, Handshake, PlusCircle, ExternalLink } from 'lucide-react'
+import { Plane, Handshake, PlusCircle, ExternalLink, UserSearch } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { formatPrice, formatShareType } from '@/lib/utils'
 import type { AircraftForSale, Partnership } from '@/lib/types'
 
+type SeekerRow = {
+  id: string
+  title: string | null
+  home_airport: string | null
+  status: string
+  created_at: string
+  preferred_makes: string[] | null
+}
+
 export const metadata: Metadata = {
   title: 'My Listings — ClubHanger',
-  description: 'View and manage your posted aircraft and partnership listings.',
+  description: 'View and manage your posted aircraft, partnership, and seeking listings.',
   robots: { index: false, follow: false },
 }
 
@@ -54,10 +63,19 @@ export default async function MyListingsPage() {
     .in('status', ['active', 'pending'])
     .order('created_at', { ascending: false })
 
+  // Fetch seeking listings posted by this user.
+  const { data: seekerRows } = await supabase
+    .from('partnership_seekers')
+    .select('id, title, home_airport, status, created_at, preferred_makes')
+    .eq('poster_id', user.id)
+    .in('status', ['active', 'pending'])
+    .order('created_at', { ascending: false })
+
   const aircraft: AircraftForSale[] = (aircraftRows ?? []) as AircraftForSale[]
   const partnerships: Partnership[] = (partnershipRows ?? []) as Partnership[]
+  const seekers: SeekerRow[] = (seekerRows ?? []) as SeekerRow[]
 
-  const hasAny = aircraft.length > 0 || partnerships.length > 0
+  const hasAny = aircraft.length > 0 || partnerships.length > 0 || seekers.length > 0
 
   return (
     <div className="ch-surface min-h-screen">
@@ -68,7 +86,7 @@ export default async function MyListingsPage() {
             My Listings
           </h1>
           <p className="mt-1 text-slate-500">
-            Aircraft and partnerships you&apos;ve posted on ClubHanger.
+            Aircraft, partnerships, and seeking listings you&apos;ve posted on ClubHanger.
           </p>
         </div>
 
@@ -162,6 +180,45 @@ export default async function MyListingsPage() {
                   </Link>
                 </li>
               ))}
+            </ul>
+          </section>
+        )}
+
+        {seekers.length > 0 && (
+          <section className="mb-8">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+              <UserSearch className="h-4 w-4" /> Pilots seeking ({seekers.length})
+            </h2>
+            <ul className="space-y-3">
+              {seekers.map((s) => {
+                const makeLabel = s.preferred_makes?.length
+                  ? s.preferred_makes.slice(0, 2).join(', ') + (s.preferred_makes.length > 2 ? '…' : '')
+                  : null
+                return (
+                  <li key={s.id} className="ch-panel flex items-center justify-between gap-4 p-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={s.status} />
+                        <span className="truncate text-sm font-semibold text-slate-800">
+                          {s.title ?? `Pilot seeking partnership${s.home_airport ? ` near ${s.home_airport}` : ''}`}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {s.home_airport ?? 'Any airport'}
+                        {makeLabel ? ` · ${makeLabel}` : ''}
+                        {' · '}
+                        {formatDate(s.created_at)}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/partnerships/seeking/${s.id}`}
+                      className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                    >
+                      View <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </section>
         )}

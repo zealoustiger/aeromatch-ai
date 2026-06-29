@@ -342,6 +342,11 @@ export default async function PartnershipDetailPage({
                 Browse pilots who are seeking →
               </Link>
             </p>
+            <p className="mt-1.5 text-sm text-emerald-700">
+              <Link href="/listings" className="font-medium underline hover:text-emerald-900">
+                View all my listings →
+              </Link>
+            </p>
           </div>
         )}
 
