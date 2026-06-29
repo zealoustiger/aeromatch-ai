@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plane, Handshake, PlusCircle, ExternalLink, UserSearch } from 'lucide-react'
+import { Plane, Handshake, PlusCircle, ExternalLink, UserSearch, ChevronDown } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { formatPrice, formatShareType } from '@/lib/utils'
 import type { AircraftForSale, Partnership } from '@/lib/types'
 import DeactivateListingButton from '@/components/DeactivateListingButton'
+import RelistListingButton from '@/components/RelistListingButton'
 
 type SeekerRow = {
   id: string
@@ -28,16 +29,14 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const isActive = status === 'active'
+  const cfg =
+    status === 'active'  ? { cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200', label: 'Active' } :
+    status === 'sold'    ? { cls: 'bg-slate-100 text-slate-500 ring-slate-200',     label: 'Sold' } :
+    status === 'closed'  ? { cls: 'bg-slate-100 text-slate-500 ring-slate-200',     label: 'Closed' } :
+                           { cls: 'bg-amber-50 text-amber-700 ring-amber-200',      label: 'Pending' }
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${
-        isActive
-          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-          : 'bg-amber-50 text-amber-700 ring-amber-200'
-      }`}
-    >
-      {isActive ? 'Active' : 'Pending'}
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${cfg.cls}`}>
+      {cfg.label}
     </span>
   )
 }
@@ -72,11 +71,38 @@ export default async function MyListingsPage() {
     .in('status', ['active', 'pending'])
     .order('created_at', { ascending: false })
 
+  // Past (closed / sold) listings — separate queries so the active sections above stay unchanged.
+  const { data: pastAircraftRows } = await supabase
+    .from('aircraft_for_sale')
+    .select('id, title, make, model, year, asking_price, price_text, status, created_at, first_seen_at, source')
+    .eq('poster_id', user.id)
+    .in('status', ['sold'])
+    .order('created_at', { ascending: false })
+
+  const { data: pastPartnershipRows } = await supabase
+    .from('partnerships')
+    .select('id, title, make, model, year, buy_in_price, share_type, status, created_at, posted_at')
+    .eq('poster_id', user.id)
+    .in('status', ['closed'])
+    .order('created_at', { ascending: false })
+
+  const { data: pastSeekerRows } = await supabase
+    .from('partnership_seekers')
+    .select('id, title, home_airport, status, created_at, preferred_makes')
+    .eq('poster_id', user.id)
+    .in('status', ['closed'])
+    .order('created_at', { ascending: false })
+
   const aircraft: AircraftForSale[] = (aircraftRows ?? []) as AircraftForSale[]
   const partnerships: Partnership[] = (partnershipRows ?? []) as Partnership[]
   const seekers: SeekerRow[] = (seekerRows ?? []) as SeekerRow[]
 
+  const pastAircraft: AircraftForSale[] = (pastAircraftRows ?? []) as AircraftForSale[]
+  const pastPartnerships: Partnership[] = (pastPartnershipRows ?? []) as Partnership[]
+  const pastSeekers: SeekerRow[] = (pastSeekerRows ?? []) as SeekerRow[]
+
   const hasAny = aircraft.length > 0 || partnerships.length > 0 || seekers.length > 0
+  const pastCount = pastAircraft.length + pastPartnerships.length + pastSeekers.length
 
   return (
     <div className="ch-surface min-h-screen">
@@ -257,6 +283,132 @@ export default async function MyListingsPage() {
               <PlusCircle className="h-4 w-4 text-sky-600" /> Post another listing
             </Link>
           </div>
+        )}
+
+        {pastCount > 0 && (
+          <details className="group mt-8">
+            <summary className="flex cursor-pointer select-none items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-600">
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              Past listings ({pastCount})
+              <span className="font-normal text-slate-400">— sold &amp; closed</span>
+            </summary>
+
+            <div className="mt-4 space-y-8">
+
+              {pastAircraft.length > 0 && (
+                <section>
+                  <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                    <Plane className="h-4 w-4" /> Aircraft ({pastAircraft.length})
+                  </h2>
+                  <ul className="space-y-3">
+                    {pastAircraft.map((p) => (
+                      <li key={p.id} className="ch-panel flex items-center justify-between gap-4 p-4 opacity-80">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge status={p.status} />
+                            <span className="truncate text-sm font-semibold text-slate-700">{p.title}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-400">
+                            {p.asking_price ? formatPrice(p.asking_price) : p.price_text ?? 'Contact for price'}
+                            {' · '}
+                            {formatDate(p.first_seen_at ?? p.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1.5">
+                          <Link
+                            href={`/aircraft/listing/${p.id}`}
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                          >
+                            View <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                          <RelistListingButton type="aircraft" id={p.id} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {pastPartnerships.length > 0 && (
+                <section>
+                  <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                    <Handshake className="h-4 w-4" /> Partnerships ({pastPartnerships.length})
+                  </h2>
+                  <ul className="space-y-3">
+                    {pastPartnerships.map((p) => (
+                      <li key={p.id} className="ch-panel flex items-center justify-between gap-4 p-4 opacity-80">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge status={p.status} />
+                            <span className="truncate text-sm font-semibold text-slate-700">{p.title}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-400">
+                            {p.buy_in_price ? `${formatPrice(p.buy_in_price)} buy-in` : 'Contact for cost'}
+                            {' · '}
+                            {formatShareType(p.share_type)}
+                            {' · '}
+                            {formatDate(p.posted_at ?? p.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1.5">
+                          <Link
+                            href={`/partnerships/${p.id}`}
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                          >
+                            View <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                          <RelistListingButton type="partnership" id={p.id} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {pastSeekers.length > 0 && (
+                <section>
+                  <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                    <UserSearch className="h-4 w-4" /> Pilots seeking ({pastSeekers.length})
+                  </h2>
+                  <ul className="space-y-3">
+                    {pastSeekers.map((s) => {
+                      const makeLabel = s.preferred_makes?.length
+                        ? s.preferred_makes.slice(0, 2).join(', ') + (s.preferred_makes.length > 2 ? '…' : '')
+                        : null
+                      return (
+                        <li key={s.id} className="ch-panel flex items-center justify-between gap-4 p-4 opacity-80">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <StatusBadge status={s.status} />
+                              <span className="truncate text-sm font-semibold text-slate-700">
+                                {s.title ?? `Pilot seeking partnership${s.home_airport ? ` near ${s.home_airport}` : ''}`}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-400">
+                              {s.home_airport ?? 'Any airport'}
+                              {makeLabel ? ` · ${makeLabel}` : ''}
+                              {' · '}
+                              {formatDate(s.created_at)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <Link
+                              href={`/partnerships/seeking/${s.id}`}
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+                            >
+                              View <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                            <RelistListingButton type="seeker" id={s.id} />
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              )}
+
+            </div>
+          </details>
         )}
       </div>
     </div>
