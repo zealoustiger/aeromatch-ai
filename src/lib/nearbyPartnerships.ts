@@ -304,3 +304,90 @@ export async function isAirportIndexable(icao: string): Promise<boolean> {
     .eq('home_airport', icao.toUpperCase())
   return (count ?? 0) > 0
 }
+
+export interface NearbyCount {
+  /** Active partnerships within NEAR_RADIUS_NM of the airport, excluding the current listing. */
+  count: number
+  /** City name for display, e.g. "Palo Alto". */
+  city: string | null
+  /** State abbreviation for display, e.g. "CA". */
+  state: string | null
+  /** Lowercase ICAO for the /partnerships/near/[icao] link. */
+  nearPath: string
+}
+
+/**
+ * Lightweight count of active partnerships within NEAR_RADIUS_NM of the given
+ * airport ICAO, excluding one listing (the current page's). Uses 3 narrow DB
+ * reads: the airport coords, the active partnerships (id + home_airport only),
+ * and the distinct home airports' coords — so it's much cheaper than the full
+ * `getNearbyPartnerships` fetch used by the /partnerships/near/[icao] page.
+ *
+ * Returns null when the ICAO can't be resolved or 0 when no other partnerships
+ * are nearby — callers suppress the panel in both cases.
+ */
+export async function countNearbyPartnerships(
+  icao: string,
+  excludeId: string,
+): Promise<NearbyCount | null> {
+  const supabase = await createServerSupabaseClient()
+  const code = icao.toUpperCase()
+
+  // 1. Resolve the airport coordinates (single row).
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('icao, city, state, lat, lng')
+    .eq('icao', code)
+    .maybeSingle()
+  if (!airport || typeof airport.lat !== 'number' || typeof airport.lng !== 'number') return null
+
+  // 2. Fetch active partnerships (minimal columns — id, home_airport, lat, lng).
+  const { data: parts } = await supabase
+    .from('partnerships')
+    .select('id, home_airport, lat, lng')
+    .eq('status', 'active')
+    .neq('id', excludeId)
+  if (!parts || parts.length === 0) return { count: 0, city: airport.city as string | null, state: airport.state as string | null, nearPath: code.toLowerCase() }
+
+  // 3. Resolve coordinates for the distinct home airports we don't already know.
+  const unknownCodes = [
+    ...new Set(
+      parts
+        .filter((p) => p.lat == null || p.lng == null)
+        .map((p) => ((p.home_airport as string | null) ?? '').toUpperCase())
+        .filter(Boolean),
+    ),
+  ]
+  const coordMap = new Map<string, { lat: number; lng: number }>()
+  if (unknownCodes.length > 0) {
+    const { data: apts } = await supabase
+      .from('airports')
+      .select('icao, lat, lng')
+      .in('icao', unknownCodes)
+    for (const a of apts ?? []) {
+      if (typeof a.lat === 'number' && typeof a.lng === 'number') {
+        coordMap.set((a.icao as string).toUpperCase(), { lat: a.lat, lng: a.lng })
+      }
+    }
+  }
+
+  // 4. Count partnerships within NEAR_RADIUS_NM.
+  let count = 0
+  for (const p of parts) {
+    let lat = p.lat as number | null
+    let lng = p.lng as number | null
+    if (lat == null || lng == null) {
+      const home = coordMap.get(((p.home_airport as string | null) ?? '').toUpperCase())
+      if (home) { lat = home.lat; lng = home.lng }
+    }
+    if (lat == null || lng == null) continue
+    if (haversineNm(airport.lat, airport.lng, lat, lng) <= NEAR_RADIUS_NM) count++
+  }
+
+  return {
+    count,
+    city: (airport.city as string | null) ?? null,
+    state: (airport.state as string | null) ?? null,
+    nearPath: code.toLowerCase(),
+  }
+}
