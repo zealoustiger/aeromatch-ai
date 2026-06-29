@@ -48,6 +48,17 @@ test('estimateShareCosts — buy-in per share is asking price ÷ shares', () => 
   assert.equal(byShares[4], 75_000)
 })
 
+test('estimateShareCosts — costPerHour is totalAnnual ÷ 100 (the assumed hrs/yr)', () => {
+  const rows = estimateShareCosts(300_000)
+  for (const r of rows) {
+    assert.equal(r.costPerHour, Math.round(r.totalAnnual / 100))
+  }
+  // Sole owner carries all fixed cost, so $/hr is highest; more partners → lower $/hr.
+  const byShares = Object.fromEntries(rows.map((r) => [r.shares, r.costPerHour]))
+  assert.ok(byShares[1] > byShares[2])
+  assert.ok(byShares[2] > byShares[3])
+})
+
 test('earnings calculator — owner offering 2 shares worked example', () => {
   const r = computeEarnings({
     monthlyFixedTotal: 960,
