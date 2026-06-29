@@ -992,6 +992,7 @@ export interface SeekerDraft {
   max_monthly?: number
   max_hourly?: number
   home_airport?: string
+  additional_airport_2?: string
   willing_to_travel_nm?: number
   total_hours?: number
   ratings_held?: string
@@ -1021,7 +1022,8 @@ Given the pilot's stream-of-consciousness notes, do TWO things:
    - max_buy_in: maximum buy-in in USD as integer, no $ or commas — or omit
    - max_monthly: maximum monthly fixed cost in USD as integer — or omit
    - max_hourly: maximum wet rate per hour in USD as integer — or omit
-   - home_airport: 4-letter ICAO code if mentioned, e.g. "KPAO" — or omit
+   - home_airport: 4-letter ICAO code for primary base airport if mentioned, e.g. "KPAO" — or omit
+   - additional_airport_2: 4-letter ICAO code for a SECOND base airport if the pilot mentions flying from multiple airports, e.g. "KSQL" — or omit if only one airport is mentioned
    - willing_to_travel_nm: how far they'll commute in nautical miles; map drive times to: 25 (~30 min), 40 (~45 min), 50 (~1 hr), 75 (~1.5 hr), 100 (~2 hr) — or omit
    - total_hours: total flight hours as integer — or omit
    - ratings_held: comma-separated ratings, e.g. "PPL, IFR, Complex" — or omit
@@ -1049,7 +1051,8 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
             max_buy_in: { type: 'integer', description: 'Max buy-in in USD, integer only' },
             max_monthly: { type: 'integer', description: 'Max monthly fixed cost in USD, integer only' },
             max_hourly: { type: 'integer', description: 'Max wet rate per hour in USD, integer only' },
-            home_airport: { type: 'string', description: '4-letter ICAO airport code, e.g. KPAO' },
+            home_airport: { type: 'string', description: '4-letter ICAO airport code for primary base, e.g. KPAO' },
+            additional_airport_2: { type: 'string', description: '4-letter ICAO code for a second base airport, only when the pilot mentions flying from multiple airports, e.g. KSQL' },
             willing_to_travel_nm: { type: 'integer', enum: [25, 40, 50, 75, 100], description: 'Commute radius in nm: 25=~30min, 40=~45min, 50=~1hr, 75=~1.5hr, 100=~2hr' },
             total_hours: { type: 'integer', description: 'Total flight hours' },
             ratings_held: { type: 'string', description: 'Comma-separated ratings, e.g. "PPL, IFR, Complex"' },
@@ -1080,6 +1083,7 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
     max_monthly: f.max_monthly,
     max_hourly: f.max_hourly,
     home_airport: f.home_airport ? f.home_airport.toUpperCase().slice(0, 4) : undefined,
+    additional_airport_2: f.additional_airport_2 ? f.additional_airport_2.toUpperCase().slice(0, 4) : undefined,
     willing_to_travel_nm: f.willing_to_travel_nm,
     total_hours: f.total_hours,
     ratings_held: f.ratings_held,

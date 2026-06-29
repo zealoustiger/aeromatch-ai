@@ -288,6 +288,7 @@ export default function PostSeekerListingForm({
           if (result.max_monthly) fillFormField(form, '[name="max_monthly"]', result.max_monthly)
           if (result.max_hourly) fillFormField(form, '[name="max_hourly"]', result.max_hourly)
           if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
+          if (result.additional_airport_2) fillFormField(form, '[name="additional_airport_2"]', result.additional_airport_2)
           if (result.willing_to_travel_nm) fillFormField(form, '[name="willing_to_travel_nm"]', result.willing_to_travel_nm, 'change')
           if (result.total_hours) fillFormField(form, '[name="total_hours"]', result.total_hours)
           if (result.ratings_held) fillFormField(form, '[name="ratings_held"]', result.ratings_held)
