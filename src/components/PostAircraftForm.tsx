@@ -204,8 +204,9 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           fillFormField(form, '[name="description"]', result.description)
 
           // Auto-open "More details" if the AI filled any optional fields inside it
-          const hasOptional = result.year || result.registration || result.ttaf || result.smoh ||
-            result.engine_type || result.asking_price || result.home_airport || result.title || result.description
+          // (description is now outside <details>, so it doesn't trigger auto-open)
+          const hasOptional = result.year || result.ttaf || result.smoh ||
+            result.engine_type || result.title
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }
@@ -432,7 +433,19 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         />
       </section>
 
-      {/* More details — aircraft specs, title & description */}
+      {/* About this aircraft — description visible by default so sellers are prompted to write one */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <h2 className="mb-1 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">About this aircraft</h2>
+        <p className="mb-3 text-xs text-slate-500">Tell buyers what makes this aircraft special — avionics, engine times, recent work, paint/interior, and why you're selling. A good description is the single biggest factor in getting a serious inquiry.</p>
+        <textarea
+          name="description"
+          rows={5}
+          placeholder="e.g. 2006 Cessna 182T with G1000 glass panel, 2,450 TTAF, 600 SMOH. Fresh annual April 2026. Good paint and interior. Garmin 650 with WAAS, ADS-B Out. Selling because upgrading. Serious buyers only."
+          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        />
+      </section>
+
+      {/* More details — aircraft specs, title & contact */}
       <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
           <span className="text-sm font-semibold text-slate-700">More details <span className="font-normal text-slate-400">(optional)</span></span>
@@ -441,9 +454,9 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
 
         <div className="space-y-6 px-4 pb-6 pt-2 sm:px-6">
 
-          {/* Aircraft details */}
+          {/* Aircraft specs */}
           <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Aircraft</h3>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Aircraft specs</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Year</Label>
@@ -473,15 +486,6 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
                 <Label>Title <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
                 <Input name="title" placeholder="e.g. 2006 Cessna 182T Skylane — G1000, 2,450 TTAF" />
                 <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from make, model, and year. Add a standout detail if you have one.</p>
-              </div>
-              <div>
-                <Label>Description</Label>
-                <textarea
-                  name="description"
-                  rows={5}
-                  placeholder="Avionics, engine/prop times, damage history, paint/interior, why you're selling, anything a buyer should know…"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
               </div>
               <div>
                 <Label>Phone <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
