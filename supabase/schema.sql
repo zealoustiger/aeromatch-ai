@@ -536,3 +536,35 @@ create policy "threads_participant_update" on threads
 alter table threads add column if not exists aircraft_for_sale_id uuid references aircraft_for_sale(id) on delete cascade;
 -- + partial unique index threads_aircraft_inquirer_uniq (aircraft_for_sale_id, inquirer_id)
 create unique index if not exists threads_aircraft_inquirer_uniq on threads (aircraft_for_sale_id, inquirer_id) where aircraft_for_sale_id is not null;
+
+-- =====================================================
+-- OUTREACH TARGETS (GTM)  (migration: create_outreach_targets)
+-- Owners we're targeting for ClubHanger partnerships, seeded from FAA registry
+-- pulls (KHWD East Bay + KOAK/KCCR Cirrus). Admin-only (service-role reads/writes;
+-- RLS on with no public policy). ⚠️ Human: already applied to remote via MCP.
+-- =====================================================
+create table if not exists outreach_targets (
+  id               uuid primary key default gen_random_uuid(),
+  n_number         text unique not null,
+  owner            text,
+  make             text,
+  model            text,
+  year             int,
+  airport          text,            -- target field: KHWD / KOAK / KCCR
+  city             text,
+  street           text,
+  zip              text,
+  mode_s_hex       text,
+  registrant_type  text,            -- Individual / LLC / Corp ...
+  based_confidence text default 'unconfirmed',  -- unconfirmed / address-residential / address-hangar / adsb-confirmed
+  status           text not null default 'not_contacted',
+                   -- not_contacted / contacted / replied / meeting / joined / dead
+  channel          text,            -- mail / email / phone / in-person
+  notes            text,
+  contacted_at     timestamptz,
+  created_at       timestamptz default now(),
+  updated_at       timestamptz default now()
+);
+create index if not exists outreach_targets_status_idx on outreach_targets (status);
+create index if not exists outreach_targets_airport_idx on outreach_targets (airport);
+alter table outreach_targets enable row level security;

@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileText, ListChecks, Inbox, ClipboardCheck, FlaskConical } from 'lucide-react'
+import { FileText, ListChecks, Inbox, ClipboardCheck, FlaskConical, Plane } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
   { href: '/admin', label: 'Daily Report', icon: FileText },
+  { href: '/admin/outreach', label: 'Outreach', icon: Plane },
   { href: '/admin/backlog', label: 'Backlog', icon: ListChecks },
   { href: '/admin/review', label: 'Review Captures', icon: Inbox },
   { href: '/admin/listings', label: 'Review Listings', icon: ClipboardCheck },
