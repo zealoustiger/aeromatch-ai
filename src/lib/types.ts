@@ -100,6 +100,10 @@ export interface AircraftForSale {
 
   // Set on user-posted listings (source='user'); null for scraped rows.
   poster_id: string | null
+
+  // Contact info — collected on user-posted listings (source='user'); null/empty for scraped rows.
+  contact_email: string
+  contact_phone: string | null
 }
 
 export interface Airport {
