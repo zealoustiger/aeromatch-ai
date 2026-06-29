@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T12:17:18Z — platform-contact-email-hide — score 5/5
+- Strengths: Hits all 7 ACs precisely with a minimal, idiomatic diff — `contactMethod` state defaults to `'platform'` so email is hidden by default, the `Select`'s `onChange` toggles it, and the field uses the CSS `hidden` class (not conditional mount) so the value survives method switches (AC5); the post-mount `useEffect` draft-sync correctly mirrors the existing `selectedMake` pattern and reads `[name="contact_method"]` (AC6); applied identically to both forms; the local `Select` spreads `...props`, so `onChange` forwards cleanly.
+- Weaknesses / risks: none material — select stays uncontrolled (relies on first option being the default), but that matches the file's established convention.
+- Follow-up: none
+
 ## 2026-06-29T11:14:12Z — ifr-badge-browse-cards — score 4/5
 - Strengths: All 5 ACs met cleanly in the single scoped file — `IfrCardBadge` reuses the shared `computeIfrSuitability`, emerald (full) / sky (capable) colors map correctly, and the `showIfrBadge` gate cleanly routes non-qualifying tiers (equipped/basic/null) back to the unchanged 2-cap chip path, so AC3 no-regression and AC5 empty-caps self-suppression both hold. Naming and `cn`/ring styling mirror the sibling `AvionicsChip`/`EngineTimeChip` chips; honest sub-line copy preserved.
 - Weaknesses / risks: `computeIfrSuitability(caps)` runs twice per card (once for `ifrTier` in the body, again inside `IfrCardBadge`) instead of computing once and passing the result down; the `IFR_CARD_CHIP` map carries unreachable `equipped`/`basic` keys (badge returns null for them); and `title={ifr.sub}` adds hover text that the spec listed as explicitly out of scope. All immaterial.
