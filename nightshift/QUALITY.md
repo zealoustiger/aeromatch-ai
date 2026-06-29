@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T07:44:23Z — partner-cost-engine-reserve — score 4/5
+- Strengths: Tight, well-scoped change — adds two optional props and one reactive `reserveAnnual` line; correctly uses the flat `reservePerHour` (overhaulCostUsd/tboHours) so `× hrsPerYear` is dimensionally sound and immune to the beyond-TBO branch; deliberately kept OUT of `annualTotal` (with an explanatory comment) to avoid double-counting; null/0 self-suppresses; reuses the dl/dt/dd + `money()` conventions and signals "estimate" via amber + dashed divider. All 7 ACs met; page passes `engineLife?.reservePerHour`/`?.family` correctly.
+- Weaknesses / risks: Caveat subtext uses `text-slate-300` (very light grey on white) — fails WCAG AA contrast for the one line buyers most need to read; label wording ("Engine reserve est.") also drifts slightly from the spec's literal "Engine reserve (est.)" — both cosmetic.
+- Follow-up: Bump the "Verify if included in monthly fixed above" subtext from `text-slate-300` to at least `text-slate-500` for readable contrast.
+
 ## 2026-06-29T07:32:15Z — partnership-buyin-optional — score 5/5
 - Strengths: Tight 4-line diff that does exactly what the spec asked — drops `required`, adds "(optional)" using the *identical* `text-xs font-normal text-slate-400` span the form already uses for Title/Phone optionals, plus clear helper text; server action (actions.ts:97) already coerced empty → null, so no over-reach into backend/schema.
 - Weaknesses / risks: none material — helper text + updated tooltip both mention the negotiable path (minor copy overlap, intentional progressive-disclosure).
