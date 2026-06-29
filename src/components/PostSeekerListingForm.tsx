@@ -158,9 +158,18 @@ export default function PostSeekerListingForm({
   )
 
   const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
+  // Monotonic token bumped on "Start over". The async AI prefill captures it before its
+  // await and bails on resolve if it has advanced — so a prefill still in flight when the
+  // user clears the form can't re-populate or re-persist the cleared draft. Mirrors
+  // PostAircraftForm / PostPartnershipForm.
+  const fillTokenRef = useRef(0)
 
   function handleStartOver() {
     if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+      // Invalidate any in-flight AI prefill so it can't re-fill the form (or re-arm
+      // autosave) after we clear it below.
+      fillTokenRef.current += 1
+      setAiError(null)
       reset()
     }
   }
@@ -186,9 +195,13 @@ export default function PostSeekerListingForm({
 
   function handleGenerate() {
     setAiError(null)
+    const token = fillTokenRef.current
     startGenerating(async () => {
       try {
         const result: SeekerDraft = await generateSeekerDraft(aiPromptRef.current?.value ?? '')
+        // Bail if the user hit "Start over" while this was in flight — don't
+        // re-populate the cleared form.
+        if (token !== fillTokenRef.current) return
         const form = formRef.current
         if (form) {
           fillFormField(form, '[name="title"]', result.title)

@@ -145,6 +145,14 @@ export default function PostPartnershipForm({
 
   const { formRef, status, handleSubmit, handleResult, reset } = useFormDraft(DRAFT_KEY)
   const detailsRef = useRef<HTMLDetailsElement>(null)
+  // Bumped on "Start over" to remount the photo uploader so its thumbnails clear too
+  // (reset() only clears the form's DOM fields, not the uploader's React state).
+  const [photoMountKey, setPhotoMountKey] = useState(0)
+  // Monotonic token bumped on "Start over". The async autofills (FAA N-number lookup,
+  // AI prefill) capture it before their await and bail on resolve if it has advanced —
+  // so a lookup/prefill still in flight when the user clears the form can't re-populate
+  // or re-persist the just-cleared draft. Mirrors PostAircraftForm.
+  const fillTokenRef = useRef(0)
 
   // Mirror the (uncontrolled) Make <select> so the Model field can suggest only that
   // make's curated models. Stays uncontrolled — the FAA/AI autofill sets make via a
@@ -167,7 +175,15 @@ export default function PostPartnershipForm({
 
   function handleStartOver() {
     if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+      // Invalidate any in-flight FAA lookup / AI prefill so it can't re-fill the
+      // form (or re-arm autosave) after we clear it below.
+      fillTokenRef.current += 1
+      setLookupStatus(null)
+      setAiError(null)
       reset()
+      // Remount the photo uploader so its thumbnails clear too (reset() only clears
+      // the form's DOM fields, not the uploader's React state).
+      setPhotoMountKey((k) => k + 1)
     }
   }
 
@@ -189,11 +205,15 @@ export default function PostPartnershipForm({
     const regInput = form.querySelector<HTMLInputElement>('[name="registration"]')
     const nRaw = regInput?.value.trim() ?? ''
     if (!nRaw || isLookingUp) return
+    const token = fillTokenRef.current
     setIsLookingUp(true)
     setLookupStatus(null)
     try {
       const res = await fetch(`/api/faa-lookup?n=${encodeURIComponent(nRaw)}`)
       const data = await res.json()
+      // Bail if the user hit "Start over" while this was in flight — don't re-fill
+      // (or re-arm autosave on) the cleared form.
+      if (token !== fillTokenRef.current) return
       if (data.found) {
         const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
         const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
@@ -250,9 +270,13 @@ export default function PostPartnershipForm({
 
   function handleGenerate() {
     setAiError(null)
+    const token = fillTokenRef.current
     startGenerating(async () => {
       try {
         const result: PartnershipDraft = await generatePartnershipDraft(aiPromptRef.current?.value ?? '')
+        // Bail if the user hit "Start over" while this was in flight — don't
+        // re-populate the cleared form.
+        if (token !== fillTokenRef.current) return
         const form = formRef.current
         if (form) {
           fillFormField(form, '[name="title"]', result.title)
@@ -450,7 +474,7 @@ export default function PostPartnershipForm({
         <p className="mb-3 text-xs text-slate-500">
           Real photos make your listing far more compelling. Add up to 5.
         </p>
-        <PartnershipPhotoUpload />
+        <PartnershipPhotoUpload key={photoMountKey} />
       </section>
 
       {/* More details — collapsible, closed by default */}
