@@ -230,6 +230,18 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }
+
+          // If the notes mentioned an N-number but the AI couldn't pin down the
+          // make/model/year, verify against the authoritative FAA registry and backfill
+          // only the gaps — so "Selling N739WL, $180k" still yields a complete listing.
+          // onlyEmpty so the registry never clobbers a value the AI already extracted.
+          const makeSel = form.querySelector<HTMLSelectElement>('[name="make"]')
+          const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
+          const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
+          const missingCore = !makeSel?.value || !modelInput?.value || !yearInput?.value
+          if (result.registration && missingCore) {
+            await handleLookup({ onlyEmpty: true })
+          }
         }
       } catch (e) {
         setAiError(e instanceof Error ? e.message : 'Generation failed. Please try again.')
@@ -237,7 +249,12 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
     })
   }
 
-  async function handleLookup() {
+  // Look up the FAA registry for the N-number currently in the form and fill make /
+  // model / year. By default (manual "Look up →" button / blur) the registry value is
+  // authoritative and overwrites whatever's there. When called with { onlyEmpty: true }
+  // — as the chained backfill after AI prefill does — it fills only the fields the AI
+  // left blank, so a registry hit never clobbers a make/model/year the AI already set.
+  async function handleLookup({ onlyEmpty = false }: { onlyEmpty?: boolean } = {}) {
     const form = formRef.current
     if (!form) return
     const regInput = form.querySelector<HTMLInputElement>('[name="registration"]')
@@ -253,14 +270,15 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
       // (or re-arm autosave on) the cleared form.
       if (token !== fillTokenRef.current) return
       if (data.found) {
+        const makeSel = form.querySelector<HTMLSelectElement>('[name="make"]')
         const modelInput = form.querySelector<HTMLInputElement>('[name="model"]')
         const yearInput = form.querySelector<HTMLInputElement>('[name="year"]')
-        if (data.make) fillMakeSelect(form, data.make)
-        if (modelInput && data.model) {
+        if (data.make && !(onlyEmpty && makeSel?.value)) fillMakeSelect(form, data.make)
+        if (modelInput && data.model && !(onlyEmpty && modelInput.value)) {
           modelInput.value = data.model
           modelInput.dispatchEvent(new Event('input', { bubbles: true }))
         }
-        if (yearInput && data.year) {
+        if (yearInput && data.year && !(onlyEmpty && yearInput.value)) {
           yearInput.value = String(data.year)
           yearInput.dispatchEvent(new Event('input', { bubbles: true }))
         }
@@ -350,7 +368,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <button
               type="button"
               data-lookup="true"
-              onClick={handleLookup}
+              onClick={() => handleLookup()}
               disabled={isLookingUp}
               className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
             >
