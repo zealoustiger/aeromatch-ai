@@ -1177,3 +1177,41 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
     home_airport: sale.home_airport ? sale.home_airport.toUpperCase().slice(0, 4) : undefined,
   }
 }
+
+// =====================================================
+// LISTING MANAGEMENT
+// =====================================================
+
+export async function deactivateListing(
+  type: 'aircraft' | 'partnership' | 'seeker',
+  id: string
+) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  if (type === 'aircraft') {
+    const { error } = await supabase
+      .from('aircraft_for_sale')
+      .update({ status: 'sold' })
+      .eq('id', id)
+      .eq('poster_id', user.id)
+    if (error) throw new Error(error.message)
+  } else if (type === 'partnership') {
+    const { error } = await supabase
+      .from('partnerships')
+      .update({ status: 'closed' })
+      .eq('id', id)
+      .eq('poster_id', user.id)
+    if (error) throw new Error(error.message)
+  } else if (type === 'seeker') {
+    const { error } = await supabase
+      .from('partnership_seekers')
+      .update({ status: 'closed' })
+      .eq('id', id)
+      .eq('poster_id', user.id)
+    if (error) throw new Error(error.message)
+  }
+
+  revalidatePath('/listings')
+}
