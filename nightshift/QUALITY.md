@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T01:42:29Z — aircraft-post-engine-type — score 5/5
+- Strengths: Exact spec match across all three touchpoints (action persist, draft schema/prompt, form field + AI-prefill + hasOptional gate); idiomatic — reuses the `title` `.trim() || null` pattern, fits cleanly as the 4th cell of the existing 2×2 grid, and adds an honest value-explaining helper line; verified the detail-page panel renders on `{engineLife && …}` with no `source` gate, so the user-listing reachability the spec promises actually holds.
+- Weaknesses / risks: none material — depends on free-text matching engineLife's TBO families, but the panel self-suppresses on no-match, so a bad entry shows nothing rather than a wrong number.
+- Follow-up: none
+
 ## 2026-06-28T21:44:47Z — airframe-utilization-read — score 4/5
 - Strengths: Faithfully meets every acceptance criterion — pure honesty-gated helper (null on missing ttaf/year, ttaf≤0, age<1), genuinely two-sided copy (low-time surfaces sitting/corrosion risk in amber, not a green win), distinct from the SMOH Engine Life panel, and mirrors its `ch-panel`/Plane-icon style; solid unit tests cover gating, all three bands, rounding, and ttaf echo.
 - Weaknesses / risks: Minor — the chip `label` ("Low time") and band `headline` ("Low-time for its age") are near-duplicate strings shown together; band thresholds (40/120) are reasonable but un-sourced magic constants. None material.
