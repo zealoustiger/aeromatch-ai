@@ -11,8 +11,8 @@ import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
 import { resolveMakeModelFamily } from '@/lib/seo'
 import type { CompResult } from '@/lib/aircraftComps'
 import type { ClubHangerDealVerdict } from '@/lib/aircraftEstimate'
-import { classifyAvionics } from '@/lib/avionicsClassify'
-import type { AvionicsCap } from '@/lib/avionicsClassify'
+import { classifyAvionics, computeIfrSuitability } from '@/lib/avionicsClassify'
+import type { AvionicsCap, IfrTier } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
@@ -178,6 +178,26 @@ function EngineTimeChip({ smoh, engineType }: { smoh: number; engineType: string
   )
 }
 
+const IFR_CARD_CHIP: Record<IfrTier, string> = {
+  full:     'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  capable:  'bg-sky-50 text-sky-700 ring-sky-200',
+  equipped: 'bg-slate-100 text-slate-600 ring-slate-200',
+  basic:    'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
+function IfrCardBadge({ caps }: { caps: AvionicsCap[] }) {
+  const ifr = computeIfrSuitability(caps)
+  if (!ifr || (ifr.tier !== 'full' && ifr.tier !== 'capable')) return null
+  return (
+    <span
+      className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1', IFR_CARD_CHIP[ifr.tier])}
+      title={ifr.sub}
+    >
+      {ifr.headline}
+    </span>
+  )
+}
+
 export default function AircraftSaleCard({
   p,
   saved = false,
@@ -206,7 +226,10 @@ export default function AircraftSaleCard({
   // exists for this listing's make+model (reuses SEO_MAKE_MODELS, never 404s).
   const family = resolveMakeModelFamily(p.make, p.model)
   // Top 2 avionics capability chips — glass panel first, then ADS-B / autopilot.
-  const avionicsCaps = classifyAvionics(p.avionics)?.caps.slice(0, 2) ?? []
+  // For full/capable IFR tiers, IfrCardBadge shows the synthesized verdict instead.
+  const avionicsCaps = classifyAvionics(p.avionics)?.caps ?? []
+  const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
+  const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
 
   return (
     <article className="ch-card group overflow-hidden bg-white">
@@ -270,9 +293,12 @@ export default function AircraftSaleCard({
                 )}
                 {dealVerdict && <DealCheckChip verdict={dealVerdict} />}
                 {!dealVerdict && comp && <CompPill comp={comp} />}
-                {avionicsCaps.map((cap) => (
-                  <AvionicsChip key={cap.key} cap={cap} />
-                ))}
+                {showIfrBadge
+                  ? <IfrCardBadge caps={avionicsCaps} />
+                  : avionicsCaps.slice(0, 2).map((cap) => (
+                      <AvionicsChip key={cap.key} cap={cap} />
+                    ))
+                }
                 {p.smoh != null && p.engine_type && (
                   <EngineTimeChip smoh={p.smoh} engineType={p.engine_type} />
                 )}
