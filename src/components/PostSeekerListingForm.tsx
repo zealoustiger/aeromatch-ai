@@ -42,6 +42,9 @@ const PREFERRED_MAKE_CHIPS = ['Cessna', 'Piper', 'Beechcraft', 'Cirrus', 'Mooney
 // abbreviations are already in the comma-separated value; the field stays free text so any
 // unlisted rating can still be typed. Ordered most-common first.
 const RATINGS_CHIPS = ['PPL', 'IFR', 'Complex', 'High Performance', 'Multi-Engine', 'Tailwheel', 'CFI', 'ATP']
+// One-tap common models for the multi-value "Preferred Models" field. Make-agnostic —
+// covers the most-sought models across all 8 common makes. Same chip/csvList pattern.
+const PREFERRED_MODEL_CHIPS = ['172', '182', 'SR22', 'SR20', 'Cherokee', 'Arrow', 'M20', 'Bonanza', 'DA40']
 const AIRCRAFT_CATEGORIES = [
   { value: 'any', label: 'Any / Open' },
   { value: 'sel', label: 'Single-Engine Land' },
@@ -177,6 +180,8 @@ export default function PostSeekerListingForm({
   const [preferredMakes, setPreferredMakes] = useState('')
   // Same mirror pattern for the "Ratings & Endorsements" field.
   const [ratingsHeld, setRatingsHeld] = useState('')
+  // Same mirror pattern for the "Preferred Models" field.
+  const [preferredModels, setPreferredModels] = useState('')
 
   // Sync once after mount in case a restored draft set the field before this ran
   // (mirrors PostAircraftForm's selectedMake sync).
@@ -185,6 +190,8 @@ export default function PostSeekerListingForm({
     if (input?.value) setPreferredMakes(input.value)
     const ratingsInput = formRef.current?.querySelector<HTMLInputElement>('[name="ratings_held"]')
     if (ratingsInput?.value) setRatingsHeld(ratingsInput.value)
+    const modelsInput = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_models"]')
+    if (modelsInput?.value) setPreferredModels(modelsInput.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -207,6 +214,15 @@ export default function PostSeekerListingForm({
     setRatingsHeld(next)
   }
 
+  function togglePreferredModel(model: string) {
+    const input = formRef.current?.querySelector<HTMLInputElement>('[name="preferred_models"]')
+    if (!input) return
+    const next = toggleCsvItem(input.value, model)
+    input.value = next
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    setPreferredModels(next)
+  }
+
   // Monotonic token bumped on "Start over". The async AI prefill captures it before its
   // await and bails on resolve if it has advanced — so a prefill still in flight when the
   // user clears the form can't re-populate or re-persist the cleared draft. Mirrors
@@ -222,6 +238,7 @@ export default function PostSeekerListingForm({
       reset()
       setPreferredMakes('')
       setRatingsHeld('')
+      setPreferredModels('')
     }
   }
   const detailsRef = useRef<HTMLDetailsElement>(null)
@@ -419,8 +436,33 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Preferred Models</Label>
-                <Input name="preferred_models" placeholder="e.g. 172, 182, PA-28, SR22" />
-                <p className="mt-1 text-xs text-slate-400">Be as specific or broad as you like.</p>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {PREFERRED_MODEL_CHIPS.map((model) => {
+                    const active = hasCsvItem(preferredModels, model)
+                    return (
+                      <button
+                        key={model}
+                        type="button"
+                        onClick={() => togglePreferredModel(model)}
+                        aria-pressed={active}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                          active
+                            ? 'border-sky-400 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        )}
+                      >
+                        {model}
+                      </button>
+                    )
+                  })}
+                </div>
+                <Input
+                  name="preferred_models"
+                  placeholder="e.g. 172, 182, PA-28, SR22"
+                  onChange={(e) => setPreferredModels(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-400">Tap a model to add it, or type your own — comma-separated. Leave blank if open to any.</p>
               </div>
               <div>
                 <Label>Aircraft Category</Label>
