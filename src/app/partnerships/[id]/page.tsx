@@ -35,6 +35,7 @@ import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
 import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/overhaulTimeline'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
+import { countNearbyPartnerships, NEAR_RADIUS_NM, type NearbyCount } from '@/lib/nearbyPartnerships'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
 // `/compare` view uses the same source of truth — no duplicated query).
@@ -293,6 +294,17 @@ export default async function PartnershipDetailPage({
         })
       : null
 
+  // Nearby alternatives — count of other active partnerships within NEAR_RADIUS_NM
+  // of this airport. Proprietary competitive context: buyers see at a glance whether
+  // this is the only option near their home field or one of several. Fails soft (null).
+  let nearbyCtx: NearbyCount | null = null
+  try {
+    const result = await countNearbyPartnerships(p.home_airport, p.id)
+    if (result && result.count > 0) nearbyCtx = result
+  } catch {
+    nearbyCtx = null
+  }
+
   return (
     <>
       {/* Warm cream page surface (Etsy × Airbnb token sweep, slice 5). The sticky
@@ -509,6 +521,29 @@ export default async function PartnershipDetailPage({
               reservePerHour={engineLife?.reservePerHour}
               engineFamily={engineLife?.family}
             />
+
+            {/* Nearby alternatives — other active partnerships within NEAR_RADIUS_NM.
+                Proprietary competitive context: lets buyers see at a glance whether
+                this is the only option near their home field or one of several.
+                Self-suppresses when count is 0 (this is the only nearby option)
+                or when the airport can't be resolved. */}
+            {nearbyCtx && (
+              <div className="ch-panel p-5">
+                <h2 className="mb-1 text-sm font-semibold text-slate-800">
+                  Also near {p.home_airport}
+                </h2>
+                <p className="text-sm text-slate-600">
+                  {nearbyCtx.count} other active {nearbyCtx.count === 1 ? 'partnership' : 'partnerships'} within {NEAR_RADIUS_NM} nm
+                  {nearbyCtx.city ? ` of ${nearbyCtx.city}${nearbyCtx.state ? `, ${nearbyCtx.state}` : ''}` : ''}
+                </p>
+                <Link
+                  href={`/partnerships/near/${nearbyCtx.nearPath}`}
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-800"
+                >
+                  Browse all {nearbyCtx.count} nearby <MapPin className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
 
             {/* Structure card */}
             <div className="ch-panel p-5">
