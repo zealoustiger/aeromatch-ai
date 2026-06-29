@@ -1,6 +1,7 @@
 import { Scale, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import { PartnerCompResult } from '@/lib/partnershipComps'
 import { formatPrice } from '@/lib/utils'
+import { type DaysOnMarketContext } from '@/lib/daysOnMarket'
 
 const VERDICT_META = {
   below: {
@@ -28,9 +29,15 @@ const VERDICT_META = {
 export default function PartnershipMarketCheck({
   comp,
   make,
+  listed,
+  daysOnMarket,
+  domContext,
 }: {
   comp: PartnerCompResult
   make: string
+  listed?: string | null
+  daysOnMarket?: number | null
+  domContext?: DaysOnMarketContext | null
 }) {
   const meta = VERDICT_META[comp.kind]
   const dir = comp.deltaDollars < 0 ? 'below' : 'above'
@@ -54,10 +61,24 @@ export default function PartnershipMarketCheck({
         Based on the median buy-in ({formatPrice(comp.median)}) of {comp.count} other active {make}{' '}
         partnership{comp.count === 1 ? '' : 's'} on ClubHanger.
       </p>
-      <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
-        Share types and partner counts vary — compare listing details before deciding. Not an
-        appraisal or financial advice.
-      </p>
+      <div className="mt-3 border-t border-slate-100 pt-3 space-y-1">
+        <p className="text-xs text-slate-400">
+          Share types and partner counts vary — compare listing details before deciding. Not an
+          appraisal or financial advice.
+        </p>
+        {listed && (
+          <p className="text-xs text-slate-500">
+            <span className="font-medium">{listed}</span>
+            {domContext && (
+              domContext.relative === 'longer'
+                ? ` — on the market longer than ~${domContext.percentileLongerThan}% of the ${domContext.compCount} comparable ${make} partnerships listed now${(daysOnMarket ?? 0) >= 30 ? ' — seller may have flexibility' : ''}`
+                : domContext.relative === 'shorter'
+                  ? ` — listed more recently than ~${100 - domContext.percentileLongerThan}% of the ${domContext.compCount} comparable ${make} partnerships listed now`
+                  : ` — on the market about as long as the typical ${make} partnership`
+            )}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
