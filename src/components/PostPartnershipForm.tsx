@@ -12,6 +12,10 @@ import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
 
 const DRAFT_KEY = 'ch:draft:partnership-new'
+// Uploaded photo URLs persist alongside the text draft so they survive the
+// deferred-auth redirect / a reload (see PartnershipPhotoUpload persistKey).
+// Mirrors PostAircraftForm.
+const PHOTOS_KEY = `${DRAFT_KEY}:photos`
 
 // Curated model-name suggestions reused from the existing SEO make/model table —
 // no new or fabricated data. Grouped by a normalized make key so the Model field
@@ -181,6 +185,11 @@ export default function PostPartnershipForm({
       setLookupStatus(null)
       setAiError(null)
       reset()
+      try {
+        window.localStorage.removeItem(PHOTOS_KEY)
+      } catch {
+        /* storage unavailable — uploader remount below still clears the thumbnails */
+      }
       // Remount the photo uploader so its thumbnails clear too (reset() only clears
       // the form's DOM fields, not the uploader's React state).
       setPhotoMountKey((k) => k + 1)
@@ -474,7 +483,11 @@ export default function PostPartnershipForm({
         <p className="mb-3 text-xs text-slate-500">
           Real photos make your listing far more compelling. Add up to 5.
         </p>
-        <PartnershipPhotoUpload key={photoMountKey} />
+        <PartnershipPhotoUpload
+          key={photoMountKey}
+          persistKey={PHOTOS_KEY}
+          restoreGateKey={DRAFT_KEY}
+        />
       </section>
 
       {/* More details — collapsible, closed by default */}
