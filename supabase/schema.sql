@@ -568,3 +568,7 @@ create table if not exists outreach_targets (
 create index if not exists outreach_targets_status_idx on outreach_targets (status);
 create index if not exists outreach_targets_airport_idx on outreach_targets (airport);
 alter table outreach_targets enable row level security;
+-- outreach_targets: ADS-B home-base confirmation (migration: outreach_add_confirmed_base)
+alter table outreach_targets add column if not exists confirmed_base text;
+alter table outreach_targets add column if not exists base_checked_at timestamptz;
+alter table outreach_targets add column if not exists adsb_summary text;

@@ -23,6 +23,9 @@ type Target = {
   channel: string | null
   notes: string | null
   contacted_at: string | null
+  confirmed_base: string | null
+  adsb_summary: string | null
+  base_checked_at: string | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -43,6 +46,8 @@ function confidenceLabel(c: string | null): { text: string; cls: string } {
       return { text: 'Hangar address', cls: 'text-sky-600' }
     case 'address-residential':
       return { text: 'Home address', cls: 'text-amber-600' }
+    case 'no-adsb-data':
+      return { text: 'No ADS-B data', cls: 'text-slate-400' }
     default:
       return { text: 'Unconfirmed', cls: 'text-slate-400' }
   }
@@ -141,7 +146,28 @@ export default async function OutreachTab() {
                     {t.street && <div className="text-[11px] text-slate-400">{t.street}</div>}
                   </td>
                   <td className="py-2.5 pr-3">
-                    <span className={`text-xs font-medium ${conf.cls}`}>{conf.text}</span>
+                    {t.confirmed_base ? (
+                      <>
+                        <span
+                          className={`text-xs font-semibold ${
+                            t.airport && t.confirmed_base.toUpperCase() === t.airport.toUpperCase()
+                              ? 'text-emerald-600'
+                              : 'text-amber-600'
+                          }`}
+                          title={t.adsb_summary ?? undefined}
+                        >
+                          ADS-B: {t.confirmed_base}
+                          {t.airport && t.confirmed_base.toUpperCase() !== t.airport.toUpperCase()
+                            ? ` (not ${t.airport})`
+                            : ''}
+                        </span>
+                        {t.adsb_summary && (
+                          <div className="text-[11px] text-slate-400">{t.adsb_summary}</div>
+                        )}
+                      </>
+                    ) : (
+                      <span className={`text-xs font-medium ${conf.cls}`}>{conf.text}</span>
+                    )}
                     {t.mode_s_hex && (
                       <div className="font-mono text-[11px] text-slate-400">{t.mode_s_hex}</div>
                     )}
