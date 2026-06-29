@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T10:32:08Z — avionics-ifr-land — score 4/5
+- Strengths: Textbook DRY refactor — lifts `computeIfrSuitability` + `IfrTier`/`IfrSuitability` verbatim into the shared `avionicsClassify.ts` (next to the `AvionicsCap` data it operates on), deletes the aircraft page's now-duplicate copy and re-imports it (behaviour byte-identical), and adds the badge to the partnership `AvionicsPanel` above the chips. Honesty floor intact (empty caps → `null` → no badge; every sub-line defers to the owner for undetected gear). 12 focused unit tests cover tier precedence, the empty-cap self-suppression, and that each tier yields non-empty copy. Tidy comments, naming matches conventions; merge-commit landed cleanly post env-cache fix.
+- Weaknesses / risks: The 4-line `IFR_CHIP` color map is now copy-pasted into both detail pages — a deliberate mirror of the existing per-page `CAP_COLORS` pattern, so defensible, but it's a second presentation site that can drift from the shared tier enum. Nothing material.
+- Follow-up: none
+
 ## 2026-06-29T08:47:46Z — seeker-on-listings-page — score 4/5
 - Strengths: All 5 functional ACs met cleanly — the new "Pilots seeking" section reuses the page's own `StatusBadge`/`formatDate` helpers and mirrors the aircraft/partnership section markup, the query correctly filters `poster_id` + active/pending and orders desc, the section self-hides when empty (AC3), and edge cases are handled gracefully (null title → sensible derived label with home airport, null `home_airport` → "Any airport", `preferred_makes` truncated to 2 with an ellipsis). Banner links added identically to both detail pages, matching the aircraft banner.
 - Weaknesses / risks: Minor — a local `SeekerRow` type is declared rather than reusing/`Pick`-ing the existing `PartnershipSeeker` interface in `lib/types`, though that interface lacks `title`/`status`/`poster_id` so a narrow local type is defensible; the internal `/partnerships/seeking/[id]` "View" link uses the `ExternalLink` icon, a slight semantic quibble. Nothing material.
