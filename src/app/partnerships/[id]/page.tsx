@@ -25,10 +25,9 @@ import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
-import CostCalculator from '@/components/CostCalculator'
 import ShareListingButton from '@/components/ShareListingButton'
-import { shareFractionFromType } from '@/lib/calculators'
 import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
+import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import { partnershipBuyInComp, PartnerCompResult } from '@/lib/partnershipComps'
 import PartnershipDealSignals from '@/components/PartnershipDealSignals'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
@@ -468,15 +467,13 @@ export default async function PartnershipDetailPage({
             )}
 
             {/* Compact cost estimator — pre-filled from this listing's real
-                numbers where available; degrades to sensible defaults when a
-                field is missing (the component handles the nulls). Lets a buyer
-                see their true monthly / per-hour cost right on the listing. */}
-            <CostCalculator
-              variant="compact"
-              initialBuyIn={p.buy_in_price}
-              initialMonthlyFixed={p.monthly_fixed}
-              initialHourlyWet={p.hourly_wet}
-              shareFraction={shareFractionFromType(p.share_type)}
+                annual cost at different flying rates + buy-in break-even vs.
+                renting — purpose-built for the partnership co-ownership context. */}
+            <PartnerShareCostPanel
+              buyInPrice={p.buy_in_price}
+              monthlyFixed={p.monthly_fixed}
+              hourlyWet={p.hourly_wet}
+              shareType={p.share_type}
             />
 
             {/* Structure card */}
