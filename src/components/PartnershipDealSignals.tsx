@@ -1,5 +1,6 @@
 import type { Partnership } from '@/lib/types'
 import type { PartnerCompResult } from '@/lib/partnershipComps'
+import type { ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import { formatPrice } from '@/lib/utils'
 
 const DAY_MS = 86_400_000
@@ -23,7 +24,11 @@ const LABEL_COLOR: Record<SignalKind, string> = {
   negative: 'text-amber-700',
 }
 
-function computeSignals(p: Partnership, comp: PartnerCompResult | null): SignalRow[] {
+function computeSignals(
+  p: Partnership,
+  comp: PartnerCompResult | null,
+  impliedValue: ImpliedValueResult | null,
+): SignalRow[] {
   const rows: SignalRow[] = []
 
   // 1. Buy-in vs same-make median (from partnerComp, already computed on the page)
@@ -51,7 +56,40 @@ function computeSignals(p: Partnership, comp: PartnerCompResult | null): SignalR
     }
   }
 
-  // 2. Days listed — use posted_at (date-only string) if available, else created_at
+  // 2. Implied full-aircraft value vs. for-sale family median
+  // buy_in × total_shares gives the implied aircraft equity; compare to what the same
+  // make/model actually asks on the open market. Proprietary cross-silo sanity check —
+  // no other listing site fuses partnership share math with for-sale market data.
+  if (impliedValue) {
+    const iv = formatPrice(impliedValue.impliedValue)
+    const med = formatPrice(impliedValue.median)
+    const makeLabel = p.make ? ` ${p.make}` : ''
+    const sharesExpr =
+      p.total_shares && p.buy_in_price
+        ? `${p.total_shares} × ${formatPrice(p.buy_in_price)} = `
+        : ''
+    if (impliedValue.kind === 'below') {
+      rows.push({
+        kind: 'positive',
+        label: 'Implied aircraft value looks favorable',
+        detail: `${sharesExpr}${iv} implied value — ${impliedValue.pct}% below the ${med} median of ${impliedValue.count} comparable${makeLabel} aircraft for sale. Buy-in may include reserves; compare closely.`,
+      })
+    } else if (impliedValue.kind === 'above') {
+      rows.push({
+        kind: 'neutral',
+        label: 'Implied aircraft value above for-sale market',
+        detail: `${sharesExpr}${iv} implied value — ${impliedValue.pct}% above the ${med} median of ${impliedValue.count} comparable${makeLabel} aircraft for sale. Ask what the buy-in includes (reserves, improvements).`,
+      })
+    } else {
+      rows.push({
+        kind: 'neutral',
+        label: 'Implied aircraft value near market',
+        detail: `${sharesExpr}${iv} implied value, in line with the ${med} median of ${impliedValue.count} comparable${makeLabel} aircraft for sale.`,
+      })
+    }
+  }
+
+  // 3. Days listed — use posted_at (date-only string) if available, else created_at
   const postedDate = p.posted_at
     ? new Date(`${p.posted_at}T00:00:00`)
     : new Date(p.created_at)
@@ -85,7 +123,7 @@ function computeSignals(p: Partnership, comp: PartnerCompResult | null): SignalR
     })
   }
 
-  // 3. Cost transparency — how much of the cost structure is disclosed
+  // 4. Cost transparency — how much of the cost structure is disclosed
   const hasBuyIn = p.buy_in_price != null
   const hasMonthly = p.monthly_fixed != null
   const hasWet = p.hourly_wet != null
@@ -111,19 +149,20 @@ function computeSignals(p: Partnership, comp: PartnerCompResult | null): SignalR
 /**
  * "How this partnership stacks up" — synthesis panel for partnership detail pages.
  *
- * Mirrors the aircraft DealScorePanel: renders up to three signals (buy-in vs market,
- * days listed, cost transparency) in the main column, above the description. Self-
- * suppresses when fewer than 2 signals are actionable — never shows a thin or
- * misleading verdict. Uses only data already fetched on the detail page; no new DB reads.
+ * Renders up to four signals (buy-in vs partnership comps, implied aircraft value vs
+ * for-sale family median, days listed, cost transparency). Self-suppresses when fewer
+ * than 2 signals are actionable — never shows a thin or misleading verdict.
  */
 export default function PartnershipDealSignals({
   p,
   comp,
+  impliedValue = null,
 }: {
   p: Partnership
   comp: PartnerCompResult | null
+  impliedValue?: ImpliedValueResult | null
 }) {
-  const rows = computeSignals(p, comp)
+  const rows = computeSignals(p, comp, impliedValue)
   if (rows.length < 2) return null
 
   return (

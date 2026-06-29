@@ -7,7 +7,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
+import { getFamilyAskingPrices } from '@/lib/aircraftForSale'
+import { computeImpliedValueCheck, type ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
 import { getSeekerCount } from '@/lib/seekersQuery'
 import ContactBar from '@/components/ContactBar'
@@ -217,6 +219,28 @@ export default async function PartnershipDetailPage({
     }
   }
 
+  // Implied aircraft value check — cross-silo sanity check comparing
+  // (buy_in × total_shares) against the median asking price of same make/model
+  // aircraft currently for sale on ClubHanger. Proprietary: no other listing site
+  // fuses partnership share math with the for-sale market. Fails soft (null) when
+  // make/model doesn't resolve a family, or fewer than 4 for-sale comps are available.
+  let impliedValueCheck: ImpliedValueResult | null = null
+  if (p.buy_in_price && p.total_shares && p.total_shares >= 2 && p.make && p.model) {
+    try {
+      const family = resolveMakeModelFamily(p.make, p.model)
+      if (family) {
+        const forSalePrices = await getFamilyAskingPrices(
+          family.make,
+          family.modelPattern,
+          family.notModelPattern,
+        )
+        impliedValueCheck = computeImpliedValueCheck(p.buy_in_price, p.total_shares, forSalePrices)
+      }
+    } catch {
+      impliedValueCheck = null
+    }
+  }
+
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const postedLabel = (p.posted_at ? new Date(`${p.posted_at}T00:00:00`) : new Date(p.created_at))
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -362,7 +386,7 @@ export default async function PartnershipDetailPage({
 
             {/* "How this partnership stacks up" synthesis panel — mirrors the
                 aircraft DealScorePanel; uses partnerComp already fetched above. */}
-            <PartnershipDealSignals p={p} comp={partnerComp} />
+            <PartnershipDealSignals p={p} comp={partnerComp} impliedValue={impliedValueCheck} />
 
             {/* Engine life & overhaul reserve — proprietary panel using extracted
                 smoh + engine_type. Self-suppresses when either field is missing or
