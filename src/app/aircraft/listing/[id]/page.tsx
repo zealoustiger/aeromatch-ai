@@ -26,6 +26,7 @@ import { getAircraftForSaleById, getFamilyAskingPrices, getFamilyComps } from '@
 import { getPartnershipCrossSell } from '@/lib/partnershipsQuery'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
+import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/overhaulTimeline'
 import { computeAnnualStatus, formatAnnualDueLabel, type AnnualStatusResult } from '@/lib/annualStatus'
 import { computeDamageHistory, type DamageHistoryResult } from '@/lib/damageHistory'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
@@ -463,6 +464,18 @@ export default async function AircraftListingDetailPage({
   // life-average rule of thumb, distinct from the SMOH-based Engine Life panel above.
   const airframeUsage = computeAirframeUsage({ ttaf: p.ttaf, year: p.year })
 
+  // Overhaul timeline — fuses the engine's hours-remaining-to-TBO with this aircraft's
+  // OWN historical utilization (from the airframe read) into the calendar question a buyer
+  // asks: "how many years until an overhaul?" Self-suppresses when the engine is at/beyond
+  // TBO or utilization is unknown, so it only enriches the Engine Life panel when honest.
+  const overhaulTimeline =
+    engineLife && !engineLife.beyondTbo && airframeUsage
+      ? computeOverhaulTimeline({
+          remainingHours: engineLife.remainingHours,
+          hoursPerYear: airframeUsage.hoursPerYear,
+        })
+      : null
+
   // Annual-inspection status — turns the normalized `annual_due` date into a buyer
   // read (months of annual remaining / due soon / may be overdue). Honesty-gated:
   // self-suppresses on an unparseable or implausibly out-of-range value, and reasons
@@ -642,7 +655,7 @@ export default async function AircraftListingDetailPage({
 
             {/* Engine life & overhaul reserve — renders only when smoh + engine_type
                 are present AND the engine type is a recognised piston-GA family. */}
-            {engineLife && <EngineLifePanel life={engineLife} />}
+            {engineLife && <EngineLifePanel life={engineLife} timeline={overhaulTimeline} />}
 
             {/* Airframe time — average hrs/year over the aircraft's life, with honest
                 two-sided guidance. Renders only when ttaf + year are both known. */}
@@ -796,7 +809,13 @@ export default async function AircraftListingDetailPage({
   )
 }
 
-function EngineLifePanel({ life }: { life: EngineLifeResult }) {
+function EngineLifePanel({
+  life,
+  timeline,
+}: {
+  life: EngineLifeResult
+  timeline?: OverhaulTimelineResult | null
+}) {
   const pct = Math.max(0, Math.min(100, Math.round((life.remainingHours / life.tboHours) * 100)))
   return (
     <div className="ch-panel p-6">
@@ -836,6 +855,26 @@ function EngineLifePanel({ life }: { life: EngineLifeResult }) {
             />
           </div>
           <p className="mt-1 text-xs text-slate-400">{pct}% of TBO remaining</p>
+        </div>
+      )}
+
+      {/* Overhaul timeline — remaining hrs projected onto THIS aircraft's own historical
+          flying rate. Only present when the engine is within TBO and we have a utilization
+          read, so it self-suppresses rather than guess. A rough projection, clearly framed. */}
+      {timeline && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+          <Clock className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+          <div>
+            <p className="text-sm font-semibold text-slate-800">
+              ≈ {timeline.yearsToTbo} {timeline.yearsToTbo === 1 ? 'year' : 'years'} to overhaul
+              at its historical pace
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {timeline.remainingHours.toLocaleString()} hrs left ÷ this aircraft&apos;s
+              ~{timeline.hoursPerYear.toLocaleString()} hrs/yr average. A rough projection —
+              your own flying rate will change the timeline.
+            </p>
+          </div>
         </div>
       )}
 

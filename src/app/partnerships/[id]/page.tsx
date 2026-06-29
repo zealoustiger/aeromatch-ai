@@ -32,6 +32,7 @@ import PartnershipDealSignals from '@/components/PartnershipDealSignals'
 import { classifyAvionics, type AvionicsInfo } from '@/lib/avionicsClassify'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
+import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/overhaulTimeline'
 
 // Single-listing fetch reuses the shared `getPartnershipById` helper (the
 // `/compare` view uses the same source of truth — no duplicated query).
@@ -238,6 +239,18 @@ export default async function PartnershipDetailPage({
   // shared airframe matters just as much to a co-ownership buyer.
   const airframeUsage = computeAirframeUsage({ ttaf: p.ttaf, year: p.year })
 
+  // Overhaul timeline — fuses the engine's hours-remaining-to-TBO with the shared aircraft's
+  // OWN historical utilization into the calendar question a co-owner asks: "how many years
+  // until an overhaul?" Self-suppresses when the engine is at/beyond TBO or utilization is
+  // unknown, so it only enriches the Engine Life panel when the projection is honest.
+  const overhaulTimeline =
+    engineLife && !engineLife.beyondTbo && airframeUsage
+      ? computeOverhaulTimeline({
+          remainingHours: engineLife.remainingHours,
+          hoursPerYear: airframeUsage.hoursPerYear,
+        })
+      : null
+
   return (
     <>
       {/* Warm cream page surface (Etsy × Airbnb token sweep, slice 5). The sticky
@@ -354,7 +367,7 @@ export default async function PartnershipDetailPage({
             {/* Engine life & overhaul reserve — proprietary panel using extracted
                 smoh + engine_type. Self-suppresses when either field is missing or
                 the engine type can't be matched to a known piston-GA TBO family. */}
-            {engineLife && <EngineLifePanel life={engineLife} />}
+            {engineLife && <EngineLifePanel life={engineLife} timeline={overhaulTimeline} />}
 
             {/* Airframe time — average hrs/year over the aircraft's life, with honest
                 two-sided guidance. Renders only when ttaf + year are both known. */}
@@ -641,7 +654,13 @@ function AirframeUsagePanel({ usage }: { usage: AirframeUsageResult }) {
   )
 }
 
-function EngineLifePanel({ life }: { life: EngineLifeResult }) {
+function EngineLifePanel({
+  life,
+  timeline,
+}: {
+  life: EngineLifeResult
+  timeline?: OverhaulTimelineResult | null
+}) {
   const pct = Math.max(0, Math.min(100, Math.round((life.remainingHours / life.tboHours) * 100)))
   return (
     <div className="ch-panel p-6">
@@ -680,6 +699,26 @@ function EngineLifePanel({ life }: { life: EngineLifeResult }) {
             />
           </div>
           <p className="mt-1 text-xs text-slate-400">{pct}% of TBO remaining</p>
+        </div>
+      )}
+
+      {/* Overhaul timeline — remaining hrs projected onto the shared aircraft's own
+          historical flying rate. Only present when the engine is within TBO and we have a
+          utilization read, so it self-suppresses rather than guess. A rough projection. */}
+      {timeline && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+          <Clock className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+          <div>
+            <p className="text-sm font-semibold text-slate-800">
+              ≈ {timeline.yearsToTbo} {timeline.yearsToTbo === 1 ? 'year' : 'years'} to overhaul
+              at its historical pace
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {timeline.remainingHours.toLocaleString()} hrs left ÷ this aircraft&apos;s
+              ~{timeline.hoursPerYear.toLocaleString()} hrs/yr average. A rough projection —
+              the partnership&apos;s actual flying rate will change the timeline.
+            </p>
+          </div>
         </div>
       )}
 
