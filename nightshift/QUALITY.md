@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-06-29T02:29:10Z — partnership-airframe-time — score 5/5
+- Strengths: Exact-to-spec port — byte-identical AirframeUsagePanel + USAGE_META, reuses the unit-tested pure computeAirframeUsage, honesty-gating self-suppresses correctly; clear comments, tight 53-line diff.
+- Weaknesses / risks: none material — panel/USAGE_META are now duplicated across two pages, but that mirrors the existing EngineLifePanel convention so drift risk is pre-existing, not introduced.
+- Follow-up: none
+
 ## 2026-06-29T01:42:29Z — aircraft-post-engine-type — score 5/5
 - Strengths: Exact spec match across all three touchpoints (action persist, draft schema/prompt, form field + AI-prefill + hasOptional gate); idiomatic — reuses the `title` `.trim() || null` pattern, fits cleanly as the 4th cell of the existing 2×2 grid, and adds an honest value-explaining helper line; verified the detail-page panel renders on `{engineLife && …}` with no `source` gate, so the user-listing reachability the spec promises actually holds.
 - Weaknesses / risks: none material — depends on free-text matching engineLife's TBO families, but the panel self-suppresses on no-match, so a bad entry shows nothing rather than a wrong number.
