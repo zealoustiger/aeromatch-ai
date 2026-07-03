@@ -106,15 +106,17 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   back except remembering the exact URL. A small dismissible site-wide banner now detects
   an in-progress draft via the existing `useFormDraft` localStorage keys and links straight
   back to it; self-suppresses on the draft's own post page. Pure client-side read, no schema.
-~~- **[agent][goal] Edit flow for published listings.**~~ ✅ SHIPPED (aircraft + partnerships)
-  via `aircraft-listing-edit` (2026-07-03) and `partnership-listing-edit` (2026-07-03).
-  Posting used to be a one-way door — no `update*Listing` action existed for any of the 3
-  post types. Added `updateAircraftListing`/`updatePartnershipListing` (ownership-scoped like
-  `deactivateListing`), an edit mode on `PostAircraftForm`/`PostPartnershipForm`, and
-  `/aircraft/listing/[id]/edit`/`/partnerships/[id]/edit`, linked from an "Edit" affordance on
-  `/listings`. **Remaining:** the same pattern for seeker listings (`updateSeekerListing` +
-  `/partnerships/seeking/[id]/edit`) — natural next Pillar-1 slice, same shape as these two,
-  would complete edit-flow parity across all three post types.
+~~- **[agent][goal] Edit flow for published listings.**~~ ✅ SHIPPED (all 3 types: aircraft,
+  partnerships, seeker) via `aircraft-listing-edit`, `partnership-listing-edit`, and
+  `seeker-listing-edit` (all 2026-07-03). Posting used to be a one-way door — no
+  `update*Listing` action existed for any of the 3 post types. Added
+  `updateAircraftListing`/`updatePartnershipListing`/`updateSeekerListing` (ownership-scoped
+  like `deactivateListing`), edit mode on all 3 post forms, and
+  `/aircraft/listing/[id]/edit`/`/partnerships/[id]/edit`/`/partnerships/seeking/[id]/edit`,
+  all linked from an "Edit" affordance on `/listings`. **Correction (found 2026-07-03 during
+  `contact-phone-prefill` research):** the seeker slice had already shipped (`seeker-listing-edit`,
+  merged before `partnership-card-freshness`) — this note was stale, listing it as still open.
+  Edit-flow parity across all three post types is complete; no further slice needed.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
@@ -228,16 +230,18 @@ completed, delete its screenshot object from `backlog-shots` to reclaim storage.
   profile/account page (`/account`) — so a user managing saved searches can jump
   straight to controlling their email alerts for them. (No screenshot.)
 
-- **[P2][want] Detail page + inquiry routing for USER-posted aircraft.** The new
-  user post-a-plane flow (`/aircraft/new` → `createAircraftListing`, `source='user'`)
-  inserts rows with `source_url = null`. Scraped listings link out to their source,
-  but user-posted ones have no destination → their marketplace card currently links to
-  `#` (a dead link). Build an internal `/aircraft/[id]` detail page (mirror the
-  partnership detail page) that renders the listing and routes buyer inquiries through
-  the platform via `poster_id` (reuse the existing partnership messaging/threads, which
-  already key off `poster_id`) instead of an external link. Make the card href point to
-  `/aircraft/[id]` when `source='user'` (keep the external `source_url` for scraped
-  rows). Without this, user-posted aircraft are effectively un-clickable. (No screenshot.)
+~~- **[P2][want] Detail page + inquiry routing for USER-posted aircraft.**~~ ✅ SHIPPED
+  via `internal-aircraft-listing-detail` (2026-06-23) + `aircraft-listing-contact` (2026-06-26).
+  **Correction (found 2026-07-03 during `contact-phone-prefill` research):** this note was
+  stale, listing it as still open. `/aircraft/listing/[id]/page.tsx` is the internal detail
+  page (mirrors the partnership one); `AircraftSaleCard`/`AircraftRailCard` already link every
+  row there (not `#`); when `source === 'user'` it renders an in-platform "Contact the seller"
+  button (`AircraftContactButton` → `getOrCreateAircraftThread`, keyed on `poster_id`, same
+  generic `threads` table as partnerships/seekers) instead of the external source-link card.
+  **One dependency still open:** the `threads.aircraft_for_sale_id` column + unique index
+  (additive migration, `supabase/schema.sql` ~line 534) needs a human to run it in the Supabase
+  SQL editor before aircraft inquiries can actually insert a thread row — until then the button
+  shows a graceful inline error rather than crashing. Not a code gap, just an unapplied DDL step.
 
 - **[P2][want] Optional note when saving a listing.** When a user saves a listing,
   let them attach an **optional free-text note** (e.g. "great panel — ask about damage
