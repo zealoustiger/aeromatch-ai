@@ -139,6 +139,84 @@ export async function createPartnership(formData: FormData) {
   redirect(`/partnerships/${data.id}?posted=1`)
 }
 
+// Edit an existing user-posted partnership listing. Mirrors createPartnership's
+// column set + derivation logic, but updates the row in place instead of
+// inserting, and is ownership-scoped the same way deactivateListing/relistListing
+// are (.eq('poster_id', user.id) on the update — RLS backs this up too). Unlike
+// aircraft_for_sale, the partnerships table stores the raw ICAO in home_airport
+// (not just the derived city/state), so — unlike updateAircraftListing — the
+// edit form can always prefill "Home Airport" and this action can always safely
+// re-derive airport_name/city/state on save; no "only touch if resupplied" case.
+export async function updatePartnershipListing(id: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const ratingsRaw = formData.get('ratings_required') as string
+  const ratings = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
+  const photoUrls = (formData.getAll('photo_url') as string[]).filter(Boolean)
+
+  const home_airport = ((formData.get('home_airport') as string) || '').trim().toUpperCase()
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('name, city, state')
+    .eq('icao', home_airport)
+    .maybeSingle()
+
+  const payload = {
+    make: (formData.get('make') as string) || null,
+    model: (formData.get('model') as string) || null,
+    year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
+    registration: (formData.get('registration') as string) || null,
+    home_airport,
+    airport_name: airport?.name ?? null,
+    city: airport?.city ?? null,
+    state: airport?.state ?? null,
+    share_type: formData.get('share_type') as string,
+    shares_available: parseInt(formData.get('shares_available') as string) || 1,
+    total_shares: formData.get('total_shares') ? parseInt(formData.get('total_shares') as string) : null,
+    buy_in_price: formData.get('buy_in_price') ? parseInt(formData.get('buy_in_price') as string) : null,
+    monthly_fixed: formData.get('monthly_fixed') ? parseInt(formData.get('monthly_fixed') as string) : null,
+    hourly_wet: formData.get('hourly_wet') ? parseInt(formData.get('hourly_wet') as string) : null,
+    min_hours: formData.get('min_hours') ? parseInt(formData.get('min_hours') as string) : null,
+    ratings_required: ratings,
+    scheduling_system: (formData.get('scheduling_system') as string) || null,
+    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
+    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+    title: (() => {
+      const t = ((formData.get('title') as string) || '').trim()
+      if (t) return t
+      const make = ((formData.get('make') as string) || '').trim()
+      const model = ((formData.get('model') as string) || '').trim()
+      return [make, model].filter(Boolean).join(' ') + ' Partnership'
+    })(),
+    description: (formData.get('description') as string) || null,
+    contact_name: (formData.get('contact_name') as string) || null,
+    contact_email: (formData.get('contact_email') as string) || user.email || '',
+    contact_method: (formData.get('contact_method') as string) || 'platform',
+    contact_phone: (formData.get('contact_phone') as string) || null,
+    images: photoUrls.length > 0 ? photoUrls : [],
+    ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
+  }
+
+  const { data, error } = await supabase
+    .from('partnerships')
+    .update(payload)
+    .eq('id', id)
+    .eq('poster_id', user.id)
+    .select('id')
+    .single()
+
+  if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
+
+  revalidatePath('/partnerships')
+  revalidatePath('/listings')
+  revalidatePath(`/partnerships/${id}`)
+  redirect(`/partnerships/${id}?updated=1`)
+}
+
 export async function submitFeedback(input: {
   type: 'feedback' | 'issue' | 'request' | 'report'
   message: string

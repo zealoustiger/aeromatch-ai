@@ -134,6 +134,7 @@ export default async function PartnershipDetailPage({
   const { id } = await params
   const sp = searchParams ? await searchParams : {}
   const justPosted = sp.posted === '1'
+  const justUpdated = sp.updated === '1'
   const p = await getPartnership(id)
   if (!p) notFound()
 
@@ -355,6 +356,19 @@ export default async function PartnershipDetailPage({
               </Link>
             </p>
             <p className="mt-1.5 text-sm text-emerald-700">
+              <Link href="/listings" className="font-medium underline hover:text-emerald-900">
+                View all my listings →
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {/* Post-edit confirmation — shown once when redirected from the edit form */}
+        {justUpdated && (
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+            <p className="font-semibold text-emerald-800">Your changes are saved.</p>
+            <p className="mt-0.5 text-sm text-emerald-700">
+              {p.title} is updated and live.{' '}
               <Link href="/listings" className="font-medium underline hover:text-emerald-900">
                 View all my listings →
               </Link>

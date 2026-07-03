@@ -220,6 +220,12 @@ export default async function MyListingsPage() {
                     >
                       View <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
+                    <Link
+                      href={`/partnerships/${p.id}/edit`}
+                      className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-600"
+                    >
+                      Edit
+                    </Link>
                     <DeactivateListingButton
                       type="partnership"
                       id={p.id}
