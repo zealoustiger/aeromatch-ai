@@ -315,6 +315,21 @@ export default function PostSeekerListingForm({
     }
   }
 
+  // Checks the boxes matching `values` in a checkbox group, then dispatches a
+  // bubbling 'change' so the form-level syncCheckboxes script re-syncs the hidden input.
+  function fillCheckboxGroup(form: HTMLFormElement, checkboxName: string, values: string[] | undefined) {
+    if (!values || !values.length) return
+    const boxes = Array.from(form.querySelectorAll<HTMLInputElement>(`[name="${checkboxName}"]`))
+    let changedBox: HTMLInputElement | undefined
+    for (const box of boxes) {
+      if (values.includes(box.value)) {
+        box.checked = true
+        changedBox = box
+      }
+    }
+    changedBox?.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+
   function handleGenerate() {
     setAiError(null)
     const token = fillTokenRef.current
@@ -342,11 +357,14 @@ export default function PostSeekerListingForm({
           if (result.total_hours) fillFormField(form, '[name="total_hours"]', result.total_hours)
           if (result.ratings_held) fillFormField(form, '[name="ratings_held"]', result.ratings_held)
           if (result.hours_per_month) fillFormField(form, '[name="hours_per_month"]', result.hours_per_month)
+          fillCheckboxGroup(form, 'share_type_check', result.preferred_share_types)
+          fillCheckboxGroup(form, 'intended_use_check', result.intended_use)
           // If AI fills anything that lives in the "More details" section, open it
           const hasMoreDetails = result.preferred_makes || result.preferred_models ||
             result.aircraft_category || result.min_year || result.max_year ||
             result.max_monthly || result.max_hourly || result.total_hours ||
             result.ratings_held || result.hours_per_month || result.willing_to_travel_nm ||
+            result.preferred_share_types?.length || result.intended_use?.length ||
             result.title || result.description
           if (hasMoreDetails && detailsRef.current) {
             detailsRef.current.open = true
