@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import PostHogProvider from '@/components/PostHogProvider'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import DeviceSaveSync from '@/components/DeviceSaveSync'
+import DraftResumeBanner from '@/components/DraftResumeBanner'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 export const viewport: Viewport = {
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
           <FeedbackWidget />
           <DeviceSaveSync />
+          <DraftResumeBanner />
         </PostHogProvider>
       </body>
     </html>
