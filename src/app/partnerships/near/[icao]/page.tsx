@@ -7,6 +7,8 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getPartnershipCompVerdicts } from '@/lib/partnershipComps'
 import {
   getNearbyPartnerships,
   NEAR_RADIUS_NM,
@@ -64,6 +66,12 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
   const { airport, results } = data
   const place = [airport.city, airport.state].filter(Boolean).join(', ')
   const stateName = airport.state ? STATE_NAMES[airport.state] : null
+
+  // Buy-in comp verdict chips ("~X% below/above market") — same proprietary
+  // signal `/partnerships` already shows via PartnershipList; this page renders
+  // PartnershipCard directly so it needs its own (batched, fail-soft) fetch.
+  const supabase = await createServerSupabaseClient()
+  const compVerdicts = await getPartnershipCompVerdicts(supabase, results.map((r) => r.p))
 
   // ItemList JSON-LD from the SAME ordered result set the page renders, so the
   // markup matches the visible cards 1:1 (each item → a real /partnerships/[id]).
@@ -123,7 +131,7 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
                 ? `Based at ${airport.icao}`
                 : `${distanceNm} nm from ${airport.icao} · ${p.home_airport}`}
             </p>
-            <PartnershipCard p={p} />
+            <PartnershipCard p={p} compVerdict={compVerdicts.get(p.id)} />
           </div>
         ))}
       </div>
