@@ -37,7 +37,6 @@ import {
   type ClubHangerEstimate,
   type ClubHangerDealVerdict,
 } from '@/lib/aircraftEstimate'
-import { estimateShareCosts } from '@/lib/calculators'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, formatPriceK } from '@/lib/utils'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
@@ -697,10 +696,9 @@ export default async function AircraftListingDetailPage({
 
   // Cost-to-own breakdown — sole ownership vs. 1/2, 1/3, 1/4 partnership shares.
   // Engine reserve is folded into fixed costs when the Engine Life panel is showing,
-  // keeping both panels numerically consistent.
-  const shareCosts = p.asking_price
-    ? estimateShareCosts(p.asking_price, engineLife?.reservePerYear ?? 0)
-    : null
+  // keeping both panels numerically consistent. ShareCostPanel computes the rows
+  // itself (client-side) so it can recompute live when the hrs/yr toggle changes.
+  const askingPriceForShareCost = p.asking_price ?? null
 
   // Deal Score synthesis — "How this stacks up" panel in the main column.
   // Computes from already-fetched data only; no new DB reads.
@@ -925,7 +923,13 @@ export default async function AircraftListingDetailPage({
             {/* Cost to own — sole vs. partnership share breakdown.
                 Fixed costs (insurance, hangar, annual, engine reserve) split by N;
                 operating stays the same since each partner flies the same hours. */}
-            {shareCosts && <ShareCostPanel rows={shareCosts} withEngineReserve={!!engineLife} />}
+            {askingPriceForShareCost && (
+              <ShareCostPanel
+                askingPrice={askingPriceForShareCost}
+                engineReservePerYear={engineLife?.reservePerYear ?? 0}
+                withEngineReserve={!!engineLife}
+              />
+            )}
           </div>
 
           {/* Sidebar — price + source CTA */}

@@ -141,11 +141,11 @@ export interface ShareCostRow {
   operatingAnnual: number
   totalAnnual: number
   totalMonthly: number
-  /** True cost per flight hour at the assumed 100 hrs/yr = totalAnnual ÷ 100 (whole USD). */
+  /** True cost per flight hour at the given hrs/yr = totalAnnual ÷ hoursPerYear (whole USD). */
   costPerHour: number
 }
 
-/** Annual hours flown assumed by `estimateShareCosts` (also drives the fuel/oil line). */
+/** Default annual hours flown assumed by `estimateShareCosts` (also drives the fuel/oil line). */
 export const ASSUMED_HOURS_PER_YEAR = 100
 
 /**
@@ -157,13 +157,14 @@ export const ASSUMED_HOURS_PER_YEAR = 100
  */
 export function estimateShareCosts(
   askingPrice: number,
-  engineReservePerYear = 0
+  engineReservePerYear = 0,
+  hoursPerYear = ASSUMED_HOURS_PER_YEAR
 ): ShareCostRow[] {
   const insuranceAnnual = Math.round(askingPrice * 0.01)
   const hangarAnnual = 7_500
   const annualInspection = 2_500
   const fixedTotal = insuranceAnnual + hangarAnnual + annualInspection + Math.round(engineReservePerYear)
-  const operatingAnnual = ASSUMED_HOURS_PER_YEAR * 120 // 100 hrs/yr × $120/hr fuel+oil
+  const operatingAnnual = hoursPerYear * 120 // hrs/yr × $120/hr fuel+oil
 
   return [
     { shares: 1, label: 'Full ownership (sole)' },
@@ -181,7 +182,7 @@ export function estimateShareCosts(
       operatingAnnual,
       totalAnnual,
       totalMonthly: Math.round(totalAnnual / 12),
-      costPerHour: Math.round(totalAnnual / ASSUMED_HOURS_PER_YEAR),
+      costPerHour: hoursPerYear > 0 ? Math.round(totalAnnual / hoursPerYear) : 0,
     }
   })
 }

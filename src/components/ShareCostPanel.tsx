@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Wallet, ArrowRight } from 'lucide-react'
-import { ASSUMED_HOURS_PER_YEAR, type ShareCostRow } from '@/lib/calculators'
+import { estimateShareCosts } from '@/lib/calculators'
 
 const money = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
@@ -17,22 +17,33 @@ const TOGGLE_LABELS: Record<number, string> = {
   4: '1/4 share',
 }
 
+const HOURS_OPTIONS = [50, 75, 100, 150] as const
+type HrsPerYear = (typeof HOURS_OPTIONS)[number]
+
 // Typical piston-GA club/FBO rental rate used for the rent-vs-buy comparison.
 // Labeled on-screen so buyers know the reference. Matches PartnerShareCostPanel.
 const REFERENCE_RENTAL_RATE = 150
 
 export default function ShareCostPanel({
-  rows,
+  askingPrice,
+  engineReservePerYear = 0,
   withEngineReserve,
 }: {
-  rows: ShareCostRow[]
+  askingPrice: number
+  engineReservePerYear?: number
   withEngineReserve: boolean
 }) {
   const [selected, setSelected] = useState(1)
+  const [hrsPerYear, setHrsPerYear] = useState<HrsPerYear>(100)
+
+  const rows = useMemo(
+    () => estimateShareCosts(askingPrice, engineReservePerYear, hrsPerYear),
+    [askingPrice, engineReservePerYear, hrsPerYear]
+  )
   const selectedRow = rows.find((r) => r.shares === selected) ?? rows[0]
 
-  // Rent-vs-buy comparison for the selected share, at the assumed hours/yr.
-  const rentingAnnual = REFERENCE_RENTAL_RATE * ASSUMED_HOURS_PER_YEAR
+  // Rent-vs-buy comparison for the selected share, at the selected hours/yr.
+  const rentingAnnual = REFERENCE_RENTAL_RATE * hrsPerYear
   const annualSavings = selectedRow ? rentingAnnual - selectedRow.totalAnnual : 0
   const breakEvenYears =
     selectedRow && selectedRow.buyInPerShare > 0 && annualSavings > 0
@@ -46,10 +57,27 @@ export default function ShareCostPanel({
       </h2>
       <p className="mb-4 text-xs text-slate-400">
         Rule-of-thumb estimates — insurance ≈ 1% of price, hangar $7,500/yr, annual
-        inspection $2,500/yr, 100 hrs/yr fuel + oil.
+        inspection $2,500/yr, fuel + oil at your selected hrs/yr.
         {withEngineReserve && ' Engine reserve from the panel above is folded into the split.'}
         {' '}Your actual costs will vary.
       </p>
+
+      {/* Hours/yr toggle */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {HOURS_OPTIONS.map((h) => (
+          <button
+            key={h}
+            onClick={() => setHrsPerYear(h)}
+            className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 transition-colors ${
+              hrsPerYear === h
+                ? 'bg-sky-600 text-white ring-sky-600'
+                : 'bg-white text-slate-600 ring-slate-200 hover:ring-sky-400'
+            }`}
+          >
+            {h} hrs/yr
+          </button>
+        ))}
+      </div>
 
       {/* Share-type toggle */}
       <div className="mb-5 flex flex-wrap gap-2">
@@ -87,7 +115,7 @@ export default function ShareCostPanel({
             ≈ <span className="font-semibold text-sky-900">{money(selectedRow.costPerHour)}</span> per
             flight hour{' '}
             <span className="text-sky-600">
-              at {ASSUMED_HOURS_PER_YEAR} hrs/yr — flying fewer hours raises this (fixed costs
+              at {hrsPerYear} hrs/yr — flying fewer hours raises this (fixed costs
               spread over fewer hours)
             </span>
           </p>
@@ -122,7 +150,7 @@ export default function ShareCostPanel({
       ) : (
         annualSavings <= 0 && (
           <p className="mb-5 text-xs text-slate-400">
-            At {ASSUMED_HOURS_PER_YEAR} hrs/yr, renting at {money(REFERENCE_RENTAL_RATE)}/hr would be{' '}
+            At {hrsPerYear} hrs/yr, renting at {money(REFERENCE_RENTAL_RATE)}/hr would be{' '}
             {money(Math.abs(annualSavings))} cheaper annually — fly more to see ownership savings.
           </p>
         )
