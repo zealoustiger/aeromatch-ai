@@ -20,6 +20,7 @@ export default function PartnershipPhotoUpload({
   endpoint = '/api/upload-partnership-photo',
   persistKey,
   restoreGateKey,
+  initialPhotos,
 }: {
   endpoint?: string
   // When set, mirror the successfully-uploaded photo URLs to localStorage[persistKey]
@@ -31,8 +32,20 @@ export default function PartnershipPhotoUpload({
   // the draft does, and are dropped (no stale photos) once the draft is gone — e.g.
   // after a successful publish clears it.
   restoreGateKey?: string
+  // Seed existing photos (edit flows) rather than a blank uploader. Ignored once the
+  // localStorage-draft restore effect below runs, so callers that pass this shouldn't
+  // also pass a persistKey/restoreGateKey pair that could restore a stale create-draft.
+  initialPhotos?: string[]
 }) {
-  const [photos, setPhotos] = useState<PhotoEntry[]>([])
+  const [photos, setPhotos] = useState<PhotoEntry[]>(() =>
+    (initialPhotos ?? []).slice(0, MAX_PHOTOS).map((url, i) => ({
+      key: `initial-${i}-${url}`,
+      url,
+      preview: url,
+      uploading: false,
+      error: null,
+    }))
+  )
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
