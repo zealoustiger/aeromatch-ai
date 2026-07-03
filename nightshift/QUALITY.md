@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-03T11:03:26Z — airport-icao-server-validation — score 4/5
+- Strengths: Closes the exact server-side gap the spec targeted — all 6 actions covered (4 required home_airport, 2 optional aircraft), throwing a clear user-facing Error right after the existing lookup so the established `useActionState` inline-error box surfaces it with zero new client UI; scope is disciplined (respects out-of-scope: no `AirportFormInput`, no `additional_airport_2`, no backfill), aircraft stays optional via the `if (homeAirportRaw)` guard, comments updated to match new behavior, and it quietly fixes a latent bug by switching the aircraft lookups from `.single()` (which throws a raw PostgREST error on 0 rows) to `.maybeSingle()` for a controlled, friendly message.
+- Weaknesses / risks: The identical error-message string is copy-pasted across all 6 actions (2 wording variants) rather than a shared constant — minor DRY smell, though consistent with this file's already-heavily-duplicated action bodies.
+- Follow-up: none
+
 ## 2026-07-03T10:05:08Z — aircraft-deals-candidate-scan-fix — score 5/5
 - Strengths: Both confirmed bugs fixed exactly as spec'd — replaces the silently-truncated `.limit(2000)` with the file's own `fetchAllRows`/`.range()` pagination helper (identical idiom to `fetchFamilyPriceMap`/`fetchFamilyCompMap`), and unwinds the statement-continuation bug by hoisting `.gte('asking_price', DEAL_MIN_PRICE)` onto the unconditional chain so the $50k floor now applies on the `photoOnly=false` `/aircraft/deals` path too, while `image_is_placeholder` stays correctly gated on `photoOnly`; clean scope (one function, no signature/schema/dep change), stale "Cap the candidate scan" comment removed, `data.length === 0` guard preserves the empty-state short-circuit, error/exception paths still fail soft to `[]`.
 - Weaknesses / risks: none material — inherits the file-wide pattern of a full-population `select('*')` scan per render (uncached), fine at ~2121 rows but worth watching as the table grows; pre-existing, out of scope here.
