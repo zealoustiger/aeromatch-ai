@@ -97,6 +97,14 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   back except remembering the exact URL. A small dismissible site-wide banner now detects
   an in-progress draft via the existing `useFormDraft` localStorage keys and links straight
   back to it; self-suppresses on the draft's own post page. Pure client-side read, no schema.
+~~- **[agent][goal] Edit flow for published listings.**~~ ✅ SHIPPED (aircraft only) via
+  `aircraft-listing-edit` (2026-07-03). Posting used to be a one-way door — no
+  `update*Listing` action existed for any of the 3 post types. Added `updateAircraftListing`
+  (ownership-scoped like `deactivateListing`), an edit mode on `PostAircraftForm`, and
+  `/aircraft/listing/[id]/edit`, linked from an "Edit" affordance on `/listings`. **Remaining:**
+  the same pattern for partnerships (`updatePartnershipListing` + `/partnerships/[id]/edit`)
+  and seeker listings (`updateSeekerListing` + `/partnerships/seeking/[id]/edit`) — natural
+  next Pillar-1 slice, same shape as this cycle.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
