@@ -92,6 +92,11 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
 ~~- **[P2][goal] Photo upload polish.**~~ ✅ SHIPPED via `aircraft-photo-upload` (2026-06-26) Drag-drop + paste + multi-file on the post forms
   (upload routes `/api/upload-aircraft-photo`, `/api/upload-partnership-photo` exist). Make
   adding photos a non-event.
+~~- **[agent][goal] Draft-resume banner.**~~ ✅ SHIPPED via `draft-resume-banner` (2026-07-03)
+  A visitor who autosaves a post draft (any of the 3 forms) and navigates away had no way
+  back except remembering the exact URL. A small dismissible site-wide banner now detects
+  an in-progress draft via the existing `useFormDraft` localStorage keys and links straight
+  back to it; self-suppresses on the draft's own post page. Pure client-side read, no schema.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
@@ -124,9 +129,14 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   verdict: comp value (ClubHanger Estimate) + days-on-market + price drops + spec completeness
   → a transparent "how this stacks up" with the *reasons* shown (not a black-box score).
   Reuse the Estimate's min-comps / dead-band honesty floors.
-- **[P2][goal] Market position + days-on-market.** "N comparable {make} {model} listed,
-  median $X — this is P% below/above; listed N days ago" using `getFamilyComps` +
-  `first_seen_at`/`previous_price`. Honest, sourced, proprietary.
+~~- **[P2][goal] Market position + days-on-market.**~~ ✅ SHIPPED (confirmed complete
+  2026-07-03) "N comparable {make} {model} listed, median $X — this is P% below/above;
+  listed N days ago" is live across every buyer surface: aircraft browse cards (CompPill:
+  %/median/count), aircraft detail (inline price-card hint + EstimatePanel + DealScorePanel
+  days-on-market row), partnership browse (comp pill), partnership detail (inline buy-in
+  hint + `PartnershipMarketCheck` + `PartnershipDealSignals` "Listed N days ago" row, built
+  on `created_at` since user-submitted partnerships have no `first_seen_at`). No further
+  slice needed for this item.
 
 ---
 
@@ -343,11 +353,10 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   Saving…/Draft saved/Draft restored indicator, restores on return, clears on successful post.
   Client-only, no schema. **Remaining: slice 3 (375px micro-polish); and adopt the same hook on the
   Post-a-Seeking form (`/partnerships/seeking/new`).**
-- **[P2][want] Easy toggle between the three "Post a…" types.** From "Post a Partnership,"
-  make it easy to switch between **post partnership / post plane for sale / post pilot
-  seeking partnership** — a segmented toggle/tabs at the top (or at minimum clear links to
-  the other two). Today they're separate pages with no cross-nav. Screenshot:
-  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/post-type-toggle/20260624-post-type-toggle.png
+~~- **[P2][want] Easy toggle between the three "Post a…" types.**~~ ✅ SHIPPED (confirmed
+  complete 2026-07-03) `PostTypeTabs` (`src/components/PostTypeTabs.tsx`) renders on all
+  three post pages (`/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`) with
+  `active` set per page. Screenshot object can be deleted from `backlog-shots`.
 - **[P1][want] Post-a-Seeking form: make it frictionless.** Goal — make posting a "pilot
   seeking partnership" listing as easy as possible. Changes: (1) **base location → multiple
   airports**, drop airport-name/city/state (implied); (2) **"willing to travel" → drive time**
