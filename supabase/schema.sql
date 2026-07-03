@@ -608,3 +608,13 @@ alter table outreach_targets add column if not exists owner_social_url text;
 -- retry without contact_phone, so posting/editing still succeeds — the phone
 -- just won't save until this runs.
 alter table aircraft_for_sale add column if not exists contact_phone text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: partnership_add_price_history
+-- Adds previous_buy_in_price/buy_in_price_changed_at to partnerships so an edited
+-- buy-in can show the same "price reduced — a seller motivation signal" that
+-- aircraft_for_sale listings already show (see previous_price/price_changed_at
+-- above). Apply in the Supabase SQL editor. Until applied, updatePartnershipListing
+-- detects the missing columns and retries without them, so editing still succeeds —
+-- the price-history signal just won't record until this runs.
+alter table partnerships add column if not exists previous_buy_in_price integer;
+alter table partnerships add column if not exists buy_in_price_changed_at timestamptz;

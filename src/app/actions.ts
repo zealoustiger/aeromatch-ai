@@ -198,6 +198,24 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
   }
 
+  const buy_in_price = formData.get('buy_in_price') ? parseInt(formData.get('buy_in_price') as string) : null
+
+  // Price-history: read the currently-stored buy-in before overwriting it, so a real
+  // change (both old and new known and different) can be recorded as a "seller
+  // motivation" signal on the listing page — mirrors aircraft_for_sale's
+  // previous_price/price_changed_at, set by the scraper on every detected price change.
+  // Requires the partnership_add_price_history migration (graceful fallback below).
+  const { data: existingRow } = await supabase
+    .from('partnerships')
+    .select('buy_in_price')
+    .eq('id', id)
+    .eq('poster_id', user.id)
+    .maybeSingle()
+  const priceChangeFields =
+    existingRow?.buy_in_price != null && buy_in_price != null && existingRow.buy_in_price !== buy_in_price
+      ? { previous_buy_in_price: existingRow.buy_in_price, buy_in_price_changed_at: new Date().toISOString() }
+      : {}
+
   const basePayload = {
     make: (formData.get('make') as string) || null,
     model: (formData.get('model') as string) || null,
@@ -210,7 +228,7 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     share_type: formData.get('share_type') as string,
     shares_available: parseInt(formData.get('shares_available') as string) || 1,
     total_shares: formData.get('total_shares') ? parseInt(formData.get('total_shares') as string) : null,
-    buy_in_price: formData.get('buy_in_price') ? parseInt(formData.get('buy_in_price') as string) : null,
+    buy_in_price,
     monthly_fixed: formData.get('monthly_fixed') ? parseInt(formData.get('monthly_fixed') as string) : null,
     hourly_wet: formData.get('hourly_wet') ? parseInt(formData.get('hourly_wet') as string) : null,
     min_hours: formData.get('min_hours') ? parseInt(formData.get('min_hours') as string) : null,
@@ -233,32 +251,44 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
   }
 
   // See createPartnership — same not-yet-applied-migration graceful fallback for
-  // ttaf/smoh/engine_type.
+  // ttaf/smoh/engine_type. previous_buy_in_price/buy_in_price_changed_at (above) are
+  // an INDEPENDENT optional group behind their own not-yet-applied migration — the
+  // live DB currently has both migrations pending at once, so the fallback below
+  // tries each group's columns and sheds whichever one the error names, in either
+  // order, converging on basePayload-only rather than ever throwing on a listing
+  // that's simply missing one or both optional column sets.
+  const specColumns = /'(ttaf|smoh|engine_type)'/i
+  const priceColumns = /'(previous_buy_in_price|buy_in_price_changed_at)'/i
+  const tryUpdate = (fields: object) =>
+    supabase
+      .from('partnerships')
+      .update({ ...basePayload, ...fields })
+      .eq('id', id)
+      .eq('poster_id', user.id)
+      .select('id')
+      .single()
+
   const specFields = {
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
   }
-  const payload = { ...basePayload, ...specFields }
 
-  let { data, error } = await supabase
-    .from('partnerships')
-    .update(payload)
-    .eq('id', id)
-    .eq('poster_id', user.id)
-    .select('id')
-    .single()
+  let includeSpec = true
+  let includePrice = true
+  let { data, error } = await tryUpdate({ ...specFields, ...priceChangeFields })
 
-  if (error && /'(ttaf|smoh|engine_type)'/i.test(error.message ?? '')) {
-    const retry = await supabase
-      .from('partnerships')
-      .update(basePayload)
-      .eq('id', id)
-      .eq('poster_id', user.id)
-      .select('id')
-      .single()
-    data = retry.data
-    error = retry.error
+  if (error && includeSpec && specColumns.test(error.message ?? '')) {
+    includeSpec = false
+    ;({ data, error } = await tryUpdate(includePrice ? priceChangeFields : {}))
+  }
+  if (error && includePrice && priceColumns.test(error.message ?? '')) {
+    includePrice = false
+    ;({ data, error } = await tryUpdate(includeSpec ? specFields : {}))
+  }
+  if (error && includeSpec && specColumns.test(error.message ?? '')) {
+    includeSpec = false
+    ;({ data, error } = await tryUpdate({}))
   }
 
   if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')

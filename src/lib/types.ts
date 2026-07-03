@@ -25,6 +25,8 @@ export interface Partnership {
   total_shares: number | null
 
   buy_in_price: number | null
+  previous_buy_in_price: number | null
+  buy_in_price_changed_at: string | null
   monthly_fixed: number | null
   hourly_wet: number | null
 

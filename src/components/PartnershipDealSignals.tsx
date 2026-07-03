@@ -58,6 +58,27 @@ function computeSignals(
     }
   }
 
+  // 1b. Buy-in price history — only when a real recorded change exists (never
+  // fabricated). Mirrors the aircraft-for-sale listing page's price-drop signal
+  // exactly (same copy, same "seller motivation" framing).
+  if (p.previous_buy_in_price != null && p.buy_in_price != null && p.previous_buy_in_price !== p.buy_in_price) {
+    const delta = p.buy_in_price - p.previous_buy_in_price
+    const pct = Math.abs(Math.round((delta / p.previous_buy_in_price) * 100))
+    if (delta < 0) {
+      rows.push({
+        kind: 'positive',
+        label: `Buy-in reduced ${formatPrice(Math.abs(delta))}`,
+        detail: `Down ${pct}% from the original ${formatPrice(p.previous_buy_in_price)} — a seller motivation signal`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: `Buy-in increased ${formatPrice(delta)}`,
+        detail: `Up ${pct}% from ${formatPrice(p.previous_buy_in_price)}`,
+      })
+    }
+  }
+
   // 2. Implied full-aircraft value vs. for-sale family median
   // buy_in × total_shares gives the implied aircraft equity; compare to what the same
   // make/model actually asks on the open market. Proprietary cross-silo sanity check —
