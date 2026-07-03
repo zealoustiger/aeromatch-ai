@@ -123,6 +123,12 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   `contact-phone-prefill` research):** the seeker slice had already shipped (`seeker-listing-edit`,
   merged before `partnership-card-freshness`) — this note was stale, listing it as still open.
   Edit-flow parity across all three post types is complete; no further slice needed.
+~~- **[agent][goal] AI draft: extract share-type + intended-use on the seeker form.**~~ ✅
+  SHIPPED via `seeker-ai-draft-share-use` (2026-07-03) "Prefill from your notes ✨" on the
+  seeker form already extracted 14 fields but silently skipped `preferred_share_types` and
+  `intended_use` — a parity gap vs. the partnership form's AI-extracted `share_type`. Now the
+  AI extracts both and auto-checks the matching chips, so a note like "1/3 share for weekend
+  trips" no longer needs manual checkbox taps after prefilling everything else.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
