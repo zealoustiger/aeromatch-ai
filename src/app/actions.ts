@@ -1352,6 +1352,8 @@ export interface SeekerDraft {
   total_hours?: number
   ratings_held?: string
   hours_per_month?: number
+  preferred_share_types?: string[]
+  intended_use?: string[]
 }
 
 export async function generateSeekerDraft(prompt: string): Promise<SeekerDraft> {
@@ -1383,6 +1385,8 @@ Given the pilot's stream-of-consciousness notes, do TWO things:
    - total_hours: total flight hours as integer — or omit
    - ratings_held: comma-separated ratings, e.g. "PPL, IFR, Complex" — or omit
    - hours_per_month: expected flying hours per month as integer — or omit
+   - preferred_share_types: which of "1/2","1/3","1/4","leaseback","dry_lease","other" the pilot mentions wanting — omit any not mentioned, omit entirely if none mentioned
+   - intended_use: which of "personal_travel","weekend_trips","cross_country","instrument_currency","training","other" the pilot's stated missions match — omit any not mentioned, omit entirely if none mentioned
 
 2. Draft the listing:
    - title: concise, specific (max 120 chars) — include ratings, desired share type, aircraft type, and airport if mentioned
@@ -1412,6 +1416,16 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
             total_hours: { type: 'integer', description: 'Total flight hours' },
             ratings_held: { type: 'string', description: 'Comma-separated ratings, e.g. "PPL, IFR, Complex"' },
             hours_per_month: { type: 'integer', description: 'Expected flying hours per month' },
+            preferred_share_types: {
+              type: 'array',
+              items: { type: 'string', enum: ['1/2', '1/3', '1/4', 'leaseback', 'dry_lease', 'other'] },
+              description: 'Share types the pilot mentions wanting, only ones actually mentioned',
+            },
+            intended_use: {
+              type: 'array',
+              items: { type: 'string', enum: ['personal_travel', 'weekend_trips', 'cross_country', 'instrument_currency', 'training', 'other'] },
+              description: 'Intended-use categories matching the pilot\'s stated missions, only ones actually mentioned',
+            },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -1443,6 +1457,8 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
     total_hours: f.total_hours,
     ratings_held: f.ratings_held,
     hours_per_month: f.hours_per_month,
+    preferred_share_types: f.preferred_share_types,
+    intended_use: f.intended_use,
   }
 }
 
