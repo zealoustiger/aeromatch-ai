@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Mail, Phone, MessageCircle } from 'lucide-react'
+import { Mail, Phone, MessageCircle, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
-import { getOrCreateThread } from '@/app/actions'
+import { getOrCreateThread, sendMessage } from '@/app/actions'
+import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
 import type { User } from '@supabase/supabase-js'
 
 interface Props {
@@ -32,9 +33,14 @@ export default function ContactBar({
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const draftKey = `partnership:${listingId}`
   const [user, setUser] = useState<User | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [text, setText] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const didAutoContact = useRef(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -45,7 +51,22 @@ export default function ContactBar({
     return () => subscription.unsubscribe()
   }, [])
 
-  // Auto-open thread when returning from auth with ?contact=1
+  // Restore a message typed before an auth redirect (or an abandoned draft from
+  // an earlier visit) so nothing the visitor already wrote is lost.
+  useEffect(() => {
+    const draft = getMessageDraft(draftKey)
+    if (draft) {
+      setText(draft)
+      setExpanded(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-open thread when returning from auth with ?contact=1, sending the
+  // drafted message if one was captured before the sign-in redirect. This
+  // component is always mounted (just CSS-hidden on desktop), so it's the
+  // single owner of this effect — ContactButtons relies on it rather than
+  // duplicating the trigger.
   useEffect(() => {
     if (searchParams.get('contact') !== '1') return
     if (!user || !posterId || user.id === posterId) return
@@ -54,24 +75,51 @@ export default function ContactBar({
     const url = new URL(window.location.href)
     url.searchParams.delete('contact')
     window.history.replaceState({}, '', url.toString())
-    startTransition(async () => {
-      const result = await getOrCreateThread(listingId, posterId)
-      if ('threadId' in result) router.push(`/messages/${result.threadId}`)
-    })
-  }, [user, searchParams, listingId, posterId, router])
-
-  function handleMessage() {
-    if (!posterId) return
-    if (!user) {
-      router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}?contact=1`)}`)
-      return
-    }
+    setErrorMsg(null)
     startTransition(async () => {
       const result = await getOrCreateThread(listingId, posterId)
       if ('threadId' in result) {
+        const draft = getMessageDraft(draftKey)
+        if (draft) {
+          await sendMessage(result.threadId, draft)
+          clearMessageDraft(draftKey)
+        }
         router.push(`/messages/${result.threadId}`)
+      } else {
+        setErrorMsg(result.error ?? 'Could not open conversation.')
       }
     })
+  }, [user, searchParams, listingId, posterId, draftKey, router])
+
+  function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = text.trim()
+    if (!trimmed || !posterId) return
+
+    if (!user) {
+      setMessageDraft(draftKey, trimmed)
+      router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}?contact=1`)}`)
+      return
+    }
+
+    setErrorMsg(null)
+    startTransition(async () => {
+      const result = await getOrCreateThread(listingId, posterId)
+      if ('threadId' in result) {
+        await sendMessage(result.threadId, trimmed)
+        clearMessageDraft(draftKey)
+        router.push(`/messages/${result.threadId}`)
+      } else {
+        setErrorMsg(result.error ?? 'Could not open conversation.')
+      }
+    })
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend(e as unknown as React.FormEvent)
+    }
   }
 
   // Seed personas: messaging only (dead demo email/phone are suppressed).
@@ -80,6 +128,33 @@ export default function ContactBar({
   const showMessage = !!posterId && user?.id !== posterId
   const firstName = contactName?.trim().split(/\s+/)[0]
   const messageLabel = isSeed && firstName ? `Message ${firstName}` : 'Message'
+
+  if (showMessage && expanded) {
+    return (
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-safe shadow-lg backdrop-blur-sm lg:hidden">
+        <form onSubmit={handleSend} className="mx-auto max-w-lg space-y-2 py-1">
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`Ask ${isSeed && firstName ? firstName : 'the owner'} about this partnership… (Enter to send)`}
+            rows={2}
+            className="w-full resize-none rounded-lg border border-slate-200 px-4 py-2.5 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+          <button
+            type="submit"
+            disabled={!text.trim() || isPending}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+          >
+            <Send className="h-4 w-4" />
+            {isPending ? 'Sending…' : user ? 'Send' : 'Sign in & send'}
+          </button>
+          {errorMsg && <p className="text-xs text-rose-600">{errorMsg}</p>}
+        </form>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-safe shadow-lg backdrop-blur-sm lg:hidden">
@@ -92,12 +167,14 @@ export default function ContactBar({
         <div className="flex flex-1 gap-2">
           {showMessage && (
             <button
-              onClick={handleMessage}
-              disabled={isPending}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+              onClick={() => {
+                setExpanded(true)
+                setTimeout(() => textareaRef.current?.focus(), 0)
+              }}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
             >
               <MessageCircle className="h-4 w-4" />
-              {isPending ? 'Opening…' : messageLabel}
+              {messageLabel}
             </button>
           )}
           {showEmail && (
