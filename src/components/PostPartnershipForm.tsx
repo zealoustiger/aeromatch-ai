@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Info, Check, ChevronDown, Loader2 } from 'lucide-react'
-import { createPartnership, updatePartnershipListing, generatePartnershipDraft, type PartnershipDraft } from '@/app/actions'
+import { createPartnership, updatePartnershipListing, generatePartnershipDraft, generatePartnershipDraftFromUrl, type PartnershipDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
@@ -331,9 +331,13 @@ export default function PostPartnershipForm({
   function handleGenerate() {
     setAiError(null)
     const token = fillTokenRef.current
+    const raw = (aiPromptRef.current?.value ?? '').trim()
+    const isBareUrl = /^https?:\/\/\S+$/i.test(raw)
     startGenerating(async () => {
       try {
-        const result: PartnershipDraft = await generatePartnershipDraft(aiPromptRef.current?.value ?? '')
+        const result: PartnershipDraft = isBareUrl
+          ? await generatePartnershipDraftFromUrl(raw)
+          : await generatePartnershipDraft(raw)
         // Bail if the user hit "Start over" while this was in flight — don't
         // re-populate the cleared form.
         if (token !== fillTokenRef.current) return
@@ -418,14 +422,14 @@ export default function PostPartnershipForm({
       <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm">
         <p className="mb-1 text-sm font-semibold text-violet-800">Have notes? Fill the whole form in one shot ✨</p>
         <p className="mb-3 text-xs text-slate-500">
-          Paste your notes or an existing listing — AI fills in aircraft, share terms, costs, and description. Edit anything before posting.
+          Paste your notes, an existing listing, or a link to your listing on another site — AI fills in aircraft, share terms, costs, and description. Edit anything before posting.
         </p>
         <textarea
           ref={aiPromptRef}
           defaultValue=""
           onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
-          placeholder="e.g. 2004 Cessna 172S, G1000, based at KAUS. 1/3 share available, $15k buy-in, $300/mo fixed, $85/hr wet. Two current partners, good communicators, use Google Calendar. Looking for IFR-rated pilot who flies 10+ hrs/month…"
+          placeholder="e.g. 2004 Cessna 172S, G1000, based at KAUS. 1/3 share available, $15k buy-in, $300/mo fixed, $85/hr wet. Two current partners, good communicators, use Google Calendar. Looking for IFR-rated pilot who flies 10+ hrs/month… Or just paste a link to your listing on another site."
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
         />
         {aiError && (
