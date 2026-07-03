@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-03T09:32:27Z — saved-aircraft-comp-verdict — score 4/5
+- Strengths: Faithful mirror of `AircraftSaleList.tsx`'s per-card precedence (self-excluded `compsWithoutSelf`, narrowed `clubHangerDealVerdict` wins, plain `compVsMarket` fallback, chip only when one exists) and of `getPartnershipCompVerdicts`'s shape; one make-scoped query (not a full-table scan) reusing the exact `50_000` floor + `status='active'`, honesty-gated so thin/unpriced families render nothing; fails soft to an empty map; type-only supabase import, tidy comments, `/saved` wiring minimal (empty-array short-circuit, `?? null` threading into props the card already accepts).
+- Weaknesses / risks: comp query is scoped broadly by `make` with `.limit(2000)` whereas browse surfaces query make+model at `.limit(5000)` — for a very high-volume make a family could be under-sampled (or arbitrarily truncated), so the chip could differ from or drop vs. the browse page; low-probability on `/saved` (few saved makes) but not "exactly like" in that edge.
+- Follow-up: none
+
 ## 2026-07-03T06:55:57Z — partnership-ai-faa-backfill — score 4/5
 - Strengths: Faithful, line-for-line mirror of PostAircraftForm's proven chained-backfill — `handleLookup({ onlyEmpty })` guards each of make/model/year with `!(onlyEmpty && input?.value)`, so a registry hit never clobbers an AI-extracted value; `missingCore` gate + `result.registration` condition scope the auto-call tightly; button/blur call sites correctly rewrapped to `() => handleLookup()`; `fillTokenRef` stale-fill guard preserved; comments explain the onlyEmpty rationale; actions.ts/schema untouched as scoped.
 - Weaknesses / risks: none material — minor: make/model/year inputs are re-queried both in handleGenerate and again inside handleLookup, and the whole flow leans on DOM querying over React state, but both match the sibling form's established convention exactly.
