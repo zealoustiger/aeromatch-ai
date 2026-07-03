@@ -618,24 +618,48 @@ async function fetchSavedAircraftIds(listings: AircraftForSale[]): Promise<Set<s
   return savedIds
 }
 
+// PostgREST silently caps a single unscoped request at its project max-rows
+// setting (1000) regardless of a larger `.limit()` — confirmed live: the active
+// +priced population is 2121 rows but a single `.limit(5000)` request returned
+// only 1000. Page through in batches so family price/comp maps cover the WHOLE
+// population; a dense make (e.g. Cirrus) would otherwise be silently
+// undersampled, skewing the "vs market" pill/verdict it's meant to be honest
+// about. Same select/filter shape either way — only completeness changes.
+async function fetchAllRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  batchSize = 1000
+): Promise<T[]> {
+  const all: T[] = []
+  let offset = 0
+  for (;;) {
+    const { data, error } = await buildQuery(offset, offset + batchSize - 1)
+    if (error || !data) break
+    all.push(...data)
+    if (data.length < batchSize) break
+    offset += batchSize
+  }
+  return all
+}
+
 // Build a make+model FAMILY -> sorted asking-prices map across ALL active priced
 // listings, so each visible card can compare its price to the family median (the
-// "vs market" pill). One lightweight read (make, model, asking_price only),
-// capped like the other rail queries; non-fatal — on any failure we just render
-// no pills. Read-only, no schema change.
+// "vs market" pill). Lightweight read (make, model, asking_price only), paginated
+// to cover the full population (see `fetchAllRows`); non-fatal — on any failure we
+// just render no pills. Read-only, no schema change.
 async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return new Map()
   try {
     const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase
-      .from('aircraft_for_sale')
-      .select('make, model, asking_price')
-      .eq('status', 'active')
-      .gte('asking_price', BUYER_PRICE_FLOOR)
-      .limit(5000)
-    if (error || !data) return new Map()
+    const data = await fetchAllRows((from, to) =>
+      supabase
+        .from('aircraft_for_sale')
+        .select('make, model, asking_price')
+        .eq('status', 'active')
+        .gte('asking_price', BUYER_PRICE_FLOOR)
+        .range(from, to)
+    )
     return buildFamilyPriceMap(data)
   } catch {
     return new Map()
@@ -644,9 +668,9 @@ async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
 
 // Build a make+model FAMILY -> comp entries map for the Deal Check verdict.
 // Each entry carries id + asking_price + year + ttaf so `clubHangerDealVerdict`
-// can narrow to similar-year / similar-hours comps. One read, capped at 5 000;
-// non-fatal — on any failure we just fall back to CompPill (no regression).
-// Read-only, no schema change.
+// can narrow to similar-year / similar-hours comps. Paginated to cover the full
+// population (see `fetchAllRows`); non-fatal — on any failure we just fall back
+// to CompPill (no regression). Read-only, no schema change.
 type FamilyCompEntry = DealComp & { id: string }
 
 async function fetchFamilyCompMap(): Promise<Map<string, FamilyCompEntry[]>> {
@@ -655,13 +679,14 @@ async function fetchFamilyCompMap(): Promise<Map<string, FamilyCompEntry[]>> {
   if (!hasSupabase) return new Map()
   try {
     const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase
-      .from('aircraft_for_sale')
-      .select('id, make, model, asking_price, year, ttaf')
-      .eq('status', 'active')
-      .gte('asking_price', BUYER_PRICE_FLOOR)
-      .limit(5000)
-    if (error || !data) return new Map()
+    const data = await fetchAllRows((from, to) =>
+      supabase
+        .from('aircraft_for_sale')
+        .select('id, make, model, asking_price, year, ttaf')
+        .eq('status', 'active')
+        .gte('asking_price', BUYER_PRICE_FLOOR)
+        .range(from, to)
+    )
     const map = new Map<string, FamilyCompEntry[]>()
     for (const row of data) {
       const key = familyKey(row)
