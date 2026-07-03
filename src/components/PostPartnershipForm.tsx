@@ -10,6 +10,11 @@ import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
+import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
+
+// Same rating set as the seeker form's "Ratings & Endorsements You Hold" chips —
+// here they describe what a partnership requires of a prospective partner.
+const RATINGS_CHIPS = ['PPL', 'IFR', 'Complex', 'High Performance', 'Multi-Engine', 'Tailwheel', 'CFI', 'ATP']
 
 const NEW_DRAFT_KEY = 'ch:draft:partnership-new'
 
@@ -147,6 +152,9 @@ export interface PartnershipEditInitial {
   ttaf?: number
   smoh?: number
   engine_type?: string
+  min_hours?: number
+  ratings_required?: string
+  scheduling_system?: string
   title?: string
   description?: string
   images?: string[]
@@ -232,15 +240,30 @@ export default function PostPartnershipForm({
   // messaging is chosen (the email address is irrelevant / never shown in that case).
   const [contactMethod, setContactMethod] = useState(initialValues?.contact_method ?? 'platform')
 
-  // Sync make + contact method once after mount in case a restored draft set them
-  // before this ran (mirrors the selectedMake pattern above).
+  // Mirror of the ratings_required chip input, same pattern as the seeker form's
+  // ratings_held — lets the chip buttons and the free-text fallback stay in sync.
+  const [ratingsRequired, setRatingsRequired] = useState(initialValues?.ratings_required ?? '')
+
+  // Sync make + contact method + ratings once after mount in case a restored draft
+  // set them before this ran (mirrors the selectedMake pattern above).
   useEffect(() => {
     const makeEl = formRef.current?.querySelector<HTMLInputElement>('[name="make"]')
     if (makeEl?.value) setSelectedMake(makeEl.value)
     const methodEl = formRef.current?.querySelector<HTMLSelectElement>('[name="contact_method"]')
     if (methodEl?.value) setContactMethod(methodEl.value)
+    const ratingsEl = formRef.current?.querySelector<HTMLInputElement>('[name="ratings_required"]')
+    if (ratingsEl?.value) setRatingsRequired(ratingsEl.value)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  function toggleRatingRequired(rating: string) {
+    const input = formRef.current?.querySelector<HTMLInputElement>('[name="ratings_required"]')
+    if (!input) return
+    const next = toggleCsvItem(input.value, rating)
+    input.value = next
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    setRatingsRequired(next)
+  }
 
   function handleStartOver() {
     const confirmMessage = isEdit
@@ -253,6 +276,10 @@ export default function PostPartnershipForm({
       setLookupStatus(null)
       setAiError(null)
       reset()
+      // form.reset() (inside reset()) restores fields to their HTML defaults — blank
+      // in create mode, the listing's saved values in edit mode — so mirror state
+      // follows the same target instead of always clearing to blank.
+      setRatingsRequired(initialValues?.ratings_required ?? '')
       try {
         window.localStorage.removeItem(PHOTOS_KEY)
       } catch {
@@ -597,7 +624,8 @@ export default function PostPartnershipForm({
         open={Boolean(
           (isEdit && (initialValues?.year || initialValues?.registration || initialValues?.ttaf || initialValues?.smoh ||
             initialValues?.engine_type || initialValues?.title || initialValues?.monthly_fixed ||
-            initialValues?.hourly_wet || initialValues?.total_shares)) ||
+            initialValues?.hourly_wet || initialValues?.total_shares || initialValues?.min_hours ||
+            initialValues?.ratings_required || initialValues?.scheduling_system)) ||
           (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -686,6 +714,52 @@ export default function PostPartnershipForm({
                 <Label>Total shares</Label>
                 <Input name="total_shares" type="number" defaultValue={initialValues?.total_shares ?? ''} placeholder="e.g. 3" min={1} />
                 <p className="mt-1 text-xs text-slate-400">Total number of partners once full</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Partner requirements */}
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Partner requirements <span className="font-normal normal-case">(optional)</span></h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Minimum Hours</Label>
+                <Input name="min_hours" type="number" defaultValue={initialValues?.min_hours ?? ''} placeholder="e.g. 200" min={0} />
+              </div>
+              <div>
+                <Label>Scheduling System</Label>
+                <Input name="scheduling_system" defaultValue={initialValues?.scheduling_system ?? ''} placeholder="e.g. FlyingClub, Google Calendar" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Ratings Required</Label>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {RATINGS_CHIPS.map((rating) => {
+                    const active = hasCsvItem(ratingsRequired, rating)
+                    return (
+                      <button
+                        key={rating}
+                        type="button"
+                        onClick={() => toggleRatingRequired(rating)}
+                        aria-pressed={active}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                          active
+                            ? 'border-sky-400 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        )}
+                      >
+                        {rating}
+                      </button>
+                    )
+                  })}
+                </div>
+                <Input
+                  name="ratings_required"
+                  defaultValue={initialValues?.ratings_required ?? ''}
+                  placeholder="e.g. PPL, IFR, Complex"
+                  onChange={(e) => setRatingsRequired(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-400">Tap to add, or type any rating — comma-separated</p>
               </div>
             </div>
           </div>

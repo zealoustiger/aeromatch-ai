@@ -89,7 +89,7 @@ export async function createPartnership(formData: FormData) {
     throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
   }
 
-  const payload = {
+  const basePayload = {
     make: formData.get('make') as string,
     model: formData.get('model') as string,
     year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
@@ -107,9 +107,6 @@ export async function createPartnership(formData: FormData) {
     min_hours: formData.get('min_hours') ? parseInt(formData.get('min_hours') as string) : null,
     ratings_required: ratings,
     scheduling_system: (formData.get('scheduling_system') as string) || null,
-    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
-    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
-    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
     title: (() => {
       const t = ((formData.get('title') as string) || '').trim()
       if (t) return t
@@ -130,7 +127,28 @@ export async function createPartnership(formData: FormData) {
     ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
   }
 
-  const { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()
+  // ttaf/smoh/engine_type require the `partnership_add_spec_fields` migration
+  // (schema.sql, still HUMAN ACTION REQUIRED as of 2026-07-03 — confirmed unapplied:
+  // referencing any of these 3 columns, even as null, makes Postgres/PostgREST reject
+  // the whole insert). Always attempt with them first so they start round-tripping the
+  // moment the migration lands; graceful fallback below keeps posting working today.
+  const specFields = {
+    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
+    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+  }
+  const payload = { ...basePayload, ...specFields }
+
+  let { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()
+
+  // Graceful fallback: if the spec-fields migration hasn't been applied yet, retry
+  // without those columns so the listing still goes live (same pattern as
+  // createSeekerListing's additional_airports fallback).
+  if (error && /'(ttaf|smoh|engine_type)'/i.test(error.message ?? '')) {
+    const retry = await supabase.from('partnerships').insert(basePayload).select('id').single()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) throw new Error(error.message)
 
@@ -149,7 +167,7 @@ export async function createPartnership(formData: FormData) {
   }
 
   revalidatePath('/partnerships')
-  redirect(`/partnerships/${data.id}?posted=1`)
+  redirect(`/partnerships/${data!.id}?posted=1`)
 }
 
 // Edit an existing user-posted partnership listing. Mirrors createPartnership's
@@ -180,7 +198,7 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
   }
 
-  const payload = {
+  const basePayload = {
     make: (formData.get('make') as string) || null,
     model: (formData.get('model') as string) || null,
     year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
@@ -198,9 +216,6 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     min_hours: formData.get('min_hours') ? parseInt(formData.get('min_hours') as string) : null,
     ratings_required: ratings,
     scheduling_system: (formData.get('scheduling_system') as string) || null,
-    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
-    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
-    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
     title: (() => {
       const t = ((formData.get('title') as string) || '').trim()
       if (t) return t
@@ -217,13 +232,34 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
   }
 
-  const { data, error } = await supabase
+  // See createPartnership — same not-yet-applied-migration graceful fallback for
+  // ttaf/smoh/engine_type.
+  const specFields = {
+    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
+    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+  }
+  const payload = { ...basePayload, ...specFields }
+
+  let { data, error } = await supabase
     .from('partnerships')
     .update(payload)
     .eq('id', id)
     .eq('poster_id', user.id)
     .select('id')
     .single()
+
+  if (error && /'(ttaf|smoh|engine_type)'/i.test(error.message ?? '')) {
+    const retry = await supabase
+      .from('partnerships')
+      .update(basePayload)
+      .eq('id', id)
+      .eq('poster_id', user.id)
+      .select('id')
+      .single()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
 
