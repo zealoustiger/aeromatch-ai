@@ -93,7 +93,7 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
   return (
     <input
       className={cn(
-        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
+        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
         className
       )}
       {...props}
@@ -105,7 +105,7 @@ function Select({ className, children, ...props }: React.SelectHTMLAttributes<HT
   return (
     <select
       className={cn(
-        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
+        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
         className
       )}
       {...props}
@@ -417,7 +417,7 @@ export default function PostSeekerListingForm({
           onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
           placeholder="e.g. IFR-rated, 450 hours, fly 10–12 hrs/month out of KPAO. Looking for a 1/4 share in an IFR single, prefer a Cessna 182 or Piper Archer. Budget around $20k buy-in, $400/mo fixed…"
-          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
         />
         {aiError && (
           <p className="mt-1.5 text-xs text-red-600">{aiError}</p>
@@ -735,7 +735,7 @@ export default function PostSeekerListingForm({
               defaultValue={initialValues?.description ?? ''}
               rows={5}
               placeholder="Tell owners about yourself — your experience, how you fly, what you're looking for in a partnership, and anything that makes you a great partner..."
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
             />
           </div>
 

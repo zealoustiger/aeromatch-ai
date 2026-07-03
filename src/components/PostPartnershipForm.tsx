@@ -81,7 +81,7 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
   return (
     <input
       className={cn(
-        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
+        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
         className
       )}
       {...props}
@@ -93,7 +93,7 @@ function Select({ className, children, ...props }: React.SelectHTMLAttributes<HT
   return (
     <select
       className={cn(
-        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
+        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
         className
       )}
       {...props}
@@ -459,7 +459,7 @@ export default function PostPartnershipForm({
           onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
           placeholder="e.g. 2004 Cessna 172S, G1000, based at KAUS. 1/3 share available, $15k buy-in, $300/mo fixed, $85/hr wet. Two current partners, good communicators, use Google Calendar. Looking for IFR-rated pilot who flies 10+ hrs/month… Or just paste a link to your listing on another site."
-          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
         />
         {aiError && (
           <p className="mt-1.5 text-xs text-red-600">{aiError}</p>
@@ -614,7 +614,7 @@ export default function PostPartnershipForm({
           defaultValue={initialValues?.description ?? ''}
           rows={5}
           placeholder="e.g. 1/3 share in a 2004 Cessna 172S based at KAUS. 3-pilot group, all instrument-rated, great camaraderie. Scheduling via FlyingClub app, rarely a conflict. TTAF 3,200, fresh annual Jan 2026. Looking for a pilot with 200+ hours who wants to fly 15+ hrs/month."
-          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
         />
       </section>
 
