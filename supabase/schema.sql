@@ -590,3 +590,10 @@ alter table partnerships add column if not exists engine_type text;
 -- /partnerships/seeking/new still submits successfully — additional airports are
 -- silently dropped (graceful fallback in createSeekerListing), so no user-facing error.
 alter table partnership_seekers add column if not exists additional_airports text[];
+-- outreach_targets: resolved owner contact (migrations: outreach_add_owner_contact, outreach_add_owner_social)
+alter table outreach_targets add column if not exists owner_name text;
+alter table outreach_targets add column if not exists owner_email text;
+alter table outreach_targets add column if not exists owner_phone text;
+alter table outreach_targets add column if not exists owner_source text;
+alter table outreach_targets add column if not exists owner_checked_at timestamptz;
+alter table outreach_targets add column if not exists owner_social_url text;
