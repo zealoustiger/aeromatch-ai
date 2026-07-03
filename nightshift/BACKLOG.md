@@ -396,8 +396,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   — **slice 2 (autosave + "Saving…/Saved" indicator) ✅ SHIPPED 2026-06-24T08:08Z** (`post-partnership-autosave`):
   new reusable `useFormDraft` hook autosaves the form to localStorage (debounced) with a
   Saving…/Draft saved/Draft restored indicator, restores on return, clears on successful post.
-  Client-only, no schema. **Remaining: slice 3 (375px micro-polish); and adopt the same hook on the
-  Post-a-Seeking form (`/partnerships/seeking/new`).**
+  Client-only, no schema. Seeker form later adopted the same hook (see its own autosave slice).
+  — **slice 3 (375px micro-polish) ✅ SHIPPED 2026-07-03** (`post-forms-ios-zoom-fix`): every
+  field on all 3 post forms (+ the shared airport-code input) rendered at 14px, which triggers
+  iOS Safari's auto-zoom-on-focus for any input under 16px; bumped to 16px on mobile (desktop
+  unchanged). This item is now fully complete. **Next (not this item):** the `EarningsCalculator`
+  widget's two number inputs are still 14px, unfixed (out of scope, different component).
 ~~- **[P2][want] Easy toggle between the three "Post a…" types.**~~ ✅ SHIPPED (confirmed
   complete 2026-07-03) `PostTypeTabs` (`src/components/PostTypeTabs.tsx`) renders on all
   three post pages (`/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`) with
