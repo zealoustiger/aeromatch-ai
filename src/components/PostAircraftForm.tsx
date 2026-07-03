@@ -101,11 +101,13 @@ export interface AircraftEditInitial {
 
 export default function PostAircraftForm({
   isLoggedIn = true,
+  userPhone,
   mode = 'create',
   listingId,
   initialValues,
 }: {
   isLoggedIn?: boolean
+  userPhone?: string
   mode?: 'create' | 'edit'
   listingId?: string
   initialValues?: AircraftEditInitial
@@ -503,9 +505,10 @@ export default function PostAircraftForm({
       {/* More details — aircraft specs, title & contact */}
       <details
         ref={detailsRef}
-        open={isEdit && Boolean(
-          initialValues?.year || initialValues?.ttaf || initialValues?.smoh ||
-          initialValues?.engine_type || initialValues?.title
+        open={Boolean(
+          (isEdit && (initialValues?.year || initialValues?.ttaf || initialValues?.smoh ||
+            initialValues?.engine_type || initialValues?.title)) ||
+          (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm"
       >
@@ -551,8 +554,12 @@ export default function PostAircraftForm({
               </div>
               <div>
                 <Label>Phone <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? ''} placeholder="(555) 000-0000" />
-                <p className="mt-1 text-xs text-slate-400">Shown to buyers on your listing if you'd like them to call or text.</p>
+                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
+                <p className="mt-1 text-xs text-slate-400">
+                  {userPhone && !initialValues?.contact_phone
+                    ? "Pre-filled from a previous listing. Shown to buyers if you'd like them to call or text."
+                    : "Shown to buyers on your listing if you'd like them to call or text. We'll save it for future listings."}
+                </p>
               </div>
             </div>
           </div>

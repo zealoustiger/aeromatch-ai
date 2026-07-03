@@ -30,6 +30,7 @@ export default async function NewSeekerListingPage() {
           isLoggedIn={!!user}
           userEmail={user?.email}
           userName={user?.user_metadata?.full_name}
+          userPhone={user?.user_metadata?.contact_phone}
         />
       </div>
     </div>

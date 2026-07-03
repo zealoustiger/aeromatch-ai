@@ -178,6 +178,7 @@ export default function PostSeekerListingForm({
   isLoggedIn = true,
   userEmail,
   userName,
+  userPhone,
   mode = 'create',
   listingId,
   initialValues,
@@ -185,6 +186,7 @@ export default function PostSeekerListingForm({
   isLoggedIn?: boolean
   userEmail?: string
   userName?: string
+  userPhone?: string
   mode?: 'create' | 'edit'
   listingId?: string
   initialValues?: SeekerEditInitial
@@ -458,12 +460,13 @@ export default function PostSeekerListingForm({
       {/* More details — everything optional; open by default in edit mode when it already holds data */}
       <details
         ref={detailsRef}
-        open={isEdit && Boolean(
-          initialValues?.preferred_makes || initialValues?.preferred_models || initialValues?.aircraft_category ||
-          initialValues?.min_year || initialValues?.max_year || initialValues?.max_monthly || initialValues?.max_hourly ||
-          initialValues?.willing_to_travel_nm || initialValues?.total_hours || initialValues?.ratings_held ||
-          initialValues?.hours_per_month || initialValues?.intended_use?.length || initialValues?.preferred_share_types?.length ||
-          initialValues?.description || initialValues?.contact_phone
+        open={Boolean(
+          (isEdit && (initialValues?.preferred_makes || initialValues?.preferred_models || initialValues?.aircraft_category ||
+            initialValues?.min_year || initialValues?.max_year || initialValues?.max_monthly || initialValues?.max_hourly ||
+            initialValues?.willing_to_travel_nm || initialValues?.total_hours || initialValues?.ratings_held ||
+            initialValues?.hours_per_month || initialValues?.intended_use?.length || initialValues?.preferred_share_types?.length ||
+            initialValues?.description || initialValues?.contact_phone)) ||
+          (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 sm:px-6">
@@ -750,7 +753,10 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Phone <span className="font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? ''} placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
+                {userPhone && !initialValues?.contact_phone && (
+                  <p className="mt-1 text-xs text-slate-400">Pre-filled from a previous listing.</p>
+                )}
               </div>
             </div>
           </div>
