@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Mail, Phone, MessageCircle, LogIn } from 'lucide-react'
+import { Mail, Phone, MessageCircle, LogIn, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
-import { getOrCreateSeekerThread } from '@/app/actions'
+import { getOrCreateSeekerThread, sendMessage } from '@/app/actions'
+import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
 import type { User } from '@supabase/supabase-js'
 
 interface Props {
@@ -30,9 +31,14 @@ export default function SeekerContactBar({
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const draftKey = `seeker:${seekerId}`
   const [user, setUser] = useState<User | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [text, setText] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const didAutoContact = useRef(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -43,7 +49,19 @@ export default function SeekerContactBar({
     return () => subscription.unsubscribe()
   }, [])
 
-  // Auto-open thread when returning from auth with ?contact=1
+  // Restore a message typed before an auth redirect (or an abandoned draft from
+  // an earlier visit) so nothing the visitor already wrote is lost.
+  useEffect(() => {
+    const draft = getMessageDraft(draftKey)
+    if (draft) {
+      setText(draft)
+      setExpanded(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-open thread when returning from auth with ?contact=1, sending the
+  // drafted message if one was captured before the sign-in redirect.
   useEffect(() => {
     if (searchParams.get('contact') !== '1') return
     if (!user || !seekerOwnerId || user.id === seekerOwnerId) return
@@ -52,24 +70,51 @@ export default function SeekerContactBar({
     const url = new URL(window.location.href)
     url.searchParams.delete('contact')
     window.history.replaceState({}, '', url.toString())
-    startTransition(async () => {
-      const result = await getOrCreateSeekerThread(seekerId, seekerOwnerId)
-      if ('threadId' in result) router.push(`/messages/${result.threadId}`)
-    })
-  }, [user, searchParams, seekerId, seekerOwnerId, router])
-
-  function handleMessage() {
-    if (!user) {
-      router.push(`/auth?next=${encodeURIComponent(seekerPath + '?contact=1')}`)
-      return
-    }
-    if (!seekerOwnerId) return
+    setErrorMsg(null)
     startTransition(async () => {
       const result = await getOrCreateSeekerThread(seekerId, seekerOwnerId)
       if ('threadId' in result) {
+        const draft = getMessageDraft(draftKey)
+        if (draft) {
+          await sendMessage(result.threadId, draft)
+          clearMessageDraft(draftKey)
+        }
         router.push(`/messages/${result.threadId}`)
+      } else {
+        setErrorMsg(result.error ?? 'Could not open conversation.')
       }
     })
+  }, [user, searchParams, seekerId, seekerOwnerId, draftKey, router])
+
+  function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = text.trim()
+    if (!trimmed || !seekerOwnerId) return
+
+    if (!user) {
+      setMessageDraft(draftKey, trimmed)
+      router.push(`/auth?next=${encodeURIComponent(seekerPath + '?contact=1')}`)
+      return
+    }
+
+    setErrorMsg(null)
+    startTransition(async () => {
+      const result = await getOrCreateSeekerThread(seekerId, seekerOwnerId)
+      if ('threadId' in result) {
+        await sendMessage(result.threadId, trimmed)
+        clearMessageDraft(draftKey)
+        router.push(`/messages/${result.threadId}`)
+      } else {
+        setErrorMsg(result.error ?? 'Could not open conversation.')
+      }
+    })
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend(e as unknown as React.FormEvent)
+    }
   }
 
   const isOwner = user?.id === seekerOwnerId
@@ -77,41 +122,51 @@ export default function SeekerContactBar({
   const showPhone = !isOwner && (contactMethod === 'phone' || contactMethod === 'both') && contactPhone
   const canMessage = !!seekerOwnerId && !isOwner
 
-  if (!user) {
-    return (
-      <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
-        <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
+  return (
+    <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
+      <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
+      {!user ? (
         <p className="mb-3 text-sm text-sky-700">
           To protect pilots&apos; privacy, contact details are only shown to signed-in
           members. Sign in to reach out{displayName ? ` to ${displayName}` : ''}.
         </p>
-        <button
-          onClick={handleMessage}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-        >
-          <LogIn className="h-4 w-4" /> Sign in to contact this pilot
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
-      <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
-      {displayName && (
-        <p className="mb-3 text-sm text-sky-700">Reach out to {displayName}</p>
+      ) : (
+        displayName && <p className="mb-3 text-sm text-sky-700">Reach out to {displayName}</p>
       )}
       <div className="space-y-2">
-        {canMessage && (
+        {canMessage && (expanded ? (
+          <form onSubmit={handleSend} className="space-y-2">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`Ask ${displayName ?? 'this pilot'} about your aircraft… (Enter to send)`}
+              rows={3}
+              className="w-full resize-none rounded-lg border border-sky-200 bg-white px-4 py-2.5 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+            />
+            <button
+              type="submit"
+              disabled={!text.trim() || isPending}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" />
+              {isPending ? 'Sending…' : user ? 'Send' : 'Sign in & send'}
+            </button>
+            {errorMsg && <p className="text-xs text-rose-600">{errorMsg}</p>}
+          </form>
+        ) : (
           <button
-            onClick={handleMessage}
-            disabled={isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+            onClick={() => {
+              setExpanded(true)
+              setTimeout(() => textareaRef.current?.focus(), 0)
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
           >
-            <MessageCircle className="h-4 w-4" />
-            {isPending ? 'Opening…' : 'Send Message'}
+            {user ? <MessageCircle className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+            Send Message
           </button>
-        )}
+        ))}
         {showEmail && (
           <a
             href={`mailto:${contactEmail}?subject=Re: ${encodeURIComponent(title)}`}
