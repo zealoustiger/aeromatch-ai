@@ -41,19 +41,19 @@ function computeSignals(
       rows.push({
         kind: 'positive',
         label: 'Buy-in below market',
-        detail: `${absDelta} (${comp.pct}%) below the median of ${comp.count} comparable${makeLabel} partnerships`,
+        detail: `${absDelta} (${comp.pct}%) below the expected buy-in for a similar-size share, based on ${comp.count} comparable${makeLabel} partnerships`,
       })
     } else if (comp.kind === 'near') {
       rows.push({
         kind: 'neutral',
         label: 'Buy-in around market',
-        detail: `Near the median buy-in of ${comp.count} comparable${makeLabel} partnerships`,
+        detail: `Near the expected buy-in for a similar-size share, based on ${comp.count} comparable${makeLabel} partnerships`,
       })
     } else {
       rows.push({
         kind: 'negative',
         label: 'Buy-in above market',
-        detail: `${absDelta} (${comp.pct}%) above the median of ${comp.count} comparable${makeLabel} partnerships`,
+        detail: `${absDelta} (${comp.pct}%) above the expected buy-in for a similar-size share, based on ${comp.count} comparable${makeLabel} partnerships`,
       })
     }
   }

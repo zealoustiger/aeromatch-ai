@@ -205,17 +205,20 @@ export default async function PartnershipDetailPage({
     try {
       const { data: comps } = await supabase
         .from('partnerships')
-        .select('buy_in_price, created_at')
+        .select('buy_in_price, total_shares, created_at')
         .eq('status', 'active')
         .eq('make', p.make)
         .neq('id', p.id)
         .limit(200)
       if (comps && comps.length > 0) {
-        if (p.buy_in_price) {
-          const otherBuyIns = comps
-            .map((c: { buy_in_price: number | null }) => c.buy_in_price)
-            .filter((v: number | null): v is number => v !== null && v > 0)
-          partnerComp = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
+        if (p.buy_in_price && p.total_shares) {
+          const otherComps = comps
+            .filter((c: { buy_in_price: number | null }) => c.buy_in_price != null && c.buy_in_price > 0)
+            .map((c: { buy_in_price: number | null; total_shares: number | null }) => ({
+              buyIn: c.buy_in_price as number,
+              totalShares: c.total_shares,
+            }))
+          partnerComp = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
         }
         partnerDomContext = computeDaysOnMarketContext(
           p.created_at,
@@ -500,8 +503,8 @@ export default async function PartnershipDetailPage({
                             : 'text-slate-500'
                       }`}>
                         {partnerComp.kind === 'near'
-                          ? `Around market · ${formatPriceK(partnerComp.median)} median · ${partnerComp.count} comps`
-                          : `~${partnerComp.pct}% ${partnerComp.kind} market · ${formatPriceK(partnerComp.median)} median · ${partnerComp.count} comps`}
+                          ? `Around market · ~${formatPriceK(partnerComp.median)} expected for this share size · ${partnerComp.count} comps`
+                          : `~${partnerComp.pct}% ${partnerComp.kind} market · ~${formatPriceK(partnerComp.median)} expected for this share size · ${partnerComp.count} comps`}
                       </p>
                     )}
                   </div>
