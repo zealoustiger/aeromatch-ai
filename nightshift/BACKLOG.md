@@ -156,7 +156,7 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
 ~~- **[P1][goal] Cost-to-own, on the listing.**~~ ✅ SHIPPED via `partner-share-cost-panel` (2026-06-29) Bring the cost calculator onto the detail
   page, prefilled with the listing's real make/model/price/hours → annual fixed + per-hour +
   reserve, with a share-split toggle ("as a 1/3 partner: ~$X each + ~$Y/mo"). Turns a static
-  price into a real ownership cost. Aircraft detail got `cost-per-flight-hour` (ShareCostPanel) earlier; partnerships now have the equivalent `PartnerShareCostPanel` with 50/75/100/150 hrs/yr tabs + buy-in break-even vs. renting.
+  price into a real ownership cost. Aircraft detail got `cost-per-flight-hour` (ShareCostPanel) earlier; partnerships now have the equivalent `PartnerShareCostPanel` with 50/75/100/150 hrs/yr tabs + buy-in break-even vs. renting. **Parity gap closed 2026-07-03** (`aircraft-share-cost-hours-toggle`): the aircraft-side `ShareCostPanel` now also has the 50/75/100/150 hrs/yr toggle (previously hardcoded to 100), so both panels are at full feature parity. This item is now fully complete.
 ~~- **[P1][goal] Deal Score panel.**~~ ✅ SHIPPED via `deal-score-signal-tally` (2026-06-28) Synthesize the signals we already have into one honest
   verdict: comp value (ClubHanger Estimate) + days-on-market + price drops + spec completeness
   → a transparent "how this stacks up" with the *reasons* shown (not a black-box score).
