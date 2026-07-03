@@ -26,7 +26,7 @@ export default async function NewAircraftPage() {
             List your aircraft for sale for free. Reach pilots and buyers across the country.
           </p>
         </div>
-        <PostAircraftForm isLoggedIn={!!user} />
+        <PostAircraftForm isLoggedIn={!!user} userPhone={user?.user_metadata?.contact_phone} />
       </div>
     </div>
   )

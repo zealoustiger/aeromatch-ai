@@ -160,6 +160,7 @@ export default function PostPartnershipForm({
   isLoggedIn = true,
   userEmail,
   userName,
+  userPhone,
   mode = 'create',
   listingId,
   initialValues,
@@ -167,6 +168,7 @@ export default function PostPartnershipForm({
   isLoggedIn?: boolean
   userEmail?: string
   userName?: string
+  userPhone?: string
   mode?: 'create' | 'edit'
   listingId?: string
   initialValues?: PartnershipEditInitial
@@ -592,10 +594,11 @@ export default function PostPartnershipForm({
       {/* More details — collapsible; open by default in edit mode when it already holds data */}
       <details
         ref={detailsRef}
-        open={isEdit && Boolean(
-          initialValues?.year || initialValues?.registration || initialValues?.ttaf || initialValues?.smoh ||
-          initialValues?.engine_type || initialValues?.title || initialValues?.monthly_fixed ||
-          initialValues?.hourly_wet || initialValues?.total_shares
+        open={Boolean(
+          (isEdit && (initialValues?.year || initialValues?.registration || initialValues?.ttaf || initialValues?.smoh ||
+            initialValues?.engine_type || initialValues?.title || initialValues?.monthly_fixed ||
+            initialValues?.hourly_wet || initialValues?.total_shares)) ||
+          (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
@@ -722,7 +725,10 @@ export default function PostPartnershipForm({
               </div>
               <div>
                 <Label>Phone <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? ''} placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
+                {userPhone && !initialValues?.contact_phone && (
+                  <p className="mt-1 text-xs text-slate-400">Pre-filled from a previous listing.</p>
+                )}
               </div>
             </div>
           </div>

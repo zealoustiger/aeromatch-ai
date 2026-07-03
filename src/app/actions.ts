@@ -137,6 +137,12 @@ export async function createPartnership(formData: FormData) {
     await supabase.auth.updateUser({ data: { full_name: contactName } })
   }
 
+  // Same lazy-save for contact_phone — one fewer field to retype on the next listing.
+  const contactPhone = (formData.get('contact_phone') as string)?.trim()
+  if (contactPhone && !user.user_metadata?.contact_phone) {
+    await supabase.auth.updateUser({ data: { contact_phone: contactPhone } })
+  }
+
   revalidatePath('/partnerships')
   redirect(`/partnerships/${data.id}?posted=1`)
 }
@@ -342,6 +348,12 @@ export async function createSeekerListing(formData: FormData) {
     await supabase.auth.updateUser({ data: { full_name: contactNameSeeker } })
   }
 
+  // Same lazy-save for contact_phone — one fewer field to retype on the next listing.
+  const contactPhoneSeeker = (formData.get('contact_phone') as string)?.trim()
+  if (contactPhoneSeeker && !user.user_metadata?.contact_phone) {
+    await supabase.auth.updateUser({ data: { contact_phone: contactPhoneSeeker } })
+  }
+
   revalidatePath('/partnerships/seeking')
   redirect(`/partnerships/seeking/${data!.id}?posted=1`)
 }
@@ -517,6 +529,13 @@ export async function createAircraftListing(formData: FormData) {
   }
 
   if (result.error) throw new Error(result.error.message)
+
+  // Same lazy-save as createPartnership/createSeekerListing — persist contact_phone
+  // to user_metadata so the next post form visit pre-fills the phone field automatically.
+  const contactPhoneAircraft = (formData.get('contact_phone') as string)?.trim()
+  if (contactPhoneAircraft && !user.user_metadata?.contact_phone) {
+    await supabase.auth.updateUser({ data: { contact_phone: contactPhoneAircraft } })
+  }
 
   revalidatePath('/aircraft')
   redirect(`/aircraft/listing/${result.data.id}?posted=1`)

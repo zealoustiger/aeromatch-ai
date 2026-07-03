@@ -31,6 +31,7 @@ export default async function NewPartnershipPage() {
         isLoggedIn={!!user}
         userEmail={user?.email}
         userName={user?.user_metadata?.full_name}
+        userPhone={user?.user_metadata?.contact_phone}
       />
 
       <div className="mt-10 border-t border-slate-100 pt-8">
