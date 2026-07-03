@@ -178,8 +178,9 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   one make + one fractional share size they specified. Self-suppresses on ambiguous
   preferences or <4 same-make comps — doesn't yet render on today's low-volume seed data
   (same as `PartnershipMarketCheck` today), but is correct and will light up as inventory grows.
-  **Next:** a card-level badge on `SeekerCard`/`SeekerList` mirroring the browse-page comp
-  chips partnerships already have.
+  **Card badge shipped 2026-07-03** (`seeker-budget-check-badge`): `SeekerCard`/`SeekerList`
+  now show the same below/above-market chip via a new batched `getSeekerBudgetCheckVerdicts()`
+  (one query per unique preferred make, not per card). This item is now fully complete.
 
 ---
 
