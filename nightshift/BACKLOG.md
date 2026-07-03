@@ -401,8 +401,9 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   — **slice 3 (375px micro-polish) ✅ SHIPPED 2026-07-03** (`post-forms-ios-zoom-fix`): every
   field on all 3 post forms (+ the shared airport-code input) rendered at 14px, which triggers
   iOS Safari's auto-zoom-on-focus for any input under 16px; bumped to 16px on mobile (desktop
-  unchanged). This item is now fully complete. **Next (not this item):** the `EarningsCalculator`
-  widget's two number inputs are still 14px, unfixed (out of scope, different component).
+  unchanged). This item is now fully complete. The `EarningsCalculator` widget's number inputs
+  were flagged as a follow-up and are now also fixed — ✅ SHIPPED 2026-07-03
+  (`earnings-calculator-ios-zoom-fix`).
 ~~- **[P2][want] Easy toggle between the three "Post a…" types.**~~ ✅ SHIPPED (confirmed
   complete 2026-07-03) `PostTypeTabs` (`src/components/PostTypeTabs.tsx`) renders on all
   three post pages (`/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`) with
