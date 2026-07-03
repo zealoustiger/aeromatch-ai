@@ -177,18 +177,29 @@ export const DEAL_DEAD_BAND = 0.05
 
 export type DealVerdict = 'good' | 'fair' | 'high'
 
-/** One same-family comp listing for the deal check. */
+/** Which engine/airframe-hours field a verdict's comp set was narrowed on. TTAF
+ *  (total airframe time) is preferred; SMOH (hours since major overhaul) is only
+ *  used as a fallback when the subject has no TTAF — and even then, comps are
+ *  narrowed on the SAME field, never mixed (a SMOH subject is never compared
+ *  against a comp's TTAF, or vice versa — that would be apples-to-oranges). */
+export type HoursSignal = 'ttaf' | 'smoh'
+
+/** One same-family comp listing for the deal check. `smoh` is optional so it can
+ *  be used as the hours-band signal when a comp (or the subject) has no `ttaf`. */
 export interface DealComp {
   asking_price: number | null
   year: number | null
   ttaf: number | null
+  smoh?: number | null
 }
 
-/** The subject listing being judged. */
+/** The subject listing being judged. `smoh` is an optional fallback hours signal,
+ *  only consulted when `ttaf` is missing/invalid. */
 export interface DealSubject {
   askingPrice: number | null | undefined
   year: number | null | undefined
   ttaf: number | null | undefined
+  smoh?: number | null | undefined
 }
 
 export interface ClubHangerDealVerdict {
@@ -206,6 +217,9 @@ export interface ClubHangerDealVerdict {
   deltaPct: number
   /** The ± year band actually used (for the on-page explanation). */
   yearBand: number
+  /** Which hours field ('ttaf' or 'smoh') the comp set was narrowed on — lets the
+   *  caller render honest copy about the basis of the "similar hours" claim. */
+  hoursSignal: HoursSignal
 }
 
 /** True when a comp's total time is within the subject's similar-hours band. */
@@ -221,27 +235,45 @@ function hoursWithinBand(subjectTtaf: number, compTtaf: number): boolean {
  * `comps` is the set of OTHER active priced same-family listings (the caller excludes
  * the subject by id in the DB read, so there's no self-comparison to undo here).
  *
- * Returns null — i.e. NO verdict — when the subject lacks a real price / year / total
- * time, or when fewer than MIN_DEAL_COMPS comps fall inside both bands. Thin or
- * uncontrolled data publishes nothing rather than a misleading endorsement.
+ * Returns null — i.e. NO verdict — when the subject lacks a real price / year / any
+ * usable hours signal (TTAF, or SMOH as a fallback), or when fewer than
+ * MIN_DEAL_COMPS comps fall inside both bands. Thin or uncontrolled data publishes
+ * nothing rather than a misleading endorsement.
  */
 export function clubHangerDealVerdict(
   subject: DealSubject,
   comps: DealComp[]
 ): ClubHangerDealVerdict | null {
-  const { askingPrice, year, ttaf } = subject
+  const { askingPrice, year, ttaf, smoh } = subject
   if (askingPrice == null || !Number.isFinite(askingPrice) || askingPrice <= 0) return null
   if (year == null || !Number.isFinite(year)) return null
-  if (ttaf == null || !Number.isFinite(ttaf) || ttaf < 0) return null
+
+  // Prefer TTAF (total airframe time) as the hours signal; SMOH (hours since major
+  // overhaul) is a fallback used ONLY when TTAF is missing/invalid. Whichever signal
+  // is chosen, comps are narrowed on that SAME field below — never a mix of the two,
+  // since TTAF and SMOH aren't comparable magnitudes (an overhauled engine can have a
+  // low SMOH on a high-TTAF airframe).
+  let hoursSignal: HoursSignal
+  let subjectHours: number
+  if (ttaf != null && Number.isFinite(ttaf) && ttaf >= 0) {
+    hoursSignal = 'ttaf'
+    subjectHours = ttaf
+  } else if (smoh != null && Number.isFinite(smoh) && smoh >= 0) {
+    hoursSignal = 'smoh'
+    subjectHours = smoh
+  } else {
+    return null
+  }
 
   const narrowed: number[] = []
   for (const c of comps) {
     const price = c.asking_price
     if (price == null || !Number.isFinite(price) || price <= 0) continue
     if (c.year == null || !Number.isFinite(c.year)) continue
-    if (c.ttaf == null || !Number.isFinite(c.ttaf) || c.ttaf < 0) continue
     if (Math.abs(c.year - year) > DEAL_YEAR_BAND) continue
-    if (!hoursWithinBand(ttaf, c.ttaf)) continue
+    const compHours = hoursSignal === 'ttaf' ? c.ttaf : c.smoh
+    if (compHours == null || !Number.isFinite(compHours) || compHours < 0) continue
+    if (!hoursWithinBand(subjectHours, compHours)) continue
     narrowed.push(price)
   }
   if (narrowed.length < MIN_DEAL_COMPS) return null
@@ -254,7 +286,7 @@ export function clubHangerDealVerdict(
   const delta = (askingPrice - median) / median
 
   if (Math.abs(delta) < DEAL_DEAD_BAND) {
-    return { verdict: 'fair', median, compCount: narrowed.length, deltaDollars, deltaPct: 0, yearBand: DEAL_YEAR_BAND }
+    return { verdict: 'fair', median, compCount: narrowed.length, deltaDollars, deltaPct: 0, yearBand: DEAL_YEAR_BAND, hoursSignal }
   }
   const deltaPct = Math.max(1, Math.round(Math.abs(delta) * 100))
   return {
@@ -264,5 +296,6 @@ export function clubHangerDealVerdict(
     deltaDollars,
     deltaPct,
     yearBand: DEAL_YEAR_BAND,
+    hoursSignal,
   }
 }

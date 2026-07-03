@@ -246,7 +246,7 @@ export async function getFamilyComps(
   modelPattern: string,
   notModelPattern: string | undefined,
   excludeId: string
-): Promise<{ asking_price: number | null; year: number | null; ttaf: number | null; first_seen_at: string | null }[]> {
+): Promise<{ asking_price: number | null; year: number | null; ttaf: number | null; smoh: number | null; first_seen_at: string | null }[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
@@ -254,7 +254,7 @@ export async function getFamilyComps(
     const supabase = await createServerSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
-      .select('asking_price, year, ttaf, first_seen_at')
+      .select('asking_price, year, ttaf, smoh, first_seen_at')
       .eq('status', 'active')
       .neq('id', excludeId)
       .ilike('make', `%${make}%`)
@@ -270,6 +270,7 @@ export async function getFamilyComps(
       asking_price: r.asking_price as number | null,
       year: r.year as number | null,
       ttaf: r.ttaf as number | null,
+      smoh: r.smoh as number | null,
       first_seen_at: r.first_seen_at as string | null,
     }))
   } catch {
@@ -289,7 +290,7 @@ export async function getFamilyCompsForBatch(
   make: string,
   modelPattern: string,
   notModelPattern?: string
-): Promise<{ id: string; asking_price: number | null; year: number | null; ttaf: number | null }[]> {
+): Promise<{ id: string; asking_price: number | null; year: number | null; ttaf: number | null; smoh: number | null }[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
@@ -297,7 +298,7 @@ export async function getFamilyCompsForBatch(
     const supabase = await createServerSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
-      .select('id, asking_price, year, ttaf')
+      .select('id, asking_price, year, ttaf, smoh')
       .eq('status', 'active')
       .ilike('make', `%${make}%`)
       .ilike('model', modelPattern)
@@ -313,6 +314,7 @@ export async function getFamilyCompsForBatch(
       asking_price: r.asking_price as number | null,
       year: r.year as number | null,
       ttaf: r.ttaf as number | null,
+      smoh: r.smoh as number | null,
     }))
   } catch {
     return []

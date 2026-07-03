@@ -197,6 +197,7 @@ export interface AircraftCompSubject {
   asking_price: number | null
   year: number | null
   ttaf: number | null
+  smoh?: number | null
 }
 
 export interface AircraftCompVerdict {
@@ -228,14 +229,14 @@ export async function getAircraftCompVerdicts(
 
     const { data, error } = await supabase
       .from('aircraft_for_sale')
-      .select('id, make, model, asking_price, year, ttaf')
+      .select('id, make, model, asking_price, year, ttaf, smoh')
       .eq('status', 'active')
       .in('make', uniqueMakes)
       .gte('asking_price', AIRCRAFT_COMP_PRICE_FLOOR)
       .limit(2000)
     if (error || !data) return verdicts
 
-    type CompRow = { id: string; make: string | null; model: string | null; asking_price: number; year: number | null; ttaf: number | null }
+    type CompRow = { id: string; make: string | null; model: string | null; asking_price: number; year: number | null; ttaf: number | null; smoh: number | null }
     const familyCompMap = new Map<string, CompRow[]>()
     for (const row of data as CompRow[]) {
       const key = familyKey(row)
@@ -251,7 +252,7 @@ export async function getAircraftCompVerdicts(
       if (!key) continue
       const compsWithoutSelf = (familyCompMap.get(key) ?? []).filter((c) => c.id !== l.id)
       const dealVerdict = clubHangerDealVerdict(
-        { askingPrice: l.asking_price, year: l.year, ttaf: l.ttaf },
+        { askingPrice: l.asking_price, year: l.year, ttaf: l.ttaf, smoh: l.smoh },
         compsWithoutSelf
       )
       const comp = dealVerdict ? null : compVsMarket(l, familyPriceMap)

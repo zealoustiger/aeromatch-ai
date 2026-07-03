@@ -116,6 +116,7 @@ test('deal: good deal — clearly below the similar-year/hours median', () => {
   assert.equal(d!.deltaDollars, -80_000)
   assert.equal(d!.deltaPct, 22) // round(80/360*100)
   assert.equal(d!.yearBand, DEAL_YEAR_BAND)
+  assert.equal(d!.hoursSignal, 'ttaf')
 })
 
 test('deal: priced high — clearly above the similar median', () => {
@@ -169,4 +170,66 @@ test('deal: hours band scales with the subject (relative band for high-time airf
   assert.equal(d!.compCount, 4) // the 8,000hr comp excluded
   assert.equal(d!.median, 215_000) // median of 200/210/220/230 → (210+220)/2
   assert.ok(DEAL_HOURS_ABS_BAND === 1_000)
+})
+
+/* ── SMOH fallback: used ONLY when the subject has no TTAF, never mixed with a
+ * comp's TTAF-only row (SMOH-to-SMOH only). ────────────────────────────────── */
+
+test('deal: SMOH fallback — no TTAF but a valid SMOH still yields a verdict', () => {
+  // Same shape as the base SR22 scenario, but every row (subject + comps) only has
+  // `smoh`, no `ttaf` at all.
+  const comps: DealComp[] = [
+    { asking_price: 340_000, year: 2008, ttaf: null, smoh: 1_200 },
+    { asking_price: 360_000, year: 2010, ttaf: null, smoh: 1_500 },
+    { asking_price: 380_000, year: 2006, ttaf: null, smoh: 800 },
+    { asking_price: 400_000, year: 2012, ttaf: null, smoh: 2_000 },
+  ]
+  const d = clubHangerDealVerdict({ askingPrice: 280_000, year: 2008, ttaf: null, smoh: 1_200 }, comps)
+  assert.ok(d)
+  assert.equal(d!.hoursSignal, 'smoh')
+  assert.equal(d!.compCount, 4)
+  assert.equal(d!.median, 370_000) // median of 340/360/380/400
+})
+
+test('deal: TTAF wins over SMOH when both are present on the subject', () => {
+  // Subject has a real TTAF, so SMOH must be ignored — the comp set is narrowed by
+  // TTAF exactly like the base scenario, even though a (deliberately wrong) SMOH is
+  // also supplied.
+  const d = clubHangerDealVerdict(
+    { askingPrice: 280_000, year: 2008, ttaf: 1_200, smoh: 99_999 },
+    SR22_COMPS
+  )
+  assert.ok(d)
+  assert.equal(d!.hoursSignal, 'ttaf')
+  assert.equal(d!.median, 360_000)
+})
+
+test('deal: SMOH subject never cross-compared against a TTAF-only comp', () => {
+  // Subject has no TTAF, only SMOH. Comps mix TTAF-only rows (no smoh) with
+  // SMOH-having rows — only the SMOH-having ones may count, even though several
+  // TTAF-only comps would otherwise "match" on ttaf if wrongly compared.
+  const comps: DealComp[] = [
+    { asking_price: 340_000, year: 2008, ttaf: 1_200, smoh: null }, // no smoh → excluded
+    { asking_price: 360_000, year: 2008, ttaf: 1_300, smoh: null }, // no smoh → excluded
+    { asking_price: 380_000, year: 2008, ttaf: null, smoh: 500 },
+    { asking_price: 400_000, year: 2008, ttaf: null, smoh: 600 },
+    { asking_price: 420_000, year: 2008, ttaf: null, smoh: 700 },
+    { asking_price: 440_000, year: 2008, ttaf: null, smoh: 800 },
+  ]
+  const d = clubHangerDealVerdict({ askingPrice: 300_000, year: 2008, ttaf: null, smoh: 600 }, comps)
+  assert.ok(d)
+  assert.equal(d!.hoursSignal, 'smoh')
+  assert.equal(d!.compCount, 4) // only the 4 smoh-having rows count
+  assert.equal(d!.median, 410_000) // median of 380/400/420/440
+})
+
+test('deal: null when subject has neither TTAF nor SMOH', () => {
+  assert.equal(
+    clubHangerDealVerdict({ askingPrice: 280_000, year: 2008, ttaf: null, smoh: null }, SR22_COMPS),
+    null
+  )
+  assert.equal(
+    clubHangerDealVerdict({ askingPrice: 280_000, year: 2008, ttaf: null }, SR22_COMPS),
+    null
+  )
 })
