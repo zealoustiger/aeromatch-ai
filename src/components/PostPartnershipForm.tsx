@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Info, Check, ChevronDown, Loader2 } from 'lucide-react'
-import { createPartnership, generatePartnershipDraft, type PartnershipDraft } from '@/app/actions'
+import { createPartnership, updatePartnershipListing, generatePartnershipDraft, type PartnershipDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
@@ -11,11 +11,7 @@ import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
 
-const DRAFT_KEY = 'ch:draft:partnership-new'
-// Uploaded photo URLs persist alongside the text draft so they survive the
-// deferred-auth redirect / a reload (see PartnershipPhotoUpload persistKey).
-// Mirrors PostAircraftForm.
-const PHOTOS_KEY = `${DRAFT_KEY}:photos`
+const NEW_DRAFT_KEY = 'ch:draft:partnership-new'
 
 // Curated model-name suggestions reused from the existing SEO make/model table —
 // no new or fabricated data. Grouped by a normalized make key so the Model field
@@ -29,7 +25,7 @@ const MODELS_BY_MAKE: Record<string, string[]> = SEO_MAKE_MODELS.reduce((acc, m)
 }, {} as Record<string, string[]>)
 const ALL_MODELS = Array.from(new Set(SEO_MAKE_MODELS.map((m) => m.model)))
 
-function forceSaveDraft(form: HTMLFormElement) {
+function forceSaveDraft(form: HTMLFormElement, draftKey: string) {
   try {
     const data: Record<string, string> = {}
     for (const el of Array.from(form.elements)) {
@@ -42,7 +38,7 @@ function forceSaveDraft(form: HTMLFormElement) {
       }
     }
     if (Object.keys(data).length) {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+      window.localStorage.setItem(draftKey, JSON.stringify(data))
     }
   } catch {
     /* storage unavailable — best effort */
@@ -136,25 +132,69 @@ function DraftIndicator({ status }: { status: DraftStatus }) {
   }
 }
 
+export interface PartnershipEditInitial {
+  make?: string
+  model?: string
+  year?: number
+  registration?: string
+  home_airport?: string
+  share_type?: string
+  shares_available?: number
+  total_shares?: number
+  buy_in_price?: number
+  monthly_fixed?: number
+  hourly_wet?: number
+  ttaf?: number
+  smoh?: number
+  engine_type?: string
+  title?: string
+  description?: string
+  images?: string[]
+  contact_name?: string
+  contact_email?: string
+  contact_method?: string
+  contact_phone?: string
+}
+
 export default function PostPartnershipForm({
   isLoggedIn = true,
   userEmail,
   userName,
+  mode = 'create',
+  listingId,
+  initialValues,
 }: {
   isLoggedIn?: boolean
   userEmail?: string
   userName?: string
+  mode?: 'create' | 'edit'
+  listingId?: string
+  initialValues?: PartnershipEditInitial
 }) {
+  const isEdit = mode === 'edit' && !!listingId
+  // Edit drafts are scoped per listing so they never collide with (or restore into)
+  // the "post a new partnership" draft, and vice versa. Mirrors PostAircraftForm.
+  const DRAFT_KEY = isEdit ? `ch:draft:partnership-edit:${listingId}` : NEW_DRAFT_KEY
+  // Uploaded photo URLs persist alongside the text draft so they survive the
+  // deferred-auth redirect / a reload (see PartnershipPhotoUpload persistKey).
+  // Mirrors PostAircraftForm.
+  const PHOTOS_KEY = `${DRAFT_KEY}:photos`
+
   const router = useRouter()
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       try {
-        track('listing_submitted', {
-          make: formData.get('make'),
-          home_airport: formData.get('home_airport'),
-          share_type: formData.get('share_type'),
-        })
-        await createPartnership(formData)
+        if (isEdit) {
+          track('partnership_listing_edited', { listing_id: listingId })
+          await updatePartnershipListing(listingId as string, formData)
+        } else {
+          track('listing_submitted', {
+            make: formData.get('make'),
+            home_airport: formData.get('home_airport'),
+            share_type: formData.get('share_type'),
+          })
+          await createPartnership(formData)
+        }
         return { ok: true }
       } catch (e: unknown) {
         return { ok: false, error: e instanceof Error ? e.message : 'Something went wrong' }
@@ -177,7 +217,7 @@ export default function PostPartnershipForm({
   // Mirror the (uncontrolled) Make input so the Model field can suggest only that make's
   // curated models. Stays uncontrolled — the FAA/AI autofill sets make via fillFormField's
   // dispatched 'input' event, which still fires this onChange.
-  const [selectedMake, setSelectedMake] = useState('')
+  const [selectedMake, setSelectedMake] = useState(initialValues?.make ?? '')
   const makeKey = normMake(selectedMake)
   const modelSuggestions =
     makeKey && MODELS_BY_MAKE[makeKey]
@@ -188,7 +228,7 @@ export default function PostPartnershipForm({
 
   // Track the selected contact method so we can hide the email field when platform
   // messaging is chosen (the email address is irrelevant / never shown in that case).
-  const [contactMethod, setContactMethod] = useState('platform')
+  const [contactMethod, setContactMethod] = useState(initialValues?.contact_method ?? 'platform')
 
   // Sync make + contact method once after mount in case a restored draft set them
   // before this ran (mirrors the selectedMake pattern above).
@@ -201,7 +241,10 @@ export default function PostPartnershipForm({
   }, [])
 
   function handleStartOver() {
-    if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+    const confirmMessage = isEdit
+      ? 'Discard your unsaved edits and revert to the last published version?'
+      : "Clear this draft and start over? This erases what you've entered on this device."
+    if (window.confirm(confirmMessage)) {
       // Invalidate any in-flight FAA lookup / AI prefill so it can't re-fill the
       // form (or re-arm autosave) after we clear it below.
       fillTokenRef.current += 1
@@ -344,8 +387,8 @@ export default function PostPartnershipForm({
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
-      if (formRef.current) forceSaveDraft(formRef.current)
-      router.push('/auth?next=/partnerships/new')
+      if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
+      router.push(`/auth?next=${isEdit ? `/partnerships/${listingId}/edit` : '/partnerships/new'}`)
       return
     }
     handleSubmit()
@@ -365,7 +408,7 @@ export default function PostPartnershipForm({
             onClick={handleStartOver}
             className="text-xs text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline"
           >
-            Start over
+            {isEdit ? 'Revert changes' : 'Start over'}
           </button>
         )}
         <DraftIndicator status={status} />
@@ -409,6 +452,7 @@ export default function PostPartnershipForm({
           <div className="flex gap-2">
             <Input
               name="registration"
+              defaultValue={initialValues?.registration ?? ''}
               placeholder="e.g. N12345 — auto-fills make, model &amp; year"
               className="font-mono uppercase"
               onBlur={(e) => {
@@ -441,6 +485,7 @@ export default function PostPartnershipForm({
             <Label required>Make</Label>
             <Input
               name="make"
+              defaultValue={initialValues?.make ?? ''}
               placeholder="e.g. Cessna, Maule, Bellanca"
               required
               list="partnership-make-suggestions"
@@ -455,6 +500,7 @@ export default function PostPartnershipForm({
             <Label required>Model</Label>
             <Input
               name="model"
+              defaultValue={initialValues?.model ?? ''}
               placeholder="e.g. 172S Skyhawk"
               required
               list="partnership-model-suggestions"
@@ -471,6 +517,7 @@ export default function PostPartnershipForm({
             <Label required>Home Airport</Label>
             <AirportFormInput
               name="home_airport"
+              defaultValue={initialValues?.home_airport ?? ''}
               required
               placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
             />
@@ -480,7 +527,7 @@ export default function PostPartnershipForm({
           </div>
           <div>
             <Label required>Share Type</Label>
-            <Select name="share_type" required>
+            <Select name="share_type" defaultValue={initialValues?.share_type ?? ''} required>
               <option value="">Select type</option>
               {SHARE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
@@ -504,7 +551,7 @@ export default function PostPartnershipForm({
             )}
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="buy_in_price" type="number" placeholder="15000" className="pl-7" min={0} />
+              <Input name="buy_in_price" type="number" defaultValue={initialValues?.buy_in_price ?? ''} placeholder="15000" className="pl-7" min={0} />
             </div>
             <p className="mt-1 text-xs text-slate-400">Leave blank if price is negotiable — describe the terms in your listing.</p>
           </div>
@@ -521,6 +568,7 @@ export default function PostPartnershipForm({
           key={photoMountKey}
           persistKey={PHOTOS_KEY}
           restoreGateKey={DRAFT_KEY}
+          initialPhotos={initialValues?.images}
         />
       </section>
 
@@ -530,14 +578,22 @@ export default function PostPartnershipForm({
         <p className="mb-3 text-xs text-slate-500">Tell prospective partners about the aircraft, the current group, how scheduling works, and what you&apos;re looking for in a partner. A compelling description is the single biggest factor in getting a serious inquiry.</p>
         <textarea
           name="description"
+          defaultValue={initialValues?.description ?? ''}
           rows={5}
           placeholder="e.g. 1/3 share in a 2004 Cessna 172S based at KAUS. 3-pilot group, all instrument-rated, great camaraderie. Scheduling via FlyingClub app, rarely a conflict. TTAF 3,200, fresh annual Jan 2026. Looking for a pilot with 200+ hours who wants to fly 15+ hrs/month."
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
         />
       </section>
 
-      {/* More details — collapsible, closed by default */}
-      <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* More details — collapsible; open by default in edit mode when it already holds data */}
+      <details
+        ref={detailsRef}
+        open={isEdit && Boolean(
+          initialValues?.year || initialValues?.registration || initialValues?.ttaf || initialValues?.smoh ||
+          initialValues?.engine_type || initialValues?.title || initialValues?.monthly_fixed ||
+          initialValues?.hourly_wet || initialValues?.total_shares
+        )}
+        className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
           <span>More details <span className="font-normal text-slate-400">(optional — makes your listing more compelling)</span></span>
           <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
@@ -550,19 +606,19 @@ export default function PostPartnershipForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Year</Label>
-                <Input name="year" type="number" placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
+                <Input name="year" type="number" defaultValue={initialValues?.year ?? ''} placeholder="e.g. 2004" min={1940} max={new Date().getFullYear()} />
               </div>
               <div>
                 <Label>Total Time (TTAF, hrs)</Label>
-                <Input name="ttaf" type="number" placeholder="e.g. 2450" min={0} />
+                <Input name="ttaf" type="number" defaultValue={initialValues?.ttaf ?? ''} placeholder="e.g. 2450" min={0} />
               </div>
               <div>
                 <Label>SMOH (hrs since overhaul)</Label>
-                <Input name="smoh" type="number" placeholder="e.g. 600" min={0} />
+                <Input name="smoh" type="number" defaultValue={initialValues?.smoh ?? ''} placeholder="e.g. 600" min={0} />
               </div>
               <div>
                 <Label>Engine</Label>
-                <Input name="engine_type" placeholder="e.g. Lycoming IO-360, Continental IO-550" />
+                <Input name="engine_type" defaultValue={initialValues?.engine_type ?? ''} placeholder="e.g. Lycoming IO-360, Continental IO-550" />
                 <p className="mt-1 text-xs text-slate-400">Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
               </div>
             </div>
@@ -576,6 +632,7 @@ export default function PostPartnershipForm({
                 <Label>Title <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
                 <Input
                   name="title"
+                  defaultValue={initialValues?.title ?? ''}
                   placeholder="e.g. 1/3 Share Available — 2004 C172S, Austin TX (KAUS)"
                 />
                 <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from make and model.</p>
@@ -593,7 +650,7 @@ export default function PostPartnershipForm({
                 </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                  <Input name="monthly_fixed" type="number" placeholder="300" className="pl-7" min={0} />
+                  <Input name="monthly_fixed" type="number" defaultValue={initialValues?.monthly_fixed ?? ''} placeholder="300" className="pl-7" min={0} />
                 </div>
                 <p className="mt-1 text-xs text-slate-400">Per-partner monthly fee (hangar, insurance, etc.)</p>
               </div>
@@ -603,7 +660,7 @@ export default function PostPartnershipForm({
                 </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                  <Input name="hourly_wet" type="number" placeholder="85" className="pl-7" min={0} />
+                  <Input name="hourly_wet" type="number" defaultValue={initialValues?.hourly_wet ?? ''} placeholder="85" className="pl-7" min={0} />
                 </div>
                 <p className="mt-1 text-xs text-slate-400">Fuel included in the hourly rate</p>
               </div>
@@ -616,11 +673,11 @@ export default function PostPartnershipForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Shares available</Label>
-                <Input name="shares_available" type="number" placeholder="1" min={1} defaultValue={1} />
+                <Input name="shares_available" type="number" placeholder="1" min={1} defaultValue={initialValues?.shares_available ?? 1} />
               </div>
               <div>
                 <Label>Total shares</Label>
-                <Input name="total_shares" type="number" placeholder="e.g. 3" min={1} />
+                <Input name="total_shares" type="number" defaultValue={initialValues?.total_shares ?? ''} placeholder="e.g. 3" min={1} />
                 <p className="mt-1 text-xs text-slate-400">Total number of partners once full</p>
               </div>
             </div>
@@ -632,14 +689,14 @@ export default function PostPartnershipForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Your Name</Label>
-                <Input name="contact_name" placeholder="First name or handle" defaultValue={userName ?? ''} />
-                {isLoggedIn && !userName && (
+                <Input name="contact_name" placeholder="First name or handle" defaultValue={initialValues?.contact_name ?? userName ?? ''} />
+                {isLoggedIn && !userName && !initialValues?.contact_name && (
                   <p className="mt-1 text-xs text-slate-400">We&apos;ll save your name for future listings.</p>
                 )}
               </div>
               <div className={contactMethod === 'platform' ? 'hidden' : undefined}>
                 <Label>Email</Label>
-                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
+                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={initialValues?.contact_email ?? userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
                   {userEmail
                     ? 'Pre-filled from your account. Only shared when you select email contact above.'
@@ -650,6 +707,7 @@ export default function PostPartnershipForm({
                 <Label>Preferred Contact Method</Label>
                 <Select
                   name="contact_method"
+                  defaultValue={initialValues?.contact_method ?? 'platform'}
                   onChange={(e) => setContactMethod(e.target.value)}
                 >
                   <option value="platform">Message through ClubHanger (default)</option>
@@ -660,7 +718,7 @@ export default function PostPartnershipForm({
               </div>
               <div>
                 <Label>Phone <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? ''} placeholder="(555) 000-0000" />
               </div>
             </div>
           </div>
@@ -678,7 +736,7 @@ export default function PostPartnershipForm({
         disabled={pending}
         className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
-        {pending ? 'Submitting…' : isLoggedIn ? 'Post Partnership Listing' : 'Sign in to Publish →'}
+        {pending ? 'Saving…' : !isLoggedIn ? 'Sign in to Publish →' : isEdit ? 'Save Changes' : 'Post Partnership Listing'}
       </button>
     </form>
   )
