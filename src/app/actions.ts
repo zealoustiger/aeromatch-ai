@@ -76,13 +76,18 @@ export async function createPartnership(formData: FormData) {
   // The post form now asks only for the ICAO (frictionless) — derive the airport
   // name / city / state from the authoritative `airports` table so the location is
   // accurate and the `/partnerships/state/[state]` SEO pages still get a real state.
-  // Falls back to null when the ICAO isn't in our table (insert still succeeds).
+  // Rejects (throws) when the ICAO isn't in our ~17k-row table rather than silently
+  // saving a listing with a null location — a syntactically-valid-but-fake code is
+  // almost always a typo, not a real gap in coverage.
   const home_airport = (formData.get('home_airport') as string).toUpperCase()
   const { data: airport } = await supabase
     .from('airports')
     .select('name, city, state')
     .eq('icao', home_airport)
     .maybeSingle()
+  if (!airport) {
+    throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
+  }
 
   const payload = {
     make: formData.get('make') as string,
@@ -171,6 +176,9 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     .select('name, city, state')
     .eq('icao', home_airport)
     .maybeSingle()
+  if (!airport) {
+    throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
+  }
 
   const payload = {
     make: (formData.get('make') as string) || null,
@@ -275,13 +283,18 @@ export async function createSeekerListing(formData: FormData) {
   // The form now asks only for the ICAO (frictionless) — derive the airport
   // name / city / state from the authoritative `airports` table so the location is
   // accurate and the seeking / `/partnerships/state/[state]` SEO surfaces still get a
-  // real state. Falls back to null when the ICAO isn't in our table (insert still succeeds).
+  // real state. Rejects (throws) when the ICAO isn't in our ~17k-row table rather than
+  // silently saving a listing with a null location — a syntactically-valid-but-fake
+  // code is almost always a typo, not a real gap in coverage.
   const home_airport = (formData.get('home_airport') as string).toUpperCase()
   const { data: airport } = await supabase
     .from('airports')
     .select('name, city, state')
     .eq('icao', home_airport)
     .maybeSingle()
+  if (!airport) {
+    throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
+  }
 
   // Optional additional airport — store as text[] when non-empty.
   // Requires the `seeker_additional_airports` migration (add column if not exists).
@@ -387,6 +400,9 @@ export async function updateSeekerListing(id: string, formData: FormData) {
     .select('name, city, state')
     .eq('icao', home_airport)
     .maybeSingle()
+  if (!airport) {
+    throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
+  }
 
   const extraRaw = ((formData.get('additional_airport_2') as string) || '').trim().toUpperCase()
   const additional_airports = extraRaw ? [extraRaw] : null
@@ -469,6 +485,9 @@ export async function createAircraftListing(formData: FormData) {
 
   // The form now asks for the ICAO airport code (frictionless) — derive location
   // string and state from the airports table, same pattern as partnership/seeker actions.
+  // Based-at is optional here, but a non-empty code that doesn't resolve is rejected
+  // (throws) rather than silently saved with a null location — same rationale as the
+  // required home_airport fields on the other two forms.
   const homeAirportRaw = ((formData.get('home_airport') as string) || '').trim().toUpperCase()
   let location: string | null = null
   let state: string | null = null
@@ -477,11 +496,12 @@ export async function createAircraftListing(formData: FormData) {
       .from('airports')
       .select('city, state')
       .eq('icao', homeAirportRaw)
-      .single()
-    if (airport?.city) {
-      location = airport.state ? `${airport.city}, ${airport.state}` : airport.city
-      state = airport.state ?? null
+      .maybeSingle()
+    if (!airport?.city) {
+      throw new Error(`We couldn't find an airport with the code "${homeAirportRaw}". Please pick one from the suggestions list, double-check the 4-letter code, or leave this field blank.`)
     }
+    location = airport.state ? `${airport.city}, ${airport.state}` : airport.city
+    state = airport.state ?? null
   }
 
   const payload = {
@@ -566,12 +586,13 @@ export async function updateAircraftListing(id: string, formData: FormData) {
       .from('airports')
       .select('city, state')
       .eq('icao', homeAirportRaw)
-      .single()
-    if (airport?.city) {
-      locationUpdate = {
-        location: airport.state ? `${airport.city}, ${airport.state}` : airport.city,
-        state: airport.state ?? null,
-      }
+      .maybeSingle()
+    if (!airport?.city) {
+      throw new Error(`We couldn't find an airport with the code "${homeAirportRaw}". Please pick one from the suggestions list, double-check the 4-letter code, or leave this field blank.`)
+    }
+    locationUpdate = {
+      location: airport.state ? `${airport.city}, ${airport.state}` : airport.city,
+      state: airport.state ?? null,
     }
   }
 
