@@ -77,15 +77,22 @@ Target: cut every step/field/decision between "I want to list" and "it's publish
 Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`
 (server actions in `src/app/actions.ts`; AI draft already exists for partnership/seeker).
 ~~- **[P1][goal] N-number autofill on the aircraft post form.**~~ ✅ SHIPPED (earlier in this drain) The `/api/faa-lookup` route is wired into `/aircraft/new`: type the registration → auto-fills make / model / year (editable); "Look up →" button + blur trigger; AI prefill also chains a registry backfill when make/model/year are missing.
-- **[P1][goal] "Paste & prefill" the whole form.** Extend the existing AI-draft
-  (`generatePartnershipDraft` / aircraft draft) so a pasted listing blob OR a source URL
-  maps into *every* field (make, model, year, price, hours, airport, share terms), not just
-  title+description. Human reviews the prefilled form, edits, publishes. *Friction: a whole
-  form → a paste + a glance.*
+~~- **[P1][goal] "Paste & prefill" the whole form.**~~ ✅ SHIPPED via `aircraft-url-prefill`
+  (2026-07-03). The pasted-text half (make/model/year/price/hours/airport/share terms →
+  nearly every field) was already live on all 3 forms; this cycle added the "OR a source
+  URL" half on the aircraft-for-sale form — paste a link to an existing listing
+  (Barnstormers/Controller/TradeAPlane) and the server fetches + reads it through the same
+  extraction prompt. SSRF-guarded (`src/lib/urlFetchGuard.ts`), shares the existing 10/hr
+  AI-draft rate limit. **Not done:** the URL half on the partnership form (lower value —
+  co-ownership shares rarely have an external source listing to link).
 - **[P1][goal] Collapse the post flow to one smart screen.** Reduce required fields to the
   irreducible set (make/model · airport ICAO · price-or-share · contact); push everything
   else to optional/progressive disclosure. ICAO already auto-derives airport/city/state —
-  lean on that. Measure clicks-to-publish before vs after.
+  lean on that. Measure clicks-to-publish before vs after. **Status check (2026-07-03):**
+  already effectively true today — aircraft form requires only make/model, partnership
+  requires make/model/home_airport/share_type, seeker requires only home_airport; everything
+  else is optional/progressive disclosure. Confirm with the human whether this needs a
+  dedicated "measure clicks-to-publish" pass or can be marked done.
 ~~- **[P1][goal] Autosave the draft (localStorage) + restore.**~~ ✅ SHIPPED via `draft-start-over` (2026-06-28) A half-filled form must
   survive a reload or the auth redirect — never lose someone's typing. Pairs with Pillar 2's
   deferred gate (post first, sign in to publish, draft intact).
