@@ -169,6 +169,17 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   hint + `PartnershipMarketCheck` + `PartnershipDealSignals` "Listed N days ago" row, built
   on `created_at` since user-submitted partnerships have no `first_seen_at`). No further
   slice needed for this item.
+~~- **[agent][goal] Budget check on seeker listings.**~~ ✅ SHIPPED via `seeker-budget-check`
+  (2026-07-03) Seeker listings (`/partnerships/seeking/[id]`) had zero Pillar 3 analysis —
+  aircraft-for-sale and partnership listings both compare price/buy-in to the market, but a
+  seeker's stated budget got no equivalent read. New `getSeekerBudgetCheck()` reuses the
+  existing `partnershipBuyInComp` share-normalized comp math (same honesty floors as
+  `PartnershipMarketCheck`) to tell a seeker whether their max buy-in is realistic for the
+  one make + one fractional share size they specified. Self-suppresses on ambiguous
+  preferences or <4 same-make comps — doesn't yet render on today's low-volume seed data
+  (same as `PartnershipMarketCheck` today), but is correct and will light up as inventory grows.
+  **Next:** a card-level badge on `SeekerCard`/`SeekerList` mirroring the browse-page comp
+  chips partnerships already have.
 
 ---
 
