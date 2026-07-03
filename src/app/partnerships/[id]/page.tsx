@@ -105,6 +105,16 @@ export async function generateMetadata({
   }
 }
 
+// Mirrors the aircraft-for-sale listing page's priceDrop() — only a real, recorded
+// buy-in reduction counts (never fabricated); increases are shown in the deal-signals
+// panel, not here.
+function buyInDrop(p: Partnership): number | null {
+  if (p.previous_buy_in_price != null && p.buy_in_price != null && p.buy_in_price < p.previous_buy_in_price) {
+    return p.previous_buy_in_price - p.buy_in_price
+  }
+  return null
+}
+
 function listingJsonLd(p: Partnership) {
   return {
     '@context': 'https://schema.org',
@@ -145,6 +155,7 @@ export default async function PartnershipDetailPage({
   const seekerCount = await getSeekerCount()
 
   const isOwner = await isListingOwner(p.poster_id)
+  const buyInPriceDrop = buyInDrop(p)
 
   // Seed/demo persona (e.g. "Marcus T.") — owned by the concierge house account,
   // so it gets the on-site "Message {name}" flow + a member profile link instead
@@ -494,6 +505,9 @@ export default async function PartnershipDetailPage({
                   <div>
                     <dt className="text-xs text-slate-400">Buy-In</dt>
                     <dd className="text-2xl font-bold text-slate-900">{formatPrice(p.buy_in_price)}</dd>
+                    {buyInPriceDrop != null && (
+                      <p className="mt-0.5 text-xs text-slate-400 line-through">{formatPrice(p.previous_buy_in_price)}</p>
+                    )}
                     {partnerComp && (
                       <p className={`mt-1 text-xs font-semibold ${
                         partnerComp.kind === 'below'
