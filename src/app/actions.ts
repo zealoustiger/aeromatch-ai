@@ -499,18 +499,27 @@ export async function createAircraftListing(formData: FormData) {
     price_text: asking_price ? `$${asking_price.toLocaleString('en-US')}` : null,
     location,
     state,
+    contact_phone: (formData.get('contact_phone') as string) || null,
     status: 'active',
     poster_id: user.id,
     images: photoUrls.length > 0 ? photoUrls : [],
     image_is_placeholder: photoUrls.length === 0,
   }
 
-  const { data, error } = await supabase.from('aircraft_for_sale').insert(payload).select('id').single()
+  let result = await supabase.from('aircraft_for_sale').insert(payload).select('id').single()
 
-  if (error) throw new Error(error.message)
+  if (result.error?.code === '42703' || result.error?.code === 'PGRST204') {
+    // contact_phone isn't migrated on every environment yet — retry without it so
+    // posting still succeeds; the phone just won't save until the human applies
+    // `alter table aircraft_for_sale add column if not exists contact_phone text;`
+    const { contact_phone: _contactPhone, ...withoutPhone } = payload
+    result = await supabase.from('aircraft_for_sale').insert(withoutPhone).select('id').single()
+  }
+
+  if (result.error) throw new Error(result.error.message)
 
   revalidatePath('/aircraft')
-  redirect(`/aircraft/listing/${data.id}?posted=1`)
+  redirect(`/aircraft/listing/${result.data.id}?posted=1`)
 }
 
 // Edit an existing user-posted aircraft listing. Mirrors createAircraftListing's
@@ -567,11 +576,12 @@ export async function updateAircraftListing(id: string, formData: FormData) {
     asking_price,
     price_text: asking_price ? `$${asking_price.toLocaleString('en-US')}` : null,
     ...locationUpdate,
+    contact_phone: (formData.get('contact_phone') as string) || null,
     images: photoUrls,
     image_is_placeholder: photoUrls.length === 0,
   }
 
-  const { data, error } = await supabase
+  let result = await supabase
     .from('aircraft_for_sale')
     .update(payload)
     .eq('id', id)
@@ -579,7 +589,21 @@ export async function updateAircraftListing(id: string, formData: FormData) {
     .select('id')
     .single()
 
-  if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
+  if (result.error?.code === '42703' || result.error?.code === 'PGRST204') {
+    // contact_phone isn't migrated on every environment yet — retry without it so
+    // editing still succeeds; the phone just won't save until the human applies
+    // `alter table aircraft_for_sale add column if not exists contact_phone text;`
+    const { contact_phone: _contactPhone, ...withoutPhone } = payload
+    result = await supabase
+      .from('aircraft_for_sale')
+      .update(withoutPhone)
+      .eq('id', id)
+      .eq('poster_id', user.id)
+      .select('id')
+      .single()
+  }
+
+  if (result.error || !result.data) throw new Error(result.error?.message ?? 'Listing not found or not yours to edit.')
 
   revalidatePath('/aircraft')
   revalidatePath('/listings')

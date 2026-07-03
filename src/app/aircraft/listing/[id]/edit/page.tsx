@@ -19,11 +19,27 @@ export default async function EditAircraftListingPage({
 
   if (!user) redirect(`/auth?next=/aircraft/listing/${id}/edit`)
 
-  const { data: listing } = await supabase
+  // Try selecting with contact_phone; fall back gracefully when the column
+  // hasn't been migrated yet in this environment (same pattern as the
+  // saved_listings `note` column) so the edit page doesn't 404 for every owner.
+  const withPhone = await supabase
     .from('aircraft_for_sale')
-    .select('id, make, model, year, registration, ttaf, smoh, engine_type, title, description, asking_price, location, state, images, poster_id')
+    .select('id, make, model, year, registration, ttaf, smoh, engine_type, title, description, asking_price, location, state, contact_phone, images, poster_id')
     .eq('id', id)
     .single()
+
+  let listing = withPhone.data
+  let contactPhone: string | null = withPhone.data?.contact_phone ?? null
+
+  if (withPhone.error) {
+    const withoutPhone = await supabase
+      .from('aircraft_for_sale')
+      .select('id, make, model, year, registration, ttaf, smoh, engine_type, title, description, asking_price, location, state, images, poster_id')
+      .eq('id', id)
+      .single()
+    listing = withoutPhone.data as typeof listing
+    contactPhone = null
+  }
 
   // Same not-found response whether the row is missing or owned by someone
   // else — never reveal that a listing exists to a non-owner.
@@ -51,6 +67,7 @@ export default async function EditAircraftListingPage({
             currentLocationLabel: listing.location ?? undefined,
             title: listing.title ?? undefined,
             description: listing.description ?? undefined,
+            contact_phone: contactPhone ?? undefined,
             images: listing.images ?? undefined,
           }}
         />
