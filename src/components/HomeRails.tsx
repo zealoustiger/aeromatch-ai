@@ -80,7 +80,7 @@ interface ResolvedRail {
 
 type FamilyKey = string
 interface FamilySpec { make: string; modelPattern: string; notModelPattern?: string }
-type BatchComp = { id: string; asking_price: number | null; year: number | null; ttaf: number | null }
+type BatchComp = { id: string; asking_price: number | null; year: number | null; ttaf: number | null; smoh: number | null }
 
 export default async function HomeRails() {
   // Fetch every candidate rail in parallel via the marketplace's own helper.
@@ -136,7 +136,7 @@ export default async function HomeRails() {
       const allComps = familyCompsMap.get(key) ?? []
       const comps = allComps.filter((c) => c.id !== p.id)
       const verdict = clubHangerDealVerdict(
-        { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf },
+        { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
         comps
       )
       if (verdict && verdict.verdict !== 'fair') {

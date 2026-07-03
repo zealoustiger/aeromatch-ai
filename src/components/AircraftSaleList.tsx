@@ -682,7 +682,7 @@ async function fetchFamilyCompMap(): Promise<Map<string, FamilyCompEntry[]>> {
     const data = await fetchAllRows((from, to) =>
       supabase
         .from('aircraft_for_sale')
-        .select('id, make, model, asking_price, year, ttaf')
+        .select('id, make, model, asking_price, year, ttaf, smoh')
         .eq('status', 'active')
         .gte('asking_price', BUYER_PRICE_FLOOR)
         .range(from, to)
@@ -692,7 +692,7 @@ async function fetchFamilyCompMap(): Promise<Map<string, FamilyCompEntry[]>> {
       const key = familyKey(row)
       if (!key) continue
       const entries = map.get(key) ?? []
-      entries.push({ id: row.id, asking_price: row.asking_price, year: row.year, ttaf: row.ttaf })
+      entries.push({ id: row.id, asking_price: row.asking_price, year: row.year, ttaf: row.ttaf, smoh: row.smoh })
       map.set(key, entries)
     }
     return map
@@ -887,7 +887,7 @@ function renderList(
           const allFamilyComps = key ? (familyCompMap.get(key) ?? []) : []
           const compsWithoutSelf = allFamilyComps.filter((c) => c.id !== p.id)
           const dealVerdict = clubHangerDealVerdict(
-            { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf },
+            { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
             compsWithoutSelf
           )
           return (

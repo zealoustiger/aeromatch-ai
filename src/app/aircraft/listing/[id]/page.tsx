@@ -115,23 +115,27 @@ function computeDealSignals(
   if (dealVerdict) {
     const absDelta = formatPrice(Math.abs(dealVerdict.deltaDollars))
     const dir = dealVerdict.deltaDollars < 0 ? 'below' : 'above'
+    // TTAF (total airframe time) is the default hours signal; when a listing has no
+    // TTAF, the verdict falls back to SMOH (hours since overhaul) — the copy names
+    // whichever basis was actually used so the claim stays honest.
+    const hoursLabel = dealVerdict.hoursSignal === 'smoh' ? 'similar-year, similar engine-time' : 'similar-year, similar-hours'
     if (dealVerdict.verdict === 'good') {
       rows.push({
         kind: 'positive',
         label: 'Good deal',
-        detail: `${absDelta} (${dealVerdict.deltaPct}%) ${dir} the median of ${dealVerdict.compCount} similar-year, similar-hours${makeModel ? ` ${makeModel}` : ''} listings`,
+        detail: `${absDelta} (${dealVerdict.deltaPct}%) ${dir} the median of ${dealVerdict.compCount} ${hoursLabel}${makeModel ? ` ${makeModel}` : ''} listings`,
       })
     } else if (dealVerdict.verdict === 'fair') {
       rows.push({
         kind: 'neutral',
         label: 'Fair price',
-        detail: `Near the going rate for similar-year, similar-hours${makeModel ? ` ${makeModel}` : ''} listings (${dealVerdict.compCount} comps)`,
+        detail: `Near the going rate for ${hoursLabel}${makeModel ? ` ${makeModel}` : ''} listings (${dealVerdict.compCount} comps)`,
       })
     } else {
       rows.push({
         kind: 'negative',
         label: 'Priced high',
-        detail: `${absDelta} (${dealVerdict.deltaPct}%) ${dir} the median of ${dealVerdict.compCount} similar-year, similar-hours${makeModel ? ` ${makeModel}` : ''} listings`,
+        detail: `${absDelta} (${dealVerdict.deltaPct}%) ${dir} the median of ${dealVerdict.compCount} ${hoursLabel}${makeModel ? ` ${makeModel}` : ''} listings`,
       })
     }
   } else if (estimate) {
@@ -605,7 +609,7 @@ export default async function AircraftListingDetailPage({
     p.asking_price && family ? clubHangerEstimate(p.asking_price, familyPrices) : null
   const dealVerdict =
     p.asking_price && family
-      ? clubHangerDealVerdict({ askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf }, familyComps)
+      ? clubHangerDealVerdict({ askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf, smoh: p.smoh }, familyComps)
       : null
   const familyLabel = family ? `${family.make} ${family.model}` : null
 
@@ -1384,10 +1388,15 @@ const DEAL_META: Record<
 function DealCheck({ deal, familyLabel }: { deal: ClubHangerDealVerdict; familyLabel: string }) {
   const meta = DEAL_META[deal.verdict]
   const dir = deal.deltaDollars < 0 ? 'below' : 'above'
+  // TTAF (total airframe time) is the default hours signal; when this listing has no
+  // TTAF, the verdict falls back to SMOH (hours since overhaul) instead — name
+  // whichever basis was actually used so the "comparable" claim stays honest.
+  const hoursLabel = deal.hoursSignal === 'smoh' ? 'similar-year, similar engine-time' : 'similar-year, similar-hours'
+  const comparableLabel = deal.hoursSignal === 'smoh' ? 'comparable engine time since overhaul' : 'comparable total time'
   const sentence =
     deal.verdict === 'fair'
-      ? `Right around the going rate for similar-year, similar-hours ${familyLabel} listings.`
-      : `Asking ${formatPrice(Math.abs(deal.deltaDollars))} (${deal.deltaPct}%) ${dir} the median of similar-year, similar-hours ${familyLabel} listings.`
+      ? `Right around the going rate for ${hoursLabel} ${familyLabel} listings.`
+      : `Asking ${formatPrice(Math.abs(deal.deltaDollars))} (${deal.deltaPct}%) ${dir} the median of ${hoursLabel} ${familyLabel} listings.`
   return (
     <div className="mt-4 border-t border-slate-100 pt-4">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Deal check</p>
@@ -1399,7 +1408,7 @@ function DealCheck({ deal, familyLabel }: { deal: ClubHangerDealVerdict; familyL
       <p className="mt-3 text-sm font-medium leading-relaxed text-slate-700">{sentence}</p>
       <p className="mt-2 text-xs text-slate-500">
         Compared with {deal.compCount} {familyLabel} listing{deal.compCount === 1 ? '' : 's'} for sale
-        now within ±{deal.yearBand} years and comparable total time — controlling for the two biggest
+        now within ±{deal.yearBand} years and {comparableLabel} — controlling for the two biggest
         value drivers, so this is a genuine value read (median {formatPrice(deal.median)}).
       </p>
     </div>

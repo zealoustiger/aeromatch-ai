@@ -22,9 +22,12 @@ import RailScroller from './RailScroller'
  * Each card shows a "Good deal" or "Priced high" chip using the year+hours-controlled
  * `clubHangerDealVerdict` (same as browse cards) — only when ≥4 same-family comps
  * fall within ±5 yr and ±1 000 hrs (or ±35%) of the subject listing, and the gap
- * clears the ±5% dead band. Listings without year or ttaf receive no chip. Comps are
- * batch-fetched per unique make+model family to avoid N+1 queries; each listing
- * self-excludes from its own comp set in JS.
+ * clears the ±5% dead band. TTAF is preferred as the hours signal; SMOH (hours
+ * since overhaul) is used as a fallback only when TTAF is missing, always narrowed
+ * against comps on that same field (never TTAF-vs-SMOH). Listings without year or
+ * any usable hours signal receive no chip. Comps are batch-fetched per unique
+ * make+model family to avoid N+1 queries; each listing self-excludes from its own
+ * comp set in JS.
  */
 export default async function SimilarAircraft({ current }: { current: AircraftForSale }) {
   const similar = await getSimilarAircraftForSale(current, 12)
@@ -54,7 +57,7 @@ export default async function SimilarAircraft({ current }: { current: AircraftFo
   // rather than the whole-family estimate — a listing 20 years newer than the median
   // won't falsely show "Good deal" just because it's cheaper than a newer family.
   const familyEntries = [...familyMap.entries()]
-  type BatchComp = { id: string; asking_price: number | null; year: number | null; ttaf: number | null }
+  type BatchComp = { id: string; asking_price: number | null; year: number | null; ttaf: number | null; smoh: number | null }
   const compArrays = await Promise.all(
     familyEntries.map(([, spec]) =>
       getFamilyCompsForBatch(spec.make, spec.modelPattern, spec.notModelPattern)
@@ -75,7 +78,7 @@ export default async function SimilarAircraft({ current }: { current: AircraftFo
     // Exclude the listing from its own comp set to avoid self-comparison bias.
     const comps = allComps.filter((c) => c.id !== p.id)
     const verdict = clubHangerDealVerdict(
-      { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf },
+      { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
       comps
     )
     if (verdict && verdict.verdict !== 'fair') {
