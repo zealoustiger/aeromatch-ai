@@ -116,7 +116,7 @@ export default function AirportFormInput({
         title="Select an airport from the list, or enter its 4-letter ICAO code."
         aria-invalid={isInvalid}
         className={cn(
-          'w-full rounded-lg border px-3 py-2.5 text-sm placeholder-slate-400 transition focus:outline-none focus:ring-2',
+          'w-full rounded-lg border px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:outline-none focus:ring-2',
           isInvalid
             ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100'
             : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100',
