@@ -1,3 +1,6 @@
+import type { createServerSupabaseClient } from './supabase-server'
+import type { Partnership } from './types'
+
 /**
  * Buy-in price comp helpers for partnership listings (read-only, pure — no DB, no React).
  *
@@ -76,4 +79,67 @@ export function partnershipBuyInComp(
     count: valid.length,
     deltaDollars,
   }
+}
+
+export interface PartnershipCompVerdict {
+  kind: 'below' | 'above'
+  pct: number
+  median: number
+  count: number
+}
+
+/**
+ * Batch-compute "below/above market" buy-in verdicts for a set of listings, one
+ * DB query per unique make (so a browse page's whole card grid costs O(makes),
+ * not O(listings)). Mirrors the per-card comp chip on `/partnerships`; any
+ * browse surface rendering `PartnershipCard` outside `PartnershipList` should
+ * call this so the proprietary comp signal doesn't silently go missing there.
+ * "Near" verdicts are omitted (the card shows nothing rather than a bland
+ * "around market" chip). Fails soft — a query error yields an empty map so
+ * callers render without chips rather than erroring the page.
+ */
+export async function getPartnershipCompVerdicts(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  listings: Partnership[]
+): Promise<Map<string, PartnershipCompVerdict>> {
+  const verdicts = new Map<string, PartnershipCompVerdict>()
+  try {
+    const uniqueMakes = [
+      ...new Set(listings.filter((l) => l.buy_in_price && l.make).map((l) => l.make as string)),
+    ]
+    if (uniqueMakes.length === 0) return verdicts
+
+    const priceResults = await Promise.all(
+      uniqueMakes.map((make) =>
+        supabase
+          .from('partnerships')
+          .select('id, buy_in_price')
+          .eq('status', 'active')
+          .eq('make', make)
+          .not('buy_in_price', 'is', null)
+          .limit(200)
+      )
+    )
+    const makeRows = new Map<string, { id: string; buy_in_price: number }[]>()
+    uniqueMakes.forEach((make, i) => {
+      makeRows.set(
+        make,
+        (priceResults[i].data ?? []).filter(
+          (r): r is { id: string; buy_in_price: number } => r.buy_in_price != null && r.buy_in_price > 0
+        )
+      )
+    })
+    for (const p of listings) {
+      if (!p.buy_in_price || !p.make) continue
+      const rows = makeRows.get(p.make) ?? []
+      const otherBuyIns = rows.filter((r) => r.id !== p.id).map((r) => r.buy_in_price)
+      const result = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
+      if (result && result.kind !== 'near') {
+        verdicts.set(p.id, { kind: result.kind, pct: result.pct, median: result.median, count: result.count })
+      }
+    }
+  } catch {
+    // Non-fatal: caller renders cards without comp chips.
+  }
+  return verdicts
 }
