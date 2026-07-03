@@ -40,6 +40,7 @@ export default function AirportFormInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const [suggestions, setSuggestions] = useState<Airport[]>([])
   const [activeIdx, setActiveIdx] = useState(-1)
+  const [isInvalid, setIsInvalid] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function query(raw: string) {
@@ -76,6 +77,7 @@ export default function AirportFormInput({
   function pick(icao: string) {
     setSuggestions([])
     setActiveIdx(-1)
+    setIsInvalid(false)
     const el = inputRef.current
     if (!el) return
     el.value = icao
@@ -110,14 +112,26 @@ export default function AirportFormInput({
         placeholder={placeholder}
         autoComplete="off"
         spellCheck={false}
+        pattern="[A-Za-z0-9]{4}"
+        title="Select an airport from the list, or enter its 4-letter ICAO code."
+        aria-invalid={isInvalid}
         className={cn(
-          'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
+          'w-full rounded-lg border px-3 py-2.5 text-sm placeholder-slate-400 transition focus:outline-none focus:ring-2',
+          isInvalid
+            ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100'
+            : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100',
           className
         )}
-        onChange={e => query(e.target.value)}
+        onChange={e => { setIsInvalid(false); query(e.target.value) }}
         onKeyDown={handleKeyDown}
         onBlur={() => { setSuggestions([]); setActiveIdx(-1) }}
+        onInvalid={e => { e.preventDefault(); setIsInvalid(true) }}
       />
+      {isInvalid && (
+        <p className="mt-1 text-xs text-rose-500">
+          Select an airport from the list, or enter its 4-letter code (e.g. KAUS).
+        </p>
+      )}
       {suggestions.length > 0 && (
         <ul
           role="listbox"
