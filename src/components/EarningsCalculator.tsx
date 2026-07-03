@@ -45,7 +45,7 @@ function NumberField({
           step={step}
           value={Number.isFinite(value) ? value : ''}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="w-full bg-transparent px-3 py-2 text-sm text-slate-900 focus:outline-none"
+          className="w-full bg-transparent px-3 py-2 text-base text-slate-900 focus:outline-none sm:text-sm"
         />
         {suffix && <span className="pr-3 text-sm text-slate-400">{suffix}</span>}
       </span>
