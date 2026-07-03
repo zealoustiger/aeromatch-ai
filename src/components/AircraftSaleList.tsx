@@ -747,17 +747,18 @@ export async function fetchUnderMarketDeals(limit = 48, photoOnly = false): Prom
     if (familyPriceMap.size === 0) return []
 
     const supabase = await createServerSupabaseClient()
-    let query = supabase
-      .from('aircraft_for_sale')
-      .select('*')
-      .eq('status', 'active')
-    if (photoOnly) query = query.eq('image_is_placeholder', false)
-      .gte('asking_price', DEAL_MIN_PRICE)
     const floor = floorScore()
-    if (floor > 0) query = query.gte('quality_score', floor)
-    // Cap the candidate scan; we only ever render `limit` rows after ranking.
-    const { data, error } = await query.limit(2000)
-    if (error || !data) return []
+    const data = await fetchAllRows((from, to) => {
+      let query = supabase
+        .from('aircraft_for_sale')
+        .select('*')
+        .eq('status', 'active')
+        .gte('asking_price', DEAL_MIN_PRICE)
+      if (photoOnly) query = query.eq('image_is_placeholder', false)
+      if (floor > 0) query = query.gte('quality_score', floor)
+      return query.range(from, to)
+    })
+    if (data.length === 0) return []
 
     // Score every candidate against its family median; keep genuine deals only.
     const scored: { deal: AircraftDeal; pct: number }[] = []
