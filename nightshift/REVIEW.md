@@ -1,3 +1,12 @@
+## 2026-07-03T13:15:02Z — Night Shift run: 4 cycles (PASS 4 / FAIL 0) — night ended
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+
+- PASS — seeker-message-draft-persist — resumed an interrupted prior cycle's work (branch/spec/diff already in progress) to give seeker-listing contact cards the same inline comp
+- PASS — seeker-budget-check-badge — added a batched budget below/above market comp badge to seeker browse cards (`/partnerships/seeking`), closing the Pillar 3 follow-up left op
+- PASS — earnings-calculator-ios-zoom-fix — fixed iOS Safari auto-zoom on the earnings-calculator widget's number inputs (`/partnerships/new` and `/tools/earnings-calculator`), c
+- PASS — partnership-message-draft-persist — partnership listing Message buttons (mobile bar + desktop sidebar) now save a typed draft across the sign-in redirect and auto-send i
+
+
 # Overnight review — 2026-06-29
 
 ## 📊 Traffic (PostHog) — as of 2026-06-29
