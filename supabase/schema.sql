@@ -597,3 +597,14 @@ alter table outreach_targets add column if not exists owner_phone text;
 alter table outreach_targets add column if not exists owner_source text;
 alter table outreach_targets add column if not exists owner_checked_at timestamptz;
 alter table outreach_targets add column if not exists owner_social_url text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: aircraft_add_contact_phone
+-- Adds contact_phone to aircraft_for_sale so the optional "Phone" field on
+-- /aircraft/new (already collected by partnerships/seeker listings) actually
+-- saves, prefills on edit, and shows on the listing detail page (that display
+-- logic + form input already shipped, but the column never existed, so the
+-- field silently never saved). Apply in the Supabase SQL editor. Until applied,
+-- createAircraftListing/updateAircraftListing detect the missing column and
+-- retry without contact_phone, so posting/editing still succeeds — the phone
+-- just won't save until this runs.
+alter table aircraft_for_sale add column if not exists contact_phone text;

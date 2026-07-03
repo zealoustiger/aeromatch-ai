@@ -95,6 +95,7 @@ export interface AircraftEditInitial {
   currentLocationLabel?: string
   title?: string
   description?: string
+  contact_phone?: string
   images?: string[]
 }
 
@@ -550,7 +551,7 @@ export default function PostAircraftForm({
               </div>
               <div>
                 <Label>Phone <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? ''} placeholder="(555) 000-0000" />
                 <p className="mt-1 text-xs text-slate-400">Shown to buyers on your listing if you'd like them to call or text.</p>
               </div>
             </div>
