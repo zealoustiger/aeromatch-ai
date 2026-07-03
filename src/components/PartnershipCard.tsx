@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Clock, Users, ExternalLink, LineChart } from 'lucide-react'
+import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -10,6 +10,35 @@ import { track } from '@/lib/analytics'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Freshness helpers — mirror AircraftSaleCard, but keyed off `created_at`:
+// user-posted partnerships have no `first_seen_at`, so days-on-market is measured
+// from when the listing was created (same field the detail page uses).
+function isNew(createdAt: string | null): boolean {
+  if (!createdAt) return false
+  const then = new Date(createdAt).getTime()
+  if (Number.isNaN(then)) return false
+  return Date.now() - then < 7 * DAY_MS
+}
+
+// Redfin-style days-on-market label. Returns null when we have no usable date.
+function listedAgo(createdAt: string | null): string | null {
+  if (!createdAt) return null
+  const then = new Date(createdAt).getTime()
+  if (Number.isNaN(then)) return null
+  const days = Math.floor((Date.now() - then) / DAY_MS)
+  if (days <= 0) return 'Listed today'
+  if (days === 1) return 'Listed 1 day ago'
+  if (days < 7) return `Listed ${days} days ago`
+  if (days < 14) return 'Listed 1 week ago'
+  if (days < 30) return `Listed ${Math.floor(days / 7)} weeks ago`
+  if (days < 60) return 'Listed 1 month ago'
+  if (days < 365) return `Listed ${Math.floor(days / 30)} months ago`
+  const years = Math.floor(days / 365)
+  return years === 1 ? 'Listed 1 year ago' : `Listed ${years} years ago`
+}
 
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -38,6 +67,8 @@ export default function PartnershipCard({
   const realPhoto = pickRealPhoto(p.images)
   const imageUrl = realPhoto ?? getPlaceholderPhoto(p.make)
   const isPlaceholder = p.image_is_placeholder !== false && !realPhoto
+  const fresh = isNew(p.created_at)
+  const listed = listedAgo(p.created_at)
 
   return (
     <article className="ch-card group overflow-hidden bg-white">
@@ -74,6 +105,12 @@ export default function PartnershipCard({
                 <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1', shareColor)}>
                   {formatShareType(p.share_type)}
                 </span>
+                {fresh && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                    <Sparkles className="h-3 w-3" />
+                    New
+                  </span>
+                )}
                 {p.registration && (
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-medium text-slate-600 ring-1 ring-slate-200">
                     {p.registration}
@@ -167,6 +204,12 @@ export default function PartnershipCard({
               <span className="flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
                 {p.ratings_required.join(', ')}
+              </span>
+            )}
+            {listed && (
+              <span className="flex items-center gap-1">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {listed}
               </span>
             )}
 
