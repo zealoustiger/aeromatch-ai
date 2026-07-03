@@ -106,6 +106,12 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   back except remembering the exact URL. A small dismissible site-wide banner now detects
   an in-progress draft via the existing `useFormDraft` localStorage keys and links straight
   back to it; self-suppresses on the draft's own post page. Pure client-side read, no schema.
+~~- **[agent][goal] Unified `/post` chooser page.**~~ ✅ SHIPPED via `post-chooser-page`
+  (2026-07-03) The nav's "Post a Listing"/"Post" CTA used to hardlink straight to
+  `/partnerships/new`, so anyone wanting to sell an aircraft or post a seeker listing
+  landed on the wrong form first and only found the other options via the tab-switcher
+  *inside* that form. New `/post` page presents all 3 flows up front (Sell an aircraft /
+  Post a partnership / Seeking a partnership); both nav CTAs now point there.
 ~~- **[agent][goal] Edit flow for published listings.**~~ ✅ SHIPPED (all 3 types: aircraft,
   partnerships, seeker) via `aircraft-listing-edit`, `partnership-listing-edit`, and
   `seeker-listing-edit` (all 2026-07-03). Posting used to be a one-way door — no
