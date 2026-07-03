@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane, ArrowRight } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, formatPriceK } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
-import { getFamilyAskingPrices } from '@/lib/aircraftForSale'
+import { getFamilyAskingPrices, getForSaleCrossSell } from '@/lib/aircraftForSale'
 import { computeImpliedValueCheck, type ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
 import { getSeekerCount } from '@/lib/seekersQuery'
@@ -228,6 +228,11 @@ export default async function PartnershipDetailPage({
       partnerDomContext = null
     }
   }
+
+  // Cross-sell to whole-aircraft listings of the same make/model — the reverse
+  // of the aircraft-for-sale detail page's `PartnershipCrossSellPanel`. Lets a
+  // co-ownership shopper see "N Cessna 172s for sale" if they'd rather buy outright.
+  const forSaleCrossSell = p.make ? await getForSaleCrossSell(p.make, p.model) : null
 
   // Implied aircraft value check — cross-silo sanity check comparing
   // (buy_in × total_shares) against the median asking price of same make/model
@@ -572,6 +577,18 @@ export default async function PartnershipDetailPage({
               </div>
             )}
 
+            {/* Whole-aircraft cross-sell — reverse of the aircraft-for-sale
+                detail page's PartnershipCrossSellPanel. Self-suppresses when
+                there are no active for-sale listings for this make/model. */}
+            {forSaleCrossSell && p.make && (
+              <ForSaleCrossSellPanel
+                make={p.make}
+                model={forSaleCrossSell.modelLevel ? (p.model ?? null) : null}
+                count={forSaleCrossSell.count}
+                minPrice={forSaleCrossSell.minPrice}
+              />
+            )}
+
             {/* Structure card */}
             <div className="ch-panel p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Structure</h2>
@@ -688,6 +705,52 @@ export default async function PartnershipDetailPage({
         isSeed={seed}
       />
     </>
+  )
+}
+
+// ─── For-Sale Cross-Sell Panel ───────────────────────────────────────────────
+// Reverse of the aircraft-for-sale detail page's PartnershipCrossSellPanel:
+// points a co-ownership shopper at whole aircraft for sale in the same make/model.
+
+function ForSaleCrossSellPanel({
+  make,
+  model,
+  count,
+  minPrice,
+}: {
+  make: string
+  model: string | null
+  count: number
+  minPrice: number | null
+}) {
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+  const makeEncoded = encodeURIComponent(make)
+  const label = model ? `${make} ${model}` : make
+  const ctaHref = model
+    ? `/aircraft?make=${makeEncoded}&model=${encodeURIComponent(model)}`
+    : `/aircraft?make=${makeEncoded}`
+  return (
+    <div className="ch-panel p-5">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Plane className="h-4 w-4" /> Prefer to buy outright?
+      </h2>
+      <p className="text-sm font-medium text-slate-800">
+        {count === 1 ? '1 whole aircraft' : `${count} whole aircraft`} for sale for{' '}
+        {label} on ClubHanger.
+      </p>
+      {minPrice != null && (
+        <p className="mt-1 text-sm text-slate-500">
+          From <span className="font-semibold text-slate-700">{fmt(minPrice)}</span> — no partner scheduling to coordinate.
+        </p>
+      )}
+      <Link
+        href={ctaHref}
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+      >
+        Browse {label} for sale <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
   )
 }
 

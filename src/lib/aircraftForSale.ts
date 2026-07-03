@@ -318,3 +318,64 @@ export async function getFamilyCompsForBatch(
     return []
   }
 }
+
+/**
+ * Cross-sell data for partnership detail pages: count + minimum asking price of
+ * active for-sale aircraft for the same make, optionally narrowed to the same
+ * model. Mirrors `getPartnershipCrossSell` in `src/lib/partnershipsQuery.ts` (the
+ * reverse direction) so a co-ownership shopper sees "N Cessna 172s for sale" the
+ * same way a for-sale shopper already sees "N Cessna 172 partnerships."
+ *
+ * When `model` is supplied, first tries make+model (ILIKE on both). If ≥1 match
+ * is found, returns those results with `modelLevel: true` so the caller can show
+ * "3 Cessna 172s for sale" instead of "6 Cessnas for sale." Falls back to
+ * make-only when no model-level matches exist. Returns null when make is blank,
+ * Supabase isn't configured, or no listings are found at either level (the
+ * for-sale marketplace has no mock-data fallback, matching `getAircraftForSaleById`).
+ */
+export async function getForSaleCrossSell(
+  make: string,
+  model?: string | null,
+): Promise<{ count: number; minPrice: number | null; modelLevel: boolean } | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return null
+
+  const m = make.trim()
+  if (!m) return null
+  const mo = model?.trim() || ''
+
+  try {
+    const supabase = await createServerSupabaseClient()
+
+    if (mo) {
+      const { data: modelData, error: modelError } = await supabase
+        .from('aircraft_for_sale')
+        .select('id, asking_price')
+        .eq('status', 'active')
+        .ilike('make', `%${m}%`)
+        .ilike('model', `%${mo}%`)
+        .limit(200)
+      if (!modelError && modelData && modelData.length) {
+        const prices = modelData
+          .map((r) => r.asking_price as number | null)
+          .filter((n): n is number => n != null && n > 0)
+        return { count: modelData.length, minPrice: prices.length ? Math.min(...prices) : null, modelLevel: true }
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('id, asking_price')
+      .eq('status', 'active')
+      .ilike('make', `%${m}%`)
+      .limit(200)
+    if (error || !data || !data.length) return null
+    const prices = data
+      .map((r) => r.asking_price as number | null)
+      .filter((n): n is number => n != null && n > 0)
+    return { count: data.length, minPrice: prices.length ? Math.min(...prices) : null, modelLevel: false }
+  } catch {
+    return null
+  }
+}
