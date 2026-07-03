@@ -7,6 +7,7 @@ import DeviceSavedListings from '@/components/DeviceSavedListings'
 import SavedListingNote from '@/components/SavedListingNote'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { getPartnershipCompVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
+import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 
 export default async function SavedPage() {
@@ -103,6 +104,11 @@ export default async function SavedPage() {
     aircraft = rows.filter((a) => a.status === 'active')
   }
 
+  // Same honest, comps-based Deal Check / "vs market" chip shown on every other
+  // aircraft browse surface (/aircraft, for-sale state/make/model pages).
+  const aircraftCompVerdicts: Map<string, AircraftCompVerdict> =
+    aircraft.length > 0 ? await getAircraftCompVerdicts(supabase, aircraft) : new Map()
+
   const total = partnerships.length + aircraft.length
 
   return (
@@ -168,9 +174,15 @@ export default async function SavedPage() {
               <div className="space-y-4">
                 {aircraft.map((a) => {
                   const meta = savedMeta.get(`aircraft:${a.id}`)
+                  const verdict = aircraftCompVerdicts.get(a.id)
                   return (
                     <div key={a.id}>
-                      <AircraftSaleCard p={a} saved />
+                      <AircraftSaleCard
+                        p={a}
+                        saved
+                        comp={verdict?.comp ?? null}
+                        dealVerdict={verdict?.dealVerdict ?? null}
+                      />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
                       )}

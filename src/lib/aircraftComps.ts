@@ -1,4 +1,6 @@
 import { resolveMakeModelFamily } from '@/lib/seo'
+import { clubHangerDealVerdict, type ClubHangerDealVerdict } from '@/lib/aircraftEstimate'
+import type { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
  * Price-vs-market comp helpers (read-only, pure — no DB, no React).
@@ -180,4 +182,83 @@ export function compVsMarket(
   // A delta just outside the dead-band can still round to 0; clamp to >= 1 so the
   // label always reads a real, non-zero percentage.
   return { kind: delta < 0 ? 'below' : 'above', pct: Math.max(1, pct), count, median: Math.round(median) }
+}
+
+/** Same real-aircraft price floor buyer surfaces already enforce (GOAL.md data-quality
+ *  floor) — a browse-surface-agnostic constant so this helper doesn't need a caller-
+ *  supplied threshold. */
+const AIRCRAFT_COMP_PRICE_FLOOR = 50_000
+
+/** Minimal shape this helper needs from a hydrated aircraft listing. */
+export interface AircraftCompSubject {
+  id: string
+  make: string | null
+  model: string | null
+  asking_price: number | null
+  year: number | null
+  ttaf: number | null
+}
+
+export interface AircraftCompVerdict {
+  comp: CompResult | null
+  dealVerdict: ClubHangerDealVerdict | null
+}
+
+/**
+ * Batch comp/Deal-Check lookup for any browse surface that renders
+ * `AircraftSaleCard` outside `AircraftSaleList` (e.g. `/saved`), mirroring
+ * `getPartnershipCompVerdicts` in `partnershipComps.ts`. One query scoped to the
+ * makes actually present in `listings` (not a full-table scan), bucketed by
+ * make+model family, then the SAME precedence `AircraftSaleList.tsx` uses per card:
+ * the narrowed (similar-year/hours) Deal Check verdict wins when available, else the
+ * plain family "vs market" pill, else nothing. Fails soft — a query error yields an
+ * empty map so callers render without chips rather than erroring the page.
+ */
+export async function getAircraftCompVerdicts(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  listings: AircraftCompSubject[]
+): Promise<Map<string, AircraftCompVerdict>> {
+  const verdicts = new Map<string, AircraftCompVerdict>()
+  try {
+    const priced = listings.filter(
+      (l) => l.make && l.asking_price != null && l.asking_price >= AIRCRAFT_COMP_PRICE_FLOOR
+    )
+    const uniqueMakes = [...new Set(priced.map((l) => l.make as string))]
+    if (uniqueMakes.length === 0) return verdicts
+
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('id, make, model, asking_price, year, ttaf')
+      .eq('status', 'active')
+      .in('make', uniqueMakes)
+      .gte('asking_price', AIRCRAFT_COMP_PRICE_FLOOR)
+      .limit(2000)
+    if (error || !data) return verdicts
+
+    type CompRow = { id: string; make: string | null; model: string | null; asking_price: number; year: number | null; ttaf: number | null }
+    const familyCompMap = new Map<string, CompRow[]>()
+    for (const row of data as CompRow[]) {
+      const key = familyKey(row)
+      if (!key) continue
+      const entries = familyCompMap.get(key) ?? []
+      entries.push(row)
+      familyCompMap.set(key, entries)
+    }
+    const familyPriceMap = buildFamilyPriceMap(data as CompRow[])
+
+    for (const l of priced) {
+      const key = familyKey(l)
+      if (!key) continue
+      const compsWithoutSelf = (familyCompMap.get(key) ?? []).filter((c) => c.id !== l.id)
+      const dealVerdict = clubHangerDealVerdict(
+        { askingPrice: l.asking_price, year: l.year, ttaf: l.ttaf },
+        compsWithoutSelf
+      )
+      const comp = dealVerdict ? null : compVsMarket(l, familyPriceMap)
+      if (dealVerdict || comp) verdicts.set(l.id, { comp, dealVerdict })
+    }
+  } catch {
+    // Non-fatal: caller renders cards without comp chips.
+  }
+  return verdicts
 }
