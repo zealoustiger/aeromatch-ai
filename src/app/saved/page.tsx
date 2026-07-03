@@ -6,6 +6,7 @@ import AircraftSaleCard from '@/components/AircraftSaleCard'
 import DeviceSavedListings from '@/components/DeviceSavedListings'
 import SavedListingNote from '@/components/SavedListingNote'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
+import { getPartnershipCompVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
 import type { Partnership, AircraftForSale } from '@/lib/types'
 
 export default async function SavedPage() {
@@ -86,6 +87,13 @@ export default async function SavedPage() {
       .filter((p): p is Partnership => !!p)
   }
 
+  // Same honest, comps-based buy-in verdict shown on every other partnership
+  // browse surface (near/[icao], make/[make], state/[state], /partnerships).
+  const compVerdicts: Map<string, PartnershipCompVerdict> =
+    partnerships.length > 0
+      ? await getPartnershipCompVerdicts(supabase, partnerships)
+      : new Map()
+
   // Hydrate aircraft via the same helper /compare uses (preserves input order,
   // drops missing ids). Then drop any that are no longer active/sold so the
   // orphan-drop behaviour matches the partnership path above.
@@ -140,7 +148,7 @@ export default async function SavedPage() {
                   const meta = savedMeta.get(`partnership:${p.id}`)
                   return (
                     <div key={p.id}>
-                      <PartnershipCard p={p} saved />
+                      <PartnershipCard p={p} saved compVerdict={compVerdicts.get(p.id)} />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
                       )}
