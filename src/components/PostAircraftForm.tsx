@@ -6,7 +6,7 @@ import { ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
-import { createAircraftListing, generateAircraftDraft, type AircraftDraft } from '@/app/actions'
+import { createAircraftListing, updateAircraftListing, generateAircraftDraft, type AircraftDraft } from '@/app/actions'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
@@ -58,12 +58,9 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
   )
 }
 
-const DRAFT_KEY = 'ch:draft:aircraft-new'
-// Uploaded photo URLs persist alongside the text draft so they survive the
-// deferred-auth redirect / a reload (see PartnershipPhotoUpload persistKey).
-const PHOTOS_KEY = `${DRAFT_KEY}:photos`
+const NEW_DRAFT_KEY = 'ch:draft:aircraft-new'
 
-function forceSaveDraft(form: HTMLFormElement) {
+function forceSaveDraft(form: HTMLFormElement, draftKey: string) {
   try {
     const data: Record<string, string> = {}
     for (const el of Array.from(form.elements)) {
@@ -76,23 +73,64 @@ function forceSaveDraft(form: HTMLFormElement) {
       }
     }
     if (Object.keys(data).length) {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+      window.localStorage.setItem(draftKey, JSON.stringify(data))
     }
   } catch {
     /* storage unavailable — best effort */
   }
 }
 
-export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: boolean }) {
+export interface AircraftEditInitial {
+  make?: string
+  model?: string
+  year?: number
+  registration?: string
+  ttaf?: number
+  smoh?: number
+  engine_type?: string
+  asking_price?: number
+  // We only store the airport's derived city/state, not the ICAO the poster
+  // originally typed, so the "Based at" field can't be prefilled directly — this
+  // is display-only context ("Currently: Austin, TX") shown alongside it.
+  currentLocationLabel?: string
+  title?: string
+  description?: string
+  images?: string[]
+}
+
+export default function PostAircraftForm({
+  isLoggedIn = true,
+  mode = 'create',
+  listingId,
+  initialValues,
+}: {
+  isLoggedIn?: boolean
+  mode?: 'create' | 'edit'
+  listingId?: string
+  initialValues?: AircraftEditInitial
+}) {
+  const isEdit = mode === 'edit' && !!listingId
+  // Edit drafts are scoped per listing so they never collide with (or restore into)
+  // the "post a new aircraft" draft, and vice versa.
+  const DRAFT_KEY = isEdit ? `ch:draft:aircraft-edit:${listingId}` : NEW_DRAFT_KEY
+  // Uploaded photo URLs persist alongside the text draft so they survive the
+  // deferred-auth redirect / a reload (see PartnershipPhotoUpload persistKey).
+  const PHOTOS_KEY = `${DRAFT_KEY}:photos`
+
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       try {
-        track('aircraft_listing_submitted', {
-          make: formData.get('make'),
-          state: formData.get('state'),
-          asking_price: formData.get('asking_price'),
-        })
-        await createAircraftListing(formData)
+        if (isEdit) {
+          track('aircraft_listing_edited', { listing_id: listingId })
+          await updateAircraftListing(listingId as string, formData)
+        } else {
+          track('aircraft_listing_submitted', {
+            make: formData.get('make'),
+            state: formData.get('state'),
+            asking_price: formData.get('asking_price'),
+          })
+          await createAircraftListing(formData)
+        }
         return { ok: true }
       } catch (e: unknown) {
         return { ok: false, error: e instanceof Error ? e.message : 'Something went wrong' }
@@ -116,7 +154,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   // Mirror the (uncontrolled) Make <select> so the Model field can suggest only that
   // make's curated models. Stays uncontrolled — the FAA/AI autofill sets make via a
   // dispatched 'change' event, which still fires this onChange (see handleMakeChange).
-  const [selectedMake, setSelectedMake] = useState('')
+  const [selectedMake, setSelectedMake] = useState(initialValues?.make ?? '')
   const makeKey = normMake(selectedMake)
   const modelSuggestions =
     makeKey && MODELS_BY_MAKE[makeKey]
@@ -137,7 +175,10 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   }, [])
 
   function handleStartOver() {
-    if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+    const confirmMessage = isEdit
+      ? 'Discard your unsaved edits and revert to the last published version?'
+      : "Clear this draft and start over? This erases what you've entered on this device."
+    if (window.confirm(confirmMessage)) {
       // Invalidate any in-flight FAA lookup / AI prefill so it can't re-fill the
       // form (or re-arm autosave) after we clear it below.
       fillTokenRef.current += 1
@@ -156,7 +197,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
-      if (formRef.current) forceSaveDraft(formRef.current)
+      if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
       router.push('/auth?next=/aircraft/new')
       return
     }
@@ -289,7 +330,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             onClick={handleStartOver}
             className="text-xs text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline"
           >
-            Start over
+            {isEdit ? 'Revert changes' : 'Start over'}
           </button>
         )}
         <span className="text-xs text-slate-400">
@@ -335,6 +376,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           <div className="flex gap-2">
             <Input
               name="registration"
+              defaultValue={initialValues?.registration ?? ''}
               placeholder="e.g. N12345 — auto-fills make, model &amp; year"
               className="font-mono uppercase"
               onBlur={(e) => {
@@ -370,6 +412,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <Label required>Make</Label>
             <Input
               name="make"
+              defaultValue={initialValues?.make ?? ''}
               placeholder="e.g. Cessna, Maule, Bellanca"
               required
               list="aircraft-make-suggestions"
@@ -384,6 +427,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <Label required>Model</Label>
             <Input
               name="model"
+              defaultValue={initialValues?.model ?? ''}
               placeholder="e.g. 182T Skylane"
               required
               list="aircraft-model-suggestions"
@@ -404,7 +448,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <Label>Asking Price <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="asking_price" type="number" placeholder="285000" className="pl-7" min={0} />
+              <Input name="asking_price" type="number" defaultValue={initialValues?.asking_price ?? ''} placeholder="285000" className="pl-7" min={0} />
             </div>
             <p className="mt-1 text-xs text-slate-400">Leave blank for &ldquo;contact for price.&rdquo;</p>
           </div>
@@ -414,7 +458,11 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
               name="home_airport"
               placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
             />
-            <p className="mt-1 text-xs text-slate-400">Type a city or airport code — city and state fill in automatically.</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {initialValues?.currentLocationLabel
+                ? `Currently: ${initialValues.currentLocationLabel} — type a city or airport code only if it's changed.`
+                : 'Type a city or airport code — city and state fill in automatically.'}
+            </p>
           </div>
         </div>
       </section>
@@ -430,6 +478,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
           endpoint="/api/upload-aircraft-photo"
           persistKey={PHOTOS_KEY}
           restoreGateKey={DRAFT_KEY}
+          initialPhotos={initialValues?.images}
         />
       </section>
 
@@ -439,6 +488,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         <p className="mb-3 text-xs text-slate-500">Tell buyers what makes this aircraft special — avionics, engine times, recent work, paint/interior, and why you're selling. A good description is the single biggest factor in getting a serious inquiry.</p>
         <textarea
           name="description"
+          defaultValue={initialValues?.description ?? ''}
           rows={5}
           placeholder="e.g. 2006 Cessna 182T with G1000 glass panel, 2,450 TTAF, 600 SMOH. Fresh annual April 2026. Good paint and interior. Garmin 650 with WAAS, ADS-B Out. Selling because upgrading. Serious buyers only."
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
@@ -446,7 +496,14 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
       </section>
 
       {/* More details — aircraft specs, title & contact */}
-      <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+      <details
+        ref={detailsRef}
+        open={isEdit && Boolean(
+          initialValues?.year || initialValues?.ttaf || initialValues?.smoh ||
+          initialValues?.engine_type || initialValues?.title
+        )}
+        className="group rounded-xl border border-slate-200 bg-white shadow-sm"
+      >
         <summary className="flex cursor-pointer select-none items-center justify-between p-4 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:px-6">
           <span className="text-sm font-semibold text-slate-700">More details <span className="font-normal text-slate-400">(optional)</span></span>
           <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
@@ -460,19 +517,19 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Year</Label>
-                <Input name="year" type="number" placeholder="e.g. 2006" min={1940} max={new Date().getFullYear()} />
+                <Input name="year" type="number" defaultValue={initialValues?.year ?? ''} placeholder="e.g. 2006" min={1940} max={new Date().getFullYear()} />
               </div>
               <div>
                 <Label>Total Time (TTAF, hrs)</Label>
-                <Input name="ttaf" type="number" placeholder="e.g. 2450" min={0} />
+                <Input name="ttaf" type="number" defaultValue={initialValues?.ttaf ?? ''} placeholder="e.g. 2450" min={0} />
               </div>
               <div>
                 <Label>SMOH (hrs since overhaul)</Label>
-                <Input name="smoh" type="number" placeholder="e.g. 600" min={0} />
+                <Input name="smoh" type="number" defaultValue={initialValues?.smoh ?? ''} placeholder="e.g. 600" min={0} />
               </div>
               <div>
                 <Label>Engine</Label>
-                <Input name="engine_type" placeholder="e.g. Lycoming IO-360, Continental IO-550" />
+                <Input name="engine_type" defaultValue={initialValues?.engine_type ?? ''} placeholder="e.g. Lycoming IO-360, Continental IO-550" />
                 <p className="mt-1 text-xs text-slate-400">Make + designation. Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
               </div>
             </div>
@@ -484,7 +541,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
             <div className="space-y-4">
               <div>
                 <Label>Title <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <Input name="title" placeholder="e.g. 2006 Cessna 182T Skylane — G1000, 2,450 TTAF" />
+                <Input name="title" defaultValue={initialValues?.title ?? ''} placeholder="e.g. 2006 Cessna 182T Skylane — G1000, 2,450 TTAF" />
                 <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from make, model, and year. Add a standout detail if you have one.</p>
               </div>
               <div>
@@ -509,7 +566,7 @@ export default function PostAircraftForm({ isLoggedIn = true }: { isLoggedIn?: b
         disabled={pending}
         className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
-        {pending ? 'Submitting…' : isLoggedIn ? 'Post Aircraft for Sale' : 'Sign in to Publish →'}
+        {pending ? 'Saving…' : !isLoggedIn ? 'Sign in to Publish →' : isEdit ? 'Save Changes' : 'Post Aircraft for Sale'}
       </button>
     </form>
   )

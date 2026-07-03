@@ -333,6 +333,80 @@ export async function createAircraftListing(formData: FormData) {
   redirect(`/aircraft/listing/${data.id}?posted=1`)
 }
 
+// Edit an existing user-posted aircraft listing. Mirrors createAircraftListing's
+// column set + derivation logic, but updates the row in place instead of
+// inserting, and is ownership-scoped the same way deactivateListing/relistListing
+// are (.eq('poster_id', user.id) on the update — RLS backs this up too).
+export async function updateAircraftListing(id: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const asking_price = formData.get('asking_price') ? parseInt(formData.get('asking_price') as string) : null
+  const photoUrls = (formData.getAll('photo_url') as string[]).filter(Boolean)
+
+  // The row only stores the airport's DERIVED city/state, never the raw ICAO —
+  // so an edit form can't be prefilled with the original "Based at" input, and an
+  // untouched (empty) field on submit doesn't mean "clear the location," just
+  // "the poster didn't re-type it." Only touch location/state when this submit
+  // actually supplied an airport; otherwise leave the stored value alone.
+  const homeAirportRaw = ((formData.get('home_airport') as string) || '').trim().toUpperCase()
+  let locationUpdate: { location: string | null; state: string | null } | null = null
+  if (homeAirportRaw) {
+    const { data: airport } = await supabase
+      .from('airports')
+      .select('city, state')
+      .eq('icao', homeAirportRaw)
+      .single()
+    if (airport?.city) {
+      locationUpdate = {
+        location: airport.state ? `${airport.city}, ${airport.state}` : airport.city,
+        state: airport.state ?? null,
+      }
+    }
+  }
+
+  const payload = {
+    make: (formData.get('make') as string) || null,
+    model: (formData.get('model') as string) || null,
+    year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
+    registration: (formData.get('registration') as string) || null,
+    ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
+    smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
+    engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+    title: (() => {
+      const t = ((formData.get('title') as string) || '').trim()
+      if (t) return t
+      const year = formData.get('year') ? parseInt(formData.get('year') as string) : null
+      const make = ((formData.get('make') as string) || '').trim()
+      const model = ((formData.get('model') as string) || '').trim()
+      return [year, make, model].filter(Boolean).join(' ') || 'Aircraft for Sale'
+    })(),
+    description: (formData.get('description') as string) || null,
+    asking_price,
+    price_text: asking_price ? `$${asking_price.toLocaleString('en-US')}` : null,
+    ...locationUpdate,
+    images: photoUrls,
+    image_is_placeholder: photoUrls.length === 0,
+  }
+
+  const { data, error } = await supabase
+    .from('aircraft_for_sale')
+    .update(payload)
+    .eq('id', id)
+    .eq('poster_id', user.id)
+    .select('id')
+    .single()
+
+  if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
+
+  revalidatePath('/aircraft')
+  revalidatePath('/listings')
+  revalidatePath(`/aircraft/listing/${id}`)
+  redirect(`/aircraft/listing/${id}?updated=1`)
+}
+
 export async function joinWaitlist(email: string, searchParams: string) {
   if (!email || !email.includes('@')) {
     return { error: 'Please enter a valid email address.' }
