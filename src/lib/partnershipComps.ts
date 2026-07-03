@@ -1,5 +1,5 @@
 import type { createServerSupabaseClient } from './supabase-server'
-import type { Partnership } from './types'
+import type { Partnership, PartnershipSeeker, ShareType } from './types'
 
 /**
  * Buy-in price comp helpers for partnership listings (read-only, pure — no DB, no React).
@@ -179,4 +179,69 @@ export async function getPartnershipCompVerdicts(
     // Non-fatal: caller renders cards without comp chips.
   }
   return verdicts
+}
+
+/** Maps a fractional share type to the share count `partnershipBuyInComp` needs to
+ *  normalize against. Non-fractional types (leaseback/dry_lease/other) have no
+ *  comparable share count, so they're intentionally excluded. */
+const FRACTIONAL_SHARE_COUNTS: Partial<Record<ShareType, number>> = {
+  '1/2': 2,
+  '1/3': 3,
+  '1/4': 4,
+}
+
+/**
+ * Check whether a partnership seeker's stated budget (`max_buy_in`) is realistic
+ * for the share size and make they're looking for, using the same share-size-
+ * normalized comp math as `getPartnershipCompVerdicts`.
+ *
+ * Deliberately conservative — returns null (→ panel self-suppresses) unless the
+ * seeker's intent is unambiguous:
+ *  - exactly ONE preferred make (multiple makes → which one would we check?),
+ *  - a `max_buy_in`,
+ *  - exactly ONE fractional `preferred_share_types` entry (`1/2`/`1/3`/`1/4` — a
+ *    seeker open to multiple share sizes or a non-fractional type like leaseback
+ *    has no single share count to normalize against).
+ * Below that, guessing would risk a confident-but-wrong verdict — exactly what
+ * GOAL.md's honesty gate forbids.
+ */
+export async function getSeekerBudgetCheck(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  seeker: PartnershipSeeker
+): Promise<{ make: string; shareType: ShareType; result: PartnerCompResult } | null> {
+  if (!seeker.max_buy_in || seeker.max_buy_in <= 0) return null
+  if (!seeker.preferred_makes || seeker.preferred_makes.length !== 1) return null
+  const make = seeker.preferred_makes[0]
+  if (!make) return null
+
+  const fractionalTypes = (seeker.preferred_share_types ?? []).filter(
+    (t): t is ShareType => t in FRACTIONAL_SHARE_COUNTS
+  )
+  if (fractionalTypes.length !== 1) return null
+  const shareType = fractionalTypes[0]
+  const shareCount = FRACTIONAL_SHARE_COUNTS[shareType]
+  if (!shareCount) return null
+
+  try {
+    const { data } = await supabase
+      .from('partnerships')
+      .select('id, buy_in_price, total_shares')
+      .eq('status', 'active')
+      .eq('make', make)
+      .not('buy_in_price', 'is', null)
+      .limit(200)
+
+    const otherComps = (data ?? [])
+      .filter(
+        (r): r is { id: string; buy_in_price: number; total_shares: number | null } =>
+          r.buy_in_price != null && r.buy_in_price > 0
+      )
+      .map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares }))
+
+    const result = partnershipBuyInComp(seeker.max_buy_in, shareCount, otherComps)
+    if (!result) return null
+    return { make, shareType, result }
+  } catch {
+    return null
+  }
 }

@@ -12,6 +12,8 @@ import SeekerContactBar from '@/components/SeekerContactBar'
 import PartnershipCard from '@/components/PartnershipCard'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
+import { getSeekerBudgetCheck } from '@/lib/partnershipComps'
+import SeekerBudgetCheck from '@/components/SeekerBudgetCheck'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -89,7 +91,12 @@ export default async function SeekerDetailPage({
   const visitorRegion = hdrs.get('x-vercel-ip-country-region')
     ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
     : null
-  const [matches, seekerCount] = await Promise.all([getMatchingPartnerships(s), getSeekerCount()])
+  const supabase = await createServerSupabaseClient()
+  const [matches, seekerCount, budgetCheck] = await Promise.all([
+    getMatchingPartnerships(s),
+    getSeekerCount(),
+    getSeekerBudgetCheck(supabase, s),
+  ])
 
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
@@ -226,6 +233,14 @@ export default async function SeekerDetailPage({
               )}
             </dl>
           </div>
+
+          {budgetCheck && (
+            <SeekerBudgetCheck
+              make={budgetCheck.make}
+              shareType={budgetCheck.shareType}
+              result={budgetCheck.result}
+            />
+          )}
 
           {/* Aircraft preferences — in the right rail so the key match facts sit
               beside the contact CTA; single-column grid to fit the narrow rail. */}
