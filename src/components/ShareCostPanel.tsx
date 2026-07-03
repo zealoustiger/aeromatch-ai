@@ -17,6 +17,10 @@ const TOGGLE_LABELS: Record<number, string> = {
   4: '1/4 share',
 }
 
+// Typical piston-GA club/FBO rental rate used for the rent-vs-buy comparison.
+// Labeled on-screen so buyers know the reference. Matches PartnerShareCostPanel.
+const REFERENCE_RENTAL_RATE = 150
+
 export default function ShareCostPanel({
   rows,
   withEngineReserve,
@@ -26,6 +30,14 @@ export default function ShareCostPanel({
 }) {
   const [selected, setSelected] = useState(1)
   const selectedRow = rows.find((r) => r.shares === selected) ?? rows[0]
+
+  // Rent-vs-buy comparison for the selected share, at the assumed hours/yr.
+  const rentingAnnual = REFERENCE_RENTAL_RATE * ASSUMED_HOURS_PER_YEAR
+  const annualSavings = selectedRow ? rentingAnnual - selectedRow.totalAnnual : 0
+  const breakEvenYears =
+    selectedRow && selectedRow.buyInPerShare > 0 && annualSavings > 0
+      ? (selectedRow.buyInPerShare / annualSavings).toFixed(1)
+      : null
 
   return (
     <div className="ch-panel p-6">
@@ -93,6 +105,27 @@ export default function ShareCostPanel({
             )}
           </p>
         </div>
+      )}
+
+      {/* Rent-vs-buy comparison for the selected share */}
+      {breakEvenYears !== null ? (
+        <div className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100 text-sm">
+          <p className="font-semibold text-emerald-800">
+            Save {money(annualSavings)}/yr vs. renting at {money(REFERENCE_RENTAL_RATE)}/hr
+          </p>
+          {selectedRow && (
+            <p className="mt-0.5 text-emerald-700">
+              The {money(selectedRow.buyInPerShare)} buy-in recouped in ≈ {breakEvenYears} yrs at this rate
+            </p>
+          )}
+        </div>
+      ) : (
+        annualSavings <= 0 && (
+          <p className="mb-5 text-xs text-slate-400">
+            At {ASSUMED_HOURS_PER_YEAR} hrs/yr, renting at {money(REFERENCE_RENTAL_RATE)}/hr would be{' '}
+            {money(Math.abs(annualSavings))} cheaper annually — fly more to see ownership savings.
+          </p>
+        )
       )}
 
       {/* All-scenarios comparison table */}
