@@ -6,7 +6,7 @@ import { ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { useFormDraft } from '@/components/useFormDraft'
-import { createAircraftListing, updateAircraftListing, generateAircraftDraft, type AircraftDraft } from '@/app/actions'
+import { createAircraftListing, updateAircraftListing, generateAircraftDraft, generateAircraftDraftFromUrl, type AircraftDraft } from '@/app/actions'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
@@ -224,9 +224,13 @@ export default function PostAircraftForm({
   function handleGenerate() {
     setAiError(null)
     const token = fillTokenRef.current
+    const raw = (aiPromptRef.current?.value ?? '').trim()
+    const isBareUrl = /^https?:\/\/\S+$/i.test(raw)
     startGenerating(async () => {
       try {
-        const result: AircraftDraft = await generateAircraftDraft(aiPromptRef.current?.value ?? '')
+        const result: AircraftDraft = isBareUrl
+          ? await generateAircraftDraftFromUrl(raw)
+          : await generateAircraftDraft(raw)
         // Bail if the user hit "Start over" while this was in flight — don't
         // re-populate the cleared form.
         if (token !== fillTokenRef.current) return
@@ -342,14 +346,14 @@ export default function PostAircraftForm({
       <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm">
         <p className="mb-1 text-sm font-semibold text-violet-800">Prefill from your notes ✨</p>
         <p className="mb-3 text-xs text-slate-500">
-          Paste your listing text or a few notes — the AI fills in make, model, year, hours, price, location, title, and description all at once. Edit anything before posting.
+          Paste your listing text, a few notes, or a link to your listing on another site — the AI fills in make, model, year, hours, price, location, title, and description all at once. Edit anything before posting.
         </p>
         <textarea
           ref={aiPromptRef}
           defaultValue=""
           onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
-          placeholder="e.g. 2006 Cessna 182T, G1000 glass panel, 2450 TTAF, 600 SMOH, good paint/interior, based at KAUS. Selling because upgrading to a twin. Fresh annual March 2026."
+          placeholder="e.g. 2006 Cessna 182T, G1000 glass panel, 2450 TTAF, 600 SMOH, good paint/interior, based at KAUS. Selling because upgrading to a twin. Fresh annual March 2026. Or just paste a link to your listing on another site."
           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
         />
         {aiError && (
