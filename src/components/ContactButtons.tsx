@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Phone, MessageCircle } from 'lucide-react'
+import { Mail, Phone, MessageCircle, Send } from 'lucide-react'
 import { track } from '@/lib/analytics'
 import { createClient } from '@/lib/supabase'
-import { getOrCreateThread } from '@/app/actions'
+import { getOrCreateThread, sendMessage } from '@/app/actions'
+import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
 import type { User } from '@supabase/supabase-js'
 
 export default function ContactButtons({
@@ -24,8 +25,13 @@ export default function ContactButtons({
   posterId?: string | null
 }) {
   const router = useRouter()
+  const draftKey = `partnership:${listingId}`
   const [user, setUser] = useState<User | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [text, setText] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -36,37 +42,89 @@ export default function ContactButtons({
     return () => subscription.unsubscribe()
   }, [])
 
-  function handleMessage() {
-    if (!posterId) return
+  // Restore a message typed before an auth redirect (or an abandoned draft from
+  // an earlier visit) so nothing the visitor already wrote is lost. The
+  // auto-send-on-return effect itself lives on the always-mounted ContactBar
+  // (single trigger, no duplicate thread creation) — this component only
+  // needs to re-show whatever the visitor had typed.
+  useEffect(() => {
+    const draft = getMessageDraft(draftKey)
+    if (draft) {
+      setText(draft)
+      setExpanded(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = text.trim()
+    if (!trimmed || !posterId) return
     const pid = posterId
+
     if (!user) {
-      // Preserve contact intent across auth: the ?contact=1 signal is auto-opened
-      // by the always-mounted ContactBar on this page (single trigger, no dup thread).
+      setMessageDraft(draftKey, trimmed)
       router.push(`/auth?next=${encodeURIComponent(`/partnerships/${listingId}?contact=1`)}`)
       return
     }
+
+    setErrorMsg(null)
     startTransition(async () => {
       const result = await getOrCreateThread(listingId, pid)
       if ('threadId' in result) {
+        await sendMessage(result.threadId, trimmed)
+        clearMessageDraft(draftKey)
         router.push(`/messages/${result.threadId}`)
+      } else {
+        setErrorMsg(result.error ?? 'Could not open conversation.')
       }
     })
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend(e as unknown as React.FormEvent)
+    }
   }
 
   const showMessage = !!posterId && user?.id !== posterId
 
   return (
     <div className="space-y-2">
-      {showMessage && (
+      {showMessage && (expanded ? (
+        <form onSubmit={handleSend} className="space-y-2">
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about this partnership… (Enter to send)"
+            rows={3}
+            className="w-full resize-none rounded-lg border border-slate-200 px-4 py-2.5 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+          <button
+            type="submit"
+            disabled={!text.trim() || isPending}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+          >
+            <Send className="h-4 w-4" />
+            {isPending ? 'Sending…' : user ? 'Send' : 'Sign in & send'}
+          </button>
+          {errorMsg && <p className="text-xs text-rose-600">{errorMsg}</p>}
+        </form>
+      ) : (
         <button
-          onClick={handleMessage}
-          disabled={isPending}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+          onClick={() => {
+            setExpanded(true)
+            setTimeout(() => textareaRef.current?.focus(), 0)
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
         >
           <MessageCircle className="h-4 w-4" />
-          {isPending ? 'Opening…' : 'Message'}
+          Message
         </button>
-      )}
+      ))}
       {(contactMethod === 'email' || contactMethod === 'both') && (
         <a
           href={`mailto:${contactEmail}?subject=Re: ${encodeURIComponent(title)}`}
