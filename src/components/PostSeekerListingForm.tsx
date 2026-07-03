@@ -3,15 +3,15 @@
 import { useActionState, useEffect, useTransition, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
-import { createSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/app/actions'
+import { createSeekerListing, updateSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 import AirportFormInput from '@/components/AirportFormInput'
 import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
 
-const DRAFT_KEY = 'ch:draft:seeker-new'
+const NEW_DRAFT_KEY = 'ch:draft:seeker-new'
 
-function forceSaveDraft(form: HTMLFormElement) {
+function forceSaveDraft(form: HTMLFormElement, draftKey: string) {
   try {
     const data: Record<string, string> = {}
     for (const el of Array.from(form.elements)) {
@@ -24,7 +24,7 @@ function forceSaveDraft(form: HTMLFormElement) {
       }
     }
     if (Object.keys(data).length) {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+      window.localStorage.setItem(draftKey, JSON.stringify(data))
     }
   } catch {
     /* storage unavailable — best effort */
@@ -149,20 +149,61 @@ function DraftIndicator({ status }: { status: DraftStatus }) {
   }
 }
 
+export interface SeekerEditInitial {
+  home_airport?: string
+  additional_airport_2?: string
+  max_buy_in?: number
+  title?: string
+  preferred_makes?: string
+  preferred_models?: string
+  aircraft_category?: string
+  min_year?: number
+  max_year?: number
+  max_monthly?: number
+  max_hourly?: number
+  willing_to_travel_nm?: number
+  total_hours?: number
+  ratings_held?: string
+  hours_per_month?: number
+  intended_use?: string[]
+  preferred_share_types?: string[]
+  description?: string
+  contact_name?: string
+  contact_email?: string
+  contact_method?: string
+  contact_phone?: string
+}
+
 export default function PostSeekerListingForm({
   isLoggedIn = true,
   userEmail,
   userName,
+  mode = 'create',
+  listingId,
+  initialValues,
 }: {
   isLoggedIn?: boolean
   userEmail?: string
   userName?: string
+  mode?: 'create' | 'edit'
+  listingId?: string
+  initialValues?: SeekerEditInitial
 }) {
+  const isEdit = mode === 'edit' && !!listingId
+  // Edit drafts are scoped per listing so they never collide with (or restore
+  // into) the "post a new seeking listing" draft, and vice versa. Mirrors
+  // PostPartnershipForm.
+  const DRAFT_KEY = isEdit ? `ch:draft:seeker-edit:${listingId}` : NEW_DRAFT_KEY
+
   const router = useRouter()
   const [state, action, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       try {
-        await createSeekerListing(formData)
+        if (isEdit) {
+          await updateSeekerListing(listingId as string, formData)
+        } else {
+          await createSeekerListing(formData)
+        }
         return { ok: true }
       } catch (e: unknown) {
         return { ok: false, error: e instanceof Error ? e.message : 'Something went wrong' }
@@ -177,14 +218,14 @@ export default function PostSeekerListingForm({
   // chips can show which makes are currently selected. Stays uncontrolled — typing,
   // the AI prefill, and chip toggles all set the input and dispatch 'input', which
   // fires the onChange that updates this mirror.
-  const [preferredMakes, setPreferredMakes] = useState('')
+  const [preferredMakes, setPreferredMakes] = useState(initialValues?.preferred_makes ?? '')
   // Same mirror pattern for the "Ratings & Endorsements" field.
-  const [ratingsHeld, setRatingsHeld] = useState('')
+  const [ratingsHeld, setRatingsHeld] = useState(initialValues?.ratings_held ?? '')
   // Same mirror pattern for the "Preferred Models" field.
-  const [preferredModels, setPreferredModels] = useState('')
+  const [preferredModels, setPreferredModels] = useState(initialValues?.preferred_models ?? '')
   // Track the selected contact method so we can hide the email field when platform
   // messaging is chosen (the email address is irrelevant / never shown in that case).
-  const [contactMethod, setContactMethod] = useState('platform')
+  const [contactMethod, setContactMethod] = useState(initialValues?.contact_method ?? 'platform')
 
   // Sync mirrors once after mount in case a restored draft set the fields before this ran
   // (mirrors PostAircraftForm's selectedMake sync).
@@ -235,15 +276,21 @@ export default function PostSeekerListingForm({
   const fillTokenRef = useRef(0)
 
   function handleStartOver() {
-    if (window.confirm("Clear this draft and start over? This erases what you've entered on this device.")) {
+    const confirmMessage = isEdit
+      ? 'Discard your unsaved edits and revert to the last published version?'
+      : "Clear this draft and start over? This erases what you've entered on this device."
+    if (window.confirm(confirmMessage)) {
       // Invalidate any in-flight AI prefill so it can't re-fill the form (or re-arm
       // autosave) after we clear it below.
       fillTokenRef.current += 1
       setAiError(null)
       reset()
-      setPreferredMakes('')
-      setRatingsHeld('')
-      setPreferredModels('')
+      // form.reset() (inside reset()) restores fields to their HTML defaults —
+      // blank in create mode, the listing's saved values in edit mode — so mirror
+      // state follows the same target instead of always clearing to blank.
+      setPreferredMakes(initialValues?.preferred_makes ?? '')
+      setRatingsHeld(initialValues?.ratings_held ?? '')
+      setPreferredModels(initialValues?.preferred_models ?? '')
     }
   }
   const detailsRef = useRef<HTMLDetailsElement>(null)
@@ -312,8 +359,8 @@ export default function PostSeekerListingForm({
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
-      if (formRef.current) forceSaveDraft(formRef.current)
-      router.push('/auth?next=/partnerships/seeking/new')
+      if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
+      router.push(`/auth?next=${isEdit ? `/partnerships/seeking/${listingId}/edit` : '/partnerships/seeking/new'}`)
       return
     }
     handleSubmit()
@@ -333,7 +380,7 @@ export default function PostSeekerListingForm({
             onClick={handleStartOver}
             className="text-xs text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline"
           >
-            Start over
+            {isEdit ? 'Revert changes' : 'Start over'}
           </button>
         )}
         <DraftIndicator status={status} />
@@ -374,6 +421,7 @@ export default function PostSeekerListingForm({
             <AirportFormInput
               name="home_airport"
               required
+              defaultValue={initialValues?.home_airport ?? ''}
               placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
             />
             <p className="mt-1 text-xs text-slate-400">Type a city or airport code — name, city, and state fill in automatically.</p>
@@ -382,6 +430,7 @@ export default function PostSeekerListingForm({
             <Label>Also flying from <span className="font-normal text-slate-400">(optional)</span></Label>
             <AirportFormInput
               name="additional_airport_2"
+              defaultValue={initialValues?.additional_airport_2 ?? ''}
               placeholder="Second airport, if you fly from multiple (e.g. KNUQ)"
             />
             <p className="mt-1 text-xs text-slate-400">Based near two airports? Add the second so owners at either can find you.</p>
@@ -390,7 +439,7 @@ export default function PostSeekerListingForm({
             <Label>Max Buy-In <span className="font-normal text-slate-400">(optional)</span></Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <Input name="max_buy_in" type="number" placeholder="e.g. 25000" className="pl-7" min={0} />
+              <Input name="max_buy_in" type="number" defaultValue={initialValues?.max_buy_in ?? ''} placeholder="e.g. 25000" className="pl-7" min={0} />
             </div>
             <p className="mt-1 text-xs text-slate-400">Your maximum buy-in — helps owners find compatible partners.</p>
           </div>
@@ -398,6 +447,7 @@ export default function PostSeekerListingForm({
             <Label>Title <span className="font-normal text-slate-400">(optional)</span></Label>
             <Input
               name="title"
+              defaultValue={initialValues?.title ?? ''}
               placeholder="e.g. IFR pilot seeking 1/3 share near Austin (KAUS)"
             />
             <p className="mt-1 text-xs text-slate-400">Leave blank to auto-fill from your location and preferences.</p>
@@ -405,8 +455,17 @@ export default function PostSeekerListingForm({
         </div>
       </section>
 
-      {/* More details — everything optional, collapsed by default */}
-      <details ref={detailsRef} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* More details — everything optional; open by default in edit mode when it already holds data */}
+      <details
+        ref={detailsRef}
+        open={isEdit && Boolean(
+          initialValues?.preferred_makes || initialValues?.preferred_models || initialValues?.aircraft_category ||
+          initialValues?.min_year || initialValues?.max_year || initialValues?.max_monthly || initialValues?.max_hourly ||
+          initialValues?.willing_to_travel_nm || initialValues?.total_hours || initialValues?.ratings_held ||
+          initialValues?.hours_per_month || initialValues?.intended_use?.length || initialValues?.preferred_share_types?.length ||
+          initialValues?.description || initialValues?.contact_phone
+        )}
+        className="group rounded-xl border border-slate-200 bg-white shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 sm:px-6">
           <span className="text-sm font-semibold text-slate-700">More details <span className="font-normal text-slate-400">(optional)</span></span>
           <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
@@ -443,6 +502,7 @@ export default function PostSeekerListingForm({
                 </div>
                 <Input
                   name="preferred_makes"
+                  defaultValue={initialValues?.preferred_makes ?? ''}
                   placeholder="e.g. Cessna, Piper, Cirrus"
                   onChange={(e) => setPreferredMakes(e.target.value)}
                 />
@@ -473,6 +533,7 @@ export default function PostSeekerListingForm({
                 </div>
                 <Input
                   name="preferred_models"
+                  defaultValue={initialValues?.preferred_models ?? ''}
                   placeholder="e.g. 172, 182, PA-28, SR22"
                   onChange={(e) => setPreferredModels(e.target.value)}
                 />
@@ -480,7 +541,7 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Aircraft Category</Label>
-                <Select name="aircraft_category">
+                <Select name="aircraft_category" defaultValue={initialValues?.aircraft_category ?? 'any'}>
                   {AIRCRAFT_CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
@@ -489,11 +550,11 @@ export default function PostSeekerListingForm({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Min Year</Label>
-                  <Input name="min_year" type="number" placeholder="e.g. 1995" min={1940} max={new Date().getFullYear()} />
+                  <Input name="min_year" type="number" defaultValue={initialValues?.min_year ?? ''} placeholder="e.g. 1995" min={1940} max={new Date().getFullYear()} />
                 </div>
                 <div>
                   <Label>Max Year</Label>
-                  <Input name="max_year" type="number" placeholder="Any" min={1940} max={new Date().getFullYear()} />
+                  <Input name="max_year" type="number" defaultValue={initialValues?.max_year ?? ''} placeholder="Any" min={1940} max={new Date().getFullYear()} />
                 </div>
               </div>
             </div>
@@ -507,7 +568,7 @@ export default function PostSeekerListingForm({
                 <Label>Max Monthly Cost</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                  <Input name="max_monthly" type="number" placeholder="500" className="pl-7" min={0} />
+                  <Input name="max_monthly" type="number" defaultValue={initialValues?.max_monthly ?? ''} placeholder="500" className="pl-7" min={0} />
                 </div>
                 <p className="mt-1 text-xs text-slate-400">Hangar, insurance, etc.</p>
               </div>
@@ -515,7 +576,7 @@ export default function PostSeekerListingForm({
                 <Label>Max Wet Rate</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                  <Input name="max_hourly" type="number" placeholder="120" className="pl-7" min={0} />
+                  <Input name="max_hourly" type="number" defaultValue={initialValues?.max_hourly ?? ''} placeholder="120" className="pl-7" min={0} />
                 </div>
                 <p className="mt-1 text-xs text-slate-400">Per hour, fuel included</p>
               </div>
@@ -527,7 +588,7 @@ export default function PostSeekerListingForm({
             <p className="mb-3 text-sm font-medium text-slate-700">Location</p>
             <div>
               <Label>Max commute distance</Label>
-              <Select name="willing_to_travel_nm">
+              <Select name="willing_to_travel_nm" defaultValue={initialValues?.willing_to_travel_nm != null ? String(initialValues.willing_to_travel_nm) : ''}>
                 <option value="">Home airport only</option>
                 <option value="25">~30 min drive</option>
                 <option value="40">~45 min drive</option>
@@ -546,7 +607,7 @@ export default function PostSeekerListingForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Total Flight Hours</Label>
-                <Input name="total_hours" type="number" placeholder="e.g. 300" min={0} />
+                <Input name="total_hours" type="number" defaultValue={initialValues?.total_hours ?? ''} placeholder="e.g. 300" min={0} />
               </div>
               <div>
                 <Label>Ratings &amp; Endorsements You Hold</Label>
@@ -573,6 +634,7 @@ export default function PostSeekerListingForm({
                 </div>
                 <Input
                   name="ratings_held"
+                  defaultValue={initialValues?.ratings_held ?? ''}
                   placeholder="e.g. PPL, IFR, Complex"
                   onChange={(e) => setRatingsHeld(e.target.value)}
                 />
@@ -580,7 +642,7 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Estimated Hours per Month</Label>
-                <Input name="hours_per_month" type="number" placeholder="e.g. 15" min={1} max={200} />
+                <Input name="hours_per_month" type="number" defaultValue={initialValues?.hours_per_month ?? ''} placeholder="e.g. 15" min={1} max={200} />
               </div>
             </div>
             <div className="mt-4">
@@ -588,7 +650,7 @@ export default function PostSeekerListingForm({
               <div className="mt-2 flex flex-wrap gap-2" id="intended-use-group">
                 {INTENDED_USE_OPTIONS.map(({ value, label }) => (
                   <label key={value} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                    <input type="checkbox" name="intended_use_check" value={value} className="sr-only" />
+                    <input type="checkbox" name="intended_use_check" value={value} defaultChecked={initialValues?.intended_use?.includes(value) ?? false} className="sr-only" />
                     {label}
                   </label>
                 ))}
@@ -605,7 +667,7 @@ export default function PostSeekerListingForm({
               <div className="mt-2 flex flex-wrap gap-2">
                 {SHARE_TYPES.map((t) => (
                   <label key={t} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                    <input type="checkbox" name="share_type_check" value={t} className="sr-only" />
+                    <input type="checkbox" name="share_type_check" value={t} defaultChecked={initialValues?.preferred_share_types?.includes(t) ?? false} className="sr-only" />
                     {t}
                   </label>
                 ))}
@@ -644,6 +706,7 @@ export default function PostSeekerListingForm({
             </div>
             <textarea
               name="description"
+              defaultValue={initialValues?.description ?? ''}
               rows={5}
               placeholder="Tell owners about yourself — your experience, how you fly, what you're looking for in a partnership, and anything that makes you a great partner..."
               className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
@@ -656,7 +719,7 @@ export default function PostSeekerListingForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Your Name</Label>
-                <Input name="contact_name" placeholder="e.g. Jay C." defaultValue={userName ?? ''} />
+                <Input name="contact_name" placeholder="e.g. Jay C." defaultValue={initialValues?.contact_name ?? userName ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
                   {isLoggedIn && !userName
                     ? "We'll save your name for future listings."
@@ -665,7 +728,7 @@ export default function PostSeekerListingForm({
               </div>
               <div className={contactMethod === 'platform' ? 'hidden' : undefined}>
                 <Label>Email <span className="font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={userEmail ?? ''} />
+                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={initialValues?.contact_email ?? userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
                   {userEmail
                     ? 'Pre-filled from your account. Only shared when you select email contact above.'
@@ -676,6 +739,7 @@ export default function PostSeekerListingForm({
                 <Label>Preferred Contact Method</Label>
                 <Select
                   name="contact_method"
+                  defaultValue={initialValues?.contact_method ?? 'platform'}
                   onChange={(e) => setContactMethod(e.target.value)}
                 >
                   <option value="platform">Message through ClubHanger (default)</option>
@@ -686,7 +750,7 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Phone <span className="font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? ''} placeholder="(555) 000-0000" />
               </div>
             </div>
           </div>
@@ -705,7 +769,7 @@ export default function PostSeekerListingForm({
         disabled={pending}
         className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
-        {pending ? 'Submitting…' : isLoggedIn ? 'Post Seeking Listing' : 'Sign in to Publish →'}
+        {pending ? 'Saving…' : !isLoggedIn ? 'Sign in to Publish →' : isEdit ? 'Save Changes' : 'Post Seeking Listing'}
       </button>
 
       {/* Sync checkbox groups to hidden inputs before submit */}
