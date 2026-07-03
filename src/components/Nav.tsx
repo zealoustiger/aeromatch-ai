@@ -132,7 +132,7 @@ export default function Nav() {
           {/* Desktop right actions */}
           <div className="hidden items-center gap-2 sm:flex">
             <Link
-              href="/partnerships/new"
+              href="/post"
               className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
               Post a Listing
@@ -154,7 +154,7 @@ export default function Nav() {
           {/* Mobile right: Post CTA + hamburger */}
           <div className="flex items-center gap-2 sm:hidden">
             <Link
-              href="/partnerships/new"
+              href="/post"
               className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
               Post
