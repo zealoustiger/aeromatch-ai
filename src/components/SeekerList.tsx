@@ -3,6 +3,8 @@ import { ArrowRight, Plane } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import { getSeekers, anySeekerFilter, type SeekerFilters } from '@/lib/seekersQuery'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getSeekerBudgetCheckVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
 import SeekerCard from './SeekerCard'
 import PartnershipCard from './PartnershipCard'
 
@@ -30,10 +32,21 @@ export default async function SeekerList({
     )
   }
 
+  let verdicts = new Map<string, PartnershipCompVerdict>()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (hasSupabase) {
+    // Budget-check chips: batch-fetch buy-in comps per unique preferred make (typically
+    // 1-4 queries even for a full page of cards) so a seeker's stated budget can be
+    // compared to market the same way partnership cards show "below/above market".
+    const supabase = await createServerSupabaseClient()
+    verdicts = await getSeekerBudgetCheckVerdicts(supabase, seekers)
+  }
+
   return (
     <div className="space-y-4">
       {seekers.map((seeker) => (
-        <SeekerCard key={seeker.id} seeker={seeker} />
+        <SeekerCard key={seeker.id} seeker={seeker} budgetVerdict={verdicts.get(seeker.id)} />
       ))}
     </div>
   )

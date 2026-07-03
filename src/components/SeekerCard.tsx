@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { MapPin, Clock, Search } from 'lucide-react'
+import { MapPin, Clock, Search, LineChart } from 'lucide-react'
 import { PartnershipSeeker } from '@/lib/types'
-import { anonymizeName, formatPrice, travelLabel } from '@/lib/utils'
+import { anonymizeName, formatPrice, formatPriceK, travelLabel } from '@/lib/utils'
+import type { PartnershipCompVerdict } from '@/lib/partnershipComps'
 import AviatorAvatar from '@/components/AviatorAvatar'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -12,7 +13,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   any: 'Any Type',
 }
 
-export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
+export default function SeekerCard({
+  seeker,
+  budgetVerdict,
+}: {
+  seeker: PartnershipSeeker
+  /** When set, shows a "~X% below/above market" chip comparing the seeker's stated
+   *  max buy-in to same-make partnership comps (same honesty gates as the detail
+   *  page's `SeekerBudgetCheck`; "near" is dropped upstream so it never renders here). */
+  budgetVerdict?: PartnershipCompVerdict
+}) {
   const budgetParts: string[] = []
   if (seeker.max_buy_in) budgetParts.push(`${formatPrice(seeker.max_buy_in)} buy-in`)
   if (seeker.max_monthly) budgetParts.push(`${formatPrice(seeker.max_monthly)}/mo`)
@@ -52,6 +62,24 @@ export default function SeekerCard({ seeker }: { seeker: PartnershipSeeker }) {
                 {r}
               </span>
             ))}
+            {budgetVerdict?.kind === 'below' && (
+              <span
+                className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
+                title={`vs. expected buy-in for this share size (${formatPrice(budgetVerdict.median)})`}
+              >
+                <LineChart className="h-3 w-3" />
+                Budget ~{budgetVerdict.pct}% below market · {formatPriceK(budgetVerdict.median)} · {budgetVerdict.count} comps
+              </span>
+            )}
+            {budgetVerdict?.kind === 'above' && (
+              <span
+                className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+                title={`vs. expected buy-in for this share size (${formatPrice(budgetVerdict.median)})`}
+              >
+                <LineChart className="h-3 w-3" />
+                Budget ~{budgetVerdict.pct}% above market · {formatPriceK(budgetVerdict.median)} · {budgetVerdict.count} comps
+              </span>
+            )}
           </div>
 
           <h3 className="truncate text-base font-semibold text-slate-900">{seeker.title}</h3>

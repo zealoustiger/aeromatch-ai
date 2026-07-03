@@ -245,3 +245,80 @@ export async function getSeekerBudgetCheck(
     return null
   }
 }
+
+/** A seeker's unambiguous single preferred make + fractional share size, or null
+ *  when the same honesty gates `getSeekerBudgetCheck` applies aren't met. */
+function seekerIntent(seeker: PartnershipSeeker): { make: string; shareCount: number } | null {
+  if (!seeker.max_buy_in || seeker.max_buy_in <= 0) return null
+  if (!seeker.preferred_makes || seeker.preferred_makes.length !== 1) return null
+  const make = seeker.preferred_makes[0]
+  if (!make) return null
+  const fractionalTypes = (seeker.preferred_share_types ?? []).filter(
+    (t): t is ShareType => t in FRACTIONAL_SHARE_COUNTS
+  )
+  if (fractionalTypes.length !== 1) return null
+  const shareCount = FRACTIONAL_SHARE_COUNTS[fractionalTypes[0]]
+  if (!shareCount) return null
+  return { make, shareCount }
+}
+
+/**
+ * Batch sibling of `getSeekerBudgetCheck` for browse surfaces (`SeekerList`) — one
+ * DB query per unique preferred make across all seekers on the page, instead of one
+ * per seeker, mirroring `getPartnershipCompVerdicts`. "Near" verdicts are omitted,
+ * matching the partnership card convention (the card shows nothing rather than a
+ * bland "around market" chip). Fails soft — a query error yields an empty map.
+ */
+export async function getSeekerBudgetCheckVerdicts(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  seekers: PartnershipSeeker[]
+): Promise<Map<string, PartnershipCompVerdict>> {
+  const verdicts = new Map<string, PartnershipCompVerdict>()
+  try {
+    const intents = new Map<string, { make: string; shareCount: number }>()
+    for (const s of seekers) {
+      const intent = seekerIntent(s)
+      if (intent) intents.set(s.id, intent)
+    }
+    if (intents.size === 0) return verdicts
+
+    const uniqueMakes = [...new Set([...intents.values()].map((i) => i.make))]
+    const priceResults = await Promise.all(
+      uniqueMakes.map((make) =>
+        supabase
+          .from('partnerships')
+          .select('id, buy_in_price, total_shares')
+          .eq('status', 'active')
+          .eq('make', make)
+          .not('buy_in_price', 'is', null)
+          .limit(200)
+      )
+    )
+    const makeRows = new Map<string, { buy_in_price: number; total_shares: number | null }[]>()
+    uniqueMakes.forEach((make, i) => {
+      makeRows.set(
+        make,
+        (priceResults[i].data ?? []).filter(
+          (r): r is { id: string; buy_in_price: number; total_shares: number | null } =>
+            r.buy_in_price != null && r.buy_in_price > 0
+        )
+      )
+    })
+
+    for (const s of seekers) {
+      const intent = intents.get(s.id)
+      if (!intent) continue
+      const otherComps = (makeRows.get(intent.make) ?? []).map((r) => ({
+        buyIn: r.buy_in_price,
+        totalShares: r.total_shares,
+      }))
+      const result = partnershipBuyInComp(s.max_buy_in as number, intent.shareCount, otherComps)
+      if (result && result.kind !== 'near') {
+        verdicts.set(s.id, { kind: result.kind, pct: result.pct, median: result.median, count: result.count })
+      }
+    }
+  } catch {
+    // Non-fatal: caller renders cards without budget-check chips.
+  }
+  return verdicts
+}
