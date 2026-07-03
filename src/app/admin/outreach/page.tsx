@@ -1,4 +1,4 @@
-import { MapPin, Plane, Mail } from 'lucide-react'
+import { MapPin, Plane, Mail, ExternalLink } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
 import OutreachStatusSelect from '@/components/OutreachStatusSelect'
 
@@ -26,6 +26,23 @@ type Target = {
   confirmed_base: string | null
   adsb_summary: string | null
   base_checked_at: string | null
+  owner_name: string | null
+  owner_social_url: string | null
+}
+
+// Google Maps deep link for the registration/mailing address.
+function mapsUrl(t: Target): string {
+  const q = [t.street, t.city, 'CA', t.zip].filter(Boolean).join(', ')
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
+}
+
+// Where the owner-name link points: a stored social profile if we found one,
+// else a LinkedIn people-search seeded with the name + city as a starting lead.
+function ownerLink(t: Target): string | null {
+  if (t.owner_social_url) return t.owner_social_url
+  if (!t.owner_name) return null
+  const q = [t.owner_name, t.city, 'aviation'].filter(Boolean).join(' ')
+  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(q)}`
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -132,17 +149,39 @@ export default async function OutreachTab() {
                     </div>
                   </td>
                   <td className="py-2.5 pr-3">
-                    <div className="text-slate-800">{t.owner}</div>
-                    {t.registrant_type && (
-                      <div className="text-[11px] text-slate-400">{t.registrant_type}</div>
+                    {t.owner_name ? (
+                      <a
+                        href={ownerLink(t) ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-sky-700 hover:underline"
+                        title={t.owner_social_url ? 'Open profile' : 'Search LinkedIn for this person'}
+                      >
+                        {t.owner_name}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+                      </a>
+                    ) : (
+                      <span className="text-xs italic text-slate-400">owner not yet resolved</span>
                     )}
+                    <div className="text-[11px] text-slate-400">
+                      {t.owner}
+                      {t.registrant_type ? ` · ${t.registrant_type}` : ''}
+                    </div>
                   </td>
                   <td className="py-2.5 pr-3 text-slate-600">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
-                      {t.city}
-                      {t.zip ? `, ${t.zip}` : ''}
-                    </div>
+                    <a
+                      href={mapsUrl(t)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-center gap-1 hover:text-sky-700"
+                      title="Open in Google Maps"
+                    >
+                      <MapPin className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-sky-600" />
+                      <span className="group-hover:underline">
+                        {t.city}
+                        {t.zip ? `, ${t.zip}` : ''}
+                      </span>
+                    </a>
                     {t.street && <div className="text-[11px] text-slate-400">{t.street}</div>}
                   </td>
                   <td className="py-2.5 pr-3">
