@@ -1147,7 +1147,65 @@ export async function generatePartnershipDraft(prompt: string): Promise<Partners
   const text = prompt.trim()
   if (!text) throw new Error('Prompt is required.')
   if (text.length > 2000) throw new Error('Prompt is too long.')
+  return draftPartnershipFromText(text)
+}
 
+// Paste-a-URL variant of the above: fetches the poster's existing listing page
+// server-side, reduces it to readable text, then runs it through the exact same
+// extraction prompt as the pasted-text path. Shares the same per-user hourly
+// quota via checkAiDraftAccess so this can't be used to run more AI calls than
+// pasting text already allows. Mirrors generateAircraftDraftFromUrl.
+export async function generatePartnershipDraftFromUrl(rawUrl: string): Promise<PartnershipDraft> {
+  await checkAiDraftAccess()
+  const url = await assertSafePublicUrl(rawUrl.trim())
+
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 8000)
+  let html: string
+  try {
+    const res = await fetch(url, {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; ClubHangerBot/1.0)' },
+      signal: ctrl.signal,
+      redirect: 'follow',
+    })
+    if (!res.ok) throw new Error('unreachable')
+    const contentType = res.headers.get('content-type') ?? ''
+    if (contentType && !contentType.includes('text/html')) throw new Error('not html')
+    const reader = res.body?.getReader()
+    if (!reader) {
+      html = await res.text()
+    } else {
+      const chunks: Uint8Array[] = []
+      let total = 0
+      const MAX_BYTES = 2_000_000
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (value) {
+          total += value.byteLength
+          if (total > MAX_BYTES) {
+            await reader.cancel()
+            break
+          }
+          chunks.push(value)
+        }
+      }
+      html = Buffer.concat(chunks.map((c) => Buffer.from(c))).toString('utf-8')
+    }
+  } catch {
+    throw new Error("Couldn't read that page — try pasting the listing text instead.")
+  } finally {
+    clearTimeout(timer)
+  }
+
+  const text = htmlToReadableText(html, 6000)
+  if (text.length < 40) {
+    throw new Error("Couldn't find enough listing text on that page — try pasting the listing text instead.")
+  }
+  return draftPartnershipFromText(text)
+}
+
+async function draftPartnershipFromText(text: string): Promise<PartnershipDraft> {
   const client = new Anthropic()
   const res = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',

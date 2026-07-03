@@ -78,13 +78,15 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
 (server actions in `src/app/actions.ts`; AI draft already exists for partnership/seeker).
 ~~- **[P1][goal] N-number autofill on the aircraft post form.**~~ ✅ SHIPPED (earlier in this drain) The `/api/faa-lookup` route is wired into `/aircraft/new`: type the registration → auto-fills make / model / year (editable); "Look up →" button + blur trigger; AI prefill also chains a registry backfill when make/model/year are missing.
 ~~- **[P1][goal] "Paste & prefill" the whole form.**~~ ✅ SHIPPED via `aircraft-url-prefill`
-  (2026-07-03). The pasted-text half (make/model/year/price/hours/airport/share terms →
-  nearly every field) was already live on all 3 forms; this cycle added the "OR a source
-  URL" half on the aircraft-for-sale form — paste a link to an existing listing
-  (Barnstormers/Controller/TradeAPlane) and the server fetches + reads it through the same
+  (2026-07-03) + `partnership-url-prefill` (2026-07-03). The pasted-text half
+  (make/model/year/price/hours/airport/share terms → nearly every field) was already live
+  on all 3 forms; `aircraft-url-prefill` added the "OR a source URL" half on the
+  aircraft-for-sale form, and `partnership-url-prefill` mirrored it onto the partnership
+  form — paste a link to an existing listing (Barnstormers/Controller/TradeAPlane, or
+  another partnership listing) and the server fetches + reads it through the same
   extraction prompt. SSRF-guarded (`src/lib/urlFetchGuard.ts`), shares the existing 10/hr
-  AI-draft rate limit. **Not done:** the URL half on the partnership form (lower value —
-  co-ownership shares rarely have an external source listing to link).
+  AI-draft rate limit on both forms. **Not done, intentionally:** the seeker form has no
+  URL-paste path — seeking listings have no external source listing to link to.
 - **[P1][goal] Collapse the post flow to one smart screen.** Reduce required fields to the
   irreducible set (make/model · airport ICAO · price-or-share · contact); push everything
   else to optional/progressive disclosure. ICAO already auto-derives airport/city/state —
