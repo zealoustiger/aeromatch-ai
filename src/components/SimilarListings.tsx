@@ -79,7 +79,7 @@ export default async function SimilarListings({ current }: { current: Partnershi
         uniqueMakes.map((make) =>
           supabase
             .from('partnerships')
-            .select('id, buy_in_price')
+            .select('id, buy_in_price, total_shares')
             .eq('status', 'active')
             .eq('make', make)
             .not('buy_in_price', 'is', null)
@@ -87,22 +87,23 @@ export default async function SimilarListings({ current }: { current: Partnershi
         )
       )
 
-      // Build make → [{id, buy_in_price}] map.
-      const makeRows = new Map<string, { id: string; buy_in_price: number }[]>()
+      // Build make → [{id, buy_in_price, total_shares}] map.
+      const makeRows = new Map<string, { id: string; buy_in_price: number; total_shares: number | null }[]>()
       uniqueMakes.forEach((make, i) => {
         const rows = (priceResults[i].data ?? [])
-          .filter((r): r is { id: string; buy_in_price: number } => r.buy_in_price != null && r.buy_in_price > 0)
+          .filter((r): r is { id: string; buy_in_price: number; total_shares: number | null } => r.buy_in_price != null && r.buy_in_price > 0)
         makeRows.set(make, rows)
       })
 
-      // Compute verdict for each similar listing with a buy-in price.
+      // Compute verdict for each similar listing with a buy-in price + known share
+      // count (share size is required to normalize the comparison honestly).
       for (const p of similar) {
-        if (!p.buy_in_price || !p.make) continue
+        if (!p.buy_in_price || !p.make || !p.total_shares) continue
         const rows = makeRows.get(p.make) ?? []
         // Exclude this listing's own price from the comp set (honesty: don't
         // compare a listing to itself). Use the fetched IDs for exact exclusion.
-        const otherBuyIns = rows.filter((r) => r.id !== p.id).map((r) => r.buy_in_price)
-        const result = partnershipBuyInComp(p.buy_in_price, otherBuyIns)
+        const otherComps = rows.filter((r) => r.id !== p.id).map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares }))
+        const result = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
         if (result && result.kind !== 'near') {
           verdicts.set(p.id, result.kind)
         }
