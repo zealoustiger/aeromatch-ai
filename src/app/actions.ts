@@ -366,7 +366,20 @@ export async function createSeekerListing(formData: FormData) {
   // Requires the `seeker_additional_airports` migration (add column if not exists).
   // Graceful fallback: if the column doesn't exist yet, we retry without it so the
   // listing still goes live without error (the additional airport is silently dropped).
+  // Same real-airport check as home_airport above (blank stays optional; a
+  // well-formed-but-fake code is rejected rather than silently stored — it would
+  // never match a real searcher's airport filter otherwise).
   const extraRaw = ((formData.get('additional_airport_2') as string) || '').trim().toUpperCase()
+  if (extraRaw) {
+    const { data: extraAirport } = await supabase
+      .from('airports')
+      .select('icao')
+      .eq('icao', extraRaw)
+      .maybeSingle()
+    if (!extraAirport) {
+      throw new Error(`We couldn't find an airport with the code "${extraRaw}" for the additional airport. Please pick one from the suggestions list, or double-check the 4-letter code.`)
+    }
+  }
   const additional_airports = extraRaw ? [extraRaw] : null
 
   const basePayload = {
@@ -470,7 +483,19 @@ export async function updateSeekerListing(id: string, formData: FormData) {
     throw new Error(`We couldn't find an airport with the code "${home_airport}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
   }
 
+  // Same real-airport check as home_airport above (blank stays optional; a
+  // well-formed-but-fake code is rejected rather than silently stored).
   const extraRaw = ((formData.get('additional_airport_2') as string) || '').trim().toUpperCase()
+  if (extraRaw) {
+    const { data: extraAirport } = await supabase
+      .from('airports')
+      .select('icao')
+      .eq('icao', extraRaw)
+      .maybeSingle()
+    if (!extraAirport) {
+      throw new Error(`We couldn't find an airport with the code "${extraRaw}" for the additional airport. Please pick one from the suggestions list, or double-check the 4-letter code.`)
+    }
+  }
   const additional_airports = extraRaw ? [extraRaw] : null
 
   const basePayload = {
