@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-03T13:15:02Z — DRAIN SUMMARY
+- Cycles this run: 4 (PASS 4 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Stopped because: night ended
+- Run: 20260703T124647Z
+
 ## 20260703T130724Z — PASS — partnership-message-draft-persist
 - Pages: /partnerships/[id]
 - What: **A partnership listing's "Message" button (mobile sticky bar and desktop sidebar) now works the same way the aircraft-for-sale and seeker contact cards already do.** Before, clicking "Message"/"Message {name}" bounced a logged-out visitor straight to sign-in with nothing captured — whatever they'd typed was gone. Now the button expands into an inline compose box right on the page; typing a message and hitting send while logged out saves the draft on-device and redirects to sign-in exactly as before, but the moment you're back the conversation opens and your message is already sent — no retyping. Already-signed-in visitors get the same inline box but it sends immediately, no redirect. Email/phone contact options and the listing-owner/seed-persona (`MessageOwnerButton`) view are unchanged.
