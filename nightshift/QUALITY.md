@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-03T06:55:57Z — partnership-ai-faa-backfill — score 4/5
+- Strengths: Faithful, line-for-line mirror of PostAircraftForm's proven chained-backfill — `handleLookup({ onlyEmpty })` guards each of make/model/year with `!(onlyEmpty && input?.value)`, so a registry hit never clobbers an AI-extracted value; `missingCore` gate + `result.registration` condition scope the auto-call tightly; button/blur call sites correctly rewrapped to `() => handleLookup()`; `fillTokenRef` stale-fill guard preserved; comments explain the onlyEmpty rationale; actions.ts/schema untouched as scoped.
+- Weaknesses / risks: none material — minor: make/model/year inputs are re-queried both in handleGenerate and again inside handleLookup, and the whole flow leans on DOM querying over React state, but both match the sibling form's established convention exactly.
+- Follow-up: none
+
 ## 2026-06-29T13:02:41Z — partner-buyin-inline-market — score 5/5
 - Strengths: Textbook minimal slice — 14 lines, single file, reuses the already-computed `partnerComp` with zero new queries/components; the emerald/amber/slate variant ternary and `formatPriceK` helper match existing file conventions exactly, copy reads naturally for all three `kind` branches, and self-suppression falls out of `partnerComp && (...)` for free. PartnershipMarketCheck panel untouched as scoped.
 - Weaknesses / risks: none material — slight semantic redundancy with the full market panel below, but that proximity-at-the-price-moment is precisely the spec's stated intent; the colored label is also backed by literal "below/above/Around market" text, so it's not color-only for a11y.
