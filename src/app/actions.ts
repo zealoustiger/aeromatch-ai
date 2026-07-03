@@ -344,6 +344,106 @@ export async function createSeekerListing(formData: FormData) {
   redirect(`/partnerships/seeking/${data!.id}?posted=1`)
 }
 
+// Edit an existing user-posted seeking listing. Mirrors createSeekerListing's
+// column set + derivation logic (including the additional_airports graceful
+// fallback), but updates the row in place instead of inserting, and is
+// ownership-scoped the same way updatePartnershipListing/updateAircraftListing
+// are (.eq('poster_id', user.id) on the update — RLS backs this up too).
+export async function updateSeekerListing(id: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const makesRaw = formData.get('preferred_makes') as string
+  const preferred_makes = makesRaw ? makesRaw.split(',').map((m) => m.trim()).filter(Boolean) : null
+
+  const ratingsRaw = formData.get('ratings_held') as string
+  const ratings_held = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
+
+  const shareTypesRaw = formData.get('preferred_share_types') as string
+  const preferred_share_types = shareTypesRaw ? shareTypesRaw.split(',').map((s) => s.trim()).filter(Boolean) : null
+
+  const useRaw = formData.get('intended_use') as string
+  const intended_use = useRaw ? useRaw.split(',').map((u) => u.trim()).filter(Boolean) : null
+
+  const home_airport = ((formData.get('home_airport') as string) || '').trim().toUpperCase()
+  const { data: airport } = await supabase
+    .from('airports')
+    .select('name, city, state')
+    .eq('icao', home_airport)
+    .maybeSingle()
+
+  const extraRaw = ((formData.get('additional_airport_2') as string) || '').trim().toUpperCase()
+  const additional_airports = extraRaw ? [extraRaw] : null
+
+  const basePayload = {
+    preferred_makes,
+    preferred_models: (formData.get('preferred_models') as string) || null,
+    min_year: formData.get('min_year') ? parseInt(formData.get('min_year') as string) : null,
+    max_year: formData.get('max_year') ? parseInt(formData.get('max_year') as string) : null,
+    aircraft_category: (formData.get('aircraft_category') as string) || null,
+    max_buy_in: formData.get('max_buy_in') ? parseInt(formData.get('max_buy_in') as string) : null,
+    max_monthly: formData.get('max_monthly') ? parseInt(formData.get('max_monthly') as string) : null,
+    max_hourly: formData.get('max_hourly') ? parseInt(formData.get('max_hourly') as string) : null,
+    home_airport,
+    airport_name: airport?.name ?? null,
+    city: airport?.city ?? null,
+    state: airport?.state ?? null,
+    willing_to_travel_nm: formData.get('willing_to_travel_nm') ? parseInt(formData.get('willing_to_travel_nm') as string) : null,
+    total_hours: formData.get('total_hours') ? parseInt(formData.get('total_hours') as string) : null,
+    ratings_held,
+    preferred_share_types,
+    preferred_scheduling: (formData.get('preferred_scheduling') as string) || null,
+    intended_use,
+    hours_per_month: formData.get('hours_per_month') ? parseInt(formData.get('hours_per_month') as string) : null,
+    title: (() => {
+      const t = ((formData.get('title') as string) || '').trim()
+      if (t) return t
+      const makePart = preferred_makes?.length ? preferred_makes.join('/') + ' ' : ''
+      return `Pilot seeking ${makePart}partnership near ${home_airport}`
+    })(),
+    description: (formData.get('description') as string) || null,
+    contact_name: (formData.get('contact_name') as string) || null,
+    contact_email: (formData.get('contact_email') as string) || user.email || '',
+    contact_method: (formData.get('contact_method') as string) || 'platform',
+    contact_phone: (formData.get('contact_phone') as string) || null,
+  }
+
+  const payload = additional_airports
+    ? { ...basePayload, additional_airports }
+    : basePayload
+
+  let { data, error } = await supabase
+    .from('partnership_seekers')
+    .update(payload)
+    .eq('id', id)
+    .eq('poster_id', user.id)
+    .select('id')
+    .single()
+
+  // Same graceful fallback as createSeekerListing — if additional_airports hasn't
+  // been migrated yet, retry without it so the save still succeeds.
+  if (error && additional_airports && error.message?.includes('additional_airports')) {
+    const retry = await supabase
+      .from('partnership_seekers')
+      .update(basePayload)
+      .eq('id', id)
+      .eq('poster_id', user.id)
+      .select('id')
+      .single()
+    data = retry.data
+    error = retry.error
+  }
+
+  if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
+
+  revalidatePath('/partnerships/seeking')
+  revalidatePath('/listings')
+  revalidatePath(`/partnerships/seeking/${id}`)
+  redirect(`/partnerships/seeking/${id}?updated=1`)
+}
+
 export async function createAircraftListing(formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
