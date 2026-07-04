@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T06:34:13Z — partnership-ai-draft-annual-damage — score 5/5
+- Strengths: Precise mirror of existing extraction pattern; defensive `YYYY-MM` regex guard on `annual_due`, correct `!== undefined` boolean handling, and `'change'` event matching the Select's `true`/`false` option values.
+- Weaknesses / risks: none material
+- Follow-up: none
+
 ## 2026-07-03T12:52:45Z — seeker-message-draft-persist — score 4/5
 - Strengths: Faithful, disciplined port of the reviewed `AircraftContactButton` pattern to `SeekerContactBar` — reuses the generic `messageDraft.ts` (seeker-scoped `seeker:<id>` key) and the existing `getOrCreateSeekerThread`/`sendMessage` server actions with zero duplication or schema change; full spec coverage (draft persisted across `/auth`, auto-sent+cleared on `?contact=1` return guarded by `didAutoContact`, one-step send when already logged in, owner guard + email/phone paths untouched); tasteful extras carried over — Enter-to-send/Shift+Enter, focus-on-expand, `errorMsg` surface, disabled empty-send, and a context-aware "Send" vs "Sign in & send" label; the two logged-in/out branches were cleanly merged into one return without dead code.
 - Weaknesses / risks: Inherits the exact weakness the sibling `aircraft-message-draft-persist` cycle was flagged for — both send paths `await sendMessage(...)` but discard its `{ error }` return and `clearMessageDraft` + navigate unconditionally, so a failed insert or an over-length body (textarea has no `maxLength`; action rejects >2000 chars) silently drops the very message the feature exists to preserve and lands the user on an empty thread. This was a known issue at port time and should ideally have been fixed here rather than duplicated.
