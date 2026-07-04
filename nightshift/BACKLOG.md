@@ -194,6 +194,13 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   (browser navigation clears JS memory) — a logged-out poster still has to re-attach the
   photo after signing in. Full persistence would need IndexedDB blob storage (localStorage
   can't reliably hold a 5 MB image); a candidate future slice if this shows up as real friction.
+~~- **[agent][goal] AI "Prefill from your notes" silently 401s when logged out.**~~ ✅
+  SHIPPED via `ai-draft-signin-redirect` (2026-07-04) Same bug class as the photo-upload fix
+  above, on the single most prominent CTA on every post form: `handleGenerate` on all 3 post
+  forms called the AI-draft server action with no login check, which threw a bare "Not
+  authenticated." shown as raw red text — no path forward. Now checks `isLoggedIn` first and
+  redirects to `/auth?next=...` (draft + pasted notes intact — the AI-notes textarea now has
+  a `name` so it's captured by the existing autosave/restore mechanism). Not in a frozen path.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
