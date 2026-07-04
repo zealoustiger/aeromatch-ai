@@ -303,8 +303,11 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   **Dormant on today's seed data** — needs both the still-unapplied `partnership_add_spec_fields`
   migration (ttaf/smoh) AND enough same-family comps to clear the 4-comp floor (neither exists
   yet in the sandbox DB); verified correct via a standalone pure-function test + a temporary
-  mock-data screenshot pass instead. **Next:** browse/rail-card parity for this chip, once real
-  data exists to confirm against.
+  mock-data screenshot pass instead. **Browse/rail-card parity ✅ SHIPPED 2026-07-04**
+  (`partnership-deal-check-card-parity`): `PartnershipCard`/`PartnershipRailCard` now prefer
+  this narrowed verdict over the plain whole-family pill on `/partnerships`, `/saved`,
+  `/partnerships/near/[icao]`, and the detail page's "Similar partnerships" rail — full parity
+  with the aircraft-for-sale side. Still dormant on today's data for the same reason as above.
 ~~- **[P2][goal] Market position + days-on-market.**~~ ✅ SHIPPED (confirmed complete
   2026-07-03) "N comparable {make} {model} listed, median $X — this is P% below/above;
   listed N days ago" is live across every buyer surface: aircraft browse cards (CompPill:
