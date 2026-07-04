@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T07:20:22Z — partnership-ai-draft-partner-reqs — score 4/5
+- Strengths: Faithful, correctly-scoped parity mirror — prompt/`input_schema`/return-mapping all add `min_hours` (integer) + `ratings_required`, `handleGenerate` fill + `hasOptional` auto-open both updated, `'never invent — omit'` wording preserved, matches surrounding one-liner style with no dead code.
+- Weaknesses / risks: Chip highlight on AI-fill of `ratings_required` relies on the native `input` dispatch firing React's onChange mirror (no explicit `setRatingsRequired` on the fill path, unlike `toggleRatingRequired`) — inherited from the seeker `ratings_held` reference and presumably works, but the chip-state sync is the one path not directly verifiable from the diff.
+- Follow-up: none
+
 ## 2026-07-04T06:34:13Z — partnership-ai-draft-annual-damage — score 5/5
 - Strengths: Precise mirror of existing extraction pattern; defensive `YYYY-MM` regex guard on `annual_due`, correct `!== undefined` boolean handling, and `'change'` event matching the Select's `true`/`false` option values.
 - Weaknesses / risks: none material
