@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
-import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
+import { useFormDraft, readForm, type DraftStatus } from '@/components/useFormDraft'
 import { createAircraftListing, updateAircraftListing, generateAircraftDraft, generateAircraftDraftFromUrl, type AircraftDraft } from '@/app/actions'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
@@ -122,16 +122,7 @@ const NEW_DRAFT_KEY = 'ch:draft:aircraft-new'
 
 function forceSaveDraft(form: HTMLFormElement, draftKey: string) {
   try {
-    const data: Record<string, string> = {}
-    for (const el of Array.from(form.elements)) {
-      const e = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      if (e.name && e.value &&
-          !['file', 'password', 'submit', 'button', 'reset', 'hidden', 'checkbox', 'radio'].includes(
-            (e as HTMLInputElement).type ?? ''
-          )) {
-        data[e.name] = e.value
-      }
-    }
+    const data = readForm(form)
     if (Object.keys(data).length) {
       window.localStorage.setItem(draftKey, JSON.stringify(data))
     }

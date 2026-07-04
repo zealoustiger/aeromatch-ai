@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * loses nothing, and a successful submit (which navigates away) leaves no draft.
  */
 export type DraftStatus = 'idle' | 'saving' | 'saved' | 'restored'
+export type DraftData = Record<string, string | string[]>
 
 const DEBOUNCE_MS = 600
 
@@ -25,37 +26,60 @@ type DraftField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 
 function isDraftable(el: Element): el is DraftField {
   if (el instanceof HTMLInputElement) {
-    return !['file', 'password', 'submit', 'button', 'reset', 'hidden', 'checkbox', 'radio'].includes(el.type)
+    return !['file', 'password', 'submit', 'button', 'reset', 'hidden'].includes(el.type)
   }
   return el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement
 }
 
-function readForm(form: HTMLFormElement): Record<string, string> {
-  const out: Record<string, string> = {}
+// Checkboxes/radios are captured as an array of checked values per input `name`
+// (supporting multi-box groups like a "Preferred Share Type" chip set), instead
+// of being excluded — an excluded checkbox group used to silently vanish across
+// a draft restore (e.g. after the sign-in-and-return redirect).
+export function readForm(form: HTMLFormElement): DraftData {
+  const out: DraftData = {}
   for (const el of Array.from(form.elements)) {
     if (!isDraftable(el) || !el.name) continue
+    if (el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')) {
+      if (!el.checked) continue
+      const existing = out[el.name]
+      out[el.name] = existing ? [...(Array.isArray(existing) ? existing : [existing]), el.value] : [el.value]
+      continue
+    }
     if (el.value !== '') out[el.name] = el.value
   }
   return out
 }
 
-function writeForm(form: HTMLFormElement, data: Record<string, string>) {
+function writeForm(form: HTMLFormElement, data: DraftData) {
+  const changedCheckboxes: HTMLInputElement[] = []
   for (const el of Array.from(form.elements)) {
     if (!isDraftable(el) || !el.name) continue
-    if (Object.prototype.hasOwnProperty.call(data, el.name)) {
-      el.value = data[el.name]
+    if (!Object.prototype.hasOwnProperty.call(data, el.name)) continue
+    const value = data[el.name]
+    if (el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')) {
+      const checked = Array.isArray(value) ? value.includes(el.value) : value === el.value
+      if (checked !== el.checked) {
+        el.checked = checked
+        changedCheckboxes.push(el)
+      }
+      continue
     }
+    el.value = Array.isArray(value) ? (value[0] ?? '') : value
   }
+  // Restoring a checked box silently (no native `change` event) would leave any
+  // form-level sync logic (e.g. a hidden-input mirror) stale — dispatch one bubbling
+  // `change` so listeners re-derive from the now-restored checked state.
+  changedCheckboxes[changedCheckboxes.length - 1]?.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
 export function useFormDraft(storageKey: string) {
   const formRef = useRef<HTMLFormElement>(null)
   const [status, setStatus] = useState<DraftStatus>('idle')
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const snapshot = useRef<Record<string, string> | null>(null)
+  const snapshot = useRef<DraftData | null>(null)
 
   const writeStore = useCallback(
-    (data: Record<string, string>) => {
+    (data: DraftData) => {
       try {
         if (Object.keys(data).length) {
           window.localStorage.setItem(storageKey, JSON.stringify(data))
@@ -85,7 +109,7 @@ export function useFormDraft(storageKey: string) {
     try {
       const raw = window.localStorage.getItem(storageKey)
       if (raw) {
-        const data = JSON.parse(raw) as Record<string, string>
+        const data = JSON.parse(raw) as DraftData
         if (data && typeof data === 'object' && Object.keys(data).length) {
           writeForm(form, data)
           setStatus('restored')
