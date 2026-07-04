@@ -430,7 +430,6 @@ export async function createSeekerListing(formData: FormData) {
     total_hours: formData.get('total_hours') ? parseInt(formData.get('total_hours') as string) : null,
     ratings_held,
     preferred_share_types,
-    preferred_scheduling: (formData.get('preferred_scheduling') as string) || null,
     intended_use,
     hours_per_month: formData.get('hours_per_month') ? parseInt(formData.get('hours_per_month') as string) : null,
     title: (formData.get('title') as string)?.trim() ||
@@ -546,7 +545,6 @@ export async function updateSeekerListing(id: string, formData: FormData) {
     total_hours: formData.get('total_hours') ? parseInt(formData.get('total_hours') as string) : null,
     ratings_held,
     preferred_share_types,
-    preferred_scheduling: (formData.get('preferred_scheduling') as string) || null,
     intended_use,
     hours_per_month: formData.get('hours_per_month') ? parseInt(formData.get('hours_per_month') as string) : null,
     title: (() => {

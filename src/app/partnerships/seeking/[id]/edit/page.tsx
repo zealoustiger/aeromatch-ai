@@ -21,7 +21,7 @@ export default async function EditSeekerListingPage({
 
   const { data: listing } = await supabase
     .from('partnership_seekers')
-    .select('id, home_airport, additional_airports, max_buy_in, title, preferred_makes, preferred_models, aircraft_category, min_year, max_year, max_monthly, max_hourly, willing_to_travel_nm, total_hours, ratings_held, hours_per_month, intended_use, preferred_share_types, preferred_scheduling, description, contact_name, contact_email, contact_method, contact_phone, poster_id')
+    .select('id, home_airport, additional_airports, max_buy_in, title, preferred_makes, preferred_models, aircraft_category, min_year, max_year, max_monthly, max_hourly, willing_to_travel_nm, total_hours, ratings_held, hours_per_month, intended_use, preferred_share_types, description, contact_name, contact_email, contact_method, contact_phone, poster_id')
     .eq('id', id)
     .single()
 
@@ -59,7 +59,6 @@ export default async function EditSeekerListingPage({
             hours_per_month: listing.hours_per_month ?? undefined,
             intended_use: listing.intended_use ?? undefined,
             preferred_share_types: listing.preferred_share_types ?? undefined,
-            preferred_scheduling: listing.preferred_scheduling ?? undefined,
             description: listing.description ?? undefined,
             contact_name: listing.contact_name ?? undefined,
             contact_email: listing.contact_email ?? undefined,

@@ -167,7 +167,6 @@ export interface SeekerEditInitial {
   hours_per_month?: number
   intended_use?: string[]
   preferred_share_types?: string[]
-  preferred_scheduling?: string
   description?: string
   contact_name?: string
   contact_email?: string
@@ -484,7 +483,7 @@ export default function PostSeekerListingForm({
             initialValues?.min_year || initialValues?.max_year || initialValues?.max_monthly || initialValues?.max_hourly ||
             initialValues?.willing_to_travel_nm || initialValues?.total_hours || initialValues?.ratings_held ||
             initialValues?.hours_per_month || initialValues?.intended_use?.length || initialValues?.preferred_share_types?.length ||
-            initialValues?.preferred_scheduling || initialValues?.description || initialValues?.contact_phone)) ||
+            initialValues?.description || initialValues?.contact_phone)) ||
           (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -695,10 +694,6 @@ export default function PostSeekerListingForm({
                 ))}
               </div>
               <input type="hidden" name="preferred_share_types" id="preferred_share_types_hidden" />
-            </div>
-            <div className="mt-4">
-              <Label>Preferred Scheduling</Label>
-              <Input name="preferred_scheduling" defaultValue={initialValues?.preferred_scheduling ?? ''} placeholder="e.g. flexible, weekday mornings" />
             </div>
           </div>
 

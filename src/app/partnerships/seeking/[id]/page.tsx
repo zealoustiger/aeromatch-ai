@@ -279,12 +279,6 @@ export default async function SeekerDetailPage({
                   </dd>
                 </div>
               )}
-              {s.preferred_scheduling && (
-                <div>
-                  <dt className="text-xs text-slate-400">Preferred scheduling</dt>
-                  <dd className="mt-0.5 font-semibold text-slate-800">{s.preferred_scheduling}</dd>
-                </div>
-              )}
             </dl>
           </div>
 
