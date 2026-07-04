@@ -179,7 +179,6 @@ export interface PartnershipSeeker {
   ratings_held: string[] | null
 
   preferred_share_types: ShareType[] | null
-  preferred_scheduling: string | null
 
   intended_use: string[] | null
   hours_per_month: number | null
