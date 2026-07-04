@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T12:24:00Z — seeker-contactbar-privacy-copy-fix — score 4/5
+- Strengths: Correct root-cause fix — verified showEmail/showPhone gate only on contactMethod (never login), so the "signed-in members only" claim was genuinely false; collapses the `!user` conditional to the single `displayName` line, reuses the component's existing "Reach out to" phrasing, leaves auth-gated messaging (handleSend redirect, draft preservation, button labels) and the still-used `user` state untouched. Tightly scoped, no dead code.
+- Weaknesses / risks: none material — copy diverges slightly from sibling ContactBar's "Contact {name}" wording, but "Reach out to" matches this component's own prior tone and is arguably better.
+- Follow-up: none
+
 ## 2026-07-04T12:14:33Z — edit-page-contact-prefill-parity — score 5/5
 - Strengths: Exact parity with the three `new` pages — correct prop names/values, forms already consume them via `initialValues?.contact_* ?? user*` (listing's own value still wins), and edit pages correctly use non-optional `user.` since the auth gate guarantees presence. Minimal, well-scoped, no form/schema churn.
 - Weaknesses / risks: none material — three-prop change duplicates the `new`-page wiring, but that mirror pattern is the existing convention.
