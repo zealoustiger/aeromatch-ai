@@ -59,10 +59,15 @@ export interface PartnerCompResult {
   deltaDollars: number
 }
 
-/** One other comp's buy-in price + share count, for normalization. */
+/** One other comp's buy-in price + share count, for normalization. `year`/`ttaf`/`smoh`
+ *  are optional — only `partnershipDealVerdict` (below) consults them; the plain
+ *  whole-family comp (`partnershipBuyInComp`) ignores the extra fields. */
 export interface PartnerCompInput {
   buyIn: number
   totalShares: number | null
+  year?: number | null
+  ttaf?: number | null
+  smoh?: number | null
 }
 
 /** Median of an ascending numeric array. Caller guarantees length > 0. */
@@ -121,6 +126,157 @@ export function partnershipBuyInComp(
     median: Math.round(expectedBuyIn),
     count: impliedValues.length,
     deltaDollars,
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Partnership Deal Check — the endorsement-style "good deal / fair / priced high"
+ * verdict `partnershipBuyInComp` deliberately withholds, mirroring
+ * `aircraftEstimate.ts`'s `clubHangerDealVerdict`. The whole-family comparison above
+ * is honest only as a DESCRIPTIVE read because its comp set is the entire make+model
+ * family — a buy-in gap there can simply mean this share is newer/lower-time, not a
+ * bargain. This helper earns the right to a value judgement by first narrowing the
+ * comp set to SIMILAR YEAR and SIMILAR HOURS (same bands as the aircraft-for-sale
+ * version), same as before ALSO normalizing every comp to its implied full-aircraft
+ * value before taking the median, so a smaller/larger fractional share is never
+ * compared on raw buy-in dollars.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Minimum number of comps that fall inside BOTH the year and hours bands required
+ *  before a value verdict is published. */
+export const MIN_PARTNER_DEAL_COMPS = 4
+
+/** A comp's year must be within ±this many years of the subject to count as
+ *  "similar year". Matches the aircraft-for-sale Deal Check. */
+export const PARTNER_DEAL_YEAR_BAND = 5
+
+/** A comp's hours signal qualifies as "similar" when within the larger of an
+ *  absolute and a relative band of the subject's hours. Matches the aircraft-for-sale
+ *  Deal Check. */
+export const PARTNER_DEAL_HOURS_ABS_BAND = 1000
+export const PARTNER_DEAL_HOURS_REL_BAND = 0.35
+
+/** Within ±this fraction of the narrowed expected buy-in we call it "Fair price". */
+export const PARTNER_DEAL_DEAD_BAND = 0.05
+
+export type PartnerDealVerdictKind = 'good' | 'fair' | 'high'
+
+/** Which hours field a verdict's comp set was narrowed on. TTAF is preferred; SMOH is
+ *  only used as a fallback when the subject has no TTAF — comps are narrowed on the
+ *  SAME field, never mixed. */
+export type PartnerHoursSignal = 'ttaf' | 'smoh'
+
+export interface PartnershipDealCheck {
+  /** Good deal (below the narrowed expected buy-in), Fair (inside the dead band), or
+   *  Priced high (above it) — a genuine value judgement, controlled for year+hours. */
+  verdict: PartnerDealVerdictKind
+  /** Expected buy-in for a share this size, derived from the narrowed comps' median
+   *  implied full-aircraft value (whole dollars). */
+  median: number
+  /** Number of comps inside BOTH the year and hours bands. */
+  compCount: number
+  /** Signed whole-dollar distance from the expected buy-in (negative = below). */
+  deltaDollars: number
+  /** Absolute whole-percent distance from the expected buy-in (>= 1 for non-fair). */
+  deltaPct: number
+  /** The ± year band actually used (for on-page copy). */
+  yearBand: number
+  /** Which hours field ('ttaf' or 'smoh') the comp set was narrowed on. */
+  hoursSignal: PartnerHoursSignal
+}
+
+/** The subject listing being judged. `smoh` is an optional fallback hours signal, only
+ *  consulted when `ttaf` is missing/invalid. */
+export interface PartnerDealSubject {
+  buyIn: number | null | undefined
+  totalShares: number | null | undefined
+  year: number | null | undefined
+  ttaf: number | null | undefined
+  smoh?: number | null | undefined
+}
+
+/** True when a comp's hours value is within the subject's similar-hours band. */
+function partnerHoursWithinBand(subjectHours: number, compHours: number): boolean {
+  const band = Math.max(PARTNER_DEAL_HOURS_ABS_BAND, subjectHours * PARTNER_DEAL_HOURS_REL_BAND)
+  return Math.abs(compHours - subjectHours) <= band
+}
+
+/**
+ * Compute the Partnership Deal Check verdict for one listing against OTHER active
+ * same-family partnerships narrowed to similar year + similar hours, normalized for
+ * share size (mirrors `partnershipBuyInComp`'s implied-full-value normalization).
+ *
+ * `comps` should already be narrowed to the subject's resolved make+model family and
+ * exclude the subject's own row (same contract as `partnershipBuyInComp`).
+ *
+ * Returns null — no verdict — when the subject lacks a real buy-in / a share count
+ * >= 2 / a year / any usable hours signal, or when fewer than MIN_PARTNER_DEAL_COMPS
+ * comps fall inside both bands. Thin or uncontrolled data publishes nothing rather
+ * than a misleading endorsement.
+ */
+export function partnershipDealVerdict(
+  subject: PartnerDealSubject,
+  comps: PartnerCompInput[]
+): PartnershipDealCheck | null {
+  const { buyIn, totalShares, year, ttaf, smoh } = subject
+  if (!buyIn || buyIn <= 0) return null
+  if (!totalShares || totalShares < 2) return null
+  if (year == null || !Number.isFinite(year)) return null
+
+  let hoursSignal: PartnerHoursSignal
+  let subjectHours: number
+  if (ttaf != null && Number.isFinite(ttaf) && ttaf >= 0) {
+    hoursSignal = 'ttaf'
+    subjectHours = ttaf
+  } else if (smoh != null && Number.isFinite(smoh) && smoh >= 0) {
+    hoursSignal = 'smoh'
+    subjectHours = smoh
+  } else {
+    return null
+  }
+
+  const impliedValues: number[] = []
+  for (const c of comps) {
+    if (!c.buyIn || c.buyIn <= 0) continue
+    if (!c.totalShares || c.totalShares < 2) continue
+    if (c.year == null || !Number.isFinite(c.year)) continue
+    if (Math.abs(c.year - year) > PARTNER_DEAL_YEAR_BAND) continue
+    const compHours = hoursSignal === 'ttaf' ? c.ttaf : c.smoh
+    if (compHours == null || !Number.isFinite(compHours) || compHours < 0) continue
+    if (!partnerHoursWithinBand(subjectHours, compHours)) continue
+    impliedValues.push(c.buyIn * c.totalShares)
+  }
+  if (impliedValues.length < MIN_PARTNER_DEAL_COMPS) return null
+
+  impliedValues.sort((a, b) => a - b)
+  const medianImplied = medianOfSorted(impliedValues)
+  if (medianImplied <= 0) return null
+  const expectedBuyIn = medianImplied / totalShares
+  if (expectedBuyIn <= 0) return null
+
+  const deltaDollars = Math.round(buyIn - expectedBuyIn)
+  const delta = (buyIn - expectedBuyIn) / expectedBuyIn
+
+  if (Math.abs(delta) < PARTNER_DEAL_DEAD_BAND) {
+    return {
+      verdict: 'fair',
+      median: Math.round(expectedBuyIn),
+      compCount: impliedValues.length,
+      deltaDollars,
+      deltaPct: 0,
+      yearBand: PARTNER_DEAL_YEAR_BAND,
+      hoursSignal,
+    }
+  }
+  const deltaPct = Math.max(1, Math.round(Math.abs(delta) * 100))
+  return {
+    verdict: delta < 0 ? 'good' : 'high',
+    median: Math.round(expectedBuyIn),
+    compCount: impliedValues.length,
+    deltaDollars,
+    deltaPct,
+    yearBand: PARTNER_DEAL_YEAR_BAND,
+    hoursSignal,
   }
 }
 
