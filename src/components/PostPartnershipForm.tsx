@@ -391,11 +391,18 @@ export default function PostPartnershipForm({
           if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
           if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
           if (result.engine_type) fillFormField(form, '[name="engine_type"]', result.engine_type)
+          if (result.annual_due) fillFormField(form, '[name="annual_due"]', result.annual_due)
+          // damage_history is a boolean — `false` is a meaningful, distinct value from
+          // "not extracted," so this must check for undefined rather than truthiness.
+          if (result.damage_history !== undefined) {
+            fillFormField(form, '[name="damage_history"]', String(result.damage_history), 'change')
+          }
           // Auto-open "More details" if the AI filled any optional fields still inside it
           // (description is now outside <details>, so it doesn't trigger auto-open)
           const hasOptional = result.year || result.registration || result.title ||
             result.monthly_fixed || result.hourly_wet ||
-            result.ttaf || result.smoh || result.engine_type
+            result.ttaf || result.smoh || result.engine_type ||
+            result.annual_due || result.damage_history !== undefined
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }
