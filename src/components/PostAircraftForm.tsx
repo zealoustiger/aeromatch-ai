@@ -234,11 +234,15 @@ export default function PostAircraftForm({
     }
   }
 
+  function redirectToAuth() {
+    if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
+    router.push('/auth?next=/aircraft/new')
+  }
+
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
-      if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
-      router.push('/auth?next=/aircraft/new')
+      redirectToAuth()
       return
     }
     handleSubmit()
@@ -542,6 +546,8 @@ export default function PostAircraftForm({
           persistKey={PHOTOS_KEY}
           restoreGateKey={DRAFT_KEY}
           initialPhotos={initialValues?.images}
+          isLoggedIn={isLoggedIn}
+          onRequireAuth={redirectToAuth}
         />
       </section>
 
