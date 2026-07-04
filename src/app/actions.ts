@@ -5,13 +5,14 @@ import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
+import { getSeekersByIds } from '@/lib/seekersQuery'
 import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail, buildSeedInquiryEmail } from '@/lib/email'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
 import { htmlToReadableText } from '@/lib/htmlText'
-import type { Partnership, AircraftForSale } from '@/lib/types'
+import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -922,7 +923,7 @@ export async function saveSearch(name: string, searchParams: string, path = '/pa
 }
 
 // Marketplaces a listing can be favorited from. Anything else is rejected.
-const SAVED_LISTING_TYPES = ['partnership', 'aircraft'] as const
+const SAVED_LISTING_TYPES = ['partnership', 'aircraft', 'seeker'] as const
 
 // Toggle a favorited listing for the current user. Inserts if absent, removes if
 // present. Owner-scoped via RLS; returns the resulting saved state.
@@ -1063,8 +1064,8 @@ export async function mergeDeviceSaves(
  */
 export async function hydrateDeviceSaves(
   saves: { id: string; type: string }[],
-): Promise<{ partnerships: Partnership[]; aircraft: AircraftForSale[] }> {
-  if (!Array.isArray(saves) || saves.length === 0) return { partnerships: [], aircraft: [] }
+): Promise<{ partnerships: Partnership[]; aircraft: AircraftForSale[]; seekers: PartnershipSeeker[] }> {
+  if (!Array.isArray(saves) || saves.length === 0) return { partnerships: [], aircraft: [], seekers: [] }
 
   // Sanitize: valid types only, well-formed ids, deduped, count-capped.
   const seen = new Set<string>()
@@ -1087,6 +1088,7 @@ export async function hydrateDeviceSaves(
 
   const partnershipIds = rows.filter((s) => s.type === 'partnership').map((s) => s.id)
   const aircraftIds = rows.filter((s) => s.type === 'aircraft').map((s) => s.id)
+  const seekerIds = rows.filter((s) => s.type === 'seeker').map((s) => s.id)
 
   // Hydrate, active-only, preserving the device's save order (newest-saved last
   // in the store → the page reverses for display). Orphan/sold saves drop out.
@@ -1107,7 +1109,13 @@ export async function hydrateDeviceSaves(
     aircraft = fetched.filter((a) => a.status === 'active')
   }
 
-  return { partnerships, aircraft }
+  // getSeekersByIds already scopes to status='active' per-row, so no extra filter needed.
+  let seekers: PartnershipSeeker[] = []
+  if (seekerIds.length > 0) {
+    seekers = await getSeekersByIds(seekerIds)
+  }
+
+  return { partnerships, aircraft, seekers }
 }
 
 export async function getOrCreateThread(partnershipId: string, ownerId: string) {

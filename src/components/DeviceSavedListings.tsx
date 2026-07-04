@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { Heart, Plane, Smartphone, ArrowRight } from 'lucide-react'
 import PartnershipCard from './PartnershipCard'
 import AircraftSaleCard from './AircraftSaleCard'
+import SeekerCard from './SeekerCard'
 import { getLocalSaves, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
 import { hydrateDeviceSaves } from '@/app/actions'
-import type { Partnership, AircraftForSale } from '@/lib/types'
+import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
 /**
  * Slice 3 of soft-save. The logged-out view of `/saved`. A visitor who soft-saved
@@ -23,6 +24,7 @@ export default function DeviceSavedListings() {
   const [loading, setLoading] = useState(true)
   const [partnerships, setPartnerships] = useState<Partnership[]>([])
   const [aircraft, setAircraft] = useState<AircraftForSale[]>([])
+  const [seekers, setSeekers] = useState<PartnershipSeeker[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -34,6 +36,7 @@ export default function DeviceSavedListings() {
         if (!cancelled) {
           setPartnerships([])
           setAircraft([])
+          setSeekers([])
           setLoading(false)
         }
         return
@@ -42,6 +45,7 @@ export default function DeviceSavedListings() {
       if (cancelled) return
       setPartnerships(result.partnerships)
       setAircraft(result.aircraft)
+      setSeekers(result.seekers)
       setLoading(false)
     }
 
@@ -53,6 +57,7 @@ export default function DeviceSavedListings() {
       const ids = new Set(getLocalSaves().map((s) => `${s.type}:${s.id}`))
       setPartnerships((prev) => prev.filter((p) => ids.has(`partnership:${p.id}`)))
       setAircraft((prev) => prev.filter((a) => ids.has(`aircraft:${a.id}`)))
+      setSeekers((prev) => prev.filter((s) => ids.has(`seeker:${s.id}`)))
     }
     window.addEventListener(LOCAL_SAVES_EVENT, onChange)
     return () => {
@@ -61,7 +66,7 @@ export default function DeviceSavedListings() {
     }
   }, [])
 
-  const total = partnerships.length + aircraft.length
+  const total = partnerships.length + aircraft.length + seekers.length
 
   if (loading) {
     return (
@@ -147,6 +152,20 @@ export default function DeviceSavedListings() {
           <div className="space-y-4">
             {aircraft.map((a) => (
               <AircraftSaleCard key={a.id} p={a} saved />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {seekers.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-slate-900">
+            Saved seeker listings{' '}
+            <span className="text-sm font-normal text-slate-400">({seekers.length})</span>
+          </h2>
+          <div className="space-y-4">
+            {seekers.map((s) => (
+              <SeekerCard key={s.id} seeker={s} saved />
             ))}
           </div>
         </section>

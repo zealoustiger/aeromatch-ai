@@ -8,7 +8,7 @@
 // SSR-safe: every accessor guards on `typeof window` so it can be imported by
 // client components without exploding during server render / prerender.
 
-export type LocalSaveType = 'partnership' | 'aircraft'
+export type LocalSaveType = 'partnership' | 'aircraft' | 'seeker'
 
 export interface LocalSave {
   id: string
@@ -33,7 +33,9 @@ export function getLocalSaves(): LocalSave[] {
     if (!Array.isArray(parsed)) return []
     return parsed.filter(
       (s): s is LocalSave =>
-        s && typeof s.id === 'string' && (s.type === 'partnership' || s.type === 'aircraft'),
+        s &&
+        typeof s.id === 'string' &&
+        (s.type === 'partnership' || s.type === 'aircraft' || s.type === 'seeker'),
     )
   } catch {
     return []

@@ -9,6 +9,7 @@ import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/utils'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SeekerContactBar from '@/components/SeekerContactBar'
+import SaveListingButton from '@/components/SaveListingButton'
 import PartnershipCard from '@/components/PartnershipCard'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
@@ -98,6 +99,22 @@ export default async function SeekerDetailPage({
     getSeekerBudgetCheck(supabase, s),
   ])
 
+  // Fetch the current user's saved row for this listing so the heart button gets
+  // the real initialSaved state (eliminates the heart-state flash), mirroring the
+  // aircraft/partnership detail pages.
+  const { data: { user } } = await supabase.auth.getUser()
+  let savedRowId: string | null = null
+  if (user) {
+    const { data } = await supabase
+      .from('saved_listings')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('listing_id', s.id)
+      .eq('listing_type', 'seeker')
+      .maybeSingle()
+    savedRowId = data?.id ?? null
+  }
+
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
   const displayName = anonymizeName(s.contact_name)
@@ -109,12 +126,15 @@ export default async function SeekerDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-      <Link
-        href="/partnerships/seeking"
-        className="mb-6 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
-      >
-        <ChevronLeft className="h-4 w-4" /> Back to Seeking Listings
-      </Link>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <Link
+          href="/partnerships/seeking"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back to Seeking Listings
+        </Link>
+        <SaveListingButton listingId={s.id} listingType="seeker" initialSaved={!!savedRowId} variant="full" />
+      </div>
 
       {/* Post-publish confirmation — shown once when redirected from the seeking post form */}
       {justPosted && (
