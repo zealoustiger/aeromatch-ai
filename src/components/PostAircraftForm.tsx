@@ -58,6 +58,20 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
   )
 }
 
+function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cn(
+        'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </select>
+  )
+}
+
 const NEW_DRAFT_KEY = 'ch:draft:aircraft-new'
 
 function forceSaveDraft(form: HTMLFormElement, draftKey: string) {
@@ -88,6 +102,8 @@ export interface AircraftEditInitial {
   ttaf?: number
   smoh?: number
   engine_type?: string
+  annual_due?: string
+  damage_history?: boolean | null
   asking_price?: number
   // We only store the airport's derived city/state, not the ICAO the poster
   // originally typed, so the "Based at" field can't be prefilled directly — this
@@ -507,7 +523,8 @@ export default function PostAircraftForm({
         ref={detailsRef}
         open={Boolean(
           (isEdit && (initialValues?.year || initialValues?.ttaf || initialValues?.smoh ||
-            initialValues?.engine_type || initialValues?.title)) ||
+            initialValues?.engine_type || initialValues?.annual_due ||
+            initialValues?.damage_history != null || initialValues?.title)) ||
           (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm"
@@ -539,6 +556,29 @@ export default function PostAircraftForm({
                 <Label>Engine</Label>
                 <Input name="engine_type" defaultValue={initialValues?.engine_type ?? ''} placeholder="e.g. Lycoming IO-360, Continental IO-550" />
                 <p className="mt-1 text-xs text-slate-400">Make + designation. Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
+              </div>
+              <div>
+                <Label>Annual due</Label>
+                <Input
+                  name="annual_due"
+                  type="month"
+                  defaultValue={initialValues?.annual_due ? initialValues.annual_due.slice(0, 7) : ''}
+                />
+                <p className="mt-1 text-xs text-slate-400">Powers the Annual Inspection status on your listing.</p>
+              </div>
+              <div>
+                <Label>Damage history</Label>
+                <Select
+                  name="damage_history"
+                  defaultValue={
+                    initialValues?.damage_history == null ? '' : initialValues.damage_history ? 'true' : 'false'
+                  }
+                >
+                  <option value="">Prefer not to say</option>
+                  <option value="false">No damage reported</option>
+                  <option value="true">Damage reported</option>
+                </Select>
+                <p className="mt-1 text-xs text-slate-400">Shown as a buyer-trust signal — leave blank to omit.</p>
               </div>
             </div>
           </div>
