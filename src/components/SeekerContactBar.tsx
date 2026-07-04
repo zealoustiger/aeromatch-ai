@@ -125,14 +125,7 @@ export default function SeekerContactBar({
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
       <h2 className="mb-1 text-sm font-semibold text-sky-800">Have a plane that fits?</h2>
-      {!user ? (
-        <p className="mb-3 text-sm text-sky-700">
-          To protect pilots&apos; privacy, contact details are only shown to signed-in
-          members. Sign in to reach out{displayName ? ` to ${displayName}` : ''}.
-        </p>
-      ) : (
-        displayName && <p className="mb-3 text-sm text-sky-700">Reach out to {displayName}</p>
-      )}
+      {displayName && <p className="mb-3 text-sm text-sky-700">Reach out to {displayName}</p>}
       <div className="space-y-2">
         {canMessage && (expanded ? (
           <form onSubmit={handleSend} className="space-y-2">
