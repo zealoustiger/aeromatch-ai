@@ -241,6 +241,13 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   edit: missing its one applicable prop), so a poster editing an older listing that itself had
   no saved contact value saw a blank field instead of the expected prefill. Now all 3 edit
   pages pass the same props their `new` counterparts do.
+~~- **[agent][goal] SeekerContactBar's privacy copy doesn't match its actual gating.**~~ ✅
+  SHIPPED via `seeker-contactbar-privacy-copy-fix` (2026-07-04) The logged-out copy claimed
+  "contact details are only shown to signed-in members," but `showEmail`/`showPhone` never
+  checked login state — the reveal was always shown, exactly like the sibling aircraft/
+  partnership `ContactBar` (which makes no such claim). Copy now matches actual behavior.
+  **Next:** the `/saved`/`DeviceSavedListings` empty-state copy still omits "seeker listings"
+  (small copy-only follow-on, flagged since `seeker-save-heart`).
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
