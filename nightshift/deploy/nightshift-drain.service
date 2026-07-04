@@ -8,7 +8,13 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-TimeoutStartSec=4300
+# The drain self-terminates on "night ended" + its own token/time budget, so a
+# tight systemd start-timeout is redundant AND harmful: at 4300s (72min) systemd
+# SIGTERM'd (status=143) each batch mid-run, producing a stream of red "Failed
+# (timeout)" statuses and occasionally killing a cycle mid-work (2026-07-04).
+# 30000s (~8.3h) is a generous backstop that outlasts a full night window so a
+# normal batch exits cleanly on its own.
+TimeoutStartSec=30000
 # --memory caps the build spike (measured ~2.3GB for `next build`; ~3GB with Chrome QA).
 # If the OOM cap kills builds, raise it / size up the box rather than lowering it.
 # ExecStartPre clears a stale same-named container before each run. `--rm` normally

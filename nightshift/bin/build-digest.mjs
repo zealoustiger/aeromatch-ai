@@ -38,10 +38,18 @@ const field = (block, name) => {
   return m ? m[1].trim() : ''
 }
 const cycles = []
+// Independent of the promote boundary: how many cycles the drain actually landed
+// overnight. `cycles` (above the boundary) is the *unpromoted* queue and goes to 0
+// right after a full promote — which made the dashboard read blank as if the drain
+// never ran (2026-07-04). `nightRan` counts everything in the last ~20h (night
+// window + digest lag) so the report always reflects that the drain DID work.
+const nightWindowStart = new Date(Date.now() - 20 * 3600e3)
+let nightRan = 0
 for (const b of blocks) {
   const h = b.match(/^## (\S+) — (PASS|FAIL) — (\S+)/m)
   if (!h) continue
   const ts = parseTs(h[1])
+  if (!isNaN(ts) && ts > nightWindowStart) nightRan++
   if (isNaN(ts) || ts <= boundary) continue
   cycles.push({ ts, status: h[2], slug: h[3], pages: field(b, 'Pages'), what: field(b, 'What') })
 }
@@ -223,7 +231,13 @@ out.push('')
 
 if (cycles.length === 0) {
   out.length = 0
-  out.push(`# Overnight review — ${today}`, '', traffic, '', '---', '', comparison, '', '---', '', '_No new cycles landed on staging since the last promote._', '')
+  // Distinguish "the drain ran but you already promoted it all" from "the drain
+  // genuinely did nothing" — otherwise a full promote makes it look like nothing ran.
+  const emptyLine =
+    nightRan > 0
+      ? `✅ **${nightRan} cycle${nightRan === 1 ? '' : 's'} ran overnight — all already promoted to production.** Nothing left in the review queue.`
+      : `_No new cycles landed on staging since the last promote._`
+  out.push(`# Overnight review — ${today}`, '', traffic, '', '---', '', comparison, '', '---', '', emptyLine, '')
 }
 
 writeFileSync(join(root, 'nightshift/REVIEW.md'), out.join('\n'))
