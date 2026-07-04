@@ -83,10 +83,14 @@ export default function DeviceSavedListings() {
           Browse{' '}
           <Link href="/partnerships" className="text-sky-600 underline-offset-2 hover:underline">
             partnerships
-          </Link>{' '}
-          or{' '}
+          </Link>
+          ,{' '}
           <Link href="/aircraft" className="text-sky-600 underline-offset-2 hover:underline">
             aircraft for sale
+          </Link>{' '}
+          or{' '}
+          <Link href="/partnerships/seeking" className="text-sky-600 underline-offset-2 hover:underline">
+            pilots seeking a partnership
           </Link>{' '}
           and tap the{' '}
           <Heart className="inline-block h-3.5 w-3.5 -translate-y-px text-sky-500" aria-hidden="true" />{' '}
@@ -171,7 +175,7 @@ export default function DeviceSavedListings() {
         </section>
       )}
 
-      <p className="flex items-center justify-center gap-1.5 text-sm text-slate-400">
+      <p className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-slate-400">
         <Plane className="h-3.5 w-3.5" />
         Looking for more?{' '}
         <Link href="/partnerships" className="text-sky-600 underline-offset-2 hover:underline">
@@ -180,6 +184,10 @@ export default function DeviceSavedListings() {
         <span aria-hidden="true">·</span>{' '}
         <Link href="/aircraft" className="text-sky-600 underline-offset-2 hover:underline">
           aircraft for sale
+        </Link>{' '}
+        <span aria-hidden="true">·</span>{' '}
+        <Link href="/partnerships/seeking" className="text-sky-600 underline-offset-2 hover:underline">
+          seeking listings
         </Link>
       </p>
     </div>
