@@ -16,6 +16,26 @@ import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
 // here they describe what a partnership requires of a prospective partner.
 const RATINGS_CHIPS = ['PPL', 'IFR', 'Complex', 'High Performance', 'Multi-Engine', 'Tailwheel', 'CFI', 'ATP']
 
+const DESCRIPTION_TIPS = [
+  'Lead with the aircraft basics: make/model/year, total time, engine time since major overhaul (SMOH), and avionics.',
+  'Describe the group: how many partners, their experience/ratings, and how well it runs today.',
+  'Explain scheduling: what system you use and how easy it is to get the airplane when you need it.',
+  "Say what you're looking for in a partner: hours, ratings, how often they'd fly, and any buy-in/reserve expectations.",
+]
+
+const DESCRIPTION_EXAMPLES = [
+  {
+    label: 'Established group with an opening',
+    text:
+      "1/4 share in a 2004 Cessna 172S based at KAUS, 3,200 TTAF, 450 SMOH, Garmin 430W with ADS-B Out. Well-run 4-pilot group, all instrument-rated, scheduling via FlyingClub app with rarely a conflict. Buy-in $18,000, $180/mo dues covers hangar + reserves, wet rate $95/hr. Looking for a pilot with 200+ hours who flies at least 10 hrs/month and wants a long-term partner, not a short-term renter.",
+  },
+  {
+    label: 'New partnership forming',
+    text:
+      "Forming a 1/3 partnership on a 2010 Piper Archer, 1,800 TTAF, 200 SMOH, based at KPAO. I'm the first partner and looking for 2 more to split a $60,000 buy-in evenly. Plan to use a shared scheduling app and split hangar/insurance/reserve costs equally. Looking for instrument-rated pilots who'll fly regularly and treat the airplane like their own — happy to talk through the full cost breakdown before you commit.",
+  },
+]
+
 const NEW_DRAFT_KEY = 'ch:draft:partnership-new'
 
 // Curated model-name suggestions reused from the existing SEO make/model table —
@@ -628,6 +648,31 @@ export default function PostPartnershipForm({
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="mb-1 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">About this partnership</h2>
         <p className="mb-3 text-xs text-slate-500">Tell prospective partners about the aircraft, the current group, how scheduling works, and what you&apos;re looking for in a partner. A compelling description is the single biggest factor in getting a serious inquiry.</p>
+        <div className="mb-2 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+          <p className="text-xs font-semibold text-sky-800">How to write a great description</p>
+          <ul className="mt-1.5 space-y-1">
+            {DESCRIPTION_TIPS.map((tip) => (
+              <li key={tip} className="flex gap-1.5 text-xs text-slate-600">
+                <span aria-hidden className="text-sky-400">•</span>
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+          <details className="group mt-2">
+            <summary className="cursor-pointer list-none text-xs font-medium text-sky-700 hover:text-sky-800">
+              <span className="group-open:hidden">See two example descriptions</span>
+              <span className="hidden group-open:inline">Hide examples</span>
+            </summary>
+            <div className="mt-2 space-y-2">
+              {DESCRIPTION_EXAMPLES.map((ex) => (
+                <div key={ex.label} className="rounded-md border border-slate-200 bg-white p-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{ex.label}</p>
+                  <p className="mt-1 text-xs italic leading-relaxed text-slate-600">&ldquo;{ex.text}&rdquo;</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
         <textarea
           name="description"
           defaultValue={initialValues?.description ?? ''}
