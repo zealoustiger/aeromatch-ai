@@ -138,6 +138,13 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   2026-07-04** (`partnership-ai-draft-scheduling-system`): the third field in that same
   section, `scheduling_system`, was missed by the fix above — now extracted too, so a pasted
   note fills all three Partner-requirements fields. This item is now fully complete.
+~~- **[agent][goal] "Use my location" autofill on the home-airport field.**~~ ✅ SHIPPED via
+  `airport-geolocation-autofill` (2026-07-04) Every remaining Pillar 1 backlog line was
+  already shipped, so this cycle invented the next slice: a 📍 button on the shared
+  `AirportFormInput` (home airport on all 3 post forms) that geolocates the browser and
+  autofills the nearest airport's ICAO code via a lat/lng bounding-box + haversine lookup
+  against the existing `airports` table — no schema change, graceful fallback on denied
+  permission. Removes the "look up my airport's code" step entirely.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
