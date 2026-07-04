@@ -33,6 +33,7 @@ export default async function SeekerList({
   }
 
   let verdicts = new Map<string, PartnershipCompVerdict>()
+  let savedIds = new Set<string>()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (hasSupabase) {
@@ -41,12 +42,33 @@ export default async function SeekerList({
     // compared to market the same way partnership cards show "below/above market".
     const supabase = await createServerSupabaseClient()
     verdicts = await getSeekerBudgetCheckVerdicts(supabase, seekers)
+
+    // Saved-listings hydration (fills hearts), mirrors PartnershipList.
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: saved } = await supabase
+          .from('saved_listings')
+          .select('listing_id')
+          .eq('user_id', user.id)
+          .eq('listing_type', 'seeker')
+          .in('listing_id', seekers.map((s) => s.id))
+        savedIds = new Set((saved ?? []).map((s) => s.listing_id as string))
+      }
+    } catch {
+      // Non-fatal: just render without filled hearts.
+    }
   }
 
   return (
     <div className="space-y-4">
       {seekers.map((seeker) => (
-        <SeekerCard key={seeker.id} seeker={seeker} budgetVerdict={verdicts.get(seeker.id)} />
+        <SeekerCard
+          key={seeker.id}
+          seeker={seeker}
+          budgetVerdict={verdicts.get(seeker.id)}
+          saved={savedIds.has(seeker.id)}
+        />
       ))}
     </div>
   )

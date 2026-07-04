@@ -18,7 +18,7 @@ import type { User } from '@supabase/supabase-js'
 
 interface Props {
   listingId: string
-  listingType?: 'partnership' | 'aircraft'
+  listingType?: 'partnership' | 'aircraft' | 'seeker'
   initialSaved?: boolean
   /** `icon` = compact heart (cards); `full` = heart + label (detail page). */
   variant?: 'icon' | 'full'

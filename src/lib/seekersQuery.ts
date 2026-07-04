@@ -170,3 +170,27 @@ export async function getSeekerCount(): Promise<number> {
     return 0
   }
 }
+
+/** Single active seeker listing by id, or null if missing/inactive. */
+export async function getSeekerById(id: string): Promise<PartnershipSeeker | null> {
+  if (!hasSupabase()) return MOCK_SEEKERS.find((s) => s.id === id) ?? null
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data } = await supabase
+      .from('partnership_seekers')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'active')
+      .maybeSingle()
+    return data
+  } catch {
+    return null
+  }
+}
+
+/** Several seeker listings by id, in the SAME order as the input ids (mirrors
+ *  `getPartnershipsByIds`/`getAircraftForSaleByIds`). Missing/inactive ids drop out. */
+export async function getSeekersByIds(ids: string[]): Promise<PartnershipSeeker[]> {
+  const results = await Promise.all(ids.map((id) => getSeekerById(id)))
+  return results.filter((s): s is PartnershipSeeker => s !== null)
+}

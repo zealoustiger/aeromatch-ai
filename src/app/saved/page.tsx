@@ -3,12 +3,14 @@ import { Heart, Plane } from 'lucide-react'
 import Link from 'next/link'
 import PartnershipCard from '@/components/PartnershipCard'
 import AircraftSaleCard from '@/components/AircraftSaleCard'
+import SeekerCard from '@/components/SeekerCard'
 import DeviceSavedListings from '@/components/DeviceSavedListings'
 import SavedListingNote from '@/components/SavedListingNote'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
+import { getSeekersByIds } from '@/lib/seekersQuery'
 import { getPartnershipCompVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
 import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
-import type { Partnership, AircraftForSale } from '@/lib/types'
+import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
 export default async function SavedPage() {
   const supabase = await createServerSupabaseClient()
@@ -72,6 +74,9 @@ export default async function SavedPage() {
   const aircraftIds = (savedRows ?? [])
     .filter((r) => r.listing_type === 'aircraft')
     .map((r) => r.listing_id as string)
+  const seekerIds = (savedRows ?? [])
+    .filter((r) => r.listing_type === 'seeker')
+    .map((r) => r.listing_id as string)
 
   // Hydrate partnerships. A saved row whose partnership is no longer active
   // simply drops out (the .in() returns only existing active rows).
@@ -109,7 +114,10 @@ export default async function SavedPage() {
   const aircraftCompVerdicts: Map<string, AircraftCompVerdict> =
     aircraft.length > 0 ? await getAircraftCompVerdicts(supabase, aircraft) : new Map()
 
-  const total = partnerships.length + aircraft.length
+  // Hydrate seekers via the same order-preserving/active-only helper used elsewhere.
+  const seekers: PartnershipSeeker[] = seekerIds.length > 0 ? await getSeekersByIds(seekerIds) : []
+
+  const total = partnerships.length + aircraft.length + seekers.length
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -183,6 +191,28 @@ export default async function SavedPage() {
                         comp={verdict?.comp ?? null}
                         dealVerdict={verdict?.dealVerdict ?? null}
                       />
+                      {notesEnabled && meta && (
+                        <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {seekers.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-lg font-semibold text-slate-900">
+                Saved seeker listings{' '}
+                <span className="text-sm font-normal text-slate-400">({seekers.length})</span>
+              </h2>
+              <div className="space-y-4">
+                {seekers.map((s) => {
+                  const meta = savedMeta.get(`seeker:${s.id}`)
+                  return (
+                    <div key={s.id}>
+                      <SeekerCard seeker={s} saved />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
                       )}
