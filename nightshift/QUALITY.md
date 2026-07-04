@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T09:23:45Z — photo-upload-signin-redirect — score 4/5
+- Strengths: Clean, correctly-scoped fix that reuses the form's proven save-draft-and-redirect flow — factors `redirectToAuth()` out of `onFormSubmit` and threads it into the shared uploader via `isLoggedIn`/`onRequireAuth`; single `addFiles` guard covers browse/drop/paste, `openPicker` gates both click targets, and a11y label + empty-state copy update for the logged-out case; out-of-scope (photo-byte persistence, seeker form, API auth) is thoughtfully documented.
+- Weaknesses / risks: `redirectToAuth` isn't memoized in either parent, so it's a fresh identity each render and churns the `addFiles` useCallback (harmless, just defeats the memo); logged-out empty-state keeps its drag/paste handlers, which is correct (they funnel to onRequireAuth) but slightly redundant with the copy change.
+- Follow-up: none
+
 ## 2026-07-04T08:19:23Z — partnership-edit-placeholder-reset — score 5/5
 - Strengths: One-line fix that makes the payload unconditional (`image_is_placeholder: photoUrls.length === 0`), exactly matching the proven `updateAircraftListing` pattern; correctly leaves the insert path out of scope.
 - Weaknesses / risks: none material
