@@ -306,11 +306,14 @@ completed, delete its screenshot object from `backlog-shots` to reclaim storage.
   the edit-affordance variant of slice 1 + slice 2. **⚠️ Needs the human to apply the
   additive migration in the Supabase SQL editor** (`alter table saved_listings add column
   if not exists note text;`) — the loop can't run DDL; until then the affordance
-  self-suppresses (dormant, no regression). **Remaining: slice 3** — render the note on the
-  listing detail page (`/aircraft/listing/[id]`) + partnership detail, and optionally on
-  browse cards; and the inline-on-save variant (needs SaveButton restructuring). **When
-  slice 3 lands and the item is fully done, delete the `backlog-shots/save-note-listing/`
-  screenshot object to reclaim storage** (left in place for now — item not yet complete).
+  self-suppresses (dormant, no regression). **Correction (found 2026-07-04 during
+  `seeker-remove-scheduling-field` research):** this "Remaining: slice 3" note was stale —
+  `SavedListingNote` already renders on both `/aircraft/listing/[id]` (imported + used
+  there) and `/partnerships/[id]` (same component, same pattern), so the detail-page render
+  slice is done. Only remaining sub-piece: the inline-on-save variant (needs `SaveButton`
+  restructuring) — optional, not blocking. Item is otherwise complete pending the human
+  migration above; **delete the `backlog-shots/save-note-listing/` screenshot object** once
+  that migration is applied and confirmed live.
 
 
 Theme: make ClubHanger feel like a polished Zillow/Redfin for aircraft, and stop
@@ -427,7 +430,8 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   complete 2026-07-03) `PostTypeTabs` (`src/components/PostTypeTabs.tsx`) renders on all
   three post pages (`/partnerships/new`, `/aircraft/new`, `/partnerships/seeking/new`) with
   `active` set per page. Screenshot object can be deleted from `backlog-shots`.
-- **[P1][want] Post-a-Seeking form: make it frictionless.** Goal — make posting a "pilot
+~~- **[P1][want] Post-a-Seeking form: make it frictionless.**~~ ✅ FULLY SHIPPED (last sub-item
+  closed 2026-07-04 via `seeker-remove-scheduling-field`) Goal — make posting a "pilot
   seeking partnership" listing as easy as possible. Changes: (1) **base location → multiple
   airports**, drop airport-name/city/state (implied); (2) **"willing to travel" → drive time**
   (e.g. 30/45/60 min), infer distance behind the scenes; (3) **remove "preferred scheduling
@@ -443,6 +447,7 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   — **slice 3 (autosave + "Saving…/Saved") ✅ SHIPPED (earlier in this drain)**: seeker form now uses `useFormDraft(DRAFT_KEY)` with the `DraftIndicator` component — full Saving/Saved/Restored cycle, "Start over" confirm, `forceSaveDraft` on auth redirect, draft key `ch:draft:seeker-new`.
   — **field change (2) "willing to travel" → drive time ✅ SHIPPED**: the seeker form's `willing_to_travel_nm` select already uses "~30 min drive / ~45 min drive / ~1 hr drive / ~1.5 hr drive / ~2 hr drive" labels.
   — **field change (1) multiple base airports ✅ SHIPPED 2026-06-29 via `seeker-additional-airports`**: seeker form "The basics" section now has an optional "Also flying from" `AirportFormInput`; stored as `additional_airports text[]` in DB (migration required: see schema.sql `seeker_additional_airports`); displayed on the seeker detail page; graceful fallback if column not yet applied.
+  — **field change (3) remove "preferred scheduling system" ✅ SHIPPED 2026-07-04 via `seeker-remove-scheduling-field`**: the "Preferred Scheduling" free-text input is removed from the create + edit forms and the detail-page display row; DB column left in place, unused. This item is now fully complete — all 5 changes + all 3 slices shipped.
 - **[P2][want] "Generate with AI" for title + description (all post flows).** ✅ SHIPPED slice 1
   2026-06-25T060247Z (`seeking-ai-draft`). Seeking form (`/partnerships/seeking/new`) now has
   a violet "Generate with AI ✨" box above Title/Description — user types stream-of-consciousness
