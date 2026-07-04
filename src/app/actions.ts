@@ -325,6 +325,18 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
 
   if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
 
+  // Same lazy-save as createPartnership — a poster who first supplies their
+  // name/phone while editing (not just on the original post) should still get it
+  // pre-filled on their next new listing.
+  const contactNameEdit = (formData.get('contact_name') as string)?.trim()
+  if (contactNameEdit && !user.user_metadata?.full_name) {
+    await supabase.auth.updateUser({ data: { full_name: contactNameEdit } })
+  }
+  const contactPhoneEdit = (formData.get('contact_phone') as string)?.trim()
+  if (contactPhoneEdit && !user.user_metadata?.contact_phone) {
+    await supabase.auth.updateUser({ data: { contact_phone: contactPhoneEdit } })
+  }
+
   revalidatePath('/partnerships')
   revalidatePath('/listings')
   revalidatePath(`/partnerships/${id}`)
@@ -591,6 +603,18 @@ export async function updateSeekerListing(id: string, formData: FormData) {
 
   if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')
 
+  // Same lazy-save as createSeekerListing — a poster who first supplies their
+  // name/phone while editing (not just on the original post) should still get it
+  // pre-filled on their next new listing.
+  const contactNameEdit = (formData.get('contact_name') as string)?.trim()
+  if (contactNameEdit && !user.user_metadata?.full_name) {
+    await supabase.auth.updateUser({ data: { full_name: contactNameEdit } })
+  }
+  const contactPhoneEdit = (formData.get('contact_phone') as string)?.trim()
+  if (contactPhoneEdit && !user.user_metadata?.contact_phone) {
+    await supabase.auth.updateUser({ data: { contact_phone: contactPhoneEdit } })
+  }
+
   revalidatePath('/partnerships/seeking')
   revalidatePath('/listings')
   revalidatePath(`/partnerships/seeking/${id}`)
@@ -800,6 +824,14 @@ export async function updateAircraftListing(id: string, formData: FormData) {
   }
 
   if (result.error || !result.data) throw new Error(result.error?.message ?? 'Listing not found or not yours to edit.')
+
+  // Same lazy-save as createAircraftListing — a poster who first supplies their
+  // phone while editing (not just on the original post) should still get it
+  // pre-filled on their next new listing. (No name field on this form.)
+  const contactPhoneEdit = (formData.get('contact_phone') as string)?.trim()
+  if (contactPhoneEdit && !user.user_metadata?.contact_phone) {
+    await supabase.auth.updateUser({ data: { contact_phone: contactPhoneEdit } })
+  }
 
   revalidatePath('/aircraft')
   revalidatePath('/listings')
