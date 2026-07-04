@@ -38,6 +38,26 @@ const MAKE_SUGGESTIONS: string[] = (() => {
   return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b))
 })()
 
+const DESCRIPTION_TIPS = [
+  'Lead with the specs that matter most: total time, engine time since major overhaul (SMOH), and avionics.',
+  'Note maintenance and condition: annual due date, recent work, damage history, paint/interior condition.',
+  "Say why you're selling — buyers trust a straight answer more than silence on this.",
+  'Call out what makes this one stand out: low time, fresh paint, upgraded panel, hangared always, etc.',
+]
+
+const DESCRIPTION_EXAMPLES = [
+  {
+    label: 'Well-equipped IFR single',
+    text:
+      "2006 Cessna 182T, 2,450 TTAF, 600 SMOH. Garmin G1000 with WAAS and ADS-B Out, autopilot, JPI engine monitor. Annual due April 2026, no damage history, always hangared. Fresh paint and interior in 2023. Selling because I'm upgrading to a twin. Serious buyers welcome — happy to answer any question and support a pre-buy inspection.",
+  },
+  {
+    label: 'Budget-friendly trainer',
+    text:
+      "1978 Piper Warrior, 5,200 TTAF, 350 SMOH. Basic VFR panel with a single Garmin GPS and Mode C transponder, no autopilot. Runs great, straightforward maintenance history, based outdoors at a low-traffic field. Great first airplane or flight-school aircraft. Selling to fund a partnership in a faster plane — reasonable offers considered.",
+  },
+]
+
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -529,6 +549,31 @@ export default function PostAircraftForm({
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="mb-1 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">About this aircraft</h2>
         <p className="mb-3 text-xs text-slate-500">Tell buyers what makes this aircraft special — avionics, engine times, recent work, paint/interior, and why you're selling. A good description is the single biggest factor in getting a serious inquiry.</p>
+        <div className="mb-2 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+          <p className="text-xs font-semibold text-sky-800">How to write a great description</p>
+          <ul className="mt-1.5 space-y-1">
+            {DESCRIPTION_TIPS.map((tip) => (
+              <li key={tip} className="flex gap-1.5 text-xs text-slate-600">
+                <span aria-hidden className="text-sky-400">•</span>
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+          <details className="group mt-2">
+            <summary className="cursor-pointer list-none text-xs font-medium text-sky-700 hover:text-sky-800">
+              <span className="group-open:hidden">See two example descriptions</span>
+              <span className="hidden group-open:inline">Hide examples</span>
+            </summary>
+            <div className="mt-2 space-y-2">
+              {DESCRIPTION_EXAMPLES.map((ex) => (
+                <div key={ex.label} className="rounded-md border border-slate-200 bg-white p-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{ex.label}</p>
+                  <p className="mt-1 text-xs italic leading-relaxed text-slate-600">&ldquo;{ex.text}&rdquo;</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
         <textarea
           name="description"
           defaultValue={initialValues?.description ?? ''}
