@@ -640,6 +640,14 @@ export async function createAircraftListing(formData: FormData) {
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+    annual_due: (() => {
+      const raw = (formData.get('annual_due') as string) || ''
+      return raw ? `${raw}-01` : null
+    })(),
+    damage_history: (() => {
+      const raw = formData.get('damage_history') as string
+      return raw === 'true' ? true : raw === 'false' ? false : null
+    })(),
     title: (() => {
       const t = ((formData.get('title') as string) || '').trim()
       if (t) return t
@@ -726,6 +734,14 @@ export async function updateAircraftListing(id: string, formData: FormData) {
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+    annual_due: (() => {
+      const raw = (formData.get('annual_due') as string) || ''
+      return raw ? `${raw}-01` : null
+    })(),
+    damage_history: (() => {
+      const raw = formData.get('damage_history') as string
+      return raw === 'true' ? true : raw === 'false' ? false : null
+    })(),
     title: (() => {
       const t = ((formData.get('title') as string) || '').trim()
       if (t) return t
