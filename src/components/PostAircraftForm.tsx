@@ -495,6 +495,17 @@ export default function PostAircraftForm({
                 ? `Currently: ${initialValues.currentLocationLabel} — type a city or airport code only if it's changed.`
                 : 'Type a city or airport code — city and state fill in automatically.'}
             </p>
+            {isEdit && initialValues?.currentLocationLabel && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+                <input
+                  type="checkbox"
+                  name="clear_home_airport"
+                  value="true"
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-200"
+                />
+                Remove this listing&rsquo;s location
+              </label>
+            )}
           </div>
         </div>
       </section>

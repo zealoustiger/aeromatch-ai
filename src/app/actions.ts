@@ -716,6 +716,7 @@ export async function updateAircraftListing(id: string, formData: FormData) {
   // "the poster didn't re-type it." Only touch location/state when this submit
   // actually supplied an airport; otherwise leave the stored value alone.
   const homeAirportRaw = ((formData.get('home_airport') as string) || '').trim().toUpperCase()
+  const clearHomeAirport = (formData.get('clear_home_airport') as string) === 'true'
   let locationUpdate: { location: string | null; state: string | null } | null = null
   if (homeAirportRaw) {
     const { data: airport } = await supabase
@@ -730,6 +731,10 @@ export async function updateAircraftListing(id: string, formData: FormData) {
       location: airport.state ? `${airport.city}, ${airport.state}` : airport.city,
       state: airport.state ?? null,
     }
+  } else if (clearHomeAirport) {
+    // Explicit "remove location" checkbox — distinct from an untouched blank field,
+    // which must leave the stored value alone (see comment above).
+    locationUpdate = { location: null, state: null }
   }
 
   const payload = {
