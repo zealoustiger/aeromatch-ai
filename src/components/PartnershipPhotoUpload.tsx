@@ -21,6 +21,8 @@ export default function PartnershipPhotoUpload({
   persistKey,
   restoreGateKey,
   initialPhotos,
+  isLoggedIn = true,
+  onRequireAuth,
 }: {
   endpoint?: string
   // When set, mirror the successfully-uploaded photo URLs to localStorage[persistKey]
@@ -36,6 +38,12 @@ export default function PartnershipPhotoUpload({
   // localStorage-draft restore effect below runs, so callers that pass this shouldn't
   // also pass a persistKey/restoreGateKey pair that could restore a stale create-draft.
   initialPhotos?: string[]
+  // The upload endpoints require a session — when logged out, addFiles() skips the
+  // doomed network call and calls onRequireAuth() instead, so a dropped/pasted photo
+  // gets the same save-draft-and-redirect treatment as a deferred-auth submit, rather
+  // than a cryptic per-thumbnail "Not authenticated" error.
+  isLoggedIn?: boolean
+  onRequireAuth?: () => void
 }) {
   const [photos, setPhotos] = useState<PhotoEntry[]>(() =>
     (initialPhotos ?? []).slice(0, MAX_PHOTOS).map((url, i) => ({
@@ -89,6 +97,11 @@ export default function PartnershipPhotoUpload({
   const canAddMore = photos.length < MAX_PHOTOS
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
+    if (!isLoggedIn) {
+      onRequireAuth?.()
+      return
+    }
+
     const arr = Array.from(files).slice(0, MAX_PHOTOS - photos.length)
     if (!arr.length) return
 
@@ -134,7 +147,7 @@ export default function PartnershipPhotoUpload({
         }
       })
     )
-  }, [photos.length])
+  }, [photos.length, isLoggedIn, onRequireAuth])
 
   const removePhoto = (key: string) => {
     setPhotos((prev) => {
@@ -190,6 +203,16 @@ export default function PartnershipPhotoUpload({
 
   const successPhotos = photos.filter((p) => p.url)
 
+  // Opens the file picker when logged in; otherwise routes straight to the same
+  // save-draft-and-redirect path a deferred-auth submit uses (see addFiles above).
+  const openPicker = () => {
+    if (!isLoggedIn) {
+      onRequireAuth?.()
+      return
+    }
+    inputRef.current?.click()
+  }
+
   return (
     <div
       onDragOver={onDragOver}
@@ -241,9 +264,9 @@ export default function PartnershipPhotoUpload({
           {canAddMore && (
             <button
               type="button"
-              onClick={() => inputRef.current?.click()}
+              onClick={openPicker}
               className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-slate-400 transition hover:border-sky-400 hover:text-sky-500"
-              aria-label="Add another photo"
+              aria-label={isLoggedIn ? 'Add another photo' : 'Sign in to add another photo'}
             >
               <ImagePlus className="h-6 w-6" />
             </button>
@@ -261,18 +284,31 @@ export default function PartnershipPhotoUpload({
               ? 'border-sky-400 bg-sky-50/60'
               : 'border-slate-200 bg-slate-50/60 hover:border-sky-300 hover:bg-sky-50/40'
           )}
-          onClick={() => inputRef.current?.click()}
+          onClick={openPicker}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+          onKeyDown={(e) => e.key === 'Enter' && openPicker()}
         >
           <ImagePlus className="mb-2 h-8 w-8 text-slate-300" />
-          <p className="text-sm font-medium text-slate-600">
-            Drag or paste photos here, or <span className="text-sky-600 underline">browse</span>
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            JPEG, PNG, or WebP · max 5 MB each · up to {MAX_PHOTOS} photos
-          </p>
+          {isLoggedIn ? (
+            <>
+              <p className="text-sm font-medium text-slate-600">
+                Drag or paste photos here, or <span className="text-sky-600 underline">browse</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                JPEG, PNG, or WebP · max 5 MB each · up to {MAX_PHOTOS} photos
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-slate-600">
+                <span className="text-sky-600 underline">Sign in</span> to add photos
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                We&rsquo;ll save your draft and bring you right back
+              </p>
+            </>
+          )}
         </div>
       )}
 

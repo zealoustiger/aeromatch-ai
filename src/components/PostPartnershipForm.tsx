@@ -430,11 +430,15 @@ export default function PostPartnershipForm({
     })
   }
 
+  function redirectToAuth() {
+    if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
+    router.push(`/auth?next=${isEdit ? `/partnerships/${listingId}/edit` : '/partnerships/new'}`)
+  }
+
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
-      if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
-      router.push(`/auth?next=${isEdit ? `/partnerships/${listingId}/edit` : '/partnerships/new'}`)
+      redirectToAuth()
       return
     }
     handleSubmit()
@@ -615,6 +619,8 @@ export default function PostPartnershipForm({
           persistKey={PHOTOS_KEY}
           restoreGateKey={DRAFT_KEY}
           initialPhotos={initialValues?.images}
+          isLoggedIn={isLoggedIn}
+          onRequireAuth={redirectToAuth}
         />
       </section>
 
