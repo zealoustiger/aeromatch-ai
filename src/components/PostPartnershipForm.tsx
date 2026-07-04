@@ -397,12 +397,15 @@ export default function PostPartnershipForm({
           if (result.damage_history !== undefined) {
             fillFormField(form, '[name="damage_history"]', String(result.damage_history), 'change')
           }
+          if (result.min_hours) fillFormField(form, '[name="min_hours"]', result.min_hours)
+          if (result.ratings_required) fillFormField(form, '[name="ratings_required"]', result.ratings_required)
           // Auto-open "More details" if the AI filled any optional fields still inside it
           // (description is now outside <details>, so it doesn't trigger auto-open)
           const hasOptional = result.year || result.registration || result.title ||
             result.monthly_fixed || result.hourly_wet ||
             result.ttaf || result.smoh || result.engine_type ||
-            result.annual_due || result.damage_history !== undefined
+            result.annual_due || result.damage_history !== undefined ||
+            result.min_hours || result.ratings_required
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }

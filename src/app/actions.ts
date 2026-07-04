@@ -1354,6 +1354,8 @@ export interface PartnershipDraft {
   engine_type?: string
   annual_due?: string
   damage_history?: boolean
+  min_hours?: number
+  ratings_required?: string
 }
 
 export async function generatePartnershipDraft(prompt: string): Promise<PartnershipDraft> {
@@ -1448,6 +1450,9 @@ Given the owner's notes or a pasted listing, do TWO things:
      a month from a vague statement like "annual is current" — omit instead
    - damage_history: true if the input states the aircraft has damage/accident/incident
      history, false if it explicitly states there is NO damage history — omit if not mentioned
+   - min_hours: minimum total flight hours the owner requires of a partner, as integer — or omit
+   - ratings_required: comma-separated ratings/endorsements the owner requires of a partner,
+     e.g. "PPL, IFR, Complex" — or omit if not mentioned
 
 2. Draft the listing:
    - title: concise, specific (max 120 chars) — include share type, year + make + model, and airport if mentioned
@@ -1479,6 +1484,8 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
             engine_type: { type: 'string', description: 'Engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550"' },
             annual_due: { type: 'string', description: 'Month the annual inspection is due, "YYYY-MM" format — only when a specific month/year is stated' },
             damage_history: { type: 'boolean', description: 'true if damage/accident history is stated, false if explicitly no damage history' },
+            min_hours: { type: 'integer', description: 'Minimum total flight hours required of a partner' },
+            ratings_required: { type: 'string', description: 'Comma-separated ratings required of a partner, e.g. "PPL, IFR, Complex"' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -1512,6 +1519,8 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
     engine_type: f.engine_type,
     annual_due: /^\d{4}-\d{2}$/.test(f.annual_due ?? '') ? f.annual_due : undefined,
     damage_history: f.damage_history,
+    min_hours: f.min_hours,
+    ratings_required: f.ratings_required,
   }
 }
 
