@@ -11,6 +11,7 @@ import { classifyAvionics, computeIfrSuitability, type AvionicsCap, type IfrTier
 import { lookupEngineTbo } from '@/lib/engineLife'
 import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
+import type { PartnershipCompVerdict, PartnershipDealCheck } from '@/lib/partnershipComps'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
@@ -160,6 +161,27 @@ function priceDrop(p: Partnership): number | null {
   return null
 }
 
+// Deal Check chip — the year+hours-controlled verdict, mirrors AircraftSaleCard's
+// DealCheckChip exactly. 'fair' is suppressed (no chip) to avoid noise; 'good' and
+// 'high' carry signal. Wins over the plain below/above comp pill when present.
+function DealCheckChip({ verdict }: { verdict: PartnershipDealCheck }) {
+  if (verdict.verdict === 'fair') return null
+  if (verdict.verdict === 'good') {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+        <LineChart className="h-3 w-3" />
+        Good deal
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+      <LineChart className="h-3 w-3" />
+      Priced high
+    </span>
+  )
+}
+
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
   '1/3': 'bg-sky-50 text-sky-700 ring-sky-200',
@@ -172,15 +194,18 @@ const shareColors: Record<string, string> = {
 export default function PartnershipCard({
   p,
   saved = false,
-  compVerdict,
+  comp = null,
+  dealVerdict = null,
 }: {
   p: Partnership
   saved?: boolean
-  /** When set, shows a "~X% below/above market · $Xk · N comps" chip.
-   *  `pct` is the whole-number percent distance from the buy-in median (always ≥1;
-   *  ±5% dead-band "near" case is filtered out upstream so it never renders here).
-   *  `median` and `count` provide the absolute dollar anchor and market depth. */
-  compVerdict?: { kind: 'below' | 'above'; pct: number; median: number; count: number }
+  /** Plain whole-family "~X% below/above market · $Xk · N comps" chip. Only rendered
+   *  when `dealVerdict` is absent — the narrowed verdict takes precedence. `pct` is the
+   *  whole-number percent distance from the buy-in median (always ≥1; ±5% dead-band
+   *  "near" case is filtered out upstream so it never renders here). */
+  comp?: PartnershipCompVerdict | null
+  /** Year+hours-narrowed "Good deal"/"Priced high" verdict — wins over `comp` when set. */
+  dealVerdict?: PartnershipDealCheck | null
 }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
@@ -267,22 +292,23 @@ export default function PartnershipCard({
                       </span>
                     ))
                 }
-                {compVerdict?.kind === 'below' && (
+                {dealVerdict && <DealCheckChip verdict={dealVerdict} />}
+                {!dealVerdict && comp?.kind === 'below' && (
                   <span
                     className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
-                    title={`vs. expected buy-in for this share size (${formatPrice(compVerdict.median)})`}
+                    title={`vs. expected buy-in for this share size (${formatPrice(comp.median)})`}
                   >
                     <LineChart className="h-3 w-3" />
-                    ~{compVerdict.pct}% below market · {formatPriceK(compVerdict.median)} · {compVerdict.count} comps
+                    ~{comp.pct}% below market · {formatPriceK(comp.median)} · {comp.count} comps
                   </span>
                 )}
-                {compVerdict?.kind === 'above' && (
+                {!dealVerdict && comp?.kind === 'above' && (
                   <span
                     className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
-                    title={`vs. expected buy-in for this share size (${formatPrice(compVerdict.median)})`}
+                    title={`vs. expected buy-in for this share size (${formatPrice(comp.median)})`}
                   >
                     <LineChart className="h-3 w-3" />
-                    ~{compVerdict.pct}% above market · {formatPriceK(compVerdict.median)} · {compVerdict.count} comps
+                    ~{comp.pct}% above market · {formatPriceK(comp.median)} · {comp.count} comps
                   </span>
                 )}
                 {/* Compare toggle — only renders inside a CompareProvider (i.e.

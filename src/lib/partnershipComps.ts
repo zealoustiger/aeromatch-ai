@@ -287,33 +287,43 @@ export interface PartnershipCompVerdict {
   count: number
 }
 
+/** Combined browse/rail-card verdict — the narrowed year+hours Deal Check wins over the
+ *  plain whole-family comp pill, mirroring `AircraftCompVerdict` in `aircraftComps.ts`. */
+export interface PartnershipCardVerdict {
+  comp: PartnershipCompVerdict | null
+  dealVerdict: PartnershipDealCheck | null
+}
+
 /**
- * Batch-compute "below/above market" buy-in verdicts for a set of listings, one
+ * Batch-compute Deal Check / "below-above market" verdicts for a set of listings, one
  * DB query per unique make (so a browse page's whole card grid costs O(makes),
  * not O(listings)), then narrowed in-memory to the same resolved make+model
- * FAMILY before computing each verdict. Mirrors the per-card comp chip on
- * `/partnerships`; any browse surface rendering `PartnershipCard` outside
- * `PartnershipList` should call this so the proprietary comp signal doesn't
- * silently go missing there. "Near" verdicts are omitted (the card shows
- * nothing rather than a bland "around market" chip). A listing whose make+model
- * doesn't resolve to a known family gets no verdict. Fails soft — a query error
- * yields an empty map so callers render without chips rather than erroring the page.
+ * FAMILY before computing each verdict. Mirrors `getAircraftCompVerdicts`'s precedence:
+ * the narrowed (similar-year/hours) `partnershipDealVerdict` wins when available, else the
+ * plain family "vs market" pill, else nothing. Any browse surface rendering
+ * `PartnershipCard` outside `PartnershipList` should call this so the proprietary comp
+ * signal doesn't silently go missing there. "Near" verdicts are omitted (the card shows
+ * nothing rather than a bland "around market" chip). A listing whose make+model doesn't
+ * resolve to a known family gets no verdict. Fails soft — a query error yields an empty
+ * map so callers render without chips rather than erroring the page.
  */
 export async function getPartnershipCompVerdicts(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   listings: Partnership[]
-): Promise<Map<string, PartnershipCompVerdict>> {
-  const verdicts = new Map<string, PartnershipCompVerdict>()
-  try {
-    const uniqueMakes = [
-      ...new Set(
-        listings
-          .filter((l) => l.buy_in_price && l.total_shares && l.total_shares >= 2 && l.make)
-          .map((l) => l.make as string)
-      ),
-    ]
-    if (uniqueMakes.length === 0) return verdicts
+): Promise<Map<string, PartnershipCardVerdict>> {
+  const verdicts = new Map<string, PartnershipCardVerdict>()
+  const uniqueMakes = [
+    ...new Set(
+      listings
+        .filter((l) => l.buy_in_price && l.total_shares && l.total_shares >= 2 && l.make)
+        .map((l) => l.make as string)
+    ),
+  ]
+  if (uniqueMakes.length === 0) return verdicts
 
+  type BaseCompRow = { id: string; buy_in_price: number; total_shares: number | null; model: string | null }
+  const baseRows = new Map<string, BaseCompRow[]>()
+  try {
     const priceResults = await Promise.all(
       uniqueMakes.map((make) =>
         supabase
@@ -325,34 +335,75 @@ export async function getPartnershipCompVerdicts(
           .limit(200)
       )
     )
-    const makeRows = new Map<
-      string,
-      { id: string; buy_in_price: number; total_shares: number | null; model: string | null }[]
-    >()
     uniqueMakes.forEach((make, i) => {
-      makeRows.set(
+      baseRows.set(
         make,
         (priceResults[i].data ?? []).filter(
-          (r): r is { id: string; buy_in_price: number; total_shares: number | null; model: string | null } =>
-            r.buy_in_price != null && r.buy_in_price > 0
+          (r): r is BaseCompRow => r.buy_in_price != null && r.buy_in_price > 0
         )
       )
     })
-    for (const p of listings) {
-      if (!p.buy_in_price || !p.make || !p.total_shares || p.total_shares < 2) continue
-      const family = familyKeyFor(p.make, p.model)
-      if (!family) continue
-      const rows = makeRows.get(p.make) ?? []
-      const otherComps = rows
+  } catch {
+    // Non-fatal: caller renders cards without any comp chips.
+  }
+
+  // Narrowed Deal Check comps (+ year/ttaf/smoh) — a SEPARATE query/try-catch from the
+  // base comp rows above: `ttaf`/`smoh` on `partnerships` are dormant behind a pending
+  // migration (see `partnership-deal-check`'s detail-page panel), so a missing-column
+  // error here must not take down the always-available whole-family comp pill.
+  type DealCompRow = BaseCompRow & { year: number | null; ttaf: number | null; smoh: number | null }
+  const dealRows = new Map<string, DealCompRow[]>()
+  try {
+    const dealResults = await Promise.all(
+      uniqueMakes.map((make) =>
+        supabase
+          .from('partnerships')
+          .select('id, buy_in_price, total_shares, model, year, ttaf, smoh')
+          .eq('status', 'active')
+          .eq('make', make)
+          .not('buy_in_price', 'is', null)
+          .limit(200)
+      )
+    )
+    uniqueMakes.forEach((make, i) => {
+      dealRows.set(
+        make,
+        (dealResults[i].data ?? []).filter(
+          (r): r is DealCompRow => r.buy_in_price != null && r.buy_in_price > 0
+        )
+      )
+    })
+  } catch {
+    // Non-fatal: the narrowed Deal Check chip stays dormant until the migration is applied.
+  }
+
+  for (const p of listings) {
+    if (!p.buy_in_price || !p.make || !p.total_shares || p.total_shares < 2) continue
+    const family = familyKeyFor(p.make, p.model)
+    if (!family) continue
+
+    const dRows = dealRows.get(p.make) ?? []
+    const otherDealComps = dRows
+      .filter((r) => r.id !== p.id && familyKeyFor(p.make, r.model) === family)
+      .map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares, year: r.year, ttaf: r.ttaf, smoh: r.smoh }))
+    const dealVerdict = partnershipDealVerdict(
+      { buyIn: p.buy_in_price, totalShares: p.total_shares, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
+      otherDealComps
+    )
+
+    let comp: PartnershipCompVerdict | null = null
+    if (!dealVerdict) {
+      const bRows = baseRows.get(p.make) ?? []
+      const otherComps = bRows
         .filter((r) => r.id !== p.id && familyKeyFor(p.make, r.model) === family)
         .map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares }))
-      const result = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
-      if (result && result.kind !== 'near') {
-        verdicts.set(p.id, { kind: result.kind, pct: result.pct, median: result.median, count: result.count })
-      }
+      const rawComp = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
+      comp = rawComp && rawComp.kind !== 'near'
+        ? { kind: rawComp.kind, pct: rawComp.pct, median: rawComp.median, count: rawComp.count }
+        : null
     }
-  } catch {
-    // Non-fatal: caller renders cards without comp chips.
+
+    if (dealVerdict || comp) verdicts.set(p.id, { comp, dealVerdict })
   }
   return verdicts
 }

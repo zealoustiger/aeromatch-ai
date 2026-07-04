@@ -131,7 +131,11 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
                 ? `Based at ${airport.icao}`
                 : `${distanceNm} nm from ${airport.icao} · ${p.home_airport}`}
             </p>
-            <PartnershipCard p={p} compVerdict={compVerdicts.get(p.id)} />
+            <PartnershipCard
+              p={p}
+              comp={compVerdicts.get(p.id)?.comp ?? null}
+              dealVerdict={compVerdicts.get(p.id)?.dealVerdict ?? null}
+            />
           </div>
         ))}
       </div>

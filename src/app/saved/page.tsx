@@ -8,7 +8,7 @@ import DeviceSavedListings from '@/components/DeviceSavedListings'
 import SavedListingNote from '@/components/SavedListingNote'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { getSeekersByIds } from '@/lib/seekersQuery'
-import { getPartnershipCompVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
+import { getPartnershipCompVerdicts, type PartnershipCardVerdict } from '@/lib/partnershipComps'
 import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
@@ -95,7 +95,7 @@ export default async function SavedPage() {
 
   // Same honest, comps-based buy-in verdict shown on every other partnership
   // browse surface (near/[icao], make/[make], state/[state], /partnerships).
-  const compVerdicts: Map<string, PartnershipCompVerdict> =
+  const compVerdicts: Map<string, PartnershipCardVerdict> =
     partnerships.length > 0
       ? await getPartnershipCompVerdicts(supabase, partnerships)
       : new Map()
@@ -166,7 +166,12 @@ export default async function SavedPage() {
                   const meta = savedMeta.get(`partnership:${p.id}`)
                   return (
                     <div key={p.id}>
-                      <PartnershipCard p={p} saved compVerdict={compVerdicts.get(p.id)} />
+                      <PartnershipCard
+                        p={p}
+                        saved
+                        comp={compVerdicts.get(p.id)?.comp ?? null}
+                        dealVerdict={compVerdicts.get(p.id)?.dealVerdict ?? null}
+                      />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
                       )}

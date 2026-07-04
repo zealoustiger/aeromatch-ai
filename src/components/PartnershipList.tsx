@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { getPartnershipListings, type PartnershipFilters } from '@/lib/partnershipsQuery'
-import { getPartnershipCompVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
+import { getPartnershipCompVerdicts, type PartnershipCardVerdict } from '@/lib/partnershipComps'
 import PartnershipCard from './PartnershipCard'
 
 /**
@@ -23,7 +23,7 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
   }
 
   let savedIds = new Set<string>()
-  let verdicts = new Map<string, PartnershipCompVerdict>()
+  let verdicts = new Map<string, PartnershipCardVerdict>()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
@@ -46,16 +46,17 @@ export default async function PartnershipList({ filters }: { filters: Partnershi
       // Non-fatal: just render without filled hearts.
     }
 
-    // Comp verdict chips: batch-fetch buy-in prices per unique make so we can show
-    // "Below market" / "Above market" on cards that are clearly priced off median.
-    // One DB query per unique make (typically 1-4). Fails soft — no chips on error.
+    // Comp/Deal Check verdict chips: batch-fetch buy-in prices (+ year/ttaf/smoh) per
+    // unique make so we can show the narrowed "Good deal"/"Priced high" verdict, or the
+    // plain "Below/Above market" pill as a fallback. One DB query per unique make
+    // (typically 1-4). Fails soft — no chips on error.
     verdicts = await getPartnershipCompVerdicts(supabase, listings)
   }
 
   return renderList(listings, filters, airportList, savedIds, verdicts)
 }
 
-function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set(), verdicts: Map<string, PartnershipCompVerdict> = new Map()) {
+function renderList(listings: Partnership[], filters: PartnershipFilters, airportList: string[], savedIds: Set<string> = new Set(), verdicts: Map<string, PartnershipCardVerdict> = new Map()) {
   if (listings.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
@@ -83,7 +84,13 @@ function renderList(listings: Partnership[], filters: PartnershipFilters, airpor
       </p>
       <div className="space-y-4">
         {listings.map((p) => (
-          <PartnershipCard key={p.id} p={p} saved={savedIds.has(p.id)} compVerdict={verdicts.get(p.id)} />
+          <PartnershipCard
+            key={p.id}
+            p={p}
+            saved={savedIds.has(p.id)}
+            comp={verdicts.get(p.id)?.comp ?? null}
+            dealVerdict={verdicts.get(p.id)?.dealVerdict ?? null}
+          />
         ))}
       </div>
     </div>

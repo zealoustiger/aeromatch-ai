@@ -117,8 +117,9 @@ export default function PartnershipRailCard({
   compVerdict,
 }: {
   p: Partnership
-  /** When set (similar-partnerships rail), shows a "Below market" or "Above market"
-   *  chip derived from the same-make buy-in median. */
+  /** When set (similar-partnerships rail), shows a "Good deal" or "Priced high" chip
+   *  derived from the year+hours-narrowed Deal Check verdict (`partnershipDealVerdict`) —
+   *  mirrors AircraftRailCard's identical chip/copy. */
   compVerdict?: 'below' | 'above'
 }) {
   const label = aircraftLabel(p.make, p.model, p.year)
@@ -147,11 +148,11 @@ export default function PartnershipRailCard({
         />
         {compVerdict === 'below' ? (
           <span className="absolute left-2 top-2 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-            Below market
+            Good deal
           </span>
         ) : compVerdict === 'above' ? (
           <span className="absolute left-2 top-2 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-            Above market
+            Priced high
           </span>
         ) : null}
         <TrustOverlayChip annualDue={p.annual_due} damageHistory={p.damage_history} />

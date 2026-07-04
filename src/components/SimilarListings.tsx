@@ -2,7 +2,7 @@ import { Layers } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
-import { partnershipBuyInComp } from '@/lib/partnershipComps'
+import { partnershipBuyInComp, partnershipDealVerdict } from '@/lib/partnershipComps'
 import PartnershipRailCard from './PartnershipRailCard'
 import RailScroller from './RailScroller'
 
@@ -65,17 +65,23 @@ export default async function SimilarListings({ current }: { current: Partnershi
   const similar = rank(current, candidates)
   if (similar.length === 0) return null
 
-  // Batch-fetch buy-in prices per unique make so we can show honest "Below market"
-  // / "Above market" chips on each card. One DB query per unique make (typically 1-2
-  // for a same-make similar set). Fails soft — verdicts stay empty on any error.
+  // Batch-fetch buy-in prices per unique make so we can show the year+hours-controlled
+  // "Good deal"/"Priced high" Deal Check verdict on each card, mirroring
+  // SimilarAircraft.tsx's clubHangerDealVerdict-only rail treatment ('fair' suppressed).
+  // The `year`/`ttaf`/`smoh` columns are fetched via a SEPARATE query/try-catch from the
+  // base buy-in/share columns below — they're dormant behind a pending migration (see
+  // `partnership-deal-check`'s detail-page panel), so a missing-column error there falls
+  // back to the plain whole-family-less "Below/Above market" pill this rail has always
+  // shown, instead of taking the chip down entirely.
   const verdicts = new Map<string, 'below' | 'above'>()
   const uniqueMakes = [...new Set(similar.map((p) => p.make).filter(Boolean))] as string[]
 
   if (uniqueMakes.length > 0 && hasSupabase()) {
     try {
       const supabase = await createServerSupabaseClient()
-      // Fetch all active buy-in prices for each unique make in parallel.
-      const priceResults = await Promise.all(
+
+      type BaseCompRow = { id: string; buy_in_price: number; total_shares: number | null }
+      const baseResults = await Promise.all(
         uniqueMakes.map((make) =>
           supabase
             .from('partnerships')
@@ -86,26 +92,68 @@ export default async function SimilarListings({ current }: { current: Partnershi
             .limit(200)
         )
       )
-
-      // Build make → [{id, buy_in_price, total_shares}] map.
-      const makeRows = new Map<string, { id: string; buy_in_price: number; total_shares: number | null }[]>()
+      const baseRows = new Map<string, BaseCompRow[]>()
       uniqueMakes.forEach((make, i) => {
-        const rows = (priceResults[i].data ?? [])
-          .filter((r): r is { id: string; buy_in_price: number; total_shares: number | null } => r.buy_in_price != null && r.buy_in_price > 0)
-        makeRows.set(make, rows)
+        baseRows.set(
+          make,
+          (baseResults[i].data ?? []).filter(
+            (r): r is BaseCompRow => r.buy_in_price != null && r.buy_in_price > 0
+          )
+        )
       })
 
-      // Compute verdict for each similar listing with a buy-in price + known share
-      // count (share size is required to normalize the comparison honestly).
+      type DealCompRow = BaseCompRow & { year: number | null; ttaf: number | null; smoh: number | null }
+      const dealRows = new Map<string, DealCompRow[]>()
+      try {
+        const dealResults = await Promise.all(
+          uniqueMakes.map((make) =>
+            supabase
+              .from('partnerships')
+              .select('id, buy_in_price, total_shares, year, ttaf, smoh')
+              .eq('status', 'active')
+              .eq('make', make)
+              .not('buy_in_price', 'is', null)
+              .limit(200)
+          )
+        )
+        uniqueMakes.forEach((make, i) => {
+          dealRows.set(
+            make,
+            (dealResults[i].data ?? []).filter(
+              (r): r is DealCompRow => r.buy_in_price != null && r.buy_in_price > 0
+            )
+          )
+        })
+      } catch {
+        // Narrowed Deal Check stays dormant until the migration is applied; base chip
+        // (below) still renders.
+      }
+
       for (const p of similar) {
         if (!p.buy_in_price || !p.make || !p.total_shares) continue
-        const rows = makeRows.get(p.make) ?? []
-        // Exclude this listing's own price from the comp set (honesty: don't
-        // compare a listing to itself). Use the fetched IDs for exact exclusion.
-        const otherComps = rows.filter((r) => r.id !== p.id).map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares }))
-        const result = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
-        if (result && result.kind !== 'near') {
-          verdicts.set(p.id, result.kind)
+
+        const dRows = dealRows.get(p.make) ?? []
+        const otherDealComps = dRows
+          .filter((r) => r.id !== p.id)
+          .map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares, year: r.year, ttaf: r.ttaf, smoh: r.smoh }))
+        const dealVerdict = partnershipDealVerdict(
+          { buyIn: p.buy_in_price, totalShares: p.total_shares, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
+          otherDealComps
+        )
+        if (dealVerdict) {
+          if (dealVerdict.verdict !== 'fair') {
+            verdicts.set(p.id, dealVerdict.verdict === 'good' ? 'below' : 'above')
+          }
+          continue
+        }
+
+        const bRows = baseRows.get(p.make) ?? []
+        const otherComps = bRows
+          .filter((r) => r.id !== p.id)
+          .map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares }))
+        const comp = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
+        if (comp && comp.kind !== 'near') {
+          verdicts.set(p.id, comp.kind)
         }
       }
     } catch {
