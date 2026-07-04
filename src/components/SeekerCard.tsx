@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { MapPin, Clock, Search, LineChart } from 'lucide-react'
+import { MapPin, Clock, Search, LineChart, Sparkles, CalendarDays } from 'lucide-react'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatPriceK, travelLabel } from '@/lib/utils'
 import type { PartnershipCompVerdict } from '@/lib/partnershipComps'
@@ -11,6 +11,34 @@ const CATEGORY_LABELS: Record<string, string> = {
   turboprop: 'Turboprop',
   jet: 'Jet',
   any: 'Any Type',
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Freshness helpers — mirror PartnershipCard, keyed off `created_at` (seekers
+// have no `first_seen_at`; they're user-posted, so creation time is the signal).
+function isNew(createdAt: string | null): boolean {
+  if (!createdAt) return false
+  const then = new Date(createdAt).getTime()
+  if (Number.isNaN(then)) return false
+  return Date.now() - then < 7 * DAY_MS
+}
+
+// Redfin-style days-on-market label. Returns null when we have no usable date.
+function listedAgo(createdAt: string | null): string | null {
+  if (!createdAt) return null
+  const then = new Date(createdAt).getTime()
+  if (Number.isNaN(then)) return null
+  const days = Math.floor((Date.now() - then) / DAY_MS)
+  if (days <= 0) return 'Listed today'
+  if (days === 1) return 'Listed 1 day ago'
+  if (days < 7) return `Listed ${days} days ago`
+  if (days < 14) return 'Listed 1 week ago'
+  if (days < 30) return `Listed ${Math.floor(days / 7)} weeks ago`
+  if (days < 60) return 'Listed 1 month ago'
+  if (days < 365) return `Listed ${Math.floor(days / 30)} months ago`
+  const years = Math.floor(days / 365)
+  return years === 1 ? 'Listed 1 year ago' : `Listed ${years} years ago`
 }
 
 export default function SeekerCard({
@@ -32,6 +60,9 @@ export default function SeekerCard({
     seeker.preferred_models || null,
   ].filter(Boolean).join(' · ') || (seeker.aircraft_category ? CATEGORY_LABELS[seeker.aircraft_category] : 'Any aircraft')
 
+  const fresh = isNew(seeker.created_at)
+  const listed = listedAgo(seeker.created_at)
+
   return (
     <Link
       href={`/partnerships/seeking/${seeker.id}`}
@@ -52,6 +83,12 @@ export default function SeekerCard({
 
           {/* Badges */}
           <div className="mb-2 flex flex-wrap gap-1.5">
+            {fresh && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                <Sparkles className="h-3 w-3" />
+                New
+              </span>
+            )}
             {seeker.total_hours && (
               <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
                 {seeker.total_hours} hrs
@@ -122,9 +159,12 @@ export default function SeekerCard({
         )}
       </div>
 
-      <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
-        Posted {new Date(seeker.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-      </div>
+      {listed && (
+        <div className="mt-3 flex items-center gap-1 border-t border-slate-100 pt-3 text-xs text-slate-400">
+          <CalendarDays className="h-3.5 w-3.5" />
+          {listed}
+        </div>
+      )}
     </Link>
   )
 }
