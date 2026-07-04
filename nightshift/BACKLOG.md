@@ -179,6 +179,14 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   all 3 post forms. **Runner-ups not pursued:** N-number helper text on the aircraft form omits
   the word "Optional" the partnership form's has (cosmetic); photo-upload `endpoint` prop
   explicit-vs-default between forms (looked intentional, not a bug).
+~~- **[agent][goal] Surface the description field on the seeker post form.**~~ ✅ SHIPPED via
+  `seeker-description-surface` (2026-07-04) The seeker form's Description field (tips box +
+  textarea, content already shipped) stayed nested inside the collapsed "More details"
+  `<details>`, unlike the aircraft and partnership forms which surface description in its own
+  always-visible section — a seeker who never expands "More details" never saw that a
+  description field existed. Moved it into its own "About you" section matching the other two
+  forms' layout exactly; no schema/actions change. Description-field visibility is now
+  consistent across all 3 post forms.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
