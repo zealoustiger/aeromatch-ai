@@ -2,10 +2,10 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Loader2 } from 'lucide-react'
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
-import { useFormDraft } from '@/components/useFormDraft'
+import { useFormDraft, type DraftStatus } from '@/components/useFormDraft'
 import { createAircraftListing, updateAircraftListing, generateAircraftDraft, generateAircraftDraftFromUrl, type AircraftDraft } from '@/app/actions'
 import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
@@ -90,6 +90,32 @@ function Select({ className, children, ...props }: React.SelectHTMLAttributes<HT
       {children}
     </select>
   )
+}
+
+function DraftIndicator({ status }: { status: DraftStatus }) {
+  const base = 'flex items-center gap-1.5 text-xs'
+  switch (status) {
+    case 'saving':
+      return (
+        <span className={cn(base, 'text-slate-400')} aria-live="polite">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+        </span>
+      )
+    case 'saved':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft saved
+        </span>
+      )
+    case 'restored':
+      return (
+        <span className={cn(base, 'text-emerald-600')} aria-live="polite">
+          <Check className="h-3.5 w-3.5" /> Draft restored — picking up where you left off
+        </span>
+      )
+    default:
+      return <span className={cn(base, 'text-slate-400')}>Your progress autosaves on this device</span>
+  }
 }
 
 const NEW_DRAFT_KEY = 'ch:draft:aircraft-new'
@@ -400,9 +426,7 @@ export default function PostAircraftForm({
             {isEdit ? 'Revert changes' : 'Start over'}
           </button>
         )}
-        <span className="text-xs text-slate-400">
-          {status === 'saved' || status === 'restored' ? 'Draft saved' : 'Your progress autosaves on this device'}
-        </span>
+        <DraftIndicator status={status} />
       </div>
 
       {/* AI prefill — at the top so the fastest path is the most visible one */}
