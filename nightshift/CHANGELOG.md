@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-04T13:28:50Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 1 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Stopped because: night ended
+- Run: 20260704T131007Z
+
 ## 20260704T130438Z — PASS — partnership-deal-check-card-parity
 - Pages: /partnerships, /saved, /partnerships/near/[icao], /partnerships/[id] (Similar partnerships rail)
 - What: **Partnership cards now show the same honest "Good deal" / "Priced high" verdict that the partnership detail page's Deal Check panel already has — not just the coarser "below/above market" comparison against every listing of that make+model.** `getPartnershipCompVerdicts` (used by `/partnerships`, `/saved`, and `/partnerships/near/[icao]`) and the "Similar partnerships" rail on the detail page now compute the year+hours-narrowed `partnershipDealVerdict()` per listing and show it in place of the plain comp pill when available, mirroring the aircraft-for-sale side's existing card/rail parity exactly. Mid-implementation, direct verification against the live database (a throwaway script, deleted before commit) showed the `ttaf`/`smoh` migration on `partnerships` is still unapplied — so bundling those columns into the SAME query used for the already-live "Below/Above market" pill would have made that entire query error and silently take the existing, working pill down for every user, not just left the new chip dormant. Fixed by splitting into two separate queries/try-catches (mirroring the pattern the detail page's own Deal Check panel already uses for this exact reason): the base buy-in/share-count lookup that powers today's pill stays untouched and always works, while the extended year/ttaf/smoh lookup for the narrowed verdict is isolated so its (currently expected) failure degrades gracefully to the existing pill instead of breaking it.
