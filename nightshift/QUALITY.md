@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-04T10:13:05Z — aircraft-draft-indicator — score 5/5
+## 2026-07-04T11:31:43Z — seeker-card-budget-chip-severity-fix — score 5/5
+- Strengths: Exact-target fix that resolves a real trust/honesty inversion — `below` now renders amber "Budget may be tight" and `above` emerald "Comfortably above typical", byte-for-byte matching `SeekerBudgetCheck`'s `VERDICT_META` colors and label intent; copy was rewritten to drop the borrowed "% below/above market" deal/no-deal framing that caused the miswrite, severity is carried in words (not color alone, so a11y holds), and scope stayed to the one file with the comp math / detail panel / partnership card correctly untouched.
+- Weaknesses / risks: none material — card keeps its static `LineChart` icon for both verdicts where the panel uses directional `TrendingDown`/`TrendingUp`, so the icon doesn't reinforce direction, but that matches the card's own existing convention and color+copy already carry severity.
+- Follow-up: none
 - Strengths: Textbook parity port — `DraftIndicator` is a verbatim copy of the partnership/seeker version, `type DraftStatus` imported cleanly, all four status states handled with an `idle` default fallback, `aria-live="polite"` on the live states; scope held to the one file, purely additive/presentational exactly as spec'd, and the two lower-value audit runner-ups were correctly deferred.
 - Weaknesses / risks: none material — the indicator is now triplicated across three forms rather than extracted to a shared component, but that matches the codebase's own established pattern and the spec explicitly chose verbatim copy.
 - Follow-up: none
