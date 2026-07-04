@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T12:03:53Z — partnership-dealsignals-annual-damage — score 4/5
+- Strengths: Exact spec match — copy mirrors aircraft DealSignals verbatim, reuses the already-computed honesty-gated annual/damage reads, self-suppresses on null, and updates the panel doc comment (six→eight signals).
+- Weaknesses / risks: Signal-row copy is now duplicated across `computeDealSignals` and `computeSignals` (two files to keep in sync) — intentional per spec and consistent with the existing mirror pattern, but a real drift risk over time.
+- Follow-up: none
+
 ## 2026-07-04T11:31:43Z — seeker-card-budget-chip-severity-fix — score 5/5
 - Strengths: Exact-target fix that resolves a real trust/honesty inversion — `below` now renders amber "Budget may be tight" and `above` emerald "Comfortably above typical", byte-for-byte matching `SeekerBudgetCheck`'s `VERDICT_META` colors and label intent; copy was rewritten to drop the borrowed "% below/above market" deal/no-deal framing that caused the miswrite, severity is carried in words (not color alone, so a11y holds), and scope stayed to the one file with the comp math / detail panel / partnership card correctly untouched.
 - Weaknesses / risks: none material — card keeps its static `LineChart` icon for both verdicts where the panel uses directional `TrendingDown`/`TrendingUp`, so the icon doesn't reinforce direction, but that matches the card's own existing convention and color+copy already carry severity.
