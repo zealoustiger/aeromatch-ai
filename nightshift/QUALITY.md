@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T08:19:23Z — partnership-edit-placeholder-reset — score 5/5
+- Strengths: One-line fix that makes the payload unconditional (`image_is_placeholder: photoUrls.length === 0`), exactly matching the proven `updateAircraftListing` pattern; correctly leaves the insert path out of scope.
+- Weaknesses / risks: none material
+- Follow-up: none
+
 ## 2026-07-04T07:45:55Z — partnership-card-ifr-badge — score 4/5
 - Strengths: Faithful verbatim port of AircraftSaleCard's `IFR_CARD_CHIP`/`IfrCardBadge`/`showIfrBadge` recipe — same tier gate (`full`/`capable`), same conditional-vs-raw-chip branch, type import folded cleanly onto the existing `classifyAvionics` import; matches surrounding conventions with no dead code and correct spec-scoped behavior (equipped/basic/none still render raw chips).
 - Weaknesses / risks: `computeIfrSuitability(avionicsCaps)` is called twice per card (once for `ifrTier`, again inside `IfrCardBadge`), and `IfrCardBadge` re-guards the tier already gated by `showIfrBadge` — a minor redundancy, but inherited verbatim from the AircraftSaleCard reference so it's consistent, not a regression.
