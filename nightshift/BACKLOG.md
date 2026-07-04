@@ -129,6 +129,12 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   `intended_use` — a parity gap vs. the partnership form's AI-extracted `share_type`. Now the
   AI extracts both and auto-checks the matching chips, so a note like "1/3 share for weekend
   trips" no longer needs manual checkbox taps after prefilling everything else.
+~~- **[agent][goal] AI draft: extract min_hours + ratings_required on the partnership form.**~~
+  ✅ SHIPPED via `partnership-ai-draft-partner-reqs` (2026-07-04) "Prefill from your notes ✨"
+  on the partnership form extracted every aircraft/cost spec but silently skipped the "Partner
+  requirements" fields (`min_hours`, `ratings_required`) — a parity gap vs. the seeker form's
+  already-extracted `hours_per_month`/`ratings_held`. Now the AI extracts both, auto-filling
+  the Minimum Hours input and checking the matching Ratings Required chips.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
