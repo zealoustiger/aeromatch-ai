@@ -306,6 +306,13 @@ export default function PostSeekerListingForm({
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
+  // The AI-notes textarea is now part of the draft (has a `name`), so a restored
+  // draft can silently set its value without firing `input` — sync the button's
+  // enabled state once after the draft-restore effect above has run.
+  useEffect(() => {
+    if (aiPromptRef.current?.value.trim()) setHasAiPrompt(true)
+  }, [])
+
   function fillFormField(form: HTMLFormElement, selector: string, value: string | number | undefined, eventType = 'input') {
     if (value === undefined || value === null) return
     const el = form.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(selector)
@@ -330,7 +337,16 @@ export default function PostSeekerListingForm({
     changedBox?.dispatchEvent(new Event('change', { bubbles: true }))
   }
 
+  function redirectToAuth() {
+    if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
+    router.push(`/auth?next=${isEdit ? `/partnerships/seeking/${listingId}/edit` : '/partnerships/seeking/new'}`)
+  }
+
   function handleGenerate() {
+    if (!isLoggedIn) {
+      redirectToAuth()
+      return
+    }
     setAiError(null)
     const token = fillTokenRef.current
     startGenerating(async () => {
@@ -379,8 +395,7 @@ export default function PostSeekerListingForm({
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
-      if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
-      router.push(`/auth?next=${isEdit ? `/partnerships/seeking/${listingId}/edit` : '/partnerships/seeking/new'}`)
+      redirectToAuth()
       return
     }
     handleSubmit()
@@ -412,6 +427,7 @@ export default function PostSeekerListingForm({
         <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will prefill the whole form (aircraft preferences, budget, location, pilot profile, title, and description).</p>
         <textarea
           ref={aiPromptRef}
+          name="_ai_notes_draft"
           defaultValue=""
           onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
