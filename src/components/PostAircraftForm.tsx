@@ -253,6 +253,13 @@ export default function PostAircraftForm({
   const [aiError, setAiError] = useState<string | null>(null)
   const [isGenerating, startGenerating] = useTransition()
 
+  // The AI-notes textarea is now part of the draft (has a `name`), so a restored
+  // draft can silently set its value without firing `input` — sync the button's
+  // enabled state once after the draft-restore effect above has run.
+  useEffect(() => {
+    if (aiPromptRef.current?.value.trim()) setHasAiPrompt(true)
+  }, [])
+
   const [isLookingUp, setIsLookingUp] = useState(false)
   const [lookupStatus, setLookupStatus] = useState<string | null>(null)
 
@@ -266,6 +273,10 @@ export default function PostAircraftForm({
   }
 
   function handleGenerate() {
+    if (!isLoggedIn) {
+      redirectToAuth()
+      return
+    }
     setAiError(null)
     const token = fillTokenRef.current
     const raw = (aiPromptRef.current?.value ?? '').trim()
@@ -402,6 +413,7 @@ export default function PostAircraftForm({
         </p>
         <textarea
           ref={aiPromptRef}
+          name="_ai_notes_draft"
           defaultValue=""
           onInput={(e) => setHasAiPrompt(!!(e.target as HTMLTextAreaElement).value.trim())}
           rows={3}
