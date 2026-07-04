@@ -1326,6 +1326,8 @@ export interface PartnershipDraft {
   ttaf?: number
   smoh?: number
   engine_type?: string
+  annual_due?: string
+  damage_history?: boolean
 }
 
 export async function generatePartnershipDraft(prompt: string): Promise<PartnershipDraft> {
@@ -1415,6 +1417,11 @@ Given the owner's notes or a pasted listing, do TWO things:
    - ttaf: total airframe hours as integer — or omit
    - smoh: hours since major overhaul as integer — or omit
    - engine_type: engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550" — or omit
+   - annual_due: month the annual inspection is due, in "YYYY-MM" format — ONLY when a
+     specific month/year is stated (e.g. "annual due March 2027" → "2027-03"); never guess
+     a month from a vague statement like "annual is current" — omit instead
+   - damage_history: true if the input states the aircraft has damage/accident/incident
+     history, false if it explicitly states there is NO damage history — omit if not mentioned
 
 2. Draft the listing:
    - title: concise, specific (max 120 chars) — include share type, year + make + model, and airport if mentioned
@@ -1444,6 +1451,8 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
             ttaf: { type: 'integer', description: 'Total time airframe, hours' },
             smoh: { type: 'integer', description: 'Hours since major overhaul' },
             engine_type: { type: 'string', description: 'Engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550"' },
+            annual_due: { type: 'string', description: 'Month the annual inspection is due, "YYYY-MM" format — only when a specific month/year is stated' },
+            damage_history: { type: 'boolean', description: 'true if damage/accident history is stated, false if explicitly no damage history' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -1475,6 +1484,8 @@ Rules: never invent facts not in the input. Omit structured fields entirely when
     ttaf: f.ttaf,
     smoh: f.smoh,
     engine_type: f.engine_type,
+    annual_due: /^\d{4}-\d{2}$/.test(f.annual_due ?? '') ? f.annual_due : undefined,
+    damage_history: f.damage_history,
   }
 }
 

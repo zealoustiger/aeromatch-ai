@@ -189,8 +189,14 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   confirmed still unapplied, same as the still-pending `ttaf`/`smoh`/`engine_type` migration),
   two optional fields on the post/edit form, and both panels on `/partnerships/[id]`, reusing
   the exact shared `src/lib/annualStatus.ts`/`src/lib/damageHistory.ts` functions the aircraft
-  page already ships. AI-draft extraction of these two fields (mirroring ttaf/smoh/engine_type)
-  is the natural next slice, not yet built.
+  page already ships. **AI-draft extraction shipped 2026-07-04** (`partnership-ai-draft-annual-damage`):
+  the "Prefill from your notes ✨" box now also extracts `annual_due`/`damage_history` from
+  pasted text, mirroring the `ttaf`/`smoh`/`engine_type` extraction. **Remaining gap:** the
+  aircraft-for-sale post form (`/aircraft/new`) has no `annual_due`/`damage_history` fields
+  at all — only ingested/scraped listings get these via the ingest pipeline's description
+  extraction; a self-posted aircraft-for-sale listing can never show either panel. Adding the
+  fields + panels to the aircraft form (mirroring this partnership work) is the natural next
+  Pillar 3 slice.
 
 ---
 
