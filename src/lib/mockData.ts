@@ -41,6 +41,8 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     ttaf: 3200,
     smoh: 650,
     engine_type: 'Lycoming IO-360',
+    annual_due: null,
+    damage_history: null,
   },
   {
     id: 'mock-2',
@@ -82,6 +84,8 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     ttaf: 2800,
     smoh: 1100,
     engine_type: 'Lycoming O-360',
+    annual_due: null,
+    damage_history: null,
   },
   {
     id: 'mock-3',
@@ -123,6 +127,8 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     ttaf: 2100,
     smoh: null,
     engine_type: null,
+    annual_due: null,
+    damage_history: null,
   },
   {
     id: 'mock-4',
@@ -164,6 +170,8 @@ export const MOCK_PARTNERSHIPS: Partnership[] = [
     ttaf: 380,
     smoh: 380,
     engine_type: 'Lycoming IO-360',
+    annual_due: null,
+    damage_history: null,
   },
 ]
 

@@ -152,6 +152,8 @@ export interface PartnershipEditInitial {
   ttaf?: number
   smoh?: number
   engine_type?: string
+  annual_due?: string
+  damage_history?: boolean
   min_hours?: number
   ratings_required?: string
   scheduling_system?: string
@@ -623,7 +625,8 @@ export default function PostPartnershipForm({
         ref={detailsRef}
         open={Boolean(
           (isEdit && (initialValues?.year || initialValues?.registration || initialValues?.ttaf || initialValues?.smoh ||
-            initialValues?.engine_type || initialValues?.title || initialValues?.monthly_fixed ||
+            initialValues?.engine_type || initialValues?.annual_due || initialValues?.damage_history != null ||
+            initialValues?.title || initialValues?.monthly_fixed ||
             initialValues?.hourly_wet || initialValues?.total_shares || initialValues?.min_hours ||
             initialValues?.ratings_required || initialValues?.scheduling_system)) ||
           (!isEdit && userPhone)
@@ -655,6 +658,29 @@ export default function PostPartnershipForm({
                 <Label>Engine</Label>
                 <Input name="engine_type" defaultValue={initialValues?.engine_type ?? ''} placeholder="e.g. Lycoming IO-360, Continental IO-550" />
                 <p className="mt-1 text-xs text-slate-400">Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
+              </div>
+              <div>
+                <Label>Annual due</Label>
+                <Input
+                  name="annual_due"
+                  type="month"
+                  defaultValue={initialValues?.annual_due ? initialValues.annual_due.slice(0, 7) : ''}
+                />
+                <p className="mt-1 text-xs text-slate-400">Powers the Annual Inspection status on your listing.</p>
+              </div>
+              <div>
+                <Label>Damage history</Label>
+                <Select
+                  name="damage_history"
+                  defaultValue={
+                    initialValues?.damage_history == null ? '' : initialValues.damage_history ? 'true' : 'false'
+                  }
+                >
+                  <option value="">Prefer not to say</option>
+                  <option value="false">No damage reported</option>
+                  <option value="true">Damage reported</option>
+                </Select>
+                <p className="mt-1 text-xs text-slate-400">Shown as a buyer-trust signal — leave blank to omit.</p>
               </div>
             </div>
           </div>

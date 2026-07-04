@@ -618,3 +618,15 @@ alter table aircraft_for_sale add column if not exists contact_phone text;
 -- the price-history signal just won't record until this runs.
 alter table partnerships add column if not exists previous_buy_in_price integer;
 alter table partnerships add column if not exists buy_in_price_changed_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: partnership_add_annual_damage
+-- Adds annual_due/damage_history to partnerships so the Annual Inspection and
+-- Damage History buyer-analysis panels (already live on aircraft_for_sale listing
+-- pages, computed by the shared src/lib/annualStatus.ts + src/lib/damageHistory.ts)
+-- can also fire on /partnerships/[id]. Both are optional fields on the "More
+-- details" section of the post/edit form. Apply in the Supabase SQL editor. Until
+-- applied, createPartnership/updatePartnershipListing detect the missing columns
+-- and retry without them, so posting/editing still succeeds — these two fields
+-- just won't save until this runs.
+alter table partnerships add column if not exists annual_due date;
+alter table partnerships add column if not exists damage_history boolean;

@@ -19,26 +19,43 @@ export default async function EditPartnershipPage({
 
   if (!user) redirect(`/auth?next=/partnerships/${id}/edit`)
 
-  // ttaf/smoh/engine_type require the `partnership_add_spec_fields` migration
-  // (schema.sql, still HUMAN ACTION REQUIRED as of 2026-07-03 — confirmed unapplied:
-  // selecting any of these 3 columns by name errors out the whole query when they
-  // don't exist). Graceful fallback: retry without them so editing still works today;
-  // they'll start prefilling automatically once the migration lands. Mirrors the
-  // same fallback in createPartnership/updatePartnershipListing (src/app/actions.ts).
+  // ttaf/smoh/engine_type and annual_due/damage_history each require their own
+  // not-yet-applied migration (schema.sql — partnership_add_spec_fields and
+  // partnership_add_annual_damage — selecting a missing column by name errors out
+  // the whole query). Graceful fallback: drop whichever optional column group the
+  // error names and retry, so editing still works today; each group starts
+  // prefilling automatically once its migration lands. Mirrors the same fallback
+  // in createPartnership/updatePartnershipListing (src/app/actions.ts).
   const FALLBACK_COLUMNS = 'id, make, model, year, registration, home_airport, share_type, shares_available, total_shares, buy_in_price, monthly_fixed, hourly_wet, min_hours, ratings_required, scheduling_system, title, description, images, contact_name, contact_email, contact_method, contact_phone, poster_id'
+  const optionalColumnGroups = [
+    { pattern: /'(ttaf|smoh|engine_type)'/i, columns: 'ttaf, smoh, engine_type' },
+    { pattern: /'(annual_due|damage_history)'/i, columns: 'annual_due, damage_history' },
+  ]
 
-  const full = await supabase
-    .from('partnerships')
-    .select(`${FALLBACK_COLUMNS}, ttaf, smoh, engine_type`)
-    .eq('id', id)
-    .single()
-  let listing: any = full.data
-  let error = full.error
+  let activeGroups = optionalColumnGroups
+  let listing: any
+  let error: any
+  {
+    const res = await supabase
+      .from('partnerships')
+      .select([FALLBACK_COLUMNS, ...activeGroups.map((g) => g.columns)].join(', '))
+      .eq('id', id)
+      .single()
+    listing = res.data
+    error = res.error
+  }
 
-  if (error && /'(ttaf|smoh|engine_type)'/i.test(error.message ?? '')) {
-    const retry = await supabase.from('partnerships').select(FALLBACK_COLUMNS).eq('id', id).single()
-    listing = retry.data
-    error = retry.error
+  while (error && activeGroups.length > 0) {
+    const idx = activeGroups.findIndex((g) => g.pattern.test(error!.message ?? ''))
+    if (idx === -1) break
+    activeGroups = activeGroups.filter((_, i) => i !== idx)
+    const res = await supabase
+      .from('partnerships')
+      .select([FALLBACK_COLUMNS, ...activeGroups.map((g) => g.columns)].join(', '))
+      .eq('id', id)
+      .single()
+    listing = res.data
+    error = res.error
   }
 
   // Same not-found response whether the row is missing or owned by someone
@@ -70,6 +87,8 @@ export default async function EditPartnershipPage({
             ttaf: listing.ttaf ?? undefined,
             smoh: listing.smoh ?? undefined,
             engine_type: listing.engine_type ?? undefined,
+            annual_due: listing.annual_due ?? undefined,
+            damage_history: listing.damage_history ?? undefined,
             min_hours: listing.min_hours ?? undefined,
             ratings_required: listing.ratings_required?.join(', ') ?? undefined,
             scheduling_system: listing.scheduling_system ?? undefined,
