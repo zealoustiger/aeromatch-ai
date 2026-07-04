@@ -55,6 +55,7 @@ export default async function EditAircraftListingPage({
         <PostAircraftForm
           mode="edit"
           listingId={listing.id}
+          userPhone={user.user_metadata?.contact_phone}
           initialValues={{
             make: listing.make ?? undefined,
             model: listing.model ?? undefined,
