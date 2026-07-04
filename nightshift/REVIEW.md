@@ -1,3 +1,9 @@
+## 2026-07-04T13:28:50Z — Night Shift run: 1 cycles (PASS 1 / FAIL 0) — night ended
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+
+- PASS — partnership-deal-check-card-parity — Partnership cards on `/partnerships`, `/saved`, near/[icao], and the detail-page Similar partnerships rail now show the narrowed Goo
+
+
 # Overnight review — 2026-07-03
 
 ## 📊 Traffic (PostHog) — as of 2026-07-03
