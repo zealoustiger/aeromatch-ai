@@ -72,6 +72,9 @@ export default async function EditPartnershipPage({
         <PostPartnershipForm
           mode="edit"
           listingId={listing.id}
+          userEmail={user.email}
+          userName={user.user_metadata?.full_name}
+          userPhone={user.user_metadata?.contact_phone}
           initialValues={{
             make: listing.make ?? undefined,
             model: listing.model ?? undefined,

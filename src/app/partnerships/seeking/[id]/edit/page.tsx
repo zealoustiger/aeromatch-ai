@@ -41,6 +41,7 @@ export default async function EditSeekerListingPage({
           listingId={listing.id}
           userEmail={user.email}
           userName={user.user_metadata?.full_name}
+          userPhone={user.user_metadata?.contact_phone}
           initialValues={{
             home_airport: listing.home_airport ?? undefined,
             additional_airport_2: listing.additional_airports?.[0] ?? undefined,
