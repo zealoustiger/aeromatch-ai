@@ -207,7 +207,7 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) redirect(`/auth?next=/partnerships/${id}/edit`)
 
   const ratingsRaw = formData.get('ratings_required') as string
   const ratings = ratingsRaw ? ratingsRaw.split(',').map((r) => r.trim()).filter(Boolean) : null
@@ -489,7 +489,7 @@ export async function updateSeekerListing(id: string, formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) redirect(`/auth?next=/partnerships/seeking/${id}/edit`)
 
   const makesRaw = formData.get('preferred_makes') as string
   const preferred_makes = makesRaw ? makesRaw.split(',').map((m) => m.trim()).filter(Boolean) : null
@@ -705,7 +705,7 @@ export async function updateAircraftListing(id: string, formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) redirect(`/auth?next=/aircraft/listing/${id}/edit`)
 
   const asking_price = formData.get('asking_price') ? parseInt(formData.get('asking_price') as string) : null
   const photoUrls = (formData.getAll('photo_url') as string[]).filter(Boolean)
