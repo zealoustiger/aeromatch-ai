@@ -178,8 +178,19 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
 ~~- **[P2][goal] Shorten the signup form to email-only.**~~ ✅ ALREADY SHIPPED (human,
   pre-pivot) — **correction 2026-07-04**: `/auth` only ever asks for an email address
   (magic-link) or a single Google OAuth tap; there is no separate name/profile collection
-  step on signup to remove. Pillar 2's two explicit BACKLOG items are both done; no further
-  Pillar 2 slice is buildable by this loop (auth files are frozen for edits).
+  step on signup to remove. Pillar 2's two explicit BACKLOG items are both done.
+~~- **[agent][goal] Photo upload silently 401s when logged out.**~~ ✅ SHIPPED via
+  `photo-upload-signin-redirect` (2026-07-04) `PartnershipPhotoUpload` (shared by both post
+  forms) had no auth awareness — dropping/pasting/browsing a photo while logged out hit the
+  upload API directly and 401'd, showing a cryptic per-thumbnail "Not authenticated" badge
+  with no path forward, unlike the forms' own submit button which already defers to
+  `/auth?next=...` with the draft intact. Now the uploader takes the same `isLoggedIn`/
+  `onRequireAuth` treatment: the drop-zone proactively says "Sign in to add photos" and
+  routes straight to the save-draft-and-redirect flow. Not in a frozen path (auth files
+  untouched). **Remaining:** the raw photo file itself can't survive the auth round-trip
+  (browser navigation clears JS memory) — a logged-out poster still has to re-attach the
+  photo after signing in. Full persistence would need IndexedDB blob storage (localStorage
+  can't reliably hold a 5 MB image); a candidate future slice if this shows up as real friction.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"

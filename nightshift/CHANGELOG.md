@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260704T091657Z — PASS — photo-upload-signin-redirect
+- Pages: /aircraft/new, /partnerships/new
+- What: When you're not signed in and drag/paste/browse a photo onto the "Sell your aircraft" or "Post a partnership" form, it used to silently fail with a cryptic "Not authenticated" badge on the thumbnail. Now the photo box itself says "Sign in to add photos — we'll save your draft and bring you right back," and clicking it (or dropping/pasting a photo) takes you straight to sign-in and back to your exact form, draft intact — the same clean flow the "Sign in to Publish" button already gives you.
+- Goal: Pillar 2 (frictionless signup/auth) — rotation: the last two landed cycles were Pillar 1 (`aircraft-description-help`) then Pillar 3 (`partnership-card-price-drop`), so Pillar 2 was due. Dispatched an Explore-agent audit specifically for Pillar 2 (outside the frozen `src/app/auth/**` files) since every explicit BACKLOG line for this pillar reads as shipped/mature. It found a genuine, previously-unnoticed gap: the shared `PartnershipPhotoUpload` component (used by both post forms) has no auth awareness and POSTs straight to the upload API, which 401s for logged-out visitors — exactly the "did real work and lost it because there was no account" failure GOAL.md's Pillar 2 guardrail warns against. Fix reuses the exact save-draft-and-redirect logic the forms' own deferred-auth submit already uses, just triggered earlier (on photo-add attempt) via a new `isLoggedIn`/`onRequireAuth` prop pair — no new pattern invented.
+- Spec: nightshift/specs/20260704T091657Z-photo-upload-signin-redirect.md
+- Verdict: PASS — clean `next build`/typecheck; QA smoke passed (200, zero console errors, zero overflow) at desktop 1280 + mobile 375 on both pages; screenshots confirm the drop-zone renders the new sign-in prompt correctly; a scripted Playwright click on the drop-zone confirmed it actually redirects to `/auth?next=/aircraft/new` and `/auth?next=/partnerships/new` respectively.
+- Screenshots: nightshift/screenshots/photo-upload-signin-redirect/
+- Next: the raw photo file itself still can't survive the auth round-trip (browser navigation clears JS memory) — a logged-out poster has to re-attach the photo after signing in. Full persistence would need IndexedDB blob storage keyed to the draft (localStorage can't reliably hold a 5 MB image); worth a dedicated slice if this friction shows up in practice, but out of scope for a single cycle.
+
 ## 20260704T090521Z — PASS — aircraft-description-help
 - Pages: /aircraft/new, /aircraft/listing/[id]/edit
 - What: **The aircraft-for-sale post form now has a "How to write a great description" tips box (4 bullets: lead with specs, note maintenance/condition, say why you're selling, call out what stands out) plus two example descriptions behind a collapsible toggle** — the exact same friction-reducer the seeking-partnership form already had, ported over so a seller isn't staring at a blank textarea despite the form's own copy calling the description "the single biggest factor in getting a serious inquiry."
