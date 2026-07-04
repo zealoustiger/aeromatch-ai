@@ -305,8 +305,12 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   chip (only for the actionable states — the common current/clean case stays quiet)
   reusing the same `computeAnnualStatus`/`computeDamageHistory` helpers — previously this
   signal only existed on the two detail pages, unlike engine-life/avionics which already had
-  card parity. This item is now fully complete: detail panels + AI-draft + browse-card chips,
-  both listing types.
+  card parity. **Rail-card parity ✅ SHIPPED 2026-07-04** (`rail-card-annual-damage-chip`):
+  `AircraftRailCard`/`PartnershipRailCard` (Similar-X rails, homepage rails, cross-sell rail)
+  now show the same chip at top-right, priority damage > overdue-annual > due-soon when both
+  are actionable — the one surface engine-life/avionics had already reached that this signal
+  hadn't. This item is now fully complete: detail panels + AI-draft + browse-card chips +
+  rail-card chips, both listing types.
 ~~- **[agent][goal] Avionics field on the aircraft post/edit form.**~~ ✅ SHIPPED via
   `aircraft-avionics-field` (2026-07-04) The built `AvionicsPanel`/IFR-suitability read
   (`src/lib/avionicsClassify.ts`) only ever rendered for scraped listings — no post/edit form
