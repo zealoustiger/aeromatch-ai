@@ -272,7 +272,7 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     contact_method: (formData.get('contact_method') as string) || 'platform',
     contact_phone: (formData.get('contact_phone') as string) || null,
     images: photoUrls.length > 0 ? photoUrls : [],
-    ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
+    image_is_placeholder: photoUrls.length === 0,
   }
 
   // See createPartnership — same not-yet-applied-migration graceful fallback, now
