@@ -148,15 +148,22 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
-- **[P1][goal] "Continue with Google" (OAuth).** Supabase supports it — the single biggest
-  signup-friction killer. Add to `/auth`, preserve `?next=`. (Magic-link/passwordless email
-  is the close second — do it as the next slice.)
+~~- **[P1][goal] "Continue with Google" (OAuth).**~~ ✅ ALREADY SHIPPED (human, pre-pivot,
+  2026-06-12, `50f3a7a`) — **correction 2026-07-04** (`partnership-comp-family-scope` audit):
+  this line was stale for weeks; several recent CHANGELOG entries wrongly described Pillar 2
+  as "structurally blocked," implying the feature was missing. In reality `/auth` (`src/app/auth/page.tsx`)
+  has shipped both "Continue with Google" and magic-link email sign-in since before the
+  pivot. What IS true: `FREEZE.md` blocks the loop from *editing* `src/app/auth/**` further —
+  the feature itself is done, only further changes to it are off-limits to this loop.
 ~~- **[P1][goal] Defer the gate to the value moment.**~~ ✅ SHIPPED via `defer-partnership-search-gate` (2026-06-27) Audit every forced-signup point (home
   search gate, save, post, message) and move the ask to the moment of value: let people
   browse, filter, and build a draft first; sign in only to *save/publish/message*. Device-
   saves already merge on signup (`mergeDeviceSaves`) — extend that pattern so nothing is lost.
-- **[P2][goal] Shorten the signup form to email-only.** Collect name/profile *after* the
-  account exists (or lazily, when first needed). Every field on the signup screen is friction.
+~~- **[P2][goal] Shorten the signup form to email-only.**~~ ✅ ALREADY SHIPPED (human,
+  pre-pivot) — **correction 2026-07-04**: `/auth` only ever asks for an email address
+  (magic-link) or a single Google OAuth tap; there is no separate name/profile collection
+  step on signup to remove. Pillar 2's two explicit BACKLOG items are both done; no further
+  Pillar 2 slice is buildable by this loop (auth files are frozen for edits).
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
