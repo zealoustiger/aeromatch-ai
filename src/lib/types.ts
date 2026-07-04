@@ -49,6 +49,8 @@ export interface Partnership {
   ttaf: number | null
   smoh: number | null
   engine_type: string | null
+  annual_due: string | null
+  damage_history: boolean | null
 
   status: ListingStatus
   poster_id: string | null

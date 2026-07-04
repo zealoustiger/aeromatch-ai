@@ -127,25 +127,50 @@ export async function createPartnership(formData: FormData) {
     ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
   }
 
-  // ttaf/smoh/engine_type require the `partnership_add_spec_fields` migration
-  // (schema.sql, still HUMAN ACTION REQUIRED as of 2026-07-03 — confirmed unapplied:
-  // referencing any of these 3 columns, even as null, makes Postgres/PostgREST reject
-  // the whole insert). Always attempt with them first so they start round-tripping the
-  // moment the migration lands; graceful fallback below keeps posting working today.
+  // ttaf/smoh/engine_type and annual_due/damage_history each require their own
+  // not-yet-applied migration (schema.sql — partnership_add_spec_fields and
+  // partnership_add_annual_damage). Always attempt with both groups first so they
+  // start round-tripping the moment each migration lands; the fallback loop below
+  // drops whichever group Postgres reports missing (in either order) and retries,
+  // converging on basePayload-only rather than ever failing the post.
   const specFields = {
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
   }
-  const payload = { ...basePayload, ...specFields }
+  const annualDamageFields = {
+    annual_due: (() => {
+      const raw = (formData.get('annual_due') as string) || ''
+      return raw ? `${raw}-01` : null
+    })(),
+    damage_history: (() => {
+      const raw = formData.get('damage_history') as string
+      return raw === 'true' ? true : raw === 'false' ? false : null
+    })(),
+  }
+  const optionalGroups = [
+    { pattern: /'(ttaf|smoh|engine_type)'/i, fields: specFields },
+    { pattern: /'(annual_due|damage_history)'/i, fields: annualDamageFields },
+  ]
+  let activeGroups = optionalGroups
+  let { data, error } = await supabase
+    .from('partnerships')
+    .insert({ ...basePayload, ...Object.assign({}, ...activeGroups.map((g) => g.fields)) })
+    .select('id')
+    .single()
 
-  let { data, error } = await supabase.from('partnerships').insert(payload).select('id').single()
-
-  // Graceful fallback: if the spec-fields migration hasn't been applied yet, retry
-  // without those columns so the listing still goes live (same pattern as
-  // createSeekerListing's additional_airports fallback).
-  if (error && /'(ttaf|smoh|engine_type)'/i.test(error.message ?? '')) {
-    const retry = await supabase.from('partnerships').insert(basePayload).select('id').single()
+  // Graceful fallback: drop whichever optional column group Postgres reports
+  // missing and retry, so the listing still goes live before every migration lands
+  // (same pattern as createSeekerListing's additional_airports fallback).
+  while (error && activeGroups.length > 0) {
+    const idx = activeGroups.findIndex((g) => g.pattern.test(error!.message ?? ''))
+    if (idx === -1) break
+    activeGroups = activeGroups.filter((_, i) => i !== idx)
+    const retry = await supabase
+      .from('partnerships')
+      .insert({ ...basePayload, ...Object.assign({}, ...activeGroups.map((g) => g.fields)) })
+      .select('id')
+      .single()
     data = retry.data
     error = retry.error
   }
@@ -250,15 +275,14 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     ...(photoUrls.length > 0 ? { image_is_placeholder: false } : {}),
   }
 
-  // See createPartnership — same not-yet-applied-migration graceful fallback for
-  // ttaf/smoh/engine_type. previous_buy_in_price/buy_in_price_changed_at (above) are
-  // an INDEPENDENT optional group behind their own not-yet-applied migration — the
-  // live DB currently has both migrations pending at once, so the fallback below
-  // tries each group's columns and sheds whichever one the error names, in either
-  // order, converging on basePayload-only rather than ever throwing on a listing
-  // that's simply missing one or both optional column sets.
-  const specColumns = /'(ttaf|smoh|engine_type)'/i
-  const priceColumns = /'(previous_buy_in_price|buy_in_price_changed_at)'/i
+  // See createPartnership — same not-yet-applied-migration graceful fallback, now
+  // covering THREE independent optional column groups, each behind its own
+  // not-yet-applied migration: spec fields (ttaf/smoh/engine_type),
+  // previous_buy_in_price/buy_in_price_changed_at (above), and annual_due/
+  // damage_history. The fallback loop below sheds whichever group's columns the
+  // error names, one at a time, in whatever order Postgres reports them, until it
+  // converges on basePayload-only — never throws just because one or more
+  // optional column sets aren't applied yet.
   const tryUpdate = (fields: object) =>
     supabase
       .from('partnerships')
@@ -273,22 +297,29 @@ export async function updatePartnershipListing(id: string, formData: FormData) {
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
   }
-
-  let includeSpec = true
-  let includePrice = true
-  let { data, error } = await tryUpdate({ ...specFields, ...priceChangeFields })
-
-  if (error && includeSpec && specColumns.test(error.message ?? '')) {
-    includeSpec = false
-    ;({ data, error } = await tryUpdate(includePrice ? priceChangeFields : {}))
+  const annualDamageFields = {
+    annual_due: (() => {
+      const raw = (formData.get('annual_due') as string) || ''
+      return raw ? `${raw}-01` : null
+    })(),
+    damage_history: (() => {
+      const raw = formData.get('damage_history') as string
+      return raw === 'true' ? true : raw === 'false' ? false : null
+    })(),
   }
-  if (error && includePrice && priceColumns.test(error.message ?? '')) {
-    includePrice = false
-    ;({ data, error } = await tryUpdate(includeSpec ? specFields : {}))
-  }
-  if (error && includeSpec && specColumns.test(error.message ?? '')) {
-    includeSpec = false
-    ;({ data, error } = await tryUpdate({}))
+
+  let activeGroups = [
+    { pattern: /'(ttaf|smoh|engine_type)'/i, fields: specFields },
+    { pattern: /'(previous_buy_in_price|buy_in_price_changed_at)'/i, fields: priceChangeFields },
+    { pattern: /'(annual_due|damage_history)'/i, fields: annualDamageFields },
+  ]
+  let { data, error } = await tryUpdate(Object.assign({}, ...activeGroups.map((g) => g.fields)))
+
+  while (error && activeGroups.length > 0) {
+    const idx = activeGroups.findIndex((g) => g.pattern.test(error!.message ?? ''))
+    if (idx === -1) break
+    activeGroups = activeGroups.filter((_, i) => i !== idx)
+    ;({ data, error } = await tryUpdate(Object.assign({}, ...activeGroups.map((g) => g.fields))))
   }
 
   if (error || !data) throw new Error(error?.message ?? 'Listing not found or not yours to edit.')

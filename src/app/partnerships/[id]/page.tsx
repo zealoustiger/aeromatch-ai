@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane, ArrowRight } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane, ArrowRight, ShieldAlert } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, formatPriceK } from '@/lib/utils'
@@ -34,6 +34,8 @@ import { classifyAvionics, computeIfrSuitability, type AvionicsInfo, type IfrTie
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
 import { computeOverhaulTimeline, type OverhaulTimelineResult } from '@/lib/overhaulTimeline'
+import { computeAnnualStatus, type AnnualStatusResult } from '@/lib/annualStatus'
+import { computeDamageHistory, type DamageHistoryResult } from '@/lib/damageHistory'
 import { computeDaysOnMarketContext, type DaysOnMarketContext } from '@/lib/daysOnMarket'
 import { countNearbyPartnerships, NEAR_RADIUS_NM, type NearbyCount } from '@/lib/nearbyPartnerships'
 
@@ -302,6 +304,13 @@ export default async function PartnershipDetailPage({
   // shared airframe matters just as much to a co-ownership buyer.
   const airframeUsage = computeAirframeUsage({ ttaf: p.ttaf, year: p.year })
 
+  // Annual-inspection status + damage-history read — same honesty-gated panels the
+  // aircraft-for-sale detail page already ships (src/lib/annualStatus.ts,
+  // src/lib/damageHistory.ts). Self-suppress when the field is null — never a
+  // fabricated status.
+  const annualStatus = computeAnnualStatus(p.annual_due, new Date())
+  const damage = computeDamageHistory(p.damage_history)
+
   // Overhaul timeline — fuses the engine's hours-remaining-to-TBO with the shared aircraft's
   // OWN historical utilization into the calendar question a co-owner asks: "how many years
   // until an overhaul?" Self-suppresses when the engine is at/beyond TBO or utilization is
@@ -464,6 +473,13 @@ export default async function PartnershipDetailPage({
             {/* Airframe time — average hrs/year over the aircraft's life, with honest
                 two-sided guidance. Renders only when ttaf + year are both known. */}
             {airframeUsage && <AirframeUsagePanel usage={airframeUsage} />}
+
+            {/* Annual-inspection status — self-suppresses when annual_due is
+                missing/unparseable/outside the plausible annual window. */}
+            {annualStatus && <AnnualStatusPanel status={annualStatus} />}
+
+            {/* Damage-history read — self-suppresses when damage_history is unknown (null). */}
+            {damage && <DamageHistoryPanel damage={damage} />}
 
             {/* Requirements */}
             {(p.min_hours || (p.ratings_required && p.ratings_required.length > 0)) && (
@@ -868,6 +884,90 @@ function AirframeUsagePanel({ usage }: { usage: AirframeUsageResult }) {
       <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
         {usage.detail}
       </p>
+    </div>
+  )
+}
+
+// Per-state accent for the annual-inspection read (mirrors the aircraft detail
+// page). "current" is a green reassurance; "soon"/"overdue" are amber prompts to
+// ask/budget — never alarmist red, since we only know the listing's stated date,
+// not the aircraft's true logbook status.
+const ANNUAL_META: Record<AnnualStatusResult['state'], { label: string; chip: string }> = {
+  current: { label: 'Current',   chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  soon:    { label: 'Due soon',  chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  overdue: { label: 'Verify',    chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+}
+
+function AnnualStatusPanel({ status }: { status: AnnualStatusResult }) {
+  const meta = ANNUAL_META[status.state]
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Calendar className="h-4 w-4" /> Annual inspection
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Required every 12 calendar months. Read off the listing&apos;s stated annual-due date —
+        confirm against the logbooks.
+      </p>
+
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-2xl font-extrabold text-slate-900">{status.dueLabel}</span>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${meta.chip}`}
+        >
+          {status.state !== 'current' && <AlertTriangle className="h-3 w-3" />}
+          {meta.label}
+        </span>
+      </div>
+      <p className="mt-1 text-sm font-semibold text-slate-700">{status.headline}</p>
+
+      <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
+        {status.detail}
+      </p>
+    </div>
+  )
+}
+
+// Per-state accent for the damage read. "clean" (none reported) is a green
+// reassurance; "reported" is an amber prompt to ask/verify — never alarmist red,
+// since the flag reflects the listing's wording, not a verified logbook fact.
+const DAMAGE_META: Record<DamageHistoryResult['state'], { chip: string }> = {
+  clean:    { chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  reported: { chip: 'bg-amber-50 text-amber-700 ring-amber-200' },
+}
+
+function DamageHistoryPanel({ damage }: { damage: DamageHistoryResult }) {
+  const meta = DAMAGE_META[damage.state]
+  return (
+    <div className="ch-panel p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <ShieldAlert className="h-4 w-4" /> Damage history
+      </h2>
+      <p className="mb-4 text-xs text-slate-400">
+        Reported in the listing — confirm against the airframe and engine logbooks.
+      </p>
+
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-lg font-extrabold text-slate-900">{damage.headline}</span>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${meta.chip}`}
+        >
+          {damage.state === 'reported' && <AlertTriangle className="h-3 w-3" />}
+          {damage.label}
+        </span>
+      </div>
+
+      <p className="mt-3 border-t border-slate-100 pt-3 text-sm leading-relaxed text-slate-600">
+        {damage.detail}
+      </p>
+
+      <Link
+        href="/guides/aircraft-pre-purchase-inspection"
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:text-sky-900"
+      >
+        Pre-purchase inspection guide
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </div>
   )
 }
