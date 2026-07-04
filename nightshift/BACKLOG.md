@@ -181,6 +181,16 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   **Card badge shipped 2026-07-03** (`seeker-budget-check-badge`): `SeekerCard`/`SeekerList`
   now show the same below/above-market chip via a new batched `getSeekerBudgetCheckVerdicts()`
   (one query per unique preferred make, not per card). This item is now fully complete.
+~~- **[agent][goal] Annual inspection + damage history panels on partnership listings.**~~
+  ✅ SHIPPED via `partnership-annual-damage` (2026-07-04) Aircraft-for-sale listings had
+  honesty-gated `AnnualStatusPanel`/`DamageHistoryPanel` (built on `annual_due`/`damage_history`);
+  partnerships had neither column, so co-ownership buyers got no equivalent read. Added the
+  additive migration (`annual_due date`, `damage_history boolean` — ⚠️ HUMAN ACTION REQUIRED,
+  confirmed still unapplied, same as the still-pending `ttaf`/`smoh`/`engine_type` migration),
+  two optional fields on the post/edit form, and both panels on `/partnerships/[id]`, reusing
+  the exact shared `src/lib/annualStatus.ts`/`src/lib/damageHistory.ts` functions the aircraft
+  page already ships. AI-draft extraction of these two fields (mirroring ttaf/smoh/engine_type)
+  is the natural next slice, not yet built.
 
 ---
 
