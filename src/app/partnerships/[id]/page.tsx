@@ -28,7 +28,7 @@ import SimilarListings from '@/components/SimilarListings'
 import ShareListingButton from '@/components/ShareListingButton'
 import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
 import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
-import { partnershipBuyInComp, PartnerCompResult } from '@/lib/partnershipComps'
+import { partnershipBuyInComp, partnershipDealVerdict, PartnerCompResult, PartnershipDealCheck } from '@/lib/partnershipComps'
 import PartnershipDealSignals from '@/components/PartnershipDealSignals'
 import { classifyAvionics, computeIfrSuitability, type AvionicsInfo, type IfrTier } from '@/lib/avionicsClassify'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
@@ -252,6 +252,50 @@ export default async function PartnershipDetailPage({
     } catch {
       partnerComp = null
       partnerDomContext = null
+    }
+  }
+
+  // Deal check — the same comp family, additionally narrowed to similar year + similar
+  // hours (ttaf/smoh), normalized for share size. Deliberately a SEPARATE query/try-catch
+  // from the block above: `ttaf`/`smoh` on `partnerships` are dormant behind the
+  // still-unapplied `partnership_add_spec_fields` migration, so an explicit select naming
+  // them can 42703 in today's DB. If it does, this block alone degrades to null — it must
+  // never take down the already-working whole-family `partnerComp` above.
+  let partnerDeal: PartnershipDealCheck | null = null
+  let partnerFamilyLabel: string | null = null
+  if (p.make && p.buy_in_price && p.total_shares && p.total_shares >= 2 && p.year) {
+    try {
+      const subjectFamily = resolveMakeModelFamily(p.make, p.model)
+      if (subjectFamily) {
+        partnerFamilyLabel = `${subjectFamily.make} ${subjectFamily.model}`
+        const { data: dealComps } = await supabase
+          .from('partnerships')
+          .select('buy_in_price, total_shares, model, year, ttaf, smoh')
+          .eq('status', 'active')
+          .eq('make', p.make)
+          .neq('id', p.id)
+          .limit(200)
+        if (dealComps && dealComps.length > 0) {
+          const otherDealComps = dealComps
+            .filter(
+              (c: { model: string | null }) =>
+                resolveMakeModelFamily(p.make, c.model)?.modelSlug === subjectFamily.modelSlug
+            )
+            .map((c: { buy_in_price: number | null; total_shares: number | null; year: number | null; ttaf: number | null; smoh: number | null }) => ({
+              buyIn: c.buy_in_price as number,
+              totalShares: c.total_shares,
+              year: c.year,
+              ttaf: c.ttaf,
+              smoh: c.smoh,
+            }))
+          partnerDeal = partnershipDealVerdict(
+            { buyIn: p.buy_in_price, totalShares: p.total_shares, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
+            otherDealComps
+          )
+        }
+      }
+    } catch {
+      partnerDeal = null
     }
   }
 
@@ -582,6 +626,8 @@ export default async function PartnershipDetailPage({
                 listed={partnerListedAgo}
                 daysOnMarket={partnerDaysOnMarket}
                 domContext={partnerDomContext}
+                deal={partnerDeal}
+                familyLabel={partnerFamilyLabel ?? undefined}
               />
             )}
 
