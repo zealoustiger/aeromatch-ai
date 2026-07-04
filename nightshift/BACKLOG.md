@@ -213,9 +213,14 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   every self-posted (organic) listing. Added an optional comma-separated "Avionics & equipment"
   field to `/aircraft/new` and the edit form, wired into `createAircraftListing`/
   `updateAircraftListing`, and AI-draft extraction on "Prefill from your notes ✨" — no schema
-  change (native column). **Next:** partnerships have no `avionics` column/panel at all — a
-  parity slice for co-ownership buyers would need an additive migration, same pattern as
-  `partnership_add_annual_damage`.
+  change (native column). **Correction (found 2026-07-04 during `partnership-card-avionics-badge`):**
+  the "Next" note above was stale — partnerships already classify avionics from description
+  text (no column needed) via `classifyAvionics()` on both the detail page and the
+  `PartnershipRailCard`; no migration was ever required. **Gap closed 2026-07-04**
+  (`partnership-card-avionics-badge`): the one place that gap was real — the primary
+  `PartnershipCard` browse/list card (`/partnerships`, `/saved`, `/airports/[icao]`,
+  `/members/[id]`, `/partnerships/near/[icao]`) — now runs the same classification and shows
+  the same chips. This item is now fully complete across aircraft and partnership listings.
 
 ---
 
