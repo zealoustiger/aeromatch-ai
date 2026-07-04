@@ -187,6 +187,14 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   description field existed. Moved it into its own "About you" section matching the other two
   forms' layout exactly; no schema/actions change. Description-field visibility is now
   consistent across all 3 post forms.
+~~- **[agent][goal] Edit actions never lazy-saved contact name/phone to `user_metadata`.**~~
+  ✅ SHIPPED via `edit-contact-lazy-save-parity` (2026-07-04) All 3 create actions save a
+  first-time `contact_name`/`contact_phone` into `user_metadata` so the next post form
+  pre-fills it; the 3 update actions wrote those fields to the listing row but never ran
+  the equivalent lazy-save — a poster who first added their phone while *editing* an
+  existing listing never got it remembered for their next new post. Copied the identical
+  lazy-save blocks into `updatePartnershipListing`/`updateSeekerListing`/`updateAircraftListing`.
+  No schema/UI change. Pillar 1 candidates remaining need a human call (see Next in CHANGELOG).
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
