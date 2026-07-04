@@ -64,6 +64,15 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   (concierge@clubhanger.com) dynamically match airports near the visitor's search. Instead
   of showing a Bay Area persona to a Texas visitor, render the same persona at an airport
   near the visitor's search/location. Keeps the page from looking empty everywhere.
+- **[agent][bug] `image_is_placeholder` never resets to `true` on partnership edit.**
+  Found 2026-07-04 during the `seeker-additional-airport-clear-fix` audit. `createPartnership`/
+  `updatePartnershipListing` (`src/app/actions.ts`) only set `image_is_placeholder: false`
+  when photos exist, but never flip it back to `true` if a poster removes all photos on
+  edit — so a now-photo-less listing could still pass the `.eq('image_is_placeholder', false)`
+  "photo-only" filter some rails use (`src/lib/partnerships.ts` homepage rail,
+  `AircraftSaleList.tsx`). Mostly self-healing elsewhere (every read site also checks
+  `images?.[0]`), so this is a narrow display-honesty edge case, not a posting-friction one —
+  small, well-scoped fix for a future cycle.
 
 ## ⭐ ACTIVATION (pivot focus — 2026-06-26) — PULL FROM HERE FIRST
 The three north-star pillars. Each cycle, build the highest-value **`[P1]`** slice and
