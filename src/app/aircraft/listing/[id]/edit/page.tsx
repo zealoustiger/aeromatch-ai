@@ -24,7 +24,7 @@ export default async function EditAircraftListingPage({
   // saved_listings `note` column) so the edit page doesn't 404 for every owner.
   const withPhone = await supabase
     .from('aircraft_for_sale')
-    .select('id, make, model, year, registration, ttaf, smoh, engine_type, annual_due, damage_history, title, description, asking_price, location, state, contact_phone, images, poster_id')
+    .select('id, make, model, year, registration, ttaf, smoh, engine_type, avionics, annual_due, damage_history, title, description, asking_price, location, state, contact_phone, images, poster_id')
     .eq('id', id)
     .single()
 
@@ -34,7 +34,7 @@ export default async function EditAircraftListingPage({
   if (withPhone.error) {
     const withoutPhone = await supabase
       .from('aircraft_for_sale')
-      .select('id, make, model, year, registration, ttaf, smoh, engine_type, annual_due, damage_history, title, description, asking_price, location, state, images, poster_id')
+      .select('id, make, model, year, registration, ttaf, smoh, engine_type, avionics, annual_due, damage_history, title, description, asking_price, location, state, images, poster_id')
       .eq('id', id)
       .single()
     listing = withoutPhone.data as typeof listing
@@ -63,6 +63,7 @@ export default async function EditAircraftListingPage({
             ttaf: listing.ttaf ?? undefined,
             smoh: listing.smoh ?? undefined,
             engine_type: listing.engine_type ?? undefined,
+            avionics: listing.avionics ?? undefined,
             annual_due: listing.annual_due ?? undefined,
             damage_history: listing.damage_history ?? null,
             asking_price: listing.asking_price ?? undefined,

@@ -102,6 +102,7 @@ export interface AircraftEditInitial {
   ttaf?: number
   smoh?: number
   engine_type?: string
+  avionics?: string[]
   annual_due?: string
   damage_history?: boolean | null
   asking_price?: number
@@ -262,6 +263,7 @@ export default function PostAircraftForm({
           if (result.ttaf) fillFormField(form, '[name="ttaf"]', result.ttaf)
           if (result.smoh) fillFormField(form, '[name="smoh"]', result.smoh)
           if (result.engine_type) fillFormField(form, '[name="engine_type"]', result.engine_type)
+          if (result.avionics?.length) fillFormField(form, '[name="avionics"]', result.avionics.join(', '))
           if (result.asking_price) fillFormField(form, '[name="asking_price"]', result.asking_price)
           if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
           if (result.annual_due) fillFormField(form, '[name="annual_due"]', result.annual_due)
@@ -276,7 +278,7 @@ export default function PostAircraftForm({
           // Auto-open "More details" if the AI filled any optional fields inside it
           // (description is now outside <details>, so it doesn't trigger auto-open)
           const hasOptional = result.year || result.ttaf || result.smoh ||
-            result.engine_type || result.title ||
+            result.engine_type || result.avionics?.length || result.title ||
             result.annual_due || result.damage_history !== undefined
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
@@ -530,7 +532,7 @@ export default function PostAircraftForm({
         ref={detailsRef}
         open={Boolean(
           (isEdit && (initialValues?.year || initialValues?.ttaf || initialValues?.smoh ||
-            initialValues?.engine_type || initialValues?.annual_due ||
+            initialValues?.engine_type || initialValues?.avionics?.length || initialValues?.annual_due ||
             initialValues?.damage_history != null || initialValues?.title)) ||
           (!isEdit && userPhone)
         )}
@@ -563,6 +565,15 @@ export default function PostAircraftForm({
                 <Label>Engine</Label>
                 <Input name="engine_type" defaultValue={initialValues?.engine_type ?? ''} placeholder="e.g. Lycoming IO-360, Continental IO-550" />
                 <p className="mt-1 text-xs text-slate-400">Make + designation. Powers the Engine Life &amp; overhaul-reserve estimate on your listing.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Avionics &amp; equipment <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
+                <Input
+                  name="avionics"
+                  defaultValue={initialValues?.avionics?.join(', ') ?? ''}
+                  placeholder="e.g. G1000, GFC 500 autopilot, ADS-B Out"
+                />
+                <p className="mt-1 text-xs text-slate-400">Comma-separated. Powers the avionics &amp; IFR-suitability read on your listing.</p>
               </div>
               <div>
                 <Label>Annual due</Label>
