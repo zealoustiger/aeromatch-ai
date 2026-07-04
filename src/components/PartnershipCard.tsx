@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays, CalendarClock, AlertTriangle } from 'lucide-react'
+import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays, CalendarClock, AlertTriangle, TrendingDown } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -150,6 +150,16 @@ function listedAgo(createdAt: string | null): string | null {
   return years === 1 ? 'Listed 1 year ago' : `Listed ${years} years ago`
 }
 
+// Confirmed price drop: we recorded a higher previous buy-in. Same recipe as
+// AircraftSaleCard's priceDrop() — never fabricated, purely a recorded self-serve
+// edit (see updatePartnershipListing's previous_buy_in_price/buy_in_price_changed_at).
+function priceDrop(p: Partnership): number | null {
+  if (p.previous_buy_in_price != null && p.buy_in_price != null && p.buy_in_price < p.previous_buy_in_price) {
+    return p.previous_buy_in_price - p.buy_in_price
+  }
+  return null
+}
+
 const shareColors: Record<string, string> = {
   '1/2': 'bg-violet-50 text-violet-700 ring-violet-200',
   '1/3': 'bg-sky-50 text-sky-700 ring-sky-200',
@@ -179,6 +189,7 @@ export default function PartnershipCard({
   const isPlaceholder = p.image_is_placeholder !== false && !realPhoto
   const fresh = isNew(p.created_at)
   const listed = listedAgo(p.created_at)
+  const drop = priceDrop(p)
   const avionicsCaps = partnershipAvionicsCaps(p.description)
   const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
   const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
@@ -235,6 +246,12 @@ export default function PartnershipCard({
                 )}
                 <AnnualStatusChip annualDue={p.annual_due} />
                 <DamageHistoryChip damageHistory={p.damage_history} />
+                {drop != null && (
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    <TrendingDown className="h-3 w-3" />
+                    Price drop {formatPrice(drop)}
+                  </span>
+                )}
                 {showIfrBadge
                   ? <IfrCardBadge caps={avionicsCaps} />
                   : avionicsCaps.map((cap) => (
@@ -294,6 +311,9 @@ export default function PartnershipCard({
                   <div className="sm:block">
                     <p className="text-xs text-slate-400">Buy-in</p>
                     <p className="text-2xl font-extrabold tracking-tight text-slate-900">{formatPrice(p.buy_in_price)}</p>
+                    {drop != null && (
+                      <p className="text-xs text-slate-400 line-through">{formatPrice(p.previous_buy_in_price)}</p>
+                    )}
                   </div>
                 ) : null}
                 {p.monthly_fixed ? (
