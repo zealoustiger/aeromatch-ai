@@ -233,6 +233,14 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   authenticated." shown as raw red text — no path forward. Now checks `isLoggedIn` first and
   redirects to `/auth?next=...` (draft + pasted notes intact — the AI-notes textarea now has
   a `name` so it's captured by the existing autosave/restore mechanism). Not in a frozen path.
+~~- **[agent][goal] Edit pages don't prefill saved contact info.**~~ ✅ SHIPPED via
+  `edit-page-contact-prefill-parity` (2026-07-04) The `new` pages for all 3 listing types pass
+  the poster's saved `userEmail`/`userName`/`userPhone` (from `user_metadata`) into their post
+  form so a returning poster's contact info auto-fills; the 3 edit pages never threaded these
+  props through at all (partnership edit: missing all 3; seeker edit: missing phone; aircraft
+  edit: missing its one applicable prop), so a poster editing an older listing that itself had
+  no saved contact value saw a blank field instead of the expected prefill. Now all 3 edit
+  pages pass the same props their `new` counterparts do.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
