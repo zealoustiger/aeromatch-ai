@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock } from 'lucide-react'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, formatPriceK, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -14,6 +14,8 @@ import type { ClubHangerDealVerdict } from '@/lib/aircraftEstimate'
 import { classifyAvionics, computeIfrSuitability } from '@/lib/avionicsClassify'
 import type { AvionicsCap, IfrTier } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
+import { computeAnnualStatus } from '@/lib/annualStatus'
+import { computeDamageHistory } from '@/lib/damageHistory'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
 import AircraftTrustBadge from './AircraftTrustBadge'
@@ -212,6 +214,40 @@ function IfrCardBadge({ caps }: { caps: AvionicsCap[] }) {
   )
 }
 
+// Card-level mirror of the detail page's AnnualStatusPanel — suppresses the common
+// 'current' state (nothing to flag) and only surfaces the actionable soon/overdue cases,
+// same clutter-avoidance convention as DealCheckChip suppressing 'fair'.
+function AnnualStatusChip({ annualDue }: { annualDue: string | null }) {
+  const status = computeAnnualStatus(annualDue, new Date())
+  if (!status || status.state === 'current') return null
+  const label = status.state === 'overdue' ? 'Annual overdue' : 'Annual due soon'
+  return (
+    <span
+      className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+      title={status.headline}
+    >
+      <CalendarClock className="h-3 w-3" />
+      {label}
+    </span>
+  )
+}
+
+// Card-level mirror of the detail page's DamageHistoryPanel — suppresses the common
+// 'clean' state (no damage reported) and only surfaces the reported case.
+function DamageHistoryChip({ damageHistory }: { damageHistory: boolean | null }) {
+  const damage = computeDamageHistory(damageHistory)
+  if (!damage || damage.state === 'clean') return null
+  return (
+    <span
+      className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+      title={damage.headline}
+    >
+      <AlertTriangle className="h-3 w-3" />
+      Damage reported
+    </span>
+  )
+}
+
 export default function AircraftSaleCard({
   p,
   saved = false,
@@ -316,6 +352,8 @@ export default function AircraftSaleCard({
                 {p.smoh != null && p.engine_type && (
                   <EngineTimeChip smoh={p.smoh} engineType={p.engine_type} />
                 )}
+                <AnnualStatusChip annualDue={p.annual_due} />
+                <DamageHistoryChip damageHistory={p.damage_history} />
                 {fresh && (
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
