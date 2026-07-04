@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
+import { localSaveCount, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
 
 // About lives in the footer (declutter the top nav per the human's nav-polish ask).
 const links: { href: string; label: string; icon?: LucideIcon }[] = [
@@ -31,6 +32,7 @@ export default function Nav() {
   const [avatarConfig, setAvatarConfig] = useState<AviatorConfig | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [deviceSaveCount, setDeviceSaveCount] = useState(0)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
@@ -91,6 +93,18 @@ export default function Nav() {
       })
   }, [user, pathname])
 
+  // Give logged-out visitors who've soft-saved a listing (device-only, no account
+  // yet) a way back to /saved — otherwise the save is undiscoverable once the
+  // SoftSavePrompt closes. Mirrors the same getLocalSaves/LOCAL_SAVES_EVENT pattern
+  // SaveListingButton already uses to stay in sync without a page reload.
+  useEffect(() => {
+    if (user) return
+    const sync = () => setDeviceSaveCount(localSaveCount())
+    sync()
+    window.addEventListener(LOCAL_SAVES_EVENT, sync)
+    return () => window.removeEventListener(LOCAL_SAVES_EVENT, sync)
+  }, [user])
+
   // Close mobile menu on route change
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
@@ -140,14 +154,30 @@ export default function Nav() {
             {user ? (
               <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} unreadCount={unreadCount} />
             ) : (
-              <Link
-                href={signInHref}
-                onClick={handleSignInClick}
-                className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                Sign in
-              </Link>
+              <>
+                {deviceSaveCount > 0 && (
+                  <Link
+                    href="/saved"
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      pathname.startsWith('/saved')
+                        ? 'bg-sky-50 text-sky-700'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    )}
+                  >
+                    <Heart className="h-3.5 w-3.5" />
+                    Saved
+                  </Link>
+                )}
+                <Link
+                  href={signInHref}
+                  onClick={handleSignInClick}
+                  className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                  Sign in
+                </Link>
+              </>
             )}
           </div>
 
@@ -262,7 +292,7 @@ export default function Nav() {
               My Searches
             </Link>
           )}
-          {user && (
+          {(user || deviceSaveCount > 0) && (
             <Link
               href="/saved"
               className={cn(
