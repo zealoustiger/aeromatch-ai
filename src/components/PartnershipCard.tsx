@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays } from 'lucide-react'
+import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays, CalendarClock, AlertTriangle } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { classifyAvionics, computeIfrSuitability, type AvionicsCap, type IfrTier } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
+import { computeAnnualStatus } from '@/lib/annualStatus'
+import { computeDamageHistory } from '@/lib/damageHistory'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
@@ -74,6 +76,37 @@ function IfrCardBadge({ caps }: { caps: AvionicsCap[] }) {
       title={ifr.sub}
     >
       {ifr.headline}
+    </span>
+  )
+}
+
+// Same recipe as AircraftSaleCard's AnnualStatusChip/DamageHistoryChip — suppresses the
+// common current/clean states, only surfaces the actionable soon/overdue/reported cases.
+function AnnualStatusChip({ annualDue }: { annualDue: string | null }) {
+  const status = computeAnnualStatus(annualDue, new Date())
+  if (!status || status.state === 'current') return null
+  const label = status.state === 'overdue' ? 'Annual overdue' : 'Annual due soon'
+  return (
+    <span
+      className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+      title={status.headline}
+    >
+      <CalendarClock className="h-3 w-3" />
+      {label}
+    </span>
+  )
+}
+
+function DamageHistoryChip({ damageHistory }: { damageHistory: boolean | null }) {
+  const damage = computeDamageHistory(damageHistory)
+  if (!damage || damage.state === 'clean') return null
+  return (
+    <span
+      className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
+      title={damage.headline}
+    >
+      <AlertTriangle className="h-3 w-3" />
+      Damage reported
     </span>
   )
 }
@@ -200,6 +233,8 @@ export default function PartnershipCard({
                 {p.smoh != null && p.engine_type && (
                   <EngineTimeChip smoh={p.smoh} engineType={p.engine_type} />
                 )}
+                <AnnualStatusChip annualDue={p.annual_due} />
+                <DamageHistoryChip damageHistory={p.damage_history} />
                 {showIfrBadge
                   ? <IfrCardBadge caps={avionicsCaps} />
                   : avionicsCaps.map((cap) => (
