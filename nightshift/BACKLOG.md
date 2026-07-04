@@ -207,7 +207,11 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   now shows the same "~N hrs to TBO" chip `AircraftSaleCard` already had — previously this
   signal only existed on the detail page's `EngineLifePanel`. Dormant in the sandbox DB
   pending the still-unapplied `partnership_add_spec_fields` migration (same as the annual/
-  damage panels). This item is now fully complete (detail panel + browse-card chip).
+  damage panels). **Rail-card parity ✅ SHIPPED 2026-07-04** (`partnership-rail-card-engine-chip`):
+  `PartnershipRailCard` (Similar-partnerships rail + aircraft⇄partnership cross-sell rail)
+  now shows the same chip too — previously only `AircraftRailCard` had it (a gap left over
+  from `engine-time-rail-chips`, 2026-06-27). This item is now fully complete across detail
+  panel, browse card, and rail card, both listing types.
 ~~- **[P1][goal] Cost-to-own, on the listing.**~~ ✅ SHIPPED via `partner-share-cost-panel` (2026-06-29) Bring the cost calculator onto the detail
   page, prefilled with the listing's real make/model/price/hours → annual fixed + per-hour +
   reserve, with a share-split toggle ("as a 1/3 partner: ~$X each + ~$Y/mo"). Turns a static
