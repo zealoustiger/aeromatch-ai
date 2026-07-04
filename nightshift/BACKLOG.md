@@ -363,6 +363,13 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   `PartnershipCard` browse/list card (`/partnerships`, `/saved`, `/airports/[icao]`,
   `/members/[id]`, `/partnerships/near/[icao]`) — now runs the same classification and shows
   the same chips. This item is now fully complete across aircraft and partnership listings.
+  **Synthesis-panel row ✅ SHIPPED 2026-07-04** (`partnership-dealsignals-avionics`): the
+  "How this partnership stacks up" panel (`PartnershipDealSignals`) now also folds in a
+  positive-only avionics/IFR-suitability row (`'full'`/`'capable'` tiers) mirroring the
+  aircraft page's `computeDealSignals` row exactly — previously this signal only existed in
+  the standalone `AvionicsPanel` and the browse/rail-card chips, not the top synthesis
+  panel. This item is now fully complete across detail panels (standalone + synthesis),
+  browse-card chips, and rail-card chips, both listing types.
 
 ---
 
