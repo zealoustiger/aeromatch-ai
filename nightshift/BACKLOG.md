@@ -158,7 +158,12 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
 ~~- **[P1][goal] Engine life & overhaul reserve.**~~ ✅ SHIPPED via `partnership-engine-life` (2026-06-28) From `smoh` + `engine_type` → a curated
   TBO table (per engine family) → "≈ X hrs / ~Y yrs to overhaul; budget ~$Z reserve."
   Render only when smoh + engine are known. Proprietary because it fuses our extracted specs
-  with a TBO/reserve model no listing site shows.
+  with a TBO/reserve model no listing site shows. **Browse-card parity ✅ SHIPPED 2026-07-04**
+  (`partnership-card-engine-chip`): `PartnershipCard` (the main `/partnerships` browse card)
+  now shows the same "~N hrs to TBO" chip `AircraftSaleCard` already had — previously this
+  signal only existed on the detail page's `EngineLifePanel`. Dormant in the sandbox DB
+  pending the still-unapplied `partnership_add_spec_fields` migration (same as the annual/
+  damage panels). This item is now fully complete (detail panel + browse-card chip).
 ~~- **[P1][goal] Cost-to-own, on the listing.**~~ ✅ SHIPPED via `partner-share-cost-panel` (2026-06-29) Bring the cost calculator onto the detail
   page, prefilled with the listing's real make/model/price/hours → annual fixed + per-hour +
   reserve, with a share-split toggle ("as a 1/3 partner: ~$X each + ~$Y/mo"). Turns a static
