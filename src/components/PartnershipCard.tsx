@@ -7,9 +7,28 @@ import { Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
+import { classifyAvionics } from '@/lib/avionicsClassify'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
+
+const AVIONICS_CHIP_STYLE: Record<string, string> = {
+  glass: 'bg-violet-50 text-violet-700 ring-violet-200',
+  adsb: 'bg-sky-50 text-sky-700 ring-sky-200',
+  autopilot: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  waas: 'bg-sky-50 text-sky-700 ring-sky-200',
+  gps: 'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
+// Classify avionics capabilities from the partnership description text — partnerships
+// have no structured avionics[] column, so this mirrors the same phrase-split +
+// classifyAvionics() recipe already used on the partnership detail page and rail card.
+function partnershipAvionicsCaps(description: string | null) {
+  const phrases = description
+    ? description.split(/[,;\n/]+/).map((s) => s.trim()).filter(Boolean)
+    : null
+  return classifyAvionics(phrases)?.caps.slice(0, 2) ?? []
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -69,6 +88,7 @@ export default function PartnershipCard({
   const isPlaceholder = p.image_is_placeholder !== false && !realPhoto
   const fresh = isNew(p.created_at)
   const listed = listedAgo(p.created_at)
+  const avionicsCaps = partnershipAvionicsCaps(p.description)
 
   return (
     <article className="ch-card group overflow-hidden bg-white">
@@ -117,6 +137,18 @@ export default function PartnershipCard({
                   </span>
                 )}
                 <TrustBadge p={p} variant="compact" />
+                {avionicsCaps.map((cap) => (
+                  <span
+                    key={cap.key}
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1',
+                      AVIONICS_CHIP_STYLE[cap.key] ?? 'bg-slate-100 text-slate-600 ring-slate-200'
+                    )}
+                    title={cap.hint}
+                  >
+                    {cap.label}
+                  </span>
+                ))}
                 {compVerdict?.kind === 'below' && (
                   <span
                     className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
