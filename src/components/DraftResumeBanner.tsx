@@ -9,14 +9,23 @@ interface DraftType {
   key: string
   href: string
   label: string
+  isEdit: boolean
 }
 
 // Same localStorage keys the three "Post a…" forms already autosave to via
 // `useFormDraft` — this component only reads them, it never writes.
-const DRAFT_TYPES: DraftType[] = [
-  { key: 'ch:draft:partnership-new', href: '/partnerships/new', label: 'aircraft partnership listing' },
-  { key: 'ch:draft:aircraft-new', href: '/aircraft/new', label: 'aircraft for sale listing' },
-  { key: 'ch:draft:seeker-new', href: '/partnerships/seeking/new', label: 'pilot-seeking listing' },
+const NEW_DRAFT_TYPES: DraftType[] = [
+  { key: 'ch:draft:partnership-new', href: '/partnerships/new', label: 'aircraft partnership listing', isEdit: false },
+  { key: 'ch:draft:aircraft-new', href: '/aircraft/new', label: 'aircraft for sale listing', isEdit: false },
+  { key: 'ch:draft:seeker-new', href: '/partnerships/seeking/new', label: 'pilot-seeking listing', isEdit: false },
+]
+
+// Edit-mode drafts are keyed per-listing (`ch:draft:{type}-edit:{id}`), so unlike the
+// fixed "new" keys above we have to scan localStorage for a match.
+const EDIT_DRAFT_TYPES: { prefix: string; hrefPrefix: string; label: string }[] = [
+  { prefix: 'ch:draft:partnership-edit:', hrefPrefix: '/partnerships', label: 'aircraft partnership listing' },
+  { prefix: 'ch:draft:aircraft-edit:', hrefPrefix: '/aircraft/listing', label: 'aircraft for sale listing' },
+  { prefix: 'ch:draft:seeker-edit:', hrefPrefix: '/partnerships/seeking', label: 'pilot-seeking listing' },
 ]
 
 function hasDraft(key: string): boolean {
@@ -30,13 +39,35 @@ function hasDraft(key: string): boolean {
   }
 }
 
+// New-post drafts take priority (checked first, same order as before); an edit-mode
+// draft is only surfaced if no new-post draft is in progress, so at most one banner shows.
+function findDraft(): DraftType | null {
+  const newDraft = NEW_DRAFT_TYPES.find((d) => hasDraft(d.key))
+  if (newDraft) return newDraft
+
+  let keys: string[]
+  try {
+    keys = Object.keys(window.localStorage)
+  } catch {
+    return null
+  }
+  for (const { prefix, hrefPrefix, label } of EDIT_DRAFT_TYPES) {
+    const match = keys.find((k) => k.startsWith(prefix) && hasDraft(k))
+    if (!match) continue
+    const id = match.slice(prefix.length)
+    if (!id) continue
+    return { key: match, href: `${hrefPrefix}/${id}/edit`, label, isEdit: true }
+  }
+  return null
+}
+
 /**
  * A small dismissible reminder, floating above the page, for a visitor who started (and
- * autosaved) a "Post a…" draft but navigated away before publishing — otherwise that
- * half-finished listing is invisible again the moment they leave the post page. Read-only
- * against the existing `useFormDraft` localStorage keys; self-suppresses on the matching
- * post page itself (which already shows its own restore indicator) and once dismissed for
- * the session.
+ * autosaved) a "Post a…" draft, or edited a published listing, but navigated away before
+ * saving — otherwise that unsaved work is invisible again the moment they leave the page.
+ * Read-only against the existing `useFormDraft` localStorage keys; self-suppresses on the
+ * matching post/edit page itself (which already shows its own restore indicator) and once
+ * dismissed for the session.
  */
 export default function DraftResumeBanner() {
   const pathname = usePathname()
@@ -44,7 +75,7 @@ export default function DraftResumeBanner() {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    setDraft(DRAFT_TYPES.find((d) => hasDraft(d.key)) ?? null)
+    setDraft(findDraft())
   }, [pathname])
 
   if (dismissed || !draft) return null
@@ -55,9 +86,13 @@ export default function DraftResumeBanner() {
       <div className="flex items-start gap-3 rounded-xl border border-sky-200 bg-white p-3.5 shadow-lg">
         <FileEdit className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-800">Unfinished listing</p>
+          <p className="text-sm font-semibold text-slate-800">
+            {draft.isEdit ? 'Unsaved changes' : 'Unfinished listing'}
+          </p>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-            Draft in progress: {draft.label} — pick up where you left off.
+            {draft.isEdit
+              ? `You have unsaved edits to your ${draft.label} — pick up where you left off.`
+              : `Draft in progress: ${draft.label} — pick up where you left off.`}
           </p>
           <Link
             href={draft.href}
