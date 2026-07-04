@@ -638,6 +638,12 @@ export async function createAircraftListing(formData: FormData) {
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+    avionics: (() => {
+      const raw = ((formData.get('avionics') as string) || '').trim()
+      if (!raw) return null
+      const items = raw.split(',').map((s) => s.trim()).filter(Boolean)
+      return items.length > 0 ? items : null
+    })(),
     annual_due: (() => {
       const raw = (formData.get('annual_due') as string) || ''
       return raw ? `${raw}-01` : null
@@ -732,6 +738,12 @@ export async function updateAircraftListing(id: string, formData: FormData) {
     ttaf: formData.get('ttaf') ? parseInt(formData.get('ttaf') as string) : null,
     smoh: formData.get('smoh') ? parseInt(formData.get('smoh') as string) : null,
     engine_type: ((formData.get('engine_type') as string) || '').trim() || null,
+    avionics: (() => {
+      const raw = ((formData.get('avionics') as string) || '').trim()
+      if (!raw) return null
+      const items = raw.split(',').map((s) => s.trim()).filter(Boolean)
+      return items.length > 0 ? items : null
+    })(),
     annual_due: (() => {
       const raw = (formData.get('annual_due') as string) || ''
       return raw ? `${raw}-01` : null
@@ -1640,6 +1652,7 @@ export interface AircraftDraft {
   ttaf?: number
   smoh?: number
   engine_type?: string
+  avionics?: string[]
   asking_price?: number
   home_airport?: string
   annual_due?: string
@@ -1726,6 +1739,9 @@ Given the seller's notes or a pasted listing, do TWO things:
    - ttaf: total airframe hours as integer — or omit
    - smoh: hours since major overhaul as integer — or omit
    - engine_type: engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550" — or omit
+   - avionics: array of specific avionics/equipment items explicitly named (e.g. "G1000",
+     "GFC 500 autopilot", "ADS-B Out", "GTN 750") — only items literally mentioned; omit or
+     leave empty if the input doesn't name any equipment
    - asking_price: integer dollars (no $ sign, no commas) — or omit
    - home_airport: 4-letter ICAO airport code where the aircraft is based, e.g. "KAUS" — or omit if not mentioned
    - annual_due: month the annual inspection is due, in "YYYY-MM" format — ONLY when a
@@ -1755,6 +1771,7 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
             ttaf: { type: 'integer', description: 'Total time airframe, hours' },
             smoh: { type: 'integer', description: 'Hours since major overhaul' },
             engine_type: { type: 'string', description: 'Engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550"' },
+            avionics: { type: 'array', items: { type: 'string' }, description: 'Specific avionics/equipment items explicitly named, e.g. ["G1000", "GFC 500 autopilot", "ADS-B Out"] — only items literally mentioned' },
             asking_price: { type: 'integer', description: 'Asking price in USD, no $ or commas' },
             home_airport: { type: 'string', description: '4-letter ICAO airport code where aircraft is based, e.g. "KAUS"' },
             annual_due: { type: 'string', description: 'Month the annual inspection is due, "YYYY-MM" format — only when a specific month/year is stated' },
@@ -1783,6 +1800,7 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
     ttaf: sale.ttaf,
     smoh: sale.smoh,
     engine_type: sale.engine_type,
+    avionics: Array.isArray(sale.avionics) && sale.avionics.length > 0 ? sale.avionics.filter(Boolean) : undefined,
     asking_price: sale.asking_price,
     home_airport: sale.home_airport ? sale.home_airport.toUpperCase().slice(0, 4) : undefined,
     annual_due: /^\d{4}-\d{2}$/.test(sale.annual_due ?? '') ? sale.annual_due : undefined,
