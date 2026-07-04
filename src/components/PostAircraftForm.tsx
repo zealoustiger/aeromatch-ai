@@ -264,13 +264,20 @@ export default function PostAircraftForm({
           if (result.engine_type) fillFormField(form, '[name="engine_type"]', result.engine_type)
           if (result.asking_price) fillFormField(form, '[name="asking_price"]', result.asking_price)
           if (result.home_airport) fillFormField(form, '[name="home_airport"]', result.home_airport)
+          if (result.annual_due) fillFormField(form, '[name="annual_due"]', result.annual_due)
+          // damage_history is a boolean — `false` is a meaningful, distinct value from
+          // "not extracted," so this must check for undefined rather than truthiness.
+          if (result.damage_history !== undefined) {
+            fillFormField(form, '[name="damage_history"]', String(result.damage_history), 'change')
+          }
           fillFormField(form, '[name="title"]', result.title)
           fillFormField(form, '[name="description"]', result.description)
 
           // Auto-open "More details" if the AI filled any optional fields inside it
           // (description is now outside <details>, so it doesn't trigger auto-open)
           const hasOptional = result.year || result.ttaf || result.smoh ||
-            result.engine_type || result.title
+            result.engine_type || result.title ||
+            result.annual_due || result.damage_history !== undefined
           if (hasOptional && detailsRef.current) {
             detailsRef.current.open = true
           }

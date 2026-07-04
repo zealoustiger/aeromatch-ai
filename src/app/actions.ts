@@ -1644,6 +1644,8 @@ export interface AircraftDraft {
   engine_type?: string
   asking_price?: number
   home_airport?: string
+  annual_due?: string
+  damage_history?: boolean
 }
 
 export async function generateAircraftDraft(prompt: string): Promise<AircraftDraft> {
@@ -1728,6 +1730,11 @@ Given the seller's notes or a pasted listing, do TWO things:
    - engine_type: engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550" — or omit
    - asking_price: integer dollars (no $ sign, no commas) — or omit
    - home_airport: 4-letter ICAO airport code where the aircraft is based, e.g. "KAUS" — or omit if not mentioned
+   - annual_due: month the annual inspection is due, in "YYYY-MM" format — ONLY when a
+     specific month/year is stated (e.g. "annual due March 2027" → "2027-03"); never guess
+     a month from a vague statement like "annual is current" — omit instead
+   - damage_history: true if the input states the aircraft has damage/accident/incident
+     history, false if it explicitly states there is NO damage history — omit if not mentioned
 
 2. Draft the listing:
    - title: concise, specific (max 120 chars) — include year + make + model and the top selling point
@@ -1752,6 +1759,8 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
             engine_type: { type: 'string', description: 'Engine make + designation as stated, e.g. "Lycoming IO-360" or "Continental IO-550"' },
             asking_price: { type: 'integer', description: 'Asking price in USD, no $ or commas' },
             home_airport: { type: 'string', description: '4-letter ICAO airport code where aircraft is based, e.g. "KAUS"' },
+            annual_due: { type: 'string', description: 'Month the annual inspection is due, "YYYY-MM" format — only when a specific month/year is stated' },
+            damage_history: { type: 'boolean', description: 'true if damage/accident history is stated, false if explicitly no damage history' },
           },
           required: ['title', 'description'],
           additionalProperties: false,
@@ -1778,6 +1787,8 @@ Rules: never invent numbers or facts not in the input. Use natural placeholders 
     engine_type: sale.engine_type,
     asking_price: sale.asking_price,
     home_airport: sale.home_airport ? sale.home_airport.toUpperCase().slice(0, 4) : undefined,
+    annual_due: /^\d{4}-\d{2}$/.test(sale.annual_due ?? '') ? sale.annual_due : undefined,
+    damage_history: sale.damage_history,
   }
 }
 
