@@ -200,6 +200,16 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   box on `/aircraft/new` now also extracts `annual_due`/`damage_history`, mirroring the
   partnership AI-draft work. This item is now fully complete across both listing types —
   manual fields + AI-draft extraction, aircraft and partnership alike.
+~~- **[agent][goal] Avionics field on the aircraft post/edit form.**~~ ✅ SHIPPED via
+  `aircraft-avionics-field` (2026-07-04) The built `AvionicsPanel`/IFR-suitability read
+  (`src/lib/avionicsClassify.ts`) only ever rendered for scraped listings — no post/edit form
+  or AI-draft path wrote to `aircraft_for_sale.avionics`, so it was structurally invisible for
+  every self-posted (organic) listing. Added an optional comma-separated "Avionics & equipment"
+  field to `/aircraft/new` and the edit form, wired into `createAircraftListing`/
+  `updateAircraftListing`, and AI-draft extraction on "Prefill from your notes ✨" — no schema
+  change (native column). **Next:** partnerships have no `avionics` column/panel at all — a
+  parity slice for co-ownership buyers would need an additive migration, same pattern as
+  `partnership_add_annual_damage`.
 
 ---
 
