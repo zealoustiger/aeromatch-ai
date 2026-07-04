@@ -233,7 +233,14 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   shipped 2026-07-04** (`aircraft-ai-draft-annual-damage`): the "Prefill from your notes ✨"
   box on `/aircraft/new` now also extracts `annual_due`/`damage_history`, mirroring the
   partnership AI-draft work. This item is now fully complete across both listing types —
-  manual fields + AI-draft extraction, aircraft and partnership alike.
+  manual fields + AI-draft extraction, aircraft and partnership alike. **Browse-card parity
+  ✅ SHIPPED 2026-07-04** (`listing-card-annual-damage-chip`): `AircraftSaleCard` and
+  `PartnershipCard` now show an amber "Annual overdue"/"Annual due soon"/"Damage reported"
+  chip (only for the actionable states — the common current/clean case stays quiet)
+  reusing the same `computeAnnualStatus`/`computeDamageHistory` helpers — previously this
+  signal only existed on the two detail pages, unlike engine-life/avionics which already had
+  card parity. This item is now fully complete: detail panels + AI-draft + browse-card chips,
+  both listing types.
 ~~- **[agent][goal] Avionics field on the aircraft post/edit form.**~~ ✅ SHIPPED via
   `aircraft-avionics-field` (2026-07-04) The built `AvionicsPanel`/IFR-suitability read
   (`src/lib/avionicsClassify.ts`) only ever rendered for scraped listings — no post/edit form
