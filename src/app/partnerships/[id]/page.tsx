@@ -211,22 +211,32 @@ export default async function PartnershipDetailPage({
     }
   }
   // Fetch buy-in prices + created_at of other active same-make partnerships for the
-  // market check. created_at powers the listing-age context (domContext). Fails soft.
+  // market check. created_at powers the listing-age context (domContext), which
+  // uses the broader same-make set (a market-activity signal, not a price claim).
+  // The buy-in verdict itself (partnerComp) is narrowed further, to the same
+  // resolved make+model family, so a price claim never compares across models
+  // (mirrors aircraftComps.ts's honesty bar). Fails soft.
   let partnerComp: PartnerCompResult | null = null
   let partnerDomContext: DaysOnMarketContext | null = null
   if (p.make) {
     try {
       const { data: comps } = await supabase
         .from('partnerships')
-        .select('buy_in_price, total_shares, created_at')
+        .select('buy_in_price, total_shares, created_at, model')
         .eq('status', 'active')
         .eq('make', p.make)
         .neq('id', p.id)
         .limit(200)
       if (comps && comps.length > 0) {
-        if (p.buy_in_price && p.total_shares) {
+        const subjectFamily = resolveMakeModelFamily(p.make, p.model)
+        if (p.buy_in_price && p.total_shares && subjectFamily) {
           const otherComps = comps
-            .filter((c: { buy_in_price: number | null }) => c.buy_in_price != null && c.buy_in_price > 0)
+            .filter(
+              (c: { buy_in_price: number | null; model: string | null }) =>
+                c.buy_in_price != null &&
+                c.buy_in_price > 0 &&
+                resolveMakeModelFamily(p.make, c.model)?.modelSlug === subjectFamily.modelSlug
+            )
             .map((c: { buy_in_price: number | null; total_shares: number | null }) => ({
               buyIn: c.buy_in_price as number,
               totalShares: c.total_shares,

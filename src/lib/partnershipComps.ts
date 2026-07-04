@@ -1,3 +1,4 @@
+import { resolveMakeModelFamily } from './seo'
 import type { createServerSupabaseClient } from './supabase-server'
 import type { Partnership, PartnershipSeeker, ShareType } from './types'
 
@@ -5,8 +6,10 @@ import type { Partnership, PartnershipSeeker, ShareType } from './types'
  * Buy-in price comp helpers for partnership listings (read-only, pure — no DB, no React).
  *
  * Compares a partnership's buy-in price to the going rate of OTHER active
- * same-make partnerships on ClubHanger, normalized for share size. Same honesty
- * philosophy as aircraftComps.ts:
+ * same-make-and-model-FAMILY partnerships on ClubHanger, normalized for share
+ * size. Same honesty philosophy as aircraftComps.ts (families resolved via the
+ * same `resolveMakeModelFamily` single source of truth, so a Cessna 172 is never
+ * benchmarked against a Cessna 206 or Citation just because the make matches):
  *
  *  - Buy-in price alone isn't comparable across listings — a 1/8 share and a 1/2
  *    share of the same make are different products. Normalize every comp to its
@@ -14,14 +17,24 @@ import type { Partnership, PartnershipSeeker, ShareType } from './types'
  *    median, then scale back down to "what a share this size would cost" for the
  *    subject. Without this, a small fraction reads as a false "below market" deal
  *    purely because it's a smaller slice, not a better price.
- *  - Require MIN_OTHER_COMPS other same-make comps with a real buy-in price AND a
- *    known share count before publishing any comparison. Below that the median is
- *    too noisy, and a listing missing its own share count gets no verdict either
- *    (can't normalize what you can't scale).
+ *  - Require MIN_OTHER_COMPS other same-family comps with a real buy-in price AND
+ *    a known share count before publishing any comparison. Below that the median
+ *    is too noisy, and a listing missing its own share count gets no verdict
+ *    either (can't normalize what you can't scale).
+ *  - A listing whose make+model doesn't resolve to a known family (via
+ *    `resolveMakeModelFamily`) gets no verdict — self-suppress rather than fall
+ *    back to a looser same-make-only comparison.
  *  - A ±DEAD_BAND window reads "Around market" rather than fabricating small-delta
  *    precision on what is effectively the going rate.
  *  - Percentages round to whole numbers.
  */
+
+/** Resolved family key ("makeSlug/modelSlug") for a make+model pair, or null if
+ *  it doesn't resolve to a known `SEO_MAKE_MODELS` family. */
+function familyKeyFor(make: string | null | undefined, model: string | null | undefined): string | null {
+  const fam = resolveMakeModelFamily(make, model)
+  return fam ? `${fam.makeSlug}/${fam.modelSlug}` : null
+}
 
 /** Minimum number of OTHER same-make active partnerships with a buy-in price and
  *  known share count required before we publish a comparison. Below this
@@ -121,12 +134,14 @@ export interface PartnershipCompVerdict {
 /**
  * Batch-compute "below/above market" buy-in verdicts for a set of listings, one
  * DB query per unique make (so a browse page's whole card grid costs O(makes),
- * not O(listings)). Mirrors the per-card comp chip on `/partnerships`; any
- * browse surface rendering `PartnershipCard` outside `PartnershipList` should
- * call this so the proprietary comp signal doesn't silently go missing there.
- * "Near" verdicts are omitted (the card shows nothing rather than a bland
- * "around market" chip). Fails soft — a query error yields an empty map so
- * callers render without chips rather than erroring the page.
+ * not O(listings)), then narrowed in-memory to the same resolved make+model
+ * FAMILY before computing each verdict. Mirrors the per-card comp chip on
+ * `/partnerships`; any browse surface rendering `PartnershipCard` outside
+ * `PartnershipList` should call this so the proprietary comp signal doesn't
+ * silently go missing there. "Near" verdicts are omitted (the card shows
+ * nothing rather than a bland "around market" chip). A listing whose make+model
+ * doesn't resolve to a known family gets no verdict. Fails soft — a query error
+ * yields an empty map so callers render without chips rather than erroring the page.
  */
 export async function getPartnershipCompVerdicts(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
@@ -147,28 +162,33 @@ export async function getPartnershipCompVerdicts(
       uniqueMakes.map((make) =>
         supabase
           .from('partnerships')
-          .select('id, buy_in_price, total_shares')
+          .select('id, buy_in_price, total_shares, model')
           .eq('status', 'active')
           .eq('make', make)
           .not('buy_in_price', 'is', null)
           .limit(200)
       )
     )
-    const makeRows = new Map<string, { id: string; buy_in_price: number; total_shares: number | null }[]>()
+    const makeRows = new Map<
+      string,
+      { id: string; buy_in_price: number; total_shares: number | null; model: string | null }[]
+    >()
     uniqueMakes.forEach((make, i) => {
       makeRows.set(
         make,
         (priceResults[i].data ?? []).filter(
-          (r): r is { id: string; buy_in_price: number; total_shares: number | null } =>
+          (r): r is { id: string; buy_in_price: number; total_shares: number | null; model: string | null } =>
             r.buy_in_price != null && r.buy_in_price > 0
         )
       )
     })
     for (const p of listings) {
       if (!p.buy_in_price || !p.make || !p.total_shares || p.total_shares < 2) continue
+      const family = familyKeyFor(p.make, p.model)
+      if (!family) continue
       const rows = makeRows.get(p.make) ?? []
       const otherComps = rows
-        .filter((r) => r.id !== p.id)
+        .filter((r) => r.id !== p.id && familyKeyFor(p.make, r.model) === family)
         .map((r) => ({ buyIn: r.buy_in_price, totalShares: r.total_shares }))
       const result = partnershipBuyInComp(p.buy_in_price, p.total_shares, otherComps)
       if (result && result.kind !== 'near') {
