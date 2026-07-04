@@ -195,11 +195,11 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   shipped 2026-07-04** (`aircraft-annual-damage-form`): `/aircraft/new` and
   `/aircraft/listing/[id]/edit` now have the same "Annual due"/"Damage history" fields —
   `aircraft_for_sale` already had the columns natively (no migration needed), so a
-  self-posted aircraft listing can now show both panels too. **Remaining gap:** the aircraft
-  AI-draft doesn't yet extract `annual_due`/`damage_history` from pasted notes (only
-  `ttaf`/`smoh`/`engine_type` are AI-extracted for aircraft today) — wiring those two fields
-  into the `AircraftDraft` prompt/schema in `actions.ts`, mirroring the partnership AI-draft
-  work, is the natural next Pillar 3 slice.
+  self-posted aircraft listing can now show both panels too. **Aircraft AI-draft extraction
+  shipped 2026-07-04** (`aircraft-ai-draft-annual-damage`): the "Prefill from your notes ✨"
+  box on `/aircraft/new` now also extracts `annual_due`/`damage_history`, mirroring the
+  partnership AI-draft work. This item is now fully complete across both listing types —
+  manual fields + AI-draft extraction, aircraft and partnership alike.
 
 ---
 
