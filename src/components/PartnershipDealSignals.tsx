@@ -4,6 +4,7 @@ import type { ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import type { EngineLifeResult } from '@/lib/engineLife'
 import type { AnnualStatusResult } from '@/lib/annualStatus'
 import type { DamageHistoryResult } from '@/lib/damageHistory'
+import { computeIfrSuitability, type AvionicsInfo } from '@/lib/avionicsClassify'
 import { formatPrice } from '@/lib/utils'
 
 const DAY_MS = 86_400_000
@@ -34,6 +35,7 @@ function computeSignals(
   engineLife: EngineLifeResult | null,
   annualStatus: AnnualStatusResult | null,
   damage: DamageHistoryResult | null,
+  avionicsInfo: AvionicsInfo | null,
 ): SignalRow[] {
   const rows: SignalRow[] = []
 
@@ -251,6 +253,21 @@ function computeSignals(
     }
   }
 
+  // 5b. Avionics IFR suitability — mirrors the aircraft-for-sale DealSignals row exactly:
+  // only fires for the top two tiers (glass, WAAS, autopilot combinations) so it's a
+  // genuinely positive signal, not neutral noise. Self-suppresses when avionics is absent
+  // or no IFR-meaningful caps were detected in the description.
+  if (avionicsInfo) {
+    const ifr = computeIfrSuitability(avionicsInfo.caps)
+    if (ifr && (ifr.tier === 'full' || ifr.tier === 'capable')) {
+      rows.push({
+        kind: 'positive',
+        label: ifr.headline,
+        detail: ifr.sub,
+      })
+    }
+  }
+
   // 6. Spec completeness — whether key engine/airframe fields are on the listing.
   // When specs are present the engine-life and airframe panels below are active;
   // when missing, buyers get a clear "what to ask" prompt. Never negative — missing
@@ -278,11 +295,11 @@ function computeSignals(
 /**
  * "How this partnership stacks up" — synthesis panel for partnership detail pages.
  *
- * Renders up to eight signals: buy-in vs partnership comps, implied aircraft value vs
+ * Renders up to nine signals: buy-in vs partnership comps, implied aircraft value vs
  * for-sale family median, annual-inspection status, damage history, days listed, cost
- * transparency, engine life (when smoh + engine_type resolve a TBO family), and spec
- * completeness. Self-suppresses when fewer than 2 signals are actionable — never shows
- * a thin or misleading verdict.
+ * transparency, engine life (when smoh + engine_type resolve a TBO family), avionics IFR
+ * suitability, and spec completeness. Self-suppresses when fewer than 2 signals are
+ * actionable — never shows a thin or misleading verdict.
  */
 export default function PartnershipDealSignals({
   p,
@@ -291,6 +308,7 @@ export default function PartnershipDealSignals({
   engineLife = null,
   annualStatus = null,
   damage = null,
+  avionicsInfo = null,
 }: {
   p: Partnership
   comp: PartnerCompResult | null
@@ -298,8 +316,9 @@ export default function PartnershipDealSignals({
   engineLife?: EngineLifeResult | null
   annualStatus?: AnnualStatusResult | null
   damage?: DamageHistoryResult | null
+  avionicsInfo?: AvionicsInfo | null
 }) {
-  const rows = computeSignals(p, comp, impliedValue, engineLife, annualStatus, damage)
+  const rows = computeSignals(p, comp, impliedValue, engineLife, annualStatus, damage, avionicsInfo)
   if (rows.length < 2) return null
 
   return (
