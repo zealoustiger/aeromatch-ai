@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T12:14:33Z — edit-page-contact-prefill-parity — score 5/5
+- Strengths: Exact parity with the three `new` pages — correct prop names/values, forms already consume them via `initialValues?.contact_* ?? user*` (listing's own value still wins), and edit pages correctly use non-optional `user.` since the auth gate guarantees presence. Minimal, well-scoped, no form/schema churn.
+- Weaknesses / risks: none material — three-prop change duplicates the `new`-page wiring, but that mirror pattern is the existing convention.
+- Follow-up: none
+
 ## 2026-07-04T12:03:53Z — partnership-dealsignals-annual-damage — score 4/5
 - Strengths: Exact spec match — copy mirrors aircraft DealSignals verbatim, reuses the already-computed honesty-gated annual/damage reads, self-suppresses on null, and updates the panel doc comment (six→eight signals).
 - Weaknesses / risks: Signal-row copy is now duplicated across `computeDealSignals` and `computeSignals` (two files to keep in sync) — intentional per spec and consistent with the existing mirror pattern, but a real drift risk over time.
