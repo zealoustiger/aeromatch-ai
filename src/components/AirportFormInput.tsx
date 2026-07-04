@@ -13,6 +13,50 @@ type Airport = {
   type: string | null
 }
 
+type AirportWithCoords = Airport & { lat: number; lng: number }
+
+const EARTH_RADIUS_MI = 3958.8
+const toRad = (deg: number) => (deg * Math.PI) / 180
+
+function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return 2 * EARTH_RADIUS_MI * Math.asin(Math.sqrt(a))
+}
+
+/** Bounding-box + client-side haversine nearest lookup (no PostGIS/earthdistance
+ * extension enabled on this DB). Widens the box once if nothing is found nearby. */
+async function findNearestAirport(lat: number, lng: number): Promise<AirportWithCoords | null> {
+  const supabase = createClient()
+  for (const latDelta of [3, 10]) {
+    const lonDelta = Math.min(30, latDelta / Math.max(Math.cos(toRad(lat)), 0.15))
+    const { data } = await supabase
+      .from('airports')
+      .select('icao,iata,name,city,state,type,lat,lng')
+      .gte('lat', lat - latDelta)
+      .lte('lat', lat + latDelta)
+      .gte('lng', lng - lonDelta)
+      .lte('lng', lng + lonDelta)
+      .limit(500)
+    const candidates = ((data ?? []) as AirportWithCoords[]).filter((a) => !SKIP_TYPES.has(a.type ?? ''))
+    if (candidates.length === 0) continue
+    let best: AirportWithCoords | null = null
+    let bestDist = Infinity
+    for (const a of candidates) {
+      const dist = haversineMiles(lat, lng, a.lat, a.lng)
+      if (dist < bestDist) {
+        bestDist = dist
+        best = a
+      }
+    }
+    if (best) return best
+  }
+  return null
+}
+
 const TYPE_RANK: Record<string, number> = { large_airport: 0, medium_airport: 1, small_airport: 2 }
 const SKIP_TYPES = new Set(['closed', 'heliport', 'seaplane_base', 'balloonport'])
 
@@ -41,6 +85,8 @@ export default function AirportFormInput({
   const [suggestions, setSuggestions] = useState<Airport[]>([])
   const [activeIdx, setActiveIdx] = useState(-1)
   const [isInvalid, setIsInvalid] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [locError, setLocError] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function query(raw: string) {
@@ -85,6 +131,36 @@ export default function AirportFormInput({
     el.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
+  function useMyLocation() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocError("Location isn't supported by this browser — enter it manually.")
+      return
+    }
+    setLocating(true)
+    setLocError(null)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const nearest = await findNearestAirport(pos.coords.latitude, pos.coords.longitude)
+          if (nearest) {
+            pick(nearest.icao)
+          } else {
+            setLocError("Couldn't find an airport near you — enter it manually.")
+          }
+        } catch {
+          setLocError("Couldn't find an airport near you — enter it manually.")
+        } finally {
+          setLocating(false)
+        }
+      },
+      () => {
+        setLocError('Location permission denied — enter it manually.')
+        setLocating(false)
+      },
+      { timeout: 8000, maximumAge: 300_000 }
+    )
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -116,21 +192,34 @@ export default function AirportFormInput({
         title="Select an airport from the list, or enter its 4-letter ICAO code."
         aria-invalid={isInvalid}
         className={cn(
-          'w-full rounded-lg border px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:outline-none focus:ring-2',
+          'w-full rounded-lg border py-2.5 pl-3 pr-10 text-base sm:text-sm placeholder-slate-400 transition focus:outline-none focus:ring-2',
           isInvalid
             ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100'
             : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100',
           className
         )}
-        onChange={e => { setIsInvalid(false); query(e.target.value) }}
+        onChange={e => { setIsInvalid(false); setLocError(null); query(e.target.value) }}
         onKeyDown={handleKeyDown}
         onBlur={() => { setSuggestions([]); setActiveIdx(-1) }}
         onInvalid={e => { e.preventDefault(); setIsInvalid(true) }}
       />
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={locating}
+        aria-label="Use my current location"
+        title="Use my current location"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-base leading-none text-sky-600 transition hover:bg-sky-50 disabled:cursor-wait disabled:opacity-60"
+      >
+        {locating ? '⏳' : '📍'}
+      </button>
       {isInvalid && (
         <p className="mt-1 text-xs text-rose-500">
           Select an airport from the list, or enter its 4-letter code (e.g. KAUS).
         </p>
+      )}
+      {!isInvalid && locError && (
+        <p className="mt-1 text-xs text-amber-600">{locError}</p>
       )}
       {suggestions.length > 0 && (
         <ul
