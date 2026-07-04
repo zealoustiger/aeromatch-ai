@@ -3,7 +3,7 @@
 ## 📊 Traffic (PostHog) — as of 2026-07-04
 
 - **Visitors:** 35 all-time · 19 in the last 7 days
-- **Pageviews:** 719 all-time · 197 in the last 7 days
+- **Pageviews:** 721 all-time · 195 in the last 7 days
 - **Not from Oakland:** 33 visitors _(early on, most non-local hits are crawlers/bots, not real users)_
 
 ---
