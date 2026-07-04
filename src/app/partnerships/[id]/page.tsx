@@ -517,7 +517,7 @@ export default async function PartnershipDetailPage({
 
             {/* "How this partnership stacks up" synthesis panel — mirrors the
                 aircraft DealScorePanel; uses partnerComp already fetched above. */}
-            <PartnershipDealSignals p={p} comp={partnerComp} impliedValue={impliedValueCheck} engineLife={engineLife} />
+            <PartnershipDealSignals p={p} comp={partnerComp} impliedValue={impliedValueCheck} engineLife={engineLife} annualStatus={annualStatus} damage={damage} />
 
             {/* Engine life & overhaul reserve — proprietary panel using extracted
                 smoh + engine_type. Self-suppresses when either field is missing or

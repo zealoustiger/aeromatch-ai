@@ -2,6 +2,8 @@ import type { Partnership } from '@/lib/types'
 import type { PartnerCompResult } from '@/lib/partnershipComps'
 import type { ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import type { EngineLifeResult } from '@/lib/engineLife'
+import type { AnnualStatusResult } from '@/lib/annualStatus'
+import type { DamageHistoryResult } from '@/lib/damageHistory'
 import { formatPrice } from '@/lib/utils'
 
 const DAY_MS = 86_400_000
@@ -30,6 +32,8 @@ function computeSignals(
   comp: PartnerCompResult | null,
   impliedValue: ImpliedValueResult | null,
   engineLife: EngineLifeResult | null,
+  annualStatus: AnnualStatusResult | null,
+  damage: DamageHistoryResult | null,
 ): SignalRow[] {
   const rows: SignalRow[] = []
 
@@ -108,6 +112,51 @@ function computeSignals(
         kind: 'neutral',
         label: 'Implied aircraft value near market',
         detail: `${sharesExpr}${iv} implied value, in line with the ${med} median of ${impliedValue.count} comparable${makeLabel} aircraft for sale.`,
+      })
+    }
+  }
+
+  // 2b. Annual-inspection status — reuse the honesty-gated read already computed for
+  // the AnnualStatusPanel; condensed into one tally row so the headline verdict
+  // reflects near-term inspection cost. Mirrors the aircraft-for-sale DealSignals copy
+  // exactly. Self-suppresses (annualStatus is null) when annual_due is missing/unparseable.
+  if (annualStatus) {
+    if (annualStatus.state === 'current') {
+      rows.push({
+        kind: 'positive',
+        label: 'Annual current',
+        detail: `The listing states the next annual is due ${annualStatus.dueLabel} — about ${annualStatus.monthsFromNow} months of inspection time remaining`,
+      })
+    } else if (annualStatus.state === 'soon') {
+      rows.push({
+        kind: 'neutral',
+        label: 'Annual due soon',
+        detail: `The listing states the next annual is due ${annualStatus.dueLabel} — budget for a fresh annual soon after purchase, or ask whether it has already been done`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: 'Annual may be overdue',
+        detail: `The listing states the annual was due ${annualStatus.dueLabel} — confirm the aircraft has a current annual before you commit`,
+      })
+    }
+  }
+
+  // 2c. Damage history — reuse the honesty-gated read already computed for the
+  // DamageHistoryPanel. Self-suppresses (damage is null) when the flag was never
+  // extracted — never infer "no damage" from an absent flag.
+  if (damage) {
+    if (damage.state === 'clean') {
+      rows.push({
+        kind: 'positive',
+        label: 'No damage reported',
+        detail: `The listing reports no prior damage — the seller's description, not the logbooks, so confirm it at a pre-buy`,
+      })
+    } else {
+      rows.push({
+        kind: 'negative',
+        label: 'Prior damage reported',
+        detail: `The listing reports prior damage — ask for the repair records and focus the pre-buy on the repaired area`,
       })
     }
   }
@@ -229,23 +278,28 @@ function computeSignals(
 /**
  * "How this partnership stacks up" — synthesis panel for partnership detail pages.
  *
- * Renders up to six signals: buy-in vs partnership comps, implied aircraft value vs
- * for-sale family median, days listed, cost transparency, engine life (when smoh +
- * engine_type resolve a TBO family), and spec completeness. Self-suppresses when fewer
- * than 2 signals are actionable — never shows a thin or misleading verdict.
+ * Renders up to eight signals: buy-in vs partnership comps, implied aircraft value vs
+ * for-sale family median, annual-inspection status, damage history, days listed, cost
+ * transparency, engine life (when smoh + engine_type resolve a TBO family), and spec
+ * completeness. Self-suppresses when fewer than 2 signals are actionable — never shows
+ * a thin or misleading verdict.
  */
 export default function PartnershipDealSignals({
   p,
   comp,
   impliedValue = null,
   engineLife = null,
+  annualStatus = null,
+  damage = null,
 }: {
   p: Partnership
   comp: PartnerCompResult | null
   impliedValue?: ImpliedValueResult | null
   engineLife?: EngineLifeResult | null
+  annualStatus?: AnnualStatusResult | null
+  damage?: DamageHistoryResult | null
 }) {
-  const rows = computeSignals(p, comp, impliedValue, engineLife)
+  const rows = computeSignals(p, comp, impliedValue, engineLife, annualStatus, damage)
   if (rows.length < 2) return null
 
   return (
