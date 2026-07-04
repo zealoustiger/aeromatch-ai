@@ -560,9 +560,9 @@ export async function updateSeekerListing(id: string, formData: FormData) {
     contact_phone: (formData.get('contact_phone') as string) || null,
   }
 
-  const payload = additional_airports
-    ? { ...basePayload, additional_airports }
-    : basePayload
+  // Always include additional_airports (even when null) so blanking the field on
+  // edit actually clears a previously-set value instead of leaving it untouched.
+  const payload = { ...basePayload, additional_airports }
 
   let { data, error } = await supabase
     .from('partnership_seekers')
@@ -573,8 +573,10 @@ export async function updateSeekerListing(id: string, formData: FormData) {
     .single()
 
   // Same graceful fallback as createSeekerListing — if additional_airports hasn't
-  // been migrated yet, retry without it so the save still succeeds.
-  if (error && additional_airports && error.message?.includes('additional_airports')) {
+  // been migrated yet, retry without it so the save still succeeds. Checked on the
+  // error alone (not "additional_airports truthy") so clearing the field on an
+  // unmigrated DB also falls back correctly.
+  if (error && error.message?.includes('additional_airports')) {
     const retry = await supabase
       .from('partnership_seekers')
       .update(basePayload)
