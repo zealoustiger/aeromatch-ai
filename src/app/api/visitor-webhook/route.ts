@@ -101,7 +101,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 403 })
   }
 
-  let body: { sessionId?: string; event?: string; path?: string; referrer?: string | null; props?: Record<string, unknown> }
+  let body: {
+    sessionId?: string
+    event?: string
+    path?: string
+    referrer?: string | null
+    utm?: { source?: string | null; content?: string | null } | null
+    props?: Record<string, unknown>
+  }
   try {
     body = await request.json()
   } catch {
@@ -111,6 +118,13 @@ export async function POST(request: NextRequest) {
   const event = body.event || '$pageview'
   const path = body.path || '/'
   const props = body.props || {}
+  // Campaign tag (from ?utm_source/&utm_content on the landing URL). Sanitized to a
+  // short slug so a crafted link can't inject formatting into the Slack message.
+  const clean = (s: unknown, n: number) =>
+    typeof s === 'string' ? s.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, n) : ''
+  const utmSource = clean(body.utm?.source, 24)
+  const utmContent = clean(body.utm?.content, 32)
+  const campaign = utmSource ? ` · ${utmSource}${utmContent ? `/${utmContent}` : ''}` : ''
   const rawReferrer = body.referrer || null
   // Strip to just the hostname, and ignore self-referrals (internal navigation).
   const referrerHost = (() => {
@@ -197,7 +211,7 @@ export async function POST(request: NextRequest) {
       const via = referrerHost ? ` · via ${referrerHost}` : ''
       const headline = isBot
         ? `🤖 *Bot* — ${botReason} · ${loc} · ${device}`
-        : `🟢 *New visitor* — ${loc} · ${device}${via}`
+        : `🟢 *New visitor* — ${loc} · ${device}${via}${campaign}`
       const root = await slack('chat.postMessage', {
         channel: CHANNEL,
         text: `${headline}\n${isBot ? 'hit' : 'landed on'} \`${path}\``,

@@ -16,6 +16,29 @@ function getSessionId(): string {
   }
 }
 
+/**
+ * Campaign source for the session. UTM params only ride the FIRST (landing) URL,
+ * so we stash them in sessionStorage on first sight and reuse for later events —
+ * that way the Slack thread's first-event headline still shows the source even if
+ * the tracked event isn't the landing pageview.
+ */
+function getUtm(): { source: string | null; content: string | null } {
+  try {
+    const p = new URLSearchParams(location.search)
+    const src = p.get('utm_source')
+    const content = p.get('utm_content')
+    if (src) {
+      sessionStorage.setItem('ch_utm', JSON.stringify({ source: src, content }))
+      return { source: src, content }
+    }
+    const saved = sessionStorage.getItem('ch_utm')
+    if (saved) return JSON.parse(saved)
+  } catch {
+    /* ignore */
+  }
+  return { source: null, content: null }
+}
+
 /** Fire-and-forget ping to the visitor radar (threaded Slack alerts). */
 export function notifyVisitor(event: string, props?: Record<string, unknown>) {
   if (typeof window === 'undefined') return
@@ -28,6 +51,7 @@ export function notifyVisitor(event: string, props?: Record<string, unknown>) {
         event,
         path: location.pathname,
         referrer: document.referrer || null,
+        utm: getUtm(),
         props,
       }),
       keepalive: true,
