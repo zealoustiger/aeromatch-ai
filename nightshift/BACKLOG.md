@@ -230,6 +230,18 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   verdict: comp value (ClubHanger Estimate) + days-on-market + price drops + spec completeness
   → a transparent "how this stacks up" with the *reasons* shown (not a black-box score).
   Reuse the Estimate's min-comps / dead-band honesty floors.
+~~- **[agent][goal] Partnership Deal Check (year/hours-narrowed value verdict).**~~ ✅
+  SHIPPED via `partnership-deal-check` (2026-07-04) Aircraft-for-sale listings had both a
+  whole-family descriptive estimate AND a narrower year+hours "Good deal/Fair/Priced high"
+  Deal Check (`clubHangerDealVerdict`); partnerships only ever got the whole-family version
+  (`partnershipBuyInComp`). New `partnershipDealVerdict()` mirrors the same year(±5yr)/
+  hours-band narrowing, additionally normalized for share size (implied full-aircraft value),
+  rendered as a "Deal check" sub-block inside `PartnershipMarketCheck` on `/partnerships/[id]`.
+  **Dormant on today's seed data** — needs both the still-unapplied `partnership_add_spec_fields`
+  migration (ttaf/smoh) AND enough same-family comps to clear the 4-comp floor (neither exists
+  yet in the sandbox DB); verified correct via a standalone pure-function test + a temporary
+  mock-data screenshot pass instead. **Next:** browse/rail-card parity for this chip, once real
+  data exists to confirm against.
 ~~- **[P2][goal] Market position + days-on-market.**~~ ✅ SHIPPED (confirmed complete
   2026-07-03) "N comparable {make} {model} listed, median $X — this is P% below/above;
   listed N days ago" is live across every buyer surface: aircraft browse cards (CompPill:
