@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin } from 'lucide-react'
+import { MapPin, CalendarClock, AlertTriangle } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import type { AvionicsCap } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
+import { computeAnnualStatus } from '@/lib/annualStatus'
+import { computeDamageHistory } from '@/lib/damageHistory'
 
 const AVIONICS_CHIP_STYLE: Record<string, string> = {
   glass: 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -63,6 +65,45 @@ function EngineOverlayChip({ smoh, engineType }: { smoh: number; engineType: str
   )
 }
 
+// Rail-card mirror of PartnershipCard's AnnualStatusChip/DamageHistoryChip —
+// same honesty-gated helpers, same "only surface the actionable state" rule.
+// A rail card only has room for one top-right badge, so when both are
+// actionable, damage (the more consequential flag) wins.
+function TrustOverlayChip({
+  annualDue,
+  damageHistory,
+}: {
+  annualDue: string | null
+  damageHistory: boolean | null
+}) {
+  const damage = computeDamageHistory(damageHistory)
+  if (damage && damage.state === 'reported') {
+    return (
+      <span
+        className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200"
+        title={damage.headline}
+      >
+        <AlertTriangle className="h-3 w-3" />
+        Damage reported
+      </span>
+    )
+  }
+  const annual = computeAnnualStatus(annualDue, new Date())
+  if (annual && annual.state !== 'current') {
+    const label = annual.state === 'overdue' ? 'Annual overdue' : 'Annual due soon'
+    return (
+      <span
+        className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200"
+        title={annual.headline}
+      >
+        <CalendarClock className="h-3 w-3" />
+        {label}
+      </span>
+    )
+  }
+  return null
+}
+
 /**
  * Compact, photo-forward rail card for a co-ownership partnership — the partnership
  * twin of `AircraftRailCard`, used in the marketplace cross-sell mini-rail (slice 3
@@ -113,6 +154,7 @@ export default function PartnershipRailCard({
             Above market
           </span>
         ) : null}
+        <TrustOverlayChip annualDue={p.annual_due} damageHistory={p.damage_history} />
         {isPlaceholder ? (
           <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
             Not actual plane photo
