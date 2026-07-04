@@ -226,6 +226,7 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   `/saved` shows a "Saved seeker listings" section both logged-in and logged-out. No migration
   needed (`listing_type` is a plain `text` column). **Next:** small copy-only follow-on — the
   `/saved`/`DeviceSavedListings` empty-state hint text still only mentions partnerships/aircraft.
+  **✅ Closed 2026-07-04** (`saved-empty-state-seeker-mention`) — see below.
 ~~- **[agent][goal] AI "Prefill from your notes" silently 401s when logged out.**~~ ✅
   SHIPPED via `ai-draft-signin-redirect` (2026-07-04) Same bug class as the photo-upload fix
   above, on the single most prominent CTA on every post form: `handleGenerate` on all 3 post
@@ -248,6 +249,13 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   partnership `ContactBar` (which makes no such claim). Copy now matches actual behavior.
   **Next:** the `/saved`/`DeviceSavedListings` empty-state copy still omits "seeker listings"
   (small copy-only follow-on, flagged since `seeker-save-heart`).
+~~- **[agent][goal] `/saved` empty-state + footer copy omits seeker listings.**~~ ✅ SHIPPED
+  via `saved-empty-state-seeker-mention` (2026-07-04) Closes the copy gap flagged above and in
+  `seeker-save-heart` — the empty state, "Looking for more?" footer (both logged-in and
+  logged-out/device-save views), and the logged-in header subcopy on `/saved` only ever
+  mentioned partnerships and aircraft for sale, even though seeker listings have had full
+  save/heart support since `seeker-save-heart`. Added a third link to `/partnerships/seeking`
+  in all four spots. Pure copy/link change, no schema/logic change.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
