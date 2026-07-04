@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-04T13:28:23Z — partnership-deal-check-card-parity — score 4/5
+- Strengths: Clean new `PartnershipCardVerdict` shape with correct dealVerdict-wins/plain-comp-fallback precedence; all 3 callers threaded correctly; browse card honestly labels each source (narrowed "Good deal" chip vs plain "~X% below/above market" pill); genuinely smart separate query/try-catch so the dormant ttaf/smoh migration degrades to the existing pill instead of killing the chip; matches conventions, no dead code.
+- Weaknesses / risks: `SimilarListings` deviates from spec's "narrowed-only, mirror SimilarAircraft exactly" by adding a plain-comp fallback while `PartnershipRailCard` copy was relabeled to "Good deal"/"Priced high" on the (now false) premise the value "always comes from the narrowed verdict" — so on live data (ttaf/smoh dormant) every rail chip is a plain whole-family comp mislabeled as a year+hours Deal Check, unlike the aircraft rail which is truly narrowed-only.
+- Follow-up: Either make the partnership rail narrowed-only (accept dormancy, true aircraft parity) or keep neutral "Below/Above market" copy on PartnershipRailCard when the chip comes from the plain `partnershipBuyInComp` fallback, so the rail never labels a whole-family comp as a Deal Check verdict.
+
 ## 2026-07-04T12:24:00Z — seeker-contactbar-privacy-copy-fix — score 4/5
 - Strengths: Correct root-cause fix — verified showEmail/showPhone gate only on contactMethod (never login), so the "signed-in members only" claim was genuinely false; collapses the `!user` conditional to the single `displayName` line, reuses the component's existing "Reach out to" phrasing, leaves auth-gated messaging (handleSend redirect, draft preservation, button labels) and the still-used `user` state untouched. Tightly scoped, no dead code.
 - Weaknesses / risks: none material — copy diverges slightly from sibling ContactBar's "Contact {name}" wording, but "Reach out to" matches this component's own prior tone and is arguably better.
