@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator, Users, BookOpen, Settings } from 'lucide-react'
+import { Plane, Bookmark, Heart, MessageCircle, LogIn, LogOut, Menu, X, Shield, Calculator, Users, BookOpen, Settings, Bell, PlusCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
@@ -143,13 +143,23 @@ export default function Nav() {
             ))}
           </nav>
 
-          {/* Desktop right actions */}
+          {/* Desktop right actions.
+              Primary CTA is "Get alerts" (demand capture) — most visitors are buyers,
+              not sellers, so we lead with the thing they want. Posting stays one click
+              away as a muted secondary link. */}
           <div className="hidden items-center gap-2 sm:flex">
             <Link
               href="/post"
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+              className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              Post a Listing
+              Post a listing
+            </Link>
+            <Link
+              href="/alerts"
+              className="flex items-center gap-1.5 rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+            >
+              <Bell className="h-3.5 w-3.5" />
+              Get alerts
             </Link>
             {user ? (
               <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} unreadCount={unreadCount} />
@@ -181,13 +191,14 @@ export default function Nav() {
             )}
           </div>
 
-          {/* Mobile right: Post CTA + hamburger */}
+          {/* Mobile right: Alerts CTA + hamburger (posting lives in the menu) */}
           <div className="flex items-center gap-2 sm:hidden">
             <Link
-              href="/post"
-              className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+              href="/alerts"
+              className="flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
-              Post
+              <Bell className="h-3.5 w-3.5" />
+              Alerts
             </Link>
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -239,6 +250,26 @@ export default function Nav() {
               {label}
             </Link>
           ))}
+          <Link
+            href="/alerts"
+            className={cn(
+              'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+              pathname.startsWith('/alerts') ? 'text-sky-700' : 'text-slate-700'
+            )}
+          >
+            <Bell className="h-4 w-4" />
+            Get alerts
+          </Link>
+          <Link
+            href="/post"
+            className={cn(
+              'flex items-center gap-2 py-4 text-base font-medium transition-colors',
+              pathname.startsWith('/post') ? 'text-sky-700' : 'text-slate-700'
+            )}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Post a listing
+          </Link>
           {user && (
             <Link
               href="/account"

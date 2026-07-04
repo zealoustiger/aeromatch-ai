@@ -3,10 +3,13 @@
 import { useState } from 'react'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
+import { track } from '@/lib/analytics'
 
 interface Props {
-  /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California". */
-  context: string
+  /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
+   *  Optional — when omitted/empty the copy reads as a general new-listing alert
+   *  (used by the /alerts landing page). */
+  context?: string
   /** The page the signup came from, e.g. "/aircraft/cessna/172". */
   sourcePath: string
   /**
@@ -25,6 +28,15 @@ interface Props {
 export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: Props) {
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
+  // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
+  const hasCtx = !!(context && context.trim())
+  const headline = hasCtx ? `Get alerts for new ${context} listings` : 'Get new-listing alerts'
+  const subcopy = hasCtx
+    ? `We'll email you when a new ${context} ${noun} is listed. One email field, no account needed.`
+    : `We'll email you the moment a new listing appears. One email field, no account needed.`
+  const doneCopy = hasCtx
+    ? `new ${context} listings appear. No spam — just relevant ${nounPlural}.`
+    : `new listings appear. No spam — just relevant listings.`
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -35,12 +47,14 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: 
     if (pending) return
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeToAlerts(email, context, sourcePath)
+    const result = await subscribeToAlerts(email, context ?? '', sourcePath)
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)
       return
     }
+    // Conversion signal for the "alerts vs post" nav experiment.
+    track('alert_subscribed', { context: context || 'all', source_path: sourcePath })
     setSubmitted(true)
   }
 
@@ -53,7 +67,7 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: 
             <h2 className="text-base font-semibold text-slate-900">Almost there — check your inbox.</h2>
             <p className="mt-1 text-sm text-slate-600">
               We just emailed you a confirmation link. Click it to start getting alerts when
-              new {context} listings appear. No spam — just relevant {nounPlural}.
+              {' '}{doneCopy}
             </p>
           </div>
         </div>
@@ -65,11 +79,10 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: 
             </div>
             <div>
               <h2 className="text-base font-semibold text-slate-900">
-                Get alerts for new {context} listings
+                {headline}
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                We&apos;ll email you when a new {context} {noun} is listed. One email field, no
-                account needed.
+                {subcopy}
               </p>
             </div>
           </div>
