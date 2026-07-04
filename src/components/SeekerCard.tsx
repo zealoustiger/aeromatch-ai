@@ -101,20 +101,20 @@ export default function SeekerCard({
             ))}
             {budgetVerdict?.kind === 'below' && (
               <span
-                className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
-                title={`vs. expected buy-in for this share size (${formatPrice(budgetVerdict.median)})`}
-              >
-                <LineChart className="h-3 w-3" />
-                Budget ~{budgetVerdict.pct}% below market · {formatPriceK(budgetVerdict.median)} · {budgetVerdict.count} comps
-              </span>
-            )}
-            {budgetVerdict?.kind === 'above' && (
-              <span
                 className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200"
                 title={`vs. expected buy-in for this share size (${formatPrice(budgetVerdict.median)})`}
               >
                 <LineChart className="h-3 w-3" />
-                Budget ~{budgetVerdict.pct}% above market · {formatPriceK(budgetVerdict.median)} · {budgetVerdict.count} comps
+                Budget may be tight · {formatPriceK(budgetVerdict.median)} typical · {budgetVerdict.count} comps
+              </span>
+            )}
+            {budgetVerdict?.kind === 'above' && (
+              <span
+                className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
+                title={`vs. expected buy-in for this share size (${formatPrice(budgetVerdict.median)})`}
+              >
+                <LineChart className="h-3 w-3" />
+                Budget comfortably above typical · {formatPriceK(budgetVerdict.median)} · {budgetVerdict.count} comps
               </span>
             )}
           </div>
