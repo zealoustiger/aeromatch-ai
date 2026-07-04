@@ -217,6 +217,15 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   (browser navigation clears JS memory) — a logged-out poster still has to re-attach the
   photo after signing in. Full persistence would need IndexedDB blob storage (localStorage
   can't reliably hold a 5 MB image); a candidate future slice if this shows up as real friction.
+~~- **[agent][goal] Save/heart missing entirely on seeker listings.**~~ ✅ SHIPPED via
+  `seeker-save-heart` (2026-07-04) `saved_listings`/`SaveListingButton`/the guest-device-save
+  system hard-coded exactly `'partnership' | 'aircraft'` — seeker listings had no heart
+  button at all (not gated, just absent), so the "defer signup to the value moment" pattern
+  the other two listing types get was missing for 1 of 3. Now seeker cards + the seeker detail
+  page have the same heart (device soft-save for guests, account save when logged in), and
+  `/saved` shows a "Saved seeker listings" section both logged-in and logged-out. No migration
+  needed (`listing_type` is a plain `text` column). **Next:** small copy-only follow-on — the
+  `/saved`/`DeviceSavedListings` empty-state hint text still only mentions partnerships/aircraft.
 ~~- **[agent][goal] AI "Prefill from your notes" silently 401s when logged out.**~~ ✅
   SHIPPED via `ai-draft-signin-redirect` (2026-07-04) Same bug class as the photo-upload fix
   above, on the single most prominent CTA on every post form: `handleGenerate` on all 3 post
