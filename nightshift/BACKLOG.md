@@ -151,6 +151,16 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   autofills the nearest airport's ICAO code via a lat/lng bounding-box + haversine lookup
   against the existing `airports` table — no schema change, graceful fallback on denied
   permission. Removes the "look up my airport's code" step entirely.
+~~- **[agent][goal] Description-writing help on the aircraft post form.**~~ ✅ SHIPPED via
+  `aircraft-description-help` (2026-07-04) `/partnerships/seeking/new` already had a
+  collapsible "How to write a great description" tips box + two example descriptions, but
+  `/aircraft/new` (and by extension its edit form) only had a single line of guidance above
+  a bare textarea — despite that page's own copy calling the description "the single biggest
+  factor in getting a serious inquiry." Ported the identical tips-box/examples pattern,
+  aircraft-flavored copy (specs/condition/why-selling/standout-feature tips; a well-equipped
+  and a budget trainer example). Purely additive presentational UI, no schema/actions change.
+  **Next:** same treatment on `/partnerships/new` (`PostPartnershipForm.tsx`) — the one
+  remaining form without this help — is the natural next Pillar 1 slice.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
