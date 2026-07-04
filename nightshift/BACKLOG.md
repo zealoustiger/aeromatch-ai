@@ -164,6 +164,16 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   remaining post form without it — partnership-flavored tips + two examples ("established
   group with an opening" / "new partnership forming"). This feature is now complete across
   all 3 post forms (aircraft, partnership, seeker).
+~~- **[agent][goal] Autosave status parity on the aircraft post form.**~~ ✅ SHIPPED via
+  `aircraft-draft-indicator` (2026-07-04) `/aircraft/new` (built later than the other two
+  forms) never got the shared `DraftIndicator` component — it showed a static, non-`aria-live`
+  "Draft saved" label that never announced "Saving…" mid-debounce or distinguished a restored
+  draft from a freshly-saved one, unlike the partnership and seeker forms. Ported the identical
+  `DraftIndicator` (Saving…/Draft saved/Draft restored, `aria-live="polite"`). Purely additive
+  presentational fix, no schema/actions change. Autosave-status parity is now complete across
+  all 3 post forms. **Runner-ups not pursued:** N-number helper text on the aircraft form omits
+  the word "Optional" the partnership form's has (cosmetic); photo-upload `endpoint` prop
+  explicit-vs-default between forms (looked intentional, not a bug).
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
