@@ -203,6 +203,15 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   hint + `PartnershipMarketCheck` + `PartnershipDealSignals` "Listed N days ago" row, built
   on `created_at` since user-submitted partnerships have no `first_seen_at`). No further
   slice needed for this item.
+~~- **[agent][goal] Price-drop badge on the partnership browse card.**~~ ✅ SHIPPED via
+  `partnership-card-price-drop` (2026-07-04) `previous_buy_in_price`/`buy_in_price_changed_at`
+  (self-serve price-edit history) already rendered as a "Buy-in reduced" row on the partnership
+  *detail* page (`PartnershipDealSignals`), but `PartnershipCard` — the primary browse/list
+  card — had no equivalent, unlike `AircraftSaleCard` which has shown a "Price drop $X" badge
+  + strikethrough previous price for a while. Now mirrored onto `PartnershipCard`; no schema
+  change, no new query. **Next:** the seeker detail page (`/partnerships/seeking/[id]`) shows
+  an absolute "Posted {date}" while its own `SeekerCard` already shows relative "Listed N days
+  ago" — small copy-consistency follow-on, not a missing analysis signal.
 ~~- **[agent][goal] Budget check on seeker listings.**~~ ✅ SHIPPED via `seeker-budget-check`
   (2026-07-03) Seeker listings (`/partnerships/seeking/[id]`) had zero Pillar 3 analysis —
   aircraft-for-sale and partnership listings both compare price/buy-in to the market, but a
