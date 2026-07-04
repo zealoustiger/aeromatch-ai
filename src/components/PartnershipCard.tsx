@@ -7,7 +7,7 @@ import { Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
-import { classifyAvionics } from '@/lib/avionicsClassify'
+import { classifyAvionics, computeIfrSuitability, type AvionicsCap, type IfrTier } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
@@ -54,6 +54,28 @@ const AVIONICS_CHIP_STYLE: Record<string, string> = {
   autopilot: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   waas: 'bg-sky-50 text-sky-700 ring-sky-200',
   gps: 'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
+// Same recipe as AircraftSaleCard's IfrCardBadge — for "full"/"capable" tiers, show
+// the one synthesized honest verdict instead of the raw equipment chips.
+const IFR_CARD_CHIP: Record<IfrTier, string> = {
+  full:     'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  capable:  'bg-sky-50 text-sky-700 ring-sky-200',
+  equipped: 'bg-slate-100 text-slate-600 ring-slate-200',
+  basic:    'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
+function IfrCardBadge({ caps }: { caps: AvionicsCap[] }) {
+  const ifr = computeIfrSuitability(caps)
+  if (!ifr || (ifr.tier !== 'full' && ifr.tier !== 'capable')) return null
+  return (
+    <span
+      className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1', IFR_CARD_CHIP[ifr.tier])}
+      title={ifr.sub}
+    >
+      {ifr.headline}
+    </span>
+  )
 }
 
 // Classify avionics capabilities from the partnership description text — partnerships
@@ -125,6 +147,8 @@ export default function PartnershipCard({
   const fresh = isNew(p.created_at)
   const listed = listedAgo(p.created_at)
   const avionicsCaps = partnershipAvionicsCaps(p.description)
+  const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
+  const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
 
   return (
     <article className="ch-card group overflow-hidden bg-white">
@@ -176,18 +200,21 @@ export default function PartnershipCard({
                 {p.smoh != null && p.engine_type && (
                   <EngineTimeChip smoh={p.smoh} engineType={p.engine_type} />
                 )}
-                {avionicsCaps.map((cap) => (
-                  <span
-                    key={cap.key}
-                    className={cn(
-                      'rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1',
-                      AVIONICS_CHIP_STYLE[cap.key] ?? 'bg-slate-100 text-slate-600 ring-slate-200'
-                    )}
-                    title={cap.hint}
-                  >
-                    {cap.label}
-                  </span>
-                ))}
+                {showIfrBadge
+                  ? <IfrCardBadge caps={avionicsCaps} />
+                  : avionicsCaps.map((cap) => (
+                      <span
+                        key={cap.key}
+                        className={cn(
+                          'rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1',
+                          AVIONICS_CHIP_STYLE[cap.key] ?? 'bg-slate-100 text-slate-600 ring-slate-200'
+                        )}
+                        title={cap.hint}
+                      >
+                        {cap.label}
+                      </span>
+                    ))
+                }
                 {compVerdict?.kind === 'below' && (
                   <span
                     className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"
