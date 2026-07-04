@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260704T073704Z — PASS — partnership-ai-draft-scheduling-system
+- Pages: /partnerships/new
+- What: **"Prefill from your notes ✨" on the partnership post form now also fills in "Scheduling system"** — before this cycle, pasting a note like "we use a shared Google Calendar to schedule flights" would fill Minimum Hours and Ratings Required (fixed earlier today) but silently drop the third field in that same section, Scheduling System, leaving one manual field behind after an otherwise-complete AI prefill.
+- Goal: frictionless-posting pillar (Pillar 1) — an Explore-agent audit (dispatched specifically to re-check Pillar 1 since the last two landed cycles were both Pillar 3) found this exact gap: the `partnership-ai-draft-partner-reqs` slice shipped earlier today added AI extraction for `min_hours`/`ratings_required` but missed their sibling `scheduling_system` in the same "Partner requirements" UI section — same class of parity bug as the two prior fixes this week, just easy to miss since it lives alongside fields that *were* fixed. `scheduling_system` was already a real, saved, edit-page-prefilled DB column; only the AI-draft schema/prompt and the form's `fillFormField` wiring were missing. Rotation: last two cycles were Pillar 3 (`partnership-card-avionics-badge`, `partnership-card-engine-chip`); Pillar 2 (Google OAuth) remains structurally blocked on frozen `/auth`. No schema change, no new UI — pure extraction parity.
+- Spec: nightshift/specs/20260704T073704Z-partnership-ai-draft-scheduling-system.md
+- Verdict: PASS — `next build` + typecheck clean; `qa-smoke.mjs` passed HTTP 200 / zero console errors / zero overflow at desktop 1280 + mobile 375 on `/partnerships/new`. Non-visual (backend extraction wiring only, no new UI), so screenshots were saved for the audit trail but not read into review per RUNBOOK.
+- Screenshots: nightshift/screenshots/partnership-ai-draft-scheduling-system/
+- Next: the remaining Pillar 1 gap found during this cycle's audit — a structured `avionics` column for partnerships (currently only regex-classified from description text; aircraft-for-sale has a real column) — is a genuine gap but multi-file + migration-sized, likely a 2-cycle item; good next Pillar 3 slice when due.
+
 ## 20260704T072956Z — PASS — partnership-card-engine-chip
 - Pages: /partnerships, /saved, /airports/[icao], /members/[id], /partnerships/near/[icao]
 - What: **The main partnership browse card now shows an "~N hrs to TBO" engine-life chip (or "Beyond TBO") when the listing's SMOH and engine type are known** — the same signal `AircraftSaleCard` already shows for aircraft-for-sale listings. Before this cycle, `PartnershipCard` never rendered `smoh`/`engine_type` anywhere, even though the partnership detail page already computes a full honesty-gated `EngineLifePanel` from those exact same fields — a shopper scanning the browse list got zero engine-life read, one click away from the exact same data on the detail page.

@@ -134,7 +134,10 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   on the partnership form extracted every aircraft/cost spec but silently skipped the "Partner
   requirements" fields (`min_hours`, `ratings_required`) — a parity gap vs. the seeker form's
   already-extracted `hours_per_month`/`ratings_held`. Now the AI extracts both, auto-filling
-  the Minimum Hours input and checking the matching Ratings Required chips.
+  the Minimum Hours input and checking the matching Ratings Required chips. **Gap closed
+  2026-07-04** (`partnership-ai-draft-scheduling-system`): the third field in that same
+  section, `scheduling_system`, was missed by the fix above — now extracted too, so a pasted
+  note fills all three Partner-requirements fields. This item is now fully complete.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
