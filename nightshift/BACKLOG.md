@@ -112,6 +112,11 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   back except remembering the exact URL. A small dismissible site-wide banner now detects
   an in-progress draft via the existing `useFormDraft` localStorage keys and links straight
   back to it; self-suppresses on the draft's own post page. Pure client-side read, no schema.
+  **Edit-mode parity ✅ SHIPPED 2026-07-04** (`draft-resume-banner-edit-mode`): the banner only
+  ever recognized the "new post" autosave keys; now also detects the edit-mode keys
+  (`ch:draft:{type}-edit:{id}`) the 3 edit forms already write, with "Unsaved changes" copy
+  and the correct per-listing edit href — new-post drafts still win if both exist. This item
+  is now fully complete across new-post and edit-mode drafts.
 ~~- **[agent][goal] Unified `/post` chooser page.**~~ ✅ SHIPPED via `post-chooser-page`
   (2026-07-03) The nav's "Post a Listing"/"Post" CTA used to hardlink straight to
   `/partnerships/new`, so anyone wanting to sell an aircraft or post a seeker listing
