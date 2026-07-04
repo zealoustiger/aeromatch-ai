@@ -159,8 +159,11 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   factor in getting a serious inquiry." Ported the identical tips-box/examples pattern,
   aircraft-flavored copy (specs/condition/why-selling/standout-feature tips; a well-equipped
   and a budget trainer example). Purely additive presentational UI, no schema/actions change.
-  **Next:** same treatment on `/partnerships/new` (`PostPartnershipForm.tsx`) — the one
-  remaining form without this help — is the natural next Pillar 1 slice.
+  **Description-writing help parity ✅ SHIPPED 2026-07-04** (`partnership-description-help`):
+  ported the identical tips-box/examples pattern onto `PostPartnershipForm.tsx`, the one
+  remaining post form without it — partnership-flavored tips + two examples ("established
+  group with an opening" / "new partnership forming"). This feature is now complete across
+  all 3 post forms (aircraft, partnership, seeker).
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
