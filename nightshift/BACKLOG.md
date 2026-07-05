@@ -584,6 +584,17 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   the same bar, falling back to the plain sentence when the comp set has zero spread.
   This item is now fully complete; the seeker budget-check panel was intentionally left
   alone (a single stated-budget number isn't a comp-set spread in the same shape).
+~~- **[agent][goal] Partnership Deal Signals panel missing the favor/watch-out tally chips.**~~
+  ✅ SHIPPED via `partnership-deal-signals-tally` (2026-07-05) `deal-score-signal-tally`
+  (2026-06-28) added an at-a-glance "N in this listing's favor" / "N to ask about" chip
+  tally to the aircraft-side `DealScorePanel` — `PartnershipDealSignals.tsx` computes the
+  identical row shape (and got every later aircraft-side row addition ported into its own
+  `computeSignals()`) but never got the tally-chip UI itself. Now mirrors the aircraft
+  panel's chips exactly, same `.filter().length` count over existing rows, no new data.
+  Dormant amber-chip path on today's seed data (no partnership listing has a negative-kind
+  row yet) — same limitation as several recent Pillar-3 items. This item is now fully
+  complete; the seeker detail page intentionally has no equivalent panel (no single
+  aircraft's specs to synthesize against in the same shape).
 
 ---
 
