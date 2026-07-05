@@ -307,10 +307,12 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   and rendered `<AlertSignup>` after the listings, mirroring `/aircraft`'s placement. No schema
   change. **Next (flagged, not fixed this cycle):** (1) `PartnershipLaunchBanner`'s visitor-count
   copy is fabricated/deterministic, shown unconditionally — a copy-honesty smell, separate scope.
-  (2) `SeekerContactBar` renders a broken empty box when a seeker-listing owner views their own
-  listing (`isOwner` excludes them from `showEmail`/`showPhone`/`canMessage` but the header still
-  renders) — unlike `AircraftContactButton`, which has an explicit owner-view branch. A small,
-  safe fix for a future Pillar-2-adjacent cycle.
+  (2) ~~`SeekerContactBar` renders a broken empty box when a seeker-listing owner views their own
+  listing~~ ✅ SHIPPED via `seeker-contactbar-owner-view` (2026-07-05) — added the same explicit
+  owner-view early return `AircraftContactButton` already had, showing a neutral "This is your
+  listing" note instead of an empty card. **Next:** `ContactBar.tsx`/`ContactButtons.tsx` (the
+  partnership contact bar) still lacks this convention — owner sees email/call buttons instead
+  of the neutral note, a milder version of the same gap.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
