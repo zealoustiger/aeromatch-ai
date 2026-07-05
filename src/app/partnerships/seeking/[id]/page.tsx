@@ -15,6 +15,7 @@ import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import { getSeekerBudgetCheck } from '@/lib/partnershipComps'
 import SeekerBudgetCheck from '@/components/SeekerBudgetCheck'
+import SeekerDealSignals from '@/components/SeekerDealSignals'
 import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
@@ -279,6 +280,14 @@ export default async function SeekerDetailPage({
               )}
             </dl>
           </div>
+
+          {/* Synthesis panel — same "how this stacks up" tally the aircraft and
+              partnership detail pages already show, sitting above the more detailed
+              budget-check panel just like its siblings sit above their own comp panels. */}
+          <SeekerDealSignals
+            s={s}
+            budgetCheck={budgetCheck ? { make: budgetCheck.make, result: budgetCheck.result } : null}
+          />
 
           {budgetCheck && (
             <SeekerBudgetCheck
