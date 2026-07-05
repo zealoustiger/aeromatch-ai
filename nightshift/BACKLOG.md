@@ -225,9 +225,15 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   (bad airport code, Supabase insert error, etc.) had no `role`/`aria-live`, unlike the same
   files' `DraftIndicator` which already announces "Draft saved" via `aria-live="polite"` — a
   screen-reader user posting a listing got no accessible signal that submission failed or why.
-  Added `role="alert"` to the identical error div in all 3 forms. **Next:** contact fields
-  (`contact_email`/`contact_phone`/`contact_name`) on the partnership/seeker forms lack explicit
-  `autoComplete` hints — a small follow-on candidate.
+  Added `role="alert"` to the identical error div in all 3 forms.
+~~- **[agent][goal] `autoComplete` hints on post-form contact fields.**~~ ✅ SHIPPED via
+  `post-form-autocomplete-hints` (2026-07-05) None of the 7 contact fields (`contact_name`/
+  `contact_email` on partnership + seeker forms; `contact_phone` on all 3, incl. aircraft which
+  has no name/email field) had `autoComplete` set, so phone/browser saved-profile autofill was
+  unreliable. Added `autoComplete="name"|"email"|"tel"` to each — pure attribute addition, no
+  schema/logic change, applies to both create and edit (shared form components). Pillar 1's
+  explicit checklist is now fully exhausted outside two human-blocked items (aircraft edit
+  form's Home Airport schema gap; "collapse to one smart screen" status-check).
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
