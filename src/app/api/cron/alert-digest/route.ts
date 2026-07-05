@@ -13,8 +13,26 @@ const DIGEST_INTERVAL_DAYS = 7
 // ─── Source-path parsing ─────────────────────────────────────────────────────
 
 type AlertTarget =
-  | { type: 'aircraft'; make?: string; modelPattern?: string; notModelPattern?: string; state?: string }
+  | {
+      type: 'aircraft'
+      make?: string
+      model?: string
+      modelPattern?: string
+      notModelPattern?: string
+      state?: string
+      minPrice?: number
+      maxPrice?: number
+      minYear?: number
+      maxYear?: number
+      maxTt?: number
+    }
   | { type: 'partnership'; make?: string; state?: string; icao?: string }
+
+const numOrUndef = (v: string | undefined): number | undefined => {
+  if (!v) return undefined
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? n : undefined
+}
 
 /**
  * Parse an alert `source_path` (e.g. "/aircraft/cessna/172") into a typed
@@ -22,7 +40,38 @@ type AlertTarget =
  * meaningfully match (mission presets, unknown families).
  */
 function parseSourcePath(raw: string | null): AlertTarget | null {
-  const p = (raw ?? '').split('?')[0].toLowerCase().replace(/\/$/, '') || '/'
+  const [pathOnly, qs] = (raw ?? '').split('?')
+  const p = pathOnly.toLowerCase().replace(/\/$/, '') || '/'
+
+  // Bare /aircraft or /partnerships WITH a query string → the filter shape the
+  // /aircraft browse page's inline AlertSignup and the /alerts landing chips
+  // actually produce (e.g. "/aircraft?make=Cessna&model=172"). Must be checked
+  // BEFORE the path-segment SEO matchers below, which never carry a query — a
+  // plain `split('?')[0]` here would otherwise silently drop every filter and
+  // downgrade the alert to "any new aircraft/partnership".
+  if (qs && (p === '/aircraft' || p === '/partnerships')) {
+    const params = new URLSearchParams(qs)
+    const g = (k: string) => params.get(k)?.trim() || undefined
+    if (p === '/aircraft') {
+      return {
+        type: 'aircraft',
+        make: g('make'),
+        model: g('model'),
+        state: g('state')?.toUpperCase(),
+        minPrice: numOrUndef(g('min_price')),
+        maxPrice: numOrUndef(g('max_price')),
+        minYear: numOrUndef(g('min_year')),
+        maxYear: numOrUndef(g('max_year')),
+        maxTt: numOrUndef(g('max_tt')),
+      }
+    }
+    return {
+      type: 'partnership',
+      make: g('make'),
+      state: g('state')?.toUpperCase(),
+      icao: g('airport')?.toUpperCase(),
+    }
+  }
 
   // ── Aircraft paths ────────────────────────────────────────────────────────
 
@@ -125,9 +174,15 @@ async function countNewAircraft(
     .gte('first_seen_at', since)
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.model) q = q.eq('model', target.model)
   if (target.modelPattern) q = q.ilike('model', target.modelPattern)
   if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
   if (target.state) q = q.eq('state', target.state)
+  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
+  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
+  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
+  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
 
   const { count, error } = await q
   if (error) {
