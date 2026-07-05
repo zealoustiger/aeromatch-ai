@@ -70,6 +70,15 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   flipped it back to `true` if a poster removed all photos on edit. Now computed unconditionally
   (`photoUrls.length === 0`), matching `updateAircraftListing`'s existing correct pattern.
   `createPartnership` (insert path) was never affected — it correctly relies on the DB default.
+~~- **[agent][goal] Seeker-listing alert support.**~~ ✅ SHIPPED via `seeker-alert-support`
+  (2026-07-05) The alert pipeline (`/api/cron/alert-digest`, `/alerts` landing chips, inline
+  browse-page `AlertSignup`) supported aircraft-for-sale and partnership alerts but silently
+  dropped pilots-seeking-a-partnership listings — the one gap left after the new "Get alerts"
+  primary CTA shipped. Added a `seeker` `AlertTarget` + `countNewSeekers` query against
+  `partnership_seekers`, an `/alerts` chip, and the same inline signup box on
+  `/partnerships/seeking` the other two listing types' browse pages already have. **Not done,
+  intentionally:** filtered seeker alerts (by make/airport) — bare "any new seeker listing"
+  only, matching how `/partnerships` worked before query-filter support was added.
 
 ## ⭐ ACTIVATION (pivot focus — 2026-06-26) — PULL FROM HERE FIRST
 The three north-star pillars. Each cycle, build the highest-value **`[P1]`** slice and
