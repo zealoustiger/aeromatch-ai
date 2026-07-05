@@ -37,12 +37,12 @@ export default function Nav() {
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
   // Preserve the current page across the sign-in round trip so a logged-out
-  // visitor returns to where they were instead of the homepage default. The href
-  // below is a pathname-only SSR / no-JS / new-tab fallback (no useSearchParams —
-  // that would force this layout-level nav, and thus every page, into client
-  // rendering). Skip on the homepage.
-  const signInHref =
-    pathname && pathname !== '/' ? `/auth?next=${encodeURIComponent(pathname)}` : '/auth'
+  // visitor returns to where they were instead of the auth page's own default
+  // (`/searches`) — including the homepage itself, which must pass `next=/`
+  // explicitly rather than omit the param. The href below is a pathname-only
+  // SSR / no-JS / new-tab fallback (no useSearchParams — that would force this
+  // layout-level nav, and thus every page, into client rendering).
+  const signInHref = `/auth?next=${encodeURIComponent(pathname || '/')}`
 
   // On a plain left-click, upgrade the fallback href to the FULL current URL —
   // including active query-string filters — read straight from window.location at
@@ -54,7 +54,7 @@ export default function Nav() {
     e.preventDefault()
     setMenuOpen(false)
     const full = window.location.pathname + window.location.search
-    router.push(full && full !== '/' ? `/auth?next=${encodeURIComponent(full)}` : '/auth')
+    router.push(`/auth?next=${encodeURIComponent(full || '/')}`)
   }
 
   useEffect(() => {
