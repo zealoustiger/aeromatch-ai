@@ -560,6 +560,16 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   with an added disclaimer line clarifying these are projected from a stated budget, not a
   confirmed cost. Self-suppresses when no monthly/hourly figure is set, same as the source
   component. No schema/component change.
+~~- **[agent][goal] Price-range/percentile bar on the partnership market check.**~~ ✅
+  SHIPPED via `partnership-market-check-range-bar` (2026-07-05) The aircraft-for-sale
+  ClubHanger Estimate has a visual low–high spread bar (median tick + "this listing"
+  marker) built up over 3 separate cycles; the partnership-side `PartnershipMarketCheck`
+  only ever showed a plain median sentence, despite `partnershipBuyInComp` already
+  computing the identical sorted comp array. `PartnerCompResult` now also carries
+  `low`/`high`/`percentile` (same comp set, same honesty floor), and the panel renders
+  the same bar, falling back to the plain sentence when the comp set has zero spread.
+  This item is now fully complete; the seeker budget-check panel was intentionally left
+  alone (a single stated-budget number isn't a comp-set spread in the same shape).
 
 ---
 
