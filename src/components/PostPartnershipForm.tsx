@@ -738,7 +738,8 @@ export default function PostPartnershipForm({
             initialValues?.engine_type || initialValues?.annual_due || initialValues?.damage_history != null ||
             initialValues?.title || initialValues?.monthly_fixed ||
             initialValues?.hourly_wet || initialValues?.total_shares || initialValues?.min_hours ||
-            initialValues?.ratings_required || initialValues?.scheduling_system)) ||
+            initialValues?.ratings_required || initialValues?.scheduling_system ||
+            initialValues?.contact_name || initialValues?.contact_email || initialValues?.contact_phone)) ||
           (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm">
