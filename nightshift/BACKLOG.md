@@ -211,6 +211,15 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   existing listing never got it remembered for their next new post. Copied the identical
   lazy-save blocks into `updatePartnershipListing`/`updateSeekerListing`/`updateAircraftListing`.
   No schema/UI change. Pillar 1 candidates remaining need a human call (see Next in CHANGELOG).
+~~- **[agent][goal] Numeric mobile keypad on all 3 post forms.**~~ ✅ SHIPPED via
+  `post-form-numeric-keypad` (2026-07-05) All 20 `type="number"` fields across the aircraft/
+  partnership/seeker post forms (price, year, TTAF/SMOH, rates, shares, hours) had no
+  `inputMode`, an unreliable-on-iOS-Safari mobile-keypad signal — a poster on a phone at the
+  hangar could get the full keyboard instead of a numeric pad. Each form's shared local `Input`
+  wrapper now defaults `inputMode="numeric"` whenever `type="number"` (override-able), fixing
+  all 20 fields via one 3-line change per file. No schema/visual change. **Next:** the aircraft
+  edit form's Home Airport field still can't prefill a `defaultValue` (schema only stores
+  derived `location`/`state`, not raw ICAO) — needs a human call on adding the column.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
