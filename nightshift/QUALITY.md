@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T09:10:32Z — seeker-owner-nudge — score 5/5
+- Strengths: Faithful line-for-line mirror of AircraftListingOwnerNudge — reuses evaluateSeekerTrust as the single source of truth (no redefined signals), SIGNAL_ACTIONS keys match the SeekerTrustSignal union exactly and correctly omit intrinsic member_posted, null-returns on complete listings (no nag), isOwner gate uses the exact `!!user && !!s.poster_id && user.id === s.poster_id` pattern, placement above the trust checklist matches convention, a11y icons aria-hidden; copy sensibly adapted to "helps owners trust it".
+- Weaknesses / risks: none material
+- Follow-up: none
+
 ## 2026-07-05T08:27:26Z — partnership-contactbar-owner-view — score 5/5
 - Strengths: Exact-to-spec, mirrors the established Aircraft/Seeker pattern; early return placed after all hooks (order preserved), handles isSeed, and the mobile note is wrapped in the full sticky-bar container so it renders in position rather than bare inline.
 - Weaknesses / risks: none material
