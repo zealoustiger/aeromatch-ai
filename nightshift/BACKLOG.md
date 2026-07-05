@@ -282,6 +282,18 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   confirmed the bug and the fix directly against the live DB. Invented this cycle (via an
   Explore-agent code audit) since Pillar 1's explicit checklist was already exhausted outside
   the two human-blocked items noted above.
+~~- **[agent][goal] Airport autocomplete input had zero ARIA combobox wiring.**~~ ✅ SHIPPED
+  via `airport-input-combobox-aria` (2026-07-05) `AirportFormInput` (shared "Home Airport"/
+  "Based at" field on all 3 post/edit forms) had a fully working visual+keyboard suggestion
+  dropdown but the `<input>` carried none of `role="combobox"`/`aria-expanded`/`aria-controls`/
+  `aria-activedescendant` — confirmed via grep, a total absence, not a partial gap — so a
+  screen-reader user got no signal a suggestion list had opened on a field required on 2 of 3
+  forms. Added the missing ARIA attributes (stable `useId()`-derived listbox id, matching
+  option ids); existing keyboard/mouse selection behavior untouched. Invented this cycle (via
+  an Explore-agent audit) since Pillar 1's explicit checklist was already exhausted outside
+  the two human-blocked items noted above. **Next:** `AirportAutocompleteInput.tsx` (a
+  separate component used outside the post forms) may have the same gap — unaudited, out of
+  scope this cycle.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
