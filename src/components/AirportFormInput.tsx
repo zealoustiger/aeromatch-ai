@@ -65,8 +65,10 @@ const SKIP_TYPES = new Set(['closed', 'heliport', 'seaplane_base', 'balloonport'
  * works seamlessly with useFormDraft (DOM-based save/restore) and fillFormField
  * (AI prefill via DOM event dispatch). Shows a suggestion dropdown as the user types
  * a city, IATA, or partial ICAO; picking a suggestion sets the input value to the
- * ICAO code and clears the dropdown. Direct ICAO entry (4+ uppercase alphanum chars)
- * suppresses the query to avoid noise after AI prefill.
+ * ICAO code and clears the dropdown. Direct ICAO entry (4 uppercase alphanum chars)
+ * suppresses the fuzzy dropdown to avoid noise after AI prefill, but still runs a
+ * debounced exact-match lookup so a typo'd/nonexistent code is flagged inline
+ * instead of only surfacing after a full-form submit round-trip.
  */
 export default function AirportFormInput({
   name,
@@ -92,10 +94,24 @@ export default function AirportFormInput({
   function query(raw: string) {
     if (timerRef.current) clearTimeout(timerRef.current)
     const q = raw.trim()
-    // Suppress query when empty or when value is already a complete ICAO-format code
-    // (4 alphanum chars like KAUS, KPAO). Avoids noise after AI prefill or direct ICAO entry.
-    if (q.length < 2 || /^[A-Z0-9]{4}$/i.test(q)) {
+    if (q.length < 2) {
       setSuggestions([])
+      return
+    }
+    // A complete ICAO-format code (4 alphanum chars like KAUS, KPAO): skip the fuzzy
+    // dropdown (avoids noise after AI prefill or direct entry), but confirm it's real.
+    if (/^[A-Z0-9]{4}$/i.test(q)) {
+      setSuggestions([])
+      const supabase = createClient()
+      timerRef.current = setTimeout(async () => {
+        const { data, error } = await supabase
+          .from('airports')
+          .select('icao')
+          .eq('icao', q.toUpperCase())
+          .maybeSingle()
+        if (error) return
+        setIsInvalid(!data)
+      }, 400)
       return
     }
     const supabase = createClient()
