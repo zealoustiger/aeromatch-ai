@@ -37,6 +37,14 @@ node nightshift/bin/backlog-reconcile.mjs --apply --quiet 2>/dev/null || true
 # Build the report (writes nightshift/REVIEW.md + syncs the admin Daily Report).
 # NO `claude` → zero tokens → not blocked by the subscription rate limit.
 STATE="${NS_STATE_DIR:-/home/night/state}"
+
+# Expose the loop's Goal + How-it-works docs to the Juno Forge dashboard. Juno mounts
+# this state dir read-only, so writing the docs here lets its /forge/docs endpoint serve
+# them — refreshed every morning so the dashboard never drifts from the real files.
+mkdir -p "$STATE/forge-docs" 2>/dev/null || true
+cp nightshift/GOAL.md "$STATE/forge-docs/goal.md" 2>/dev/null || true
+cp nightshift/HOW_IT_WORKS.md "$STATE/forge-docs/how-it-works.md" 2>/dev/null || true
+
 node nightshift/bin/build-digest.mjs > "$STATE/digest.out" 2> "$STATE/digest.err"
 rc=$?
 cat "$STATE/digest.out" 2>/dev/null
