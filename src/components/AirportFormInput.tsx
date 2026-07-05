@@ -217,7 +217,12 @@ export default function AirportFormInput({
         onChange={e => { setIsInvalid(false); setLocError(null); query(e.target.value) }}
         onKeyDown={handleKeyDown}
         onBlur={() => { setSuggestions([]); setActiveIdx(-1) }}
-        onInvalid={e => { e.preventDefault(); setIsInvalid(true) }}
+        onInvalid={e => {
+          e.preventDefault()
+          setIsInvalid(true)
+          e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          e.currentTarget.focus()
+        }}
       />
       <button
         type="button"
