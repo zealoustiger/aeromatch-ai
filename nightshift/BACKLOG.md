@@ -234,6 +234,15 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   schema/logic change, applies to both create and edit (shared form components). Pillar 1's
   explicit checklist is now fully exhausted outside two human-blocked items (aircraft edit
   form's Home Airport schema gap; "collapse to one smart screen" status-check).
+~~- **[agent][goal] Inline validation for a typo'd/nonexistent airport ICAO code.**~~ ✅
+  SHIPPED via `airport-icao-inline-validation` (2026-07-05) `AirportFormInput` (shared by all
+  3 post/edit forms) suppressed its autocomplete lookup entirely once a typed value matched
+  the complete 4-char ICAO shape, so a mistyped code (e.g. `KUAS` instead of `KAUS`) gave no
+  feedback until the poster filled the entire rest of the form and got bounced by the
+  server-side check on submit. Now that branch runs a debounced exact-match lookup and flips
+  the existing invalid-state UI (red border + message) if the code doesn't exist — no new
+  UI, no schema change. Invented this cycle since Pillar 1's explicit checklist had nothing
+  left except the two human-blocked items noted above.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
