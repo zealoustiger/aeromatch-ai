@@ -287,10 +287,13 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   `/auth?next=...` with the draft intact. Now the uploader takes the same `isLoggedIn`/
   `onRequireAuth` treatment: the drop-zone proactively says "Sign in to add photos" and
   routes straight to the save-draft-and-redirect flow. Not in a frozen path (auth files
-  untouched). **Remaining:** the raw photo file itself can't survive the auth round-trip
-  (browser navigation clears JS memory) — a logged-out poster still has to re-attach the
-  photo after signing in. Full persistence would need IndexedDB blob storage (localStorage
-  can't reliably hold a 5 MB image); a candidate future slice if this shows up as real friction.
+  untouched). **IndexedDB recovery ✅ SHIPPED 2026-07-05** (`photo-mid-upload-recovery`):
+  new `src/lib/idbPhotoDraft.ts` persists a photo's raw file to IndexedDB the instant its
+  upload starts and clears it once the upload settles; `PartnershipPhotoUpload` resumes any
+  leftover file automatically on mount. Note: the addressed race is narrower than originally
+  framed — a logged-out `addFiles()` never touches the file at all (nothing to lose there);
+  the real gap was a reload/navigation during the ~1-3s an already-logged-in upload is in
+  flight. This item is now fully complete.
 ~~- **[agent][goal] Save/heart missing entirely on seeker listings.**~~ ✅ SHIPPED via
   `seeker-save-heart` (2026-07-04) `saved_listings`/`SaveListingButton`/the guest-device-save
   system hard-coded exactly `'partnership' | 'aircraft'` — seeker listings had no heart
