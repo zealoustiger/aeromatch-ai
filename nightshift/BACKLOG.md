@@ -242,7 +242,13 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   server-side check on submit. Now that branch runs a debounced exact-match lookup and flips
   the existing invalid-state UI (red border + message) if the code doesn't exist — no new
   UI, no schema change. Invented this cycle since Pillar 1's explicit checklist had nothing
-  left except the two human-blocked items noted above.
+  left except the two human-blocked items noted above. **Start Over/Revert parity ✅ SHIPPED
+  2026-07-05** (`airport-input-start-over-reset`): the invalid-state UI this feature added
+  was never cleared by any of the 3 forms' Start Over/Revert flow (`reset()`'s native
+  `form.reset()` doesn't fire the `onChange` this component relies on) — a poster fixing a
+  typo via Start Over saw a cleared field still showing the stale red error. Fixed with the
+  same `photoMountKey`-style remount pattern already used for the photo uploader. This item
+  is now fully complete.
 ~~- **[agent][goal] Reorder uploaded photos / pick the cover photo.**~~ ✅ SHIPPED via
   `photo-reorder-cover` (2026-07-05) `PartnershipPhotoUpload` (shared by aircraft +
   partnership post/edit forms) only ever appended new photos to the end — since the first
