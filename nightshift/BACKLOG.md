@@ -390,6 +390,14 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   **Card badge shipped 2026-07-03** (`seeker-budget-check-badge`): `SeekerCard`/`SeekerList`
   now show the same below/above-market chip via a new batched `getSeekerBudgetCheckVerdicts()`
   (one query per unique preferred make, not per card). This item is now fully complete.
+~~- **[agent][goal] Trust/completeness badge on seeker listings.**~~ ✅ SHIPPED via
+  `seeker-trust-badge` (2026-07-05) Aircraft-for-sale and partnership listings both had an
+  honest "N/4 trust signals" chip; seeker listings had none — the last listing type with zero
+  Pillar 3 trust coverage. New `seekerTrust.ts` scores aircraft-preference-stated,
+  budget-disclosed, experience-disclosed (hours + ratings), and member-posted, rendered via
+  `SeekerTrustBadge` on every `SeekerCard`. **Not done, intentionally:** a seeker detail-page
+  checklist variant and an owner-facing "improve your profile" nudge — natural follow-ups,
+  same rollout order the aircraft side used (card chip first, checklist + nudge later).
 ~~- **[agent][goal] Annual inspection + damage history panels on partnership listings.**~~
   ✅ SHIPPED via `partnership-annual-damage` (2026-07-04) Aircraft-for-sale listings had
   honesty-gated `AnnualStatusPanel`/`DamageHistoryPanel` (built on `annual_due`/`damage_history`);
