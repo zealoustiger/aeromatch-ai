@@ -57,6 +57,16 @@ export interface PartnerCompResult {
   count: number
   /** Delta in dollars (negative = below market). */
   deltaDollars: number
+  /** Lowest expected buy-in for a share this size among the comp set, in whole
+   *  dollars (same per-share scaling as `median`). */
+  low: number
+  /** Highest expected buy-in for a share this size among the comp set, in whole
+   *  dollars (same per-share scaling as `median`). */
+  high: number
+  /** Whole percent of the comp set (scaled to this share size) priced below this
+   *  listing's buy-in (0 = cheapest, ~100 = priciest). Honest position signal —
+   *  computed only from the real comp set used for the median. */
+  percentile: number
 }
 
 /** One other comp's buy-in price + share count, for normalization. `year`/`ttaf`/`smoh`
@@ -115,8 +125,26 @@ export function partnershipBuyInComp(
   const delta = (buyIn - expectedBuyIn) / expectedBuyIn
   const deltaDollars = Math.round(buyIn - expectedBuyIn)
 
+  // Same comp set used for the median, scaled to a share of the subject's own size —
+  // the honest low/high spread and this listing's position within it. No new data,
+  // no new honesty floor: still gated by the MIN_OTHER_COMPS check above.
+  const perShareSorted = sorted.map((v) => v / totalShares)
+  const low = Math.round(perShareSorted[0])
+  const high = Math.round(perShareSorted[perShareSorted.length - 1])
+  const below = perShareSorted.filter((v) => v < buyIn).length
+  const percentile = Math.round((below / perShareSorted.length) * 100)
+
   if (Math.abs(delta) < DEAD_BAND) {
-    return { kind: 'near', pct: 0, median: Math.round(expectedBuyIn), count: impliedValues.length, deltaDollars }
+    return {
+      kind: 'near',
+      pct: 0,
+      median: Math.round(expectedBuyIn),
+      count: impliedValues.length,
+      deltaDollars,
+      low,
+      high,
+      percentile,
+    }
   }
 
   const pct = Math.max(1, Math.round(Math.abs(delta) * 100))
@@ -126,6 +154,9 @@ export function partnershipBuyInComp(
     median: Math.round(expectedBuyIn),
     count: impliedValues.length,
     deltaDollars,
+    low,
+    high,
+    percentile,
   }
 }
 
