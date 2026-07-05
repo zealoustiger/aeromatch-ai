@@ -671,3 +671,25 @@ create trigger trg_quarantine_test before insert or update of poster_id, status
 drop trigger if exists trg_quarantine_test on partnership_seekers;
 create trigger trg_quarantine_test before insert or update of poster_id, status
   on partnership_seekers for each row execute function quarantine_test_listing();
+
+-- 3) Nightly sweep (safety net) — the 07:30 health check calls this to delete any
+--    @example.com accounts + their rows older than 24h, so a cycle that forgets to
+--    clean up doesn't pollute prod indefinitely. Age floor spares in-flight QA.
+--    Scoped to @example.com posters; gmail-posted seed listings untouched.
+create or replace function public.sweep_test_accounts(p_min_age_hours int default 24)
+returns integer language plpgsql security definer set search_path to '' as $$
+declare cutoff timestamptz := now() - make_interval(hours => p_min_age_hours); n int;
+begin
+  create temp table _sweep_ids on commit drop as
+    select id, email from auth.users where email like '%@example.com' and created_at < cutoff;
+  delete from public.threads       where inquirer_id in (select id from _sweep_ids) or owner_id in (select id from _sweep_ids);
+  delete from public.partnerships        where poster_id in (select id from _sweep_ids);
+  delete from public.aircraft_for_sale   where poster_id in (select id from _sweep_ids);
+  delete from public.partnership_seekers where poster_id in (select id from _sweep_ids);
+  delete from public.saved_listings      where user_id  in (select id from _sweep_ids);
+  delete from public.alerts              where email    in (select email from _sweep_ids);
+  select count(*) into n from _sweep_ids;
+  delete from auth.users where id in (select id from _sweep_ids);
+  return n;
+end $$;
+revoke all on function public.sweep_test_accounts(int) from public, anon, authenticated;

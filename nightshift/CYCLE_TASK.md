@@ -77,6 +77,22 @@ If — and only if — you are certain there is genuinely nothing safe to do, ou
 - Obey `nightshift/FREEZE.md`. Never edit `.env*`, secrets, `ANTHROPIC_API_KEY`, auth, admin gating.
 - Additive SQL only (`add column if not exists`); no destructive DB operations.
 - One scoped change this cycle. Don't thrash; if you can't land cleanly, write FAIL and stop.
+- **Prod DB is SHARED — clean up test data.** There is ONE Supabase project across
+  local/staging/prod, so any signup/post you create while QA-testing (even against
+  `localhost:3000`) writes REAL rows to production `auth.users` + the marketplace tables.
+  If your QA needs a throwaway account or listing, you MUST:
+  (1) use an `@example.com` email for every test account (e.g. `qa-<slug>-<ts>@example.com`),
+      never a real-looking domain; and
+  (2) DELETE every test user + row you created before ending the cycle. Do it with the
+      service-role key from `.env.local` against Supabase — delete from `threads`,
+      `messages`, `saved_listings`, `partnerships`/`aircraft_for_sale`/`partnership_seekers`
+      (by `poster_id`), `alerts` (by `email`), then `auth.users` — scoped to the exact
+      accounts you made. A `quarantine_test_listing` DB trigger auto-hides `@example.com`
+      listings from the public site and `count_signups` excludes them from metrics, but those
+      are backstops — leaving rows behind still pollutes the DB. The 07:30 health check sweeps
+      any `@example.com` users older than 24h as a final safety net; don't rely on it.
+  Prefer NOT creating prod rows at all: test read-only paths, mock at the component level, or
+  assert on the built HTML instead of round-tripping through a live signup where you can.
 
 ## 4. Final output — ONE line only
 

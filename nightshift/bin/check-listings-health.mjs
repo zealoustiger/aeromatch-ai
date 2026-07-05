@@ -227,9 +227,30 @@ async function persist(markdown) {
   else console.log('[persist] wrote admin_content.listings_health_report')
 }
 
+// ─── Test-account sweep (safety net) ──────────────────────────────────────
+// The overnight drain sometimes leaves @example.com QA accounts + listings in
+// the (shared) prod DB when a cycle forgets to clean up. This sweeps any older
+// than 24h — the age floor spares an in-flight QA run. Scoped to @example.com
+// posters, so the gmail-posted seed listings are never touched. Best-effort:
+// a failure here never blocks the health report.
+async function sweepTestAccounts() {
+  try {
+    const { data, error } = await supa.rpc('sweep_test_accounts', { p_min_age_hours: 24 })
+    if (error) { console.log(`[sweep] failed: ${error.message}`); return 0 }
+    const n = data ?? 0
+    console.log(n > 0 ? `[sweep] removed ${n} stale @example.com test account(s) + their rows` : '[sweep] no stale test accounts')
+    return n
+  } catch (e) {
+    console.log(`[sweep] error: ${String(e)}`)
+    return 0
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────
+const swept = await sweepTestAccounts()
 const results = await Promise.all(SOURCES.map(checkSource))
-const { markdown, overallFailed } = renderReport(results)
+let { markdown, overallFailed } = renderReport(results)
+if (swept > 0) markdown += `\n\n_Swept ${swept} stale @example.com test account(s) this run._`
 console.log(markdown)
 await persist(markdown)
 await postSlackIfFailure(results, overallFailed)
