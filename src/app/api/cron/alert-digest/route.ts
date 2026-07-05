@@ -27,7 +27,7 @@ type AlertTarget =
       maxTt?: number
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string }
-  | { type: 'seeker' }
+  | { type: 'seeker'; make?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
   if (!v) return undefined
@@ -44,13 +44,13 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
   const [pathOnly, qs] = (raw ?? '').split('?')
   const p = pathOnly.toLowerCase().replace(/\/$/, '') || '/'
 
-  // Bare /aircraft or /partnerships WITH a query string → the filter shape the
-  // /aircraft browse page's inline AlertSignup and the /alerts landing chips
-  // actually produce (e.g. "/aircraft?make=Cessna&model=172"). Must be checked
-  // BEFORE the path-segment SEO matchers below, which never carry a query — a
-  // plain `split('?')[0]` here would otherwise silently drop every filter and
-  // downgrade the alert to "any new aircraft/partnership".
-  if (qs && (p === '/aircraft' || p === '/partnerships')) {
+  // Bare /aircraft, /partnerships, or /partnerships/seeking WITH a query string →
+  // the filter shape the browse pages' inline AlertSignup and the /alerts landing
+  // chips actually produce (e.g. "/aircraft?make=Cessna&model=172"). Must be
+  // checked BEFORE the path-segment SEO matchers below, which never carry a
+  // query — a plain `split('?')[0]` here would otherwise silently drop every
+  // filter and downgrade the alert to "any new aircraft/partnership/seeker".
+  if (qs && (p === '/aircraft' || p === '/partnerships' || p === '/partnerships/seeking')) {
     const params = new URLSearchParams(qs)
     const g = (k: string) => params.get(k)?.trim() || undefined
     if (p === '/aircraft') {
@@ -65,6 +65,9 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
         maxYear: numOrUndef(g('max_year')),
         maxTt: numOrUndef(g('max_tt')),
       }
+    }
+    if (p === '/partnerships/seeking') {
+      return { type: 'seeker', make: g('make') }
     }
     return {
       type: 'partnership',
@@ -224,14 +227,20 @@ async function countNewPartnerships(
 
 async function countNewSeekers(
   supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'seeker' }>,
   since: string
 ): Promise<number> {
-  const { count, error } = await supabase
+  let q = supabase
     .from('partnership_seekers')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'active')
     .gte('created_at', since)
 
+  // preferred_makes is a text[] — overlap, not equality, matching the same
+  // make-filter semantics getSeekers() uses for the browse page.
+  if (target.make) q = q.overlaps('preferred_makes', [target.make])
+
+  const { count, error } = await q
   if (error) {
     console.error('[alert-digest] seeker count error:', error.message)
     return 0
@@ -245,7 +254,7 @@ async function countNew(
   since: string
 ): Promise<number> {
   if (target.type === 'aircraft') return countNewAircraft(supabase, target, since)
-  if (target.type === 'seeker') return countNewSeekers(supabase, since)
+  if (target.type === 'seeker') return countNewSeekers(supabase, target, since)
   return countNewPartnerships(supabase, target, since)
 }
 

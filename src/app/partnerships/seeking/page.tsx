@@ -109,6 +109,16 @@ export default async function SeekingPartnershipsPage({
   const [seekerMakes, seekerCount] = await Promise.all([getSeekerMakes(), getSeekerCount()])
   const activeFilterCount = ['airports', 'airport', 'state', 'make', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
+  // Filter-aware email-alert source path — mirrors /aircraft's alertSourcePath
+  // pattern so a visitor filtered to one make gets alerted on new seekers wanting
+  // that make, not every new seeker listing (alert-digest route.ts parses `make`
+  // off this query string).
+  const alertMake = params.make?.trim()
+  const alertContext = alertMake || undefined
+  const alertSourcePath = alertMake
+    ? `/partnerships/seeking?make=${encodeURIComponent(alertMake)}`
+    : '/partnerships/seeking'
+
   return (
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -208,7 +218,7 @@ export default async function SeekingPartnershipsPage({
 
         {/* Email-alerts capture — inline, no account required. Backed by the same
             double-opt-in `alerts` pipeline the aircraft/partnership browse pages use. */}
-        <AlertSignup sourcePath="/partnerships/seeking" noun="seeker" />
+        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" />
 
         {/* Cross-links so crawlers (and pilots) reach the partnership hub families. */}
         <div className="mt-8 ch-panel p-6">
