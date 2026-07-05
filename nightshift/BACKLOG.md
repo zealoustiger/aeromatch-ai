@@ -79,6 +79,13 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   `/partnerships/seeking` the other two listing types' browse pages already have. **Not done,
   intentionally:** filtered seeker alerts (by make/airport) — bare "any new seeker listing"
   only, matching how `/partnerships` worked before query-filter support was added.
+  **Make-filtering ✅ SHIPPED 2026-07-05** (`seeker-alert-make-filter`): `parseSourcePath` now
+  parses `make` off `/partnerships/seeking?make=...` into `.overlaps('preferred_makes', [make])`,
+  and the seeking page's inline `AlertSignup` builds that query string from the active make
+  filter, mirroring `/aircraft`'s `alertSourcePath` pattern. **Still not done:** airport/state
+  filtering for seeker alerts — seeker location matching is multi-airport + radius +
+  `additional_airports`-aware, materially more complex than the scalar `icao`/`state` aircraft/
+  partnership alerts use; a natural next slice.
 
 ## ⭐ ACTIVATION (pivot focus — 2026-06-26) — PULL FROM HERE FIRST
 The three north-star pillars. Each cycle, build the highest-value **`[P1]`** slice and
