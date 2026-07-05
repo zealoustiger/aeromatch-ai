@@ -1,0 +1,12 @@
+# /etc/systemd/system/nightshift-health.timer
+# Fires the listings-health check at 07:30 PT — after the 06:40 daily scrape has
+# had 50 min to finish, and before the founder checks the 07:15 morning digest.
+[Unit]
+Description=Fire the ClubHanger Night Shift listings-health check
+
+[Timer]
+OnCalendar=*-*-* 07:30:00 America/Los_Angeles
+Persistent=false
+
+[Install]
+WantedBy=timers.target

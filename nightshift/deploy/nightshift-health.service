@@ -1,0 +1,26 @@
+# /etc/systemd/system/nightshift-health.service
+# Runs the per-source listings-health check and publishes a markdown verdict
+# to admin_content.listings_health_report; alerts Slack #alerts on failure.
+[Unit]
+Description=ClubHanger Night Shift listings-health check
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=600
+ExecStartPre=-/usr/bin/docker rm -f clubhanger-nightshift-health
+ExecStart=/usr/bin/docker run --rm \
+  --name clubhanger-nightshift-health \
+  --memory=1g --cpus=1 \
+  -e NS_STATE_DIR=/home/night/state \
+  -e TZ=America/Los_Angeles \
+  -v /opt/nightshift/repo:/app \
+  -v /opt/nightshift/claude:/home/night/.claude \
+  -v /opt/nightshift/state:/home/night/state \
+  -v /opt/nightshift/ssh:/home/night/.ssh:ro \
+  --entrypoint /app/nightshift/bin/run-health-check.sh \
+  clubhanger-nightshift:latest
+
+[Install]
+WantedBy=multi-user.target

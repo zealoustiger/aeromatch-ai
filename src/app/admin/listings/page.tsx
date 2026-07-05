@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { ExternalLink, EyeOff, Eye, Sparkles, Activity, CheckCircle2, AlertTriangle, ImageOff, Camera, Loader2, Lock } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { getScraperHealth, getRealListings, getListingFreshness, getPhotoCoverage, getHarvestStatus, getPartnershipScraperHealth, getPartnershipFreshness } from '@/lib/adminScrapers'
+import { getAdminDoc } from '@/lib/adminDocs'
+import AdminMarkdown from '@/components/AdminMarkdown'
 import HarvestRefresh from '@/components/HarvestRefresh'
 import { moderateListing } from './actions'
 
@@ -93,6 +95,7 @@ export default async function ReviewListingsTab({
   const photoCoverage = viewingHidden ? null : await getPhotoCoverage(admin)
   const harvest = viewingHidden ? null : await getHarvestStatus(admin)
   const partnershipHealth = viewingHidden ? null : await getPartnershipScraperHealth(admin)
+  const healthReport = viewingHidden ? null : await getAdminDoc('listings_health_report')
   const partnershipFreshness = viewingHidden ? null : await getPartnershipFreshness(admin)
 
   // "Last new" is stale (scraper likely not running) if older than yesterday.
@@ -115,6 +118,25 @@ export default async function ReviewListingsTab({
           {viewingHidden ? '← Back to live' : 'View hidden →'}
         </Link>
       </div>
+
+      {/* Listings-health report — fires post-scrape at 07:30 PT (check-listings-health.mjs).
+          Renders whatever the script last wrote to `admin_content` so the admin sees the
+          morning verdict (per-source ✅/⚠️ for new inventory, re-seen rate, last-scrape age,
+          photo coverage) plus debug context on failure. Self-suppresses if the script hasn't
+          run yet (e.g. first deploy or on the local dev DB). */}
+      {healthReport?.content && (
+        <div className="mb-8 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <Activity className="h-4 w-4" /> Listings health — daily verdict
+            </h3>
+            <span className="text-xs text-slate-400">
+              updated {new Date(healthReport.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+            </span>
+          </div>
+          <AdminMarkdown markdown={healthReport.content} />
+        </div>
+      )}
 
       {/* Real on-platform listings — highlighted at the top (the gold signal). */}
       {realListings && (
