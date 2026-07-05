@@ -289,6 +289,20 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   mentioned partnerships and aircraft for sale, even though seeker listings have had full
   save/heart support since `seeker-save-heart`. Added a third link to `/partnerships/seeking`
   in all four spots. Pure copy/link change, no schema/logic change.
+~~- **[agent][goal] `/partnerships` hub missing the filter-aware guest alert signup.**~~ ✅
+  SHIPPED via `partnerships-hub-alert-signup` (2026-07-05) `/aircraft`, `/partnerships/seeking`,
+  and all three partnership sub-family pages (near/[icao], make/[make], state/[state]) already
+  had a one-email-field, no-account `AlertSignup` box that carries the active filter into the
+  alert; the flagship `/partnerships` hub only showed the geo-IP `PartnershipLaunchBanner`,
+  which ignores active filters entirely. Added the same filter-aware `alertContext`/
+  `alertSourcePath` (make/state/airport, matching `alert-digest`'s existing `parseSourcePath`)
+  and rendered `<AlertSignup>` after the listings, mirroring `/aircraft`'s placement. No schema
+  change. **Next (flagged, not fixed this cycle):** (1) `PartnershipLaunchBanner`'s visitor-count
+  copy is fabricated/deterministic, shown unconditionally — a copy-honesty smell, separate scope.
+  (2) `SeekerContactBar` renders a broken empty box when a seeker-listing owner views their own
+  listing (`isOwner` excludes them from `showEmail`/`showPhone`/`canMessage` but the header still
+  renders) — unlike `AircraftContactButton`, which has an explicit owner-view branch. A small,
+  safe fix for a future Pillar-2-adjacent cycle.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
