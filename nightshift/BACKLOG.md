@@ -243,6 +243,14 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   the existing invalid-state UI (red border + message) if the code doesn't exist — no new
   UI, no schema change. Invented this cycle since Pillar 1's explicit checklist had nothing
   left except the two human-blocked items noted above.
+~~- **[agent][goal] Reorder uploaded photos / pick the cover photo.**~~ ✅ SHIPPED via
+  `photo-reorder-cover` (2026-07-05) `PartnershipPhotoUpload` (shared by aircraft +
+  partnership post/edit forms) only ever appended new photos to the end — since the first
+  photo is the listing's cover/thumbnail everywhere on the site (`pickRealPhoto`), a poster
+  who uploaded their best shot last had to delete everything and re-upload in order. Added
+  move-earlier/move-later buttons per thumbnail (2+ photos) and a "Cover" badge on the first
+  photo. Pure array reorder, no schema/action change. Invented this cycle since Pillar 1's
+  explicit checklist had nothing left except the two human-blocked items noted above.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
