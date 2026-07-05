@@ -630,3 +630,44 @@ alter table partnerships add column if not exists buy_in_price_changed_at timest
 -- just won't save until this runs.
 alter table partnerships add column if not exists annual_due date;
 alter table partnerships add column if not exists damage_history boolean;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test-account quarantine (applied 2026-07-05 via apply_migration)
+-- The overnight drain does ad-hoc QA against production — it curls the signup +
+-- post endpoints with @example.com accounts (e.g. nightshift-owner@example.com,
+-- curlowner@example.com) and doesn't clean up. That leaked test listings onto the
+-- public marketplace and inflated the daily signup metric. Two guards:
+--
+-- 1) Signup metric excludes @example.com so QA accounts don't count as real signups.
+create or replace function public.count_signups(p_since timestamptz, p_until timestamptz)
+returns integer language sql security definer set search_path to '' as $$
+  select count(*)::int from auth.users
+  where created_at >= p_since and created_at < p_until
+    and email not like '%@example.com';
+$$;
+
+-- 2) Any listing posted by an @example.com account is auto-set to status='test' on
+--    insert/update, so the public queries (which gate status='active') never show it.
+--    Checks the POSTER's email — seed listings posted by the real account with
+--    persona @example.com CONTACT emails are untouched. Scraped rows (poster_id
+--    null) short-circuit. Applied to all three marketplace tables.
+create or replace function public.quarantine_test_listing()
+returns trigger language plpgsql security definer as $$
+begin
+  if new.poster_id is not null then
+    if exists (select 1 from auth.users u where u.id = new.poster_id and u.email like '%@example.com') then
+      new.status := 'test';
+    end if;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_quarantine_test on partnerships;
+create trigger trg_quarantine_test before insert or update of poster_id, status
+  on partnerships for each row execute function quarantine_test_listing();
+drop trigger if exists trg_quarantine_test on aircraft_for_sale;
+create trigger trg_quarantine_test before insert or update of poster_id, status
+  on aircraft_for_sale for each row execute function quarantine_test_listing();
+drop trigger if exists trg_quarantine_test on partnership_seekers;
+create trigger trg_quarantine_test before insert or update of poster_id, status
+  on partnership_seekers for each row execute function quarantine_test_listing();
