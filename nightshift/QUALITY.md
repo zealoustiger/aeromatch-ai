@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T08:27:26Z — partnership-contactbar-owner-view — score 5/5
+- Strengths: Exact-to-spec, mirrors the established Aircraft/Seeker pattern; early return placed after all hooks (order preserved), handles isSeed, and the mobile note is wrapped in the full sticky-bar container so it renders in position rather than bare inline.
+- Weaknesses / risks: none material
+- Follow-up: none
+
 ## 2026-07-05T07:12:46Z — seeker-post-analytics-parity — score 4/5
 - Strengths: Precise mirror of PostAircraftForm — track() sits in the same spot (inside the try, just before the server action), same `listing_id: listingId` edit shape, and both create props (`home_airport`, `preferred_makes`) are genuinely present FormData fields (names verified at 478 / preferred_makes checkboxes), so no fabricated props; type-prefixed event names match the cleaner convention; single-file, no aircraft/partnership/schema churn.
 - Weaknesses / risks: none material — like its siblings the event fires on submit *attempt*, so a server-side validation throw still counts as "submitted"; this is inherited parity behavior, not a regression.
