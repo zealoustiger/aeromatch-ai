@@ -4,6 +4,7 @@ import { useActionState, useEffect, useTransition, useState, useRef } from 'reac
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { createSeekerListing, updateSeekerListing, generateSeekerDraft, type SeekerDraft } from '@/app/actions'
+import { track } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
 import { useFormDraft, readForm, type DraftStatus } from '@/components/useFormDraft'
 import AirportFormInput from '@/components/AirportFormInput'
@@ -195,8 +196,13 @@ export default function PostSeekerListingForm({
     async (_prev: unknown, formData: FormData) => {
       try {
         if (isEdit) {
+          track('seeker_listing_edited', { listing_id: listingId })
           await updateSeekerListing(listingId as string, formData)
         } else {
+          track('seeker_listing_submitted', {
+            home_airport: formData.get('home_airport'),
+            preferred_makes: formData.get('preferred_makes'),
+          })
           await createSeekerListing(formData)
         }
         return { ok: true }
