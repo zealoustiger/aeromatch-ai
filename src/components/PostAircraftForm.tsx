@@ -220,6 +220,9 @@ export default function PostAircraftForm({
   // Bumped on "Start over" to remount the photo uploader so its thumbnails clear too
   // (reset() only clears the form's DOM fields, not the uploader's React state).
   const [photoMountKey, setPhotoMountKey] = useState(0)
+  // Bumped on "Start over" to remount AirportFormInput so its own invalid/suggestion
+  // state clears too (reset() doesn't fire the input/change event it relies on).
+  const [airportMountKey, setAirportMountKey] = useState(0)
   // Count of photos still mid-upload — blocks submit so a photo whose upload hasn't
   // resolved yet can't silently publish without it (PartnershipPhotoUpload only emits
   // a hidden photo_url input once a photo's URL exists).
@@ -270,6 +273,7 @@ export default function PostAircraftForm({
         /* storage unavailable — uploader remount below still clears the thumbnails */
       }
       setPhotoMountKey((k) => k + 1)
+      setAirportMountKey((k) => k + 1)
     }
   }
 
@@ -581,6 +585,7 @@ export default function PostAircraftForm({
           <div>
             <Label>Based at <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
             <AirportFormInput
+              key={airportMountKey}
               name="home_airport"
               placeholder="City, IATA, or ICAO (e.g. Austin, AUS, KAUS)"
             />

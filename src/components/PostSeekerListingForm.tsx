@@ -277,6 +277,9 @@ export default function PostSeekerListingForm({
   // user clears the form can't re-populate or re-persist the cleared draft. Mirrors
   // PostAircraftForm / PostPartnershipForm.
   const fillTokenRef = useRef(0)
+  // Bumped on "Start over" to remount both AirportFormInputs so their own invalid/
+  // suggestion state clears too (reset() doesn't fire the input/change event they rely on).
+  const [airportMountKey, setAirportMountKey] = useState(0)
 
   function handleStartOver() {
     const confirmMessage = isEdit
@@ -294,6 +297,7 @@ export default function PostSeekerListingForm({
       setPreferredMakes(initialValues?.preferred_makes ?? '')
       setRatingsHeld(initialValues?.ratings_held ?? '')
       setPreferredModels(initialValues?.preferred_models ?? '')
+      setAirportMountKey((k) => k + 1)
     }
   }
   const detailsRef = useRef<HTMLDetailsElement>(null)
@@ -488,6 +492,7 @@ export default function PostSeekerListingForm({
           <div>
             <Label required>Home Airport</Label>
             <AirportFormInput
+              key={airportMountKey}
               name="home_airport"
               required
               defaultValue={initialValues?.home_airport ?? ''}
@@ -498,6 +503,7 @@ export default function PostSeekerListingForm({
           <div>
             <Label>Also flying from <span className="font-normal text-slate-400">(optional)</span></Label>
             <AirportFormInput
+              key={airportMountKey}
               name="additional_airport_2"
               defaultValue={initialValues?.additional_airport_2 ?? ''}
               placeholder="Second airport, if you fly from multiple (e.g. KNUQ)"
