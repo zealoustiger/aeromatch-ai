@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260705T125646Z — PASS — seeker-details-contact-autoopen
+- Pages: /partnerships/seeking/[id]/edit, /partnerships/seeking/new
+- What: Editing a seeking-a-partnership listing now auto-expands the "More details" section when the listing already has a saved name or email, not just a phone number — so a returning editor's own contact info is never hidden behind an extra click.
+- Goal: posting pillar (Pillar 1) — rotation check: the last two PASSes (`saved-seeker-budget-verdict`, `seeker-form-live-auth-state`) were Pillar 3 then Pillar 2, so Pillar 1 was due. Pillar 1's explicit BACKLOG checklist is exhausted outside two human-blocked items (aircraft edit Home Airport schema gap; "collapse to one screen" measurement check), so per RUNBOOK's "queue empty → invent" fallback an Explore agent audited all 3 post/edit forms' "More details" auto-open conditions side by side and found the seeker form's `isEdit` branch checked only `contact_phone`, while the partnership form's equivalent already checks `contact_name || contact_email || contact_phone` (confirmed by reading both files' exact `open={Boolean(...)}` conditions). `partnership_seekers.contact_email` is `not null` in the schema, so every seeker listing has one — this was a real, reachable gap, not theoretical. Ruled out: aircraft form's missing contact_name/email fields entirely (schema-gated, human call, same class as the two already-excluded items) and adding photo upload to the seeker form (adds a step, not a friction removal).
+- Spec: nightshift/specs/20260705T125646Z-seeker-details-contact-autoopen.md
+- Verdict: PASS. `npx next build` + typecheck clean. QA smoke (`qa-smoke.mjs`) passed HTTP 200 / zero console errors / zero horizontal overflow on `/partnerships/seeking/new` at desktop 1280 + mobile 375. Since the real edit page requires an authenticated owner session (unavailable in this sandbox), verified the fix visually via a temporary scratch route (`/qa-scratch-seeker-contact`, rendering `PostSeekerListingForm` in edit mode with mock `initialValues={{ contact_name: 'Test Pilot' }}`) — screenshot confirms "More details" renders expanded with the name populated; scratch route deleted before merge (not in the final diff).
+- Screenshots: nightshift/screenshots/seeker-details-contact-autoopen/
+- Next: none identified — this closes the one remaining gap found in this cycle's audit of the "More details" auto-open mechanism across all 3 forms.
+
 ## 20260705T124046Z — PASS — saved-seeker-budget-verdict
 - Pages: /saved
 - What: `/saved`'s "Saved seeking listings" section now shows the same honest "Budget may be tight" / "Budget comfortably above typical" chip that seeker cards already show everywhere else (e.g. `/partnerships/seeking`). Before, `/saved` fetched and passed comps-based verdicts into its partnership and aircraft sections but silently dropped the equivalent verdict for its seeker section, even though `SeekerCard` already accepted the prop.
