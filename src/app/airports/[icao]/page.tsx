@@ -10,6 +10,7 @@ import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partne
 import PartnershipCard from '@/components/PartnershipCard'
 import SeekerCard from '@/components/SeekerCard'
 import { getSeekers } from '@/lib/seekersQuery'
+import { getPartnershipCompVerdicts, getSeekerBudgetCheckVerdicts } from '@/lib/partnershipComps'
 import {
   getNearbyPartnerships,
   getIndexableAirportHubs,
@@ -103,6 +104,15 @@ export default async function AirportPage({
   // Seekers whose home airport exactly matches — preview up to 4; link to full browse.
   const seekersHere = allSeekers.slice(0, 4)
   const seekerCount = allSeekers.length
+
+  // Honest "vs. market" comp/budget verdicts — same batch helpers every sibling
+  // browse surface (/partnerships/near/[icao], /saved) already uses, so this hub
+  // doesn't silently drop the proprietary comp signal its cards support.
+  const supabaseForVerdicts = await createServerSupabaseClient()
+  const [compVerdicts, seekerBudgetVerdicts] = await Promise.all([
+    getPartnershipCompVerdicts(supabaseForVerdicts, allListings),
+    getSeekerBudgetCheckVerdicts(supabaseForVerdicts, seekersHere),
+  ])
 
   // Internal link to the canonical geo "partnerships near [airport]" page
   // (`/partnerships/near/[icao]`). Gate it on the EXACT same inventory check that
@@ -209,7 +219,12 @@ export default async function AirportPage({
         {atAirport.length > 0 ? (
           <div className="space-y-4">
             {atAirport.map((p) => (
-              <PartnershipCard key={p.id} p={p} />
+              <PartnershipCard
+                key={p.id}
+                p={p}
+                comp={compVerdicts.get(p.id)?.comp ?? null}
+                dealVerdict={compVerdicts.get(p.id)?.dealVerdict ?? null}
+              />
             ))}
           </div>
         ) : (
@@ -243,7 +258,11 @@ export default async function AirportPage({
           </div>
           <div className="space-y-4">
             {seekersHere.map((s) => (
-              <SeekerCard key={s.id} seeker={s} />
+              <SeekerCard
+                key={s.id}
+                seeker={s}
+                budgetVerdict={seekerBudgetVerdicts.get(s.id)}
+              />
             ))}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -271,7 +290,12 @@ export default async function AirportPage({
           </h2>
           <div className="space-y-4">
             {nearby.map((p) => (
-              <PartnershipCard key={p.id} p={p} />
+              <PartnershipCard
+                key={p.id}
+                p={p}
+                comp={compVerdicts.get(p.id)?.comp ?? null}
+                dealVerdict={compVerdicts.get(p.id)?.dealVerdict ?? null}
+              />
             ))}
           </div>
         </section>
