@@ -28,7 +28,9 @@ export const metadata: Metadata = {
 // Which marketplace a saved search belongs to (mirrors /searches). Older rows
 // default to partnerships.
 function marketplaceLabel(path: string): string {
-  return path === '/aircraft' ? 'Planes for Sale' : 'Partnerships'
+  if (path === '/aircraft') return 'Planes for Sale'
+  if (path === '/partnerships/seeking') return 'Pilot Seekers'
+  return 'Partnerships'
 }
 
 // One quick-link tile to an existing activity surface.
@@ -88,10 +90,10 @@ export default async function AccountPage() {
               Email alerts &amp; saved searches
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              A free account lets you save searches and listings across both marketplaces —
-              co-ownership partnerships and planes for sale — and get email alerts when new
-              listings match what you&apos;re looking for. We only email about searches you
-              choose to save, and you can remove any of them anytime.
+              A free account lets you save searches and listings across ClubHanger — co-ownership
+              partnerships, planes for sale, and pilots seeking a partnership — and get email
+              alerts when new listings match what you&apos;re looking for. We only email about
+              searches you choose to save, and you can remove any of them anytime.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
@@ -108,10 +110,14 @@ export default async function AccountPage() {
             Just browsing? Explore{' '}
             <Link href="/partnerships" className="text-sky-600 underline-offset-2 hover:underline">
               partnerships
-            </Link>{' '}
-            or{' '}
+            </Link>
+            ,{' '}
             <Link href="/aircraft" className="text-sky-600 underline-offset-2 hover:underline">
               planes for sale
+            </Link>{' '}
+            or{' '}
+            <Link href="/partnerships/seeking" className="text-sky-600 underline-offset-2 hover:underline">
+              pilots seeking a partnership
             </Link>
             .
           </p>
@@ -181,10 +187,14 @@ export default async function AccountPage() {
                 Set your filters on{' '}
                 <Link href="/aircraft" className="text-sky-600 underline-offset-2 hover:underline">
                   planes for sale
-                </Link>{' '}
-                or{' '}
+                </Link>
+                ,{' '}
                 <Link href="/partnerships" className="text-sky-600 underline-offset-2 hover:underline">
                   partnerships
+                </Link>{' '}
+                or{' '}
+                <Link href="/partnerships/seeking" className="text-sky-600 underline-offset-2 hover:underline">
+                  pilots seeking a partnership
                 </Link>{' '}
                 and tap <strong className="text-slate-600">Save this search</strong> to turn on
                 alerts.
