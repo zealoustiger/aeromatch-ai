@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T09:48:00Z — photo-mid-upload-recovery — score 4/5
+- Strengths: Clean mirror of the existing best-effort-storage pattern — new idbPhotoDraft.ts feature-detects indexedDB and swallows every error (true no-regression), the shared uploadEntry callback removes the old duplicated fetch/setPhotos block, resume is gated identically to the URL restore and respects MAX_PHOTOS across both paths via functional setPhotos, finally-deletes the pending record on settle, clears IDB on the gate-gone "Start over" branch, and even guards StrictMode double-invoke with a cancelled flag.
+- Weaknesses / risks: removePhoto (individual X) doesn't delete the pending IDB record, so removing a photo during the ~1-3s in-flight window and reloading before it settles can resurrect it — narrow and self-healing (resume→settle→delete), but a semantic gap vs. the deliberate-remove intent.
+- Follow-up: none
+
 ## 2026-07-05T09:16:39Z — launch-banner-honest-stats — score 4/5
 - Strengths: Cleanly deletes both fabrications (VISITOR_BASE/charCodeAt visitor count and the Math.max floor) exactly per spec, uses raw seekerCount, drops the false location-scoping claim, and correctly guards seekerCount===0 with singular/plural ("1 pilot is" vs "N pilots are"); scope stayed to the one component, no dead code, subscribe form untouched.
 - Weaknesses / risks: In the seekerCount===0 case the surviving sentence "Get email alerts when more post" reads with no antecedent ("more" of what) — minor copy smell only in the empty state.
