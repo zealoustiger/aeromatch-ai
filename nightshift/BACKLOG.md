@@ -414,9 +414,10 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   draft/photo-upload/submit auth gates silently stale (never firing their redirect), surfacing
   a raw 401 instead. `PostAircraftForm.tsx` now tracks `isLoggedIn` as live client state,
   seeded from the SSR prop and kept current via `supabase.auth.getUser()` +
-  `onAuthStateChange` — the exact pattern `Nav.tsx` already uses. **Next (not done this
-  cycle, same gap, same fix shape):** `PostPartnershipForm.tsx` and
-  `PostSeekerListingForm.tsx` still need the identical treatment (slices 2 and 3).
+  `onAuthStateChange` — the exact pattern `Nav.tsx` already uses. **Slice 2 ✅ SHIPPED
+  2026-07-05** (`partnership-form-live-auth-state`): identical treatment on
+  `PostPartnershipForm.tsx`. **Still not done:** slice 3, `PostSeekerListingForm.tsx` — same
+  gap, same fix shape, its own single-file cycle.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
