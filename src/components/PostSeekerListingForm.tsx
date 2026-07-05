@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 import { useFormDraft, readForm, type DraftStatus } from '@/components/useFormDraft'
 import AirportFormInput from '@/components/AirportFormInput'
 import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
+import { consumePostHandoff } from '@/lib/postHandoff'
+import Link from 'next/link'
 
 const NEW_DRAFT_KEY = 'ch:draft:seeker-new'
 
@@ -383,6 +385,20 @@ export default function PostSeekerListingForm({
     })
   }
 
+  // Pick up a paste handed off from the /post chooser (read-once). Fills the AI notes
+  // box either way; only auto-runs the extraction when logged in — doing it while
+  // logged out would just immediately bounce to /auth, which is a jarring first touch.
+  useEffect(() => {
+    if (isEdit) return
+    const handoff = consumePostHandoff()
+    if (!handoff || !aiPromptRef.current) return
+    aiPromptRef.current.value = handoff
+    aiPromptRef.current.dispatchEvent(new Event('input', { bubbles: true }))
+    setHasAiPrompt(true)
+    if (isLoggedIn) handleGenerate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!isLoggedIn) {
       e.preventDefault()
@@ -414,7 +430,14 @@ export default function PostSeekerListingForm({
 
       {/* AI prefill — first thing on the form */}
       <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-4">
-        <p className="mb-1 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+          <p className="mb-1 text-xs font-semibold text-violet-800">Prefill from your notes ✨</p>
+          {!isEdit && (
+            <Link href="/post" className="shrink-0 text-xs font-medium text-violet-600 underline-offset-2 hover:text-violet-800 hover:underline">
+              Not seeking a partnership? Choose again →
+            </Link>
+          )}
+        </div>
         <p className="mb-2 text-xs text-slate-500">Jot down a few sentences about yourself and what you&apos;re looking for — the AI will prefill the whole form (aircraft preferences, budget, location, pilot profile, title, and description).</p>
         <textarea
           ref={aiPromptRef}
