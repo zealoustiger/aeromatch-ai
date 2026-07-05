@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T09:16:39Z — launch-banner-honest-stats — score 4/5
+- Strengths: Cleanly deletes both fabrications (VISITOR_BASE/charCodeAt visitor count and the Math.max floor) exactly per spec, uses raw seekerCount, drops the false location-scoping claim, and correctly guards seekerCount===0 with singular/plural ("1 pilot is" vs "N pilots are"); scope stayed to the one component, no dead code, subscribe form untouched.
+- Weaknesses / risks: In the seekerCount===0 case the surviving sentence "Get email alerts when more post" reads with no antecedent ("more" of what) — minor copy smell only in the empty state.
+- Follow-up: Reword the zero-seeker fallback so "when more post" has an antecedent (e.g. "when pilots post here").
+
 ## 2026-07-05T09:10:32Z — seeker-owner-nudge — score 5/5
 - Strengths: Faithful line-for-line mirror of AircraftListingOwnerNudge — reuses evaluateSeekerTrust as the single source of truth (no redefined signals), SIGNAL_ACTIONS keys match the SeekerTrustSignal union exactly and correctly omit intrinsic member_posted, null-returns on complete listings (no nag), isOwner gate uses the exact `!!user && !!s.poster_id && user.id === s.poster_id` pattern, placement above the trust checklist matches convention, a11y icons aria-hidden; copy sensibly adapted to "helps owners trust it".
 - Weaknesses / risks: none material
