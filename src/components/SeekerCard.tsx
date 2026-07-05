@@ -5,6 +5,7 @@ import { anonymizeName, formatPrice, formatPriceK, travelLabel } from '@/lib/uti
 import type { PartnershipCompVerdict } from '@/lib/partnershipComps'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SaveListingButton from '@/components/SaveListingButton'
+import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine',
@@ -87,6 +88,7 @@ export default function SeekerCard({
 
             {/* Badges */}
             <div className="mb-2 flex flex-wrap gap-1.5">
+              <SeekerTrustBadge s={seeker} />
               {fresh && (
                 <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                   <Sparkles className="h-3 w-3" />
