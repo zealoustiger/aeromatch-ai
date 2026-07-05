@@ -440,10 +440,12 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   card and detail page could disagree about the same listing's completeness. Replaced it with
   `AircraftTrustBadge`'s new `variant="checklist"`, matching how the partnership detail page
   already shows its trust checklist; deleted the orphaned `ListingCompletenessPanel` (sole
-  usage site). **Next:** aircraft-for-sale still has no owner-facing "Improve your listing"
-  nudge the way partnerships does (`ListingOwnerNudge`); seeker listings have no trust/
-  completeness module at all (a separate, larger slice — seekers have no price/photos to
-  score).
+  usage site). **Owner nudge ✅ SHIPPED 2026-07-05** (`aircraft-owner-nudge`): the
+  owner-facing "Improve your listing" nudge partnerships already had (`ListingOwnerNudge`)
+  is now mirrored on the aircraft-for-sale detail page as `AircraftListingOwnerNudge`,
+  driven by the same `evaluateAircraftTrust` signals, gated on `poster_id` ownership, no
+  new query/schema. **Still not done:** seeker listings have no trust/completeness module
+  at all (a separate, larger slice — seekers have no price/photos to score).
 
 ---
 
