@@ -4,7 +4,7 @@
   "workBranch": "staging",
   "gitEmail": "nightshift@clubhanger.local",
   "gitName": "ClubHanger Night Shift",
-  "models": { "cycle": "sonnet", "escalate": "opus", "judge": "opus", "judgePct": 25, "plan": "opus" },
+  "models": { "cycle": "sonnet", "escalate": "sonnet", "judge": "sonnet", "judgePct": 25, "plan": "opus" },
   "budget": { "maxNightCostUsd": 0, "maxCycles": 25 },
   "window": { "start": "2300", "end": "0615" },
   "qa": { "ignoreConsole": ["upload\\.wikimedia\\.org", "\\b429\\b"] }
