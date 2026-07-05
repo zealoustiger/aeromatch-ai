@@ -25,23 +25,26 @@ entries** (what's already done + the last lane). Optionally glance at the scoreb
 
 ## 1. Pick THIS cycle's ONE item (allocation policy from GOAL.md)
 
-- **Blocker first (uncapped):** if the most recent CHANGELOG entry is a **FAIL**, or there's
-  a known broken page / console error / CWV regression → fix that. A broken **post or signup
-  flow** is a P0 blocker (it directly defeats the activation goal). Otherwise:
-- **ACTIVATION pivot (2026-06-26):** pull the highest-value **`[P1]`** slice from
-  **"⭐ ACTIVATION (pivot focus)"** in BACKLOG.md, and **rotate across the three pillars**
-  (frictionless posting / frictionless signup / proprietary buyer-analysis) so none stalls —
-  check the recent CHANGELOG `Goal:` lines and pick a pillar that hasn't gone in the last 1-2
-  cycles. `[goal]` now means "advances an activation pillar," NOT SEO.
-- **SEO is PARKED:** do NOT invent SEO experiments or build new programmatic page families.
-  The `[PARKED]` sections in BACKLOG are off-limits except to fix a `[bug]` (broken canonical,
-  404 on an indexed page, busted sitemap, CWV/structured-data regression).
-- **If the activation queue is somehow empty,** invent the next activation slice (tag
-  `[agent][goal]` + which pillar + the friction it removes), append to BACKLOG, build the
-  smallest valuable increment. The backlog never truly empties.
-- Obey GOAL.md guardrails (honesty-gated analysis — never fabricate; don't remove data
-  integrity when removing posting friction; never regress Core Web Vitals/mobile). Record the
-  pillar + item in the CHANGELOG `Goal:` line.
+**STRICT priority cascade (human-set 2026-07-05 — finish a tier before the next):**
+1. **`[bug]` — fix bugs first (uncapped).** If the most recent CHANGELOG entry is a **FAIL**,
+   or there's a known bug / broken page / console error / CWV or 375px regression → fix that.
+   A broken **alert / signup / post** flow is a P0 bug.
+2. **`[want]` — then human-inputted tasks.** Any task the user put in the backlog (`[want]`,
+   or under a human-added section) outranks all AI goal work. Clear the highest `[P1][want]`
+   first. Only when NO `[want]` items remain do you drop to tier 3.
+3. **`[goal]` — then the AI goal: the ALERT EXPERIENCE.** Pull the highest-value `[P1]`
+   alert-experience slice from BACKLOG (do alerts before the older activation pillars).
+- **SEO is PARKED** — never invent SEO experiments or new programmatic page families
+  (`[PARKED]` sections are off-limits except to fix a `[bug]`).
+- **If all three tiers are empty:** do NOT invent goal tasks inline on this (cheap) model —
+  emit `ABORT — none — plan needed` so the loop's plan pass (Opus/Fable) generates the next
+  alert-experience `[goal]` batch. (Inline invention on a weak model is disallowed.)
+- **CHECK IT OFF:** when you PASS a backlog item, mark it done in BACKLOG.md this cycle —
+  strike the title + append ``✅ SHIPPED via `<slug>` (<date>)``. Do NOT add a duplicate item
+  for work you just did. An un-checked-off shipped item = an incomplete cycle. Only add NEW
+  backlog items for genuinely new, un-built work.
+- Obey GOAL.md guardrails (honesty-gated — never fabricate; never regress CWV/mobile). Record
+  the tier + item in the CHANGELOG `Goal:` line.
 
 If — and only if — you are certain there is genuinely nothing safe to do, output exactly
 `ABORT — none — nothing eligible` and stop.

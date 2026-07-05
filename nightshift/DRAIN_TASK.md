@@ -67,24 +67,26 @@ leaves a stale lock that the next fire reclaims after 70 min.
 Repeat until a stop condition (section 3) fires:
 
 1. **Heartbeat:** `touch /tmp/clubhanger-nightshift.drain.lock`.
-2. **Pick the next item** per **GOAL.md's allocation policy** — ACTIVATION pivot 2026-06-26
-   (rotate pillars, not greedy metric-chasing):
-   - **Blockers first, uncapped:** if the most recent CHANGELOG entry is a **FAIL**, or
-     there's a known broken page / console error / CWV regression → fix it. A broken **post
-     or signup flow** is a P0 blocker (it defeats the activation goal directly).
-   - **Else pull the highest-value `[P1]` slice from "⭐ ACTIVATION (pivot focus)"** in
-     BACKLOG, **rotating across the three pillars** (posting / signup / buyer-analysis) so
-     none stalls — check recent CHANGELOG `Goal:` lines and pick a pillar not done in the
-     last 1-2 cycles. `[goal]` now = "advances an activation pillar," not SEO.
-   - **SEO is PARKED:** do NOT invent SEO experiments or build new programmatic page
-     families. The `[PARKED]` BACKLOG sections are off-limits except to fix a `[bug]`
-     (broken canonical / 404 on an indexed page / busted sitemap / CWV regression).
-   - **If the activation queue is somehow empty,** the worker invents the next activation
-     slice (`[agent][goal]` + pillar + friction removed) and appends to BACKLOG. The
-     backlog never truly empties. Only stop on the night/usage/time limits in section 3.
-     Obey GOAL.md guardrails (honesty-gated analysis — never fabricate; keep data integrity
-     when cutting posting friction; never regress Core Web Vitals/mobile).
-   Pass the chosen lane + item to the worker so its CHANGELOG `Goal:` line records it.
+2. **Pick the next item** per **GOAL.md's STRICT priority cascade** (human-set 2026-07-05 —
+   finish a tier before touching the next; no rotation, no ratio):
+   - **1) `[bug]` first (uncapped):** most recent CHANGELOG entry is a **FAIL**, or a known
+     bug / broken page / console error / CWV or 375px regression → fix it. A broken **alert /
+     signup / post** flow is a P0 bug.
+   - **2) `[want]` — human-inputted tasks next:** every task the user added to BACKLOG
+     (`[want]`, or a human-added section) outranks all AI goal work. Clear the highest
+     `[P1][want]` first; only when NO `[want]` remain, drop to tier 3.
+   - **3) `[goal]` — the AI goal: the ALERT EXPERIENCE.** Highest-value `[P1]` alert slice
+     from BACKLOG (alerts before the older activation pillars).
+   - **SEO is PARKED:** never invent SEO experiments or new programmatic page families
+     (`[PARKED]` sections off-limits except to fix a `[bug]`).
+   - **All three tiers empty →** do NOT invent goal tasks on the cheap cycle model. The
+     worker emits `ABORT — none — plan needed`; the drain then runs a **plan pass** on the
+     smart model (`config.json.models.plan`, Opus/Fable) via `PLAN_TASK.md` to generate the
+     next alert-experience `[goal]` batch, and the loop continues.
+   - **Check-off is mandatory:** a worker that PASSes a backlog item must mark it
+     ``✅ SHIPPED via `<slug>` `` in BACKLOG.md the same cycle. Obey GOAL.md guardrails
+     (honesty-gated; never regress CWV/mobile).
+   Pass the chosen tier + item to the worker so its CHANGELOG `Goal:` line records it.
 3. **Dispatch ONE worker** with the **Task tool** (a fresh subagent). Its prompt:
 
    > You are one Night Shift build cycle for ClubHanger. Working dir:

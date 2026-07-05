@@ -29,6 +29,11 @@ set -a; [ -f "$APP/.env.local" ] && . "$APP/.env.local"; set +a
 # each orient) — archive entries older than a week. Token discipline, not deletion.
 node nightshift/bin/rotate-changelog.mjs --keep-days 7 2>/dev/null || true
 
+# Reconcile the backlog: mark items ✅ SHIPPED whose work has already landed, so the
+# burn-down actually shrinks (the human noticed it wasn't — 2026-07-05). Backstop to the
+# deterministic per-cycle check-off; conservative matcher, safe to run daily.
+node nightshift/bin/backlog-reconcile.mjs --apply --quiet 2>/dev/null || true
+
 # Build the report (writes nightshift/REVIEW.md + syncs the admin Daily Report).
 # NO `claude` → zero tokens → not blocked by the subscription rate limit.
 STATE="${NS_STATE_DIR:-/home/night/state}"
@@ -37,8 +42,8 @@ rc=$?
 cat "$STATE/digest.out" 2>/dev/null
 
 # Commit the regenerated report + rotated changelog to staging (logs only — safe).
-git add nightshift/REVIEW.md nightshift/CHANGELOG.md nightshift/CHANGELOG-archive.md 2>/dev/null || true
-git commit -q -m "nightshift: morning digest (VPS, token-free)" 2>/dev/null || true
+git add nightshift/REVIEW.md nightshift/CHANGELOG.md nightshift/CHANGELOG-archive.md nightshift/BACKLOG.md 2>/dev/null || true
+git commit -q -m "nightshift: morning digest + backlog reconcile (VPS, token-free)" 2>/dev/null || true
 git push --quiet origin staging 2>/dev/null || true
 
 echo "digest exit $rc"

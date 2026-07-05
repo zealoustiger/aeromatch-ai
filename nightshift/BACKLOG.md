@@ -87,12 +87,46 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   `additional_airports`-aware, materially more complex than the scalar `icao`/`state` aircraft/
   partnership alerts use; a natural next slice.
 
-## ⭐ ACTIVATION (pivot focus — 2026-06-26) — PULL FROM HERE FIRST
-The three north-star pillars. Each cycle, build the highest-value **`[P1]`** slice and
-**rotate across the pillars** so none stalls (don't spend a week only on analysis). All
-items are `[goal]` under the pivot (activation), and `[bug]`s in posting/signup flows are
-P0 (a broken flow defeats the goal). Slice big items — one shippable increment per cycle.
-When you ship one, mark it ✅ and note the next slice in the CHANGELOG.
+## 🔔 GOAL — BEST ALERT EXPERIENCE (human-set 2026-07-05) — PULL FROM HERE FIRST
+**The `[goal]` is now: make setting/managing an alert the best experience on the web,
+everywhere on the site.** Alerts are far lower-friction than posting, and our traffic is
+mostly buyers who want to be told when the right aircraft/partnership lists. See GOAL.md.
+**Priority order every cycle: `[bug]` → `[want]` (human tasks) → `[goal]` (these).** When
+you PASS one of these, **mark it ✅ SHIPPED here in the same cycle** (strike + `via <slug>`).
+The `/alerts` landing + `AlertSignup` already exist — build on them; each new capture point
+must emit the `alert_subscribed` PostHog event.
+
+- **[P1][goal] Alert CTA on every aircraft listing page.** A prominent "Alert me for {make}
+  {model}" capture on `/aircraft/listing/[id]` (prefill make+model context, sourcePath a
+  matchable `/aircraft?make=…&model=…`). Biggest-traffic surface with no alert entry today.
+- **[P1][goal] "Alert me for this search" on browse/filter results.** On `/aircraft` and
+  `/partnerships` with active filters, a one-tap alert that captures the current filter set
+  as the sourcePath (so it genuinely matches). Turns any search into a standing alert.
+- **[P1][goal] Alert prompt in empty/zero-result search states.** When a filter returns 0
+  results, lead with "Get alerted when one lists" instead of a dead end.
+- **[P1][goal] Alert management page (v1, read-only).** `/account` (or `/alerts/manage`):
+  list a signed-in user's active alerts with context + source. Foundation for pause/delete.
+- **[P1][goal] Pause & delete an alert.** Add pause/resume + delete to the management list
+  (and honor them in `send-alerts.mjs`).
+- **[P1][goal] Alert CTA on make/model & state pages.** `/aircraft/[make]/[model]` and
+  `/aircraft/for-sale/[state]` — inline `AlertSignup` with the page's context (many already
+  have it; audit + fill gaps), each emitting `alert_subscribed`.
+- **[P2][goal] Homepage alert band.** A tasteful "Get alerts" capture on `/` for visitors
+  who aren't ready to browse.
+- **[P2][goal] Better unsubscribe UX.** The one-click unsubscribe page offers "fewer / pause"
+  instead of only "off" — recover subscribers instead of losing them.
+- **[P2][goal] Confirmation-email + confirm-landing polish.** Make the double-opt-in email
+  and the `/alerts/status` confirm page best-in-class (clear, warm, on-brand).
+
+_(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
+this queue drains — see PLAN_TASK.md.)_
+
+---
+
+## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
+The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
+pillar item only when the alert queue above is genuinely exhausted, or a `[want]`/`[bug]`
+calls for it. When you ship one, mark it ✅ and note the next slice in the CHANGELOG.
 
 ### Pillar 1 — Frictionless listing posting
 Target: cut every step/field/decision between "I want to list" and "it's published."

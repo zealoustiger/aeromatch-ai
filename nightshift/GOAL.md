@@ -7,56 +7,81 @@
 > previous SEO-centric goal is preserved verbatim in `GOAL-seo-parked.md` for when we
 > un-park it.
 
-**Goal: make ClubHanger effortless to act on.** Three pillars, equal weight:
+**Goal (updated 2026-07-05, human-set): build the best "set an alert" experience on the
+web — everywhere on the site.** Setting an alert is *far* lower-friction than posting a
+listing (one email vs. a whole form), and most of our traffic is buyers who want to be
+told when the right aircraft or partnership shows up. So the whole site should make
+setting — and managing — an alert effortless, obvious, and delightful.
 
-1. **Frictionless listing posting** — posting a partnership, an aircraft for sale, or a
-   pilot-seeking listing should take as few steps, fields, and decisions as humanly
-   possible. The ideal is "paste what you have → we draft the rest → publish in one
-   screen." Every required field, every extra click, every dead-end is a target to remove.
-2. **Frictionless signup / auth** — never make someone create an account before they get
-   value. Defer the gate to the moment of value (save / message / publish), and when we do
-   ask, make it one tap (Google) or one field (magic link). Cut the signup form to the bone.
-3. **Proprietary, useful buyer analysis on listing pages** — give shoppers decision-making
-   insight they **cannot get on Controller / Barnstormers / Trade-A-Plane**: synthesized
-   from our own data (the **ClubHanger Estimate** is the template). Every listing page
-   should answer "is this a good buy, and what will it really cost me?" with honest,
-   data-grounded analysis — not a spec dump.
+**Do alerts FIRST.** Before anything else in the goal lane, make the alert experience
+best-in-class. Concretely, that means (invent more — this is a starting list):
+- **Alert entry points everywhere they make sense:** every listing page, every browse /
+  search / filter result, make/model/state pages, the homepage, empty-search states — a
+  visitor should never be more than one click from "alert me about this." One-tap "alert
+  me for *this* search" from any active filter set.
+- **Frictionless capture:** email-only, no account required (already the case) — keep it
+  one field; pre-fill context from the page; instant, reassuring confirmation UX; make the
+  double-opt-in email itself excellent.
+- **Great alert *management*:** a place to see, edit, pause, and delete your alerts;
+  signed-in users see saved-search ↔ alert unified; one-click unsubscribe that doesn't
+  feel like a dead end (offer "fewer" instead of "none").
+- **Smart, honest alert content:** new-listing AND price-drop alerts; only fire on genuine
+  matches; digest vs. instant options; never spam. The email a subscriber receives should
+  be the best listing alert email in aviation.
+- **Prove it converts:** every alert surface emits an analytics event (`alert_subscribed`
+  with the context/source) so we can see which placements convert.
 
-These three ARE the goal. Build the highest-value slice of one of them every cycle.
+This IS the goal now. The three earlier activation pillars (posting, signup, buyer
+analysis) are **still valuable but secondary** — pull them only after the alert experience
+is genuinely great, or when a `[want]`/`[bug]` calls for them.
 
-## Why these, and how to judge a cycle (the honesty rule)
-We are a cold-start marketplace: signups and posts are **low-volume**, so a single
-night's conversion delta is noise — **do not judge a cycle by tonight's signup/post
-count.** Judge by **leading indicators of friction removed and value added**:
-- **Posting:** required fields cut, steps collapsed, a new prefill/import path, autosave,
-  a gate removed. Measure: count the clicks/fields to publish before vs after — fewer wins.
-- **Signup:** a gate deferred, an auth method added (Google/magic-link), the form shortened,
-  intent preserved across the redirect.
-- **Analysis:** a new proprietary module live on the listing page that's honest and
-  data-grounded (uses real columns, says "unknown" when data is missing, never fabricates).
+## How to judge a cycle (the honesty rule)
+We are a cold-start marketplace: signups/alerts/posts are **low-volume**, so a single
+night's conversion delta is noise — **do not judge a cycle by tonight's numbers.** Judge
+by **leading indicators**: a new alert entry point live in a place that lacked one; friction
+removed from setting/managing an alert; a better confirmation/unsubscribe flow; a real
+`alert_subscribed` event wired. Track PostHog conversions (`alert_subscribed`, `signup`,
+`*_posted`, `contact_initiated`) **week-over-week** as the lagging confirmation. The GSC
+funnel is *background* (SEO parked).
 
-Track conversions (PostHog `signup`, `partnership_posted`, `aircraft_posted`,
-`seeker_posted`, `contact_initiated`) **week-over-week** as the lagging confirmation —
-not as the nightly scoreboard. `node nightshift/bin/scoreboard.mjs` still runs; read the
-GSC funnel as *background* (we're parked there), and prefer PostHog activation events.
+## Allocation — STRICT priority order (human-set 2026-07-05, replaces the old ratio)
+Every backlog item carries an intent tag: `[bug]` = broken behavior/regression/console
+error/CWV-mobile regression · `[want]` = **a task the human (user) put in the backlog** ·
+`[goal]` = AI-invented work toward the goal (the alert experience). Work them **strictly in
+this order — finish a higher tier before touching a lower one:**
 
-## Allocation — how cycles are split (replaces the old SEO 3:1 knob)
-Every backlog item still carries an intent tag (`[bug]` / `[want]` / `[goal]`), but the
-meanings shift under the pivot:
-- **`[goal]` now means "advances one of the three activation pillars."** (It no longer
-  means SEO.) Default for agent-invented work — invent activation experiments, not SEO ones.
-- **`[want]`** — a human-wanted product feature outside the three pillars.
-- **`[bug]`** — broken behavior, regression, console error, CWV/mobile regression.
+1. **`[bug]` — fix bugs first (uncapped).** Any known bug, a FAILed prior cycle, a broken
+   page / console error / CWV or 375px regression → fix it before anything else. A broken
+   alert/signup/post flow is a P0 bug (it defeats the goal directly).
+2. **`[want]` — then do human-inputted tasks.** Every task the user added to the backlog
+   (tagged `[want]`, or under a human-added section) outranks all AI-invented goal work.
+   Clear the `[want]` queue (highest `[P1]` first) before pulling any `[goal]` item. These
+   are the human's explicit priorities — they always beat what the AI thinks is best.
+3. **`[goal]` — then AI-generated goal work (the alert experience).** Only when tiers 1 & 2
+   are empty. Pull the highest-value `[P1]` alert-experience slice from BACKLOG. **Do alerts
+   before the older activation pillars.**
 
-**Lane order, every cycle:**
-1. **Blockers first, uncapped.** Last cycle FAILED, or a known broken page / console error /
-   CWV regression → fix it before anything else. (A broken post or signup flow is a P0 here —
-   it directly defeats the goal.)
-2. **Then pull the highest-value activation slice.** Prefer `[P1]` pillar items in
-   `BACKLOG.md` under "ACTIVATION (pivot focus)". Rotate across the three pillars so none
-   stalls — don't spend a week only on analysis modules while posting friction sits.
-3. **`[want]` features** that aren't pillar work are still built when they're clearly
-   high-value or P1, but the three pillars take precedence on ties.
+There is no rotation and no ratio anymore — it is a strict cascade. If a higher tier is
+empty, drop to the next; if all are empty, generate new `[goal]` tasks (see below).
+
+### Generating new goal tasks — use the SMARTEST model (human-set 2026-07-05)
+When tiers 1 & 2 are empty and the `[goal]` (alert-experience) queue is thin, **generate
+the next batch of goal tasks with the strongest available model — Opus (`claude-opus-4-8`)
+or Fable (`claude-fable-5`)** — NOT the cheap execution model. Task *ideation* is where
+model quality matters most; execution can stay on the cheaper cycle model. The loop runs a
+dedicated **plan pass** on `config.json.models.plan` (opus/fable) via `PLAN_TASK.md` that
+appends concrete, sliced `[P1][goal]` alert-experience tasks to BACKLOG; the ordinary
+execution cycles then build them. Do not invent goal tasks inline on the cheap model.
+
+### Check the item OFF when you finish it (human-set 2026-07-05 — the backlog must shrink)
+When a cycle SHIPS a backlog item (PASS), it **must mark that item done in BACKLOG.md** in
+the same cycle: strike the title and append `✅ SHIPPED via \`<slug>\` (<date>)`. Do NOT
+add a fresh duplicate item for work you just did. The morning digest also runs
+`backlog-reconcile.mjs --apply` as a backstop, but the deterministic check-off is yours —
+the human noticed the backlog wasn't shrinking, so treat an un-checked-off shipped item as
+an incomplete cycle. Only add NEW backlog items for genuinely new, un-built work.
+
+**(legacy note — superseded by the strict order above):**
 4. **The night never idles.** If the pillar queue is somehow empty, invent the next
    activation slice (tag `[agent][goal]` + a one-line "which pillar / what friction this
    removes" rationale), append to `BACKLOG.md`, build the smallest valuable increment.

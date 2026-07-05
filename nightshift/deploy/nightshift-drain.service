@@ -27,8 +27,10 @@ ExecStart=/usr/bin/docker run --rm \
   --memory=4g --memory-swap=5g --cpus=1.5 \
   -e NS_STATE_DIR=/home/night/state \
   -e TZ=America/Los_Angeles \
-  -e NS_ESCALATE_MODEL=sonnet \
-  -e NS_JUDGE_MODEL=sonnet \
+  # Models come from nightshift/config.json (.models): cycle=sonnet (cheap execution),
+  # escalate/judge/plan=opus (smart model for retries, quality-judging, and goal-task
+  # generation). Do NOT re-pin escalate/judge to sonnet here — the human wants the
+  # smartest model for ideation/judging (2026-07-05).
   -v /opt/nightshift/repo:/app \
   -v /opt/nightshift/claude:/home/night/.claude \
   -v /opt/nightshift/state:/home/night/state \
