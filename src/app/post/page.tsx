@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Plane, Handshake, UserSearch, ArrowRight } from 'lucide-react'
 import type { ComponentType } from 'react'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import PostHandoffBox from '@/components/PostHandoffBox'
 
 export const metadata: Metadata = {
   title: 'Post a Listing — ClubHanger',
@@ -51,7 +52,17 @@ export default function PostChooserPage() {
           </p>
         </header>
 
-        <div className="mt-8 space-y-4">
+        <div className="mt-8">
+          <PostHandoffBox />
+        </div>
+
+        <div className="mt-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          or choose directly
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <div className="mt-6 space-y-4">
           {CHOICES.map((c) => {
             const Icon = c.icon
             return (

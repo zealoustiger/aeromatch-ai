@@ -11,6 +11,8 @@ import PartnershipPhotoUpload from '@/components/PartnershipPhotoUpload'
 import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
 import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
+import { consumePostHandoff } from '@/lib/postHandoff'
+import Link from 'next/link'
 
 // Same rating set as the seeker form's "Ratings & Endorsements You Hold" chips —
 // here they describe what a partnership requires of a prospective partner.
@@ -452,6 +454,20 @@ export default function PostPartnershipForm({
     })
   }
 
+  // Pick up a paste handed off from the /post chooser (read-once). Fills the AI notes
+  // box either way; only auto-runs the extraction when logged in — doing it while
+  // logged out would just immediately bounce to /auth, which is a jarring first touch.
+  useEffect(() => {
+    if (isEdit) return
+    const handoff = consumePostHandoff()
+    if (!handoff || !aiPromptRef.current) return
+    aiPromptRef.current.value = handoff
+    aiPromptRef.current.dispatchEvent(new Event('input', { bubbles: true }))
+    setHasAiPrompt(true)
+    if (isLoggedIn) handleGenerate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function redirectToAuth() {
     if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
     router.push(`/auth?next=${isEdit ? `/partnerships/${listingId}/edit` : '/partnerships/new'}`)
@@ -488,7 +504,14 @@ export default function PostPartnershipForm({
 
       {/* AI prefill — at the top so the fastest path is the most visible one */}
       <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm">
-        <p className="mb-1 text-sm font-semibold text-violet-800">Have notes? Fill the whole form in one shot ✨</p>
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+          <p className="mb-1 text-sm font-semibold text-violet-800">Have notes? Fill the whole form in one shot ✨</p>
+          {!isEdit && (
+            <Link href="/post" className="shrink-0 text-xs font-medium text-violet-600 underline-offset-2 hover:text-violet-800 hover:underline">
+              Not posting a share? Choose again →
+            </Link>
+          )}
+        </div>
         <p className="mb-3 text-xs text-slate-500">
           Paste your notes, an existing listing, or a link to your listing on another site — AI fills in aircraft, share terms, costs, and description. Edit anything before posting.
         </p>
