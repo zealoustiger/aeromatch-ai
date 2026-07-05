@@ -68,9 +68,11 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
   )
 }
 
-function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+function Input({ className, type, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
+      type={type}
+      inputMode={type === 'number' ? 'numeric' : undefined}
       className={cn(
         'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base sm:text-sm placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100',
         className
