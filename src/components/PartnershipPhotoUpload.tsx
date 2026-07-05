@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImagePlus, X, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { savePendingPhoto, deletePendingPhoto, listPendingPhotos, clearPendingPhotos } from '@/lib/idbPhotoDraft'
 
 const MAX_PHOTOS = 5
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/avif'
@@ -57,28 +58,81 @@ export default function PartnershipPhotoUpload({
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Shared upload path for both a freshly-added file and one recovered from
+  // IndexedDB after an interrupted upload — either way, the pending record is
+  // dropped once the request settles (success or failure).
+  const uploadEntry = useCallback(
+    async (key: string, file: File) => {
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch(endpoint, { method: 'POST', body: fd })
+        const json = await res.json()
+        if (!res.ok || !json.url) {
+          setPhotos((prev) =>
+            prev.map((p) => (p.key === key ? { ...p, uploading: false, error: json.error ?? 'Upload failed' } : p))
+          )
+        } else {
+          setPhotos((prev) => prev.map((p) => (p.key === key ? { ...p, url: json.url, uploading: false } : p)))
+        }
+      } catch {
+        setPhotos((prev) => prev.map((p) => (p.key === key ? { ...p, uploading: false, error: 'Upload failed' } : p)))
+      } finally {
+        if (persistKey) deletePendingPhoto(persistKey, key)
+      }
+    },
+    [endpoint, persistKey]
+  )
+
   // Restore persisted photos on mount, gated on the draft key (see prop docs).
   useEffect(() => {
     if (!persistKey) return
+    let cancelled = false
     try {
       const draftPresent = restoreGateKey ? !!window.localStorage.getItem(restoreGateKey) : true
       if (!draftPresent) {
         window.localStorage.removeItem(persistKey)
+        clearPendingPhotos(persistKey)
         return
       }
       const raw = window.localStorage.getItem(persistKey)
-      if (!raw) return
-      const urls = JSON.parse(raw) as unknown
-      if (!Array.isArray(urls)) return
-      const restored: PhotoEntry[] = urls
-        .filter((u): u is string => typeof u === 'string' && u.length > 0)
-        .slice(0, MAX_PHOTOS)
-        .map((url, i) => ({ key: `restored-${i}-${url}`, url, preview: url, uploading: false, error: null }))
-      if (restored.length) setPhotos(restored)
+      if (raw) {
+        const urls = JSON.parse(raw) as unknown
+        if (Array.isArray(urls)) {
+          const restored: PhotoEntry[] = urls
+            .filter((u): u is string => typeof u === 'string' && u.length > 0)
+            .slice(0, MAX_PHOTOS)
+            .map((url, i) => ({ key: `restored-${i}-${url}`, url, preview: url, uploading: false, error: null }))
+          if (restored.length) setPhotos(restored)
+        }
+      }
+      // A photo that was still mid-upload (in-flight request, only an in-memory
+      // File) when the tab reloaded or navigated away never made it into the
+      // persisted URL list above. Resume any such leftover file automatically.
+      listPendingPhotos(persistKey).then((pending) => {
+        if (cancelled || !pending.length) return
+        setPhotos((prev) => {
+          const room = MAX_PHOTOS - prev.length
+          if (room <= 0) return prev
+          const toRestore = pending.slice(0, room)
+          const restoredEntries: PhotoEntry[] = toRestore.map(({ entryKey, file }) => ({
+            key: entryKey,
+            url: '',
+            preview: URL.createObjectURL(file),
+            uploading: true,
+            error: null,
+          }))
+          toRestore.forEach(({ entryKey, file }) => uploadEntry(entryKey, file))
+          return [...prev, ...restoredEntries]
+        })
+      })
     } catch {
       /* corrupt/unavailable storage — start clean */
     }
-    // Run once on mount; persistKey/restoreGateKey are stable per form instance.
+    return () => {
+      cancelled = true
+    }
+    // Run once on mount; persistKey/restoreGateKey/uploadEntry are stable per form instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -114,40 +168,15 @@ export default function PartnershipPhotoUpload({
     }))
     setPhotos((prev) => [...prev, ...newEntries])
 
+    // Persist the raw file so it can resume if a reload/navigation interrupts
+    // the upload below (see the mount-time recovery effect above).
+    if (persistKey) {
+      newEntries.forEach((entry, i) => savePendingPhoto(persistKey, entry.key, arr[i]))
+    }
+
     // Upload each file concurrently
-    await Promise.all(
-      arr.map(async (file, i) => {
-        const entry = newEntries[i]
-        try {
-          const fd = new FormData()
-          fd.append('file', file)
-          const res = await fetch(endpoint, { method: 'POST', body: fd })
-          const json = await res.json()
-          if (!res.ok || !json.url) {
-            setPhotos((prev) =>
-              prev.map((p) =>
-                p.key === entry.key
-                  ? { ...p, uploading: false, error: json.error ?? 'Upload failed' }
-                  : p
-              )
-            )
-          } else {
-            setPhotos((prev) =>
-              prev.map((p) =>
-                p.key === entry.key ? { ...p, url: json.url, uploading: false } : p
-              )
-            )
-          }
-        } catch {
-          setPhotos((prev) =>
-            prev.map((p) =>
-              p.key === entry.key ? { ...p, uploading: false, error: 'Upload failed' } : p
-            )
-          )
-        }
-      })
-    )
-  }, [photos.length, isLoggedIn, onRequireAuth])
+    await Promise.all(arr.map((file, i) => uploadEntry(newEntries[i].key, file)))
+  }, [photos.length, isLoggedIn, onRequireAuth, persistKey, uploadEntry])
 
   const removePhoto = (key: string) => {
     setPhotos((prev) => {
