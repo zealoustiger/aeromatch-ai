@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -83,6 +83,7 @@ export default function AirportFormInput({
   placeholder?: string
   className?: string
 }) {
+  const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [suggestions, setSuggestions] = useState<Airport[]>([])
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -207,6 +208,11 @@ export default function AirportFormInput({
         pattern="[A-Za-z0-9]{4}"
         title="Select an airport from the list, or enter its 4-letter ICAO code."
         aria-invalid={isInvalid}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={suggestions.length > 0}
+        aria-controls={listboxId}
+        aria-activedescendant={activeIdx >= 0 ? `${listboxId}-option-${activeIdx}` : undefined}
         className={cn(
           'w-full rounded-lg border py-2.5 pl-3 pr-10 text-base sm:text-sm placeholder-slate-400 transition focus:outline-none focus:ring-2',
           isInvalid
@@ -244,11 +250,17 @@ export default function AirportFormInput({
       )}
       {suggestions.length > 0 && (
         <ul
+          id={listboxId}
           role="listbox"
           className="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
         >
           {suggestions.map((a, i) => (
-            <li key={a.icao} role="option" aria-selected={i === activeIdx}>
+            <li
+              key={a.icao}
+              id={`${listboxId}-option-${i}`}
+              role="option"
+              aria-selected={i === activeIdx}
+            >
               <button
                 type="button"
                 onMouseDown={e => e.preventDefault()}
