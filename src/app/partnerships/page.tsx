@@ -21,7 +21,8 @@ import CompareTray from '@/components/CompareTray'
 import ModelFaq from '@/components/ModelFaq'
 import Link from 'next/link'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
-import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
+import AlertSignup from '@/components/AlertSignup'
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
 // Unique, evergreen content depth for this priority seed page (#3, STAGE=INDEXING).
@@ -103,6 +104,28 @@ export default async function PartnershipsPage({
 
   const activeFilterCount = Object.values(params).filter(Boolean).length
   const [makes, seekerCount] = await Promise.all([getPartnershipMakes(), getSeekerCount()])
+
+  // Filter-aware email-alert context + source path — mirrors /aircraft's
+  // alertSourcePath pattern (`describeAircraftFilters` + preserved query string).
+  // alert-digest's `parseSourcePath` already parses make/state/airport off this
+  // exact `/partnerships?...` shape, so this is purely the missing UI wire-up —
+  // every other partnership surface (seeking, near/[icao], make/[make],
+  // state/[state]) already has this, only the flagship hub was missing it.
+  const alertMake = params.make?.trim()
+  const alertAirport = params.airport?.trim().toUpperCase()
+  const alertStateName = params.state ? STATE_NAMES[params.state.toUpperCase()] : undefined
+  const alertLocationClause = alertAirport
+    ? `near ${alertAirport}`
+    : alertStateName
+      ? `in ${alertStateName}`
+      : undefined
+  const alertContext = [alertMake, alertLocationClause].filter(Boolean).join(' ') || undefined
+  const alertQuery = new URLSearchParams(
+    (['make', 'state', 'airport'] as const)
+      .filter((k) => params[k])
+      .map((k) => [k, params[k] as string])
+  ).toString()
+  const alertSourcePath = alertQuery ? `/partnerships?${alertQuery}` : '/partnerships'
 
   // ItemList JSON-LD for the partnerships the visitor actually sees — fetched with
   // the SAME filters PartnershipList renders below, so the structured data matches
@@ -219,6 +242,11 @@ export default async function PartnershipsPage({
             samples={(await fetchAircraftPage({ make: params.make })).listings}
             className="mt-10"
           />
+
+          {/* Email-alerts capture — inline, no account required. Filter-aware:
+              the context describes the active search so the alert is useful.
+              Mirrors /aircraft and every other partnership surface. */}
+          <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
         </div>
       </div>
 
