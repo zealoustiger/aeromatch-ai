@@ -435,8 +435,12 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   seeded from the SSR prop and kept current via `supabase.auth.getUser()` +
   `onAuthStateChange` — the exact pattern `Nav.tsx` already uses. **Slice 2 ✅ SHIPPED
   2026-07-05** (`partnership-form-live-auth-state`): identical treatment on
-  `PostPartnershipForm.tsx`. **Still not done:** slice 3, `PostSeekerListingForm.tsx` — same
-  gap, same fix shape, its own single-file cycle.
+  `PostPartnershipForm.tsx`. **Slice 3 ✅ SHIPPED 2026-07-05** (`seeker-form-live-auth-state`):
+  identical treatment on `PostSeekerListingForm.tsx` — this closes the live-auth-state gap
+  across all 3 post forms. **Still open (verification gap, all 3 slices):** the real
+  mid-session-expiry repro (sign out in another tab while the form is open) has never been
+  driven live in this sandbox (no seeded auth session available to invalidate) — every PASS
+  leans on code parity with `Nav.tsx`'s proven pattern, not a live repro.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
