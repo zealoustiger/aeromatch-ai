@@ -261,7 +261,7 @@ export default function PostAircraftForm({
 
   function redirectToAuth() {
     if (formRef.current) forceSaveDraft(formRef.current, DRAFT_KEY)
-    router.push('/auth?next=/aircraft/new')
+    router.push(`/auth?next=${isEdit ? `/aircraft/listing/${listingId}/edit` : '/aircraft/new'}`)
   }
 
   function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
