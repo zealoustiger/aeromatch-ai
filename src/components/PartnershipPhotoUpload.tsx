@@ -24,6 +24,7 @@ export default function PartnershipPhotoUpload({
   initialPhotos,
   isLoggedIn = true,
   onRequireAuth,
+  onUploadingChange,
 }: {
   endpoint?: string
   // When set, mirror the successfully-uploaded photo URLs to localStorage[persistKey]
@@ -45,6 +46,10 @@ export default function PartnershipPhotoUpload({
   // than a cryptic per-thumbnail "Not authenticated" error.
   isLoggedIn?: boolean
   onRequireAuth?: () => void
+  // Called with the current count of photos still mid-upload whenever it changes, so
+  // callers can block form submit until every photo has resolved (success or error) —
+  // otherwise a photo whose upload hasn't finished yet would silently publish without it.
+  onUploadingChange?: (count: number) => void
 }) {
   const [photos, setPhotos] = useState<PhotoEntry[]>(() =>
     (initialPhotos ?? []).slice(0, MAX_PHOTOS).map((url, i) => ({
@@ -147,6 +152,10 @@ export default function PartnershipPhotoUpload({
       /* storage unavailable/full — best effort */
     }
   }, [photos, persistKey])
+
+  useEffect(() => {
+    onUploadingChange?.(photos.filter((p) => p.uploading).length)
+  }, [photos, onUploadingChange])
 
   const canAddMore = photos.length < MAX_PHOTOS
 
