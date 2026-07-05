@@ -251,6 +251,16 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   move-earlier/move-later buttons per thumbnail (2+ photos) and a "Cover" badge on the first
   photo. Pure array reorder, no schema/action change. Invented this cycle since Pillar 1's
   explicit checklist had nothing left except the two human-blocked items noted above.
+~~- **[agent][goal] Seeker AI-prefill mishandled a pasted URL.**~~ ✅ SHIPPED via
+  `seeker-ai-draft-url-guard` (2026-07-05) The aircraft/partnership forms' AI-prefill boxes
+  detect a bare pasted URL and route it through a dedicated fetch-and-read path; the seeker
+  form had no such branch and shipped the raw link straight to Claude as if it were the
+  pilot's own notes, risking a backwards/misleading draft (e.g. extracting a for-sale
+  listing's make/model as the pilot's own preference). Since a seeker post has no analogous
+  external source page to fetch, `handleGenerate` now detects the bare-URL case and shows an
+  explanatory message instead of calling the AI. No schema/action change. Invented this cycle
+  (via an Explore-agent code audit, not the changelog) since Pillar 1's explicit checklist was
+  already exhausted outside the two human-blocked items noted above.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
