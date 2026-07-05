@@ -597,8 +597,11 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   computing the identical sorted comp array. `PartnerCompResult` now also carries
   `low`/`high`/`percentile` (same comp set, same honesty floor), and the panel renders
   the same bar, falling back to the plain sentence when the comp set has zero spread.
-  This item is now fully complete; the seeker budget-check panel was intentionally left
-  alone (a single stated-budget number isn't a comp-set spread in the same shape).
+  **Correction 2026-07-05** (`seeker-budget-check-range-bar`): the note below calling the
+  seeker panel out-of-scope was wrong — `getSeekerBudgetCheck` calls the identical
+  `partnershipBuyInComp` and its result already carries `low`/`high`/`percentile`;
+  `SeekerBudgetCheck.tsx` just never rendered them. Now ported (see below); this item is
+  fully complete across all 3 comp-based panels (aircraft, partnership, seeker).
 ~~- **[agent][goal] Partnership Deal Signals panel missing the favor/watch-out tally chips.**~~
   ✅ SHIPPED via `partnership-deal-signals-tally` (2026-07-05) `deal-score-signal-tally`
   (2026-06-28) added an at-a-glance "N in this listing's favor" / "N to ask about" chip
@@ -610,6 +613,17 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   row yet) — same limitation as several recent Pillar-3 items. This item is now fully
   complete; the seeker detail page intentionally has no equivalent panel (no single
   aircraft's specs to synthesize against in the same shape).
+~~- **[agent][goal] Seeker Budget Check panel missing the low–high range bar.**~~ ✅ SHIPPED
+  via `seeker-budget-check-range-bar` (2026-07-05) `getSeekerBudgetCheck` already returns a
+  full `PartnerCompResult` (same shape `PartnershipMarketCheck` uses) carrying `low`/`high`/
+  `percentile`, but `SeekerBudgetCheck.tsx` only ever rendered `kind`/`deltaDollars`/`pct`/
+  `median`/`count` — a prior BACKLOG note calling this out-of-scope didn't hold up once the
+  implementation was actually read. Now renders the identical visual spread bar (median tick
+  + "your budget" marker), falling back to the existing plain sentence on a degenerate/zero
+  spread. Dormant on today's seed data (no make yet clears the 4-comp floor) — verified via a
+  temporary mock-data preview route (3 result shapes), screenshotted, then deleted before
+  merge. **Next:** the seeker detail page still has no "How this stacks up" multi-signal
+  synthesis panel (see the note above) — a bigger, separate slice.
 
 ---
 
