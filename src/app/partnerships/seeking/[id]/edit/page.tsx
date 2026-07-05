@@ -19,11 +19,31 @@ export default async function EditSeekerListingPage({
 
   if (!user) redirect(`/auth?next=/partnerships/seeking/${id}/edit`)
 
-  const { data: listing } = await supabase
+  const FALLBACK_COLUMNS = 'id, home_airport, max_buy_in, title, preferred_makes, preferred_models, aircraft_category, min_year, max_year, max_monthly, max_hourly, willing_to_travel_nm, total_hours, ratings_held, hours_per_month, intended_use, preferred_share_types, description, contact_name, contact_email, contact_method, contact_phone, poster_id'
+
+  // additional_airports requires its own not-yet-applied migration
+  // (schema.sql — seeker_additional_airports); selecting a missing column by
+  // name errors out the whole query. Graceful fallback: drop it and retry so
+  // the edit page doesn't 404 for every owner today (same pattern as the
+  // aircraft/partnership edit pages' contact_phone / ttaf-smoh fallbacks).
+  const withExtraAirports = await supabase
     .from('partnership_seekers')
-    .select('id, home_airport, additional_airports, max_buy_in, title, preferred_makes, preferred_models, aircraft_category, min_year, max_year, max_monthly, max_hourly, willing_to_travel_nm, total_hours, ratings_held, hours_per_month, intended_use, preferred_share_types, description, contact_name, contact_email, contact_method, contact_phone, poster_id')
+    .select(`${FALLBACK_COLUMNS}, additional_airports`)
     .eq('id', id)
     .single()
+
+  let listing = withExtraAirports.data
+  let additionalAirports: string[] | null = withExtraAirports.data?.additional_airports ?? null
+
+  if (withExtraAirports.error) {
+    const withoutExtraAirports = await supabase
+      .from('partnership_seekers')
+      .select(FALLBACK_COLUMNS)
+      .eq('id', id)
+      .single()
+    listing = withoutExtraAirports.data as typeof listing
+    additionalAirports = null
+  }
 
   // Same not-found response whether the row is missing or owned by someone
   // else — never reveal that a listing exists to a non-owner.
@@ -44,7 +64,7 @@ export default async function EditSeekerListingPage({
           userPhone={user.user_metadata?.contact_phone}
           initialValues={{
             home_airport: listing.home_airport ?? undefined,
-            additional_airport_2: listing.additional_airports?.[0] ?? undefined,
+            additional_airport_2: additionalAirports?.[0] ?? undefined,
             max_buy_in: listing.max_buy_in ?? undefined,
             title: listing.title ?? undefined,
             preferred_makes: listing.preferred_makes?.join(', ') ?? undefined,
