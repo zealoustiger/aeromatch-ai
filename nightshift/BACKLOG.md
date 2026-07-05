@@ -331,9 +331,13 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   *detail* page (`PartnershipDealSignals`), but `PartnershipCard` — the primary browse/list
   card — had no equivalent, unlike `AircraftSaleCard` which has shown a "Price drop $X" badge
   + strikethrough previous price for a while. Now mirrored onto `PartnershipCard`; no schema
-  change, no new query. **Next:** the seeker detail page (`/partnerships/seeking/[id]`) shows
-  an absolute "Posted {date}" while its own `SeekerCard` already shows relative "Listed N days
-  ago" — small copy-consistency follow-on, not a missing analysis signal.
+  change, no new query. **Follow-on ✅ SHIPPED 2026-07-05** (`seeker-detail-relative-freshness`):
+  the seeker detail page (`/partnerships/seeking/[id]`) showed an absolute "Posted {date}"
+  while its own `SeekerCard` already showed relative "Listed N days ago" — now uses the
+  identical relative label. **Next:** the partnership detail page (`/partnerships/[id]`) has a
+  milder version of the same split (absolute "Posted {date}" in the header, separate relative
+  "Listed N days ago" lower in the market-check sidebar) — left alone, needs a human call on
+  whether to unify since that page has an existing sidebar panel to reconcile with.
 ~~- **[agent][goal] Budget check on seeker listings.**~~ ✅ SHIPPED via `seeker-budget-check`
   (2026-07-03) Seeker listings (`/partnerships/seeking/[id]`) had zero Pillar 3 analysis —
   aircraft-for-sale and partnership listings both compare price/buy-in to the market, but a
