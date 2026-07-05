@@ -10,6 +10,7 @@ import { useFormDraft, readForm, type DraftStatus } from '@/components/useFormDr
 import AirportFormInput from '@/components/AirportFormInput'
 import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
 import { consumePostHandoff } from '@/lib/postHandoff'
+import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 const NEW_DRAFT_KEY = 'ch:draft:seeker-new'
@@ -171,7 +172,7 @@ export interface SeekerEditInitial {
 }
 
 export default function PostSeekerListingForm({
-  isLoggedIn = true,
+  isLoggedIn: isLoggedInProp = true,
   userEmail,
   userName,
   userPhone,
@@ -188,6 +189,19 @@ export default function PostSeekerListingForm({
   initialValues?: SeekerEditInitial
 }) {
   const isEdit = mode === 'edit' && !!listingId
+  // Live auth state, not just the SSR-derived prop above — so a session that
+  // expires/changes while this form is open (mid-edit, mid-AI-draft) still flips
+  // the submit/AI-draft auth gates instead of leaving them silently stale and
+  // letting a 401 surface as a raw error. Mirrors PostAircraftForm/PostPartnershipForm.
+  const [isLoggedIn, setIsLoggedIn] = useState(isLoggedInProp)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session?.user)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
   // Edit drafts are scoped per listing so they never collide with (or restore
   // into) the "post a new seeking listing" draft, and vice versa. Mirrors
   // PostPartnershipForm.
