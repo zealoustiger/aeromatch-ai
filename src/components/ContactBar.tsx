@@ -91,6 +91,18 @@ export default function ContactBar({
     })
   }, [user, searchParams, listingId, posterId, draftKey, router])
 
+  // Viewer is the poster — show a neutral note instead of Email/Call buttons
+  // that would just contact themselves.
+  if (!isSeed && user?.id === posterId) {
+    return (
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 pb-safe shadow-lg backdrop-blur-sm lg:hidden">
+        <p className="mx-auto max-w-lg text-center text-sm text-slate-500">
+          This is your listing. Interested buyers can message you once they sign in.
+        </p>
+      </div>
+    )
+  }
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = text.trim()
