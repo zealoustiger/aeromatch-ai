@@ -32,10 +32,6 @@ if (!URL || !KEY) {
 const DOCS = [
   { key: 'backlog', title: 'Feature Backlog', file: 'nightshift/BACKLOG.md' },
   { key: 'daily_report', title: 'Daily Report', file: 'nightshift/REVIEW.md' },
-  // Operator explainers — so the dashboard shows how the loop actually runs and what
-  // it's optimizing. Project-specific: each project syncs its OWN nightshift docs.
-  { key: 'how_it_works', title: 'How the loop works', file: 'nightshift/HOW_IT_WORKS.md' },
-  { key: 'goal', title: 'Goal & allocation', file: 'nightshift/GOAL.md' },
 ]
 
 const rows = DOCS.filter((d) => existsSync(join(root, d.file))).map((d) => {

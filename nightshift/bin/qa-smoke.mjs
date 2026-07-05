@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// Night Shift headless QA smoke test (replaces gstack /browse on the VPS).
+// Forge Night Shift headless QA smoke test. VENDORED FROM forge/core/bin/qa-smoke.mjs.
 //
 // Programmatic gate + saves ONE "after" screenshot per page/viewport for the QA
-// agent to visually inspect. Screenshots are kept on disk (cheap audit trail /
-// Forge can surface the latest) but are NOT meant for human review — the human-
-// facing review is the staging site itself.
+// agent to visually inspect. Screenshots are kept on disk (cheap audit trail) but
+// are NOT meant for human review — the human-facing review is the staging site.
 //
 // Assumes the production server is already running (worker does `next build` +
 // `next start` first, per RUNBOOK). This script only drives the browser.
@@ -16,13 +15,14 @@
 //
 // Programmatic checks per page × viewport (desktop 1280, mobile 375):
 //   - HTTP status 200–399
-//   - zero app-origin console errors / pageerrors (known external CDN noise ignored)
+//   - zero app-origin console errors / pageerrors (known noise ignored — add
+//     project-specific patterns in nightshift/config.json under qa.ignoreConsole)
 //   - zero horizontal overflow (documentElement.scrollWidth > clientWidth)
 // A failure on ANY of these fails the gate. The screenshot is for the agent's
 // separate visual sanity pass (catches "renders but looks wrong").
 
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -50,9 +50,14 @@ const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
 ];
 
-// Pre-existing external noise that is NOT an app regression (seen in prior QA notes:
-// the Next image optimizer fetching upload.wikimedia.org placeholder photos gets 429s).
-const IGNORE_CONSOLE = [/upload\.wikimedia\.org/i, /\b429\b/, /favicon/i];
+// Console noise that is NOT an app regression. Favicon 404s are universal; each
+// project adds its own known-noise regexes (external CDNs, third-party 429s) via
+// nightshift/config.json → qa.ignoreConsole: ["upload\\.wikimedia\\.org", ...].
+const IGNORE_CONSOLE = [/favicon/i];
+try {
+  const cfg = JSON.parse(readFileSync(join(repoRoot, 'nightshift', 'config.json'), 'utf8'));
+  for (const p of cfg?.qa?.ignoreConsole ?? []) IGNORE_CONSOLE.push(new RegExp(p, 'i'));
+} catch {}
 
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const results = [];

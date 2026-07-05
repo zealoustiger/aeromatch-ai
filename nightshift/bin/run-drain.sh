@@ -48,9 +48,6 @@ CYCLE_MODEL="${NS_CYCLE_MODEL:-$(cfgd '.models.cycle' sonnet)}"
 ESCALATE_MODEL="${NS_ESCALATE_MODEL:-$(cfgd '.models.escalate' opus)}"
 JUDGE_MODEL="${NS_JUDGE_MODEL:-$(cfgd '.models.judge' opus)}"
 JUDGE_PCT="${NS_JUDGE_PCT:-$(cfgd '.models.judgePct' 25)}"
-# Plan model: goal-task GENERATION runs on the smartest model (opus/fable), never the
-# cheap cycle model (human-set 2026-07-05). Used by the plan pass when the backlog is dry.
-PLAN_MODEL="${NS_PLAN_MODEL:-$(cfgd '.models.plan' opus)}"
 mname() { case "$1" in *sonnet*) echo sonnet;; *opus*) echo opus;; *haiku*) echo haiku;; *) echo "$1";; esac; }
 
 # Bounds. NS_FORCE=1 = authorized manual run, ignores the night window + uses a time box.
@@ -137,9 +134,6 @@ trap 'kill "$HM_PID" 2>/dev/null' EXIT
 
 n=0; pass=0; fail=0; abort=0; escalations=0; judged=0; stop_reason="safety cap"
 CYCLE_PROMPT="$(cat "$APP/nightshift/CYCLE_TASK.md")"
-# Plan pass prompt (goal-task generation on the smart model). Empty → plan pass no-ops.
-PLAN_PROMPT="$(cat "$APP/nightshift/PLAN_TASK.md" 2>/dev/null || echo '')"
-PLANNED=0   # at most one plan pass per drain, to bound cost + avoid infinite loops
 rm -f "$STATE/stop" 2>/dev/null   # clear any stale stop request from a prior run
 
 # Run ONE claude cycle. $1 = model, $2 = escalated (0|1). Sets globals: verdict, rline,
@@ -194,19 +188,6 @@ run_judge() {
     > "$RUNDIR/judge-$n.jsonl" 2> "$RUNDIR/judge-$n.stderr" || true
 }
 
-# Plan pass: when the backlog is dry, GENERATE the next batch of goal (alert-experience)
-# tasks on the SMART model (opus/fable) — never inline on the cheap cycle model. The
-# PLAN_TASK.md prompt edits BACKLOG.md + commits/pushes itself (like a cycle does its
-# own git). Runs at most once per drain. No-op if PLAN_TASK.md is absent.
-plan_pass() {
-  PLANNED=1
-  [ -z "$PLAN_PROMPT" ] && { echo "  ↳ plan pass skipped (no PLAN_TASK.md)"; return; }
-  echo "  ↳ backlog dry — generating goal tasks on $(mname "$PLAN_MODEL")"
-  printf '%s' "$PLAN_PROMPT" | timeout --signal=INT 1800 \
-    claude --dangerously-skip-permissions --model "$PLAN_MODEL" --output-format stream-json --verbose -p \
-    > "$RUNDIR/plan.jsonl" 2> "$RUNDIR/plan.stderr" || true
-}
-
 while : ; do
   # Graceful stop request ($STATE/stop, e.g. a dashboard Stop button) ends cleanly here.
   [ -f "$STATE/stop" ] && { stop_reason="stopped by human"; rm -f "$STATE/stop"; break; }
@@ -234,21 +215,15 @@ while : ; do
     run_judge "$slug"
   fi
 
-  # Backlog dry: instead of ending the night, run ONE plan pass on the smart model to
-  # generate the next goal-task batch, then keep going (the next cycle picks them up).
-  # If we already planned this drain, or we're over budget, end cleanly.
-  case "$rline" in
-    ABORT*none*|ABORT*nothing*|ABORT*plan*)
-      if [ "$PLANNED" = "0" ] && ! over_budget; then plan_pass; continue
-      else stop_reason="backlog drained"; break; fi
-      ;;
-  esac
+  # Stop conditions surfaced by the most recent cycle.
+  case "$rline" in ABORT*none*|ABORT*nothing*) stop_reason="backlog drained"; break;; esac
   [ "$apierr" = "429" ] && { stop_reason="rate limited"; break; }
   [ "$apierr" = "401" ] && { stop_reason="auth expired"; break; }
 done
 
 # ── Wrap: headroom report + DRAIN SUMMARY to the CHANGELOG (logs only, safe) ─────
 kill "$HM_PID" 2>/dev/null || true
+wait "$HM_PID" 2>/dev/null || true
 HEADROOM_MD="$(node "$APP/nightshift/bin/headroom-report.mjs" --samples "$HRM" --ledger "$LEDGER" --run "$RUN_ID" 2>"$RUNDIR/headroom.stderr")" \
   || HEADROOM_MD="### VPS headroom
 - ⚠️ headroom report failed to generate — see runs/$RUN_ID/headroom.stderr"
@@ -288,7 +263,12 @@ ${HEADROOM_MD}
   elif [ -f "$APP/scripts/sync-admin-docs.mjs" ]; then
     ( cd "$APP" && node scripts/sync-admin-docs.mjs >/dev/null 2>&1 ) || true
   fi
-  git add "$RV" nightshift/QUALITY.md 2>/dev/null && git commit -q -m "nightshift: run report → admin Daily Report" 2>/dev/null
+  # Add separately: a combined `git add` is atomic, so a missing QUALITY.md (fresh
+  # project, nothing judged yet) would silently un-stage REVIEW.md too — and the next
+  # fire's `git reset --hard` would then wipe the uncommitted run report.
+  git add "$RV" 2>/dev/null || true
+  git add nightshift/QUALITY.md 2>/dev/null || true
+  git commit -q -m "nightshift: run report → admin Daily Report" 2>/dev/null
 
   git push origin "$WORK_BRANCH" 2>/dev/null || true
 fi
