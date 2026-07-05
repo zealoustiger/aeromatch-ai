@@ -779,7 +779,7 @@ export default function PostSeekerListingForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Your Name</Label>
-                <Input name="contact_name" placeholder="e.g. Jay C." defaultValue={initialValues?.contact_name ?? userName ?? ''} />
+                <Input name="contact_name" autoComplete="name" placeholder="e.g. Jay C." defaultValue={initialValues?.contact_name ?? userName ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
                   {isLoggedIn && !userName
                     ? "We'll save your name for future listings."
@@ -788,7 +788,7 @@ export default function PostSeekerListingForm({
               </div>
               <div className={contactMethod === 'platform' ? 'hidden' : undefined}>
                 <Label>Email <span className="font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_email" type="email" placeholder="you@example.com" defaultValue={initialValues?.contact_email ?? userEmail ?? ''} />
+                <Input name="contact_email" type="email" autoComplete="email" placeholder="you@example.com" defaultValue={initialValues?.contact_email ?? userEmail ?? ''} />
                 <p className="mt-1 text-xs text-slate-400">
                   {userEmail
                     ? 'Pre-filled from your account. Only shared when you select email contact above.'
@@ -810,7 +810,7 @@ export default function PostSeekerListingForm({
               </div>
               <div>
                 <Label>Phone <span className="font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" autoComplete="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
                 {userPhone && !initialValues?.contact_phone && (
                   <p className="mt-1 text-xs text-slate-400">Pre-filled from a previous listing.</p>
                 )}
