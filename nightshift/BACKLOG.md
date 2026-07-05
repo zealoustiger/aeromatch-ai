@@ -441,6 +441,17 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   mid-session-expiry repro (sign out in another tab while the form is open) has never been
   driven live in this sandbox (no seeded auth session available to invalidate) — every PASS
   leans on code parity with `Nav.tsx`'s proven pattern, not a live repro.
+- **[HUMAN-BLOCKED][goal] Auth callback drops `next` on error; `/auth` missing contextual
+  copy for 2 redirect paths.** Found 2026-07-05 (`airport-hub-comp-verdicts` cycle's Pillar 2
+  audit, not fixed — both fixes require editing frozen `src/app/auth/**`). (1)
+  `src/app/auth/callback/route.ts`'s error branch redirects to `/auth?error=auth_failed` with
+  no `next=`, so a user mid-contact/mid-post whose magic-link/OAuth exchange fails (expired
+  link, stale code) loses their intended-return path on retry. (2) `src/app/auth/page.tsx`'s
+  `deriveAuthContext` has no branch for `/partnerships/seeking/*` contact (`SeekerContactBar`)
+  or `/members/{id}` message (`MessageOwnerButton`) — both land on generic "Sign in to
+  ClubHanger" copy instead of "Sign in to contact the owner" (functionally fine, the redirect
+  itself works — copy-only gap). Same class as Pillar 1's two human-blocked items — needs a
+  human call on authorizing a scoped edit to frozen auth files.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
@@ -652,6 +663,18 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   budget transparency + days-listed into one scannable card above `SeekerBudgetCheck`. All 3
   listing types now have full synthesis-panel parity (aircraft `DealScorePanel`, partnership
   `PartnershipDealSignals`, seeker `SeekerDealSignals`) — this item is now fully complete.
+~~- **[agent][goal] `/airports/[icao]` hub missing comp/budget verdicts entirely.**~~ ✅
+  SHIPPED via `airport-hub-comp-verdicts` (2026-07-05) `/partnerships/near/[icao]` and
+  `/saved` both batch-fetch comp/budget verdicts and pass them into their `PartnershipCard`/
+  `SeekerCard` renders; `/airports/[icao]` rendered both card types with zero verdict props at
+  all — a parity gap found via an Explore-agent audit that also ruled out the aircraft browse
+  family, homepage rails, and an honesty-floor mismatch (none found). Fixed by calling the same
+  `getPartnershipCompVerdicts`/`getSeekerBudgetCheckVerdicts` batch helpers already proven
+  elsewhere. Dormant on today's seed data at both audited airports (no make clears the 4-comp
+  floor) — verified via a temporary mock-data preview route, screenshotted, then deleted before
+  merge. **Next:** `DeviceSavedListings.tsx` (logged-out `/saved`) has the same gap but needs
+  verdict maps threaded through `hydrateDeviceSaves` (separate cycle); `/members/[id]`'s
+  persona partnership card is missing the same props too but is noindex/lower-value.
 
 ---
 
