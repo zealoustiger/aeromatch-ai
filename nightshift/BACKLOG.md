@@ -294,6 +294,19 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   the two human-blocked items noted above. **Next:** `AirportAutocompleteInput.tsx` (a
   separate component used outside the post forms) may have the same gap — unaudited, out of
   scope this cycle.
+~~- **[agent][goal] "More details" auto-open check missed the contact field on 2 of 3 forms.**~~
+  ✅ SHIPPED via `post-form-details-contact-autoopen` (2026-07-05) All 3 post/edit forms
+  auto-expand their collapsed "More details" section in edit mode when it already holds data,
+  so a returning editor's existing info isn't hidden — but the seeker form's check included
+  `contact_phone` while the aircraft and partnership forms' equivalent checks didn't (partnership
+  also omitted `contact_name`/`contact_email`, all 3 of which live inside its collapsed section).
+  A seller whose only saved data was a contact field (e.g. added a phone number while editing,
+  with no other optional specs filled in) got a collapsed section hiding it with no visual cue.
+  Added the missing fields to both OR-chains, mirroring the seeker form's already-correct check.
+  Found via a second, more targeted Explore-agent audit after a first audit surfaced the
+  `PostSeekerListingForm.tsx` live-auth-state gap (correctly identified as Pillar 2, not Pillar 1
+  — that slice remains open, see Pillar 2 below). No schema/action change — pure boolean-condition
+  fix, verified visually via a temporary mock-data preview route (deleted before merge).
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
