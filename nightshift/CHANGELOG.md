@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-05T13:23:43Z — DRAIN SUMMARY
+- Cycles this run: 18 (PASS 18 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 5 quality-judged on opus
+- Stopped because: night ended
+- Run: 20260705T095653Z
+
 ## 20260705T131006Z — PASS — airport-hub-comp-verdicts
 - Pages: /airports/[icao]
 - What: The `/airports/[icao]` hub page (e.g. `/airports/kpao`) now shows the same honest "~X% below/above market" comp chip on partnership cards and "Budget may be tight"/"comfortably above typical" chip on seeker cards that every sibling browse surface (`/partnerships`, `/partnerships/near/[icao]`, `/saved`) already shows — before, this page rendered both card types with zero verdict props at all, silently dropping the proprietary comp signal.
