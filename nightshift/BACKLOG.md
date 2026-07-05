@@ -336,6 +336,14 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   listing" note instead of an empty card. **Closed 2026-07-05** (`partnership-contactbar-owner-view`):
   `ContactBar.tsx`/`ContactButtons.tsx` (the partnership contact bar/box on `/partnerships/[id]`)
   now have the same owner-view early return — the last of the 3 listing types to get it.
+~~- **[agent][goal] `PartnershipLaunchBanner`'s "visitor count" was fabricated.**~~ ✅ SHIPPED
+  via `launch-banner-honest-stats` (2026-07-05) The banner (shown on 5 partnership pages)
+  claimed "{N}+ pilot visitors this month" from `VISITOR_BASE + charCodeAt(0)*7` — a number
+  with zero backing data — and padded the real seeker count up to a floor of 12 if it was
+  smaller, plus falsely claimed that sitewide count was "in this location." Deleted the
+  fabricated visitor stat entirely, removed the artificial floor so the real `seekerCount`
+  renders as-is (correct singular/plural, omits the clause at 0), and dropped the false
+  location-scoping claim. Single-file change, no schema/query/prop-signature change.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
