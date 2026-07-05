@@ -2,6 +2,12 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-05T09:56:50Z — DRAIN SUMMARY
+- Cycles this run: 25 (PASS 24 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus
+- Stopped because: safety cap (25)
+- Run: 20260705T061749Z
+
 ## 2026-07-05T095110Z — PASS — photo-upload-block-submit
 - Pages: /aircraft/new, /aircraft/listing/[id]/edit, /partnerships/new, /partnerships/[id]/edit
 - What: **Tapping "Post" while a photo is still uploading no longer silently drops that photo from the listing.** The shared photo uploader only attaches a photo to the form once its upload finishes, but neither post form tracked that in-flight state — so a seller who hit publish a second or two early (easy on a slow mobile connection) got their listing published missing that photo, with zero error or notice. The submit button on the aircraft and partnership post/edit forms now disables and shows "Uploading photos…" for as long as any photo is still mid-upload, then re-enables automatically once every photo resolves.
