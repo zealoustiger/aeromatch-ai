@@ -636,8 +636,12 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   + "your budget" marker), falling back to the existing plain sentence on a degenerate/zero
   spread. Dormant on today's seed data (no make yet clears the 4-comp floor) — verified via a
   temporary mock-data preview route (3 result shapes), screenshotted, then deleted before
-  merge. **Next:** the seeker detail page still has no "How this stacks up" multi-signal
-  synthesis panel (see the note above) — a bigger, separate slice.
+  merge. **Synthesis panel ✅ SHIPPED 2026-07-05** (`seeker-deal-signals-panel`): new
+  `SeekerDealSignals.tsx` mirrors `PartnershipDealSignals`'s "how this stacks up" tally-chip
+  pattern, synthesizing budget-vs-market + preference specificity + experience disclosed +
+  budget transparency + days-listed into one scannable card above `SeekerBudgetCheck`. All 3
+  listing types now have full synthesis-panel parity (aircraft `DealScorePanel`, partnership
+  `PartnershipDealSignals`, seeker `SeekerDealSignals`) — this item is now fully complete.
 
 ---
 
