@@ -50,6 +50,7 @@ import ShareListingButton from '@/components/ShareListingButton'
 import SimilarAircraft from '@/components/SimilarAircraft'
 import SavedListingNote from '@/components/SavedListingNote'
 import AircraftTrustBadge from '@/components/AircraftTrustBadge'
+import AircraftListingOwnerNudge from '@/components/AircraftListingOwnerNudge'
 import AircraftContactButton from '@/components/AircraftContactButton'
 import ShareCostPanel from '@/components/ShareCostPanel'
 
@@ -544,6 +545,7 @@ export default async function AircraftListingDetailPage({
   // (b) render the note editor if the user has saved this listing.
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const isOwner = !!user && !!p.poster_id && user.id === p.poster_id
 
   let savedRowId: string | null = null
   let savedNote: string | null = null
@@ -995,6 +997,12 @@ export default async function AircraftListingDetailPage({
                 count={crossSell.count}
                 minBuyIn={crossSell.minBuyIn}
               />
+            )}
+
+            {/* Owner-facing nudge — shown only to the listing's own poster,
+                names exactly which trust signals below are still missing. */}
+            {isOwner && (
+              <AircraftListingOwnerNudge p={p} editHref={`/aircraft/listing/${p.id}/edit`} />
             )}
 
             {/* Trust / completeness — slice 1 of the listing trust layer, same
