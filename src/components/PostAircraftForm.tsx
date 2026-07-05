@@ -206,6 +206,10 @@ export default function PostAircraftForm({
   // Bumped on "Start over" to remount the photo uploader so its thumbnails clear too
   // (reset() only clears the form's DOM fields, not the uploader's React state).
   const [photoMountKey, setPhotoMountKey] = useState(0)
+  // Count of photos still mid-upload — blocks submit so a photo whose upload hasn't
+  // resolved yet can't silently publish without it (PartnershipPhotoUpload only emits
+  // a hidden photo_url input once a photo's URL exists).
+  const [uploadingPhotoCount, setUploadingPhotoCount] = useState(0)
   // Monotonic token bumped on "Start over". The async autofills (FAA N-number lookup,
   // AI prefill) capture it before their await and bail on resolve if it has advanced —
   // so a lookup still in flight when the user clears the form can't re-populate or
@@ -600,6 +604,7 @@ export default function PostAircraftForm({
           initialPhotos={initialValues?.images}
           isLoggedIn={isLoggedIn}
           onRequireAuth={redirectToAuth}
+          onUploadingChange={setUploadingPhotoCount}
         />
       </section>
 
@@ -747,10 +752,18 @@ export default function PostAircraftForm({
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || uploadingPhotoCount > 0}
         className="w-full rounded-lg bg-sky-600 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-60"
       >
-        {pending ? 'Saving…' : !isLoggedIn ? 'Sign in to Publish →' : isEdit ? 'Save Changes' : 'Post Aircraft for Sale'}
+        {pending
+          ? 'Saving…'
+          : uploadingPhotoCount > 0
+            ? 'Uploading photos…'
+            : !isLoggedIn
+              ? 'Sign in to Publish →'
+              : isEdit
+                ? 'Save Changes'
+                : 'Post Aircraft for Sale'}
       </button>
     </form>
   )
