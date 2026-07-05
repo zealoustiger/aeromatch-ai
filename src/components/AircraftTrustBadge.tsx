@@ -1,35 +1,86 @@
 'use client'
 
-import { ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
+import { ShieldCheck, Check, Circle } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { evaluateAircraftTrust, AIRCRAFT_TRUST_SIGNAL_COUNT } from '@/lib/aircraftTrust'
+import { cn } from '@/lib/utils'
 
 /**
- * Compact trust / completeness chip for an aircraft-for-sale listing.
+ * Trust / completeness indicator for an aircraft-for-sale listing.
+ *
+ * - `variant="compact"` (default) — a small "N/4 trust signals" chip for cards.
+ * - `variant="checklist"` — an expanded checklist for the detail page, mirroring
+ *   the partnerships `TrustBadge` checklist variant exactly.
  *
  * Slice 1 of the for-sale listing trust layer: makes trustworthiness VISIBLE.
- * Pure read of existing data; no ranking effect. Sky-blue accent only. Mirrors
- * the partnerships `TrustBadge` compact variant. The score is always a real
- * computed count (0–4), so the chip is never fake/empty.
- *
- * There is no for-sale per-listing detail page, so only the compact variant is
- * provided this slice (a checklist would have nowhere to render).
+ * Pure read of existing data; no ranking effect. Sky-blue accent only. The score
+ * is always a real computed count (0–4), so neither variant is ever fake/empty.
  */
-export default function AircraftTrustBadge({ p }: { p: AircraftForSale }) {
+export default function AircraftTrustBadge({
+  p,
+  variant = 'compact',
+}: {
+  p: AircraftForSale
+  variant?: 'compact' | 'checklist'
+}) {
   const { score, signals } = evaluateAircraftTrust(p)
 
+  if (variant === 'compact') {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200"
+        title={`Meets ${score} of ${AIRCRAFT_TRUST_SIGNAL_COUNT} trust signals: ${
+          signals
+            .filter((s) => s.met)
+            .map((s) => s.label)
+            .join(', ') || 'none yet'
+        }`}
+      >
+        <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+        {score}/{AIRCRAFT_TRUST_SIGNAL_COUNT} trust signals
+      </span>
+    )
+  }
+
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200"
-      title={`Meets ${score} of ${AIRCRAFT_TRUST_SIGNAL_COUNT} trust signals: ${
-        signals
-          .filter((s) => s.met)
-          .map((s) => s.label)
-          .join(', ') || 'none yet'
-      }`}
-    >
-      <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-      {score}/{AIRCRAFT_TRUST_SIGNAL_COUNT} trust signals
-    </span>
+    <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-sky-800">
+          <ShieldCheck className="h-4 w-4" aria-hidden /> Listing trust
+        </h2>
+        <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+          {score}/{AIRCRAFT_TRUST_SIGNAL_COUNT}
+        </span>
+      </div>
+      <ul className="space-y-2.5">
+        {signals.map((s) => (
+          <li key={s.key} className="flex items-start gap-2">
+            {s.met ? (
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
+            ) : (
+              <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" aria-hidden />
+            )}
+            <span className="min-w-0">
+              <span
+                className={cn(
+                  'text-sm font-medium',
+                  s.met ? 'text-slate-800' : 'text-slate-400',
+                )}
+              >
+                {s.label}
+              </span>
+              <span className="block text-xs text-slate-400">{s.hint}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href="/listing-quality"
+        className="mt-3 inline-block text-xs font-medium text-sky-700 hover:text-sky-800 hover:underline"
+      >
+        What do these mean? →
+      </Link>
+    </div>
   )
 }
