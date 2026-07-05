@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T12:36:24Z — seeker-form-live-auth-state — score 5/5
+- Strengths: Byte-for-byte faithful port of the proven PostPartnershipForm live-auth block — correct isLoggedInProp rename, seeded state, getUser + onAuthStateChange sync, unsubscribe cleanup; tight single-file scope, clear comment, all existing isLoggedIn uses left untouched. Closes the Pillar 2 gap across all 3 post forms.
+- Weaknesses / risks: none material — the live-auth block is now copy-pasted across all 3 post forms; extracting a shared useLiveAuthState hook is the obvious next refactor but correctly out of scope here.
+- Follow-up: none
+
 ## 2026-07-05T11:42:13Z — partnership-form-live-auth-state — score 5/5
 - Strengths: Exact, faithful mirror of the proven PostAircraftForm live-auth block — correct prop rename, seeded state, getUser + onAuthStateChange sync, unsubscribe on unmount; hooks already imported, tight scope, well-commented.
 - Weaknesses / risks: none material — pattern is now duplicated across 3 forms; extracting a shared useLiveAuthState hook would be the natural next refactor but is out of scope here.
