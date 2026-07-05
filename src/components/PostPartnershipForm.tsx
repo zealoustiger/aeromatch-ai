@@ -12,6 +12,7 @@ import AirportFormInput from '@/components/AirportFormInput'
 import { SEO_MAKE_MODELS } from '@/lib/seo'
 import { hasCsvItem, toggleCsvItem } from '@/lib/csvList'
 import { consumePostHandoff } from '@/lib/postHandoff'
+import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 // Same rating set as the seeker form's "Ratings & Endorsements You Hold" chips —
@@ -182,7 +183,7 @@ export interface PartnershipEditInitial {
 }
 
 export default function PostPartnershipForm({
-  isLoggedIn = true,
+  isLoggedIn: isLoggedInProp = true,
   userEmail,
   userName,
   userPhone,
@@ -199,6 +200,20 @@ export default function PostPartnershipForm({
   initialValues?: PartnershipEditInitial
 }) {
   const isEdit = mode === 'edit' && !!listingId
+  // Live auth state, not just the SSR-derived prop above — so a session that
+  // expires/changes while this form is open (mid-edit, mid-AI-draft, mid-upload)
+  // still flips the submit/AI-draft/photo-upload auth gates instead of leaving
+  // them silently stale and letting a 401 surface as a raw error. Mirrors
+  // PostAircraftForm.
+  const [isLoggedIn, setIsLoggedIn] = useState(isLoggedInProp)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session?.user)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
   // Edit drafts are scoped per listing so they never collide with (or restore into)
   // the "post a new partnership" draft, and vice versa. Mirrors PostAircraftForm.
   const DRAFT_KEY = isEdit ? `ch:draft:partnership-edit:${listingId}` : NEW_DRAFT_KEY
