@@ -27,6 +27,7 @@ type AlertTarget =
       maxTt?: number
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string }
+  | { type: 'seeker' }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
   if (!v) return undefined
@@ -129,6 +130,9 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
   const pState = p.match(/^\/partnerships\/state\/([a-z]{2})$/)
   if (pState) return { type: 'partnership', state: pState[1].toUpperCase() }
 
+  // /partnerships/seeking → pilots seeking a partnership
+  if (p === '/partnerships/seeking') return { type: 'seeker' }
+
   // /partnerships → all partnerships
   if (p === '/partnerships') return { type: 'partnership' }
 
@@ -136,7 +140,10 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
 }
 
 /** Resolve a make+model slug pair to an aircraft AlertTarget, or null if unknown. */
-function resolveAircraftMakeModel(makeSlug: string, modelSlug: string): AlertTarget | null {
+function resolveAircraftMakeModel(
+  makeSlug: string,
+  modelSlug: string
+): Extract<AlertTarget, { type: 'aircraft' }> | null {
   const makeEntry = getMakeBySlug(makeSlug)
   if (!makeEntry) return null
 
@@ -215,12 +222,30 @@ async function countNewPartnerships(
   return count ?? 0
 }
 
+async function countNewSeekers(
+  supabase: ReturnType<typeof createAdminClient>,
+  since: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('partnership_seekers')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .gte('created_at', since)
+
+  if (error) {
+    console.error('[alert-digest] seeker count error:', error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
 async function countNew(
   supabase: ReturnType<typeof createAdminClient>,
   target: AlertTarget,
   since: string
 ): Promise<number> {
   if (target.type === 'aircraft') return countNewAircraft(supabase, target, since)
+  if (target.type === 'seeker') return countNewSeekers(supabase, since)
   return countNewPartnerships(supabase, target, since)
 }
 

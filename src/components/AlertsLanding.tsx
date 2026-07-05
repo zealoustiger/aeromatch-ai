@@ -21,7 +21,7 @@ interface Interest {
   context: string
   /** Matchable search path (must start with /aircraft or /partnerships). */
   sourcePath: string
-  noun: 'aircraft' | 'partnership'
+  noun: 'aircraft' | 'partnership' | 'seeker'
 }
 
 const INTERESTS: Interest[] = [
@@ -31,6 +31,7 @@ const INTERESTS: Interest[] = [
   { label: 'Piper Cherokee', context: 'Piper Cherokee', sourcePath: '/aircraft?make=Piper&model=Cherokee', noun: 'aircraft' },
   { label: 'Beechcraft Bonanza', context: 'Beechcraft Bonanza', sourcePath: '/aircraft?make=Beechcraft&model=Bonanza', noun: 'aircraft' },
   { label: 'Partnership shares', context: '', sourcePath: '/partnerships', noun: 'partnership' },
+  { label: 'Pilots seeking a partnership', context: '', sourcePath: '/partnerships/seeking', noun: 'seeker' },
 ]
 
 export default function AlertsLanding() {

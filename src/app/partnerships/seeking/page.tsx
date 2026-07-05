@@ -13,6 +13,7 @@ import PartnershipTabs from '@/components/PartnershipTabs'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
 import SaveSearchButton from '@/components/SaveSearchButton'
+import AlertSignup from '@/components/AlertSignup'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import { getSeekerMakes, getSeekerCount } from '@/lib/seekersQuery'
@@ -204,6 +205,10 @@ export default async function SeekingPartnershipsPage({
 
         {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}
         <ModelFaq label="Pilots seeking partnerships" faqs={SEEKING_FAQS} className="mt-8" />
+
+        {/* Email-alerts capture — inline, no account required. Backed by the same
+            double-opt-in `alerts` pipeline the aircraft/partnership browse pages use. */}
+        <AlertSignup sourcePath="/partnerships/seeking" noun="seeker" />
 
         {/* Cross-links so crawlers (and pilots) reach the partnership hub families. */}
         <div className="mt-8 ch-panel p-6">
