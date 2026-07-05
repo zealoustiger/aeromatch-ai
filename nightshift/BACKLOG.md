@@ -395,13 +395,16 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   logged-out/session-expired user editing an existing aircraft listing (via the AI-draft or
   photo-upload auth gate, or the submit-time gate) was bounced to a blank new-post form
   instead of back to their edit page, losing their intent. One-line fix, mirroring the two
-  sibling forms exactly. **Not done, intentionally (flagged for a future cycle, larger
-  scope):** `isLoggedIn` is a static SSR-derived prop with no client-side auth-state listener
-  on any of the 3 edit forms — a session that expires mid-edit still shows a stale
-  `isLoggedIn=true`, so the AI-draft/photo-upload gates silently fail to redirect (they just
-  never fire) and the underlying 401 surfaces as a raw error instead. Real, but a multi-file
-  change (a live `supabase.auth.getUser()`/`onAuthStateChange` check threaded into all 3 edit
-  forms, mirroring `Nav.tsx`'s existing pattern) — bigger than a single-scope cycle.
+  sibling forms exactly.
+~~- **[agent][goal] `isLoggedIn` is a static SSR-derived prop with no client-side auth-state
+  listener — slice 1 (`PostAircraftForm.tsx`).**~~ ✅ SHIPPED via
+  `aircraft-form-live-auth-state` (2026-07-05) A session that expired mid-edit left the AI-
+  draft/photo-upload/submit auth gates silently stale (never firing their redirect), surfacing
+  a raw 401 instead. `PostAircraftForm.tsx` now tracks `isLoggedIn` as live client state,
+  seeded from the SSR prop and kept current via `supabase.auth.getUser()` +
+  `onAuthStateChange` — the exact pattern `Nav.tsx` already uses. **Next (not done this
+  cycle, same gap, same fix shape):** `PostPartnershipForm.tsx` and
+  `PostSeekerListingForm.tsx` still need the identical treatment (slices 2 and 3).
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
