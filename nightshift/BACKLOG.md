@@ -220,6 +220,14 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   all 20 fields via one 3-line change per file. No schema/visual change. **Next:** the aircraft
   edit form's Home Airport field still can't prefill a `defaultValue` (schema only stores
   derived `location`/`state`, not raw ICAO) — needs a human call on adding the column.
+~~- **[agent][goal] Submission-error accessibility on all 3 post forms.**~~ ✅ SHIPPED via
+  `post-form-error-alert-role` (2026-07-05) The red error box shown on a failed submission
+  (bad airport code, Supabase insert error, etc.) had no `role`/`aria-live`, unlike the same
+  files' `DraftIndicator` which already announces "Draft saved" via `aria-live="polite"` — a
+  screen-reader user posting a listing got no accessible signal that submission failed or why.
+  Added `role="alert"` to the identical error div in all 3 forms. **Next:** contact fields
+  (`contact_email`/`contact_phone`/`contact_name`) on the partnership/seeker forms lack explicit
+  `autoComplete` hints — a small follow-on candidate.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
