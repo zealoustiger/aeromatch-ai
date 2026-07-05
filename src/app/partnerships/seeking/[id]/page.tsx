@@ -36,6 +36,26 @@ const USE_LABELS: Record<string, string> = {
 
 const MATCH_LIMIT = 4
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Redfin-style days-on-market label — mirrors SeekerCard's listedAgo exactly, so
+// the browse card and this detail page always agree on how "fresh" a listing reads.
+function listedAgo(createdAt: string | null): string | null {
+  if (!createdAt) return null
+  const then = new Date(createdAt).getTime()
+  if (Number.isNaN(then)) return null
+  const days = Math.floor((Date.now() - then) / DAY_MS)
+  if (days <= 0) return 'Listed today'
+  if (days === 1) return 'Listed 1 day ago'
+  if (days < 7) return `Listed ${days} days ago`
+  if (days < 14) return 'Listed 1 week ago'
+  if (days < 30) return `Listed ${Math.floor(days / 7)} weeks ago`
+  if (days < 60) return 'Listed 1 month ago'
+  if (days < 365) return `Listed ${Math.floor(days / 30)} months ago`
+  const years = Math.floor(days / 365)
+  return years === 1 ? 'Listed 1 year ago' : `Listed ${years} years ago`
+}
+
 /**
  * Find up to 4 active partnerships that match this seeker's location and
  * aircraft preference. Airport-first; falls back to state if the airport
@@ -209,10 +229,12 @@ export default async function SeekerDetailPage({
                 )}
                 {s.willing_to_travel_nm && ` (willing to commute ${travelLabel(s.willing_to_travel_nm)})`}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-slate-400" />
-                Posted {new Date(s.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-              </span>
+              {listedAgo(s.created_at) && (
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-slate-400" />
+                  {listedAgo(s.created_at)}
+                </span>
+              )}
             </div>
 
             {s.description && (
