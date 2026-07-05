@@ -368,6 +368,16 @@ Target: never gate value behind an account; when we must ask, one tap or one fie
   fabricated visitor stat entirely, removed the artificial floor so the real `seekerCount`
   renders as-is (correct singular/plural, omits the clause at 0), and dropped the false
   location-scoping claim. Single-file change, no schema/query/prop-signature change.
+~~- **[agent][goal] Homepage "Sign in" doesn't preserve `next=/`.**~~ ✅ SHIPPED via
+  `nav-signin-homepage-next` (2026-07-05) `Nav.tsx` special-cased the homepage by omitting
+  `next=` entirely — but `/auth`'s own fallback for a missing `next` is `/searches`, not `/`,
+  so a plain "Sign in" click from home dropped the user on Saved Searches after auth instead
+  of back home. Every other page already passed its own path; this was the one intent-drop
+  case, found via an Explore-agent audit of every `/auth?next=...` call site (all others
+  confirmed correct). Fixed in `Nav.tsx` only — `src/app/auth/**` untouched. **Pillar 2 now
+  looks structurally complete** across every auth-gated CTA in the app (save, save-search,
+  message, photo-upload, AI-draft, post/edit forms, generic sign-in) — a future cycle
+  reaching for this pillar may want a human check-in before inventing further slices.
 
 ### Pillar 3 — Proprietary buyer analysis on listing pages
 Target: every aircraft listing answers "is this a good buy, and what will it really cost me?"
