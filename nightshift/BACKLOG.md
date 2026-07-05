@@ -261,6 +261,17 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   explanatory message instead of calling the AI. No schema/action change. Invented this cycle
   (via an Explore-agent code audit, not the changelog) since Pillar 1's explicit checklist was
   already exhausted outside the two human-blocked items noted above.
+~~- **[agent][goal] Publishing while a photo is still uploading silently dropped it.**~~ ✅
+  SHIPPED via `photo-upload-block-submit` (2026-07-05) `PartnershipPhotoUpload` (shared by
+  the aircraft + partnership post/edit forms) only attaches a photo's hidden `photo_url`
+  input once its upload resolves, but neither form tracked the uploader's in-flight state —
+  the submit button's only gate was the server action's own `pending` flag. A seller who hit
+  publish before an in-flight upload (~1-3s, longer on mobile) finished got a listing
+  published with that photo silently missing, no error shown. New `onUploadingChange` prop
+  on the shared uploader reports the live mid-upload count; both forms now disable submit
+  and show "Uploading photos…" until every photo resolves. No schema/action change. Invented
+  this cycle (via an Explore-agent code audit) since Pillar 1's explicit checklist was already
+  exhausted outside the two human-blocked items noted above.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
