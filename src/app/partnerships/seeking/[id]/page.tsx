@@ -15,6 +15,7 @@ import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import { getSeekerBudgetCheck } from '@/lib/partnershipComps'
 import SeekerBudgetCheck from '@/components/SeekerBudgetCheck'
+import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
 
@@ -285,6 +286,20 @@ export default async function SeekerDetailPage({
               shareType={budgetCheck.shareType}
               result={budgetCheck.result}
             />
+          )}
+
+          {(s.max_monthly || s.max_hourly) && (
+            <div>
+              <p className="mb-2 px-1 text-xs text-slate-400">
+                Projected from this pilot&apos;s stated maximum budget — not a confirmed cost.
+              </p>
+              <PartnerShareCostPanel
+                buyInPrice={s.max_buy_in}
+                monthlyFixed={s.max_monthly}
+                hourlyWet={s.max_hourly}
+                shareType={s.preferred_share_types?.length === 1 ? s.preferred_share_types[0] : null}
+              />
+            </div>
           )}
 
           {/* Aircraft preferences — in the right rail so the key match facts sit

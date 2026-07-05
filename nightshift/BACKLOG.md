@@ -527,8 +527,19 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   owner-facing "Improve your listing" nudge partnerships already had (`ListingOwnerNudge`)
   is now mirrored on the aircraft-for-sale detail page as `AircraftListingOwnerNudge`,
   driven by the same `evaluateAircraftTrust` signals, gated on `poster_id` ownership, no
-  new query/schema. **Still not done:** seeker listings have no trust/completeness module
-  at all (a separate, larger slice — seekers have no price/photos to score).
+  new query/schema. **Correction (found 2026-07-05 during `seeker-cost-panel` audit):** this
+  note was stale — seeker listings gained a full trust/completeness module (card chip, detail
+  checklist, owner nudge, explainer-page column) via `seeker-trust-badge` and its follow-ons,
+  all shipped 2026-07-05. No further slice needed.
+~~- **[agent][goal] Flying-cost estimate on the seeker detail page.**~~ ✅ SHIPPED via
+  `seeker-cost-panel` (2026-07-05) Aircraft-for-sale and partnership listings both show a
+  "what will this cost me per hour" panel (`ShareCostPanel`/`PartnerShareCostPanel`); seeker
+  listings collect the identical shape of budget inputs (max buy-in/monthly/hourly, hours/month,
+  preferred share type) but never turned them into the same estimate. `PartnerShareCostPanel` is
+  now reused as-is on `/partnerships/seeking/[id]`, fed from the seeker's own stated maximums,
+  with an added disclaimer line clarifying these are projected from a stated budget, not a
+  confirmed cost. Self-suppresses when no monthly/hourly figure is set, same as the source
+  component. No schema/component change.
 
 ---
 
