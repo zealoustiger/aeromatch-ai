@@ -56,6 +56,16 @@ export default function ContactButtons({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Viewer is the poster — show a neutral note instead of Email/Call buttons
+  // that would just contact themselves.
+  if (user?.id === posterId) {
+    return (
+      <p className="text-sm text-slate-500">
+        This is your listing. Interested buyers can message you once they sign in.
+      </p>
+    )
+  }
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = text.trim()
