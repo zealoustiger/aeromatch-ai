@@ -1,3 +1,26 @@
+## 2026-07-05T13:23:43Z — Night Shift run: 18 cycles (PASS 18 / FAIL 0) — night ended
+- Models: cycles on sonnet; 0 escalated to opus; 5 quality-judged on opus
+
+- PASS — seeker-cost-panel — Added a flying-cost estimate panel (annual/per-hour cost, break-even vs. renting) to the seeker detail page (`/partnerships/seeking/[id]`), reusing t
+- PASS — nav-signin-homepage-next — fixed homepage Sign in landing on Saved Searches instead of the homepage after auth, by passing `next=/` explicitly instead of omitting it.
+- PASS — seeker-edit-additional-airports-fallback — Fixed a live bug where `/partnerships/seeking/[id]/edit` 404'd for every owner (its query explicitly selected the not-yet-migr
+- PASS — partnership-market-check-range-bar — Partnership listing pages now show a visual price-range bar (low–high spread, median tick, this listing marker) and percentile fra
+- PASS — aircraft-edit-redirect-fix — fixed the aircraft edit form's auth redirect so a logged-out/session-expired edit now returns you to your edit page instead of a blank new-p
+- PASS — airport-input-invalid-scroll-focus — Fixed the shared airport-code field (used on all 3 post/edit forms) so an invalid submit scrolls the field into view and focuses it 
+- PASS — partnership-deal-signals-tally — added favor/watch-out summary chips to the partnership detail page's How this partnership stacks up panel, matching the aircraft listing
+- PASS — aircraft-form-live-auth-state — PostAircraftForm now tracks live auth state (mirroring Nav.tsx's getUser/onAuthStateChange) instead of a stale SSR snapshot, so a session
+- PASS — airport-input-combobox-aria — added missing ARIA combobox attributes (`role`, `aria-expanded`, `aria-controls`, `aria-activedescendant`) to the shared `AirportFormInput`
+- PASS — seeker-budget-check-range-bar — Ported the aircraft/partnership-side low–high spread bar onto the seeker detail page's Budget Check panel, since it already received `l
+- PASS — partnership-form-live-auth-state — gave PostPartnershipForm.tsx a live client-side auth-state listener (mirrors the aircraft form's fix), so a session that expires mid-e
+- PASS — post-form-details-contact-autoopen — Fixed the aircraft and partnership post/edit forms' More details section so it auto-expands in edit mode when a saved contact field 
+- PASS — seeker-deal-signals-panel — added a how this seeker profile stacks up synthesis panel to `/partnerships/seeking/[id]` (budget-vs-market, preference specificity, experien
+- PASS — airport-input-start-over-reset — fixed all 3 post/edit forms (aircraft, partnership, seeker) so clicking Start over/Revert changes now clears the airport field's stale i
+- PASS — seeker-form-live-auth-state — Ported the live client-side auth-state listener (already on the aircraft/partnership post forms) onto `PostSeekerListingForm.tsx`, closing 
+- PASS — saved-seeker-budget-verdict — /saved's seeker-listing section now shows the same honest budget vs. market chip its partnership and aircraft sections already show, closin
+- PASS — seeker-details-contact-autoopen — Fixed the seeking-a-partnership edit form so More details auto-expands when a saved contact name or email exists, not just phone, match
+- PASS — airport-hub-comp-verdicts — /airports/[icao]'s partnership and seeker cards now show the same honest below/above-market comp chips every sibling browse page already show
+
+
 ## 2026-07-05T09:56:50Z — Night Shift run: 25 cycles (PASS 24 / FAIL 1) — safety cap (25)
 - Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus
 
