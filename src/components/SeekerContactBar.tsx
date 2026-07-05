@@ -86,6 +86,15 @@ export default function SeekerContactBar({
     })
   }, [user, searchParams, seekerId, seekerOwnerId, draftKey, router])
 
+  // Viewer is the seeker who posted this listing — show a neutral note instead of a dead-end box.
+  if (user?.id === seekerOwnerId) {
+    return (
+      <p className="text-sm text-slate-500">
+        This is your listing. Owners with a fitting aircraft can message you once they sign in.
+      </p>
+    )
+  }
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = text.trim()
@@ -117,10 +126,9 @@ export default function SeekerContactBar({
     }
   }
 
-  const isOwner = user?.id === seekerOwnerId
-  const showEmail = !isOwner && (contactMethod === 'email' || contactMethod === 'both')
-  const showPhone = !isOwner && (contactMethod === 'phone' || contactMethod === 'both') && contactPhone
-  const canMessage = !!seekerOwnerId && !isOwner
+  const showEmail = contactMethod === 'email' || contactMethod === 'both'
+  const showPhone = (contactMethod === 'phone' || contactMethod === 'both') && contactPhone
+  const canMessage = !!seekerOwnerId
 
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
