@@ -410,9 +410,12 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   honest "N/4 trust signals" chip; seeker listings had none — the last listing type with zero
   Pillar 3 trust coverage. New `seekerTrust.ts` scores aircraft-preference-stated,
   budget-disclosed, experience-disclosed (hours + ratings), and member-posted, rendered via
-  `SeekerTrustBadge` on every `SeekerCard`. **Not done, intentionally:** a seeker detail-page
-  checklist variant and an owner-facing "improve your profile" nudge — natural follow-ups,
-  same rollout order the aircraft side used (card chip first, checklist + nudge later).
+  `SeekerTrustBadge` on every `SeekerCard`. **Detail-page checklist ✅ SHIPPED 2026-07-05**
+  (`seeker-trust-checklist-detail`): `SeekerTrustBadge` gained a `variant="checklist"` option
+  (identical to `AircraftTrustBadge`/`TrustBadge`'s), rendered on `/partnerships/seeking/[id]`
+  above the contact card — same placement convention as the other two listing types. **Still
+  not done:** an owner-facing "improve your profile" nudge for seekers (mirroring
+  `ListingOwnerNudge`/`AircraftListingOwnerNudge`), now unblocked since the checklist exists.
 ~~- **[agent][goal] Annual inspection + damage history panels on partnership listings.**~~
   ✅ SHIPPED via `partnership-annual-damage` (2026-07-04) Aircraft-for-sale listings had
   honesty-gated `AnnualStatusPanel`/`DamageHistoryPanel` (built on `annual_due`/`damage_history`);
