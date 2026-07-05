@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T10:42:23Z — partnership-market-check-range-bar — score 4/5
+- Strengths: Faithful mirror of EstimatePanel's bar (identical markup, same median+deltaDollars subject reconstruction, role="img" + descriptive aria-label); percentile/low/high reuse the already-sorted comp set (no new query/honesty floor), correctly per-share-scaled and gated by MIN_OTHER_COMPS; hasRange guard cleanly avoids divide-by-zero and falls back to the plain-median copy; well-documented new interface fields — matches spec acceptance exactly.
+- Weaknesses / risks: The ~40-line bar block is now duplicated verbatim across EstimatePanel and PartnershipMarketCheck (two copies will drift); marker is value-interpolated while the "above X%" text is rank-based, so they can visually disagree — both inherited from EstimatePanel, so consistent, not new.
+- Follow-up: Extract a shared `<PriceRangeBar>` component consumed by both EstimatePanel and PartnershipMarketCheck to kill the duplicated markup.
+
 ## 2026-07-05T09:56:33Z — photo-upload-block-submit — score 5/5
 - Strengths: Exactly matches spec — single shared `onUploadingChange` prop driven by a `useEffect` on `photos`, wired identically into both forms; correct label precedence, clear comments matching the file's existing token/mountKey idiom, edit forms covered for free.
 - Weaknesses / risks: none material (`setUploadingPhotoCount` is a stable setter so the effect dep is safe; disabled button also blocks implicit Enter-submit).
