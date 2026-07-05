@@ -349,10 +349,21 @@ export default function PostSeekerListingForm({
       return
     }
     setAiError(null)
+    const raw = (aiPromptRef.current?.value ?? '').trim()
+    // Unlike the aircraft/partnership forms, a seeker post has no external source
+    // page to fetch — a bare pasted link would otherwise get shipped to Claude as
+    // if it were the pilot's own notes and produce a backwards/misleading draft
+    // (e.g. extracting a for-sale listing's make/model as the pilot's "preference").
+    if (/^https?:\/\/\S+$/i.test(raw)) {
+      setAiError(
+        "This works from your own notes about yourself — not a link. Seeker posts don't have a listing page to read from, so paste a few sentences about your experience, budget, and what you're looking for instead."
+      )
+      return
+    }
     const token = fillTokenRef.current
     startGenerating(async () => {
       try {
-        const result: SeekerDraft = await generateSeekerDraft(aiPromptRef.current?.value ?? '')
+        const result: SeekerDraft = await generateSeekerDraft(raw)
         // Bail if the user hit "Start over" while this was in flight — don't
         // re-populate the cleared form.
         if (token !== fillTokenRef.current) return
