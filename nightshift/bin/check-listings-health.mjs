@@ -192,9 +192,12 @@ function renderReport(results) {
 async function postSlackIfFailure(results, overallFailed) {
   if (!overallFailed) return
   const token = process.env.SLACK_BOT_TOKEN
-  const channel = process.env.SLACK_ALERTS_CHANNEL_ID
+  // Prefer a dedicated alerts channel; fall back to the existing visitor channel
+  // (both use the same bot). Health alerts are top-level messages there, easy to
+  // distinguish from the visitor threads by the 🚨 prefix + no threading.
+  const channel = process.env.SLACK_ALERTS_CHANNEL_ID || process.env.SLACK_VISITOR_CHANNEL_ID
   if (!token || !channel) {
-    console.log('[slack] skipping — SLACK_ALERTS_CHANNEL_ID or SLACK_BOT_TOKEN not set')
+    console.log('[slack] skipping — SLACK_BOT_TOKEN or channel env not set')
     return
   }
   const failing = results.filter((r) => r.failed.length > 0)
