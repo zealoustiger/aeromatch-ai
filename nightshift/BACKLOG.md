@@ -272,6 +272,16 @@ Current post flows: `/partnerships/new`, `/aircraft/new`, `/partnerships/seeking
   and show "Uploading photos…" until every photo resolves. No schema/action change. Invented
   this cycle (via an Explore-agent code audit) since Pillar 1's explicit checklist was already
   exhausted outside the two human-blocked items noted above.
+~~- **[agent][bug] Seeker edit page 404'd for every owner.**~~ ✅ SHIPPED via
+  `seeker-edit-additional-airports-fallback` (2026-07-05) `/partnerships/seeking/[id]/edit`
+  explicitly named the not-yet-migrated `additional_airports` column in its select with no
+  fallback — unlike the aircraft and partnership edit pages, which both already handle a
+  not-yet-applied optional column via select-then-retry. On today's unmigrated DB this meant
+  the query errored, `listing` came back null, and the owner hit `notFound()` trying to edit
+  their own published seeker listing. Added the same select-without-the-column fallback;
+  confirmed the bug and the fix directly against the live DB. Invented this cycle (via an
+  Explore-agent code audit) since Pillar 1's explicit checklist was already exhausted outside
+  the two human-blocked items noted above.
 
 ### Pillar 2 — Frictionless signup / auth
 Target: never gate value behind an account; when we must ask, one tap or one field.
