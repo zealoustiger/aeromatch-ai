@@ -409,6 +409,18 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   the standalone `AvionicsPanel` and the browse/rail-card chips, not the top synthesis
   panel. This item is now fully complete across detail panels (standalone + synthesis),
   browse-card chips, and rail-card chips, both listing types.
+~~- **[agent][goal] Aircraft-for-sale detail page trust checklist.**~~ ✅ SHIPPED via
+  `aircraft-trust-checklist-detail` (2026-07-05) The detail page (`/aircraft/listing/[id]`)
+  never used the canonical trust-signal system (`evaluateAircraftTrust`, the same 4 signals
+  behind the browse card's compact chip and `/listing-quality`'s documentation) — instead it
+  showed an unrelated one-off "Listing info" (X/5) panel with a different signal set, so the
+  card and detail page could disagree about the same listing's completeness. Replaced it with
+  `AircraftTrustBadge`'s new `variant="checklist"`, matching how the partnership detail page
+  already shows its trust checklist; deleted the orphaned `ListingCompletenessPanel` (sole
+  usage site). **Next:** aircraft-for-sale still has no owner-facing "Improve your listing"
+  nudge the way partnerships does (`ListingOwnerNudge`); seeker listings have no trust/
+  completeness module at all (a separate, larger slice — seekers have no price/photos to
+  score).
 
 ---
 
