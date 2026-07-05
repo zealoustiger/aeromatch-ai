@@ -666,7 +666,8 @@ export default function PostAircraftForm({
         open={Boolean(
           (isEdit && (initialValues?.year || initialValues?.ttaf || initialValues?.smoh ||
             initialValues?.engine_type || initialValues?.avionics?.length || initialValues?.annual_due ||
-            initialValues?.damage_history != null || initialValues?.title)) ||
+            initialValues?.damage_history != null || initialValues?.title ||
+            initialValues?.contact_phone)) ||
           (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm"
