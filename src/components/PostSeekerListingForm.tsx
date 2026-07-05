@@ -590,7 +590,7 @@ export default function PostSeekerListingForm({
             initialValues?.min_year || initialValues?.max_year || initialValues?.max_monthly || initialValues?.max_hourly ||
             initialValues?.willing_to_travel_nm || initialValues?.total_hours || initialValues?.ratings_held ||
             initialValues?.hours_per_month || initialValues?.intended_use?.length || initialValues?.preferred_share_types?.length ||
-            initialValues?.contact_phone)) ||
+            initialValues?.contact_name || initialValues?.contact_email || initialValues?.contact_phone)) ||
           (!isEdit && userPhone)
         )}
         className="group rounded-xl border border-slate-200 bg-white shadow-sm">
