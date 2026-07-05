@@ -443,9 +443,12 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   nudge ✅ SHIPPED 2026-07-05** (`seeker-owner-nudge`): new `SeekerListingOwnerNudge.tsx` mirrors
   `ListingOwnerNudge`/`AircraftListingOwnerNudge` exactly, driven by the existing
   `evaluateSeekerTrust()`, rendered only to the listing's owner directly above the trust
-  checklist on `/partnerships/seeking/[id]`. This item is now fully complete across all 3
-  listing types: card chip, detail checklist, and owner nudge. **Remaining Pillar-3 gap:**
-  `/listing-quality`'s copy still only describes aircraft/partnership trust signals, not seeker's.
+  checklist on `/partnerships/seeking/[id]`. **Explainer-page parity ✅ SHIPPED 2026-07-05**
+  (`listing-quality-seeker-parity`): `/listing-quality` now documents seeker trust signals in
+  a third column alongside partnership/aircraft, and its intro copy no longer implies
+  partnership listings carry a quality grade (aircraft-only in the code). This item is now
+  fully complete across all 3 listing types: card chip, detail checklist, owner nudge, and the
+  explainer page.
 ~~- **[agent][goal] Annual inspection + damage history panels on partnership listings.**~~
   ✅ SHIPPED via `partnership-annual-damage` (2026-07-04) Aircraft-for-sale listings had
   honesty-gated `AnnualStatusPanel`/`DamageHistoryPanel` (built on `annual_due`/`damage_history`);
