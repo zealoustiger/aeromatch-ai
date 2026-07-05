@@ -16,6 +16,7 @@ import { MOCK_SEEKERS } from '@/lib/mockData'
 import { getSeekerBudgetCheck } from '@/lib/partnershipComps'
 import SeekerBudgetCheck from '@/components/SeekerBudgetCheck'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
+import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -135,6 +136,7 @@ export default async function SeekerDetailPage({
       .maybeSingle()
     savedRowId = data?.id ?? null
   }
+  const isOwner = !!user && !!s.poster_id && user.id === s.poster_id
 
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
@@ -352,6 +354,14 @@ export default async function SeekerDetailPage({
                 )}
               </dl>
             </div>
+          )}
+
+          {/* Owner-only "Improve your listing" nudge — shown only to the
+              listing's owner, names exactly which trust signals below are
+              still missing. Same placement convention (directly above the
+              trust checklist) as the aircraft/partnership detail pages. */}
+          {isOwner && (
+            <SeekerListingOwnerNudge s={s} editHref={`/partnerships/seeking/${id}/edit`} />
           )}
 
           {/* Trust / completeness — checklist variant, same canonical signals
