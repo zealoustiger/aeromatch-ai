@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T09:56:33Z — photo-upload-block-submit — score 5/5
+- Strengths: Exactly matches spec — single shared `onUploadingChange` prop driven by a `useEffect` on `photos`, wired identically into both forms; correct label precedence, clear comments matching the file's existing token/mountKey idiom, edit forms covered for free.
+- Weaknesses / risks: none material (`setUploadingPhotoCount` is a stable setter so the effect dep is safe; disabled button also blocks implicit Enter-submit).
+- Follow-up: none
+
 ## 2026-07-05T09:48:00Z — photo-mid-upload-recovery — score 4/5
 - Strengths: Clean mirror of the existing best-effort-storage pattern — new idbPhotoDraft.ts feature-detects indexedDB and swallows every error (true no-regression), the shared uploadEntry callback removes the old duplicated fetch/setPhotos block, resume is gated identically to the URL restore and respects MAX_PHOTOS across both paths via functional setPhotos, finally-deletes the pending record on settle, clears IDB on the gate-gone "Start over" branch, and even guards StrictMode double-invoke with a cancelled flag.
 - Weaknesses / risks: removePhoto (individual X) doesn't delete the pending IDB record, so removing a photo during the ~1-3s in-flight window and reloading before it settles can resurrect it — narrow and self-healing (resume→settle→delete), but a semantic gap vs. the deliberate-remove intent.
