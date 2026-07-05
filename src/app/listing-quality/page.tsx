@@ -8,6 +8,7 @@ import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { gradeMeta, QUALITY_SIGNALS, GRADE_CUTOFFS, type Grade } from '@/lib/listingQuality'
 import { TRUST_SIGNALS } from '@/lib/partnershipTrust'
 import { AIRCRAFT_TRUST_SIGNALS } from '@/lib/aircraftTrust'
+import { SEEKER_TRUST_SIGNALS } from '@/lib/seekerTrust'
 
 const TITLE = 'What our listing badges mean'
 const PATH = '/listing-quality'
@@ -48,7 +49,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What are the trust signals?',
-    a: 'Trust signals are a separate set of checks shown as a "trust signals" chip. They flag listings that are filled out, disclose the details buyers care about, are contacted on ClubHanger rather than off-platform, and are posted by a signed-up member rather than scraped from an aggregator. The more signals a listing meets, the more confidence you can have in it.',
+    a: 'Trust signals are a separate set of checks shown as a "trust signals" chip on every listing type — aircraft for sale, partnerships, and pilots seeking a partnership. They flag listings that are filled out, disclose the details buyers care about, are contacted on ClubHanger rather than off-platform, and are posted by a signed-up member rather than scraped from an aggregator. The more signals a listing meets, the more confidence you can have in it.',
   },
 ]
 
@@ -70,10 +71,11 @@ export default function ListingQualityPage() {
             What our listing badges mean
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-slate-600">
-            Every aircraft and partnership listing on ClubHanger carries two kinds of
-            badge to help you judge it at a glance: a <strong>quality grade</strong>{' '}
-            (A, B, or C) and a set of <strong>trust signals</strong>. Here is exactly
-            what each one means — and, just as importantly, what it doesn&rsquo;t.
+            Aircraft-for-sale listings on ClubHanger carry a{' '}
+            <strong>quality grade</strong> (A, B, or C), and every listing — aircraft,
+            partnership, or pilots-seeking-a-partnership — carries a set of{' '}
+            <strong>trust signals</strong>. Here is exactly what each one means — and,
+            just as importantly, what it doesn&rsquo;t.
           </p>
         </header>
 
@@ -146,11 +148,10 @@ export default function ListingQualityPage() {
             counts how many trust checks a listing meets (for example,{' '}
             &ldquo;3/4 trust signals&rdquo;). They reward listings that are filled out,
             handled on-platform, and posted by real members — the things pilots tell us
-            matter most. The checks differ slightly for partnerships and for aircraft
-            for sale:
+            matter most. The checks differ slightly across listing types:
           </p>
 
-          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">
                 Partnership listings
@@ -175,6 +176,24 @@ export default function ListingQualityPage() {
               </h3>
               <ul className="mt-3 space-y-3">
                 {AIRCRAFT_TRUST_SIGNALS.map((s) => (
+                  <li key={s.key} className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-slate-800">
+                        {s.label}
+                      </span>
+                      <span className="block text-xs text-slate-500">{s.hint}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">
+                Pilots seeking a partnership
+              </h3>
+              <ul className="mt-3 space-y-3">
+                {SEEKER_TRUST_SIGNALS.map((s) => (
                   <li key={s.key} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
                     <span className="min-w-0">
