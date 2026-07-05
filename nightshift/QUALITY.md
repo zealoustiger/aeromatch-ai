@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T07:12:46Z — seeker-post-analytics-parity — score 4/5
+- Strengths: Precise mirror of PostAircraftForm — track() sits in the same spot (inside the try, just before the server action), same `listing_id: listingId` edit shape, and both create props (`home_airport`, `preferred_makes`) are genuinely present FormData fields (names verified at 478 / preferred_makes checkboxes), so no fabricated props; type-prefixed event names match the cleaner convention; single-file, no aircraft/partnership/schema churn.
+- Weaknesses / risks: none material — like its siblings the event fires on submit *attempt*, so a server-side validation throw still counts as "submitted"; this is inherited parity behavior, not a regression.
+- Follow-up: none
+
 ## 2026-07-04T13:28:23Z — partnership-deal-check-card-parity — score 4/5
 - Strengths: Clean new `PartnershipCardVerdict` shape with correct dealVerdict-wins/plain-comp-fallback precedence; all 3 callers threaded correctly; browse card honestly labels each source (narrowed "Good deal" chip vs plain "~X% below/above market" pill); genuinely smart separate query/try-catch so the dormant ttaf/smoh migration degrades to the existing pill instead of killing the chip; matches conventions, no dead code.
 - Weaknesses / risks: `SimilarListings` deviates from spec's "narrowed-only, mirror SimilarAircraft exactly" by adding a plain-comp fallback while `PartnershipRailCard` copy was relabeled to "Good deal"/"Priced high" on the (now false) premise the value "always comes from the narrowed verdict" — so on live data (ttaf/smoh dormant) every rail chip is a plain whole-family comp mislabeled as a year+hours Deal Check, unlike the aircraft rail which is truly narrowed-only.
