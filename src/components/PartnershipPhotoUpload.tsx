@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ImagePlus, X, Loader2, AlertCircle } from 'lucide-react'
+import { ImagePlus, X, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const MAX_PHOTOS = 5
@@ -157,6 +157,20 @@ export default function PartnershipPhotoUpload({
     })
   }
 
+  // Swaps a thumbnail with its left/right neighbor. Array order is the existing cover
+  // mechanism (pickRealPhoto picks the first usable image), so reordering here is all
+  // that's needed to change the cover photo — no schema/action change.
+  const movePhoto = (key: string, direction: 'left' | 'right') => {
+    setPhotos((prev) => {
+      const i = prev.findIndex((p) => p.key === key)
+      const j = direction === 'left' ? i - 1 : i + 1
+      if (i < 0 || j < 0 || j >= prev.length) return prev
+      const next = [...prev]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
+  }
+
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       addFiles(e.target.files)
@@ -228,7 +242,7 @@ export default function PartnershipPhotoUpload({
       {/* Thumbnails */}
       {photos.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {photos.map((p) => (
+          {photos.map((p, i) => (
             <div
               key={p.key}
               className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
@@ -249,6 +263,11 @@ export default function PartnershipPhotoUpload({
                   <p className="mt-0.5 text-center text-[9px] leading-tight text-red-700">{p.error}</p>
                 </div>
               )}
+              {photos.length > 1 && i === 0 && (
+                <span className="absolute left-0.5 top-0.5 rounded bg-slate-900/70 px-1 py-0.5 text-[9px] font-medium leading-none text-white">
+                  Cover
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => removePhoto(p.key)}
@@ -257,6 +276,30 @@ export default function PartnershipPhotoUpload({
               >
                 <X className="h-3 w-3" />
               </button>
+              {photos.length > 1 && (
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-gradient-to-t from-slate-900/70 to-transparent pb-0.5 pt-2.5">
+                  {i > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => movePhoto(p.key, 'left')}
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900/70 text-white transition hover:bg-slate-900"
+                      aria-label="Move photo earlier"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </button>
+                  )}
+                  {i < photos.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => movePhoto(p.key, 'right')}
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900/70 text-white transition hover:bg-slate-900"
+                      aria-label="Move photo later"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
 
