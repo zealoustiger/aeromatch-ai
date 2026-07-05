@@ -250,6 +250,9 @@ export default function PostPartnershipForm({
   // Bumped on "Start over" to remount the photo uploader so its thumbnails clear too
   // (reset() only clears the form's DOM fields, not the uploader's React state).
   const [photoMountKey, setPhotoMountKey] = useState(0)
+  // Bumped on "Start over" to remount AirportFormInput so its own invalid/suggestion
+  // state clears too (reset() doesn't fire the input/change event it relies on).
+  const [airportMountKey, setAirportMountKey] = useState(0)
   // Count of photos still mid-upload — blocks submit so a photo whose upload hasn't
   // resolved yet can't silently publish without it (PartnershipPhotoUpload only emits
   // a hidden photo_url input once a photo's URL exists).
@@ -324,6 +327,7 @@ export default function PostPartnershipForm({
       // Remount the photo uploader so its thumbnails clear too (reset() only clears
       // the form's DOM fields, not the uploader's React state).
       setPhotoMountKey((k) => k + 1)
+      setAirportMountKey((k) => k + 1)
     }
   }
 
@@ -633,6 +637,7 @@ export default function PostPartnershipForm({
           <div className="sm:col-span-2">
             <Label required>Home Airport</Label>
             <AirportFormInput
+              key={airportMountKey}
               name="home_airport"
               defaultValue={initialValues?.home_airport ?? ''}
               required
