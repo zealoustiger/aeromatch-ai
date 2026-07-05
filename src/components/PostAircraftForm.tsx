@@ -726,7 +726,7 @@ export default function PostAircraftForm({
               </div>
               <div>
                 <Label>Phone <span className="text-xs font-normal text-slate-400">(optional)</span></Label>
-                <Input name="contact_phone" type="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
+                <Input name="contact_phone" type="tel" autoComplete="tel" defaultValue={initialValues?.contact_phone ?? userPhone ?? ''} placeholder="(555) 000-0000" />
                 <p className="mt-1 text-xs text-slate-400">
                   {userPhone && !initialValues?.contact_phone
                     ? "Pre-filled from a previous listing. Shown to buyers if you'd like them to call or text."
