@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T11:37:40Z — seeker-budget-check-range-bar — score 4/5
+- Strengths: Faithful, tightly-scoped port of PartnershipMarketCheck's bar into the seeker panel (same hasRange guard, onBar clamp, median+deltaDollars budget recovery, role="img" aria-label, legend); spec correctly overturned BACKLOG's wrong "not the same shape" claim with file/line evidence that getSeekerBudgetCheck already returns low/high/percentile; copy correctly reframed to "your budget", zero-spread fallback preserves prior behavior, no schema/query/caller changes.
+- Weaknesses / risks: This is now the THIRD verbatim copy of the ~40-line bar block (EstimatePanel + PartnershipMarketCheck + SeekerBudgetCheck) — the prior cycle's extraction follow-up wasn't taken, so drift risk grew; percentile ternary duplicated across sentence + aria-label; value-interpolated marker vs rank-based "above X%" copy can visually disagree (all inherited, not new).
+- Follow-up: Extract a shared <PriceRangeBar> now consumed by all three panels — the third copy makes this overdue.
+
 ## 2026-07-05T10:42:23Z — partnership-market-check-range-bar — score 4/5
 - Strengths: Faithful mirror of EstimatePanel's bar (identical markup, same median+deltaDollars subject reconstruction, role="img" + descriptive aria-label); percentile/low/high reuse the already-sorted comp set (no new query/honesty floor), correctly per-share-scaled and gated by MIN_OTHER_COMPS; hasRange guard cleanly avoids divide-by-zero and falls back to the plain-median copy; well-documented new interface fields — matches spec acceptance exactly.
 - Weaknesses / risks: The ~40-line bar block is now duplicated verbatim across EstimatePanel and PartnershipMarketCheck (two copies will drift); marker is value-interpolated while the "above X%" text is rank-based, so they can visually disagree — both inherited from EstimatePanel, so consistent, not new.
