@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-05T11:42:13Z — partnership-form-live-auth-state — score 5/5
+- Strengths: Exact, faithful mirror of the proven PostAircraftForm live-auth block — correct prop rename, seeded state, getUser + onAuthStateChange sync, unsubscribe on unmount; hooks already imported, tight scope, well-commented.
+- Weaknesses / risks: none material — pattern is now duplicated across 3 forms; extracting a shared useLiveAuthState hook would be the natural next refactor but is out of scope here.
+- Follow-up: none
+
 ## 2026-07-05T11:37:40Z — seeker-budget-check-range-bar — score 4/5
 - Strengths: Faithful, tightly-scoped port of PartnershipMarketCheck's bar into the seeker panel (same hasRange guard, onBar clamp, median+deltaDollars budget recovery, role="img" aria-label, legend); spec correctly overturned BACKLOG's wrong "not the same shape" claim with file/line evidence that getSeekerBudgetCheck already returns low/high/percentile; copy correctly reframed to "your budget", zero-spread fallback preserves prior behavior, no schema/query/caller changes.
 - Weaknesses / risks: This is now the THIRD verbatim copy of the ~40-line bar block (EstimatePanel + PartnershipMarketCheck + SeekerBudgetCheck) — the prior cycle's extraction follow-up wasn't taken, so drift risk grew; percentile ternary duplicated across sentence + aria-label; value-interpolated marker vs rank-based "above X%" copy can visually disagree (all inherited, not new).
