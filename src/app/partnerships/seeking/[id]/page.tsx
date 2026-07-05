@@ -15,6 +15,7 @@ import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import { getSeekerBudgetCheck } from '@/lib/partnershipComps'
 import SeekerBudgetCheck from '@/components/SeekerBudgetCheck'
+import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -352,6 +353,11 @@ export default async function SeekerDetailPage({
               </dl>
             </div>
           )}
+
+          {/* Trust / completeness — checklist variant, same canonical signals
+              as the browse-card compact chip, same sidebar placement (just
+              above the contact card) as the aircraft/partnership pages. */}
+          <SeekerTrustBadge s={s} variant="checklist" />
 
           {/* Contact card — client component handles auth so contact details
               are never rendered in the public (crawlable) server HTML. */}
