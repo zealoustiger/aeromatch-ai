@@ -1,4 +1,5 @@
 ▲ Next.js 16.2.9
-- Local:         http://localhost:3011
-- Network:       http://172.17.0.2:3011
-✓ Ready in 130ms
+- Local:         http://localhost:3000
+- Network:       http://172.17.0.2:3000
+✓ Ready in 136ms
+Killed

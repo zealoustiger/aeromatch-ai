@@ -8,7 +8,12 @@ import DeviceSavedListings from '@/components/DeviceSavedListings'
 import SavedListingNote from '@/components/SavedListingNote'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { getSeekersByIds } from '@/lib/seekersQuery'
-import { getPartnershipCompVerdicts, type PartnershipCardVerdict } from '@/lib/partnershipComps'
+import {
+  getPartnershipCompVerdicts,
+  getSeekerBudgetCheckVerdicts,
+  type PartnershipCardVerdict,
+  type PartnershipCompVerdict,
+} from '@/lib/partnershipComps'
 import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
@@ -117,6 +122,11 @@ export default async function SavedPage() {
   // Hydrate seekers via the same order-preserving/active-only helper used elsewhere.
   const seekers: PartnershipSeeker[] = seekerIds.length > 0 ? await getSeekersByIds(seekerIds) : []
 
+  // Same honest, comps-based budget verdict chip shown on the main seeker browse
+  // surface (SeekerList/`/partnerships/seeking`).
+  const seekerBudgetVerdicts: Map<string, PartnershipCompVerdict> =
+    seekers.length > 0 ? await getSeekerBudgetCheckVerdicts(supabase, seekers) : new Map()
+
   const total = partnerships.length + aircraft.length + seekers.length
 
   return (
@@ -221,7 +231,11 @@ export default async function SavedPage() {
                   const meta = savedMeta.get(`seeker:${s.id}`)
                   return (
                     <div key={s.id}>
-                      <SeekerCard seeker={s} saved />
+                      <SeekerCard
+                        seeker={s}
+                        saved
+                        budgetVerdict={seekerBudgetVerdicts.get(s.id)}
+                      />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
                       )}
