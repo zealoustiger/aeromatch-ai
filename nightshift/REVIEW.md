@@ -1,3 +1,33 @@
+## 2026-07-05T09:56:50Z — Night Shift run: 25 cycles (PASS 24 / FAIL 1) — safety cap (25)
+- Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus
+
+- PASS — alert-digest-query-filter-parse — Fixed a silent bug where the scheduled alert-digest cron dropped the make/model/state/price filters from any query-parameterized alert 
+- PASS — seeker-alert-support — Extended the Get alerts pipeline (digest cron + `/alerts` landing chip + inline browse-page signup) to cover pilots-seeking-a-partnership listings
+- PASS — seeker-detail-relative-freshness — Fixed the pilots-seeking-a-partnership detail page to show relative Listed N days ago freshness instead of an absolute date, matching 
+- cycle produced no verdict (exit 124)
+- PASS — seeker-post-analytics-parity — the pilots-seeking-a-partnership post form now fires submit/edit analytics events (like the aircraft & partnership forms already do), maki
+- PASS — seeker-alert-make-filter — Seeker-listing email alerts on `/partnerships/seeking` now respect an active make filter (e.g. `?make=Cessna`) instead of always alerting on a
+- PASS — aircraft-trust-checklist-detail — Replaced the aircraft-for-sale detail page's disconnected Listing info completeness panel with the canonical trust checklist (same sign
+- PASS — post-form-numeric-keypad — All numeric fields (price, year, hours, shares) across the three post forms (aircraft, partnership, seeker) now trigger a numeric mobile keypa
+- PASS — partnerships-hub-alert-signup — added the filter-aware, no-account get alerts email signup to the `/partnerships` browse hub (Pillar 2/signup), the one major browse page
+- PASS — aircraft-owner-nudge — Aircraft-for-sale listing owners now see an Improve your listing nudge on `/aircraft/listing/[id]` naming exactly which trust signals to complete 
+- PASS — post-form-error-alert-role — Added `role=alert` to the submission-error message on all 3 post forms (aircraft/partnership/seeker) so screen-reader users learn why a list
+- PASS — seeker-contactbar-owner-view — a seeker-listing owner viewing their own listing now sees a neutral This is your listing note instead of a broken empty contact box`
+- PASS — seeker-trust-badge — Added an honest N/4 trust signals completeness chip to seeker (pilot-seeking-a-partnership) listings, closing the last Pillar-3 gap where seeker lis
+- PASS — post-form-autocomplete-hints — added `autoComplete=name/email/tel` to the 7 contact-info fields across all 3 post forms (aircraft/partnership/seeker), so browser/phone s
+- PASS — partnership-contactbar-owner-view — Partnership owners viewing their own listing now see This is your listing... instead of Email/Call buttons that would contact themsel
+- PASS — airport-icao-inline-validation — post forms (aircraft/partnership/seeker) now flag a mistyped/nonexistent airport code inline within ~1s instead of only after a full-for
+- PASS — seeker-trust-checklist-detail — Added the expanded Listing trust checklist to the seeker detail page (`/partnerships/seeking/[id]`), the last of the 3 listing types miss
+- PASS — account-page-seeker-parity — fixed `/account`'s stale 2-way listing-type logic (mislabeled seeker saved searches as Partnerships) and copy gaps to match `/searches`'s al
+- PASS — photo-reorder-cover — Added move-earlier/move-later buttons and a Cover badge to the shared photo uploader on the aircraft and partnership post/edit forms, so posters ca
+- PASS — seeker-owner-nudge — Added an Improve your listing owner nudge to the pilot-seeking-a-partnership detail page (mirroring the existing aircraft/partnership nudges, driven
+- PASS — launch-banner-honest-stats — removed a fabricated 1,247+ pilot visitors stat and an artificial floor padding the real seeker count on the `/partnerships` beta-signup ban
+- PASS — seeker-ai-draft-url-guard — Fixed a Pillar-1 posting-friction gap: the seeker post form's AI Prefill from your notes box now detects a pasted URL and shows a clear messa
+- PASS — listing-quality-seeker-parity — /listing-quality now documents seeker (pilots-seeking-a-partnership) trust signals in a third column matching the existing partnership/ai
+- PASS — photo-mid-upload-recovery — a photo you were mid-uploading on the aircraft/partnership post or edit forms no longer vanishes if the page reloads or you navigate away dur
+- PASS — photo-upload-block-submit — aircraft/partnership post forms now block Post/Save Changes while any photo is still mid-upload (showing Uploading photos…), so a slow uplo
+
+
 # Overnight review — 2026-07-04
 
 ## 📊 Traffic (PostHog) — as of 2026-07-04
