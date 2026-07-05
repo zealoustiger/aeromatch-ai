@@ -71,6 +71,13 @@ git config --global --add safe.directory "$APP" 2>/dev/null || true
 git config --global user.email "nightshift@clubhanger.local" 2>/dev/null || true
 git config --global user.name  "ClubHanger Night Shift" 2>/dev/null || true
 git fetch --quiet origin 2>/dev/null || true
+# Self-heal a wedged tree before switching branches. A prior cycle killed mid-edit
+# (systemd timeout → SIGTERM) can leave the working tree dirty; with dirty tracked
+# files `git checkout staging` refuses to switch, the `|| true` swallows the error,
+# and the drain silently runs on a stale night/* branch so nothing ever lands to
+# staging. Reset + clean first so the checkout can't fail this way and re-wedge.
+git reset --hard --quiet 2>/dev/null || true
+git clean -fdq 2>/dev/null || true
 git checkout staging --quiet 2>/dev/null || true
 git pull --quiet --ff-only 2>/dev/null || true
 
