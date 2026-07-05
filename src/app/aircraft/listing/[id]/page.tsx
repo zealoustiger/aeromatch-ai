@@ -49,7 +49,7 @@ import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
 import SimilarAircraft from '@/components/SimilarAircraft'
 import SavedListingNote from '@/components/SavedListingNote'
-import ListingCompletenessPanel from '@/components/ListingCompletenessPanel'
+import AircraftTrustBadge from '@/components/AircraftTrustBadge'
 import AircraftContactButton from '@/components/AircraftContactButton'
 import ShareCostPanel from '@/components/ShareCostPanel'
 
@@ -997,8 +997,9 @@ export default async function AircraftListingDetailPage({
               />
             )}
 
-            {/* Listing completeness — shows buyers which key signals are present. */}
-            <ListingCompletenessPanel p={p} />
+            {/* Trust / completeness — slice 1 of the listing trust layer, same
+                canonical signals as the browse-card compact chip. */}
+            <AircraftTrustBadge p={p} variant="checklist" />
 
             {/* Contact CTA — for user-posted aircraft with a poster, show Message button;
                 for scraped listings, show the outbound source link. */}
