@@ -42,8 +42,9 @@ STATE="${NS_STATE_DIR:-/home/night/state}"
 # this state dir read-only, so writing the docs here lets its /forge/docs endpoint serve
 # them — refreshed every morning so the dashboard never drifts from the real files.
 mkdir -p "$STATE/forge-docs" 2>/dev/null || true
-cp nightshift/GOAL.md "$STATE/forge-docs/goal.md" 2>/dev/null || true
-cp nightshift/HOW_IT_WORKS.md "$STATE/forge-docs/how-it-works.md" 2>/dev/null || true
+# The dashboard shows the concise cards; fall back to the full steering docs if a card is missing.
+cp nightshift/FORGE_GOAL_CARD.md "$STATE/forge-docs/goal.md" 2>/dev/null || cp nightshift/GOAL.md "$STATE/forge-docs/goal.md" 2>/dev/null || true
+cp nightshift/FORGE_HOW_CARD.md "$STATE/forge-docs/how-it-works.md" 2>/dev/null || cp nightshift/HOW_IT_WORKS.md "$STATE/forge-docs/how-it-works.md" 2>/dev/null || true
 
 node nightshift/bin/build-digest.mjs > "$STATE/digest.out" 2> "$STATE/digest.err"
 rc=$?
