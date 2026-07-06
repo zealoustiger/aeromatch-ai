@@ -1201,7 +1201,33 @@ Two confirmed gaps: (1) all 1,856 listings came from a **single manual ingest on
 - **[P1][want] Email alerts end-to-end.** Currently every send is a logged no-op. Needs: **(a) HUMAN setup (only you):** create a Resend account, add `RESEND_API_KEY`, **verify `clubhanger.com` as a sending domain (SPF/DKIM DNS records)**, set `ALERTS_FROM_EMAIL`. **(b) Build the match-and-send job:** after each ingestion, find listings new since last run, match them against confirmed `alerts` + `saved_searches`, send a digest email (reuse `src/lib/email.ts`); schedule it. **(c)** Verify the existing double-opt-in confirmation actually delivers once the key is in. Depends on scheduled ingestion. Keep it tasteful (digest, not per-listing spam; easy unsubscribe).
 
 ### Planes for Sale
-- **[P1] Filter UI overhaul.** Lead with **Make + Model** (the primary search path — Model options depend on selected Make). Then secondary filters: **avionics, total time (tach/Hobbs), engine time (SMOH), year, price, state.** Cleaner than Controller — surface the few that matter, progressive-disclose the rest. Must work at 375px.
+~~- **[P1] Filter UI overhaul.**~~ ✅ FULLY SHIPPED 2026-07-06 (`aircraft-avionics-filter`).
+  Lead with **Make + Model** (the primary search path), then secondary filters — all
+  already live prior to this cycle except one: **total time** (range filter), **year**
+  (range filter), **price** (range filter), and **state** were all previously shipped
+  (see the design/aesthetic + brainstorm-round-2 sections above). **Avionics was the
+  one dimension with zero UI** (confirmed via a fresh code audit — no `avionics` string
+  anywhere in `AircraftSaleFilters.tsx`), closed this cycle: a 5-checkbox "Avionics"
+  group (Glass panel / ADS-B Out / Autopilot / WAAS GPS / GPS navigator) reusing the
+  existing `classifyAvionics` categorization (same logic the listing detail page's
+  avionics panel already uses — no new classification, no fabricated data). Since
+  `avionics` is a `text[]` column and PostgREST has no `ilike`-equivalent for arrays
+  (confirmed live against the DB — the `column::text` cast trick doesn't coerce the
+  array either, same "operator does not exist" error both ways), the category match
+  runs in JS: a lightweight `id, avionics` scan of all active listings (paginated via
+  the existing `fetchAllRows` helper, same technique already used for the family
+  price/comp maps in this file), narrowing the real query with `.in('id', …)` before
+  pagination — correct counts/paging, no schema change, ships live tonight rather than
+  self-suppressing pending a human DDL step. OR semantics across selected categories
+  (matches the existing Model/Grade checkbox-group convention). Chip + mobile-drawer
+  parity (the drawer reuses the same `AircraftSaleFilters` component, so no separate
+  file to touch). Verified against the live DB: 2,180 active priced listings scanned,
+  51 classify as glass-panel; `/aircraft?avionics=glass` returned 46 (the gap is
+  listings without photos, excluded by the page's own default no-photo gate — expected).
+  **Not done, intentionally:** distance-sort + avionics combo (falls back to default
+  sort rather than crashing — the `aircraft_by_distance` RPC has no avionics
+  parameter); engine time (SMOH) as its own filter dimension (a natural next slice,
+  same range-input pattern as Total Time).
 ~~- **[P1][bug] real aircraft photos missing.**~~ ✅ SHIPPED via `listing-completeness-panel` (2026-06-25) None of the sale listings show the actual plane photo. Diagnose the whole path: is the Barnstormers ingest capturing image URLs? Are they being re-hosted / stored on `aircraft_for_sale`? Is the card falling back to a placeholder when a real image exists? Fix so real photos render, with the "Not actual plane photo" badge only when genuinely a placeholder.
 
 ### Search & discovery

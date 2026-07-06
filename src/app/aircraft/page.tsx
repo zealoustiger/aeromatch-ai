@@ -100,7 +100,7 @@ export default async function AircraftPage({
   // ("cirrus sr22 near khwd"), parse it into real filters and redirect to the
   // canonical URL — so the search box fills filters instead of one literal
   // keyword match (which matched nothing). Leftover words stay as `q`.
-  const STRUCTURED = ['make', 'model', 'model_like', 'airport', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt', 'grade', 'min_grade']
+  const STRUCTURED = ['make', 'model', 'model_like', 'airport', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt', 'grade', 'min_grade', 'avionics']
   if (params.q && !STRUCTURED.some((k) => params[k])) {
     const parsed = parseAircraftSearch(params.q)
     if (parsed.matched) {
