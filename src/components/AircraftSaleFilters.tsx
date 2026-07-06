@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
 import { groupModelVariants } from '@/lib/modelGroups'
+import { AVIONICS_FILTER_OPTIONS } from '@/lib/avionicsClassify'
 import SaveSearchButton from './SaveSearchButton'
 import AirportAutocompleteInput from './AirportAutocompleteInput'
 
@@ -100,6 +101,26 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
     [pushParams]
   )
 
+  // Avionics is a multi-select checkbox group like Model, but a flat list of
+  // independent capabilities (not variants of one field) — OR semantics, same
+  // comma-joined-param convention.
+  const toggleAvionics = useCallback(
+    (key: string) => {
+      pushParams((params) => {
+        const current = (params.get('avionics') ?? '')
+          .split(',')
+          .map((c) => c.trim())
+          .filter(Boolean)
+        const next = current.includes(key)
+          ? current.filter((c) => c !== key)
+          : [...current, key]
+        if (next.length) params.set('avionics', next.join(','))
+        else params.delete('avionics')
+      })
+    },
+    [pushParams]
+  )
+
   const clearAll = () => {
     startTransition(() => { router.push(pathname) })
   }
@@ -128,6 +149,12 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
   // picking "an SR20" is one click. Single-member groups render as plain checkboxes.
   const modelGroups = useMemo(() => groupModelVariants(modelOptions), [modelOptions])
   const selectedModelSet = new Set(selectedModels)
+
+  const selectedAvionics = (initialValues.avionics ?? '')
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean)
+  const selectedAvionicsSet = new Set(selectedAvionics)
 
   return (
     <div className="space-y-5">
@@ -282,6 +309,36 @@ export default function AircraftSaleFilters({ initialValues, facets, saveSearchB
             onChange={(e) => updateFilter('max_tt', e.target.value)}
             className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
           />
+        </div>
+      </div>
+
+      {/* Avionics — independent equipment capabilities (not variants of one
+          field, unlike Model), so each renders as its own checkbox. OR
+          semantics: matches ANY selected capability. */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Avionics
+          {selectedAvionics.length > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {selectedAvionics.length} selected
+            </span>
+          )}
+        </label>
+        <div className="space-y-1.5">
+          {AVIONICS_FILTER_OPTIONS.map((opt) => (
+            <label
+              key={opt.key}
+              className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+            >
+              <input
+                type="checkbox"
+                checked={selectedAvionicsSet.has(opt.key)}
+                onChange={() => toggleAvionics(opt.key)}
+                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+              />
+              {opt.label}
+            </label>
+          ))}
         </div>
       </div>
 

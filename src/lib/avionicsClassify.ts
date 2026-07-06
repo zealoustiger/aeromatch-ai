@@ -22,6 +22,19 @@ export interface AvionicsInfo {
   items: string[]
 }
 
+/**
+ * Single source of truth for the /aircraft browse-page avionics filter —
+ * one checkbox per detectable capability, in the same order `classifyAvionics`
+ * evaluates them.
+ */
+export const AVIONICS_FILTER_OPTIONS: { key: AvionicsCap['key']; label: string }[] = [
+  { key: 'glass', label: 'Glass panel' },
+  { key: 'adsb', label: 'ADS-B Out' },
+  { key: 'autopilot', label: 'Autopilot' },
+  { key: 'waas', label: 'WAAS GPS' },
+  { key: 'gps', label: 'GPS navigator' },
+]
+
 // --- Pattern tables (checked via substring match on lowercased joined list) ---
 
 const GLASS_PATTERNS = [

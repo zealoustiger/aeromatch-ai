@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 import { STATE_NAMES } from '@/lib/seo'
 import { groupModelVariants } from '@/lib/modelGroups'
+import { AVIONICS_FILTER_OPTIONS } from '@/lib/avionicsClassify'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
 
 type Params = Record<string, string | undefined>
@@ -240,6 +241,22 @@ export default function ActiveFilterChips({
         }),
       })
     }
+  }
+
+  // Avionics — one chip per selected capability.
+  const avionics = parseList(params.avionics)
+  for (const key of avionics) {
+    const opt = AVIONICS_FILTER_OPTIONS.find((o) => o.key === key)
+    if (!opt) continue
+    chips.push({
+      key: `avionics:${key}`,
+      label: opt.label,
+      href: buildHref(params, (p) => {
+        const next = avionics.filter((x) => x !== key)
+        if (next.length) p.set('avionics', next.join(','))
+        else p.delete('avionics')
+      }),
+    })
   }
 
   // Keyword

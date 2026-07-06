@@ -6,6 +6,7 @@ import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
 import { buildFamilyPriceMap, compVsMarket, familyKey, priceStats, type CompResult, type PriceStats } from '@/lib/aircraftComps'
 import { clubHangerDealVerdict, type ClubHangerDealVerdict, type DealComp } from '@/lib/aircraftEstimate'
 import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
+import { classifyAvionics } from '@/lib/avionicsClassify'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -34,6 +35,10 @@ interface Filters {
   max_year?: string
   min_tt?: string
   max_tt?: string
+  /** comma-joined avionics capability keys (glass/adsb/autopilot/waas/gps).
+   *  OR semantics — matches ANY selected capability, same convention as the
+   *  `model`/`grade` checkbox groups below. */
+  avionics?: string
   /** legacy single grade *floor* (A or B). Superseded by `grade` (multi-select);
    *  still honored read-only so old links / saved searches keep working. */
   min_grade?: string
@@ -114,6 +119,44 @@ function gradeQueryPlan(
   }
   if (bands.length === 0) return { impossible: true }
   return { or: bands.join(',') }
+}
+
+// Parse the comma-joined `avionics` filter param into its category keys.
+function parseAvionicsFilter(raw: string | undefined): string[] {
+  return (raw ?? '').split(',').map((c) => c.trim()).filter(Boolean)
+}
+
+// Does this listing's raw avionics list satisfy the selected category filter?
+// Reuses the exact same classification the listing detail page's avionics
+// panel uses, so the filter and the panel a buyer sees never disagree.
+function avionicsMatch(avionics: string[] | null, categories: string[]): boolean {
+  const info = classifyAvionics(avionics)
+  if (!info) return false
+  const capKeys = new Set<string>(info.caps.map((c) => c.key))
+  return categories.some((cat) => capKeys.has(cat))
+}
+
+// `avionics` is a `text[]` column — PostgREST has no `ilike`-style operator for
+// arrays, and casting the column in the filter (`avionics::text=ilike...`)
+// still fails the same way (confirmed live against the DB: "operator does not
+// exist: text[] ~~* unknown"). So the category match runs in JS instead: fetch
+// id+avionics for every active row (paginated via `fetchAllRows`, same
+// technique already used below for the family price/comp maps), classify each,
+// and narrow the real query with `.in('id', …)`. Population is a few thousand
+// rows — a lightweight two-column scan, only run when the filter is active.
+async function fetchAvionicsMatchIds(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  categories: string[]
+): Promise<string[]> {
+  const rows = await fetchAllRows<{ id: string; avionics: string[] | null }>((from, to) =>
+    supabase
+      .from('aircraft_for_sale')
+      .select('id, avionics')
+      .eq('status', 'active')
+      .gte('asking_price', BUYER_PRICE_FLOOR)
+      .range(from, to)
+  )
+  return rows.filter((r) => avionicsMatch(r.avionics, categories)).map((r) => r.id)
 }
 
 // Parse ?page into a 1-based page number, clamped to >= 1. Anything missing or
@@ -476,10 +519,15 @@ export async function fetchAircraftPage(
       centerLng = visitorCoords.lng
     }
 
+    const avionicsCategories = parseAvionicsFilter(filters.avionics)
+
     // Distance sort takes the RPC path — server-side haversine with proper
     // pagination. We only branch when we have a real center; otherwise the
-    // PostgREST path below handles every other sort consistently.
-    if (filters.sort === 'distance' && centerLat != null && centerLng != null) {
+    // PostgREST path below handles every other sort consistently. The RPC has
+    // no avionics parameter, so an active avionics filter falls through to the
+    // plain query path below instead (loses distance ordering, not scope this
+    // slice — documented in the spec).
+    if (filters.sort === 'distance' && centerLat != null && centerLng != null && avionicsCategories.length === 0) {
       const includeNoPhoto = filters.include_no_photo === '1'
       const state = filters.state || airportState || null
       const { data, error: rpcErr } = await supabase.rpc('aircraft_by_distance', {
@@ -507,11 +555,20 @@ export async function fetchAircraftPage(
       return { listings, totalCount, page, error }
     }
 
+    let avionicsIdFilter: string[] | null = null
+    if (avionicsCategories.length > 0) {
+      avionicsIdFilter = await fetchAvionicsMatchIds(supabase, avionicsCategories)
+      if (avionicsIdFilter.length === 0) {
+        return { listings: [], totalCount: 0, page, error: false }
+      }
+    }
+
     let query = supabase
       .from('aircraft_for_sale')
       .select('*', { count: 'exact' })
       .eq('status', 'active')
       .gte('asking_price', BUYER_PRICE_FLOOR)
+    if (avionicsIdFilter) query = query.in('id', avionicsIdFilter)
     if (filters.include_no_photo !== '1') {
       query = query.not('images', 'eq', '[]')
     }
