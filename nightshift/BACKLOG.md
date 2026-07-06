@@ -86,6 +86,22 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   filtering for seeker alerts — seeker location matching is multi-airport + radius +
   `additional_airports`-aware, materially more complex than the scalar `icao`/`state` aircraft/
   partnership alerts use; a natural next slice.
+~~- **[agent][bug] Nav unread-message badge 400'd for every signed-in user, every page.**~~ ✅
+  SHIPPED via `nav-unread-badge-migration-fallback` (2026-07-06) `Nav.tsx`'s unread-count query
+  selects `threads.last_message_at`/`last_message_sender_id`/`inquirer_read_at`/`owner_read_at`
+  — columns `schema.sql` declares (lines 526-529) but that were never applied to the live
+  Supabase DB (confirmed directly: `42703 column threads.last_message_at does not exist`, with
+  both the service-role and anon key). Every signed-in page load/route change fired this failing
+  query, permanently breaking the unread badge (always renders 0) and logging a `supabase.co`
+  400 — flagged twice already in CHANGELOG (`searches-quickstart-onboarding`,
+  `alerts-manage-page` cycles) as a "possible future `[bug]`" but never actioned. Added a
+  module-level cache so a not-yet-migrated DB fails the query at most once per browser tab
+  session instead of on every navigation; self-heals to the real query with no code change once
+  the migration lands. **⚠️ HUMAN ACTION still needed: apply the additive `threads` columns
+  (schema.sql lines 526-529) against live Supabase** — until then the unread badge stays
+  silently at 0 for everyone (degraded gracefully, not broken-looking, but not functional
+  either). This joins `alerts_owner_select` and the `saved_listings.note` migration as pending
+  human DDL applications.
 
 ## 🔔 GOAL — BEST ALERT EXPERIENCE (human-set 2026-07-05) — PULL FROM HERE FIRST
 **The `[goal]` is now: make setting/managing an alert the best experience on the web,

@@ -25,6 +25,14 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean)
 
+// The `threads` read-tracking columns (last_message_at/last_message_sender_id/
+// inquirer_read_at/owner_read_at) are additive columns already declared in
+// schema.sql but not yet applied to the live Supabase DB. Cache the result for
+// this browser tab so a not-yet-migrated DB fails the query at most once per
+// session instead of on every route change — self-heals to the full query on
+// the next page load once the migration is applied, no code change needed.
+let threadsReadTrackingAvailable: boolean | null = null
+
 export default function Nav() {
   const pathname = usePathname()
   const router = useRouter()
@@ -77,12 +85,19 @@ export default function Nav() {
   // Fetch unread message count whenever the user or route changes.
   useEffect(() => {
     if (!user) { setUnreadCount(0); return }
+    if (threadsReadTrackingAvailable === false) { setUnreadCount(0); return }
     const supabase = createClient()
     supabase
       .from('threads')
       .select('inquirer_id, owner_id, last_message_at, last_message_sender_id, inquirer_read_at, owner_read_at')
       .not('last_message_sender_id', 'is', null)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          threadsReadTrackingAvailable = false
+          setUnreadCount(0)
+          return
+        }
+        threadsReadTrackingAvailable = true
         const count = (data ?? []).filter((t) => {
           if (t.last_message_sender_id === user.id) return false
           const readAt = t.inquirer_id === user.id ? t.inquirer_read_at : t.owner_read_at
