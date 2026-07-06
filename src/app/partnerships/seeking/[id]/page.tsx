@@ -10,6 +10,7 @@ import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SeekerContactBar from '@/components/SeekerContactBar'
 import SaveListingButton from '@/components/SaveListingButton'
+import SavedListingNote from '@/components/SavedListingNote'
 import PartnershipCard from '@/components/PartnershipCard'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
@@ -123,20 +124,40 @@ export default async function SeekerDetailPage({
     getSeekerBudgetCheck(supabase, s),
   ])
 
-  // Fetch the current user's saved row for this listing so the heart button gets
-  // the real initialSaved state (eliminates the heart-state flash), mirroring the
+  // Fetch the current user's saved row for this listing so we can:
+  // (a) pass the real initialSaved state (eliminates the heart-state flash), and
+  // (b) render the note editor if the user has saved this listing — mirroring the
   // aircraft/partnership detail pages.
   const { data: { user } } = await supabase.auth.getUser()
   let savedRowId: string | null = null
+  let savedNote: string | null = null
+  let notesEnabled = false
   if (user) {
-    const { data } = await supabase
+    // Try to select with the note column; fall back gracefully when the column
+    // hasn't been migrated yet (same pattern as the /saved page and aircraft/partnership).
+    const withNote = await supabase
       .from('saved_listings')
-      .select('id')
+      .select('id, note')
       .eq('user_id', user.id)
       .eq('listing_id', s.id)
       .eq('listing_type', 'seeker')
       .maybeSingle()
-    savedRowId = data?.id ?? null
+
+    if (!withNote.error) {
+      notesEnabled = true
+      savedRowId = withNote.data?.id ?? null
+      savedNote = withNote.data?.note ?? null
+    } else {
+      // note column not yet migrated (42703) or other error — id-only fallback.
+      const fallback = await supabase
+        .from('saved_listings')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('listing_id', s.id)
+        .eq('listing_type', 'seeker')
+        .maybeSingle()
+      savedRowId = fallback.data?.id ?? null
+    }
   }
   const isOwner = !!user && !!s.poster_id && user.id === s.poster_id
 
@@ -158,7 +179,12 @@ export default async function SeekerDetailPage({
         >
           <ChevronLeft className="h-4 w-4" /> Back to Seeking Listings
         </Link>
-        <SaveListingButton listingId={s.id} listingType="seeker" initialSaved={!!savedRowId} variant="full" />
+        <div className="flex flex-col items-end gap-2">
+          <SaveListingButton listingId={s.id} listingType="seeker" initialSaved={!!savedRowId} variant="full" />
+          {notesEnabled && savedRowId && (
+            <SavedListingNote savedRowId={savedRowId} note={savedNote} />
+          )}
+        </div>
       </div>
 
       {/* Post-publish confirmation — shown once when redirected from the seeking post form */}
