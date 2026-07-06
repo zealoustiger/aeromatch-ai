@@ -1,3 +1,37 @@
+## 2026-07-06T06:01:02Z — Night Shift run: 25 cycles (PASS 0 / FAIL 25) — safety cap (25)
+- Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $0.0000 of $120 cap
+
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+
+### VPS headroom
+- ✅ no headroom issues — peak load 2.5/2 cores, min free mem 5.0 GB, container peaked at 4% of its memory cap (2 samples)
+
+
 # Overnight review — 2026-07-05
 
 ## 📊 Traffic (PostHog) — as of 2026-07-05
