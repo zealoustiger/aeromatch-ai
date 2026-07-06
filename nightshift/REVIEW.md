@@ -1,3 +1,40 @@
+## 2026-07-06T12:11:57Z — Night Shift run: 25 cycles (PASS 20 / FAIL 4) — safety cap (25)
+- Models: cycles on sonnet; 3 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $113.4755 of $120 cap
+
+- PASS — seeker-saved-note-parity — Added the note on a saved listing feature to the pilot-seeking-a-partnership detail page (the one of 3 listing types missing it); also confirm
+- PASS — parts-filter-pattern-gaps — closed real gaps (wingtips/wing-assy/wing-rack/governor) in the parts/wanted listing filter on /aircraft, verified zero false positives again
+- PASS — partnership-seeker-match-count — shipped a compatibility-matching-engine slice 1: an honest, owner-only N matches count on partnership and seeker detail pages (make/budg
+- PASS — partnership-model-multiselect — `/partnerships` Model filter is now a checkbox multi-select scoped to a live Make dropdown (parity with `/aircraft`), with per-model remo
+- PASS — seeker-match-alert — Owner-only get alerts for new matches email signup added to the seeking-a-partnership detail page, closing the last gap in the `[P1][want]` Instant 
+- PASS — seeker-model-filter — Added a Model Wanted filter to `/partnerships/seeking`, closing the parity gap flagged in the last two changelog entries; unlike a simple UI port, 
+- PASS — aircraft-avionics-filter — Added an Avionics filter (Glass panel / ADS-B Out / Autopilot / WAAS GPS / GPS navigator) to `/aircraft`, closing the last unbuilt dimension o
+- cycle produced no verdict (exit 124)
+- PASS — partnership-make-seeker-demand — make hub pages now show an honest N pilots are looking for a {Make} partnership right now → see who demand line (real counts, self-sup
+- PASS — listings-completeness-nudge — My Listings dashboard now shows a real N/4 trust signals completeness chip on every active listing (also audited and struck 6 stale-but-alr
+- ABORT — partnership-model-rollup — Ported the aircraft filter's model variant (all) group-checkbox rollup onto the Partnerships Model filter and its active-filter chips, closin
+- PASS — aircraft-trust-ranking — `/aircraft`'s default sort now floats complete, honestly-disclosed listings above thin ones (mirroring the existing `/partnerships` trust-rankin
+- PASS — seeker-trust-ranking — completeness-weighted trust ranking now applies to `/partnerships/seeking`, matching `/aircraft` and `/partnerships`; closes slice 2 of the Listin
+- PASS — seeker-saved-search-path-fix — fixed saved-search from /partnerships/seeking silently mislabeling as a Partnerships search (wrong badge + wrong View link)`
+- PASS — aircraft-listing-alert-cta — Added a make/model-scoped Get alerts signup to every aircraft-for-sale detail page and demoted the off-platform View on {source} button's vi
+- PASS — search-empty-state-alert — zero-result searches on /aircraft, /partnerships, and /partnerships/seeking now lead with a filter-aware Get alerts capture instead of a dead 
+- cycle produced no verdict (exit 0)
+- PASS — searches-quickstart-onboarding — signed-in users with no saved searches now get a one-screen What are you looking for? form on /searches that saves a search and turns on
+- cycle produced no verdict (exit 124)
+- PASS — alerts-manage-page — new read-only `/alerts/manage` page listing a signed-in user's own email alert subscriptions, plus an Alerts tile on /account
+- PASS — seeker-alert-model-filter — Wired `model` into seeker alert matching on `/partnerships/seeking` (alertContext/sourcePath + alert-digest's parseSourcePath/countNewSeekers
+- PASS — nav-unread-badge-migration-fallback — fixed a site-wide `[bug]`: the nav's unread-message badge query referenced 4 `threads` columns declared in schema.sql but never app
+- PASS — savesearch-real-alerts — Wired Save this search to actually create a confirmed email alert (via `alert-digest`'s already-live pipeline), closing a gap where the site pro
+- PASS — faa-lookup-registrant-type-hint — surfaced the FAA registry's owner-type (Individual/LLC/Trust/etc.) in the N-number lookup status on `/aircraft/new` and `/partnerships/
+- cycle produced no verdict (exit 1)
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 4.2 on 2 cores, sustained ~4 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container neared its memory cap: peak 3.2 GB of 3.2 GB (100%) — raise --memory in the env file before it OOM-kills a build
+- ⚠️ container CPU-throttled ~1022s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+- 2 of 25 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-06T06:01:02Z — Night Shift run: 25 cycles (PASS 0 / FAIL 25) — safety cap (25)
 - Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
 - Night spend so far: $0.0000 of $120 cap
