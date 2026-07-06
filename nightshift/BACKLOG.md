@@ -850,9 +850,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   desktop chevron arrows via a reusable client `RailScroller` (cards stay server-rendered
   as children). This delivers the headline "drop the horizontal scrollbar" reversibly on
   the existing real-listing rails. **STILL OPEN — the wholesale redesign awaits the human's
-  mock: Option A (category-tile mosaic) vs tabbed Option C.** Also: apply `RailScroller` to
-  the in-listing Similar-aircraft rails (the real Option-B target) + the newest-partnerships
-  homepage row for consistency.
+  mock: Option A (category-tile mosaic) vs tabbed Option C.** **RailScroller rollout ✅
+  AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06** — both named follow-ups are done: the in-listing
+  Similar-aircraft rail (`SimilarAircraft.tsx`, `similar-rails-snap-carousel`), the
+  newest-partnerships homepage row (`FeaturedListings.tsx`, `home-newest-partnerships-rail`),
+  and also `DealsRail.tsx` + `SimilarListings.tsx` — `RailScroller` is now the standard for
+  every card rail site-wide. Confirmed via grep, no code change needed.
 
 **Zillow/Redfin features buyers love (all [want]):**
 ~~- **[P1][want] Internal listing detail pages.**~~ ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06
@@ -863,7 +866,9 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   `price_changed_at`, only when a real recorded change exists); slice 3 — `SimilarAircraft` rail;
   slice 4 — `buildAircraftListingJsonLd` Product/Offer JSON-LD + BreadcrumbList, wired into the
   page. Confirmed via direct grep of the current file, not a changelog note.
-- **[P1][want] "ClubHanger Estimate" — fair-value pricing (Zestimate analog).** "Priced
+~~- **[P1][want] "ClubHanger Estimate" — fair-value pricing (Zestimate analog).**~~ ✅
+  AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06 (all 3 slices done per the note below, parent
+  bullet lacked its strikethrough). "Priced
   $18k below similar 2008 SR22s" + a Good-deal / Priced-high score, computed from comps
   on make/model/year-band/hours. Differentiator. Slice: (1) comp model + API; (2) deal
   badge on cards (extends existing `CompResult`); (3) price-analysis block on detail page.
@@ -909,7 +914,11 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   uploader. Slice: (1) DnD + multi-select zone with previews → Supabase Storage + attach
   URLs to the listing; (2) remove/reorder + validation (type/size/count cap); (3) progress
   states + 375px polish.
-- **[P1][want] Post-a-partnership form: make posting frictionless.** Goal — make posting a
+~~- **[P1][want] Post-a-partnership form: make posting frictionless.**~~ ✅
+  AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06 (all sub-slices below already done, including
+  buy-in itself later made optional per `buy-in-price-optional` — an even friendlier
+  end-state than this item's original ask; parent bullet lacked its strikethrough). Goal —
+  make posting a
   partnership as easy as possible. Changes: (1) **N-number optional** with helper text;
   (2) **simplify "Home airport"** to just the identifier, drop airport-name/city/state
   (implied); (3) **buy-in required**, monthly-fixed + wet (per-hr) rate **optional** with an
@@ -1187,6 +1196,24 @@ thin/doorway pages; real listings + real data per page).
 
 **Trust — the human's #1 differentiator: pilots trust filled-out, on-platform, real-photo, member-posted listings:**
 - **[P1][want] Listing trust layer.** Make trustworthiness visible and maximize it: (a) a trust/completeness badge on cards + detail (real photo ✓, full specs ✓, on-platform contact ✓, posted by signed-up member ✓); (b) rank complete + on-platform + real-photo listings above thin/off-platform ones (extends existing ranking work); (c) nudge posters to complete listings + add real photos (post-flow + an owner "improve your listing" prompt); (d) prefer on-platform contact over off-platform redirects. Goal: as many fully-filled, on-platform, real-photo, member-owned listings as possible. Slice: (1) trust badge + signals; (2) completeness-weighted ranking; (3) poster completion nudges; (4) reduce off-platform redirects.
+  — **slice 1 (trust badge + signals) ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06**:
+  `src/lib/aircraftTrust.ts`/`partnershipTrust.ts`/`seekerTrust.ts` + `AircraftTrustBadge`/
+  `TrustBadge`/`SeekerTrustBadge` components render real signals (complete details,
+  maintenance disclosed, transparent price, on-platform member) on cards and detail pages
+  for all 3 listing types, plus a `/listing-quality` explainer page. **Remaining, genuinely
+  open:** slices 2-4 (completeness-weighted ranking, poster completion nudges, reducing
+  off-platform redirects) — no code found for any of these three.
+  — **slice 3 (poster completion nudges) — dashboard half ✅ SHIPPED 2026-07-06**
+  (`listings-completeness-nudge`): the detail-page "Improve your listing" nudge
+  (`*ListingOwnerNudge` components) already existed for all 3 types, but the `/listings`
+  ("My Listings") dashboard showed zero completeness signal — an owner had to open each
+  listing individually to see what needed work. Now every active/pending row on `/listings`
+  shows its real "N/4 trust signals" chip (reusing the existing `AircraftTrustBadge`/
+  `TrustBadge`/`SeekerTrustBadge` `variant="compact"` + `evaluate*Trust` — no new scoring
+  logic), right next to the Edit link. Required extending the 3 active-listing `.select()`
+  queries to include the columns those evaluators read (no schema change). **Remaining:**
+  slice 2 (completeness-weighted ranking) and slice 4 (reduce off-platform redirects) are
+  still genuinely open.
 
 ### Inventory coverage & ingestion — 2026-06-20
 **Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.
@@ -1197,8 +1224,17 @@ thin/doorway pages; real listings + real data per page).
 
 ### Make the marketplace LIVE — scheduled ingestion + working email alerts (2026-06-20)
 Two confirmed gaps: (1) all 1,856 listings came from a **single manual ingest on 2026-06-18** — scrapers are NOT scheduled, so inventory is frozen; (2) email alerts are a **no-op** (no `RESEND_API_KEY`, and no match-and-send job). They're a chain: scheduled scraping → detect new → match saved searches → send email.
-- **[P1][want] Schedule the ingestion scrapers (recurring).** Run the existing adapters (barnstormers, aircraftforsale, hangar67 — + trade-a-plane when added) on a schedule (start daily) via a scheduled task (like nightshift) or cron calling `scraper/ingest.mjs`. Dedupe by `source_id`/N-number; **flag genuinely new rows** (for alerts) and retire sold/stale (the sold-detection grace window already exists). Without this the site looks dead and alerts have nothing to send.
-- **[P1][want] Email alerts end-to-end.** Currently every send is a logged no-op. Needs: **(a) HUMAN setup (only you):** create a Resend account, add `RESEND_API_KEY`, **verify `clubhanger.com` as a sending domain (SPF/DKIM DNS records)**, set `ALERTS_FROM_EMAIL`. **(b) Build the match-and-send job:** after each ingestion, find listings new since last run, match them against confirmed `alerts` + `saved_searches`, send a digest email (reuse `src/lib/email.ts`); schedule it. **(c)** Verify the existing double-opt-in confirmation actually delivers once the key is in. Depends on scheduled ingestion. Keep it tasteful (digest, not per-listing spam; easy unsubscribe).
+~~- **[P1][want] Schedule the ingestion scrapers (recurring).**~~ ✅ AUDIT-CONFIRMED FULLY
+  SHIPPED 2026-07-06 — `nightshift/deploy/nightshift-scrape.timer` (systemd,
+  `OnCalendar=*-*-* 06:40:00 America/Los_Angeles`) runs `scraper/ingest.mjs` +
+  `scraper/ingest-partnerships.mjs` + `scraper/send-alerts.mjs` daily, unattended. Run the
+  existing adapters (barnstormers, aircraftforsale, hangar67 — + trade-a-plane when added) on a schedule (start daily) via a scheduled task (like nightshift) or cron calling `scraper/ingest.mjs`. Dedupe by `source_id`/N-number; **flag genuinely new rows** (for alerts) and retire sold/stale (the sold-detection grace window already exists). Without this the site looks dead and alerts have nothing to send.
+~~- **[P1][want] Email alerts end-to-end.**~~ ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06 —
+  `RESEND_API_KEY` is set and `src/lib/email.ts` sends real emails (no longer a no-op);
+  confirm-email send on capture (`actions.ts`) + `/api/alerts/confirm`/`/api/alerts/unsubscribe`
+  routes live; the digest cron (`src/app/api/cron/alert-digest/route.ts`) runs daily via
+  `vercel.json`'s `crons` entry (`0 8 * * *`), matching new listings against confirmed
+  alerts across all 3 listing types. Currently every send is a logged no-op. Needs: **(a) HUMAN setup (only you):** create a Resend account, add `RESEND_API_KEY`, **verify `clubhanger.com` as a sending domain (SPF/DKIM DNS records)**, set `ALERTS_FROM_EMAIL`. **(b) Build the match-and-send job:** after each ingestion, find listings new since last run, match them against confirmed `alerts` + `saved_searches`, send a digest email (reuse `src/lib/email.ts`); schedule it. **(c)** Verify the existing double-opt-in confirmation actually delivers once the key is in. Depends on scheduled ingestion. Keep it tasteful (digest, not per-listing spam; easy unsubscribe).
 
 ### Planes for Sale
 ~~- **[P1] Filter UI overhaul.**~~ ✅ FULLY SHIPPED 2026-07-06 (`aircraft-avionics-filter`).
@@ -1246,7 +1282,8 @@ Two confirmed gaps: (1) all 1,856 listings came from a **single manual ingest on
 
 ### Re-filed from the 6/14 feature run — adapt the existing code, don't rebuild from scratch
 These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now conflict. The code is a strong starting point: rebase the relevant files onto current `staging`, resolve conflicts, then QA per RUNBOOK. ONE per cycle.
-- **[P1][want] Cost + earnings calculators.** Standalone `/tools/cost-calculator` (co-ownership cost split) + `/tools/earnings-calculator` (leaseback earnings). Near-complete in branch `feat/financial-calculators` (PR #17): mostly new isolated files — `src/app/tools/*`, `src/components/CostCalculator.tsx`, `EarningsCalculator.tsx`, `src/lib/calculators.ts` + tests. Only 1 conflict; easiest win. Link in footer/nav. Cleaner-than-Controller, 375px-first.
+~~- **[P1][want] Cost + earnings calculators.**~~ ✅ SHIPPED 2026-06-20 (stale duplicate of the
+  entry already struck off in the Done section — see CHANGELOG 2026-06-20T06:13Z). Standalone `/tools/cost-calculator` (co-ownership cost split) + `/tools/earnings-calculator` (leaseback earnings). Near-complete in branch `feat/financial-calculators` (PR #17): mostly new isolated files — `src/app/tools/*`, `src/components/CostCalculator.tsx`, `EarningsCalculator.tsx`, `src/lib/calculators.ts` + tests. Only 1 conflict; easiest win. Link in footer/nav. Cleaner-than-Controller, 375px-first.
 - **[P2][want] Compatibility matching engine + new-match alerts.** Score how well a seeker fits an available partnership (and vice-versa) from EXISTING columns (budget, home airport + `willing_to_travel_nm` via airport lat/lng, ratings, hours, share type) — NO schema change. Surface "N matches" + a `/matches` view + match badges. Starting code in `feat/matching-engine` (PR #15): `src/lib/matching.ts` + tests, `MatchScore.tsx`, `ListingMatches.tsx`. Pairs with the Available+Seeking toggle above.
   — **slice 1 (scoring function + owner-only "N matches" count) ✅ SHIPPED 2026-07-06** (`partnership-seeker-match-count`): new `isCompatibleMatch()` (`src/lib/matching.ts` + `matching.test.ts`, 9 worked-example tests) scores make/budget(buy-in, monthly, hourly)/min-hours/ratings-required/share-type from existing columns, honesty-gated (a criterion only counts when BOTH sides have data — missing data never disqualifies). Wired as an owner-only `MatchCountNudge` on `/partnerships/[id]` ("N pilots seeking a partnership match your listing") and `/partnerships/seeking/[id]` ("N available partnerships match what you're looking for"), self-suppressing at 0, linking to the filtered browse page. Verified against the live DB directly (read-only) — real non-dormant matches exist today (e.g. the Cessna 172SP partnership matches 2 active seekers). **Not done, intentionally (real remaining scope, future slices):** the `willing_to_travel_nm` distance criterion (needs an airport lat/lng join for seeker rows, not yet wired), a standalone `/matches` view, match badges on browse cards, and new-match alerts.
 - **[P2][want] Listing depth — photo gallery + similar listings.** Multi-photo gallery on the partnership detail page + a "Similar listings" rail. Starting code in `feat/listing-depth` (PR #18): `PhotoGallery.tsx`, `SimilarListings.tsx`. The "richer filters" part of that PR overlaps the P1 Filter UI overhaul — fold it there, don't duplicate.
@@ -1304,8 +1341,12 @@ Backlinks deferred by human. So: (A) make existing pages genuinely index-worthy,
 - **[P1][want] Post-signup onboarding: "What are you looking for?"** One screen right after signup — aircraft type / home airport / budget → instantly creates a saved search + turns on alerts, and offers "Also post yourself as looking for a share?" Converts a signup into ongoing engagement + seeds the seeking side. *(2 cycles)*
 
 #### C. Engagement — get pilots to post as "seeking a share"
-- **[P1][want] Dead-simple "Looking for a share" post flow.** Prominent CTA ("Want to join a partnership? Tell pilots what you're looking for →") → a ~30-second form: home airport, aircraft/mission, budget, ratings, one sentence. Mobile-first, minimal fields. The biggest lever for seeking-side supply. *(2 cycles)*
-- **[P1][want] Anonymous-by-default seeker posts.** Show seeker as "First L." with NO contact info; owners reach out **through on-platform messaging** only. Removes the "I don't want my info public" barrier. *(1 cycle)* — **slice 1 ✅ SHIPPED 2026-06-22T12:28Z** (`anonymizeName` in `utils.ts`; seeker shown as "First L." on `SeekerCard` + `/partnerships/seeking/[id]`; email/phone now **server-side gated behind sign-in** so they never enter the public/crawlable HTML — logged-out sees a "Sign in to contact this pilot" CTA; honors the post form's existing "not shown publicly" promise; NO schema change; see Done + CHANGELOG). **Next: replace the email/phone reveal with real on-platform messaging to seekers. ✅ SCHEMA APPLIED 2026-06-22 — `threads.seeker_id` added, `partnership_id` now nullable, a one-target check + seeker-thread unique index are live (see `supabase/schema.sql`). Build the on-platform seeker messaging NOW: reuse the existing partnership thread/message UI + actions for the seeker case; threads RLS is participant-based (inquirer/owner ids) so it already covers seeker threads — set `owner_id` = the seeker's `poster_id`.**
+~~- **[P1][want] Dead-simple "Looking for a share" post flow.**~~ ✅ SUPERSEDED 2026-07-06 —
+  stale duplicate of "Post-a-Seeking form: make it frictionless" (struck through below,
+  fully shipped); `PostSeekerListingForm.tsx` requires only `home_airport`, with autosave,
+  AI-draft prefill, and examples covering the rest of this ask's spirit even though it isn't
+  literally a bare 5-field form. Prominent CTA ("Want to join a partnership? Tell pilots what you're looking for →") → a ~30-second form: home airport, aircraft/mission, budget, ratings, one sentence. Mobile-first, minimal fields. The biggest lever for seeking-side supply. *(2 cycles)*
+- **[P1][want] Anonymous-by-default seeker posts.** Show seeker as "First L." with NO contact info; owners reach out **through on-platform messaging** only. Removes the "I don't want my info public" barrier. *(1 cycle)* — **slice 1 ✅ SHIPPED 2026-06-22T12:28Z** (`anonymizeName` in `utils.ts`; seeker shown as "First L." on `SeekerCard` + `/partnerships/seeking/[id]`; email/phone now **server-side gated behind sign-in** so they never enter the public/crawlable HTML — logged-out sees a "Sign in to contact this pilot" CTA; honors the post form's existing "not shown publicly" promise; NO schema change; see Done + CHANGELOG). **On-platform seeker messaging ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06** — `threads.seeker_id` is wired end-to-end in `src/app/actions.ts` (thread lookup/insert scoped by `seeker_id`, `owner_id` = the seeker's `poster_id`) and `SeekerContactBar.tsx` drives it; this item is now fully complete across both slices.
 ~~- **[P1][want] Instant payoff when posting a seeking.**~~ ✅ SHIPPED via `seeker-match-alert`
   (2026-07-06) The "show available partnerships that already match" half was already live
   (`getMatchingPartnerships()` on `/partnerships/seeking/[id]`, plus the owner-only

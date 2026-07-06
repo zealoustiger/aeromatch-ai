@@ -4,18 +4,13 @@ import Link from 'next/link'
 import { Plane, Handshake, PlusCircle, ExternalLink, UserSearch, ChevronDown } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { formatPrice, formatShareType } from '@/lib/utils'
-import type { AircraftForSale, Partnership } from '@/lib/types'
+import type { AircraftForSale, Partnership, PartnershipSeeker } from '@/lib/types'
 import DeactivateListingButton from '@/components/DeactivateListingButton'
 import RelistListingButton from '@/components/RelistListingButton'
+import AircraftTrustBadge from '@/components/AircraftTrustBadge'
+import TrustBadge from '@/components/TrustBadge'
+import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 
-type SeekerRow = {
-  id: string
-  title: string | null
-  home_airport: string | null
-  status: string
-  created_at: string
-  preferred_makes: string[] | null
-}
 
 export const metadata: Metadata = {
   title: 'My Listings — ClubHanger',
@@ -48,25 +43,29 @@ export default async function MyListingsPage() {
   if (!user) redirect('/auth?next=/listings')
 
   // Fetch aircraft posted by this user.
+  // (columns beyond the display fields — description/registration/ttaf/smoh — feed the
+  // completeness/trust chip below via the shared evaluateAircraftTrust())
   const { data: aircraftRows } = await supabase
     .from('aircraft_for_sale')
-    .select('id, title, make, model, year, asking_price, price_text, status, created_at, first_seen_at, source')
+    .select('id, title, make, model, year, asking_price, price_text, status, created_at, first_seen_at, source, description, registration, ttaf, smoh')
     .eq('poster_id', user.id)
     .in('status', ['active', 'pending'])
     .order('created_at', { ascending: false })
 
   // Fetch partnerships posted by this user.
+  // (extra columns feed the completeness/trust chip via evaluateTrust())
   const { data: partnershipRows } = await supabase
     .from('partnerships')
-    .select('id, title, make, model, year, buy_in_price, share_type, status, created_at, posted_at')
+    .select('id, title, make, model, year, buy_in_price, share_type, status, created_at, posted_at, images, image_is_placeholder, registration, monthly_fixed, hourly_wet, description, source_url, poster_id')
     .eq('poster_id', user.id)
     .in('status', ['active', 'pending'])
     .order('created_at', { ascending: false })
 
   // Fetch seeking listings posted by this user.
+  // (extra columns feed the completeness/trust chip via evaluateSeekerTrust())
   const { data: seekerRows } = await supabase
     .from('partnership_seekers')
-    .select('id, title, home_airport, status, created_at, preferred_makes')
+    .select('id, title, home_airport, status, created_at, preferred_makes, preferred_models, aircraft_category, max_buy_in, max_monthly, max_hourly, total_hours, ratings_held, poster_id')
     .eq('poster_id', user.id)
     .in('status', ['active', 'pending'])
     .order('created_at', { ascending: false })
@@ -95,11 +94,11 @@ export default async function MyListingsPage() {
 
   const aircraft: AircraftForSale[] = (aircraftRows ?? []) as AircraftForSale[]
   const partnerships: Partnership[] = (partnershipRows ?? []) as Partnership[]
-  const seekers: SeekerRow[] = (seekerRows ?? []) as SeekerRow[]
+  const seekers: PartnershipSeeker[] = (seekerRows ?? []) as PartnershipSeeker[]
 
   const pastAircraft: AircraftForSale[] = (pastAircraftRows ?? []) as AircraftForSale[]
   const pastPartnerships: Partnership[] = (pastPartnershipRows ?? []) as Partnership[]
-  const pastSeekers: SeekerRow[] = (pastSeekerRows ?? []) as SeekerRow[]
+  const pastSeekers: PartnershipSeeker[] = (pastSeekerRows ?? []) as PartnershipSeeker[]
 
   const hasAny = aircraft.length > 0 || partnerships.length > 0 || seekers.length > 0
   const pastCount = pastAircraft.length + pastPartnerships.length + pastSeekers.length
@@ -165,6 +164,9 @@ export default async function MyListingsPage() {
                       {' · '}
                       {formatDate(p.first_seen_at ?? p.created_at)}
                     </p>
+                    <div className="mt-1.5">
+                      <AircraftTrustBadge p={p} variant="compact" />
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <Link
@@ -212,6 +214,9 @@ export default async function MyListingsPage() {
                       {' · '}
                       {formatDate(p.posted_at ?? p.created_at)}
                     </p>
+                    <div className="mt-1.5">
+                      <TrustBadge p={p} variant="compact" />
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <Link
@@ -264,6 +269,9 @@ export default async function MyListingsPage() {
                         {' · '}
                         {formatDate(s.created_at)}
                       </p>
+                      <div className="mt-1.5">
+                        <SeekerTrustBadge s={s} variant="compact" />
+                      </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <Link
