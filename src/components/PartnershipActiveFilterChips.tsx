@@ -99,23 +99,35 @@ export default function PartnershipActiveFilterChips({ params }: { params: Param
     })
   }
 
-  // Aircraft make
+  // Aircraft make — removing it also drops any model (mirrors /aircraft: a
+  // model selection only makes sense scoped to its make).
   const make = params.make?.trim()
   if (make) {
     chips.push({
       key: 'make',
       label: make,
-      href: buildHref(params, (p) => p.delete('make')),
+      href: buildHref(params, (p) => {
+        p.delete('make')
+        p.delete('model')
+      }),
     })
   }
 
-  // Aircraft model
-  const model = params.model?.trim()
-  if (model) {
+  // Aircraft model — multi-select: one removable chip per selected model
+  // (mirrors the `airports` multi-chip pattern above).
+  const selectedModels = (params.model ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+  for (const model of selectedModels) {
     chips.push({
-      key: 'model',
+      key: `model:${model}`,
       label: model,
-      href: buildHref(params, (p) => p.delete('model')),
+      href: buildHref(params, (p) => {
+        const rest = selectedModels.filter((m) => m !== model)
+        if (rest.length) p.set('model', rest.join(','))
+        else p.delete('model')
+      }),
     })
   }
 

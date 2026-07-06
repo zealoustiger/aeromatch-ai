@@ -5,6 +5,7 @@ import { useCallback, useTransition } from 'react'
 import { X } from 'lucide-react'
 import SaveSearchButton from './SaveSearchButton'
 import AirportAutocompleteInput from './AirportAutocompleteInput'
+import type { PartnershipFacets } from '@/lib/partnershipsQuery'
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -39,9 +40,12 @@ interface Props {
    *  filters" (the base route the saved search reopens). Lets users save where
    *  they tune filters, not just from the top action bar. */
   saveSearchBasePath?: string
+  /** Live Make/Model options for the Make select → Model multi-select. Falls
+   *  back to today's free-text Make input (and hides Model) when unavailable. */
+  facets?: PartnershipFacets
 }
 
-export default function PartnershipFilters({ initialValues, saveSearchBasePath }: Props) {
+export default function PartnershipFilters({ initialValues, saveSearchBasePath, facets }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -93,11 +97,52 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
     [airportCodes, setAirports]
   )
 
+  // Changing make also clears any model from a different make (mirrors /aircraft).
+  const updateMake = useCallback(
+    (value: string) => {
+      pushParams((params) => {
+        if (value) params.set('make', value)
+        else params.delete('make')
+        params.delete('model')
+      })
+    },
+    [pushParams]
+  )
+
+  // Model is multi-select: the `model` param is a comma-joined list. Toggling a
+  // model adds/removes it; an empty list drops the param entirely.
+  const toggleModel = useCallback(
+    (model: string) => {
+      pushParams((params) => {
+        const current = (params.get('model') ?? '')
+          .split(',')
+          .map((m) => m.trim())
+          .filter(Boolean)
+        const next = current.includes(model)
+          ? current.filter((m) => m !== model)
+          : [...current, model]
+        if (next.length) params.set('model', next.join(','))
+        else params.delete('model')
+      })
+    },
+    [pushParams]
+  )
+
   const clearAll = () => {
     startTransition(() => { router.push(pathname) })
   }
 
   const hasFilters = Object.values(initialValues).some(Boolean)
+
+  const makes = facets?.makes ?? []
+  const selectedMake = initialValues.make ?? ''
+  const modelOptions =
+    selectedMake && facets?.modelsByMake[selectedMake] ? facets.modelsByMake[selectedMake] : []
+  const selectedModels = (initialValues.model ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+  const selectedModelSet = new Set(selectedModels)
 
   return (
     <div className="space-y-5">
@@ -179,28 +224,63 @@ export default function PartnershipFilters({ initialValues, saveSearchBasePath }
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
           Aircraft Make
         </label>
-        <input
-          type="text"
-          placeholder="e.g. Cessna, Piper"
-          defaultValue={initialValues.make ?? ''}
-          onChange={(e) => updateFilter('make', e.target.value)}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-        />
+        {makes.length > 0 ? (
+          <select
+            value={selectedMake}
+            onChange={(e) => updateMake(e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          >
+            <option value="">All makes</option>
+            {makes.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        ) : (
+          // Fallback when facets are unavailable: keep search working via free text.
+          <input
+            type="text"
+            placeholder="e.g. Cessna, Piper"
+            defaultValue={selectedMake}
+            onChange={(e) => updateMake(e.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+        )}
       </div>
 
-      {/* Aircraft model */}
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Aircraft Model
-        </label>
-        <input
-          type="text"
-          placeholder="e.g. 172, SR22"
-          defaultValue={initialValues.model ?? ''}
-          onChange={(e) => updateFilter('model', e.target.value)}
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-        />
-      </div>
+      {/* Aircraft model — depends on selected make; multi-select so a pilot can
+          search several models of a make at once (e.g. 172 + 182). */}
+      {makes.length > 0 && (
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Aircraft Model
+            {selectedModels.length > 0 && (
+              <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+                · {selectedModels.length} selected
+              </span>
+            )}
+          </label>
+          {modelOptions.length === 0 ? (
+            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+              {selectedMake ? 'No listed models for this make yet' : 'Select a make first'}
+            </p>
+          ) : (
+            <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
+              {modelOptions.map((model) => (
+                <label
+                  key={model}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedModelSet.has(model)}
+                    onChange={() => toggleModel(model)}
+                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                  />
+                  {model}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Max monthly */}
       <div>

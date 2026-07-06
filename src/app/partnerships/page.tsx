@@ -7,7 +7,7 @@ import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterChips'
 import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
-import { getPartnershipMakes, getPartnershipListings } from '@/lib/partnershipsQuery'
+import { getPartnershipMakes, getPartnershipListings, getPartnershipFacets } from '@/lib/partnershipsQuery'
 import { getSeekerCount } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { countForSale, fetchAircraftPage } from '@/components/AircraftSaleList'
@@ -103,7 +103,11 @@ export default async function PartnershipsPage({
     : null
 
   const activeFilterCount = Object.values(params).filter(Boolean).length
-  const [makes, seekerCount] = await Promise.all([getPartnershipMakes(), getSeekerCount()])
+  const [makes, seekerCount, partnershipFacets] = await Promise.all([
+    getPartnershipMakes(),
+    getSeekerCount(),
+    getPartnershipFacets(),
+  ])
 
   // Filter-aware email-alert context + source path — mirrors /aircraft's
   // alertSourcePath pattern (`describeAircraftFilters` + preserved query string).
@@ -184,7 +188,11 @@ export default async function PartnershipsPage({
         {/* Action bar — filter button visible only on mobile */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="lg:hidden">
-            <MobileFiltersDrawer initialValues={params} activeCount={activeFilterCount} />
+            <MobileFiltersDrawer
+              initialValues={params}
+              activeCount={activeFilterCount}
+              partnershipFacets={partnershipFacets}
+            />
           </div>
           <Suspense>
             <SaveSearchButton />
@@ -220,7 +228,11 @@ export default async function PartnershipsPage({
               <SlidersHorizontal className="h-4 w-4" />
               Filter Results
             </div>
-            <PartnershipFilters initialValues={params} saveSearchBasePath="/partnerships" />
+            <PartnershipFilters
+              initialValues={params}
+              saveSearchBasePath="/partnerships"
+              facets={partnershipFacets}
+            />
           </div>
         </aside>
 

@@ -855,21 +855,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   homepage row for consistency.
 
 **Zillow/Redfin features buyers love (all [want]):**
-- **[P1][want] Internal listing detail pages.** Today planes link OUT to the source;
-  Zillow/Redfin keep users on-site. Build rich `/aircraft/[…]/listing/[id]` (or similar)
-  pages: full photo gallery + all specs + cost-to-own + price history + similar listings
-  + contact/source CTA. Biggest UX **and** SEO win (new indexable family — helps the
-  INDEXING goal). Slice: (1) route + gallery + specs + source CTA; (2) cost-to-own +
-  price-history block; (3) similar listings; (4) JSON-LD Vehicle/Offer + sitemap +
-  internal links from cards. (Subsumes the Phase-2 photo gallery/lightbox.)
-  — **slice 1 ✅ SHIPPED 2026-06-23T07:55Z** (`internal-aircraft-listing-detail`):
-  new `/aircraft/listing/[id]` route with `PhotoGallery` (thumbnail strip + lightbox),
-  specs grid, price + price-drop, source/grade/New/registration badges, description,
-  Save/Share, breadcrumb + make+model family link, `generateMetadata` (canonical/OG);
-  `AircraftSaleCard` photo+title now link internally (footer source CTA unchanged);
-  bad ids 404. See CHANGELOG. **Next: slice 2 (cost-to-own + price-history block);
-  slice 3 (similar listings); slice 4 (Vehicle/Offer JSON-LD + sitemap + wire homepage
-  `AircraftRailCard` to the detail page).**
+~~- **[P1][want] Internal listing detail pages.**~~ ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06
+  (found stale/unchecked during `partnership-model-multiselect` cycle's backlog scan; no code
+  change needed). All 4 slices are live on `/aircraft/listing/[id]`: slice 1 (route + gallery +
+  specs + source CTA, `internal-aircraft-listing-detail`); slice 2 — cost-to-own breakdown (sole
+  vs 1/2, 1/3, 1/4 partnership shares, inline on the page) + price-history block (`previous_price`/
+  `price_changed_at`, only when a real recorded change exists); slice 3 — `SimilarAircraft` rail;
+  slice 4 — `buildAircraftListingJsonLd` Product/Offer JSON-LD + BreadcrumbList, wired into the
+  page. Confirmed via direct grep of the current file, not a changelog note.
 - **[P1][want] "ClubHanger Estimate" — fair-value pricing (Zestimate analog).** "Priced
   $18k below similar 2008 SR22s" + a Good-deal / Priced-high score, computed from comps
   on make/model/year-band/hours. Differentiator. Slice: (1) comp model + API; (2) deal
@@ -974,16 +967,17 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   with their inner grids collapsed to a single column to fit the narrow rail; "About me" stays
   the main left column. Same data + privacy gating, purely a layout balance/conversion move.
   See CHANGELOG. (Screenshot object can be deleted from `backlog-shots`.)
-- **[P1][want] On-site messaging instead of exposing emails.** Replace the "Send Email" CTA
-  ("Have a plane that fits? Reach out to … → Send Email") with a **"Send Message"** flow that
-  delivers an **on-site message** to the listing owner instead of handing out their email. If
-  no message center/chat exists yet, **build it out** (note: an account "Messages" quick-link
-  already exists per recent CHANGELOG — check existing infra first). Slice: (1) `messages`
-  schema (thread per listing+sender, additive, RLS so only the two parties read) + send form
-  replacing the email CTA; (2) inbox at `/messages` (thread list + view + reply) wired to the
-  account link; (3) new-message email **notification** behind `RESEND_API_KEY` (link back, no
-  raw email exposed); (4) unread badge + 375px polish. Keep "Send Email" as fallback until
-  messaging is live. Screenshot:
+~~- **[P1][want] On-site messaging instead of exposing emails.**~~ ✅ AUDIT-CONFIRMED FULLY
+  SHIPPED 2026-07-06 (found stale/unchecked during `partnership-model-multiselect` cycle's
+  backlog scan via an Explore-agent audit; no code change needed). All 4 slices are live and
+  merged to staging: (1) `threads`/`messages` schema covers all 3 listing types
+  (`partnership_id`/`seeker_id`/`aircraft_for_sale_id`, participant-based RLS) with
+  `MessageOwnerButton`/`AircraftContactButton`/`SeekerContactBar` replacing "Send Email" as the
+  primary CTA on `/aircraft/listing/[id]`, `/partnerships/[id]`, and `/partnerships/seeking/[id]`
+  (mailto kept only as the explicit fallback this item itself asked for); (2) `/messages` +
+  `/messages/[threadId]` inbox, all 3 listing types; (3) `RESEND_API_KEY`-gated new-message email
+  notification (`messaging-new-message-email`, `message-notify-throttle`); (4) unread badge in
+  `Nav.tsx` (`messages-unread-badge`). Screenshot:
   https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/in-app-messaging/20260624-in-app-messaging.png
 - ~~**[P2][want] Partnership filter: multiple airport codes.**~~ ✅ SHIPPED 2026-06-24T10:40Z
   (`partnership-filter-multi-airport`). The `/partnerships` "Home Airport (ICAO)" filter now
@@ -1033,6 +1027,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   + the page's existing facets; no query/schema change. See CHANGELOG. **Remaining: (2) normalize
   stored variant casing in the DB (deferred — destructive-ish, ask-a-human); apply the same rollup
   to the partnerships/seeking model filters + their active-filter chips.**
+  — **`/partnerships` Model multi-select UI ✅ SHIPPED 2026-07-06** (`partnership-model-multiselect`):
+  the prerequisite this line called for ("needs the multi-select UI first") — Make is now a live-facets
+  `<select>` and Model a checkbox multi-select scoped to the selected make (`getPartnershipFacets()`,
+  mirrors `getAircraftFacets`), `model` param comma-joined → `.eq`/`.in()`, one removable chip per
+  selected model in the results header. **Deliberately NOT done this slice:** variant-group rollup
+  (`groupModelVariants`, "SR20 (all)") on the new partnership model list — plain checkboxes only; and
+  the `/partnerships/seeking` (seeker) side, which has the identical free-text-model gap — natural next
+  slice now that the UI pattern exists to port.
 ~~- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**~~ ✅ SHIPPED via `filter-promote-core-fields` (2026-06-24)
   Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
   buying criteria. Surface them **higher and always-visible** in the main filter panel, and

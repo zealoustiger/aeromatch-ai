@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
+import type { PartnershipFacets } from '@/lib/partnershipsQuery'
 import PartnershipFilters from './PartnershipFilters'
 import AircraftSaleFilters from './AircraftSaleFilters'
 import SeekerFilters from './SeekerFilters'
@@ -13,11 +14,13 @@ interface Props {
   activeCount: number
   variant?: 'partnership' | 'sale' | 'seeker'
   facets?: AircraftFacets
+  /** Make/Model options for the partnership variant's Make→Model multi-select. */
+  partnershipFacets?: PartnershipFacets
   /** Make options for the seeker variant's make dropdown. */
   makes?: string[]
 }
 
-export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets, makes }: Props) {
+export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets, partnershipFacets, makes }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -75,7 +78,11 @@ export default function MobileFiltersDrawer({ initialValues, activeCount, varian
           ) : variant === 'seeker' ? (
             <SeekerFilters initialValues={initialValues} makes={makes} saveSearchBasePath="/partnerships/seeking" />
           ) : (
-            <PartnershipFilters initialValues={initialValues} saveSearchBasePath="/partnerships" />
+            <PartnershipFilters
+              initialValues={initialValues}
+              saveSearchBasePath="/partnerships"
+              facets={partnershipFacets}
+            />
           )}
         </div>
 

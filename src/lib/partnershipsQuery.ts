@@ -90,7 +90,11 @@ export async function getPartnershipListings(
       if (airportList.length > 0 && !airportList.includes(p.home_airport)) return false
       if (filters.state && p.state !== filters.state) return false
       if (filters.make && !p.make.toLowerCase().includes(filters.make.toLowerCase())) return false
-      if (filters.model && !(p.model ?? '').toLowerCase().includes(filters.model.toLowerCase())) return false
+      if (filters.model) {
+        // `model` accepts a comma-joined list (multi-select) — match any of them.
+        const models = filters.model.split(',').map((m) => m.trim().toLowerCase()).filter(Boolean)
+        if (models.length && !models.includes((p.model ?? '').toLowerCase())) return false
+      }
       if (filters.share_type && p.share_type !== filters.share_type) return false
       if (filters.max_monthly && (p.monthly_fixed ?? 0) > parseInt(filters.max_monthly)) return false
       if (filters.max_buyin && (p.buy_in_price ?? 0) > parseInt(filters.max_buyin)) return false
@@ -115,7 +119,13 @@ export async function getPartnershipListings(
 
     if (filters.state) query = query.eq('state', filters.state)
     if (filters.make) query = query.ilike('make', `%${filters.make}%`)
-    if (filters.model) query = query.ilike('model', `%${filters.model}%`)
+    if (filters.model) {
+      // `model` accepts a comma-joined list (multi-select on /partnerships,
+      // mirrors /aircraft): one value keeps the exact `.eq`; 2+ match any via `.in`.
+      const models = filters.model.split(',').map((m) => m.trim()).filter(Boolean)
+      if (models.length === 1) query = query.eq('model', models[0])
+      else if (models.length > 1) query = query.in('model', models)
+    }
     if (filters.share_type) query = query.eq('share_type', filters.share_type)
     if (filters.max_monthly) query = query.lte('monthly_fixed', parseInt(filters.max_monthly))
     if (filters.max_buyin) query = query.lte('buy_in_price', parseInt(filters.max_buyin))
@@ -326,5 +336,66 @@ export async function getPartnershipMakes(): Promise<string[]> {
     return rank(data)
   } catch {
     return []
+  }
+}
+
+export interface PartnershipFacets {
+  /** Makes that have active partnerships, most-listed first. */
+  makes: string[]
+  /** Models per make, alphabetical. Only makes with at least one real model appear. */
+  modelsByMake: Record<string, string[]>
+}
+
+const EMPTY_FACETS: PartnershipFacets = { makes: [], modelsByMake: {} }
+
+/**
+ * Derive Make + Model filter options from the live `partnerships` table —
+ * mirrors `getAircraftFacets` (`src/lib/aircraft-facets.ts`) so `/partnerships`
+ * can offer the same Make-select → Model-checkbox-multi-select UX `/aircraft`
+ * already has. Read-time aggregation, no schema, mock-data aware like the rest
+ * of this file.
+ */
+export async function getPartnershipFacets(): Promise<PartnershipFacets> {
+  const JUNK_MAKES = new Set(['unknown', 'other', 'n/a', 'na', '-'])
+
+  const build = (rows: { make: string | null; model: string | null }[]): PartnershipFacets => {
+    const counts = new Map<string, number>()
+    const models = new Map<string, Set<string>>()
+    for (const row of rows) {
+      const make = (row.make ?? '').trim()
+      if (!make || JUNK_MAKES.has(make.toLowerCase())) continue
+      counts.set(make, (counts.get(make) ?? 0) + 1)
+      const model = (row.model ?? '').trim()
+      if (model) {
+        if (!models.has(make)) models.set(make, new Set())
+        models.get(make)!.add(model)
+      }
+    }
+    const makes = [...counts.keys()].sort((a, b) => {
+      const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0)
+      return diff !== 0 ? diff : a.localeCompare(b)
+    })
+    const modelsByMake: Record<string, string[]> = {}
+    for (const [make, set] of models) {
+      modelsByMake[make] = [...set].sort((a, b) => a.localeCompare(b))
+    }
+    return { makes, modelsByMake }
+  }
+
+  if (!hasSupabase()) {
+    return build(MOCK_PARTNERSHIPS.map((p) => ({ make: p.make, model: p.model ?? null })))
+  }
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('partnerships')
+      .select('make, model')
+      .eq('status', 'active')
+      .not('make', 'is', null)
+      .limit(5000)
+    if (error || !data) return EMPTY_FACETS
+    return build(data)
+  } catch {
+    return EMPTY_FACETS
   }
 }
