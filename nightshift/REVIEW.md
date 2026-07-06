@@ -1,3 +1,14 @@
+## 2026-07-06T12:33:38Z — Night Shift run: 2 cycles (PASS 2 / FAIL 0) — night budget cap ($120)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $121.2616 of $120 cap
+
+- PASS — aircraft-crosssell-airport-aware — the `/aircraft` search results' partnerships cross-sell banner is now airport-aware, narrowing its count/samples/link to nearby invent
+- PASS — alert-pause-delete — added Pause/Resume/Delete actions to `/alerts/manage` and fixed that page's read (was silently blocked by an unapplied RLS policy, always showed emp
+
+### VPS headroom
+- ⚠️ container CPU-throttled ~62s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+
+
 ## 2026-07-06T12:11:57Z — Night Shift run: 25 cycles (PASS 20 / FAIL 4) — safety cap (25)
 - Models: cycles on sonnet; 3 escalated to opus; 3 quality-judged on opus
 - Night spend so far: $113.4755 of $120 cap
