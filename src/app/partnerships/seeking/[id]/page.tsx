@@ -20,6 +20,8 @@ import SeekerDealSignals from '@/components/SeekerDealSignals'
 import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
+import MatchCountNudge from '@/components/MatchCountNudge'
+import { countMatchingPartnershipsForSeeker } from '@/lib/matchingQuery'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -160,6 +162,8 @@ export default async function SeekerDetailPage({
     }
   }
   const isOwner = !!user && !!s.poster_id && user.id === s.poster_id
+  // Owner-only compatibility count — never computed for a visitor's page load.
+  const matchingPartnershipCount = isOwner ? await countMatchingPartnershipsForSeeker(s) : 0
 
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
@@ -412,6 +416,18 @@ export default async function SeekerDetailPage({
               trust checklist) as the aircraft/partnership detail pages. */}
           {isOwner && (
             <SeekerListingOwnerNudge s={s} editHref={`/partnerships/seeking/${id}/edit`} />
+          )}
+
+          {/* Owner-only "N matches" — slice 1 of the compatibility matching
+              engine. Honest count of active partnership listings compatible
+              with this seeker's stated make/budget/hours/ratings/share-type
+              preferences (src/lib/matching.ts); self-suppresses at 0. */}
+          {isOwner && (
+            <MatchCountNudge
+              count={matchingPartnershipCount}
+              label="Available partnerships match what you're looking for."
+              href={`/partnerships${s.preferred_makes?.[0] ? `?make=${encodeURIComponent(s.preferred_makes[0])}` : ''}`}
+            />
           )}
 
           {/* Trust / completeness — checklist variant, same canonical signals
