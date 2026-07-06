@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { X } from 'lucide-react'
 import { STATE_NAMES } from '@/lib/seo'
+import { groupModelVariants } from '@/lib/modelGroups'
+import type { PartnershipFacets } from '@/lib/partnershipsQuery'
 
 type Params = Record<string, string | undefined>
 
@@ -42,7 +44,16 @@ interface Chip {
  * `/aircraft` `ActiveFilterChips`, keyed to the partnership filter params
  * (`airport`+`radius`, `state`, `make`, `share_type`, `max_monthly`, `max_buyin`).
  */
-export default function PartnershipActiveFilterChips({ params }: { params: Params }) {
+export default function PartnershipActiveFilterChips({
+  params,
+  facets,
+}: {
+  params: Params
+  /** Make/model facets — when present, fully-selected variant groups collapse to a
+   *  single "{base} (all)" chip (mirrors the sidebar rollup); omit and chips stay
+   *  per-model. */
+  facets?: PartnershipFacets
+}) {
   const chips: Chip[] = []
 
   const num = (raw: string | undefined): number | null => {
@@ -113,13 +124,43 @@ export default function PartnershipActiveFilterChips({ params }: { params: Param
     })
   }
 
-  // Aircraft model — multi-select: one removable chip per selected model
-  // (mirrors the `airports` multi-chip pattern above).
+  // Aircraft model — multi-select: one removable chip per selected model. When a
+  // multi-variant group's members are ALL selected, collapse them into a single
+  // "{base} (all)" chip (mirrors /aircraft's ActiveFilterChips rollup); partially
+  // selected groups, singletons, and models absent from facets stay per-model.
   const selectedModels = (params.model ?? '')
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean)
+  const selectedModelSet = new Set(selectedModels)
+
+  const collapsedGroups: { key: string; members: string[] }[] = []
+  const memberToGroupKey = new Map<string, string>()
+  if (facets && make) {
+    const options = facets.modelsByMake[make] ?? []
+    for (const g of groupModelVariants(options)) {
+      if (g.members.length < 2) continue // singletons render as plain chips
+      if (g.members.every((mem) => selectedModelSet.has(mem))) {
+        collapsedGroups.push(g)
+        for (const mem of g.members) memberToGroupKey.set(mem, g.key)
+      }
+    }
+  }
+
+  for (const g of collapsedGroups) {
+    chips.push({
+      key: `modelgroup:${g.key}`,
+      label: `${g.key} (all)`,
+      href: buildHref(params, (p) => {
+        const next = selectedModels.filter((x) => !g.members.includes(x))
+        if (next.length) p.set('model', next.join(','))
+        else p.delete('model')
+      }),
+    })
+  }
+
   for (const model of selectedModels) {
+    if (memberToGroupKey.has(model)) continue // covered by a collapsed parent chip
     chips.push({
       key: `model:${model}`,
       label: model,

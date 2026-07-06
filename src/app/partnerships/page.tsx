@@ -240,7 +240,7 @@ export default async function PartnershipsPage({
             overflow-x-auto rails (cross-sell samples) scroll instead of
             widening the page at desktop. */}
         <div className="min-w-0 flex-1">
-          <PartnershipActiveFilterChips params={params} />
+          <PartnershipActiveFilterChips params={params} facets={partnershipFacets} />
           <Suspense fallback={<PartnershipListSkeleton />}>
             <PartnershipList filters={params} />
           </Suspense>
