@@ -795,12 +795,16 @@ completed, delete its screenshot object from `backlog-shots` to reclaim storage.
   SQL editor before aircraft inquiries can actually insert a thread row — until then the button
   shows a graceful inline error rather than crashing. Not a code gap, just an unapplied DDL step.
 
-- **[P2][want] Optional note when saving a listing.** When a user saves a listing,
-  let them attach an **optional free-text note** (e.g. "great panel — ask about damage
-  history"). If a note exists, display it **(a)** on the listing page and **(b)** on the
-  saved listings page (`/saved`). Screenshot (aircraft listing detail — note the
-  **Save** button, top-right, where the note affordance attaches):
-  https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/save-note-listing/20260623-falcon-example.png
+~~- **[P2][want] Optional note when saving a listing.**~~ ✅ SHIPPED via `seeker-saved-note-parity`
+  (2026-07-06) When a user saves a listing, they can attach an optional free-text note,
+  displayed **(a)** on the listing page and **(b)** on `/saved`. The aircraft and partnership
+  detail pages, plus `/saved`, already had this (`SavedListingNote` + `updateSavedNote`) — the
+  seeker (pilot-seeking-a-partnership) detail page was the one of the 3 listing types that
+  never got the with-note fetch + editor, even though the component/action were already
+  listing-type-agnostic. Ported the identical with-note/fallback-without-note query pattern
+  (graceful degrade if the `note` column isn't migrated yet — confirmed still true on the
+  live DB) and rendered `SavedListingNote` next to the Save button. No schema/component change.
+  This item is now fully complete across all 3 listing types.
   — shows breadcrumb `Home / Planes for Sale / Dassault Falcon 900ex`, a Share + **Save**
   pair top-right, the photo, a PRICE card ($795,000), and a "View on AircraftForSale"
   card. Data: add a `note text` column to the saved-listings record (per-user save row).
