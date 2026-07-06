@@ -1235,9 +1235,14 @@ thin/doorway pages; real listings + real data per page).
   under `/aircraft`'s default (newest-first) sort, stable tie-break on recency, mirroring
   `partnershipsQuery.ts`'s `sortByTrust` exactly. Explicit `price_asc`/`price_desc`/`reduced`/
   `distance` sorts are untouched. No schema change; new unit test in `aircraftTrust.test.ts`
-  asserts the float + stability. **Remaining: `/partnerships/seeking` half** (needs its own
-  approach — no `evaluateSeekerTrust`-driven sort exists there yet); slice 4 (reduce
-  off-platform redirects) is also still open.
+  asserts the float + stability.
+  — ~~**slice 2, `/partnerships/seeking` half**~~ ✅ SHIPPED via `seeker-trust-ranking`
+  (2026-07-06): `getSeekers()` now sorts by `evaluateSeekerTrust(s).score` DESC (recency
+  tie-break) across all 3 return paths (main query, `additional_airports` fallback, mock
+  data) — unlike `/aircraft`/`/partnerships`, this page had no explicit sort param to
+  preserve, so trust order simply replaces plain newest-first. New unit test in
+  `seekerTrust.test.ts`. **Slice 2 is now fully complete across all 3 marketplaces.
+  Remaining: slice 4 (reduce off-platform redirects) is the one open piece of this item.**
 
 ### Inventory coverage & ingestion — 2026-06-20
 **Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.

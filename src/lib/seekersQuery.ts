@@ -3,6 +3,7 @@ import { getAirportsWithinRadius } from '@/lib/airports'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import type { PartnershipSeeker } from '@/lib/types'
 import { parsePreferredModelTokens, matchesModelFilter } from './seekerModelFilter'
+import { evaluateSeekerTrust } from './seekerTrust'
 
 export type SeekerFilters = {
   /** Multi-airport list (comma-joined ICAO codes), OR'd together. */
@@ -49,8 +50,20 @@ async function resolveSeekerAirports(f: SeekerFilters): Promise<string[]> {
   return codes
 }
 
-/** Pilots-seeking listings matching the active filters (newest first). Seeker
- *  fields are mostly arrays (preferred makes / ratings / share types), so those
+// Completeness-weighted ranking (mirrors `sortByTrust` in `AircraftSaleList.tsx` /
+// `partnershipsQuery.ts`, shipped there 2026-07-06 / 2026-06-20): a stable sort surfaces
+// fuller, more-trustworthy seeker listings first, with recency as the tie-break. Unlike
+// those two, `getSeekers` has no explicit sort param to preserve — this replaces the
+// plain newest-first order as the one and only ordering.
+function sortByTrust(seekers: PartnershipSeeker[]): PartnershipSeeker[] {
+  return seekers
+    .map((s, i) => ({ s, i, score: evaluateSeekerTrust(s).score }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.s)
+}
+
+/** Pilots-seeking listings matching the active filters (trust-ranked, recency tie-break).
+ *  Seeker fields are mostly arrays (preferred makes / ratings / share types), so those
  *  filters use array-contains; hours is a floor; location is airport±radius or state. */
 export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]> {
   // Make / Rating are multi-select (comma-joined params) → match seekers wanting
@@ -78,7 +91,7 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
     }
     if (f.share_type) r = r.filter((s) => (s.preferred_share_types ?? []).some((t) => t === f.share_type))
     if (f.min_hours) r = r.filter((s) => (s.total_hours ?? 0) >= parseInt(f.min_hours!, 10))
-    return r
+    return sortByTrust(r)
   }
 
   const supabase = await createServerSupabaseClient()
@@ -132,13 +145,15 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
     }
     const { data: fallback } = await retry
     const fallbackRows = (fallback as PartnershipSeeker[]) ?? []
-    return models.length ? fallbackRows.filter((s) => matchesModelFilter(s.preferred_models, models)) : fallbackRows
+    return sortByTrust(
+      models.length ? fallbackRows.filter((s) => matchesModelFilter(s.preferred_models, models)) : fallbackRows,
+    )
   }
 
   const rows = (data as PartnershipSeeker[]) ?? []
   // Model has no DB column of its own (free-text `preferred_models`), so it's
   // matched in JS against the already-filtered rows rather than in SQL.
-  return models.length ? rows.filter((s) => matchesModelFilter(s.preferred_models, models)) : rows
+  return sortByTrust(models.length ? rows.filter((s) => matchesModelFilter(s.preferred_models, models)) : rows)
 }
 
 /** Makes that seekers are actually looking for (most-wanted first) — feeds the
