@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-06T12:33:38Z — DRAIN SUMMARY
+- Cycles this run: 2 (PASS 2 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $121.2616 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260706T121202Z
+
 ## 20260706T122722Z — PASS — alert-pause-delete
 - Pages: /alerts/manage
 - What: **The "Your alerts" management page now actually works, and you can pause or delete an alert instead of only ever being stuck with it.** Two things landed together: (1) `/alerts/manage` was quietly broken for every real user — it read alerts through a path the database blocks until a still-pending migration is applied, so it always showed "No alerts yet" even for someone with active alerts; it now reads the same data a different, already-safe way, so real subscriptions show up today. (2) Each alert row now has **Pause**, **Resume** (once paused), and **Delete** buttons — pausing keeps the subscription but skips it from the next email digest, resuming turns it back on, and delete removes it for good.
