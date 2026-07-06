@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-06T09:17:28Z — listings-completeness-nudge — score 5/5
+- Strengths: Exactly-scoped single-file change that reuses the shipped AircraftTrustBadge/TrustBadge/SeekerTrustBadge (variant="compact") + evaluate*Trust with zero new scoring logic; I cross-checked every added .select() column against what each evaluator actually reads (aircraft: description/registration/ttaf/smoh; partnership: images/image_is_placeholder/registration/monthly_fixed/hourly_wet/description/source_url/poster_id; seeker: preferred_models/aircraft_category/max_buy_in/max_monthly/max_hourly/total_hours/ratings_held/poster_id) and all match — the chip counts will be real, not placeholders; local SeekerRow type retired in favour of the canonical PartnershipSeeker (all display fields still present), past-listings section correctly left untouched, comments explain why the extra columns are fetched.
+- Weaknesses / risks: none material — only a cosmetic leftover double blank line where the SeekerRow type was removed; chip placed under the meta line rather than literally beside StatusBadge as the spec worded it, which reads fine.
+- Follow-up: none
+
 ## 2026-07-06T07:42:09Z — partnership-model-multiselect — score 4/5
 - Strengths: Faithful mirror of the /aircraft facets stack — getPartnershipFacets clones aircraft-facets.ts (count-ranked makes, alpha models, status='active', 5000 limit) and even adds a JUNK_MAKES sink; the .eq (single) / .in (multi) model split matches AircraftSaleList.tsx:529-530 verbatim, make-change clears stale model in both the filter and the chip removal, and per-model removable chips reuse the airports multi-chip pattern; tight scope, no schema, well-commented.
 - Weaknesses / risks: Facet-empty fallback keeps free-text Make but hides Model entirely, so the old free-text model search is lost in that (rare, DB-empty/error) path; mock-mode facets build over all MOCK_PARTNERSHIPS without the status='active' filter the live query applies — both immaterial for production/live mode and the fallback is called out in the spec.
