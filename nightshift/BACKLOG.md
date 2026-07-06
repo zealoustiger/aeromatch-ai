@@ -1314,7 +1314,7 @@ Backlinks deferred by human. So: (A) make existing pages genuinely index-worthy,
   make + home airport via the existing `/partnerships?make=&airport=` alert-digest path.
   Renders whether or not the seeker currently has any matches. Posting a seeking listing
   now feels valuable *and* pays off later, not just into-the-void.
-- **[P2][want] Show demand exists.** "3 pilots near KPAO are looking for a Cessna share" on airport + partnership pages — validates seekers and motivates owners to list. Real counts only. *(1 cycle)*
+- ~~**[P2][want] Show demand exists.** "3 pilots near KPAO are looking for a Cessna share" on airport + partnership pages — validates seekers and motivates owners to list. Real counts only. *(1 cycle)*~~ ✅ SHIPPED via `partnership-make-seeker-demand` (2026-07-06) — make-hub pages (`/partnerships/make/[make]`) now show a real, self-suppressing "N pilots are looking for a {Make} partnership right now → see who" line (reuses `getSeekers`, no fabrication, 0 → nothing). Airport pages already surface a plain seeker count, so this closes the owner-motivation framing on the make hubs.
 
 ## Constraints / taste notes
 - **Brand/palette is open for experimentation** (logo, accent color, typography, overall look) — the human reviews post-cycle. Keep each cycle to ONE cohesive palette and make it reversible; don't scatter unrelated colors or thrash the whole brand at once.

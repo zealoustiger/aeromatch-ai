@@ -12,6 +12,7 @@ import AlertSignup from '@/components/AlertSignup'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
+import { getSeekers } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -62,6 +63,12 @@ export default async function MakePartnershipsPage({ params }: Props) {
   // the markup matches the visible cards 1:1 (each item links to a real
   // /partnerships/[id]). Real data only — no fabricated rating/review.
   const { listings } = await getPartnershipListings({ make: entry.filter })
+
+  // Real demand signal: how many pilots are actively seeking a partnership in this
+  // make (same array-overlap match `/airports/[icao]` and the owner-only
+  // MatchCountNudge already use) — motivates an owner of this make to post.
+  // Real count only, no fabrication; self-suppresses at 0.
+  const seekerCount = (await getSeekers({ make: entry.filter })).length
   const itemListJsonLd = buildPartnershipItemListJsonLd(listings, {
     name: `${entry.name} aircraft partnerships`,
     url: `${SITE_URL}/partnerships/make/${entry.slug}`,
@@ -118,6 +125,21 @@ export default async function MakePartnershipsPage({ params }: Props) {
                 Post a free listing
               </Link>.
             </p>
+            {seekerCount > 0 && (
+              <p className="mt-2 text-sm font-medium text-sky-700">
+                {seekerCount === 1
+                  ? `1 pilot is looking for a ${entry.name} partnership right now`
+                  : `${seekerCount} pilots are looking for a ${entry.name} partnership right now`}
+                {' — '}
+                <Link
+                  href={`/partnerships/seeking?make=${encodeURIComponent(entry.filter)}`}
+                  className="underline hover:text-sky-800"
+                >
+                  see who
+                </Link>
+                .
+              </p>
+            )}
           </div>
           <div className="relative hidden h-full min-h-[220px] md:block">
             <Image
