@@ -250,7 +250,12 @@ export default async function AircraftPage({
           {/* Active-filter chips — removable, one per active filter. */}
           <ActiveFilterChips params={params} facets={facets} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
-            <AircraftSaleList filters={params} visitorCoords={visitorCoords} />
+            <AircraftSaleList
+              filters={params}
+              visitorCoords={visitorCoords}
+              alertContext={alertContext}
+              alertSourcePath={alertSourcePath}
+            />
           </Suspense>
 
           {/* Aggregation disclosure */}
@@ -261,8 +266,12 @@ export default async function AircraftPage({
           </p>
 
           {/* Email-alerts capture — inline, no account required. Filter-aware:
-              the context describes the active search so the alert is useful. */}
-          <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
+              the context describes the active search so the alert is useful.
+              Skipped when the list is empty — AircraftSaleList's own empty state
+              already leads with this same capture, so this would be a duplicate. */}
+          {itemListListings.length > 0 && (
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
+          )}
 
           {/* Browse by state — crawlable internal links to the per-state for-sale pages */}
           <div className="ch-panel mt-10 p-6">

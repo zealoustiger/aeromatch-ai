@@ -200,7 +200,12 @@ export default async function SeekingPartnershipsPage({
               <SaveSearchButton basePath="/partnerships/seeking" />
             </div>
             <Suspense fallback={<SeekerListSkeleton />}>
-              <SeekerList filters={params} fallbackPartnerships={railPartnerships} />
+              <SeekerList
+                filters={params}
+                fallbackPartnerships={railPartnerships}
+                alertContext={alertContext}
+                alertSourcePath={alertSourcePath}
+              />
             </Suspense>
           </div>
         </div>

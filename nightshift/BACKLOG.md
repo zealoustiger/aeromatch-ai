@@ -100,11 +100,21 @@ must emit the `alert_subscribed` PostHog event.
   `aircraft-listing-alert-cta` (2026-07-06) A prominent "Alert me for {make} {model}"
   capture on `/aircraft/listing/[id]` (prefill make+model context, sourcePath a
   matchable `/aircraft?make=…&model=…`). Biggest-traffic surface with no alert entry today.
-- **[P1][goal] "Alert me for this search" on browse/filter results.** On `/aircraft` and
-  `/partnerships` with active filters, a one-tap alert that captures the current filter set
-  as the sourcePath (so it genuinely matches). Turns any search into a standing alert.
-- **[P1][goal] Alert prompt in empty/zero-result search states.** When a filter returns 0
-  results, lead with "Get alerted when one lists" instead of a dead end.
+~~- **[P1][goal] "Alert me for this search" on browse/filter results.**~~ ✅
+  AUDIT-CONFIRMED ALREADY SHIPPED 2026-07-06 (found during `search-empty-state-alert`
+  scoping). `/aircraft` and `/partnerships` already render `<AlertSignup>` below the results
+  with `alertContext`/`alertSourcePath` computed from every active query param (not just
+  make) — confirmed via direct code read (`aircraft/page.tsx`, `partnerships/page.tsx`), no
+  code change needed. This was quietly completed as a side-effect of the family-page alert
+  rollout; the backlog line just never got struck.
+~~- **[P1][goal] Alert prompt in empty/zero-result search states.**~~ ✅ SHIPPED via
+  `search-empty-state-alert` (2026-07-06) When a filter returns 0 results on `/aircraft`,
+  `/partnerships`, or `/partnerships/seeking`, the empty-state card now leads with a
+  filter-aware "Get alerts for new {context} listings" capture (reusing the exact
+  `alertContext`/`alertSourcePath` each page already computes for its below-the-list
+  `AlertSignup`) instead of just "try widening your search." The pre-existing below-the-list
+  `AlertSignup` on `/aircraft`/`/partnerships` is now suppressed when the list is empty to
+  avoid showing the identical capture twice back-to-back.
 - **[P1][goal] Alert management page (v1, read-only).** `/account` (or `/alerts/manage`):
   list a signed-in user's active alerts with context + source. Foundation for pause/delete.
 - **[P1][goal] Pause & delete an alert.** Add pause/resume + delete to the management list
@@ -1138,7 +1148,12 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 
 **Search results UX:**
 - **[P2][want] Blend result types + cross-sell.** Instead of hard tabs, blend partnerships / planes-for-sale / pilots; when viewing one, surface a prominent side panel upselling the other two with relevant results. — **slice 1 ✅ SHIPPED 2026-06-22T11:09Z** (make-aware cross-sell card at the bottom of /partnerships + /aircraft). — **slice 2 ✅ SHIPPED 2026-06-22T11:26Z** (real, make-aware live count on the card — "Browse 251 Cirrus aircraft for sale" / "See 6 Cessna co-ownership partnerships"; hidden when 0; `countForSale`/`countActivePartnerships`). — **slice 3 ✅ SHIPPED 2026-07-03** (`forsale-crosssell-reverse`): the detail-page direction of this cross-sell was one-way — aircraft-for-sale detail pages already had `PartnershipCrossSellPanel`, but partnership detail pages had no equivalent. New "Prefer to buy outright?" panel on `/partnerships/[id]` (`getForSaleCrossSell` in `aircraftForSale.ts`) shows live count + min asking price for the same make/model, self-suppresses at 0. **Next slice: a sticky side panel surfacing 2-3 actual sample listings from the other marketplace (both directions); eventually blend the optional third "pilots" type.**
-- **[P2][want] Make "Save this search" prominent in results** for both for-sale and partnerships (saving a listing is discoverable; saving a search isn't).
+~~- **[P2][want] Make "Save this search" prominent in results**~~ ✅ AUDIT-CONFIRMED ALREADY
+  SHIPPED 2026-07-06 (found during `search-empty-state-alert` scoping). Both `/aircraft` and
+  `/partnerships` already render `SaveSearchButton` in the top action bar with a sky-accent
+  border/background + bookmark icon (not a muted gray control) — confirmed via direct code
+  read (`SaveSearchButton.tsx`) — plus a second full-width copy inside the filter panel
+  (`save-search-in-filter-panel`, 2026-06-24). No code change needed.
 
 **Identity & account:**
 - ~~**[P2][want] Signed-in indicator + profile menu.**~~ ✅ SHIPPED 2026-06-22 (see Done + CHANGELOG 2026-06-22T08:19Z). `ProfileMenu` shows an initial-based avatar (deterministic color) + a dropdown consolidating the signed-in email, Messages, Saved, My Searches, Admin (admins only), Sign out; desktop nav decluttered, mobile menu gains an avatar+email header. **Follow-ups:** real **pilot-themed cartoon avatars** for users without a photo (this slice used an initial avatar); ~~an `/account` settings page to link from the dropdown~~ ✅ SHIPPED 2026-06-23T11:01Z (`account-settings-page` — `/account` is now linked from the dropdown + mobile menu; see Done).

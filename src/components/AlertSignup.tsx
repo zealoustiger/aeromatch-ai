@@ -18,6 +18,10 @@ interface Props {
    * partnership pages pass "partnership". Plural is derived for "just relevant …".
    */
   noun?: string
+  /** Override the section's outer spacing — default matches the standalone,
+   *  below-the-list placement. Callers embedding this inside a tighter container
+   *  (e.g. an empty-state card) pass a smaller margin. */
+  className?: string
 }
 
 /**
@@ -25,7 +29,7 @@ interface Props {
  * no fake urgency — a single email field + button that drops the email + context
  * into the additive `alerts` table (no account required). Sky-blue accent only.
  */
-export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: Props) {
+export default function AlertSignup({ context, sourcePath, noun = 'aircraft', className = 'my-10' }: Props) {
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
@@ -59,7 +63,7 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft' }: 
   }
 
   return (
-    <section className="my-10 rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm">
+    <section className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
       {submitted ? (
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />

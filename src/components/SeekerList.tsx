@@ -7,10 +7,13 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getSeekerBudgetCheckVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
 import SeekerCard from './SeekerCard'
 import PartnershipCard from './PartnershipCard'
+import AlertSignup from './AlertSignup'
 
 export default async function SeekerList({
   filters,
   fallbackPartnerships,
+  alertContext,
+  alertSourcePath,
 }: {
   filters: Record<string, string | undefined>
   /**
@@ -20,6 +23,11 @@ export default async function SeekerList({
    * falls back to fetching its own when not provided.
    */
   fallbackPartnerships?: Partnership[]
+  /** Filter-aware email-alert context/source path — same values the page's own
+   *  below-the-list `<AlertSignup>` uses. Rendered inside the empty state so a
+   *  dead-end search leads with "get alerted" instead of nothing. */
+  alertContext?: string
+  alertSourcePath?: string
 }) {
   const seekers = await getSeekers(filters as SeekerFilters)
 
@@ -28,6 +36,8 @@ export default async function SeekerList({
       <SeekerEmptyState
         filtered={anySeekerFilter(filters as SeekerFilters)}
         partnerships={fallbackPartnerships}
+        alertContext={alertContext}
+        alertSourcePath={alertSourcePath}
       />
     )
   }
@@ -88,9 +98,13 @@ export default async function SeekerList({
 async function SeekerEmptyState({
   filtered,
   partnerships: provided,
+  alertContext,
+  alertSourcePath,
 }: {
   filtered: boolean
   partnerships?: Partnership[]
+  alertContext?: string
+  alertSourcePath?: string
 }) {
   const partnerships = provided ?? (await getLatestPartnerships(3))
 
@@ -116,6 +130,11 @@ async function SeekerEmptyState({
         >
           + Post Seeking Listing
         </Link>
+        {alertSourcePath && (
+          <div className="mx-auto mt-6 max-w-md text-left">
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" className="mt-0" />
+          </div>
+        )}
       </div>
 
       {partnerships.length > 0 && (
