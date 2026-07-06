@@ -70,8 +70,10 @@ function parseCategory(html, make) {
     if (!title || title.length < 3) continue
     // Drop parts listings and wanted ads by title keyword. "parts?" catches both
     // "part" and "parts"; the expanded set covers the most common slip-throughs
-    // (wing assembly, wheelpants, cowling, fairing, for-parts, accepting-orders).
-    if (/\b(parts?|engine\s+only|prop\s+only|avionics?\s+only|wanted|assembly|wheel\s*pants?|wheelpants?|cowling|fairing|for\s+parts|accepting\s+orders|wtb)\b/i.test(title)) continue
+    // (wing assembly, wheelpants, cowling, fairing, for-parts, accepting-orders,
+    // wingtips/wing-assy/wing-rack/governor — display-layer patterns mirrored here
+    // so these never reach the DB in the first place).
+    if (/\b(parts?|engine\s+only|prop\s+only|avionics?\s+only|wanted|assembly|assy|wheel\s*pants?|wheelpants?|wingtips?|wing\s*rack|governor|cowling|fairing|for\s+parts|accepting\s+orders|wtb)\b/i.test(title)) continue
 
     const sourceUrl = href.startsWith('http')
       ? href
