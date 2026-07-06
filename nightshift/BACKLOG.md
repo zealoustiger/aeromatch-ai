@@ -96,8 +96,9 @@ you PASS one of these, **mark it ✅ SHIPPED here in the same cycle** (strike + 
 The `/alerts` landing + `AlertSignup` already exist — build on them; each new capture point
 must emit the `alert_subscribed` PostHog event.
 
-- **[P1][goal] Alert CTA on every aircraft listing page.** A prominent "Alert me for {make}
-  {model}" capture on `/aircraft/listing/[id]` (prefill make+model context, sourcePath a
+~~- **[P1][goal] Alert CTA on every aircraft listing page.**~~ ✅ SHIPPED via
+  `aircraft-listing-alert-cta` (2026-07-06) A prominent "Alert me for {make} {model}"
+  capture on `/aircraft/listing/[id]` (prefill make+model context, sourcePath a
   matchable `/aircraft?make=…&model=…`). Biggest-traffic surface with no alert entry today.
 - **[P1][goal] "Alert me for this search" on browse/filter results.** On `/aircraft` and
   `/partnerships` with active filters, a one-tap alert that captures the current filter set
@@ -1241,8 +1242,20 @@ thin/doorway pages; real listings + real data per page).
   tie-break) across all 3 return paths (main query, `additional_airports` fallback, mock
   data) — unlike `/aircraft`/`/partnerships`, this page had no explicit sort param to
   preserve, so trust order simply replaces plain newest-first. New unit test in
-  `seekerTrust.test.ts`. **Slice 2 is now fully complete across all 3 marketplaces.
-  Remaining: slice 4 (reduce off-platform redirects) is the one open piece of this item.**
+  `seekerTrust.test.ts`. **Slice 2 is now fully complete across all 3 marketplaces.**
+  — **slice 4 (reduce off-platform redirects) ✅ SHIPPED via `aircraft-listing-alert-cta`
+  (2026-07-06):** confirmed via code audit that partnerships/seekers never had an
+  off-platform redirect to begin with (partnership `ContactButtons.tsx` only ever
+  surfaces `mailto:`/`tel:` even for scraped rows; `PartnershipSeeker` has no
+  `source_url`) — aircraft-for-sale was the one surface with the issue. On
+  `/aircraft/listing/[id]`, the scraped-listing "View on {source}" button was a
+  solid filled CTA with the *same* visual weight as the on-platform "Contact the
+  seller" button; demoted it to an outline/secondary style (same copy/href/icon)
+  and — since a scraped listing has no poster to message — added a make/model-scoped
+  `AlertSignup` box below it as the on-platform alternative action, applied to
+  every aircraft listing (also closes the 🔔 goal-tier "Alert CTA on every aircraft
+  listing page" item in one diff). **The Listing trust layer item is now fully
+  shipped across all 4 slices.**
 
 ### Inventory coverage & ingestion — 2026-06-20
 **Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.
