@@ -17,10 +17,16 @@ import PartnershipRailCard from './PartnershipRailCard'
  * matching listings (never padded/fabricated), and the card degrades to the
  * slice-2 heading + count + CTA. When a `make` filter is active it's carried into
  * the cross-link, the copy, and the sample query so the suggestions stay on-topic.
+ *
+ * Slice 4: also location-aware. When the visitor's search has an active `airport`
+ * filter, `nearAirport` carries it into the copy ("near KAUS") and the cross-link
+ * (`airport`+`radius`), so the count/samples/CTA reflect nearby inventory instead
+ * of the whole country.
  */
 export default function MarketplaceCrossSell({
   from,
   make,
+  nearAirport,
   count,
   samples,
   className = '',
@@ -29,6 +35,8 @@ export default function MarketplaceCrossSell({
   from: 'partnerships' | 'aircraft'
   /** Active make filter, if any — carried into the cross-link + the copy. */
   make?: string
+  /** Active airport (ICAO) filter, if any — carried into the cross-link + the copy. */
+  nearAirport?: string
   /** Live count of the OTHER marketplace's matching listings; shown only when > 0. */
   count?: number
   /**
@@ -41,24 +49,32 @@ export default function MarketplaceCrossSell({
 }) {
   const m = make?.trim()
   const makeLabel = m ? `${m} ` : ''
-  const makeQuery = m ? `?make=${encodeURIComponent(m)}` : ''
+  const airport = nearAirport?.trim()
+  const locationLabel = airport ? ` near ${airport.toUpperCase()}` : ''
+  const qp = new URLSearchParams()
+  if (m) qp.set('make', m)
+  if (airport) {
+    qp.set('airport', airport.toUpperCase())
+    qp.set('radius', '100')
+  }
+  const crossQuery = qp.toString() ? `?${qp.toString()}` : ''
   // Only surface a real, positive count — fall back to the countless copy otherwise.
   const countLabel = count && count > 0 ? `${count.toLocaleString()} ` : ''
 
   const content =
     from === 'partnerships'
       ? {
-          href: `/aircraft${makeQuery}`,
+          href: `/aircraft${crossQuery}`,
           Icon: Plane,
           heading: 'Prefer to own outright?',
-          body: `Browse ${countLabel}${makeLabel}aircraft for sale aggregated from across the web — the same planes, owned solo instead of shared.`,
+          body: `Browse ${countLabel}${makeLabel}aircraft for sale${locationLabel} aggregated from across the web — the same planes, owned solo instead of shared.`,
           cta: `Browse ${makeLabel}planes for sale`,
         }
       : {
-          href: `/partnerships${makeQuery}`,
+          href: `/partnerships${crossQuery}`,
           Icon: Users,
           heading: 'Want to split the cost?',
-          body: `See ${countLabel}${makeLabel}co-ownership partnerships — transparent buy-in, monthly, and hourly costs on every listing.`,
+          body: `See ${countLabel}${makeLabel}co-ownership partnerships${locationLabel} — transparent buy-in, monthly, and hourly costs on every listing.`,
           cta: `Browse ${makeLabel}partnerships`,
         }
 

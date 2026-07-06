@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260706T121603Z — PASS — aircraft-crosssell-airport-aware
+- Pages: /aircraft
+- What: **The "Want to split the cost?" partnerships banner on aircraft search results now knows where you're looking, not just what you're looking for.** Search `/aircraft?make=Cessna` near a specific airport and the banner used to show the same nationwide partnership count as a no-airport search. Now, when your search has an airport filter, the count/sample listings/link all narrow to partnerships within 100 miles of that airport, and the copy says "near KPAO" (etc.) so the number is honest about what it's counting.
+- Goal: `[want]` tier (human-inputted backlog item, outranks `[goal]` work) — "Cross-link aircraft search → partnerships." Friction removed: the cross-sell previously showed an irrelevant nationwide count/samples to a visitor who had already narrowed their search by location; it now reflects real nearby inventory, making the suggested partnerships actually relevant to click.
+- Spec: nightshift/specs/20260706T121603Z-aircraft-crosssell-airport-aware.md
+- Verdict: PASS. `npx tsc --noEmit` clean, `npx next build` compiled clean (385 pages). QA smoke (production `next start` on port 3100) reported HTTP 200, zero app-origin console errors, zero horizontal overflow at desktop 1280 + mobile 375 on `/aircraft`, `/aircraft?make=Cessna`, `/aircraft?make=Cessna&airport=KPAO` — smoke exit 0. Visual cycle: read all 6 screenshots — the cross-sell card renders correctly (rounded card, sample rail of two real KPAO-area Cessna partnerships, no layout breakage) on both viewports. Manually verified via curl against the live DB: the nationwide Cessna count (6) narrows to 2 when `airport=KPAO` is active, "near KPAO" appears in the body copy, and the CTA link carries `make=Cessna&airport=KPAO&radius=100` through to `/partnerships`. No regression on the no-airport case (byte-identical copy to before).
+- Screenshots: nightshift/screenshots/aircraft-crosssell-airport-aware/
+- Next: the reverse direction (`/partnerships` → aircraft cross-sell) isn't airport-aware from partnerships' own airport filter yet — same component, different call site, noted in BACKLOG.md as a follow-up. The `[want]` queue's other open item, "Dynamic-location seed seeking personas," remains for a future cycle; the third `[want]` item ("Owner-leads list") is explicitly flagged for human review before any autonomous build, so it stays parked.
+
 ## 2026-07-06T12:11:57Z — DRAIN SUMMARY
 - Cycles this run: 25 (PASS 20 / FAIL 4 / ABORT 1)
 - Models: cycles on sonnet; 3 escalated to opus; 3 quality-judged on opus

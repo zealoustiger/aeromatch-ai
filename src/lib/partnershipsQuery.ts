@@ -55,7 +55,7 @@ export interface PartnershipQueryResult {
  * Resolve the airport filter list exactly as PartnershipList did: explicit
  * multi-airport input, OR a single airport optionally expanded by radius.
  */
-async function resolveAirportList(filters: PartnershipFilters): Promise<string[]> {
+export async function resolveAirportList(filters: PartnershipFilters): Promise<string[]> {
   if (filters.airports) {
     return filters.airports
       .split(',')
@@ -196,17 +196,27 @@ export async function countPartnershipsByState(code: string): Promise<number> {
 
 /**
  * Count active partnerships, optionally narrowed to a make (case-insensitive
- * substring, like the make hub page). Used by the `/aircraft` cross-sell card to
- * show how many partnerships exist the other way (make-aware when a make filter is
- * active). Mirrors `countPartnershipsByMake`; returns 0 on any failure. Mock-data
- * fallback when Supabase is unconfigured.
+ * substring, like the make hub page) and/or an airport (+ radius in miles, same
+ * expansion `getPartnershipListings` uses). Used by the `/aircraft` cross-sell card
+ * to show how many partnerships exist the other way — make-aware when a make
+ * filter is active, and location-aware when the visitor's search has an airport
+ * filter, so the count reflects the same nearby inventory the CTA link leads to.
+ * Mirrors `countPartnershipsByMake`; returns 0 on any failure. Mock-data fallback
+ * when Supabase is unconfigured.
  */
-export async function countActivePartnerships(make?: string): Promise<number> {
+export async function countActivePartnerships(
+  make?: string,
+  opts?: { airport?: string; radius?: string }
+): Promise<number> {
   const m = make?.trim()
+  const airportList = await resolveAirportList({ airport: opts?.airport, radius: opts?.radius })
+
   if (!hasSupabase()) {
-    return MOCK_PARTNERSHIPS.filter(
-      (p) => !m || p.make.toLowerCase().includes(m.toLowerCase())
-    ).length
+    return MOCK_PARTNERSHIPS.filter((p) => {
+      if (m && !p.make.toLowerCase().includes(m.toLowerCase())) return false
+      if (airportList.length > 0 && !airportList.includes(p.home_airport)) return false
+      return true
+    }).length
   }
   try {
     const supabase = await createServerSupabaseClient()
@@ -215,6 +225,8 @@ export async function countActivePartnerships(make?: string): Promise<number> {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
     if (m) query = query.ilike('make', `%${m}%`)
+    if (airportList.length > 1) query = query.in('home_airport', airportList)
+    else if (airportList.length === 1) query = query.ilike('home_airport', `%${airportList[0]}%`)
     const { count, error } = await query
     if (error) return 0
     return count ?? 0
