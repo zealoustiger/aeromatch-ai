@@ -32,9 +32,15 @@ export const PARTS_TITLE_PATTERNS: readonly string[] = [
   '% wing assembly%',
   '% wing structure%',
   '% wing tip%',
+  '%wingtip%',      // no-space variant ("WINGTIPS") that "% wing tip%" misses
+  '% wing assy%',   // "assy" = common shorthand for "assembly" in classifieds
+  '% wing rack%',
 
   // Airframe assembly fragments (not whole aircraft)
   '% assembly%', // "wing assembly", "tail assembly" — leading space avoids broad matches
+
+  // Standalone prop-governor listings (a part, never an aircraft model/spec name)
+  '%governor%',
 
   // Engine/powerplant parts listed alone (not an aircraft with engine)
   '%engine only%',
