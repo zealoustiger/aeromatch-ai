@@ -18,9 +18,11 @@ interface Props {
   partnershipFacets?: PartnershipFacets
   /** Make options for the seeker variant's make dropdown. */
   makes?: string[]
+  /** Model options for the seeker variant's model filter. */
+  models?: string[]
 }
 
-export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets, partnershipFacets, makes }: Props) {
+export default function MobileFiltersDrawer({ initialValues, activeCount, variant = 'partnership', facets, partnershipFacets, makes, models }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -76,7 +78,7 @@ export default function MobileFiltersDrawer({ initialValues, activeCount, varian
           {variant === 'sale' ? (
             <AircraftSaleFilters initialValues={initialValues} facets={facets} saveSearchBasePath="/aircraft" />
           ) : variant === 'seeker' ? (
-            <SeekerFilters initialValues={initialValues} makes={makes} saveSearchBasePath="/partnerships/seeking" />
+            <SeekerFilters initialValues={initialValues} makes={makes} models={models} saveSearchBasePath="/partnerships/seeking" />
           ) : (
             <PartnershipFilters
               initialValues={initialValues}

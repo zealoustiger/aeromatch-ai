@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import type { PartnershipSeeker } from '@/lib/types'
+import { parsePreferredModelTokens, matchesModelFilter } from './seekerModelFilter'
 
 export type SeekerFilters = {
   /** Multi-airport list (comma-joined ICAO codes), OR'd together. */
@@ -11,6 +12,8 @@ export type SeekerFilters = {
   radius?: string
   state?: string
   make?: string
+  /** Comma-joined model tokens, OR'd against the free-text `preferred_models` field. */
+  model?: string
   rating?: string
   min_hours?: string
   share_type?: string
@@ -22,7 +25,7 @@ function hasSupabase() {
 }
 
 export function anySeekerFilter(f: SeekerFilters): boolean {
-  return Boolean(f.airports || f.airport || f.state || f.make || f.rating || f.min_hours || f.share_type)
+  return Boolean(f.airports || f.airport || f.state || f.make || f.model || f.rating || f.min_hours || f.share_type)
 }
 
 /** Parse a comma-joined multi-select param ("Cessna,Cirrus") into a clean, de-duped
@@ -53,6 +56,7 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
   // Make / Rating are multi-select (comma-joined params) → match seekers wanting
   // ANY of the chosen makes / holding ANY of the chosen ratings (OR semantics).
   const makes = parseMulti(f.make)
+  const models = parseMulti(f.model)
   const ratings = parseMulti(f.rating)
 
   if (!hasSupabase()) {
@@ -67,6 +71,7 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
       const wanted = new Set(makes.map((m) => m.toLowerCase()))
       r = r.filter((s) => s.preferred_makes?.some((m) => wanted.has(m.toLowerCase())))
     }
+    if (models.length) r = r.filter((s) => matchesModelFilter(s.preferred_models, models))
     if (ratings.length) {
       const wanted = new Set(ratings)
       r = r.filter((s) => s.ratings_held?.some((rt) => wanted.has(rt)))
@@ -126,10 +131,14 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
       if (Number.isFinite(n) && n > 0) retry = retry.gte('total_hours', n)
     }
     const { data: fallback } = await retry
-    return (fallback as PartnershipSeeker[]) ?? []
+    const fallbackRows = (fallback as PartnershipSeeker[]) ?? []
+    return models.length ? fallbackRows.filter((s) => matchesModelFilter(s.preferred_models, models)) : fallbackRows
   }
 
-  return (data as PartnershipSeeker[]) ?? []
+  const rows = (data as PartnershipSeeker[]) ?? []
+  // Model has no DB column of its own (free-text `preferred_models`), so it's
+  // matched in JS against the already-filtered rows rather than in SQL.
+  return models.length ? rows.filter((s) => matchesModelFilter(s.preferred_models, models)) : rows
 }
 
 /** Makes that seekers are actually looking for (most-wanted first) — feeds the
@@ -152,6 +161,32 @@ export async function getSeekerMakes(): Promise<string[]> {
       .eq('status', 'active')
       .limit(5000)
     return rank((data ?? []).map((r) => r.preferred_makes as string[] | null))
+  } catch {
+    return []
+  }
+}
+
+/** Model tokens seekers are actually looking for (most-wanted first), parsed out of
+ *  the free-text `preferred_models` field — feeds the Model filter's option list.
+ *  Mirrors getSeekerMakes()'s ranking, but over comma-split tokens instead of an
+ *  array column. */
+export async function getSeekerModels(): Promise<string[]> {
+  const rank = (values: (string | null | undefined)[]): string[] => {
+    const counts = new Map<string, number>()
+    for (const raw of values) for (const model of parsePreferredModelTokens(raw)) {
+      counts.set(model, (counts.get(model) ?? 0) + 1)
+    }
+    return [...counts.keys()].sort((a, b) => (counts.get(b)! - counts.get(a)!) || a.localeCompare(b))
+  }
+  if (!hasSupabase()) return rank(MOCK_SEEKERS.map((s) => s.preferred_models))
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data } = await supabase
+      .from('partnership_seekers')
+      .select('preferred_models')
+      .eq('status', 'active')
+      .limit(5000)
+    return rank((data ?? []).map((r) => r.preferred_models as string | null))
   } catch {
     return []
   }
