@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-06T12:11:57Z — DRAIN SUMMARY
+- Cycles this run: 25 (PASS 20 / FAIL 4 / ABORT 1)
+- Models: cycles on sonnet; 3 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $113.4755 of $120 cap
+- Stopped because: safety cap (25)
+- Run: 20260706T064931Z
+
 ## 2026-07-06T120526Z — PASS — faa-lookup-registrant-type-hint
 - Pages: /aircraft/new, /partnerships/new
 - What: **The FAA tail-number lookup on the post forms now tells you who owns the plane today, not just its make/model/year.** Typing a registration and hitting "Look up →" (or tabbing out of the field) already fetched the FAA registry's owner-type field (Individual / LLC / Trust / Corporation / Government) via `/api/faa-lookup`, but both the aircraft-for-sale and partnership post forms silently threw it away — the status line only ever showed "Found: 2015 Cirrus SR22". It now reads "Found: 2015 Cirrus SR22 · Individually registered" (or "· Registered to an LLC", etc.), giving a seller/poster a useful signal with zero extra clicks.
