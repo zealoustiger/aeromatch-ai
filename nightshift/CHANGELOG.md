@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-06T091945Z — PASS — partnership-model-rollup
+- Pages: /partnerships
+- What: **The Aircraft Model filter on Partnerships now groups near-duplicate variants under one "(all)" checkbox**, matching how the Planes for Sale filter already works — e.g. picking "SR20 (all)" checks every SR20/Sr20 G2/SR20-G2 variant in one click instead of forcing you to tick each one separately, with the individual variants tucked behind a "Show N variants" toggle. The active-filter chips above the results also collapse a fully-selected group into one removable chip instead of one per variant.
+- Goal: `[want]` tier — Model-filter variant-rollup backlog item's explicit remaining gap ("Deliberately NOT done this slice" on `partnership-model-multiselect`, 2026-07-06): the `/partnerships` Model multi-select shipped with plain checkboxes only, unlike `/aircraft`'s already-rolled-up list. Ported the identical `groupModelVariants` grouping + `ModelGroupRow` component into `PartnershipFilters.tsx` (desktop sidebar + mobile drawer, which already renders this component) and the matching collapsed-chip logic into `PartnershipActiveFilterChips.tsx` (new optional `facets` prop, wired from `partnerships/page.tsx`'s already-fetched `partnershipFacets`). Pure UI/front-end change reusing the existing unit-tested helper — no query or schema change.
+- Spec: nightshift/specs/20260706T091945Z-partnership-model-rollup.md
+- Verdict: PASS. `npx next build` clean (compile + typecheck). qa-smoke exit 0 on `/partnerships` and `/partnerships?make=Cirrus` at desktop 1280 + mobile 375 (0 console errors, 0 overflow); screenshots confirm the unchanged singleton-checkbox case (today's live partnership data has no make with >1 model, so the group UI is dormant on real data). Verified the actual grouped-rendering path via a temporary route rendering `PartnershipFilters`/`PartnershipActiveFilterChips` with mocked SR20-cluster facets (screenshotted: parent "SR20 (all)" checked, "Show 4 variants" collapsed, SR22 untouched, chips collapsed to one "SR20 (all)" chip) — deleted before merge, not part of the shipped diff.
+- Screenshots: nightshift/screenshots/partnership-model-rollup/
+- Next: the parent backlog item's other remaining pieces — DB casing normalization (destructive-ish, human call) and the `/partnerships/seeking` half (seeker rows have no clean `model` column, needs its own approach, see `seeker-model-filter`'s existing free-text parsing as the template).
+
 ## 2026-07-06T090513Z — PASS — listings-completeness-nudge
 - Pages: /listings
 - What: **Your "My Listings" dashboard now shows how complete each of your listings is at a glance** — every active aircraft, partnership, and seeking listing gets a real "N/4 trust signals" chip (the same badge buyers already see on cards/detail pages) right next to its Edit link, so you can tell which listings need more detail without opening each one individually.

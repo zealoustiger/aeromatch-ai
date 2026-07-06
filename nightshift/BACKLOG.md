@@ -1036,6 +1036,19 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   + the page's existing facets; no query/schema change. See CHANGELOG. **Remaining: (2) normalize
   stored variant casing in the DB (deferred — destructive-ish, ask-a-human); apply the same rollup
   to the partnerships/seeking model filters + their active-filter chips.**
+  — ~~**`/partnerships` variant-group rollup**~~ ✅ SHIPPED via `partnership-model-rollup`
+  (2026-07-06): the gap explicitly called out below ("Deliberately NOT done this slice") —
+  `PartnershipFilters`' Model checkbox list now groups clustered variants under a parent
+  "{base} (all)" checkbox (collapse-by-default "Show N variants", indeterminate state) via the
+  same `groupModelVariants` helper, and `PartnershipActiveFilterChips` collapses a fully-selected
+  group into one removable chip — both mirror `/aircraft`'s existing rollup exactly, no
+  query/schema change. Live partnership data currently has no make with >1 model (dormant on
+  today's seed data), so verified via a temporary mock-data preview route (screenshotted, then
+  deleted before merge) with a mocked SR20/Sr20 G2/Sr20 G3/SR20-G2 cluster — parent checkbox,
+  "Show 4 variants" disclosure, and the collapsed "SR20 (all)" chip all render correctly.
+  **Remaining: still (2) DB casing normalization (human call) and the `/partnerships/seeking`
+  half — see below, that one needs its own approach since seeker rows have no clean `model`
+  column.**
   — **`/partnerships` Model multi-select UI ✅ SHIPPED 2026-07-06** (`partnership-model-multiselect`):
   the prerequisite this line called for ("needs the multi-select UI first") — Make is now a live-facets
   `<select>` and Model a checkbox multi-select scoped to the selected make (`getPartnershipFacets()`,
