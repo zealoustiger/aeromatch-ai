@@ -115,8 +115,14 @@ must emit the `alert_subscribed` PostHog event.
   `AlertSignup`) instead of just "try widening your search." The pre-existing below-the-list
   `AlertSignup` on `/aircraft`/`/partnerships` is now suppressed when the list is empty to
   avoid showing the identical capture twice back-to-back.
-- **[P1][goal] Alert management page (v1, read-only).** `/account` (or `/alerts/manage`):
-  list a signed-in user's active alerts with context + source. Foundation for pause/delete.
+~~- **[P1][goal] Alert management page (v1, read-only).**~~ ✅ SHIPPED via `alerts-manage-page`
+  (2026-07-06) New `/alerts/manage` page lists a signed-in user's own alert subscriptions
+  (email-keyed against the `alerts` table, `context` + a "View" link back to `source_path` +
+  Active/Pending status chip), plus a Bell "Alerts" tile on `/account`'s activity grid. Added
+  an additive `alerts_owner_select` RLS policy (⚠️ apply against live Supabase before real rows
+  show — page renders a clean empty state, never an error, until then). Read-only per the slice;
+  pause/delete is the next item below. `/account`'s existing mislabeled "Email alerts"
+  (saved-searches) section left untouched — flagged as a copy follow-up.
 - **[P1][goal] Pause & delete an alert.** Add pause/resume + delete to the management list
   (and honor them in `send-alerts.mjs`).
 - **[P1][goal] Alert CTA on make/model & state pages.** `/aircraft/[make]/[model]` and
@@ -1220,11 +1226,23 @@ thin/doorway pages; real listings + real data per page).
 - **[P2][goal] Rich structured data (JSON-LD).** Product/Offer on listings, Place on airport pages, FAQPage on guides, BreadcrumbList sitewide → eligible for rich results = higher CTR. Slice by schema type.
 
 **Conversion — turn SEO visitors into a list (a goal once traffic grows):**
-- **[P1][want] Email alerts capture (smart, low-friction).** Inline "Get alerts for {Make} {Model} near {airport}" on search results + listing + the new programmatic pages — one email field, NO account required, double-opt-in confirmation, stored to an additive `alerts` table; then a weekly "N new matches" email. Seeds the list now, pays off as traffic grows. Tasteful only — no modal spam, no fake urgency (FREEZE). Slice: (1) capture UI + table; (2) confirmation email; (3) weekly match digest. — ✅ Slice 1 shipped. **2026-06-22: double-opt-in SCHEMA APPLIED** (`alerts.confirm_token` / `confirmed_at` / `unsubscribe_token` / `last_digest_at`) + **provider = Resend** chosen. **Build slices 2-3 NOW, gated behind `RESEND_API_KEY`** — do NOT block on the key: add a `lib/email.ts` that sends via Resend when the key is present and **no-ops + logs** when it's absent (so it ships safely and "just works" once the human drops the key in). Then: the confirmation-email send on capture + `/api/alerts/confirm?token=` (sets `status='confirmed'`,`confirmed_at`) + `/api/alerts/unsubscribe?token=` routes, and the weekly "N new matches" digest job (uses `last_digest_at`). Human will add the Resend key + verify the sender domain later.
+~~- **[P1][want] Email alerts capture (smart, low-friction).**~~ ✅ AUDIT-CONFIRMED FULLY
+  SHIPPED 2026-07-06 (`alerts-manage-page` cycle's tier-2 audit). All 3 slices are live:
+  capture UI + table (slice 1), `lib/email.ts` sending via Resend + `/api/alerts/confirm`
+  + `/api/alerts/unsubscribe` (slice 2), and the weekly digest cron (slice 3,
+  `/api/cron/alert-digest` + `vercel.json`). `RESEND_API_KEY`/`ALERTS_FROM_EMAIL` are in
+  fact both set in `.env.local` — this is sending real mail, not a no-op. This line was
+  stale (duplicate of the earlier-struck line elsewhere); no code change needed.
 - **[P2][want/goal] Price-vs-market insight.** On a for-sale listing, "priced ~X% below/above similar {model} listings," computed from your own inventory as comps (show only with ≥N comps). Unique data Barnstormers/Craigslist don't surface — shareable/linkable. Slice: (1) comp calc + badge on detail; (2) "market snapshot" on model pages.
 
 **Trust — the human's #1 differentiator: pilots trust filled-out, on-platform, real-photo, member-posted listings:**
-- **[P1][want] Listing trust layer.** Make trustworthiness visible and maximize it: (a) a trust/completeness badge on cards + detail (real photo ✓, full specs ✓, on-platform contact ✓, posted by signed-up member ✓); (b) rank complete + on-platform + real-photo listings above thin/off-platform ones (extends existing ranking work); (c) nudge posters to complete listings + add real photos (post-flow + an owner "improve your listing" prompt); (d) prefer on-platform contact over off-platform redirects. Goal: as many fully-filled, on-platform, real-photo, member-owned listings as possible. Slice: (1) trust badge + signals; (2) completeness-weighted ranking; (3) poster completion nudges; (4) reduce off-platform redirects.
+~~- **[P1][want] Listing trust layer.**~~ ✅ SHIPPED across all 4 slices (see the
+  sub-notes below — trust badge + signals, completeness-weighted ranking on all 3
+  marketplaces, poster completion nudges, and off-platform-redirect demotion all
+  confirmed complete as of `aircraft-listing-alert-cta`/`seeker-trust-ranking`,
+  2026-07-06). Struck this cycle (`alerts-manage-page`) — the title bullet was never
+  marked done even though every sub-slice below it was. Make trustworthiness visible
+  and maximize it: (a) a trust/completeness badge on cards + detail (real photo ✓, full specs ✓, on-platform contact ✓, posted by signed-up member ✓); (b) rank complete + on-platform + real-photo listings above thin/off-platform ones (extends existing ranking work); (c) nudge posters to complete listings + add real photos (post-flow + an owner "improve your listing" prompt); (d) prefer on-platform contact over off-platform redirects. Goal: as many fully-filled, on-platform, real-photo, member-owned listings as possible. Slice: (1) trust badge + signals; (2) completeness-weighted ranking; (3) poster completion nudges; (4) reduce off-platform redirects.
   — **slice 1 (trust badge + signals) ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06**:
   `src/lib/aircraftTrust.ts`/`partnershipTrust.ts`/`seekerTrust.ts` + `AircraftTrustBadge`/
   `TrustBadge`/`SeekerTrustBadge` components render real signals (complete details,
@@ -1275,6 +1293,15 @@ thin/doorway pages; real listings + real data per page).
 ### Inventory coverage & ingestion — 2026-06-20
 **Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.
 - **[P1][want] Add Trade-A-Plane ingestion.** TAP is likely the largest source of Bay-Area piston-GA for-sale listings and we capture 0. Extend the scraper/ingest pipeline: (1) fetch + parse TAP search results (filter by state/region, **Bay Area / CA first**); (2) normalize → `aircraft_for_sale` with `source='tradeaplane'`, `source_url`, `source_id`, make/model/year/price/location/state/photos; (3) dedupe against existing rows by **N-number (registration)** where available, else make+model+year+price+seller fuzzy; (4) schedule/repeat. Respect robots/ToS; capture for aggregation, link back to the source.
+  — **BLOCKED 2026-07-06** (`alerts-manage-page` cycle's tier-2 audit, live-checked, not
+  fixed): `trade-a-plane.com` sits behind **DataDome bot-protection** — every request,
+  including plain `robots.txt`, returns a `captcha-delivery.com` JS challenge page, not
+  real content. Same class as Hangar67/Controller/AirMart/AeroTrader already flagged
+  elsewhere in this file — **do NOT build DataDome-evasion.** Cover it the clean way
+  instead, same playbook as the Controller/AirMart/AeroTrader notes below: cross-listing
+  dedupe by N-number against sources we *can* read, dealer/broker outreach, or a human/
+  bookmarklet capture for the Bay-Area beachhead. Needs a human call before any further
+  attempt (headed-browser scraping would be evasion, out of scope for this loop).
 - **[P1][want] Bay-Area coverage benchmark (repeatable, tracked).** A job + small readout that answers "what % of real Bay-Area inventory do we have?" Slice: (1) define the Bay Area (the ~15 airports/counties); (2) numerator = our DB counts (for-sale + partnerships) in that geo; (3) denominator A = FAA/AirNav **based-aircraft fleet count** for those airports (market size, no scraping issues); (4) denominator B = de-duped union of accessible-marketplace Bay-Area for-sale (Barnstormers + AircraftForSale + Hangar67 + Trade-A-Plane) → **coverage % + a gap list** (listings elsewhere we're missing); (5) surface in admin / scoreboard, tracked weekly, with a target (e.g. ≥80% of Bay-Area Barnstormers within 7 days). The gap list doubles as ingestion targets. For partnerships, track **flow + freshness** (new captured/week, % active) instead of a coverage ratio (no central source = no real denominator).
 - **[P2][want] Controller.com — covered indirectly, not by scraping.** Controller actively blocks bots (Cloudflare). Do NOT build Cloudflare-evasion. Get its inventory the clean ways: (a) the same planes are cross-listed — dedupe from Trade-A-Plane + dealer sites by N-number; (b) **dealer/broker outreach** to list directly (also feeds the broker lead-gen monetization model); (c) a human/bookmarklet capture for the Bay-Area beachhead (low volume), reusing the FB-capture pattern. Track Controller Bay-Area listings as a benchmark reference only.
 - **[P3][want] AirMart + AeroTrader — bot-protected, cover indirectly (human-requested 2026-06-23).** Human asked whether we can scrape https://airmart.com/aircraft-for-sale/ and https://www.aerotrader.com/listing/ . **Both block plain HTTP fetch and so don't fit the static-HTML/sitemap adapter pipeline:** AirMart sits behind a **Cloudflare/Kinsta "Just a moment" JS challenge** (`?ki-cf-botcl` redirect, 403 to bots); AeroTrader is behind **AWS WAF** (HTTP 202 hold + `gokuProps`/`awsWafCookieDomainList` captcha JS). Same class as Controller/Hangar67 — **do NOT build bot/Cloudflare/WAF-evasion.** Cover them the clean ways, same playbook as Controller: (a) cross-listing dedupe by **N-number** (most AeroTrader/AirMart planes are also on Trade-A-Plane / Barnstormers / dealer sites we *can* read); (b) **dealer/broker outreach** to list directly; (c) human/bookmarklet capture for the Bay-Area beachhead, reusing the FB-capture pattern. Track each as a **benchmark reference** in the coverage gap list, not as a scraper target. (NOTE: the third site the human asked about, **aircraftforsale.com, is already ingested** — `source='aircraftforsale'`, ~620 listings — no work needed.)
