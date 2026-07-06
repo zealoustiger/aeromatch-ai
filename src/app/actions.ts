@@ -950,6 +950,25 @@ export async function saveSearch(name: string, searchParams: string, path = '/pa
     return { error: 'Failed to save search.' }
   }
 
+  // Saving a search also turns on email alerts for it — the same `alerts` table/
+  // `alert-digest` pipeline the standalone AlertSignup boxes use, but already-
+  // authenticated here so we skip the anonymous double-opt-in and confirm immediately.
+  // Insert-only + idempotent on (email, source_path), mirroring `subscribeToAlerts`:
+  // a unique-violation means this search's alert already exists, which is success, not
+  // an error. Best-effort — a failure here must never fail the search save itself.
+  if (user.email) {
+    const { error: alertError } = await supabase.from('alerts').insert({
+      email: user.email.toLowerCase().trim(),
+      context: name.trim(),
+      source_path: `${safePath}?${searchParams}`,
+      status: 'confirmed',
+      confirmed_at: new Date().toISOString(),
+    })
+    if (alertError && alertError.code !== '23505') {
+      console.error('[saveSearch] alert insert failed:', alertError.message)
+    }
+  }
+
   revalidatePath('/searches')
   return { ok: true }
 }
