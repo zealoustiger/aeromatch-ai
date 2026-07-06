@@ -109,3 +109,28 @@ test('member_posted is true only when poster_id is set', () => {
     false,
   )
 })
+
+test('trust score sort (mirrors seekersQuery.sortByTrust) floats complete seekers above thin ones, stable on ties', () => {
+  const thin = makeSeeker({ id: 'thin' }) // 0/4
+  const budgetOnly = makeSeeker({ id: 'budget', max_hourly: 150 }) // 1/4
+  const complete = makeSeeker({
+    id: 'complete',
+    preferred_makes: ['Cessna'],
+    max_buy_in: 40000,
+    total_hours: 250,
+    ratings_held: ['PPL', 'IR'],
+    poster_id: 'user-1',
+  }) // 4/4
+  const budgetOnly2 = makeSeeker({ id: 'budget2', max_hourly: 200 }) // 1/4, same score as `budget`
+
+  const input = [thin, budgetOnly, complete, budgetOnly2]
+  const sorted = input
+    .map((s, i) => ({ s, i, score: evaluateSeekerTrust(s).score }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.s)
+
+  assert.deepEqual(
+    sorted.map((s) => s.id),
+    ['complete', 'budget', 'budget2', 'thin'],
+  )
+})
