@@ -22,6 +22,7 @@ import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
 import { countMatchingPartnershipsForSeeker } from '@/lib/matchingQuery'
+import AlertSignup from '@/components/AlertSignup'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -164,6 +165,20 @@ export default async function SeekerDetailPage({
   const isOwner = !!user && !!s.poster_id && user.id === s.poster_id
   // Owner-only compatibility count — never computed for a visitor's page load.
   const matchingPartnershipCount = isOwner ? await countMatchingPartnershipsForSeeker(s) : 0
+
+  // Owner-only "alert me for new matches" — same `/partnerships?make=&airport=`
+  // query-string shape alert-digest's existing parseSourcePath already understands
+  // (mirrors the /partnerships hub's alertMake/alertAirport/alertSourcePath pattern),
+  // built from this seeker's own stated preferences so it's a genuine standing match.
+  const alertMake = s.preferred_makes?.length === 1 ? s.preferred_makes[0] : undefined
+  const alertAirport = s.home_airport || undefined
+  const alertLocationClause = alertAirport ? `near ${alertAirport}` : undefined
+  const alertContext = [alertMake, alertLocationClause].filter(Boolean).join(' ') || undefined
+  const alertQuery = new URLSearchParams({
+    ...(alertMake ? { make: alertMake } : {}),
+    ...(alertAirport ? { airport: alertAirport } : {}),
+  }).toString()
+  const alertSourcePath = alertQuery ? `/partnerships?${alertQuery}` : '/partnerships'
 
   // Privacy-by-default: show the pilot as "First L." Contact details (email/phone)
   // are handled client-side by SeekerContactBar so they're never in public HTML.
@@ -473,6 +488,14 @@ export default async function SeekerDetailPage({
             </Link>
           </div>
         </section>
+      )}
+
+      {/* Owner-only "alert me for new matches" — closes the "instant payoff" backlog
+          item's remaining gap now that currently-matching partnerships already render
+          above: a seeker with 0 (or a full page of) matches today can still get
+          notified the moment a new one appears. Renders independent of match count. */}
+      {isOwner && (
+        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
       )}
 
       <PartnershipLaunchBanner
