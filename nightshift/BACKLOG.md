@@ -1227,6 +1227,17 @@ thin/doorway pages; real listings + real data per page).
   queries to include the columns those evaluators read (no schema change). **Remaining:**
   slice 2 (completeness-weighted ranking) and slice 4 (reduce off-platform redirects) are
   still genuinely open.
+  — **Correction (2026-07-06):** slice 2 was NOT actually un-started — `/partnerships`
+  already shipped it 2026-06-20 (`trust-ranking`, see CHANGELOG archive), the 2026-07-06 audit
+  above missed it. **slice 2, `/aircraft` half ✅ SHIPPED via `aircraft-trust-ranking`
+  (2026-07-06):** the one browse surface still missing it — `evaluateAircraftTrust(p).score`
+  now floats complete/priced/maintenance-disclosed/member-posted listings above thin ones
+  under `/aircraft`'s default (newest-first) sort, stable tie-break on recency, mirroring
+  `partnershipsQuery.ts`'s `sortByTrust` exactly. Explicit `price_asc`/`price_desc`/`reduced`/
+  `distance` sorts are untouched. No schema change; new unit test in `aircraftTrust.test.ts`
+  asserts the float + stability. **Remaining: `/partnerships/seeking` half** (needs its own
+  approach — no `evaluateSeekerTrust`-driven sort exists there yet); slice 4 (reduce
+  off-platform redirects) is also still open.
 
 ### Inventory coverage & ingestion — 2026-06-20
 **Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.
