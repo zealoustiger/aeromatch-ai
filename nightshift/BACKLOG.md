@@ -1083,8 +1083,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   showed 14 links (13 active seekers + "post new"); `model=172` narrowed to exactly 1 (excluding the
   "172 G1000" row, confirming exact-token match); `model=SR20` narrowed to exactly 2 (both rows
   containing that token). Not scoped by the selected Make (the two fields aren't linked in the data).
-  **Not done, intentionally:** wiring `model` into the seeker `AlertSignup` source path/alert-digest
-  matching (mirrors how `make`-only alert matching already works there) — a natural next slice.
+  ~~**Not done, intentionally:** wiring `model` into the seeker `AlertSignup` source path/alert-digest
+  matching (mirrors how `make`-only alert matching already works there) — a natural next slice.~~ ✅
+  SHIPPED via `seeker-alert-model-filter` (2026-07-06) `/partnerships/seeking`'s `alertContext`/
+  `alertSourcePath` now carry `model` alongside `make`; `alert-digest`'s `parseSourcePath` parses it
+  and `countNewSeekers` matches it against the free-text `preferred_models` field via the existing
+  `matchesModelFilter` helper. This item is now fully complete.
 ~~- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**~~ ✅ SHIPPED via `filter-promote-core-fields` (2026-06-24)
   Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
   buying criteria. Surface them **higher and always-visible** in the main filter panel, and
