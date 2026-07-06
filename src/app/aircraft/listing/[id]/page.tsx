@@ -53,6 +53,7 @@ import AircraftTrustBadge from '@/components/AircraftTrustBadge'
 import AircraftListingOwnerNudge from '@/components/AircraftListingOwnerNudge'
 import AircraftContactButton from '@/components/AircraftContactButton'
 import ShareCostPanel from '@/components/ShareCostPanel'
+import AlertSignup from '@/components/AlertSignup'
 
 const DAY_MS = 86_400_000
 
@@ -1029,9 +1030,9 @@ export default async function AircraftListingDetailPage({
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
-                <h2 className="mb-1 text-sm font-semibold text-sky-800">View the original listing</h2>
-                <p className="mb-3 text-sm text-sky-700">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="mb-1 text-sm font-semibold text-slate-800">View the original listing</h2>
+                <p className="mb-3 text-sm text-slate-500">
                   This aircraft is listed on {source}. Contact and full details are on the source site.
                 </p>
                 {p.source_url ? (
@@ -1039,15 +1040,29 @@ export default async function AircraftListingDetailPage({
                     href={p.source_url}
                     target={isExternal ? '_blank' : undefined}
                     rel={isExternal ? 'noopener noreferrer' : undefined}
-                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50"
                   >
                     {isExternal ? `View on ${source}` : 'View listing'} <ExternalLink className="h-4 w-4" />
                   </a>
                 ) : (
-                  <p className="text-sm text-sky-700">No source link available.</p>
+                  <p className="text-sm text-slate-500">No source link available.</p>
                 )}
               </div>
             )}
+
+            {/* Alert capture — every aircraft listing page, on-platform or
+                scraped, gets a make/model-scoped "get alerts" box so there's
+                always an on-site action available (not just an off-platform
+                exit for scraped listings). */}
+            <AlertSignup
+              context={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+              sourcePath={
+                p.make
+                  ? `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
+                  : '/aircraft'
+              }
+              noun="aircraft"
+            />
           </div>
         </div>
 
