@@ -774,15 +774,17 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
 FAA-registry-powered ideas. The aircraft registry is public (tail number → owner
 name OR LLC + mailing address, make/model/year; NO emails/phones). Two items:
 
-- **[P2][want] N-number autofill on "Post a Listing".** Owner/seller types their FAA
-  tail number (N-number) and we prefill make / model / year (and flag individual-vs-LLC
-  ownership) from the FAA Aircraft Registry. One-click, accurate listings — gets owners
-  to come to us. Low-risk, clean public data. Slice: (1) data source — either the
-  single-record inquiry endpoint (`registry.faa.gov/aircraftinquiry`, per-lookup) or
-  import the bulk Releasable Aircraft DB (`MASTER.txt` + `ACFTREF.txt`) into an
-  `faa_aircraft` table (refresh monthly); (2) an N-number field on the post form that
-  fetches + prefills make/model/year; (3) show owner-type (individual vs LLC/trust) hint.
-  No emails (FAA has none).
+~~- **[P2][want] N-number autofill on "Post a Listing".**~~ Slices (1) and (2) were
+  already live (`/api/faa-lookup`'s single-record inquiry endpoint, wired into
+  `/aircraft/new` + `/partnerships/new` to prefill make/model/year). **Slice 3 ✅
+  SHIPPED via `faa-lookup-registrant-type-hint` (2026-07-06):** the route already parsed
+  and returned `registrantType` (Individual/LLC/Trust/Corporation/Government) from the
+  FAA registry but both forms fetched and silently discarded it. Now appended to the
+  lookup status line (e.g. "Found: 2015 Cirrus SR22 · Individually registered"). No new
+  data source, no schema change — pure client-side surfacing of data already in hand.
+  **Not done, intentionally:** the bulk `faa_aircraft` registry import / owner-leads
+  angle — that's the separate, much larger "Owner-leads list" item below, still
+  flagged for human review before any autonomous build.
 
 - **[P2][want] Owner-leads list from airport-based tail numbers — DATA COLLECTION ONLY,
   NO OUTREACH YET.** Growth-prospecting dataset: for a chosen airport, enumerate based
