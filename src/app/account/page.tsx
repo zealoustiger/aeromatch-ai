@@ -244,14 +244,15 @@ export default async function AccountPage() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
             Your activity
           </h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <ActivityLink href="/saved" label="Saved" hint="Listings you've hearted" icon={Heart} />
             <ActivityLink
               href="/searches"
               label="Saved searches"
-              hint="Your alert subscriptions"
+              hint="Your saved filters"
               icon={Bookmark}
             />
+            <ActivityLink href="/alerts/manage" label="Alerts" hint="Your email alert subscriptions" icon={Bell} />
             <ActivityLink href="/messages" label="Messages" hint="Your conversations" icon={MessageCircle} />
           </div>
         </section>

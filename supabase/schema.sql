@@ -693,3 +693,11 @@ begin
   return n;
 end $$;
 revoke all on function public.sweep_test_accounts(int) from public, anon, authenticated;
+
+-- alerts: owner read access (migration: alerts_owner_select). The `alerts` table has
+-- no `user_id` (email-only, no-account-required capture) — a signed-in user can only
+-- read their OWN rows, matched by their JWT's email, never anyone else's. Powers the
+-- new read-only "/alerts/manage" page. ⚠️ ADDITIVE — apply against the live Supabase
+-- DB; until applied, the page's query returns no rows (never an error).
+create policy "alerts_owner_select" on alerts
+  for select using (auth.jwt() ->> 'email' = email);
