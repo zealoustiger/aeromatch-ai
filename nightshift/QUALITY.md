@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-06T07:42:09Z — partnership-model-multiselect — score 4/5
+- Strengths: Faithful mirror of the /aircraft facets stack — getPartnershipFacets clones aircraft-facets.ts (count-ranked makes, alpha models, status='active', 5000 limit) and even adds a JUNK_MAKES sink; the .eq (single) / .in (multi) model split matches AircraftSaleList.tsx:529-530 verbatim, make-change clears stale model in both the filter and the chip removal, and per-model removable chips reuse the airports multi-chip pattern; tight scope, no schema, well-commented.
+- Weaknesses / risks: Facet-empty fallback keeps free-text Make but hides Model entirely, so the old free-text model search is lost in that (rare, DB-empty/error) path; mock-mode facets build over all MOCK_PARTNERSHIPS without the status='active' filter the live query applies — both immaterial for production/live mode and the fallback is called out in the spec.
+- Follow-up: none
+
 ## 2026-07-05T13:23:25Z — airport-hub-comp-verdicts — score 5/5
 - Strengths: Faithful, minimal mirror of the proven getPartnershipCompVerdicts/getSeekerBudgetCheckVerdicts batch pattern — comp verdicts fetched once over the full allListings set (feeds both "Based at" and "Within 50 miles" sections), seeker verdicts over exactly the rendered seekersHere slice; prop optionality (budgetVerdict?) and `?? null` handling match /saved and /partnerships/near/[icao] verbatim; honesty-gating preserved by reusing the helpers; tight single-file scope, clear comment.
 - Weaknesses / risks: none material — instantiates a second supabase client solely for verdicts, but each sibling surface does the same and there's no page-scope client to reuse.
