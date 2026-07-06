@@ -1269,7 +1269,14 @@ Backlinks deferred by human. So: (A) make existing pages genuinely index-worthy,
 #### C. Engagement — get pilots to post as "seeking a share"
 - **[P1][want] Dead-simple "Looking for a share" post flow.** Prominent CTA ("Want to join a partnership? Tell pilots what you're looking for →") → a ~30-second form: home airport, aircraft/mission, budget, ratings, one sentence. Mobile-first, minimal fields. The biggest lever for seeking-side supply. *(2 cycles)*
 - **[P1][want] Anonymous-by-default seeker posts.** Show seeker as "First L." with NO contact info; owners reach out **through on-platform messaging** only. Removes the "I don't want my info public" barrier. *(1 cycle)* — **slice 1 ✅ SHIPPED 2026-06-22T12:28Z** (`anonymizeName` in `utils.ts`; seeker shown as "First L." on `SeekerCard` + `/partnerships/seeking/[id]`; email/phone now **server-side gated behind sign-in** so they never enter the public/crawlable HTML — logged-out sees a "Sign in to contact this pilot" CTA; honors the post form's existing "not shown publicly" promise; NO schema change; see Done + CHANGELOG). **Next: replace the email/phone reveal with real on-platform messaging to seekers. ✅ SCHEMA APPLIED 2026-06-22 — `threads.seeker_id` added, `partnership_id` now nullable, a one-target check + seeker-thread unique index are live (see `supabase/schema.sql`). Build the on-platform seeker messaging NOW: reuse the existing partnership thread/message UI + actions for the seeker case; threads RLS is participant-based (inquirer/owner ids) so it already covers seeker threads — set `owner_id` = the seeker's `poster_id`.**
-- **[P1][want] Instant payoff when posting a seeking.** The moment a pilot posts, show available partnerships that already match (matching engine) + enable alerts for new matches. Posting feels valuable, not into-the-void. *(1 cycle; pairs with the matching engine item)*
+~~- **[P1][want] Instant payoff when posting a seeking.**~~ ✅ SHIPPED via `seeker-match-alert`
+  (2026-07-06) The "show available partnerships that already match" half was already live
+  (`getMatchingPartnerships()` on `/partnerships/seeking/[id]`, plus the owner-only
+  `MatchCountNudge`); this cycle closed the other half — "enable alerts for new matches" —
+  with an owner-only `AlertSignup` box on the same page, sourced from the seeker's own
+  make + home airport via the existing `/partnerships?make=&airport=` alert-digest path.
+  Renders whether or not the seeker currently has any matches. Posting a seeking listing
+  now feels valuable *and* pays off later, not just into-the-void.
 - **[P2][want] Show demand exists.** "3 pilots near KPAO are looking for a Cessna share" on airport + partnership pages — validates seekers and motivates owners to list. Real counts only. *(1 cycle)*
 
 ## Constraints / taste notes
