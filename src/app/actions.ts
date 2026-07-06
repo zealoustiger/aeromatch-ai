@@ -926,6 +926,66 @@ export async function subscribeToAlerts(
   return { ok: true }
 }
 
+// Alerts have no user_id (they're settable with no account), so "ownership" is
+// proven by matching the signed-in user's own email against the row — not by an
+// RLS policy, since anon/authenticated has no SELECT on this PII-holding table
+// (see subscribeToAlerts above) and adding write policies would need the same
+// human DDL step the pending `alerts_owner_select` policy is still waiting on.
+// The admin client does the actual read/write; this check is what makes it safe.
+async function loadOwnedAlert(id: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user?.email) return { error: 'Not authenticated' as const }
+
+  const admin = createAdminClient()
+  const { data: alert } = await admin
+    .from('alerts')
+    .select('id, email, status')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!alert || alert.email.toLowerCase() !== user.email.toLowerCase()) {
+    return { error: 'Alert not found.' as const }
+  }
+  return { admin, alert }
+}
+
+// Pause an active alert without losing the subscription — skips it from the
+// alert-digest cron (which only ever queries `status = 'confirmed'`) until resumed.
+export async function pauseAlert(id: string) {
+  const owned = await loadOwnedAlert(id)
+  if ('error' in owned) return { error: owned.error }
+  if (owned.alert.status !== 'confirmed') return { error: 'Only an active alert can be paused.' }
+
+  const { error } = await owned.admin.from('alerts').update({ status: 'paused' }).eq('id', id)
+  if (error) return { error: 'Failed to pause alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+export async function resumeAlert(id: string) {
+  const owned = await loadOwnedAlert(id)
+  if ('error' in owned) return { error: owned.error }
+  if (owned.alert.status !== 'paused') return { error: 'Only a paused alert can be resumed.' }
+
+  const { error } = await owned.admin.from('alerts').update({ status: 'confirmed' }).eq('id', id)
+  if (error) return { error: 'Failed to resume alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Deletes the alert row outright (the management page's own delete affordance,
+// distinct from the one-click email `unsubscribe` link, which just flips status).
+export async function deleteAlert(id: string) {
+  const owned = await loadOwnedAlert(id)
+  if ('error' in owned) return { error: owned.error }
+
+  const { error } = await owned.admin.from('alerts').delete().eq('id', id)
+  if (error) return { error: 'Failed to delete alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
 const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft', '/partnerships/seeking'] as const
 
