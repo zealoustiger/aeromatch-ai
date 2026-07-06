@@ -1051,17 +1051,25 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   (reuse our coords) + filter by distance (needs lat/long or geocoded location); (2) "within X
   of {ICAO}" filter chip; (3) sort-by-distance + 375px polish. If listing coords are sparse,
   fall back to state/metro match and note the coverage gap.
-- **[P1][bug] Hide parts/wanted listings — only show actual aircraft.** The feed leaks
-  non-aircraft listings — **parts and wanted ads**, mostly from **Barnstormers** (e.g. "CIRRUS
-  SR22T WING ASSEMBLY", "WHEELPANTS FOR THE CIRRUS SR22", and a "CIRRUS SR22 NON TURBO" that's
-  actually a **WANTED** ad). The Barnstormers adapter's parts/wanted regex isn't catching
-  these. Tighten classification: title keywords (wing/wheel pants/fairing/assembly/parts/
-  avionics/prop/engine-only, **WANTED/accepting orders** in title or description) + **low or
-  missing price** as a secondary flag. Apply at **ingest** (drop/flag via a `category`/
-  `is_aircraft` field) so junk never reaches the DB, plus a display-side guard for existing
-  rows, plus a one-time backfill cleanup of `aircraft_for_sale`. Slice: (1) strengthen
-  ingest-time filter (title+desc+price) + admin count of removals; (2) backfill cleanup of
-  existing junk; (3) optional `category` tag so genuine parts could bucket separately later.
+~~- **[P1][bug] Hide parts/wanted listings — only show actual aircraft.**~~ ✅ SHIPPED via
+  `parts-filter-pattern-gaps` (2026-07-06) The originally-reported titles ("CIRRUS SR22T WING
+  ASSEMBLY", "WHEELPANTS FOR THE CIRRUS SR22", the "CIRRUS SR22 NON TURBO" WANTED ad) were
+  already fixed by an earlier, undocumented pass (`PARTS_TITLE_PATTERNS` in
+  `src/lib/partsFilter.ts` + a Barnstormers ingest-time regex, both already wired into the
+  main feed query, the `aircraft_by_distance` RPC, the sitemap query, and "similar aircraft").
+  This cycle's live-DB audit found the pattern list still had real gaps — "WINGTIPS" (no
+  space), "WING ASSY"/"WING RACK", and standalone "GOVERNOR" parts slipped past — invisible on
+  the live feed today only because those specific rows happen to be priced below the $50k
+  floor or unpriced, not because the filter actually caught them; a future higher-priced
+  ingest with one of these patterns would have leaked through. Added the 4 missing patterns to
+  both the display-layer array and the scraper regex; spot-checked against the live DB with no
+  false positives (governor-part titles that mention a historic airframe, e.g. "P-51 MUSTANG
+  GOVERNORS", are governors *for* that type, not aircraft listings). **Deliberately NOT
+  added** (false-positive risk): "spares", "project" — "project aircraft" is a legitimate,
+  human-named listing category elsewhere in this backlog, so a bare "project" filter would
+  hide real listings. **Not done, intentionally:** the one-time backfill cleanup of existing
+  junk rows and a `category`/`is_aircraft` schema column — both out of scope per FREEZE (no
+  bulk-rewrite of existing listings; schema change is a separate, bigger slice).
   Screenshot:
   https://khypdoyfhwtdwaelzzle.supabase.co/storage/v1/object/public/backlog-shots/filter-out-parts-listings/20260624-filter-out-parts-listings.png
 
