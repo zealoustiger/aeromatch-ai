@@ -4,6 +4,7 @@ import { Bookmark, Search, ExternalLink, Bell, Plane, Users, PlusCircle, ArrowRi
 import Link from 'next/link'
 import DeleteSearchButton from '@/components/DeleteSearchButton'
 import RenameSavedSearch from '@/components/RenameSavedSearch'
+import QuickStartSearchForm from '@/components/QuickStartSearchForm'
 import type { SavedSearch } from '@/lib/types'
 
 // Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
@@ -159,23 +160,29 @@ export default async function SearchesPage() {
             </div>
           </div>
 
-          {/* Saved-search instruction */}
-          <div className="rounded-2xl border-2 border-dashed border-slate-200 py-10 text-center">
-            <Search className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-            <p className="font-medium text-slate-600">No saved searches yet</p>
-            <p className="mt-1 text-sm text-slate-400">
-              Head to{' '}
-              <Link href="/partnerships" className="text-sky-600 hover:underline underline-offset-2">
-                partnerships
-              </Link>{' '}
-              or{' '}
-              <Link href="/aircraft" className="text-sky-600 hover:underline underline-offset-2">
-                planes for sale
-              </Link>
-              , set your filters, and click{' '}
-              <strong className="text-slate-600">Save this search</strong>.
-            </p>
-          </div>
+          {/* Quick-start onboarding — one screen to save a search AND turn on alerts,
+              instead of sending a brand-new signup off to hunt for the "Save this
+              search" button themselves. Uses the account's own email (no extra field). */}
+          {user.email ? (
+            <QuickStartSearchForm userEmail={user.email} />
+          ) : (
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 py-10 text-center">
+              <Search className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+              <p className="font-medium text-slate-600">No saved searches yet</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Head to{' '}
+                <Link href="/partnerships" className="text-sky-600 hover:underline underline-offset-2">
+                  partnerships
+                </Link>{' '}
+                or{' '}
+                <Link href="/aircraft" className="text-sky-600 hover:underline underline-offset-2">
+                  planes for sale
+                </Link>
+                , set your filters, and click{' '}
+                <strong className="text-slate-600">Save this search</strong>.
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
