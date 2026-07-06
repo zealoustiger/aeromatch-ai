@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-06T10:25:41Z — search-empty-state-alert — score 4/5
+- Strengths: Textbook prop-threading across all three surfaces (aircraft/partnership/seeker) that reuses each page's already-computed alertContext/alertSourcePath (no new query, no schema touch), a genuinely thoughtful duplicate-suppression guard (itemListListings.length > 0) so the empty-state alert and the below-list AlertSignup never stack, the new AlertSignup className prop defaults to the old 'my-10' so every existing placement is byte-identical, and the scoping honestly audited + struck two backlog items found already-shipped; out-of-range (page>1) branch correctly left alert-free per spec.
+- Weaknesses / risks: On an out-of-range /aircraft or /partnerships page (page>1, 0 rows) the below-list AlertSignup is now suppressed while the "no more on this page" branch shows no alert either, so that rare pagination-past-end state loses its capture entirely — negligible traffic, not worth a fix.
+- Follow-up: none
+
 ## 2026-07-06T09:17:28Z — listings-completeness-nudge — score 5/5
 - Strengths: Exactly-scoped single-file change that reuses the shipped AircraftTrustBadge/TrustBadge/SeekerTrustBadge (variant="compact") + evaluate*Trust with zero new scoring logic; I cross-checked every added .select() column against what each evaluator actually reads (aircraft: description/registration/ttaf/smoh; partnership: images/image_is_placeholder/registration/monthly_fixed/hourly_wet/description/source_url/poster_id; seeker: preferred_models/aircraft_category/max_buy_in/max_monthly/max_hourly/total_hours/ratings_held/poster_id) and all match — the chip counts will be real, not placeholders; local SeekerRow type retired in favour of the canonical PartnershipSeeker (all display fields still present), past-listings section correctly left untouched, comments explain why the extra columns are fetched.
 - Weaknesses / risks: none material — only a cosmetic leftover double blank line where the SeekerRow type was removed; chip placed under the meta line rather than literally beside StatusBadge as the spec worded it, which reads fine.
