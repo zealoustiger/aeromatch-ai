@@ -154,6 +154,13 @@ export async function POST(request: NextRequest) {
     (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
     request.headers.get('x-real-ip') ||
     null
+  // Loopback = the request came from the same machine as the server: local dev,
+  // or (the common case) the overnight drain's headless-Chrome QA hammering
+  // localhost:3000. Never a real visitor — drop silently so it doesn't flood the
+  // Slack channel with "🤖 Bot" pings and bury genuine traffic.
+  if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.')) {
+    return NextResponse.json({ ok: true })
+  }
   // Fall back to the country code when no city resolves, so an "unknown" visitor
   // still shows where they're roughly from in Slack instead of a blank.
   const loc = [city, region].filter(Boolean).join(', ') || country || 'Unknown location'
