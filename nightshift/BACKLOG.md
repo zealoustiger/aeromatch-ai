@@ -115,8 +115,14 @@ must emit the `alert_subscribed` PostHog event.
   `AlertSignup`) instead of just "try widening your search." The pre-existing below-the-list
   `AlertSignup` on `/aircraft`/`/partnerships` is now suppressed when the list is empty to
   avoid showing the identical capture twice back-to-back.
-- **[P1][goal] Alert management page (v1, read-only).** `/account` (or `/alerts/manage`):
-  list a signed-in user's active alerts with context + source. Foundation for pause/delete.
+~~- **[P1][goal] Alert management page (v1, read-only).**~~ ✅ SHIPPED via `alerts-manage-page`
+  (2026-07-06) New `/alerts/manage` page lists a signed-in user's own alert subscriptions
+  (email-keyed against the `alerts` table, `context` + a "View" link back to `source_path` +
+  Active/Pending status chip), plus a Bell "Alerts" tile on `/account`'s activity grid. Added
+  an additive `alerts_owner_select` RLS policy (⚠️ apply against live Supabase before real rows
+  show — page renders a clean empty state, never an error, until then). Read-only per the slice;
+  pause/delete is the next item below. `/account`'s existing mislabeled "Email alerts"
+  (saved-searches) section left untouched — flagged as a copy follow-up.
 - **[P1][goal] Pause & delete an alert.** Add pause/resume + delete to the management list
   (and honor them in `send-alerts.mjs`).
 - **[P1][goal] Alert CTA on make/model & state pages.** `/aircraft/[make]/[model]` and
