@@ -23,6 +23,8 @@ import SaveListingButton from '@/components/SaveListingButton'
 import SavedListingNote from '@/components/SavedListingNote'
 import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
+import MatchCountNudge from '@/components/MatchCountNudge'
+import { countMatchingSeekersForPartnership } from '@/lib/matchingQuery'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
 import ShareListingButton from '@/components/ShareListingButton'
@@ -158,6 +160,8 @@ export default async function PartnershipDetailPage({
 
   const isOwner = await isListingOwner(p.poster_id)
   const buyInPriceDrop = buyInDrop(p)
+  // Owner-only compatibility count — never computed for a visitor's page load.
+  const matchingSeekerCount = isOwner ? await countMatchingSeekersForPartnership(p) : 0
 
   // Seed/demo persona (e.g. "Marcus T.") — owned by the concierge house account,
   // so it gets the on-site "Message {name}" flow + a member profile link instead
@@ -712,6 +716,18 @@ export default async function PartnershipDetailPage({
                 existing per-listing edit route yet, so it links to the post
                 flow (the only listing-management surface). */}
             {isOwner && <ListingOwnerNudge p={p} editHref="/partnerships/new" />}
+
+            {/* Owner-only "N matches" — slice 1 of the compatibility matching
+                engine. Honest count of active pilots-seeking-a-partnership
+                listings compatible with this partnership's make/budget/hours/
+                ratings/share-type (src/lib/matching.ts); self-suppresses at 0. */}
+            {isOwner && (
+              <MatchCountNudge
+                count={matchingSeekerCount}
+                label={`Pilot${matchingSeekerCount === 1 ? '' : 's'} seeking a partnership match what you're offering.`}
+                href={`/partnerships/seeking?make=${encodeURIComponent(p.make)}`}
+              />
+            )}
 
             {/* Trust / completeness — slice 1 of the listing trust layer */}
             <TrustBadge p={p} variant="checklist" />
