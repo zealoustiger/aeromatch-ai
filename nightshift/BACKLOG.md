@@ -147,8 +147,18 @@ must emit the `alert_subscribed` PostHog event.
   show — page renders a clean empty state, never an error, until then). Read-only per the slice;
   pause/delete is the next item below. `/account`'s existing mislabeled "Email alerts"
   (saved-searches) section left untouched — flagged as a copy follow-up.
-- **[P1][goal] Pause & delete an alert.** Add pause/resume + delete to the management list
-  (and honor them in `send-alerts.mjs`).
+~~- **[P1][goal] Pause & delete an alert.**~~ ✅ SHIPPED via `alert-pause-delete` (2026-07-06)
+  Added owner-scoped `pauseAlert`/`resumeAlert`/`deleteAlert` server actions (ownership proven
+  by matching the signed-in user's own email against the row via the service-role client — no
+  RLS write policy needed) and Pause/Resume/Delete buttons on `/alerts/manage`. Also fixed that
+  page's read: it was querying via the anon/authenticated client, which the still-pending
+  `alerts_owner_select` RLS policy blocks, so the page always rendered empty for real users —
+  switched to the same email-scoped service-role read, so it shows real rows *today* without
+  waiting on that migration. No schema change (`alerts.status` is free-text; a new `'paused'`
+  value needs no migration) and no cron change (`alert-digest` already only queries
+  `status='confirmed'`, so a paused alert is auto-skipped). The unwired legacy
+  `scraper/send-alerts.mjs` (not on any cron — the live one is `/api/cron/alert-digest`) was
+  not touched.
 - **[P1][goal] Alert CTA on make/model & state pages.** `/aircraft/[make]/[model]` and
   `/aircraft/for-sale/[state]` — inline `AlertSignup` with the page's context (many already
   have it; audit + fill gaps), each emitting `alert_subscribed`.
@@ -1014,12 +1024,16 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   — **field change (2) "willing to travel" → drive time ✅ SHIPPED**: the seeker form's `willing_to_travel_nm` select already uses "~30 min drive / ~45 min drive / ~1 hr drive / ~1.5 hr drive / ~2 hr drive" labels.
   — **field change (1) multiple base airports ✅ SHIPPED 2026-06-29 via `seeker-additional-airports`**: seeker form "The basics" section now has an optional "Also flying from" `AirportFormInput`; stored as `additional_airports text[]` in DB (migration required: see schema.sql `seeker_additional_airports`); displayed on the seeker detail page; graceful fallback if column not yet applied.
   — **field change (3) remove "preferred scheduling system" ✅ SHIPPED 2026-07-04 via `seeker-remove-scheduling-field`**: the "Preferred Scheduling" free-text input is removed from the create + edit forms and the detail-page display row; DB column left in place, unused. This item is now fully complete — all 5 changes + all 3 slices shipped.
-- **[P2][want] "Generate with AI" for title + description (all post flows).** ✅ SHIPPED slice 1
-  2026-06-25T060247Z (`seeking-ai-draft`). Seeking form (`/partnerships/seeking/new`) now has
-  a violet "Generate with AI ✨" box above Title/Description — user types stream-of-consciousness
-  notes, Claude Haiku server-side drafts title+desc, fills both fields (editable, not auto-submit).
-  Remaining slices: (2) reuse `generateSeekerDraft`-style action on for-sale + partnership post
-  forms; (3) rate limit / cost cap before wide traffic.
+~~- **[P2][want] "Generate with AI" for title + description (all post flows).**~~ ✅
+  AUDIT-CONFIRMED FULLY SHIPPED 2026-07-06 (found during `alert-pause-delete` cycle's tier-2
+  scan; no code change needed). Slice 1 (`seeking-ai-draft`, 2026-06-25) shipped the seeking
+  form's "Generate with AI ✨" box. The two "remaining" slices below were stale: slice 2
+  (reuse on for-sale + partnership forms) is done — `generateAircraftDraft`/
+  `generatePartnershipDraft` (`src/app/actions.ts`) both return `{title, description, ...}`,
+  and `PostAircraftForm.tsx`/`PostPartnershipForm.tsx` both call `fillFormField(form,
+  '[name="title"]', result.title)` and the same for `description` — confirmed via direct grep,
+  not a changelog note. Slice 3 (rate limit/cost cap) is also done — `checkAiDraftAccess`
+  enforces a 10/hr-per-user cap shared by all 3 forms' draft + URL-paste variants.
 - ~~**[P2][want] Seeking-partnership profile: fill the empty right rail.**~~ ✅ SHIPPED
   2026-06-24T06:02Z (`seeking-profile-right-rail`). On `/partnerships/seeking/[id]`, the
   **Aircraft Preferences** and **Flying Profile** cards moved out of the full-width left column
