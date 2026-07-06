@@ -7,6 +7,7 @@ import { buildFamilyPriceMap, compVsMarket, familyKey, priceStats, type CompResu
 import { clubHangerDealVerdict, type ClubHangerDealVerdict, type DealComp } from '@/lib/aircraftEstimate'
 import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
 import { classifyAvionics } from '@/lib/avionicsClassify'
+import { evaluateAircraftTrust } from '@/lib/aircraftTrust'
 import AircraftSaleCard from './AircraftSaleCard'
 
 interface Filters {
@@ -57,6 +58,17 @@ interface Filters {
 }
 
 const PAGE_SIZE = 60
+
+// Completeness-weighted ranking (mirrors `sortByTrust` in partnershipsQuery.ts,
+// shipped there 2026-06-20): under the default newest-first sort, a stable sort
+// surfaces fuller, more trustworthy listings first, keeping recency as the
+// tie-break. Explicit price/reduced/distance sorts are untouched (see callers).
+function sortByTrust(listings: AircraftForSale[]): AircraftForSale[] {
+  return listings
+    .map((p, i) => ({ p, i, score: evaluateAircraftTrust(p).score }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.p)
+}
 
 // Site-wide buyer-surface price floor: the verified sub-$50k rows are parts/
 // projects ("M20C COWLING", "O-235 MAGS", rivet-gun kits), not flyable aircraft;
@@ -612,6 +624,7 @@ export async function fetchAircraftPage(
     // comparison isn't expressible in PostgREST).
     if (filters.drops) query = query.not('price_changed_at', 'is', null)
 
+    let applyTrustSort = false
     switch (filters.sort) {
       case 'price_asc':
         query = query.order('asking_price', { ascending: true, nullsFirst: false })
@@ -624,6 +637,7 @@ export async function fetchAircraftPage(
         break
       default:
         query = query.order('created_at', { ascending: false })
+        applyTrustSort = true
     }
 
     const { data, error: err, count } = await query.range(from, to)
@@ -642,6 +656,7 @@ export async function fetchAircraftPage(
       } else {
         totalCount = count ?? null
       }
+      if (applyTrustSort) listings = sortByTrust(listings)
     }
   } catch {
     error = true

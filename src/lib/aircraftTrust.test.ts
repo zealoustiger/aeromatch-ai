@@ -111,3 +111,34 @@ test('transparent_price needs a numeric asking_price, not price_text', () => {
     true,
   )
 })
+
+test('slice 2 ranking: trust score sort floats complete listings above thin ones, stable on ties', () => {
+  // Mirrors AircraftSaleList.sortByTrust: trust score DESC, stable tie-break on input order.
+  const thin = makeAircraft({ id: 'thin' }) // 0/4
+  const priceOnly = makeAircraft({ id: 'price', asking_price: 99000 }) // 1/4
+  const complete = makeAircraft({
+    id: 'complete',
+    source: 'user',
+    make: 'Cessna',
+    model: '172',
+    year: 2004,
+    registration: 'N12345',
+    description: 'x'.repeat(120),
+    ttaf: 3200,
+    smoh: 450,
+    asking_price: 185000,
+  }) // 4/4
+  const priceOnly2 = makeAircraft({ id: 'price2', asking_price: 120000 }) // 1/4, same score as `price`
+
+  const input = [thin, priceOnly, complete, priceOnly2]
+  const sorted = input
+    .map((p, i) => ({ p, i, score: evaluateAircraftTrust(p).score }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.p)
+
+  // complete (4) first, the two price-only (1) keep their input order, thin (0) last.
+  assert.deepEqual(
+    sorted.map((p) => (p as unknown as { id: string }).id),
+    ['complete', 'price', 'price2', 'thin'],
+  )
+})
