@@ -175,8 +175,7 @@ export default async function AccountPage() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             We&apos;ll email you when new listings match a search you&apos;ve saved — and only
-            those searches. Email delivery is rolling out soon; your saved searches below are
-            ready and will start sending the moment alerts go live.
+            those searches. Saving a search turns on its alerts automatically, no extra step.
           </p>
 
           {searches.length === 0 ? (

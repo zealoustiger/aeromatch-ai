@@ -930,10 +930,18 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   by airport/region using `airports` lat/lng; click pins → listings. Slice: (1) map view
   on `/aircraft` + `/partnerships`; (2) pin clustering; (3) "search this area" / region
   filter; (4) sidebar list ↔ map sync.
-- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).** Save
-  exists; add saved-search → alert when new matching listings appear (pairs with the
-  `alerts` table). Slice: (1) wire alerts to saved searches; (2) nightly match job; (3)
-  email (human tests sending later — build, don't send) + settings page.
+~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
+  **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
+  `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the
+  `/searches` quick-start form) now also inserts a `status='confirmed'` `alerts` row
+  (skipping the anonymous double-opt-in since the user is already authenticated), so a
+  saved search actually starts receiving the already-live `alert-digest` cron's emails —
+  closing the gap the site's own copy already promised ("tap Save this search to turn on
+  alerts") but the code never delivered on. Slices 2 (nightly match job) and 3 (the email
+  itself) were **already live** before this cycle (`alert-digest` cron + Resend), so this
+  slice was the one missing link. **Not done, intentionally:** no backfill of
+  `saved_searches` rows created before this cycle — they won't have a matching alert until
+  re-saved (flagged in CHANGELOG, not silently mutated on a real user's data this cycle).
 - **[P2][want] "Similar planes" comparables on every listing.** Same make/model/region;
   keeps users browsing (the Zillow "more homes like this" loop). Slice: (1) similar-by-
   make/model on the detail page; (2) "also near {airport}" variant.
