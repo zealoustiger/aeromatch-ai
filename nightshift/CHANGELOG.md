@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-06T0856Z — PASS — partnership-make-seeker-demand
+- Pages: /partnerships/make/[make]
+- What: **The make-specific partnership hub pages (e.g. `/partnerships/make/cessna`) now show a real demand signal** to motivate owners to list: right under the "Have a {Make} to share? Post a free listing" CTA, an honest line — "5 pilots are looking for a Cessna partnership right now — see who" — linking to the pre-filtered `/partnerships/seeking?make=Cessna`. Real counts only, singular/plural-correct ("1 pilot is" vs "N pilots are"), and it renders nothing at all for a make with zero active seekers (verified on `/partnerships/make/beechcraft`, which has 0).
+- Goal: `[want]` tier — closes the human-authored "Show demand exists" backlog item ("3 pilots near KPAO are looking for a Cessna share … validates seekers and motivates owners to list"). Reused the existing `getSeekers({ make })` helper (the same array-overlap match `/airports/[icao]` and the owner-only `MatchCountNudge` already use) — no new query/helper, no schema change, no fabrication. Self-suppresses at 0 so there's never dead or invented copy.
+- Spec: nightshift/specs/20260706T083639Z-partnership-make-seeker-demand.md
+- Verdict: PASS. `npx next build` + typecheck clean. QA smoke (production `next start`, not dev) on `/partnerships/make/cessna` + `/partnerships/make/beechcraft` at desktop 1280 + mobile 375: 4/4 green — HTTP 200, zero app-origin console errors, zero horizontal overflow. Verified the served HTML: Cessna renders "5 pilots are looking for a Cessna partnership right now" with the `?make=Cessna` link (5 = the live active-Cessna-seeker count); Beechcraft renders no extra line (0 seekers). Visual cycle — screenshots read and confirmed clean on both viewports: the sky-blue demand line sits correctly under the CTA in the header card with no layout regression. Cleaned up a leftover `DEBUG COUNT` scratch line from the in-progress working tree before landing, and killed a stale `next-server` on port 3000 so QA ran against the fresh build.
+- Screenshots: nightshift/screenshots/partnership-make-seeker-demand/
+- Next: the same honest demand line could be tightened on the airport family with the "near you"/radius framing (the airport page currently shows only a plain seeker count), and demand chips could be added to the partnership browse/detail surfaces.
+
 ## 2026-07-06T083119Z — PASS — aircraft-avionics-filter
 - Pages: /aircraft
 - What: **`/aircraft` (planes for sale) now has an Avionics filter** — check any of Glass panel / ADS-B Out / Autopilot / WAAS GPS / GPS navigator to narrow results to aircraft with that equipment, matching how the listing detail page already describes each plane's avionics. Works identically in the desktop sidebar and the mobile filter drawer, with a removable chip.
