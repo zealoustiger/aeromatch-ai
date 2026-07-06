@@ -1032,9 +1032,20 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   `<select>` and Model a checkbox multi-select scoped to the selected make (`getPartnershipFacets()`,
   mirrors `getAircraftFacets`), `model` param comma-joined → `.eq`/`.in()`, one removable chip per
   selected model in the results header. **Deliberately NOT done this slice:** variant-group rollup
-  (`groupModelVariants`, "SR20 (all)") on the new partnership model list — plain checkboxes only; and
-  the `/partnerships/seeking` (seeker) side, which has the identical free-text-model gap — natural next
-  slice now that the UI pattern exists to port.
+  (`groupModelVariants`, "SR20 (all)") on the new partnership model list — plain checkboxes only.
+  — **`/partnerships/seeking` Model filter ✅ SHIPPED 2026-07-06** (`seeker-model-filter`): turned out
+  NOT to be a mechanical UI port — seeker rows have no clean `model` column at all (`preferred_models`
+  is free text, e.g. `"SR20, SR22"`, previously display-only). Added `src/lib/seekerModelFilter.ts`
+  (unit-tested token-parsing + case-insensitive exact-token match — no substring false positives, e.g.
+  "172" never matches "172RG"), `getSeekerModels()` frequency-ranking (mirrors `getSeekerMakes()`), a
+  new "Model Wanted" checkbox multi-select in `SeekerFilters`/`MobileFiltersDrawer`, and a removable
+  chip in `SeekerActiveFilterChips`. Filtering happens in JS on the already-DB-filtered rows, not SQL
+  (avoids `.or()`/`ILIKE` escaping risk on free text). Verified against the live DB: unfiltered page
+  showed 14 links (13 active seekers + "post new"); `model=172` narrowed to exactly 1 (excluding the
+  "172 G1000" row, confirming exact-token match); `model=SR20` narrowed to exactly 2 (both rows
+  containing that token). Not scoped by the selected Make (the two fields aren't linked in the data).
+  **Not done, intentionally:** wiring `model` into the seeker `AlertSignup` source path/alert-digest
+  matching (mirrors how `make`-only alert matching already works there) — a natural next slice.
 ~~- **[P2][want] Promote Price/Year/Total-Time out of "More filters"; drop Listing Quality.**~~ ✅ SHIPPED via `filter-promote-core-fields` (2026-06-24)
   Price, Year, and Total Time are buried in the collapsed "More filters" disclosure — core
   buying criteria. Surface them **higher and always-visible** in the main filter panel, and

@@ -16,7 +16,7 @@ import SaveSearchButton from '@/components/SaveSearchButton'
 import AlertSignup from '@/components/AlertSignup'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
-import { getSeekerMakes, getSeekerCount } from '@/lib/seekersQuery'
+import { getSeekerMakes, getSeekerModels, getSeekerCount } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -106,8 +106,13 @@ export default async function SeekingPartnershipsPage({
   // The make hubs this page should reach so it isn't an internal dead-end.
   const makeLinks = SEO_MAKES.slice(0, 3)
   // Makes seekers actually want — feeds the chip bar + the make filter dropdown.
-  const [seekerMakes, seekerCount] = await Promise.all([getSeekerMakes(), getSeekerCount()])
-  const activeFilterCount = ['airports', 'airport', 'state', 'make', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
+  // Models are parsed from the free-text `preferred_models` field — feeds the Model filter.
+  const [seekerMakes, seekerModels, seekerCount] = await Promise.all([
+    getSeekerMakes(),
+    getSeekerModels(),
+    getSeekerCount(),
+  ])
+  const activeFilterCount = ['airports', 'airport', 'state', 'make', 'model', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   // Filter-aware email-alert source path — mirrors /aircraft's alertSourcePath
   // pattern so a visitor filtered to one make gets alerted on new seekers wanting
@@ -150,7 +155,7 @@ export default async function SeekingPartnershipsPage({
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="lg:hidden">
-              <MobileFiltersDrawer variant="seeker" initialValues={params} activeCount={activeFilterCount} makes={seekerMakes} />
+              <MobileFiltersDrawer variant="seeker" initialValues={params} activeCount={activeFilterCount} makes={seekerMakes} models={seekerModels} />
             </div>
             <Link
               href="/partnerships/seeking/new"
@@ -181,7 +186,7 @@ export default async function SeekingPartnershipsPage({
                 <SlidersHorizontal className="h-4 w-4" />
                 Filter Pilots
               </div>
-              <SeekerFilters initialValues={params} makes={seekerMakes} saveSearchBasePath="/partnerships/seeking" />
+              <SeekerFilters initialValues={params} makes={seekerMakes} models={seekerModels} saveSearchBasePath="/partnerships/seeking" />
             </div>
           </aside>
 

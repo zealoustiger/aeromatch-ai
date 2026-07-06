@@ -30,12 +30,15 @@ interface Props {
   initialValues: Record<string, string | undefined>
   /** Makes seekers are looking for, for the make filter (values match stored data). */
   makes?: string[]
+  /** Model tokens seekers are looking for, parsed from the free-text `preferred_models`
+   *  field (not scoped by the selected make — the two fields aren't linked in the data). */
+  models?: string[]
   /** When set, render an in-panel "Save this search" button above "Clear all
    *  filters" (the base route the saved search reopens). */
   saveSearchBasePath?: string
 }
 
-export default function SeekerFilters({ initialValues, makes = [], saveSearchBasePath }: Props) {
+export default function SeekerFilters({ initialValues, makes = [], models = [], saveSearchBasePath }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -127,6 +130,9 @@ export default function SeekerFilters({ initialValues, makes = [], saveSearchBas
   const selectedMakes = new Set(
     (initialValues.make ?? '').split(',').map((m) => m.trim()).filter(Boolean)
   )
+  const selectedModels = new Set(
+    (initialValues.model ?? '').split(',').map((m) => m.trim()).filter(Boolean)
+  )
   const selectedRatings = new Set(
     (initialValues.rating ?? '').split(',').map((r) => r.trim()).filter(Boolean)
   )
@@ -156,6 +162,39 @@ export default function SeekerFilters({ initialValues, makes = [], saveSearchBas
                   type="checkbox"
                   checked={selectedMakes.has(m)}
                   onChange={() => toggleMulti('make', m)}
+                  className={checkboxCls}
+                />
+                {m}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Model wanted — multi-select, parsed from the free-text `preferred_models`
+          field. Not scoped by the selected make above (the two fields aren't linked
+          in the data — a seeker's model list isn't stored per-make). */}
+      <div>
+        <label className={labelCls}>
+          Model Wanted
+          {selectedModels.size > 0 && (
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-sky-600">
+              · {selectedModels.size} selected
+            </span>
+          )}
+        </label>
+        {models.length === 0 ? (
+          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400">
+            No models to filter yet
+          </p>
+        ) : (
+          <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
+            {models.map((m) => (
+              <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={selectedModels.has(m)}
+                  onChange={() => toggleMulti('model', m)}
                   className={checkboxCls}
                 />
                 {m}

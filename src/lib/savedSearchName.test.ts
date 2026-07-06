@@ -71,3 +71,14 @@ test('seeker: single airport + share type', () => {
 test('seeker: bare query → generic label', () => {
   assert.equal(autoNameSearch('', '/partnerships/seeking'), 'Seekers')
 })
+
+test('seeker: make + model', () => {
+  assert.equal(
+    autoNameSearch('make=Cessna&model=172', '/partnerships/seeking'),
+    'Cessna 172 seekers'
+  )
+})
+
+test('seeker: model only', () => {
+  assert.equal(autoNameSearch('model=172', '/partnerships/seeking'), '172 seekers')
+})

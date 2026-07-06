@@ -78,6 +78,10 @@ export default function SeekerActiveFilterChips({ params }: { params: Params }) 
     chips.push({ key: `make:${make}`, label: `Wants ${make}`, href: buildHref(params, dropFromList('make', make)) })
   }
 
+  for (const model of splitMulti(params.model)) {
+    chips.push({ key: `model:${model}`, label: `Wants ${model}`, href: buildHref(params, dropFromList('model', model)) })
+  }
+
   for (const rating of splitMulti(params.rating)) {
     chips.push({ key: `rating:${rating}`, label: `${rating}-rated`, href: buildHref(params, dropFromList('rating', rating)) })
   }

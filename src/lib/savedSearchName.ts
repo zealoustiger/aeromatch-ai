@@ -81,7 +81,9 @@ function namePartnership(p: URLSearchParams): string {
 
 function nameSeeker(p: URLSearchParams): string {
   const make = p.get('make')?.trim()
-  const lead = make ? `${make} seekers` : 'Seekers'
+  const model = p.get('model')?.trim()
+  const wants = [make, model].filter(Boolean).join(' ')
+  const lead = wants ? `${wants} seekers` : 'Seekers'
 
   let name = lead
 
