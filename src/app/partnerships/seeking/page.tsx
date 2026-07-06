@@ -115,14 +115,16 @@ export default async function SeekingPartnershipsPage({
   const activeFilterCount = ['airports', 'airport', 'state', 'make', 'model', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   // Filter-aware email-alert source path — mirrors /aircraft's alertSourcePath
-  // pattern so a visitor filtered to one make gets alerted on new seekers wanting
-  // that make, not every new seeker listing (alert-digest route.ts parses `make`
-  // off this query string).
+  // pattern so a visitor filtered to a make/model gets alerted on new seekers
+  // wanting that make/model, not every new seeker listing (alert-digest route.ts
+  // parses `make`/`model` off this query string).
   const alertMake = params.make?.trim()
-  const alertContext = alertMake || undefined
-  const alertSourcePath = alertMake
-    ? `/partnerships/seeking?make=${encodeURIComponent(alertMake)}`
-    : '/partnerships/seeking'
+  const alertModel = params.model?.trim()
+  const alertContext = [alertMake, alertModel].filter(Boolean).join(' ') || undefined
+  const alertQuery = new URLSearchParams(
+    Object.entries({ make: alertMake, model: alertModel }).filter(([, v]) => Boolean(v)) as [string, string][]
+  ).toString()
+  const alertSourcePath = alertQuery ? `/partnerships/seeking?${alertQuery}` : '/partnerships/seeking'
 
   return (
     <div className="ch-surface min-h-screen">

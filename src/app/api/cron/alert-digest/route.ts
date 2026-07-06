@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { sendEmail, buildAlertDigestEmail } from '@/lib/email'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
+import { matchesModelFilter } from '@/lib/seekerModelFilter'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -27,7 +28,7 @@ type AlertTarget =
       maxTt?: number
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string }
-  | { type: 'seeker'; make?: string }
+  | { type: 'seeker'; make?: string; model?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
   if (!v) return undefined
@@ -67,7 +68,7 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
       }
     }
     if (p === '/partnerships/seeking') {
-      return { type: 'seeker', make: g('make') }
+      return { type: 'seeker', make: g('make'), model: g('model') }
     }
     return {
       type: 'partnership',
@@ -230,9 +231,12 @@ async function countNewSeekers(
   target: Extract<AlertTarget, { type: 'seeker' }>,
   since: string
 ): Promise<number> {
+  // `model` has no DB column of its own (free-text `preferred_models`), so when it's
+  // present we fetch the field and match in JS via the same `matchesModelFilter` the
+  // browse page's `getSeekers()` uses, instead of a head-only count query.
   let q = supabase
     .from('partnership_seekers')
-    .select('id', { count: 'exact', head: true })
+    .select('id, preferred_models')
     .eq('status', 'active')
     .gte('created_at', since)
 
@@ -240,12 +244,16 @@ async function countNewSeekers(
   // make-filter semantics getSeekers() uses for the browse page.
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
 
-  const { count, error } = await q
+  const { data, error } = await q
   if (error) {
     console.error('[alert-digest] seeker count error:', error.message)
     return 0
   }
-  return count ?? 0
+  const rows = data ?? []
+  if (!target.model) return rows.length
+
+  const wanted = target.model.split(',').map((m) => m.trim()).filter(Boolean)
+  return rows.filter((r) => matchesModelFilter(r.preferred_models as string | null, wanted)).length
 }
 
 async function countNew(
