@@ -927,7 +927,7 @@ export async function subscribeToAlerts(
 }
 
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
-const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft'] as const
+const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft', '/partnerships/seeking'] as const
 
 export async function saveSearch(name: string, searchParams: string, path = '/partnerships') {
   const supabase = await createServerSupabaseClient()
