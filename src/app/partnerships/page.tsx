@@ -242,7 +242,7 @@ export default async function PartnershipsPage({
         <div className="min-w-0 flex-1">
           <PartnershipActiveFilterChips params={params} facets={partnershipFacets} />
           <Suspense fallback={<PartnershipListSkeleton />}>
-            <PartnershipList filters={params} />
+            <PartnershipList filters={params} alertContext={alertContext} alertSourcePath={alertSourcePath} />
           </Suspense>
 
           {/* Cross-sell to the other marketplace type (planes for sale).
@@ -257,8 +257,12 @@ export default async function PartnershipsPage({
 
           {/* Email-alerts capture — inline, no account required. Filter-aware:
               the context describes the active search so the alert is useful.
-              Mirrors /aircraft and every other partnership surface. */}
-          <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
+              Mirrors /aircraft and every other partnership surface. Skipped when
+              the list is empty — PartnershipList's own empty state already leads
+              with this same capture, so this would be a duplicate. */}
+          {itemListListings.length > 0 && (
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
+          )}
         </div>
       </div>
 

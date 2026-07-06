@@ -9,6 +9,7 @@ import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import { evaluateAircraftTrust } from '@/lib/aircraftTrust'
 import AircraftSaleCard from './AircraftSaleCard'
+import AlertSignup from './AlertSignup'
 
 interface Filters {
   q?: string
@@ -861,7 +862,17 @@ export async function fetchUnderMarketDeals(limit = 48, photoOnly = false): Prom
 export default async function AircraftSaleList({
   filters,
   visitorCoords,
-}: { filters: Filters; visitorCoords?: VisitorCoords }) {
+  alertContext,
+  alertSourcePath,
+}: {
+  filters: Filters
+  visitorCoords?: VisitorCoords
+  /** Filter-aware email-alert context/source path — same values the page's own
+   *  below-the-list `<AlertSignup>` uses. Rendered inside the zero-results empty
+   *  state so a dead-end search leads with "get alerted" instead of nothing. */
+  alertContext?: string
+  alertSourcePath?: string
+}) {
   const { listings, totalCount, page, error } = await fetchAircraftPage(filters, visitorCoords)
 
   // An offset past the end of the result set makes PostgREST return a
@@ -882,7 +893,7 @@ export default async function AircraftSaleList({
     fetchFamilyCompMap(),
   ])
 
-  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap)
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath)
 }
 
 function renderList(
@@ -892,7 +903,9 @@ function renderList(
   page: number,
   savedIds: Set<string> = new Set(),
   familyPriceMap: Map<string, number[]> = new Map(),
-  familyCompMap: Map<string, FamilyCompEntry[]> = new Map()
+  familyCompMap: Map<string, FamilyCompEntry[]> = new Map(),
+  alertContext?: string,
+  alertSourcePath?: string
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -919,6 +932,11 @@ function renderList(
         <p className="mt-1 text-sm text-slate-400">
           {filtered ? 'Try widening your search.' : 'Check back soon — new listings are added daily.'}
         </p>
+        {alertSourcePath && (
+          <div className="mt-6 text-left">
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} className="mt-0" />
+          </div>
+        )}
       </div>
     )
   }
