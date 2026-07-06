@@ -56,10 +56,18 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   (or none near the visitor's search airport), show a full-width card: "Be the first pilot
   seeking a partnership near {airport}. Post for free — owners will find you." The current
   + Post button is small and top-right; this needs to be unmissable in the empty state.
-- **[P2][want] Cross-link aircraft search → partnerships.** When aircraft search results
-  include makes/models that also have partnership listings, show a banner in the results:
-  "Can't afford the whole plane? N {make} partnerships are available near {airport}."
-  Visitors already navigate to partnerships manually — meet them where they are.
+~~- **[P2][want] Cross-link aircraft search → partnerships.**~~ ✅ SHIPPED via
+  `aircraft-crosssell-airport-aware` (2026-07-06) The existing `/aircraft` →
+  partnerships `MarketplaceCrossSell` card was make-aware but ignored the visitor's
+  active `airport` filter, showing the nationwide partnership count/samples even
+  when searching near a specific airport. It's now also location-aware: when
+  `airport` is set, the count/samples/CTA link narrow to partnerships within 100mi
+  (`countActivePartnerships`/`getPartnershipListings` now both accept
+  `{airport, radius}`), and the copy reads "See N {make} co-ownership partnerships
+  near {ICAO}…". No schema change. **Not done, intentionally:** the reverse
+  direction (`/partnerships` → aircraft) isn't airport-aware yet from partnerships'
+  own airport filter — same component, different call site, a natural follow-up
+  slice.
 - **[P2][want] Dynamic-location seed seeking personas.** Make the seeded seeking profiles
   (concierge@clubhanger.com) dynamically match airports near the visitor's search. Instead
   of showing a Bay Area persona to a Texas visitor, render the same persona at an airport

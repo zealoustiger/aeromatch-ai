@@ -348,12 +348,26 @@ export default async function AircraftPage({
           </div>
 
           {/* Cross-sell to the other marketplace type (co-ownership partnerships).
-              Make-aware: carries the active make filter through. */}
+              Make-aware AND location-aware: carries the active make + airport
+              filters through, so the count/samples/link reflect nearby inventory
+              (not the whole country) when the visitor has searched near an airport. */}
           <MarketplaceCrossSell
             from="aircraft"
             make={params.make}
-            count={await countActivePartnerships(params.make)}
-            samples={(await getPartnershipListings({ make: params.make })).listings}
+            nearAirport={params.airport}
+            count={await countActivePartnerships(params.make, {
+              airport: params.airport,
+              radius: params.airport ? '100' : undefined,
+            })}
+            samples={
+              (
+                await getPartnershipListings({
+                  make: params.make,
+                  airport: params.airport,
+                  radius: params.airport ? '100' : undefined,
+                })
+              ).listings
+            }
             className="mt-10"
           />
 
