@@ -14,6 +14,26 @@ import { consumePostHandoff } from '@/lib/postHandoff'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
+// FAA registrant-type hint appended to the N-number lookup status line. The API
+// already returns this (parsed from the registry) — just wasn't surfaced before.
+function registrantTypeHint(registrantType: string | null | undefined): string {
+  if (!registrantType) return ''
+  switch (registrantType) {
+    case 'Individual':
+      return ' · Individually registered'
+    case 'LLC':
+      return ' · Registered to an LLC'
+    case 'Trust':
+      return ' · Registered to a trust'
+    case 'Corporation':
+      return ' · Registered to a company'
+    case 'Government':
+      return ' · Government registered'
+    default:
+      return ` · Registered to ${registrantType}`
+  }
+}
+
 // Common makes kept as one-tap suggestions. The Make field is free text (datalist),
 // so a seller of any make can type it in — no "Other" dead-end that would lose their
 // real make and break the buyer-side comp / Estimate / model-family matching.
@@ -427,7 +447,9 @@ export default function PostAircraftForm({
           yearInput.value = String(data.year)
           yearInput.dispatchEvent(new Event('input', { bubbles: true }))
         }
-        setLookupStatus(`Found: ${[data.year, data.make, data.model].filter(Boolean).join(' ')}`)
+        setLookupStatus(
+          `Found: ${[data.year, data.make, data.model].filter(Boolean).join(' ')}${registrantTypeHint(data.registrantType)}`
+        )
         // Auto-open details since N-number lookup fills optional fields
         if (detailsRef.current) detailsRef.current.open = true
       } else {

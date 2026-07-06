@@ -15,6 +15,26 @@ import { consumePostHandoff } from '@/lib/postHandoff'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
+// FAA registrant-type hint appended to the N-number lookup status line. The API
+// already returns this (parsed from the registry) — just wasn't surfaced before.
+function registrantTypeHint(registrantType: string | null | undefined): string {
+  if (!registrantType) return ''
+  switch (registrantType) {
+    case 'Individual':
+      return ' · Individually registered'
+    case 'LLC':
+      return ' · Registered to an LLC'
+    case 'Trust':
+      return ' · Registered to a trust'
+    case 'Corporation':
+      return ' · Registered to a company'
+    case 'Government':
+      return ' · Government registered'
+    default:
+      return ` · Registered to ${registrantType}`
+  }
+}
+
 // Same rating set as the seeker form's "Ratings & Endorsements You Hold" chips —
 // here they describe what a partnership requires of a prospective partner.
 const RATINGS_CHIPS = ['PPL', 'IFR', 'Complex', 'High Performance', 'Multi-Engine', 'Tailwheel', 'CFI', 'ATP']
@@ -383,7 +403,9 @@ export default function PostPartnershipForm({
           yearInput.value = String(data.year)
           yearInput.dispatchEvent(new Event('input', { bubbles: true }))
         }
-        setLookupStatus(`Found: ${[data.year, data.make, data.model].filter(Boolean).join(' ')}`)
+        setLookupStatus(
+          `Found: ${[data.year, data.make, data.model].filter(Boolean).join(' ')}${registrantTypeHint(data.registrantType)}`
+        )
         if (detailsRef.current) detailsRef.current.open = true
       } else {
         setLookupStatus('Not found — fill in manually')
