@@ -77,7 +77,13 @@ function describeExit(e: string, path: string, props: Record<string, unknown>): 
   const scroll = Number(props.scroll) || 0
   const dwell = secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`
   const engaged = props.engaged ? '' : ' · bounced'
-  return `${e} left \`${path}\` after ${dwell} · scrolled ${scroll}%${engaged}`
+  // "What they paused on" — the sections they lingered on longest, e.g.
+  // "paused on: Estimate (22s), Cost to own (14s)". Omitted on a quick bounce.
+  const sections = Array.isArray(props.sections) ? (props.sections as Array<{ label?: string; seconds?: number }>) : []
+  const paused = sections.length
+    ? `\n    ⏸️ paused on: ${sections.map((s) => `${String(s.label ?? '').slice(0, 48)}${s.seconds ? ` (${s.seconds}s)` : ''}`).join(', ')}`
+    : ''
+  return `${e} left \`${path}\` after ${dwell} · scrolled ${scroll}%${engaged}${paused}`
 }
 
 function describe(event: string, path: string, props: Record<string, unknown> = {}): string {
