@@ -1,9 +1,12 @@
 'use client'
 
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
 import Link from 'next/link'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import type { MapPin } from './PartnershipsMapView'
 
 // Leaflet's default marker icon references bundler-relative image paths that
@@ -36,32 +39,34 @@ export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {pins.map((p) => (
-        <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon}>
-          <Popup>
-            <div className="text-sm">
-              <div className="font-semibold text-slate-900">
-                {p.make} {p.model}
-              </div>
-              <div className="text-slate-600">
-                {p.airport_name || p.home_airport}
-                {p.city ? ` · ${p.city}, ${p.state}` : ''}
-              </div>
-              {p.buy_in_price != null && (
-                <div className="mt-1 text-slate-700">
-                  Buy-in: ${p.buy_in_price.toLocaleString()}
+      <MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>
+        {pins.map((p) => (
+          <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon}>
+            <Popup>
+              <div className="text-sm">
+                <div className="font-semibold text-slate-900">
+                  {p.make} {p.model}
                 </div>
-              )}
-              <Link
-                href={`/partnerships/${p.id}`}
-                className="mt-1 inline-block font-medium text-sky-600 hover:underline"
-              >
-                View listing →
-              </Link>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+                <div className="text-slate-600">
+                  {p.airport_name || p.home_airport}
+                  {p.city ? ` · ${p.city}, ${p.state}` : ''}
+                </div>
+                {p.buy_in_price != null && (
+                  <div className="mt-1 text-slate-700">
+                    Buy-in: ${p.buy_in_price.toLocaleString()}
+                  </div>
+                )}
+                <Link
+                  href={`/partnerships/${p.id}`}
+                  className="mt-1 inline-block font-medium text-sky-600 hover:underline"
+                >
+                  View listing →
+                </Link>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MarkerClusterGroup>
     </MapContainer>
   )
 }
