@@ -2,6 +2,35 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-07T20:22:28Z — PASS — partnerships-map-clustering
+- Pages: /partnerships
+- What: The new partnerships map (shipped last cycle) placed one pin per listing at
+  its home airport's exact coordinates — but a live-DB check found 10 of the 23
+  active partnership listings all share the same airport (KPAO/Palo Alto), so those
+  10 markers were rendering exactly stacked, with only the top one visible/clickable.
+  Pins now cluster: nearby/co-located listings group into a numbered bubble (e.g.
+  "10") that expands into the individual pins when you click it or zoom in — same
+  popup content as before once you're down to an individual marker.
+- Goal: `[want]` tier — "Map search (Zillow/Redfin core)" P1 item, slice 2 (pin
+  clustering), continuing directly off last cycle's slice 1. Fixes a real
+  just-shipped bug (invisible stacked markers), not just polish.
+- Spec: nightshift/specs/20260707T202228Z-partnerships-map-clustering.md
+- Verdict: PASS — `npx next build` + TypeScript clean; qa-smoke exit 0 on
+  /partnerships at 1280 + 375 (200, zero app-console errors, zero horizontal
+  overflow). Since this is a visual/map-behavior change, also drove the OPENED map
+  directly with Playwright: confirmed cluster bubbles render at the default US-wide
+  zoom, clicking/zooming reveals a "10" bubble over Palo Alto that spiderfies into 10
+  distinct markers, and an individual marker's popup still shows the correct
+  make/model/airport/buy-in + working `/partnerships/[id]` link. Screenshots
+  (collapsed, opened-clustered, zoomed-spiderfied, mobile) visually correct. New dep
+  `react-leaflet-cluster@4.1.3` — peer-declares react-leaflet ^5.0.0/react ^19/
+  leaflet ^1.9, exact match to what's already installed. No schema change, no test
+  DB rows (QA was read-only against partnerships data).
+- Screenshots: nightshift/screenshots/partnerships-map-clustering/
+- Next: slice 3 ("search this area" region filter) or slice 4 (sidebar list ↔ map
+  sync); the `/aircraft` half of map search is still blocked on geocoding
+  `aircraft_for_sale.location` (free-text, no ICAO/lat/lng column today).
+
 ## 2026-07-07T20:05:00Z — PASS — partnerships-map-view
 - Pages: /partnerships
 - What: New "View on map (N)" toggle above the partnership results (collapsed by

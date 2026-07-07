@@ -958,6 +958,16 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
     `/aircraft` half is blocked on geocoding `aircraft_for_sale.location` (no ICAO/lat/lng
     column — separate backlog item); then slices (2) clustering, (3) "search this area",
     (4) list ↔ map sync.
+  - **Slice 2 — pin clustering ✅ SHIPPED via `partnerships-map-clustering` (2026-07-07)**:
+    a live-DB check found 10 of 23 active partnerships share `KPAO` alone (23 rows, only 9
+    unique airports) — most markers were rendering exactly stacked/invisible on top of each
+    other, a real bug in slice 1, not just polish. Wrapped the marker list in
+    `react-leaflet-cluster`'s `MarkerClusterGroup` (new dep, peer-matches installed
+    react-leaflet ^5/react ^19/leaflet ^1.9 exactly); co-located pins now group into a
+    numbered cluster bubble that spiderfies/zooms on click, verified via Playwright driving
+    the real map: a "10" bubble appears over Palo Alto and clicking it reveals all 10
+    individual markers with working popups. **Remaining:** (3) "search this area" region
+    filter, (4) sidebar list ↔ map sync; `/aircraft` half still blocked on geocoding.
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the
