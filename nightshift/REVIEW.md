@@ -1,3 +1,16 @@
+## 2026-07-07T20:40:06Z — Night Shift run: 3 cycles (PASS 2 / FAIL 1) — time box · manual
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $12.4626 of $120 cap
+
+- cycle produced no verdict (exit 0)
+- PASS — partnerships-map-view — added a collapsible View on map Leaflet/OSM map of filtered results to /partnerships (pins at real FAA airport coords → popup with make/model, 
+- PASS — partnerships-map-clustering — fixed 10 of 23 stacked/invisible partnership map pins (all sharing KPAO) by clustering overlapping markers on `/partnerships`.
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 3.4 on 2 cores, sustained ~3 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container CPU-throttled ~112s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+
+
 # Overnight review — 2026-07-07
 
 ## 📊 Traffic (PostHog) — as of 2026-07-07
