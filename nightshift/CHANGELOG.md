@@ -2,6 +2,42 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-07T19:21:24Z — PASS — bay-area-coverage-numerator
+- Pages: /admin/coverage
+- What: New admin-only "Bay Area Coverage" tab showing two real, live counts — active
+  partnership listings at the 11 Bay Area airports, and active $50k+ for-sale listings
+  whose location matches Bay Area cities/airports. No coverage percentage is shown (we
+  don't have a real market-size denominator yet — honesty gate) — this is the numerator
+  only, meant to be tracked week over week.
+- Goal: `[want]` tier — first slice of the backlog's "Bay-Area coverage benchmark" P1 item
+  (BACKLOG.md, "Zillow/Redfin features" section). Denominator (FAA fleet data or a
+  de-duped competitor count) is the next slice.
+- Spec: nightshift/specs/20260707T192124Z-bay-area-coverage-numerator.md
+- Verdict: PASS — `npx next build` clean (typecheck included); qa-smoke exit 0 on
+  /admin/coverage at 1280 + 375 (200, zero console errors, zero overflow); gated
+  "Admin only" view confirmed visually correct via screenshot (QA has no admin session,
+  so the authenticated content itself was verified separately: ran the exact count
+  queries directly against the live DB with the service-role key — read-only, no writes —
+  and got sane real numbers (20 partnerships, 19 for-sale) with no errors).
+- Screenshots: nightshift/screenshots/bay-area-coverage-numerator/
+- Next: denominator slice — source FAA based-aircraft fleet counts for the 11 Bay Area
+  airports (or a de-duped Barnstormers/Hangar67/Trade-A-Plane Bay Area count) to turn this
+  into a real coverage %.
+
+## ⚠️ INFRA NOTE (found this cycle, not a code bug) — unattended drain was silently
+broken 2026-07-06T~12:33Z through 2026-07-07T~19:14Z (~175 cycles, 7 drain runs of 25,
+all FAIL, $0.0000 spend each). Root cause: `/home/night/.claude.json` (the `claude` CLI's
+login/config) went missing on the VPS — every unattended `claude -p` cycle exited
+instantly with `"Not logged in · Please run /login"` before doing any work, so every
+FAIL was a harness auth failure, not a real QA/build failure (confirmed by reading
+`cycle-*.jsonl` result lines directly in `/home/night/state/runs/20260707T130005Z/` —
+all 25 identical). By the time this cycle ran, `.claude.json` existed again and cycles
+were completing normally, so whatever restored it (a fresh `/login`, likely done by a
+human) already happened — nothing for a future cycle to fix here, just flagging the
+~7-hour gap in case the human wants to add a health-check/alert for this failure mode
+(e.g. drain-summary already reports `$0.0000` spend on an all-FAIL run, which is itself
+a strong "auth broke" signal worth paging on).
+
 ## 2026-07-07T13:00:49Z — DRAIN SUMMARY
 - Cycles this run: 25 (PASS 0 / FAIL 25 / ABORT 0)
 - Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
