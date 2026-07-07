@@ -950,6 +950,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   by airport/region using `airports` lat/lng; click pins → listings. Slice: (1) map view
   on `/aircraft` + `/partnerships`; (2) pin clustering; (3) "search this area" / region
   filter; (4) sidebar list ↔ map sync.
+  - **Slice 1 — `/partnerships` half ✅ SHIPPED via `partnerships-map-view` (2026-07-07)**:
+    collapsed-by-default "View on map (N)" toggle above the filtered results → lazy-loaded
+    Leaflet/OSM map (no API key, off the default CWV) with one pin per listing at its home
+    airport's real FAA-seeded lat/lng (`resolveAirportCoords()`); pin popup shows
+    make/model, airport/city/state, buy-in, and a link to the listing. **Remaining:** the
+    `/aircraft` half is blocked on geocoding `aircraft_for_sale.location` (no ICAO/lat/lng
+    column — separate backlog item); then slices (2) clustering, (3) "search this area",
+    (4) list ↔ map sync.
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the

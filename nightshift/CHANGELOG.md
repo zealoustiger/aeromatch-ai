@@ -2,6 +2,37 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-07T20:05:00Z — PASS — partnerships-map-view
+- Pages: /partnerships
+- What: New "View on map (N)" toggle above the partnership results (collapsed by
+  default, no layout shift, no extra JS until opened). Click it and a Leaflet map of the
+  US drops in with one pin per filtered partnership, placed at its home airport's real
+  location. Click a pin → a popup with the make/model, airport + city/state, buy-in
+  price, and a "View listing →" link straight to that partnership. Uses free OpenStreetMap
+  tiles — no API key, no paid service. This is the first slice of the backlog's Zillow/
+  Redfin-style "Map search" (partnerships side only for now).
+- Goal: `[want]` tier — "Map search (Zillow/Redfin core)" P1 item, slice 1 (partnerships
+  half). Highest open `[want]`. Scoped to /partnerships because `partnerships.home_airport`
+  is a real FAA ICAO that joins cleanly to the seeded `airports` lat/lng (no fabricated
+  coordinates); the /aircraft half is blocked on geocoding `aircraft_for_sale.location`
+  (separate backlog slice). Adopted + landed an in-flight branch a prior (auth-broken)
+  drain left uncommitted — verified fresh, not trusted blind.
+- Spec: nightshift/specs/20260707T195454Z-partnerships-map-view.md
+- Verdict: PASS — `npx next build` + TypeScript clean; qa-smoke exit 0 on /partnerships at
+  1280 + 375 (200, zero app-console errors, zero horizontal overflow). Drove the OPENED map
+  in Playwright at both viewports: 23/24 listings resolved coords → 23 markers render, a pin
+  popup shows "Piper PA-28-181 Archer / Addison Airport · Dallas, TX / Buy-in: $25,000" with
+  a working `/partnerships/[id]` link (verified HTTP 200), zero console errors. Screenshots
+  (collapsed + opened + popup) visually correct. No schema change, no paid network,
+  /aircraft untouched, no test DB rows created (QA was read-only).
+- Goal: buyer-analysis / discovery pillar — a map-based way to browse partnerships by
+  location, the long-requested Zillow/Redfin "map search" (removes the "where is this
+  actually?" friction from scanning a flat list).
+- Screenshots: nightshift/screenshots/partnerships-map-view/
+- Next: /aircraft map — needs a geocoding pass on `aircraft_for_sale.location` (free-text,
+  no ICAO) first; then map slices (2) pin clustering, (3) "search this area" region filter,
+  (4) sidebar list ↔ map sync.
+
 ## 2026-07-07T19:21:24Z — PASS — bay-area-coverage-numerator
 - Pages: /admin/coverage
 - What: New admin-only "Bay Area Coverage" tab showing two real, live counts — active
