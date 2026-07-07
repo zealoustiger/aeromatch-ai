@@ -41,3 +41,24 @@ export async function getAirportsWithinRadius(
   if (!nearby.includes(homeIcao.toUpperCase())) nearby.push(homeIcao.toUpperCase())
   return nearby
 }
+
+/**
+ * Batched ICAO → lat/lng lookup against the seeded FAA `airports` table.
+ * Codes that don't exist in the table are simply absent from the result (no
+ * fabricated coordinates) — callers should drop anything not present.
+ */
+export async function resolveAirportCoords(
+  icaos: string[]
+): Promise<Record<string, { lat: number; lng: number }>> {
+  const unique = Array.from(new Set(icaos.map((c) => c.trim().toUpperCase()))).filter(Boolean)
+  if (unique.length === 0) return {}
+
+  const supabase = await createServerSupabaseClient()
+  const { data } = await supabase.from('airports').select('icao, lat, lng').in('icao', unique)
+
+  const out: Record<string, { lat: number; lng: number }> = {}
+  for (const a of data ?? []) {
+    out[a.icao] = { lat: a.lat, lng: a.lng }
+  }
+  return out
+}
