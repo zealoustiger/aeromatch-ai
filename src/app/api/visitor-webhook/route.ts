@@ -65,6 +65,19 @@ const EMOJI: Record<string, string> = {
   listing_submitted: '📝',
   feedback_submitted: '💬',
   saved_listing: '❤️',
+  alert_subscribed: '🔔',
+  page_exit: '👋',
+}
+
+// Compact "left after 45s · scrolled 80%" summary for a page_exit beacon.
+// `seconds` = wall-clock dwell, `scroll` = deepest % of the page reached,
+// `engaged` = scrolled past the fold OR stayed >10s (bounce vs. real read).
+function describeExit(e: string, path: string, props: Record<string, unknown>): string {
+  const secs = Number(props.seconds) || 0
+  const scroll = Number(props.scroll) || 0
+  const dwell = secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`
+  const engaged = props.engaged ? '' : ' · bounced'
+  return `${e} left \`${path}\` after ${dwell} · scrolled ${scroll}%${engaged}`
 }
 
 function describe(event: string, path: string, props: Record<string, unknown> = {}): string {
@@ -72,12 +85,16 @@ function describe(event: string, path: string, props: Record<string, unknown> = 
   switch (event) {
     case '$pageview':
       return `${e} viewed \`${path}\``
+    case 'page_exit':
+      return describeExit(e, path, props)
     case 'search_performed':
       return `${e} searched — ${props.airports || props.airport || ''} ${props.radius_miles ? `(${props.radius_miles}mi)` : ''}`.trim()
     case 'listing_viewed':
       return `${e} opened a listing — ${[props.make, props.airport].filter(Boolean).join(' · ')}`
     case 'contact_initiated':
       return `${e} *clicked contact* — high intent!`
+    case 'alert_subscribed':
+      return `${e} *set an email alert*${props.context ? ` — ${props.context}` : ''}`
     case 'source_link_clicked':
       return `${e} clicked the original post`
     case 'listing_submitted':

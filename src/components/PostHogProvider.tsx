@@ -4,6 +4,7 @@ import { useEffect, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import posthog from 'posthog-js'
 import { notifyVisitor } from '@/lib/analytics'
+import EngagementTracker from '@/components/EngagementTracker'
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com'
@@ -39,6 +40,7 @@ export default function PostHogProvider({ children }: { children: React.ReactNod
       <Suspense fallback={null}>
         <PageViewTracker />
       </Suspense>
+      <EngagementTracker />
       {children}
     </>
   )
