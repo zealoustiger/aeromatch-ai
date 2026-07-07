@@ -7,7 +7,9 @@ import PartnershipFilters from '@/components/PartnershipFilters'
 import PartnershipActiveFilterChips from '@/components/PartnershipActiveFilterChips'
 import PartnershipChipBar from '@/components/PartnershipChipBar'
 import PartnershipList from '@/components/PartnershipList'
+import PartnershipsMapView, { type MapPin } from '@/components/PartnershipsMapView'
 import { getPartnershipMakes, getPartnershipListings, getPartnershipFacets } from '@/lib/partnershipsQuery'
+import { resolveAirportCoords } from '@/lib/airports'
 import { getSeekerCount } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { countForSale, fetchAircraftPage } from '@/components/AircraftSaleList'
@@ -142,6 +144,29 @@ export default async function PartnershipsPage({
     url: `${SITE_URL}/partnerships`,
   })
 
+  // Map view (Zillow/Redfin-style "Map search" — slice 1, partnerships only; see
+  // BACKLOG.md). Reuses itemListListings (already fetched above) instead of a
+  // second query. `home_airport` is a real FAA ICAO, so coords come straight from
+  // the seeded `airports` table — no fabricated locations, and listings whose
+  // ICAO doesn't resolve are simply dropped from the map (still shown in the list).
+  const airportCoords = await resolveAirportCoords(itemListListings.map((p) => p.home_airport))
+  const mapPins: MapPin[] = itemListListings.flatMap((p) => {
+    const coords = airportCoords[p.home_airport?.toUpperCase()]
+    if (!coords) return []
+    return [{
+      id: p.id,
+      make: p.make,
+      model: p.model,
+      home_airport: p.home_airport,
+      airport_name: p.airport_name,
+      city: p.city,
+      state: p.state,
+      buy_in_price: p.buy_in_price,
+      lat: coords.lat,
+      lng: coords.lng,
+    }]
+  })
+
   // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
   const faqJsonLd = buildFaqPageJsonLd(PARTNERSHIPS_FAQS, {
     url: `${SITE_URL}/partnerships`,
@@ -241,6 +266,7 @@ export default async function PartnershipsPage({
             widening the page at desktop. */}
         <div className="min-w-0 flex-1">
           <PartnershipActiveFilterChips params={params} facets={partnershipFacets} />
+          <PartnershipsMapView pins={mapPins} />
           <Suspense fallback={<PartnershipListSkeleton />}>
             <PartnershipList filters={params} alertContext={alertContext} alertSourcePath={alertSourcePath} />
           </Suspense>
