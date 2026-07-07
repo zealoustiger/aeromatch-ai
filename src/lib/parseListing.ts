@@ -19,7 +19,7 @@ export interface ParsedListing {
   title: string
 }
 
-const BAY_AREA_AIRPORTS = ['KHWD', 'KPAO', 'KSQL', 'KLVK', 'KRHV', 'KOAK', 'KNUQ', 'KSJC', 'KSFO', 'KCCR', 'KAPC']
+export const BAY_AREA_AIRPORTS = ['KHWD', 'KPAO', 'KSQL', 'KLVK', 'KRHV', 'KOAK', 'KNUQ', 'KSJC', 'KSFO', 'KCCR', 'KAPC']
 
 const MAKES: Record<string, string[]> = {
   Cessna: ['172', '182', '152', '206', '210', '177', '180', 'skyhawk', 'skylane'],
