@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-07T20:39:43Z — partnerships-map-clustering — score 4/5
+- Strengths: Surgically-scoped fix for a real just-shipped bug (10 KPAO listings stacking invisibly) — wraps the existing `<Marker>` map in `<MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>` with the two required markercluster CSS imports and nothing else; the entire per-marker popup (make/model, airport·city/state, buy-in, "View listing →") is byte-identical, just re-indented, so single pins behave exactly as before; dependency choice is well-justified (react-leaflet-cluster 4.1.3 peer-declares react-leaflet ^5 / react ^19 / leaflet ^1.9, matching installed versions) and the PartnershipsMapView/page were correctly left untouched.
+- Weaknesses / risks: Default `maxClusterRadius` (~80px) is unset, so at low zoom genuinely distinct-but-nearby Bay Area airports (KPAO/KSQL/KHWD) can merge into one bubble — arguably desired UX, but not deliberately tuned; screenshots confirm the KPAO-10 cluster and spiderfy work.
+- Follow-up: none
+
 ## 2026-07-06T10:25:41Z — search-empty-state-alert — score 4/5
 - Strengths: Textbook prop-threading across all three surfaces (aircraft/partnership/seeker) that reuses each page's already-computed alertContext/alertSourcePath (no new query, no schema touch), a genuinely thoughtful duplicate-suppression guard (itemListListings.length > 0) so the empty-state alert and the below-list AlertSignup never stack, the new AlertSignup className prop defaults to the old 'my-10' so every existing placement is byte-identical, and the scoping honestly audited + struck two backlog items found already-shipped; out-of-range (page>1) branch correctly left alert-free per spec.
 - Weaknesses / risks: On an out-of-range /aircraft or /partnerships page (page>1, 0 rows) the below-list AlertSignup is now suppressed while the "no more on this page" branch shows no alert either, so that rare pagination-past-end state loses its capture entirely — negligible traffic, not worth a fix.
