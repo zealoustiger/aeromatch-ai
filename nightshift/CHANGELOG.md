@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-07T20:40:06Z — DRAIN SUMMARY
+- Cycles this run: 3 (PASS 2 / FAIL 1 / ABORT 0)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $12.4626 of $120 cap
+- Stopped because: time box
+- Run: 20260707T195045Z (manual NS_FORCE)
+
 ## 2026-07-07T20:22:28Z — PASS — partnerships-map-clustering
 - Pages: /partnerships
 - What: The new partnerships map (shipped last cycle) placed one pin per listing at
