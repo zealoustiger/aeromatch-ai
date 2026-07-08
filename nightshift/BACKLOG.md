@@ -1268,7 +1268,7 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 - **[P2][goal] Guides: less text-heavy + broaden + engage.** Break up text with images/tables/charts; add general aircraft-ownership guidance (not just co-ownership); embed relevant top YouTube videos; add a small "request a guide" feedback link to invite interaction.
 
 **Airports (human "really likes" these — community angle):**
-- **[P1][want] Airport pages as community hubs.** Keep the planes/partnerships focus, but add FBOs + ratings, flight clubs + ratings, "pilots who fly out of here," and let pilots set a home airport. Slice: (1) FBO + flight-club sections (seed from public data); (2) ratings; (3) pilots-by-home-airport (needs profile base-airport below).
+- **[P1][want] Airport pages as community hubs.** Keep the planes/partnerships focus, but add FBOs + ratings, flight clubs + ratings, "pilots who fly out of here," and let pilots set a home airport. Slice: (1) FBO + flight-club sections (seed from public data); (2) ratings; (3) pilots-by-home-airport (needs profile base-airport below). **Prerequisite done:** pilots can now set base + up to 3 favorite airports on `/account` — ✅ SHIPPED via `profile-base-favorite-airports` (2026-07-08). Remaining for slice 3: the airport-page "pilots based here" display itself (reads `profiles.home_airport`/`favorite_airports`; requires applying the additive `favorite_airports` migration live first).
 - **[P2][want] Profile: base + favorite airports.** Let pilots set base airport(s) + favorite/frequently-visited airports (feeds the airport "pilots here" section).
 
 **Polish & tools:**
