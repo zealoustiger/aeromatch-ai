@@ -1,3 +1,13 @@
+## 2026-07-08T13:14:17Z — Night Shift run: 1 cycles (PASS 1 / FAIL 0) — night budget cap ($120)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $121.4278 of $120 cap
+
+- PASS — homepage-alert-band — added a Not ready to browse yet? email alert-signup band to the homepage (below the deals rail), reusing the existing AlertSignup component; verifi
+
+### VPS headroom
+- ✅ no headroom issues — peak load 1.6/2 cores, min free mem 4.2 GB, container peaked at 36% of its memory cap (18 samples)
+
+
 ## 2026-07-08T13:05:35Z — Night Shift run: 25 cycles (PASS 21 / FAIL 4) — safety cap (25)
 - Models: cycles on sonnet; 4 escalated to opus; 8 quality-judged on opus
 - Night spend so far: $118.9981 of $120 cap
