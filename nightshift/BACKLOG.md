@@ -1004,10 +1004,19 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
     `AircraftLeafletMap.tsx` (mirror the partnerships pair); popup shows the listing's own
     real make/model/asking-price/location text (never an inferred airport claim) + a link
     to `/aircraft/listing/[id]`. Wired into `/aircraft/page.tsx` reusing the
-    already-fetched `itemListListings` (no second query). **Remaining:** "search this
-    area" + list↔map sync for the aircraft side (partnerships slices 3–4) — same
-    `mapListSync.ts` events, not yet wired to `AircraftSaleCard`/an aircraft result-count
-    component. The Map Search item as a whole is not fully closed until those two land.
+    already-fetched `itemListListings` (no second query).
+  - **"Search this area" region filter ✅ SHIPPED via `aircraft-map-search-area`
+    (2026-07-08)**: ported partnerships' slice-3 feature onto `/aircraft` — a floating
+    "Search this area" button appears on the aircraft map once the visitor pans/zooms;
+    clicking it filters the list below to only listings whose pin falls inside the
+    current viewport. The inline pagination-aware count line became a new client
+    component `AircraftResultCount.tsx` (mirrors `PartnershipResultCount.tsx`) that
+    swaps to "Showing M of N in this map area · Show all" while filtered and restores
+    the exact original text on reset/collapse; `AircraftSaleCard.tsx` gained the same
+    `hiddenByArea` bounds-filter subscription `PartnershipCard.tsx` already had. Purely
+    client-side, no schema/query change. **Remaining:** list↔map sync (map→list "↓ Show
+    in list" popup button + list→map "Show on map" card button) is the last open piece
+    of the whole Map Search backlog item.
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the
