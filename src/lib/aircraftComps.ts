@@ -203,6 +203,12 @@ export interface AircraftCompSubject {
 export interface AircraftCompVerdict {
   comp: CompResult | null
   dealVerdict: ClubHangerDealVerdict | null
+  /** Real count of active, priced listings (incl. this one) in this listing's
+   *  make+model family — powers the "Rare find" chip on `AircraftSaleCard`.
+   *  `null` when the family can't be resolved. Recorded independent of
+   *  `comp`/`dealVerdict`: both of those require >= MIN_OTHER_COMPS (4) other
+   *  comps, which by construction excludes every rare (1-3) family. */
+  familyCount: number | null
 }
 
 /**
@@ -250,13 +256,14 @@ export async function getAircraftCompVerdicts(
     for (const l of priced) {
       const key = familyKey(l)
       if (!key) continue
-      const compsWithoutSelf = (familyCompMap.get(key) ?? []).filter((c) => c.id !== l.id)
+      const allFamilyComps = familyCompMap.get(key) ?? []
+      const compsWithoutSelf = allFamilyComps.filter((c) => c.id !== l.id)
       const dealVerdict = clubHangerDealVerdict(
         { askingPrice: l.asking_price, year: l.year, ttaf: l.ttaf, smoh: l.smoh },
         compsWithoutSelf
       )
       const comp = dealVerdict ? null : compVsMarket(l, familyPriceMap)
-      if (dealVerdict || comp) verdicts.set(l.id, { comp, dealVerdict })
+      verdicts.set(l.id, { comp, dealVerdict, familyCount: allFamilyComps.length })
     }
   } catch {
     // Non-fatal: caller renders cards without comp chips.

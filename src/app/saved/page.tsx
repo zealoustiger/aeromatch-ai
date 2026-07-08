@@ -15,6 +15,7 @@ import {
   type PartnershipCompVerdict,
 } from '@/lib/partnershipComps'
 import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
+import { getSaveCounts } from '@/lib/saveCounts'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
 export default async function SavedPage() {
@@ -127,6 +128,16 @@ export default async function SavedPage() {
   const seekerBudgetVerdicts: Map<string, PartnershipCompVerdict> =
     seekers.length > 0 ? await getSeekerBudgetCheckVerdicts(supabase, seekers) : new Map()
 
+  // Same real, honesty-gated "Saved by N pilots" chip shown on every other
+  // browse surface (/aircraft, /partnerships, /partnerships/seeking) — /saved
+  // never wired it in, so a pilot's own saved listings never showed the same
+  // social proof they saw when they saved them.
+  const [partnershipSaveCounts, aircraftSaveCounts, seekerSaveCounts] = await Promise.all([
+    partnerships.length > 0 ? getSaveCounts(partnerships.map((p) => p.id), 'partnership') : Promise.resolve(new Map<string, number>()),
+    aircraft.length > 0 ? getSaveCounts(aircraft.map((a) => a.id), 'aircraft') : Promise.resolve(new Map<string, number>()),
+    seekers.length > 0 ? getSaveCounts(seekers.map((s) => s.id), 'seeker') : Promise.resolve(new Map<string, number>()),
+  ])
+
   const total = partnerships.length + aircraft.length + seekers.length
 
   return (
@@ -181,6 +192,7 @@ export default async function SavedPage() {
                         saved
                         comp={compVerdicts.get(p.id)?.comp ?? null}
                         dealVerdict={compVerdicts.get(p.id)?.dealVerdict ?? null}
+                        saveCount={partnershipSaveCounts.get(p.id) ?? 0}
                       />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
@@ -209,6 +221,8 @@ export default async function SavedPage() {
                         saved
                         comp={verdict?.comp ?? null}
                         dealVerdict={verdict?.dealVerdict ?? null}
+                        saveCount={aircraftSaveCounts.get(a.id) ?? 0}
+                        familyCount={verdict?.familyCount ?? null}
                       />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
@@ -235,6 +249,7 @@ export default async function SavedPage() {
                         seeker={s}
                         saved
                         budgetVerdict={seekerBudgetVerdicts.get(s.id)}
+                        saveCount={seekerSaveCounts.get(s.id) ?? 0}
                       />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
