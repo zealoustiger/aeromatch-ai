@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T13:14:17Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 1 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $121.4278 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260708T130538Z
+
 ## 2026-07-08T13:12:45Z — PASS — homepage-alert-band
 - Pages: /
 - What: The homepage now has a "Not ready to browse yet?" alert-signup band — a one-field
