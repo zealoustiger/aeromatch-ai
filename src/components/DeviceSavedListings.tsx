@@ -9,6 +9,8 @@ import SeekerCard from './SeekerCard'
 import { getLocalSaves, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
 import { hydrateDeviceSaves } from '@/app/actions'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
+import type { AircraftCompVerdict } from '@/lib/aircraftComps'
+import type { PartnershipCardVerdict, PartnershipCompVerdict } from '@/lib/partnershipComps'
 
 /**
  * Slice 3 of soft-save. The logged-out view of `/saved`. A visitor who soft-saved
@@ -25,6 +27,14 @@ export default function DeviceSavedListings() {
   const [partnerships, setPartnerships] = useState<Partnership[]>([])
   const [aircraft, setAircraft] = useState<AircraftForSale[]>([])
   const [seekers, setSeekers] = useState<PartnershipSeeker[]>([])
+  // Real, honesty-gated social-proof/deal signals — same helpers the logged-in
+  // `/saved` page uses, keyed by listing id (plain objects: server-action-safe).
+  const [partnershipSaveCounts, setPartnershipSaveCounts] = useState<Record<string, number>>({})
+  const [aircraftSaveCounts, setAircraftSaveCounts] = useState<Record<string, number>>({})
+  const [seekerSaveCounts, setSeekerSaveCounts] = useState<Record<string, number>>({})
+  const [partnershipVerdicts, setPartnershipVerdicts] = useState<Record<string, PartnershipCardVerdict>>({})
+  const [aircraftVerdicts, setAircraftVerdicts] = useState<Record<string, AircraftCompVerdict>>({})
+  const [seekerBudgetVerdicts, setSeekerBudgetVerdicts] = useState<Record<string, PartnershipCompVerdict>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -46,6 +56,12 @@ export default function DeviceSavedListings() {
       setPartnerships(result.partnerships)
       setAircraft(result.aircraft)
       setSeekers(result.seekers)
+      setPartnershipSaveCounts(result.partnershipSaveCounts)
+      setAircraftSaveCounts(result.aircraftSaveCounts)
+      setSeekerSaveCounts(result.seekerSaveCounts)
+      setPartnershipVerdicts(result.partnershipVerdicts)
+      setAircraftVerdicts(result.aircraftVerdicts)
+      setSeekerBudgetVerdicts(result.seekerBudgetVerdicts)
       setLoading(false)
     }
 
@@ -141,7 +157,14 @@ export default function DeviceSavedListings() {
           </h2>
           <div className="space-y-4">
             {partnerships.map((p) => (
-              <PartnershipCard key={p.id} p={p} saved />
+              <PartnershipCard
+                key={p.id}
+                p={p}
+                saved
+                comp={partnershipVerdicts[p.id]?.comp ?? null}
+                dealVerdict={partnershipVerdicts[p.id]?.dealVerdict ?? null}
+                saveCount={partnershipSaveCounts[p.id] ?? 0}
+              />
             ))}
           </div>
         </section>
@@ -155,7 +178,15 @@ export default function DeviceSavedListings() {
           </h2>
           <div className="space-y-4">
             {aircraft.map((a) => (
-              <AircraftSaleCard key={a.id} p={a} saved />
+              <AircraftSaleCard
+                key={a.id}
+                p={a}
+                saved
+                comp={aircraftVerdicts[a.id]?.comp ?? null}
+                dealVerdict={aircraftVerdicts[a.id]?.dealVerdict ?? null}
+                saveCount={aircraftSaveCounts[a.id] ?? 0}
+                familyCount={aircraftVerdicts[a.id]?.familyCount ?? null}
+              />
             ))}
           </div>
         </section>
@@ -169,7 +200,13 @@ export default function DeviceSavedListings() {
           </h2>
           <div className="space-y-4">
             {seekers.map((s) => (
-              <SeekerCard key={s.id} seeker={s} saved />
+              <SeekerCard
+                key={s.id}
+                seeker={s}
+                saved
+                budgetVerdict={seekerBudgetVerdicts[s.id]}
+                saveCount={seekerSaveCounts[s.id] ?? 0}
+              />
             ))}
           </div>
         </section>
