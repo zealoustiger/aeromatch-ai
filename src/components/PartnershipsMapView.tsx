@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Map as MapIcon } from 'lucide-react'
+import { LIST_FOCUS_PIN_EVENT, type ListFocusPinDetail } from '@/lib/mapListSync'
 
 export interface MapPin {
   id: string
@@ -31,11 +32,31 @@ const PartnershipsLeafletMap = dynamic(() => import('./PartnershipsLeafletMap'),
 
 export default function PartnershipsMapView({ pins }: { pins: MapPin[] }) {
   const [open, setOpen] = useState(false)
+  const [focusId, setFocusId] = useState<string | null>(null)
+  const [focusNonce, setFocusNonce] = useState(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  // List → map sync: a card's "Show on map" click opens the map (if collapsed),
+  // scrolls it into view, and hands the target pin id down to the leaflet map.
+  // Ignores ids with no pin here (e.g. no resolvable airport coords) so an
+  // unrelated event never pops the map open for nothing.
+  useEffect(() => {
+    function onFocus(e: Event) {
+      const detail = (e as CustomEvent<ListFocusPinDetail>).detail
+      if (!detail || !pins.some((p) => p.id === detail.id)) return
+      setOpen(true)
+      setFocusId(detail.id)
+      setFocusNonce((n) => n + 1)
+      wrapperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    window.addEventListener(LIST_FOCUS_PIN_EVENT, onFocus)
+    return () => window.removeEventListener(LIST_FOCUS_PIN_EVENT, onFocus)
+  }, [pins])
 
   if (pins.length === 0) return null
 
   return (
-    <div className="mb-4">
+    <div ref={wrapperRef} className="mb-4">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -47,7 +68,7 @@ export default function PartnershipsMapView({ pins }: { pins: MapPin[] }) {
       </button>
       {open && (
         <div className="mt-2 overflow-hidden rounded-2xl">
-          <PartnershipsLeafletMap pins={pins} />
+          <PartnershipsLeafletMap pins={pins} focusId={focusId} focusNonce={focusNonce} />
         </div>
       )}
     </div>

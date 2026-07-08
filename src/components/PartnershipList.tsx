@@ -18,6 +18,7 @@ export default async function PartnershipList({
   filters,
   alertContext,
   alertSourcePath,
+  mapPinIds,
 }: {
   filters: PartnershipFilters
   /** Filter-aware email-alert context/source path — same values the page's own
@@ -25,6 +26,10 @@ export default async function PartnershipList({
    *  state so a dead-end search leads with "get alerted" instead of nothing. */
   alertContext?: string
   alertSourcePath?: string
+  /** Ids of listings with a resolvable pin on the map above this list (same
+   *  filters, computed once in the page from `resolveAirportCoords`) — threaded
+   *  to each card so only listings actually on the map show "Show on map". */
+  mapPinIds?: Set<string>
 }) {
   const { listings, airportList, error } = await getPartnershipListings(filters)
 
@@ -71,7 +76,7 @@ export default async function PartnershipList({
     saveCounts = await getSaveCounts(listings.map((l) => l.id), 'partnership')
   }
 
-  return renderList(listings, filters, airportList, savedIds, verdicts, alertContext, alertSourcePath, saveCounts)
+  return renderList(listings, filters, airportList, savedIds, verdicts, alertContext, alertSourcePath, saveCounts, mapPinIds)
 }
 
 function renderList(
@@ -82,7 +87,8 @@ function renderList(
   verdicts: Map<string, PartnershipCardVerdict> = new Map(),
   alertContext?: string,
   alertSourcePath?: string,
-  saveCounts: Map<string, number> = new Map()
+  saveCounts: Map<string, number> = new Map(),
+  mapPinIds?: Set<string>
 ) {
   if (listings.length === 0) {
     return (
@@ -122,6 +128,7 @@ function renderList(
             comp={verdicts.get(p.id)?.comp ?? null}
             dealVerdict={verdicts.get(p.id)?.dealVerdict ?? null}
             saveCount={saveCounts.get(p.id) ?? 0}
+            onMap={mapPinIds?.has(p.id) ?? false}
           />
         ))}
       </div>

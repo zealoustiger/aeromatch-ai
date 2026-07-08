@@ -13,7 +13,7 @@ import { lookupEngineTbo } from '@/lib/engineLife'
 import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
 import type { PartnershipCompVerdict, PartnershipDealCheck } from '@/lib/partnershipComps'
-import { MAP_FOCUS_LISTING_EVENT, MAP_BOUNDS_FILTER_EVENT, type MapFocusListingDetail, type MapBoundsFilterDetail } from '@/lib/mapListSync'
+import { MAP_FOCUS_LISTING_EVENT, MAP_BOUNDS_FILTER_EVENT, type MapFocusListingDetail, type MapBoundsFilterDetail, focusPinFromList } from '@/lib/mapListSync'
 import { MIN_SAVES_TO_SHOW } from '@/lib/saveCounts'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
@@ -200,6 +200,7 @@ export default function PartnershipCard({
   comp = null,
   dealVerdict = null,
   saveCount = 0,
+  onMap = false,
 }: {
   p: Partnership
   saved?: boolean
@@ -213,6 +214,11 @@ export default function PartnershipCard({
   /** Real cross-user save count (see `saveCounts.ts`) — shows a "Saved by N
    *  pilots" chip only at/above `MIN_SAVES_TO_SHOW`; never fabricated. */
   saveCount?: number
+  /** True when this listing has a resolvable pin on the /partnerships map above
+   *  the list — shows a "Show on map" affordance (list → map sync). Only ever
+   *  passed true from that page; every other PartnershipCard call site (saved,
+   *  airport, seeking, member pages — no map present) leaves it off. */
+  onMap?: boolean
 }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
@@ -445,6 +451,16 @@ export default function PartnershipCard({
                 <CalendarDays className="h-3.5 w-3.5" />
                 {listed}
               </span>
+            )}
+            {onMap && (
+              <button
+                type="button"
+                onClick={() => focusPinFromList(p.id)}
+                className="flex items-center gap-1 font-medium text-slate-500 hover:text-sky-700 hover:underline"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Show on map
+              </button>
             )}
 
             {/* Original post link */}
