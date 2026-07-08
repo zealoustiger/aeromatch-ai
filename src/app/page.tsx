@@ -6,6 +6,7 @@ import HeroSearch from '@/components/HeroSearch'
 import FeaturedListings from '@/components/FeaturedListings'
 import HomeRails from '@/components/HomeRails'
 import DealsRail from '@/components/DealsRail'
+import AlertSignup from '@/components/AlertSignup'
 import { STATE_NAMES, STATE_CODES, stateSlug, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { countForSaleState } from '@/components/AircraftSaleList'
 
@@ -241,6 +242,17 @@ export default async function HomePage() {
 
       {/* ── PRICED BELOW MARKET — rail of below-market deals (links to /aircraft/deals) ── */}
       <DealsRail />
+
+      {/* ── NOT READY TO BROWSE? — homepage alert capture ── */}
+      <section className="border-t border-slate-100 bg-white py-16">
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Not ready to browse yet?</h2>
+          <p className="mt-2 text-lg text-slate-500">
+            Tell us what you&apos;re looking for and we&apos;ll email you the moment it&apos;s listed.
+          </p>
+          <AlertSignup sourcePath="/" className="mt-8 text-left" />
+        </div>
+      </section>
 
       {/* ── EXPLORE — three big photo cards ── */}
       <section className="bg-slate-50 py-16">
