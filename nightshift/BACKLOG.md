@@ -1504,8 +1504,12 @@ Slice it:
   applied). Fixed by switching `joinWaitlist` to the admin/service-role client (mirrors the
   `loadOwnedAlert` pattern in `actions.ts`) — both the new broker CTA and the original
   hero-search signup now work today, no migration wait required.
-- **[P2][want] slice 2: place broker + services CTAs** on for-sale listing detail (broker CTA ✅
-  live, see above) + `/aircraft` results (financing, insurance, escrow, pre-buy still open).
+~~- **[P2][want] slice 2: place broker + services CTAs** on for-sale listing detail~~ ✅
+  SHIPPED via `monetization-services-cta` (2026-07-08) Financing / Insurance quote /
+  Escrow-title / Pre-buy inspection CTAs added below the existing broker CTA on
+  `/aircraft/listing/[id]` — same `MonetizationIntent` component, distinct `path`/copy
+  per button, verified end-to-end (real waitlist row with matching `source`, deleted after).
+  **Not done, intentionally:** the `/aircraft` results-page placement — a natural next slice.
 - **[P2][want] slice 3: place partnership formation/management CTAs** on partnership pages; seller upgrade CTAs in the post-listing flow.
 - **[P2][want] slice 4: surface the tallies** — a small admin panel (or a line in the scoreboard) showing clicks per `path` so we can compare which model has real demand and pick the one to actually build.
 

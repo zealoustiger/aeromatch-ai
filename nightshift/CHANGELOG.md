@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T10:05:42Z — PASS — monetization-services-cta
+- Pages: /aircraft/listing/[id]
+- What: **The "Work with a broker" button on aircraft-for-sale listing pages now has 4 siblings** — Financing, Insurance quote, Escrow/title, and Pre-buy inspection — in a compact "More ways we can help" card right below it. Same honest pattern as the broker CTA: click any one, a "Coming soon — want early access?" modal opens (this is the real demand signal), and leaving an email is optional. Nothing claims to exist yet; nothing charges anyone.
+- Goal: `[want]` tier — backlog's "Monetization — intent signals" item, slice 2 (the remaining 4 of 5 adjacent-services CTAs on listing detail; the broker CTA was slice 1, shipped last cycle). Friction/signal added: 4 more measurable revenue-path signals with zero new backend — reuses `MonetizationIntent` + `joinWaitlist` verbatim, just new `path`/copy per button.
+- Spec: nightshift/specs/20260708T100542Z-monetization-services-cta.md
+- Verdict: PASS — `tsc --noEmit` + `rm -rf .next && npx next build` both clean. `qa-smoke` on `/aircraft/listing/[id]` (real listing) at 1280 + 375: HTTP 200, zero app-console errors, zero horizontal overflow. Visual cycle — screenshots read: the new 2x2 button grid renders cleanly under the broker CTA at both viewports, no overlap/overflow, matches the existing sky-outline button style. Beyond the smoke gate, drove the real interaction with a one-off Playwright script: clicked "Financing" → modal opened with financing-specific copy → submitted a throwaway `@example.com` email → success state rendered → confirmed a real `waitlist` row landed with `source='financing'` (verified directly against the DB, then deleted — no test data left behind) → closed the modal cleanly; also opened Insurance/Escrow/Pre-buy and confirmed each shows its own distinct description text (not a copy-paste of the broker or financing copy) and zero console errors throughout. 1 file changed (`page.tsx`), +40 lines, no schema/DB/dependency change.
+- Screenshots: nightshift/screenshots/monetization-services-cta/
+- Next: slice 2's `/aircraft` results-page placement is still open (this slice only covered listing detail); slice 3 (partnership formation/management CTAs); slice 4 (admin tally of clicks per `path`).
+
 ## 2026-07-08T09:54:20Z — PASS — monetization-intent-cta
 - Pages: /aircraft/listing/[id]
 - What: **A new honest "Work with a broker" button on aircraft-for-sale listing pages** —
