@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership } from '@/lib/types'
 import { getPartnershipListings, type PartnershipFilters } from '@/lib/partnershipsQuery'
 import { getPartnershipCompVerdicts, type PartnershipCardVerdict } from '@/lib/partnershipComps'
+import { getSaveCounts } from '@/lib/saveCounts'
 import PartnershipCard from './PartnershipCard'
 import PartnershipResultCount from './PartnershipResultCount'
 import AlertSignup from './AlertSignup'
@@ -37,6 +38,7 @@ export default async function PartnershipList({
 
   let savedIds = new Set<string>()
   let verdicts = new Map<string, PartnershipCardVerdict>()
+  let saveCounts = new Map<string, number>()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
@@ -64,9 +66,12 @@ export default async function PartnershipList({
     // plain "Below/Above market" pill as a fallback. One DB query per unique make
     // (typically 1-4). Fails soft — no chips on error.
     verdicts = await getPartnershipCompVerdicts(supabase, listings)
+
+    // Real cross-user save counts for the "Saved by N pilots" chip.
+    saveCounts = await getSaveCounts(listings.map((l) => l.id), 'partnership')
   }
 
-  return renderList(listings, filters, airportList, savedIds, verdicts, alertContext, alertSourcePath)
+  return renderList(listings, filters, airportList, savedIds, verdicts, alertContext, alertSourcePath, saveCounts)
 }
 
 function renderList(
@@ -76,7 +81,8 @@ function renderList(
   savedIds: Set<string> = new Set(),
   verdicts: Map<string, PartnershipCardVerdict> = new Map(),
   alertContext?: string,
-  alertSourcePath?: string
+  alertSourcePath?: string,
+  saveCounts: Map<string, number> = new Map()
 ) {
   if (listings.length === 0) {
     return (
@@ -115,6 +121,7 @@ function renderList(
             saved={savedIds.has(p.id)}
             comp={verdicts.get(p.id)?.comp ?? null}
             dealVerdict={verdicts.get(p.id)?.dealVerdict ?? null}
+            saveCount={saveCounts.get(p.id) ?? 0}
           />
         ))}
       </div>

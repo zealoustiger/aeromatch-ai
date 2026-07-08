@@ -8,6 +8,7 @@ import { clubHangerDealVerdict, type ClubHangerDealVerdict, type DealComp } from
 import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import { evaluateAircraftTrust } from '@/lib/aircraftTrust'
+import { getSaveCounts } from '@/lib/saveCounts'
 import AircraftSaleCard from './AircraftSaleCard'
 import AlertSignup from './AlertSignup'
 
@@ -887,13 +888,14 @@ export default async function AircraftSaleList({
     )
   }
 
-  const [savedIds, familyPriceMap, familyCompMap] = await Promise.all([
+  const [savedIds, familyPriceMap, familyCompMap, saveCounts] = await Promise.all([
     fetchSavedAircraftIds(listings),
     fetchFamilyPriceMap(),
     fetchFamilyCompMap(),
+    getSaveCounts(listings.map((l) => l.id), 'aircraft'),
   ])
 
-  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath)
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath, saveCounts)
 }
 
 function renderList(
@@ -905,7 +907,8 @@ function renderList(
   familyPriceMap: Map<string, number[]> = new Map(),
   familyCompMap: Map<string, FamilyCompEntry[]> = new Map(),
   alertContext?: string,
-  alertSourcePath?: string
+  alertSourcePath?: string,
+  saveCounts: Map<string, number> = new Map()
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -987,6 +990,7 @@ function renderList(
               saved={savedIds.has(p.id)}
               comp={dealVerdict ? null : compVsMarket(p, familyPriceMap)}
               dealVerdict={dealVerdict}
+              saveCount={saveCounts.get(p.id) ?? 0}
             />
           )
         })}
