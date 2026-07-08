@@ -1,10 +1,12 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle, Heart, Gem } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, formatPriceK, cn } from '@/lib/utils'
+import { MAP_BOUNDS_FILTER_EVENT, type MapBoundsFilterDetail } from '@/lib/mapListSync'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
@@ -322,8 +324,21 @@ export default function AircraftSaleCard({
   const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
   const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
 
+  // "Search this area" sync: when the map filters to its current viewport, hide
+  // any card whose listing isn't among the visible pins. `ids === null` clears.
+  // Mirrors PartnershipCard's identical logic.
+  const [hiddenByArea, setHiddenByArea] = useState(false)
+  useEffect(() => {
+    function onBoundsFilter(e: Event) {
+      const ids = (e as CustomEvent<MapBoundsFilterDetail>).detail?.ids
+      setHiddenByArea(ids != null && !ids.includes(p.id))
+    }
+    window.addEventListener(MAP_BOUNDS_FILTER_EVENT, onBoundsFilter)
+    return () => window.removeEventListener(MAP_BOUNDS_FILTER_EVENT, onBoundsFilter)
+  }, [p.id])
+
   return (
-    <article className="ch-card group overflow-hidden bg-white">
+    <article className={cn('ch-card group overflow-hidden bg-white', hiddenByArea && 'hidden')}>
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
         <div className="relative h-52 sm:h-auto sm:w-56 sm:shrink-0">
