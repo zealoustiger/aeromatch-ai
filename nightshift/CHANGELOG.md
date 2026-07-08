@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T12:52:09Z — PASS — tools-token-sweep
+- Pages: /tools, /tools/cost-calculator, /tools/earnings-calculator, /partnerships/new
+- What: **The Tools hub and both calculator pages now match the warm, rounded "Etsy × Airbnb" card look used everywhere else on the site** (`/aircraft`, `/partnerships`, airport pages) — previously they used an older, slightly colder rounded-corner/shadow style left over from before that visual language existed.
+- Goal: `[want]` tier — the `/tools` slice of the long-running "Etsy × Airbnb visual refresh — slice 5: token sweep" backlog item (one page-family per cycle). The `/tools` hub's list-item cards now use the shared `.ch-card` utility (rounded-2xl + soft hover-lift shadow) instead of a hand-rolled `rounded-2xl border-slate-200`; `CostCalculator`/`EarningsCalculator` (both `full` and `compact` variants — `compact` is also embedded on `/partnerships/new`) neutral input panels now use `.ch-panel`; the colored accent result panels (sky for cost, emerald for earnings) got `rounded-xl`→`rounded-2xl` to match the existing sky "Interested?" card convention on `/partnerships/[id]`. Purely presentational className changes — no logic, copy, schema, or dependency change. Checked off in `BACKLOG.md`; remaining family: guides.
+- Spec: nightshift/specs/20260708T125209Z-tools-token-sweep.md
+- Verdict: PASS — `npx next build` clean; qa-smoke exit 0 across all 4 pages × 2 viewports (200, zero console errors, zero horizontal overflow); screenshots confirm the rounded-2xl warm-panel look on both the hub cards and both calculators' input/result panels, desktop and 375px, including the compact calculator embedded on `/partnerships/new`.
+- Screenshots: nightshift/screenshots/tools-token-sweep/
+- Next: the last remaining token-sweep family is "guides" (`/guides` + its 7 detail pages) — a natural next slice.
+
 ## 2026-07-08T12:40:35Z — PASS — device-saves-social-proof-parity
 - Pages: /saved (logged-out device-saves view)
 - What: **A logged-out visitor's device-saved listings on `/saved` now show the same real "Saved by N pilots," price-vs-market, and "Rare find" chips that a signed-in user sees for the identical listing** — previously the logged-out view rendered bare cards with none of that signal, a quiet gap versus the logged-in page.
