@@ -1,14 +1,37 @@
 'use client'
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import type { MapPin } from './PartnershipsMapView'
-import { focusListingFromMap } from '@/lib/mapListSync'
+import { focusListingFromMap, filterListByBounds } from '@/lib/mapListSync'
+
+// Captures the live map instance + reports user pan/zoom up to the parent so it
+// can offer a "Search this area" filter. Must live *inside* <MapContainer> to
+// use the react-leaflet hooks.
+function MapController({
+  onReady,
+  onMove,
+}: {
+  onReady: (map: L.Map) => void
+  onMove: () => void
+}) {
+  const map = useMap()
+  useEffect(() => {
+    onReady(map)
+  }, [map, onReady])
+  useMapEvents({
+    moveend: () => onMove(),
+    zoomend: () => onMove(),
+  })
+  return null
+}
 
 // Leaflet's default marker icon references bundler-relative image paths that
 // don't resolve under Next's asset pipeline — point them at the same CDN
@@ -29,18 +52,47 @@ export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
     pins.reduce((sum, p) => sum + p.lng, 0) / pins.length,
   ]
 
+  // "Search this area" state: `moved` gates the button (only offer it once the
+  // visitor has actually panned/zoomed); clicking it filters the list below to
+  // the pins inside the current viewport. Clears when this map unmounts (e.g.
+  // the visitor collapses "Hide map") so the list never stays silently filtered.
+  const [map, setMap] = useState<L.Map | null>(null)
+  const [moved, setMoved] = useState(false)
+
+  useEffect(() => () => filterListByBounds(null), [])
+
+  function searchThisArea() {
+    if (!map) return
+    const bounds = map.getBounds()
+    const ids = pins.filter((p) => bounds.contains([p.lat, p.lng])).map((p) => p.id)
+    filterListByBounds(ids)
+    setMoved(false)
+  }
+
   return (
-    <MapContainer
-      center={center}
-      zoom={4}
-      scrollWheelZoom={false}
-      style={{ height: 384, width: '100%' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>
+    <div className="relative">
+      {moved && (
+        <button
+          type="button"
+          onClick={searchThisArea}
+          className="absolute left-1/2 top-3 z-[1000] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-md hover:bg-slate-50"
+        >
+          <Search className="h-4 w-4 text-sky-500" />
+          Search this area
+        </button>
+      )}
+      <MapContainer
+        center={center}
+        zoom={4}
+        scrollWheelZoom={false}
+        style={{ height: 384, width: '100%' }}
+      >
+        <MapController onReady={setMap} onMove={() => setMoved(true)} />
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>
         {pins.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon}>
             <Popup>
@@ -77,6 +129,7 @@ export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
           </Marker>
         ))}
       </MarkerClusterGroup>
-    </MapContainer>
+      </MapContainer>
+    </div>
   )
 }

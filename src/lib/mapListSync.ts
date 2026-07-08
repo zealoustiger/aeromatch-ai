@@ -17,3 +17,21 @@ export function focusListingFromMap(id: string) {
     new CustomEvent<MapFocusListingDetail>(MAP_FOCUS_LISTING_EVENT, { detail: { id } })
   )
 }
+
+/**
+ * Fired on the window when the map's "Search this area" control filters the list
+ * to the current viewport. `ids` is the set of listing ids visible in the map
+ * bounds; `null` clears the filter (show every card again).
+ */
+export const MAP_BOUNDS_FILTER_EVENT = 'ch:map-bounds-filter'
+
+export interface MapBoundsFilterDetail {
+  ids: string[] | null
+}
+
+export function filterListByBounds(ids: string[] | null) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent<MapBoundsFilterDetail>(MAP_BOUNDS_FILTER_EVENT, { detail: { ids } })
+  )
+}

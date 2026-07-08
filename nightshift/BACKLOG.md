@@ -968,13 +968,27 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
     the real map: a "10" bubble appears over Palo Alto and clicking it reveals all 10
     individual markers with working popups. **Remaining:** (3) "search this area" region
     filter, (4) sidebar list ↔ map sync; `/aircraft` half still blocked on geocoding.
-  - **Slice 4 — sidebar list ↔ map sync (map → list direction) ✅ SHIPPED via
-    `partnerships-map-list-sync` (2026-07-08)**: a pin's popup now has a "↓ Show in
-    list" button that smooth-scrolls to and briefly highlights (2s blue ring) the
-    matching card below. New `mapListSync.ts` window-CustomEvent helper (mirrors
-    `LOCAL_SAVES_EVENT`), no schema/query change. **Remaining:** (3) "search this
-    area" region filter; the reverse direction (list card → pan/open its map pin);
-    `/aircraft` half still blocked on geocoding.
+  - **Slice 3 — "search this area" region filter ✅ SHIPPED via
+    `partnerships-map-search-area` (2026-07-08)**: the `/partnerships` map now has a
+    Zillow/Redfin-style floating "Search this area" button that appears once the
+    visitor pans/zooms; clicking it filters the list below to only the listings whose
+    pins fall inside the current viewport (`map.getBounds().contains`). The results-count
+    line becomes a client component (`PartnershipResultCount`) that stays honest —
+    "Showing M of N in this map area · Show all" — with a one-tap reset; collapsing the
+    map ("Hide map") clears the filter automatically (unmount cleanup). Purely a
+    client-side in-page view over listings already fetched — no schema/query/JSON-LD
+    change. Shares `mapListSync.ts`'s window-CustomEvent pattern (new
+    `MAP_BOUNDS_FILTER_EVENT`). **Remaining:** the `/aircraft` map half is still blocked
+    on geocoding `aircraft_for_sale.location` (no ICAO/lat/lng column).
+  - **Slice 4 — sidebar list ↔ map sync ✅ FULLY SHIPPED (both directions)**: map →
+    list via `partnerships-map-list-sync` (2026-07-08) — a pin's popup has a "↓ Show
+    in list" button that smooth-scrolls to and briefly highlights (2s blue ring) the
+    matching card below. List → map via `partnerships-list-map-sync` (2026-07-08) —
+    a card whose listing has a resolvable pin now shows "Show on map"; clicking it
+    opens the map (if collapsed), scrolls it into view, and pans/zooms to the pin
+    (spiderfying out of a cluster via `zoomToShowLayer` if needed) then opens its
+    popup. Both directions share `mapListSync.ts`'s window-CustomEvent pattern
+    (mirrors `LOCAL_SAVES_EVENT`), no schema/query change.
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the

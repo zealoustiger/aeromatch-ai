@@ -13,7 +13,7 @@ import { lookupEngineTbo } from '@/lib/engineLife'
 import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
 import type { PartnershipCompVerdict, PartnershipDealCheck } from '@/lib/partnershipComps'
-import { MAP_FOCUS_LISTING_EVENT, type MapFocusListingDetail } from '@/lib/mapListSync'
+import { MAP_FOCUS_LISTING_EVENT, MAP_BOUNDS_FILTER_EVENT, type MapFocusListingDetail, type MapBoundsFilterDetail } from '@/lib/mapListSync'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
@@ -243,13 +243,26 @@ export default function PartnershipCard({
     }
   }, [p.id])
 
+  // "Search this area" sync: when the map filters to its current viewport, hide
+  // any card whose listing isn't among the visible pins. `ids === null` clears.
+  const [hiddenByArea, setHiddenByArea] = useState(false)
+  useEffect(() => {
+    function onBoundsFilter(e: Event) {
+      const ids = (e as CustomEvent<MapBoundsFilterDetail>).detail?.ids
+      setHiddenByArea(ids != null && !ids.includes(p.id))
+    }
+    window.addEventListener(MAP_BOUNDS_FILTER_EVENT, onBoundsFilter)
+    return () => window.removeEventListener(MAP_BOUNDS_FILTER_EVENT, onBoundsFilter)
+  }, [p.id])
+
   return (
     <article
       ref={articleRef}
       id={`partnership-card-${p.id}`}
       className={cn(
         'ch-card group overflow-hidden bg-white transition-shadow',
-        mapFocused && 'ring-2 ring-sky-400'
+        mapFocused && 'ring-2 ring-sky-400',
+        hiddenByArea && 'hidden'
       )}
     >
       <div className="flex flex-col sm:flex-row">
