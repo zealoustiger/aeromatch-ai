@@ -1,12 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle, Heart, Gem } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, formatPriceK, cn } from '@/lib/utils'
-import { MAP_BOUNDS_FILTER_EVENT, type MapBoundsFilterDetail } from '@/lib/mapListSync'
+import {
+  MAP_BOUNDS_FILTER_EVENT,
+  MAP_FOCUS_LISTING_EVENT,
+  type MapBoundsFilterDetail,
+  type MapFocusListingDetail,
+  focusPinFromList,
+} from '@/lib/mapListSync'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { track } from '@/lib/analytics'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
@@ -287,6 +293,7 @@ export default function AircraftSaleCard({
   dealVerdict = null,
   saveCount = 0,
   familyCount = null,
+  onMap = false,
 }: {
   p: AircraftForSale
   saved?: boolean
@@ -299,6 +306,11 @@ export default function AircraftSaleCard({
    *  make+model family — powers the "Rare find" chip. `null` when the family
    *  can't be resolved or the comp map failed to load (no chip either way). */
   familyCount?: number | null
+  /** True when this listing has a resolvable pin on the /aircraft map above the
+   *  list — shows a "Show on map" affordance (list → map sync). Only ever
+   *  passed true from that page; every other call site (saved, deals, rail,
+   *  detail page — no map present) leaves it off. Mirrors PartnershipCard. */
+  onMap?: boolean
 }) {
   const label = aircraftTitle(p)
   // Real harvested source photo when we have one; else a per-make placeholder.
@@ -337,8 +349,38 @@ export default function AircraftSaleCard({
     return () => window.removeEventListener(MAP_BOUNDS_FILTER_EVENT, onBoundsFilter)
   }, [p.id])
 
+  // Map → list sync: a click on this listing's map pin popup ("↓ Show in list")
+  // scrolls it into view and briefly highlights it, so a visitor exploring the
+  // map can jump straight to the matching card without re-scanning the list.
+  // Mirrors PartnershipCard's identical logic.
+  const [mapFocused, setMapFocused] = useState(false)
+  const articleRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    function onFocus(e: Event) {
+      const detail = (e as CustomEvent<MapFocusListingDetail>).detail
+      if (detail?.id !== p.id) return
+      articleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setMapFocused(true)
+      clearTimeout(timer)
+      timer = setTimeout(() => setMapFocused(false), 2000)
+    }
+    window.addEventListener(MAP_FOCUS_LISTING_EVENT, onFocus)
+    return () => {
+      window.removeEventListener(MAP_FOCUS_LISTING_EVENT, onFocus)
+      clearTimeout(timer)
+    }
+  }, [p.id])
+
   return (
-    <article className={cn('ch-card group overflow-hidden bg-white', hiddenByArea && 'hidden')}>
+    <article
+      ref={articleRef}
+      className={cn(
+        'ch-card group overflow-hidden bg-white transition-shadow',
+        mapFocused && 'ring-2 ring-sky-400',
+        hiddenByArea && 'hidden'
+      )}
+    >
       <div className="flex flex-col sm:flex-row">
         {/* Photo */}
         <div className="relative h-52 sm:h-auto sm:w-56 sm:shrink-0">
@@ -508,6 +550,16 @@ export default function AircraftSaleCard({
                 <Clock className="h-3.5 w-3.5" />
                 {listed}
               </span>
+            )}
+            {onMap && (
+              <button
+                type="button"
+                onClick={() => focusPinFromList(p.id)}
+                className="flex items-center gap-1 font-medium text-slate-500 hover:text-sky-700 hover:underline"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Show on map
+              </button>
             )}
 
             {p.source_url && (
