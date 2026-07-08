@@ -8,9 +8,11 @@ import { Plane, SlidersHorizontal, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
 import ActiveFilterChips from '@/components/ActiveFilterChips'
 import AircraftChipBar from '@/components/AircraftChipBar'
+import AircraftMapView, { type AircraftMapPin } from '@/components/AircraftMapView'
 import AircraftSaleFilters from '@/components/AircraftSaleFilters'
 import AircraftSaleList, { fetchAircraftPage } from '@/components/AircraftSaleList'
 import { countActivePartnerships, getPartnershipListings } from '@/lib/partnershipsQuery'
+import { resolveLocationCoords } from '@/lib/airports'
 import AlertSignup from '@/components/AlertSignup'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
@@ -151,6 +153,40 @@ export default async function AircraftPage({
     name: aircraftTitle,
     url: `${SITE_URL}/aircraft`,
   })
+
+  // Map view (Zillow/Redfin-style "Map search" — the aircraft half; the
+  // partnerships half already shipped). aircraft_for_sale has no ICAO column
+  // (unlike partnerships' home_airport), so pins are a coarser city-level
+  // approximation: parse the leading city out of the free-text `location`
+  // ("City, ST") and match it + `state` against the seeded `airports` table.
+  // Reuses itemListListings already fetched above — no second query. Anything
+  // that doesn't resolve (non-US location, bare state, typo'd/truncated city)
+  // simply gets no pin — no fabricated coordinates.
+  const STATE_CODE_SET = new Set(STATE_CODES)
+  const aircraftLocationPairs = itemListListings.flatMap((a) => {
+    const city = a.location?.split(',')[0]?.trim()
+    const state = a.state?.trim().toUpperCase()
+    if (!city || !state || !STATE_CODE_SET.has(state)) return []
+    return [{ city, state }]
+  })
+  const locationCoords = await resolveLocationCoords(aircraftLocationPairs)
+  const aircraftMapPins: AircraftMapPin[] = itemListListings.flatMap((a) => {
+    const city = a.location?.split(',')[0]?.trim()
+    const state = a.state?.trim().toUpperCase()
+    if (!city || !state || !STATE_CODE_SET.has(state)) return []
+    const coords = locationCoords[`${city.toLowerCase()}|${state.toLowerCase()}`]
+    if (!coords) return []
+    return [{
+      id: a.id,
+      make: a.make,
+      model: a.model,
+      location: a.location,
+      state: a.state,
+      asking_price: a.asking_price,
+      lat: coords.lat,
+      lng: coords.lng,
+    }]
+  })
   // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
   const faqJsonLd = buildFaqPageJsonLd(AIRCRAFT_FAQS, {
     url: `${SITE_URL}/aircraft`,
@@ -249,6 +285,7 @@ export default async function AircraftPage({
         <div className="min-w-0 flex-1">
           {/* Active-filter chips — removable, one per active filter. */}
           <ActiveFilterChips params={params} facets={facets} />
+          <AircraftMapView pins={aircraftMapPins} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
             <AircraftSaleList
               filters={params}

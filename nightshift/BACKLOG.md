@@ -989,6 +989,25 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
     (spiderfying out of a cluster via `zoomToShowLayer` if needed) then opens its
     popup. Both directions share `mapListSync.ts`'s window-CustomEvent pattern
     (mirrors `LOCAL_SAVES_EVENT`), no schema/query change.
+  - **`/aircraft` half — basic view ✅ SHIPPED via `aircraft-map-view` (2026-07-08)**:
+    unblocked the geocoding gap noted above. `aircraft_for_sale` has no ICAO column like
+    partnerships' `home_airport`, only free-text `location` ("City, ST") + `state` — so a
+    new `resolveLocationCoords()` (`src/lib/airports.ts`) matches the parsed city + state
+    against the seeded `airports` table (case-insensitive, largest-airport-type wins on a
+    city collision) instead of an exact ICAO join. Verified live: 63.8% of active priced
+    listings with a location resolve to a real coordinate; the rest (non-US locations,
+    bare-state or truncated/typo'd city strings) simply get no pin — no fabrication, same
+    self-suppress pattern as unmatched ICAOs. Since city-level matching collides far more
+    than partnerships' exact-airport matching did, shipped **with clustering from day
+    one** (`MarkerClusterGroup`, already installed) rather than repeating the
+    stacked-pins bug partnerships hit in its own slice 1. New `AircraftMapView.tsx` /
+    `AircraftLeafletMap.tsx` (mirror the partnerships pair); popup shows the listing's own
+    real make/model/asking-price/location text (never an inferred airport claim) + a link
+    to `/aircraft/listing/[id]`. Wired into `/aircraft/page.tsx` reusing the
+    already-fetched `itemListListings` (no second query). **Remaining:** "search this
+    area" + list↔map sync for the aircraft side (partnerships slices 3–4) — same
+    `mapListSync.ts` events, not yet wired to `AircraftSaleCard`/an aircraft result-count
+    component. The Map Search item as a whole is not fully closed until those two land.
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the
