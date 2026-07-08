@@ -991,6 +991,7 @@ function renderList(
               comp={dealVerdict ? null : compVsMarket(p, familyPriceMap)}
               dealVerdict={dealVerdict}
               saveCount={saveCounts.get(p.id) ?? 0}
+              familyCount={key ? allFamilyComps.length : null}
             />
           )
         })}
