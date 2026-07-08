@@ -64,6 +64,54 @@ export async function saveAvatarConfig(config: AviatorConfig): Promise<{ ok: boo
   return { ok: true }
 }
 
+// Let a signed-in pilot set their base airport (profiles.home_airport, already exists
+// but was never settable) + up to 3 favorite/frequently-visited airports. Seeds the
+// prerequisite for a future airport-page "pilots based here" section (BACKLOG.md).
+// Each non-blank code is validated against the real airports table (same "reject a
+// fake/typo'd ICAO" pattern as createPartnership/createSeekerListing) — a blank field
+// just clears that slot rather than erroring.
+export async function updateProfile(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  async function resolveIcao(raw: string): Promise<string | null> {
+    const code = raw.trim().toUpperCase()
+    if (!code) return null
+    const { data } = await supabase.from('airports').select('icao').eq('icao', code).maybeSingle()
+    if (!data) throw new Error(`We couldn't find an airport with the code "${code}". Please pick one from the suggestions list, or double-check the 4-letter code.`)
+    return data.icao as string
+  }
+
+  let home_airport: string | null
+  let favorites: string[]
+  try {
+    home_airport = await resolveIcao((formData.get('home_airport') as string) || '')
+    const rawFavorites = ['favorite_airport_1', 'favorite_airport_2', 'favorite_airport_3']
+      .map((k) => (formData.get(k) as string) || '')
+    const resolved = await Promise.all(rawFavorites.map(resolveIcao))
+    // Dedupe, drop blanks, drop anything matching the base airport, cap at 3.
+    favorites = Array.from(new Set(resolved.filter((a): a is string => !!a && a !== home_airport))).slice(0, 3)
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Invalid airport code.' }
+  }
+
+  const basePayload = { user_id: user.id, home_airport, updated_at: new Date().toISOString() }
+  const payload = { ...basePayload, favorite_airports: favorites }
+
+  let { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'user_id' })
+
+  // If favorite_airports hasn't been migrated live yet, retry without it — the base
+  // airport still saves (graceful fallback, same pattern as additional_airports).
+  if (error && error.message?.includes('favorite_airports')) {
+    ;({ error } = await supabase.from('profiles').upsert(basePayload, { onConflict: 'user_id' }))
+  }
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/account')
+  return { ok: true }
+}
+
 export async function createPartnership(formData: FormData) {
   const supabase = await createServerSupabaseClient()
 

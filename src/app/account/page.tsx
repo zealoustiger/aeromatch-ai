@@ -9,11 +9,13 @@ import {
   LogIn,
   ExternalLink,
   ArrowRight,
+  MapPin,
 } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import AviatorAvatar, { type AviatorConfig } from '@/components/AviatorAvatar'
 import AvatarPicker from '@/components/AvatarPicker'
 import AccountSignOutButton from '@/components/AccountSignOutButton'
+import ProfileAirportsForm from '@/components/ProfileAirportsForm'
 import { SITE_NAME } from '@/lib/seo'
 import type { SavedSearch } from '@/lib/types'
 
@@ -133,12 +135,26 @@ export default async function AccountPage() {
     .order('created_at', { ascending: false })
   const searches = (searchesData ?? []) as SavedSearch[]
 
-  const { data: profile } = await supabase
+  // favorite_airports may not be migrated live yet — fall back to the columns that
+  // definitely exist so the page never errors while that migration is pending.
+  let profile: { avatar_config?: unknown; home_airport?: string | null; favorite_airports?: string[] } | null
+  const { data: profileData } = await supabase
     .from('profiles')
-    .select('avatar_config')
+    .select('avatar_config, home_airport, favorite_airports')
     .eq('user_id', user.id)
     .maybeSingle()
+  profile = profileData
+  if (!profile) {
+    const fallback = await supabase
+      .from('profiles')
+      .select('avatar_config, home_airport')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    profile = fallback.data
+  }
   const avatarConfig = (profile?.avatar_config ?? null) as AviatorConfig | null
+  const homeAirport = (profile?.home_airport ?? null) as string | null
+  const favoriteAirports = (profile?.favorite_airports ?? []) as string[]
 
   return (
     <div className="ch-surface min-h-screen">
@@ -165,6 +181,19 @@ export default async function AccountPage() {
             Every pilot gets a ClubHanger aviator. Pick the one that feels like you — or shuffle for more.
           </p>
           <AvatarPicker seed={user.id} initial={avatarConfig} />
+        </section>
+
+        {/* Pilot profile — base + favorite airports */}
+        <section className="ch-panel mb-6 p-6">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <MapPin className="h-5 w-5 text-sky-600" />
+            Your pilot profile
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Set your base airport and a few favorites you fly out of often. This helps us
+            show you as a pilot based near an airport in the future.
+          </p>
+          <ProfileAirportsForm homeAirport={homeAirport} favoriteAirports={favoriteAirports} />
         </section>
 
         {/* Email alerts — saved searches are the alert subscriptions */}

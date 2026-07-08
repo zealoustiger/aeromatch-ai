@@ -701,3 +701,12 @@ revoke all on function public.sweep_test_accounts(int) from public, anon, authen
 -- DB; until applied, the page's query returns no rows (never an error).
 create policy "alerts_owner_select" on alerts
   for select using (auth.jwt() ->> 'email' = email);
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: profiles_favorite_airports
+-- Adds favorite_airports to profiles so a pilot can list up to 3 favorite/frequently-
+-- visited airports (base airport reuses the already-existing profiles.home_airport
+-- column). Optional (text[]); existing profiles unaffected. Apply in the Supabase SQL
+-- editor. Until applied, /account's profile form still saves successfully — favorite
+-- airports are silently dropped (graceful fallback in updateProfile), so no user-facing
+-- error; the base airport already saves today.
+alter table profiles add column if not exists favorite_airports text[];
