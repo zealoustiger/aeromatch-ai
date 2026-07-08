@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T10:54:11Z — saved-page-social-proof-parity — score 4/5
+- Strengths: Correct pure data-wiring; familyCount recorded independent of comp/deal (fixes the rare-family exclusion), active-only aircraft filter avoids off-by-one, `/saved` is the sole caller so the broadened verdicts map carries no regression, clean conventions, zero component churn.
+- Weaknesses / risks: Spec called for save-counts "in parallel with the existing comp-verdict fetches" but the Promise.all sits after three sequential comp-verdict awaits — a 4th serial DB barrier, minor added latency (only the 3 save-count calls parallelize among themselves).
+- Follow-up: none
+
 ## 2026-07-08T10:43:45Z — aircraft-rare-find-chip — score 4/5
 - Strengths: Correct and honest — reuses the already-computed `familyCompMap` (zero new query/schema), and the "0 = failed load, never render" invariant genuinely holds because the browse query and comp map share the exact same `status='active'` + `asking_price >= BUYER_PRICE_FLOOR` filters, so a rendered listing is always in its own family; `familyCount` is unfiltered by user filters so it reflects true market rarity not the filtered view; `RareFindChip` matches surrounding chip styling/accent conventions exactly and `isBrandNew`/`RARE_FIND_MAX` are well-documented with clear reasoning.
 - Weaknesses / risks: "Rare find — only 1 like this" reads slightly oddly when the count includes the listing itself (there are zero *others* like it); copy nuance only, tooltip clarifies, not material.
