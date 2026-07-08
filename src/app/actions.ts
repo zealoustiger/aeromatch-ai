@@ -5,7 +5,15 @@ import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
+import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
 import { getSeekersByIds } from '@/lib/seekersQuery'
+import {
+  getPartnershipCompVerdicts,
+  getSeekerBudgetCheckVerdicts,
+  type PartnershipCardVerdict,
+  type PartnershipCompVerdict,
+} from '@/lib/partnershipComps'
+import { getSaveCounts } from '@/lib/saveCounts'
 import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail, buildSeedInquiryEmail } from '@/lib/email'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
@@ -1228,8 +1236,30 @@ export async function mergeDeviceSaves(
  */
 export async function hydrateDeviceSaves(
   saves: { id: string; type: string }[],
-): Promise<{ partnerships: Partnership[]; aircraft: AircraftForSale[]; seekers: PartnershipSeeker[] }> {
-  if (!Array.isArray(saves) || saves.length === 0) return { partnerships: [], aircraft: [], seekers: [] }
+): Promise<{
+  partnerships: Partnership[]
+  aircraft: AircraftForSale[]
+  seekers: PartnershipSeeker[]
+  partnershipSaveCounts: Record<string, number>
+  aircraftSaveCounts: Record<string, number>
+  seekerSaveCounts: Record<string, number>
+  partnershipVerdicts: Record<string, PartnershipCardVerdict>
+  aircraftVerdicts: Record<string, AircraftCompVerdict>
+  seekerBudgetVerdicts: Record<string, PartnershipCompVerdict>
+}> {
+  if (!Array.isArray(saves) || saves.length === 0) {
+    return {
+      partnerships: [],
+      aircraft: [],
+      seekers: [],
+      partnershipSaveCounts: {},
+      aircraftSaveCounts: {},
+      seekerSaveCounts: {},
+      partnershipVerdicts: {},
+      aircraftVerdicts: {},
+      seekerBudgetVerdicts: {},
+    }
+  }
 
   // Sanitize: valid types only, well-formed ids, deduped, count-capped.
   const seen = new Set<string>()
@@ -1279,7 +1309,37 @@ export async function hydrateDeviceSaves(
     seekers = await getSeekersByIds(seekerIds)
   }
 
-  return { partnerships, aircraft, seekers }
+  // Same real save-count + comp/deal-verdict signals the logged-in `/saved` page
+  // already computes for its hydrated listings — a device-only visitor should see
+  // the identical honest social-proof/deal chips, not a stripped-down view.
+  const supabase = await createServerSupabaseClient()
+  const [
+    partnershipVerdictsMap,
+    aircraftVerdictsMap,
+    seekerBudgetVerdictsMap,
+    partnershipSaveCountsMap,
+    aircraftSaveCountsMap,
+    seekerSaveCountsMap,
+  ] = await Promise.all([
+    partnerships.length > 0 ? getPartnershipCompVerdicts(supabase, partnerships) : Promise.resolve(new Map<string, PartnershipCardVerdict>()),
+    aircraft.length > 0 ? getAircraftCompVerdicts(supabase, aircraft) : Promise.resolve(new Map<string, AircraftCompVerdict>()),
+    seekers.length > 0 ? getSeekerBudgetCheckVerdicts(supabase, seekers) : Promise.resolve(new Map<string, PartnershipCompVerdict>()),
+    partnerships.length > 0 ? getSaveCounts(partnerships.map((p) => p.id), 'partnership') : Promise.resolve(new Map<string, number>()),
+    aircraft.length > 0 ? getSaveCounts(aircraft.map((a) => a.id), 'aircraft') : Promise.resolve(new Map<string, number>()),
+    seekers.length > 0 ? getSaveCounts(seekers.map((s) => s.id), 'seeker') : Promise.resolve(new Map<string, number>()),
+  ])
+
+  return {
+    partnerships,
+    aircraft,
+    seekers,
+    partnershipSaveCounts: Object.fromEntries(partnershipSaveCountsMap),
+    aircraftSaveCounts: Object.fromEntries(aircraftSaveCountsMap),
+    seekerSaveCounts: Object.fromEntries(seekerSaveCountsMap),
+    partnershipVerdicts: Object.fromEntries(partnershipVerdictsMap),
+    aircraftVerdicts: Object.fromEntries(aircraftVerdictsMap),
+    seekerBudgetVerdicts: Object.fromEntries(seekerBudgetVerdictsMap),
+  }
 }
 
 export async function getOrCreateThread(partnershipId: string, ownerId: string) {
