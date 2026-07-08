@@ -19,6 +19,7 @@ import AviatorAvatar from '@/components/AviatorAvatar'
 import { isSeedProfile, personaFromPartnership } from '@/lib/seedProfiles'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
+import MonetizationIntent from '@/components/MonetizationIntent'
 import SaveListingButton from '@/components/SaveListingButton'
 import SavedListingNote from '@/components/SavedListingNote'
 import TrustBadge from '@/components/TrustBadge'
@@ -775,6 +776,34 @@ export default async function PartnershipDetailPage({
                   />
                 </>
               )}
+            </div>
+
+            {/* Monetization intent signals — same honest fake-door pattern as
+                the aircraft-for-sale listing page's broker/services CTAs,
+                testing demand for partnership-formation and co-ownership
+                management services before building either. Never claims the
+                service exists; UI + waitlist capture only. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-1 text-sm font-semibold text-slate-800">More ways we can help</h2>
+              <p className="mb-3 text-sm text-slate-500">
+                We're exploring these too — let us know what you'd use.
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                <MonetizationIntent
+                  path="partnership_formation"
+                  label="Help me form a partnership"
+                  title="Coming soon — want early access?"
+                  description="Get help finding partners, drafting an agreement, and structuring a new co-ownership from scratch. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                />
+                <MonetizationIntent
+                  path="co_ownership_management"
+                  label="Manage my co-ownership"
+                  title="Coming soon — want early access?"
+                  description="Get help running an existing partnership — scheduling, cost-splitting, and partner communication in one place. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                />
+              </div>
             </div>
 
             <div className="text-center">
