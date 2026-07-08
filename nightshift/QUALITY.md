@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T11:36:15Z — match-count-travel-radius — score 4/5
+- Strengths: Tight, correctly-scoped slice — `isWithinTravelRadius` is honesty-gated exactly like every `isCompatibleMatch` criterion (missing radius/coords never disqualify), coords are batch-resolved once per query (no N+1), `isCompatibleMatch` left untouched with its 9 tests intact, and 3 clear near/far/missing worked-example tests added.
+- Weaknesses / risks: haversineNm is now triple-duplicated (airports.ts, nearbyPartnerships.ts, matching.ts) — justified & documented (keeps matching.ts free of @/-alias value imports so its tests run under node strip-types) but still drift-prone; also deviates from spec (which said export from airports.ts, not duplicate) and the coord lookup uses `.toUpperCase()` without the `.trim()` that resolveAirportCoords applies, so a whitespaced airport code silently falls through the honesty gate (harmless, never over-counts).
+- Follow-up: none
+
 ## 2026-07-08T11:24:11Z — profile-base-favorite-airports — score 4/5
 - Strengths: Faithful to spec — validates every ICAO against the real airports table (mirrors createPartnership), dedupes/caps favorites at 3, drops a favorite matching the base, and has graceful column-not-migrated fallbacks on BOTH the write (retry without favorite_airports) and read paths; upsert onConflict:'user_id' matches saveAvatarConfig exactly, reuses AirportFormInput (which submits the resolved ICAO so exact-match validation is correct), and the client form covers idle/saving/saved/error states with a role="alert" and proper htmlFor label.
 - Weaknesses / risks: The read-side fallback keys off `!profile` rather than an error, so it (a) always fires a second redundant query for brand-new users who simply have no profiles row, and (b) would silently mask a genuine non-column select error by re-querying — minor robustness smell, no user impact.
