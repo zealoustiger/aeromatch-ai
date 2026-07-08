@@ -187,6 +187,12 @@ export default async function AircraftPage({
       lng: coords.lng,
     }]
   })
+  // Threaded to AircraftSaleList so only cards with a resolvable map pin show
+  // "Show on map" (list → map sync) — same filters/query as the map itself, so
+  // ids line up 1:1 with what AircraftSaleList's own fetch renders. Mirrors
+  // /partnerships' identical `mapPinIds`.
+  const mapPinIds = new Set(aircraftMapPins.map((p) => p.id))
+
   // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
   const faqJsonLd = buildFaqPageJsonLd(AIRCRAFT_FAQS, {
     url: `${SITE_URL}/aircraft`,
@@ -292,6 +298,7 @@ export default async function AircraftPage({
               visitorCoords={visitorCoords}
               alertContext={alertContext}
               alertSourcePath={alertSourcePath}
+              mapPinIds={mapPinIds}
             />
           </Suspense>
 

@@ -866,6 +866,7 @@ export default async function AircraftSaleList({
   visitorCoords,
   alertContext,
   alertSourcePath,
+  mapPinIds,
 }: {
   filters: Filters
   visitorCoords?: VisitorCoords
@@ -874,6 +875,10 @@ export default async function AircraftSaleList({
    *  state so a dead-end search leads with "get alerted" instead of nothing. */
   alertContext?: string
   alertSourcePath?: string
+  /** Ids of listings with a resolvable pin on the map above this list (same
+   *  filters, computed once in the page from `resolveLocationCoords`) — threaded
+   *  to each card so only listings actually on the map show "Show on map". */
+  mapPinIds?: Set<string>
 }) {
   const { listings, totalCount, page, error } = await fetchAircraftPage(filters, visitorCoords)
 
@@ -896,7 +901,7 @@ export default async function AircraftSaleList({
     getSaveCounts(listings.map((l) => l.id), 'aircraft'),
   ])
 
-  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath, saveCounts)
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath, saveCounts, mapPinIds)
 }
 
 function renderList(
@@ -909,7 +914,8 @@ function renderList(
   familyCompMap: Map<string, FamilyCompEntry[]> = new Map(),
   alertContext?: string,
   alertSourcePath?: string,
-  saveCounts: Map<string, number> = new Map()
+  saveCounts: Map<string, number> = new Map(),
+  mapPinIds?: Set<string>
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -993,6 +999,7 @@ function renderList(
               dealVerdict={dealVerdict}
               saveCount={saveCounts.get(p.id) ?? 0}
               familyCount={key ? allFamilyComps.length : null}
+              onMap={mapPinIds?.has(p.id) ?? false}
             />
           )
         })}
