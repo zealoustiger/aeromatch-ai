@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T12:16:16Z — aircraft-map-search-area — score 4/5
+- Strengths: Faithful, idiomatic port of the partnerships slice — MapController + gated "Search this area" button, extracted AircraftResultCount, cn()-based card hiding, unmount cleanup and event-listener teardown all clean; pins reuse itemListListings (no extra query) and unfiltered copy is preserved verbatim.
+- Weaknesses / risks: Filtered line "Showing M of N in this map area" uses N = full DB total (page size 60) while the map only ever holds the current page's ≤60 pins, so with >60 results it reads e.g. "Showing 8 of 340" when 340 pins can never exist on that map — a semantic mismatch partnerships (radius-scoped) never surfaced.
+- Follow-up: Pass the count of on-page pinned/rendered listings (or itemListListings length) as the "of N" denominator in the filtered AircraftResultCount state instead of the paginated DB total.
+
 ## 2026-07-08T11:36:15Z — match-count-travel-radius — score 4/5
 - Strengths: Tight, correctly-scoped slice — `isWithinTravelRadius` is honesty-gated exactly like every `isCompatibleMatch` criterion (missing radius/coords never disqualify), coords are batch-resolved once per query (no N+1), `isCompatibleMatch` left untouched with its 9 tests intact, and 3 clear near/far/missing worked-example tests added.
 - Weaknesses / risks: haversineNm is now triple-duplicated (airports.ts, nearbyPartnerships.ts, matching.ts) — justified & documented (keeps matching.ts free of @/-alias value imports so its tests run under node strip-types) but still drift-prone; also deviates from spec (which said export from airports.ts, not duplicate) and the coord lookup uses `.toUpperCase()` without the `.trim()` that resolveAirportCoords applies, so a whitespaced airport code silently falls through the honesty gate (harmless, never over-counts).
