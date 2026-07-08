@@ -1510,7 +1510,13 @@ Slice it:
   `/aircraft/listing/[id]` — same `MonetizationIntent` component, distinct `path`/copy
   per button, verified end-to-end (real waitlist row with matching `source`, deleted after).
   **Not done, intentionally:** the `/aircraft` results-page placement — a natural next slice.
-- **[P2][want] slice 3: place partnership formation/management CTAs** on partnership pages; seller upgrade CTAs in the post-listing flow.
+~~- **[P2][want] slice 3: place partnership formation/management CTAs** on partnership pages~~ ✅
+  SHIPPED via `monetization-partnership-cta` (2026-07-08) "Help me form a partnership" +
+  "Manage my co-ownership" CTAs (same `MonetizationIntent` component, `path=partnership_formation`/
+  `co_ownership_management`) added to `/partnerships/[id]`'s sidebar, right after the "Interested?"
+  contact card. **Not done, intentionally:** the seller-upgrade CTAs in the post-listing flow (the
+  other half of this slice) — a separate placement, left for a follow-up cycle to keep this one
+  scoped.
 - **[P2][want] slice 4: surface the tallies** — a small admin panel (or a line in the scoreboard) showing clicks per `path` so we can compare which model has real demand and pick the one to actually build.
 
 ### Monetization (UI only — do NOT activate; human decision)
