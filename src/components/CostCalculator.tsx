@@ -85,7 +85,7 @@ export default function CostCalculator({
 
   if (variant === 'compact') {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="ch-panel p-5">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
           <Calculator className="h-4 w-4" /> Cost estimator
         </h2>
@@ -122,7 +122,7 @@ export default function CostCalculator({
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Inputs */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="ch-panel p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Your numbers</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <NumberField label="Buy-in (one-time)" value={buyIn} onChange={setBuyIn} prefix="$" step={500} />
@@ -138,7 +138,7 @@ export default function CostCalculator({
       </div>
 
       {/* Results */}
-      <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-6 shadow-sm">
+      <div className="rounded-2xl border border-sky-200 bg-sky-50/50 p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-sky-700">Your cost</h2>
         <div className="space-y-3">
           <Result label="All-in monthly (operating)" value={money(result.operatingMonthly)} big />
