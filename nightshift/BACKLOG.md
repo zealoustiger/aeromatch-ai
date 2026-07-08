@@ -1014,9 +1014,23 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
     swaps to "Showing M of N in this map area · Show all" while filtered and restores
     the exact original text on reset/collapse; `AircraftSaleCard.tsx` gained the same
     `hiddenByArea` bounds-filter subscription `PartnershipCard.tsx` already had. Purely
-    client-side, no schema/query change. **Remaining:** list↔map sync (map→list "↓ Show
-    in list" popup button + list→map "Show on map" card button) is the last open piece
-    of the whole Map Search backlog item.
+    client-side, no schema/query change.
+  - **List ↔ map sync ✅ SHIPPED via `aircraft-list-map-sync` (2026-07-08)**: ported
+    partnerships' slice-4 feature onto `/aircraft` (both directions, one cycle — the
+    generic `mapListSync.ts` event pattern needed no changes). Map → list: a pin's popup
+    gets a "↓ Show in list" button (`AircraftLeafletMap.tsx`) that smooth-scrolls to +
+    briefly highlights (2s sky ring) the matching card (`AircraftSaleCard.tsx`). List →
+    map: a card whose listing has a resolvable pin now shows "Show on map"
+    (`AircraftSaleList.tsx` threads `mapPinIds` computed in `aircraft/page.tsx`, same
+    pattern as `/partnerships`' `mapPinIds`); clicking it opens the map if collapsed,
+    scrolls it into view, and pans/zooms to the pin (spiderfying out of a cluster via
+    `zoomToShowLayer` if needed) then opens its popup (`AircraftMapView.tsx`). Verified
+    live via Playwright driving the real map on both viewports: clicked a cluster to
+    reveal individual markers, clicked a marker's "Show in list" and confirmed exactly 1
+    highlighted card; collapsed the map, clicked a card's "Show on map" and confirmed the
+    map auto-opened + panned to the correct pin's popup ("Cessna 182 / Gustavus, AK /
+    $56,850") on both desktop and mobile — zero console errors. **The whole "Map search
+    (Zillow/Redfin core)" backlog item is now fully closed on both listing types.**
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the
