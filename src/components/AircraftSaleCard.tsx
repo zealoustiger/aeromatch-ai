@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle, Heart } from 'lucide-react'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle, Heart, Gem } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, formatPriceK, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -28,6 +28,21 @@ function isNew(firstSeenAt: string | null): boolean {
   if (!firstSeenAt) return false
   return Date.now() - new Date(firstSeenAt).getTime() < 7 * DAY_MS
 }
+
+// Narrower than isNew — true only in the first 24h, so the badge can say
+// "New today" instead of the generic week-long "New" (same real timestamp,
+// just a tighter, more honest read for a listing that JUST appeared).
+function isBrandNew(firstSeenAt: string | null): boolean {
+  if (!firstSeenAt) return false
+  return Date.now() - new Date(firstSeenAt).getTime() < DAY_MS
+}
+
+/** Max family size (this listing + others) for the "Rare find" chip. Above
+ *  this the family isn't genuinely rare — no chip. Never shown at 0: a
+ *  resolved family the current listing belongs to can't have a real count of
+ *  0 (the listing itself would be in it), so 0 means the comp map failed to
+ *  load — fail soft to no chip rather than show a self-contradictory count. */
+const RARE_FIND_MAX = 3
 
 // Redfin-style days-on-market label from when we first saw the listing.
 // Returns null when we have no first_seen_at (so no empty/"null" chip renders).
@@ -249,12 +264,27 @@ function DamageHistoryChip({ damageHistory }: { damageHistory: boolean | null })
   )
 }
 
+// Honest scarcity chip — only renders on a real, resolved family count of
+// 1..RARE_FIND_MAX (never fabricated, never shown on an unresolved/failed count).
+function RareFindChip({ count }: { count: number }) {
+  return (
+    <span
+      className="flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200"
+      title={`Only ${count} of this make + model currently for sale on ClubHanger`}
+    >
+      <Gem className="h-3 w-3" />
+      Rare find — only {count} like this
+    </span>
+  )
+}
+
 export default function AircraftSaleCard({
   p,
   saved = false,
   comp = null,
   dealVerdict = null,
   saveCount = 0,
+  familyCount = null,
 }: {
   p: AircraftForSale
   saved?: boolean
@@ -263,6 +293,10 @@ export default function AircraftSaleCard({
   /** Real cross-user save count (see `saveCounts.ts`) — shows a "Saved by N
    *  pilots" chip only at/above `MIN_SAVES_TO_SHOW`; never fabricated. */
   saveCount?: number
+  /** Real count of active, priced listings (incl. this one) in this listing's
+   *  make+model family — powers the "Rare find" chip. `null` when the family
+   *  can't be resolved or the comp map failed to load (no chip either way). */
+  familyCount?: number | null
 }) {
   const label = aircraftTitle(p)
   // Real harvested source photo when we have one; else a per-make placeholder.
@@ -274,7 +308,9 @@ export default function AircraftSaleCard({
   const source = sourceLabel(p.source)
   const drop = priceDrop(p)
   const fresh = isNew(p.first_seen_at)
+  const brandNew = isBrandNew(p.first_seen_at)
   const listed = listedAgo(p.first_seen_at)
+  const isRareFind = familyCount != null && familyCount >= 1 && familyCount <= RARE_FIND_MAX
   const grade = gradeFromScore(p.quality_score)
   const gm = gradeMeta(grade)
   // Internal link to the make+model for-sale family page — only when a real page
@@ -362,9 +398,10 @@ export default function AircraftSaleCard({
                 {fresh && (
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
-                    New
+                    {brandNew ? 'New today' : 'New'}
                   </span>
                 )}
+                {isRareFind && <RareFindChip count={familyCount as number} />}
                 {saveCount >= MIN_SAVES_TO_SHOW && (
                   <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
                     <Heart className="h-3 w-3 fill-current" />
