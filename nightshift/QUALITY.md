@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-08T10:30:27Z — monetization-tally-admin — score 4/5
+## 2026-07-08T10:43:45Z — aircraft-rare-find-chip — score 4/5
+- Strengths: Correct and honest — reuses the already-computed `familyCompMap` (zero new query/schema), and the "0 = failed load, never render" invariant genuinely holds because the browse query and comp map share the exact same `status='active'` + `asking_price >= BUYER_PRICE_FLOOR` filters, so a rendered listing is always in its own family; `familyCount` is unfiltered by user filters so it reflects true market rarity not the filtered view; `RareFindChip` matches surrounding chip styling/accent conventions exactly and `isBrandNew`/`RARE_FIND_MAX` are well-documented with clear reasoning.
+- Weaknesses / risks: "Rare find — only 1 like this" reads slightly oddly when the count includes the listing itself (there are zero *others* like it); copy nuance only, tooltip clarifies, not material.
+- Follow-up: none
 - Strengths: Correct and tightly scoped — all 7 `path` keys match the live CTAs exactly, `getMonetizationTally()` faithfully mirrors the `bayAreaCoverage.ts` admin-client pattern, query `.in('source', paths)` aligns with `joinWaitlist`'s `source` upsert, share/max math is guarded against divide-by-zero, both per-row 0s and an overall empty-state render, and the honesty copy (opt-ins ≠ raw clicks, "at least this high") is genuinely well-judged.
 - Weaknesses / risks: `waitlist` upserts on `email`, so a pilot who opts into multiple paths has only their latest `source` retained — counts can misattribute/undercount across paths, a real caveat the "distinct people who left an email for that path" copy slightly overstates; inherited from schema, not introduced here.
 - Follow-up: none
