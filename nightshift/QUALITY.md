@@ -3,6 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T13:13:51Z — homepage-alert-band — score 4/5
+- Strengths: Exactly the spec's scope — one purely-additive `<section>` slotted between DealsRail and the explore cards, reuses `AlertSignup sourcePath="/"` (no context → correct general copy) with zero schema/action/dependency changes; Tailwind matches neighbouring sections verbatim (`text-2xl font-bold text-slate-900 sm:text-3xl`, `max-w-2xl`, responsive px), `text-left` override is deliberate for the card, and mobile is safe (form is `flex-col sm:flex-row`, sr-only label already in the component).
+- Weaknesses / risks: The wrapper adds its own `<h2>` + subcopy ("…we'll email you the moment it's listed") directly above `AlertSignup`, which renders its own `<h2>` ("Get new-listing alerts") + near-identical subcopy — two stacked h2s and duplicated messaging, slightly wordy and awkward heading semantics; not material.
+- Follow-up: none
 ## 2026-07-08T12:35:04Z — aircraft-list-map-sync — score 4/5
 - Strengths: Faithful, idiomatic port of both partnerships sync slices — every scope item met; the tricky cluster-focus path is preserved verbatim (poll for marker ref + `__parent` before `zoomToShowLayer`, focusNonce so a repeat click re-fires, spiderfy-then-openPopup), event listeners + highlight timers are all torn down, the Set stays server-side so only a boolean crosses the RSC boundary, and `onMap` is honestly gated to the one map-bearing call site.
 - Weaknesses / risks: The ~30-line focus-polling effect (markersRef/clusterRef/`__parent` poll) is now copy-pasted verbatim across AircraftLeafletMap and PartnershipsLeafletMap — a genuine drift risk if the leaflet-cluster timing hack ever needs a fix, though consistent with the codebase's per-page-component convention.
