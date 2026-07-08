@@ -54,6 +54,7 @@ import AircraftListingOwnerNudge from '@/components/AircraftListingOwnerNudge'
 import AircraftContactButton from '@/components/AircraftContactButton'
 import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
+import MonetizationIntent from '@/components/MonetizationIntent'
 
 const DAY_MS = 86_400_000
 
@@ -1062,6 +1063,16 @@ export default async function AircraftListingDetailPage({
                   : '/aircraft'
               }
               noun="aircraft"
+            />
+
+            {/* Monetization intent signal — an honest "coming soon" fake-door CTA
+                that measures real demand for a broker/dealer path before we build
+                one. Never claims the service exists; UI + waitlist capture only. */}
+            <MonetizationIntent
+              path="broker"
+              label="Work with a broker"
+              title="Coming soon — want early access?"
+              description="Get matched with a broker who can help you evaluate, negotiate, and close on this aircraft. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
             />
           </div>
         </div>

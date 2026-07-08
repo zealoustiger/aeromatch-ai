@@ -839,17 +839,22 @@ export async function updateAircraftListing(id: string, formData: FormData) {
   redirect(`/aircraft/listing/${id}?updated=1`)
 }
 
-export async function joinWaitlist(email: string, searchParams: string) {
+export async function joinWaitlist(email: string, searchParams: string, source: string = 'hero_search') {
   if (!email || !email.includes('@')) {
     return { error: 'Please enter a valid email address.' }
   }
 
-  const supabase = await createServerSupabaseClient()
+  // The live DB's `waitlist_anyone_insert` RLS policy (schema.sql) isn't applied
+  // against the shared Supabase project, so the anon-key client 401s on every
+  // insert (confirmed directly — see nightshift CHANGELOG). Same class of gap as
+  // `alerts_owner_select`; use the admin client so real signups work today
+  // instead of waiting on that migration.
+  const admin = createAdminClient()
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('waitlist')
     .upsert(
-      { email: email.toLowerCase().trim(), search_params: searchParams, source: 'hero_search' },
+      { email: email.toLowerCase().trim(), search_params: searchParams, source },
       { onConflict: 'email' }
     )
 
