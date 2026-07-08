@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T10:15:07Z — PASS — monetization-partnership-cta
+- Pages: /partnerships/[id]
+- What: **Partnership listing pages now have two more honest "coming soon" CTAs** — "Help me form a partnership" and "Manage my co-ownership" — in a "More ways we can help" card right after the "Interested?" contact box. Same fake-door pattern as the broker/financing/insurance/escrow/pre-buy CTAs already shipped on aircraft-for-sale listing pages this week: click one, a "Coming soon — want early access?" modal opens (the click itself is the real demand signal), and leaving an email is optional.
+- Goal: `[want]` tier — backlog's "Monetization — intent signals" item, slice 3 (the partnership-pages half; the seller-upgrade-in-post-flow half is intentionally deferred to keep this cycle scoped to one placement). Friction/signal added: 2 more measurable revenue-path signals with zero new backend — reuses `MonetizationIntent` + `joinWaitlist` verbatim, just new `path`/copy per button on a new page.
+- Spec: nightshift/specs/20260708T101507Z-monetization-partnership-cta.md
+- Verdict: PASS — `tsc --noEmit` + `rm -rf .next && npx next build` both clean. `qa-smoke` on `/partnerships/[id]` (real listing) + `/partnerships` at 1280 + 375: HTTP 200, zero app-console errors, zero horizontal overflow (4/4). Visual cycle — screenshots read: the new card renders cleanly below the contact card at both viewports, single-column buttons match the sidebar width, no overlap/overflow. Beyond the smoke gate, drove the real interaction with a one-off Playwright script: clicked "Help me form a partnership" → modal opened with formation-specific copy → submitted a throwaway `@example.com` email → success state ("You're on the list.") rendered → confirmed a real `waitlist` row landed with `source='partnership_formation'` (verified directly against the DB, then deleted); repeated for "Manage my co-ownership" → confirmed `source='co_ownership_management'` — both rows deleted after, zero console errors throughout. 1 file changed (`partnerships/[id]/page.tsx`), +29 lines, no schema/DB/dependency change.
+- Screenshots: nightshift/screenshots/monetization-partnership-cta/
+- Next: seller-upgrade CTAs ("Feature this listing" / "Get it vetted/verified") in the post-listing flow are still open from this same slice; slice 4 (admin tally of clicks per `path`) remains the last open piece of the whole Monetization backlog item.
+
 ## 2026-07-08T10:05:42Z — PASS — monetization-services-cta
 - Pages: /aircraft/listing/[id]
 - What: **The "Work with a broker" button on aircraft-for-sale listing pages now has 4 siblings** — Financing, Insurance quote, Escrow/title, and Pre-buy inspection — in a compact "More ways we can help" card right below it. Same honest pattern as the broker CTA: click any one, a "Coming soon — want early access?" modal opens (this is the real demand signal), and leaving an email is optional. Nothing claims to exist yet; nothing charges anyone.
