@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays, CalendarClock, AlertTriangle, TrendingDown } from 'lucide-react'
@@ -12,6 +13,7 @@ import { lookupEngineTbo } from '@/lib/engineLife'
 import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
 import type { PartnershipCompVerdict, PartnershipDealCheck } from '@/lib/partnershipComps'
+import { MAP_FOCUS_LISTING_EVENT, type MapFocusListingDetail } from '@/lib/mapListSync'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
@@ -219,8 +221,37 @@ export default function PartnershipCard({
   const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
   const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
 
+  // Map → list sync: a click on this listing's map pin popup ("↓ Show in list")
+  // scrolls it into view and briefly highlights it, so a visitor exploring the
+  // map can jump straight to the matching card without re-scanning the list.
+  const [mapFocused, setMapFocused] = useState(false)
+  const articleRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    function onFocus(e: Event) {
+      const detail = (e as CustomEvent<MapFocusListingDetail>).detail
+      if (detail?.id !== p.id) return
+      articleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setMapFocused(true)
+      clearTimeout(timer)
+      timer = setTimeout(() => setMapFocused(false), 2000)
+    }
+    window.addEventListener(MAP_FOCUS_LISTING_EVENT, onFocus)
+    return () => {
+      window.removeEventListener(MAP_FOCUS_LISTING_EVENT, onFocus)
+      clearTimeout(timer)
+    }
+  }, [p.id])
+
   return (
-    <article className="ch-card group overflow-hidden bg-white">
+    <article
+      ref={articleRef}
+      id={`partnership-card-${p.id}`}
+      className={cn(
+        'ch-card group overflow-hidden bg-white transition-shadow',
+        mapFocused && 'ring-2 ring-sky-400'
+      )}
+    >
       <div className="flex flex-col sm:flex-row">
 
         {/* Photo */}

@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import type { MapPin } from './PartnershipsMapView'
+import { focusListingFromMap } from '@/lib/mapListSync'
 
 // Leaflet's default marker icon references bundler-relative image paths that
 // don't resolve under Next's asset pipeline — point them at the same CDN
@@ -56,12 +57,21 @@ export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
                     Buy-in: ${p.buy_in_price.toLocaleString()}
                   </div>
                 )}
-                <Link
-                  href={`/partnerships/${p.id}`}
-                  className="mt-1 inline-block font-medium text-sky-600 hover:underline"
-                >
-                  View listing →
-                </Link>
+                <div className="mt-1 flex items-center gap-3">
+                  <Link
+                    href={`/partnerships/${p.id}`}
+                    className="font-medium text-sky-600 hover:underline"
+                  >
+                    View listing →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => focusListingFromMap(p.id)}
+                    className="font-medium text-slate-500 hover:text-slate-700 hover:underline"
+                  >
+                    ↓ Show in list
+                  </button>
+                </div>
               </div>
             </Popup>
           </Marker>
