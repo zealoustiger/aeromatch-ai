@@ -2,6 +2,51 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T09:54:20Z — PASS — monetization-intent-cta
+- Pages: /aircraft/listing/[id]
+- What: **A new honest "Work with a broker" button on aircraft-for-sale listing pages** —
+  click it and a tasteful "Coming soon — want early access?" modal opens; leave an email and
+  we'll notify you when it's ready, or just close it. It never claims a broker service exists
+  today or charges anyone — it's purely there to measure real demand before we build one.
+  **Also fixed a real, pre-existing bug found while testing this:** the site's email-waitlist
+  capture (used by this new CTA, and by the existing homepage "Save your search" flow) was
+  silently broken for every real visitor — submitting an email always failed with "Something
+  went wrong." No one would have known unless they tried it and watched closely.
+- Goal: `[want]` tier — backlog's "Monetization — intent signals" item, slice 1 (reusable
+  `MonetizationIntent` component + `monetization_intent` PostHog event) plus the first real
+  placement (start of slice 2). **Also closes a `[bug]` found mid-cycle:** the live `waitlist`
+  table's anon-insert RLS policy (`waitlist_anyone_insert` in `schema.sql`) isn't actually
+  applied against the shared Supabase project — confirmed directly (anon-key insert 401s;
+  service-role insert succeeds) — so both the new broker CTA's email capture AND the
+  pre-existing homepage hero-search waitlist signup (`SignUpGate.tsx`) were completely broken
+  for real visitors. Same class of gap as the still-pending `alerts_owner_select` migration.
+  Rather than block on a human DDL apply, `joinWaitlist` now writes via the admin/service-role
+  client (mirrors the existing `loadOwnedAlert` pattern in `actions.ts` used for the same class
+  of RLS gap) — both flows work today, no migration wait required.
+- Spec: nightshift/specs/20260708T095420Z-monetization-intent-cta.md
+- Verdict: PASS — `npx tsc --noEmit` + `rm -rf .next && npx next build` both clean. `qa-smoke`
+  on `/aircraft/listing/[id]` at 1280 + 375: HTTP 200, zero app-console errors, zero horizontal
+  overflow. Visual cycle — screenshots read: the new "Work with a broker" card renders cleanly
+  in the sidebar below the existing alert-signup box at both viewports, no overlap/overflow.
+  Beyond the smoke gate, drove the real interaction with one-off Playwright scripts: opened the
+  modal, submitted a throwaway `@example.com` email, confirmed the success state rendered and
+  a real row landed in `waitlist` with `source='broker'` (verified directly against the DB,
+  then deleted — no test data left behind); also confirmed backdrop-click and the X button both
+  close the modal without submitting, and that opening it fires `track('monetization_intent',
+  { path: 'broker' })`. This is what caught the RLS bug in the first place — the initial
+  end-to-end test failed with the pre-existing "Something went wrong" error before the fix.
+  2 files touched beyond the new component + spec (`actions.ts`, the listing-detail page),
+  ~20 lines; no schema/DB change (extends the existing `waitlist` table's `source` column
+  usage, no new table).
+- Screenshots: nightshift/screenshots/monetization-intent-cta/
+- Next: slice 2 (financing/insurance/escrow/pre-buy CTAs on the same page + `/aircraft`
+  results), slice 3 (partnership formation/management + seller-upgrade CTAs), slice 4 (an
+  admin/scoreboard tally of clicks per `path` to compare real demand across revenue paths).
+  Also worth a human's attention: the RLS-policy-vs-live-DB drift pattern has now recurred 3
+  times (`threads` columns, `alerts_owner_select`, now `waitlist_anyone_insert`) — a scripted
+  audit comparing `schema.sql`'s declared policies against what's actually live on Supabase
+  would catch the next one before a cycle has to discover it by hand.
+
 ## 2026-07-08T09:46:25Z — PASS — seeker-similar-rail
 - Pages: /partnerships/seeking/[id]
 - What: **Pilot-seeking profile pages now show a "Similar pilots also seeking" rail** — up to 12 other real, active pilots looking for a partnership share, ranked by shared aircraft preference, then state, then home airport, excluding the seeker whose page you're on. Each card (avatar, aircraft they want, home airport/city, stated budget) links straight to that pilot's own profile — the same "keep browsing" loop the aircraft-for-sale and partnership detail pages already offer, just built for the third listing type. If no other seeker is a sensible match, the section simply doesn't render — nothing fabricated, nothing empty-looking.

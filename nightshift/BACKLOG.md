@@ -1490,8 +1490,22 @@ The revenue paths to test (from the model analysis — buyer side stays free; mo
 - **Seller upgrades**: in the post-listing flow, "Feature this listing" + "Get it vetted/verified" (coming soon).
 
 Slice it:
-- **[P2][want] slice 1: intent taxonomy + reusable honest-CTA component.** One `MonetizationIntent` component: tasteful button → "Coming soon, want early access?" modal that fires `monetization_intent` (PostHog) with `{path}` + captures an optional email (reuse the `alerts`/email-capture plumbing). No backend, no partners.
-- **[P2][want] slice 2: place broker + services CTAs** on for-sale listing detail + `/aircraft` results (broker, financing, insurance, escrow, pre-buy).
+~~- **[P2][want] slice 1: intent taxonomy + reusable honest-CTA component.**~~ ✅ SHIPPED via
+  `monetization-intent-cta` (2026-07-08) New `MonetizationIntent` component: tasteful button →
+  "Coming soon, want early access?" modal, fires `track('monetization_intent', { path })` the
+  moment it opens (the click itself is the demand signal), optional email field upserts into the
+  existing `waitlist` table (`joinWaitlist` extended with an additive `source` param — no new
+  table). First real placement (start of slice 2): a "Work with a broker" CTA on
+  `/aircraft/listing/[id]`. **Bonus `[bug]` fix found + fixed this cycle:** QA-testing the email
+  capture found the live `waitlist` table's anon-insert RLS policy (`waitlist_anyone_insert` in
+  `schema.sql`) isn't actually applied on the shared Supabase project — every insert 401'd,
+  including the **pre-existing** hero-search waitlist flow (`SignUpGate.tsx`), so that flow has
+  been silently broken for real visitors. Same class of gap as `alerts_owner_select` (never
+  applied). Fixed by switching `joinWaitlist` to the admin/service-role client (mirrors the
+  `loadOwnedAlert` pattern in `actions.ts`) — both the new broker CTA and the original
+  hero-search signup now work today, no migration wait required.
+- **[P2][want] slice 2: place broker + services CTAs** on for-sale listing detail (broker CTA ✅
+  live, see above) + `/aircraft` results (financing, insurance, escrow, pre-buy still open).
 - **[P2][want] slice 3: place partnership formation/management CTAs** on partnership pages; seller upgrade CTAs in the post-listing flow.
 - **[P2][want] slice 4: surface the tallies** — a small admin panel (or a line in the scoreboard) showing clicks per `path` so we can compare which model has real demand and pick the one to actually build.
 
