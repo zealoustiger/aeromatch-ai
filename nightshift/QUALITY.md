@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T10:30:27Z — monetization-tally-admin — score 4/5
+- Strengths: Correct and tightly scoped — all 7 `path` keys match the live CTAs exactly, `getMonetizationTally()` faithfully mirrors the `bayAreaCoverage.ts` admin-client pattern, query `.in('source', paths)` aligns with `joinWaitlist`'s `source` upsert, share/max math is guarded against divide-by-zero, both per-row 0s and an overall empty-state render, and the honesty copy (opt-ins ≠ raw clicks, "at least this high") is genuinely well-judged.
+- Weaknesses / risks: `waitlist` upserts on `email`, so a pilot who opts into multiple paths has only their latest `source` retained — counts can misattribute/undercount across paths, a real caveat the "distinct people who left an email for that path" copy slightly overstates; inherited from schema, not introduced here.
+- Follow-up: none
+
 ## 2026-07-08T10:11:31Z — monetization-services-cta — score 4/5
 - Strengths: Textbook fake-door slice — one file, +40 lines, reuses the shipped `MonetizationIntent` component and `joinWaitlist` action verbatim with zero schema/backend change; every prop (path/label/title/description/className) matches the component signature, the four `path` values (financing/insurance/escrow/prebuy) are distinct so `track('monetization_intent',{path})` and the `joinWaitlist` `source` differ per button as the spec demanded, copy is consistently honest ("we're gauging interest before building this out") with no card claiming the service exists, and out-of-scope items (browse results, partnership page, admin tally) were correctly left untouched.
 - Weaknesses / risks: The 20-token Tailwind className string is duplicated verbatim across all four buttons rather than hoisted to a local const — minor, matches the codebase's inline-className idiom; also the passed `title` prop only feeds the modal's aria-label (the `<h2>` is hardcoded in the component), so the per-button titles are effectively cosmetic — harmless, mirrors the broker CTA's own usage.
