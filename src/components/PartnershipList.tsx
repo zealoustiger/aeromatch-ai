@@ -3,6 +3,7 @@ import { Partnership } from '@/lib/types'
 import { getPartnershipListings, type PartnershipFilters } from '@/lib/partnershipsQuery'
 import { getPartnershipCompVerdicts, type PartnershipCardVerdict } from '@/lib/partnershipComps'
 import PartnershipCard from './PartnershipCard'
+import PartnershipResultCount from './PartnershipResultCount'
 import AlertSignup from './AlertSignup'
 
 /**
@@ -93,8 +94,7 @@ function renderList(
 
   return (
     <div>
-      <p className="mb-4 text-sm text-slate-500">
-        {listings.length} {listings.length === 1 ? 'partnership' : 'partnerships'} found
+      <PartnershipResultCount total={listings.length}>
         {filters.airport && filters.radius ? (
           <span className="ml-1">
             within <strong>{filters.radius} miles</strong> of{' '}
@@ -106,7 +106,7 @@ function renderList(
         ) : airportList.length > 0 ? (
           <span className="ml-1">near <strong>{airportList.join(', ')}</strong></span>
         ) : null}
-      </p>
+      </PartnershipResultCount>
       <div className="space-y-4">
         {listings.map((p) => (
           <PartnershipCard
