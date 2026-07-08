@@ -1,5 +1,18 @@
 import type { Partnership, PartnershipSeeker } from '@/lib/types'
 
+// Duplicated from src/lib/airports.ts / nearbyPartnerships.ts rather than imported: this
+// module stays free of `@/`-alias value imports so its worked-example tests keep running
+// directly under `node --experimental-strip-types --test` without path-alias resolution.
+function haversineNm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3440.065 // Earth radius in nautical miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 /**
  * Honest compatibility check between a partnership listing and a pilot seeking a
  * partnership, using only columns both sides already store (no schema change).
@@ -38,4 +51,20 @@ export function isCompatibleMatch(seeker: PartnershipSeeker, partnership: Partne
   }
 
   return true
+}
+
+/**
+ * Distance criterion for the matching engine: is `partnershipCoord` within the
+ * seeker's stated `willingToTravelNm` of `seekerCoord`? Honesty-gated like every
+ * `isCompatibleMatch` criterion above — a missing radius or an unresolvable
+ * airport (either side) never disqualifies, it just means there's not enough
+ * data to judge distance.
+ */
+export function isWithinTravelRadius(
+  seekerCoord: { lat: number; lng: number } | undefined,
+  partnershipCoord: { lat: number; lng: number } | undefined,
+  willingToTravelNm: number | null
+): boolean {
+  if (willingToTravelNm == null || !seekerCoord || !partnershipCoord) return true
+  return haversineNm(seekerCoord.lat, seekerCoord.lng, partnershipCoord.lat, partnershipCoord.lng) <= willingToTravelNm
 }
