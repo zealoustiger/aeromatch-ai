@@ -2,6 +2,42 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T08:30:11Z — PASS — qa-playwright-1223-pin
+- Pages: (none — build/QA tooling only; no app route or UI changed)
+- What: Fixed the broken QA smoke gate that was FAILing **every** cycle. The gate
+  (`nightshift/bin/qa-smoke.mjs`) launches Playwright's Chromium; the `playwright`
+  package had drifted to 1.61.1, which demands Chromium build **1228**, but the VPS
+  browser cache `/ms-playwright` only holds build **1223** — so every cycle crashed at
+  `browserType.launch: Executable doesn't exist … chromium_headless_shell-1228` before
+  it could QA anything → non-zero exit → no merge → FAIL. Pinned `playwright` +
+  `@playwright/test` to **1.60.0** (bundles Chromium 1223, the build actually on disk).
+  The gate now launches and passes again.
+- Goal: `[bug]` tier (P0) — this is the root cause of the last ~50 unattended cycles
+  all FAILing (the 2026-07-08 06:01 & 07:00 drain summaries, 25 FAIL / 25 FAIL, $0 net
+  spend). Not a goal/pillar cycle; it un-blocks the whole loop so goal work can resume.
+- Spec: nightshift/specs/20260708T083011Z-qa-playwright-1223-pin.md
+- Verdict: PASS — `npx next build` + typecheck clean on the pinned deps; `qa-smoke`
+  now exits **0** on `/partnerships`, `/`, and `/aircraft` at 1280 + 375 (all HTTP 200,
+  zero app-console errors, zero horizontal overflow) — the exact gate that had been
+  crashing. Diff is only `package.json` + `package-lock.json` (verified: nothing else).
+  `node_modules` downgraded in place so future cycles on this VPS pick it up without a
+  reinstall. Non-visual (tooling) cycle → screenshots saved for audit but not human-read
+  per RUNBOOK. No schema change, no test DB rows (QA read-only).
+- Screenshots: nightshift/screenshots/qa-playwright-1223-pin/
+- Next: (1) **A `night/partnerships-map-list-sync` branch holds finished, un-QA'd WIP**
+  (map-pin popup "↓ Show in list" → scrolls/highlights the matching card — backlog "Map
+  search" slice 4). A prior cycle wrote it but died before QA (auth/infra); I committed
+  it to its branch and off staging's working tree (it had been silently contaminating
+  every fresh cycle's build). Now that the gate works, a cycle can `git checkout` it,
+  QA, and land it. (2) ⚠️ **INFRA for the human:** my pin is the in-repo workaround. The
+  durable cause is version drift between the `playwright` npm package and the root-owned,
+  read-only `/ms-playwright` browser cache (I'm the `night` user; I can't `playwright
+  install` there). Long-term: either (a) as root, `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+  npx playwright install chromium chromium-headless-shell` whenever playwright is bumped,
+  or (b) keep playwright pinned (this commit) and bump deliberately alongside a browser
+  reinstall. An all-FAIL drain with near-$0 spend is a strong "QA/harness broke" pager
+  signal (same class as the 2026-07-06→07 `.claude.json` auth outage noted below).
+
 ## 2026-07-08T07:00:52Z — DRAIN SUMMARY
 - Cycles this run: 25 (PASS 0 / FAIL 25 / ABORT 0)
 - Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
