@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isCompatibleMatch } from './matching.ts'
+import { isCompatibleMatch, isWithinTravelRadius } from './matching.ts'
 import type { Partnership, PartnershipSeeker } from './types.ts'
 
 function seeker(overrides: Partial<PartnershipSeeker> = {}): PartnershipSeeker {
@@ -150,6 +150,26 @@ test('seeker ratings undisclosed never disqualifies (honesty gate)', () => {
     ),
     true
   )
+})
+
+test('isWithinTravelRadius: nearby coords within the stated radius pass', () => {
+  const seekerCoord = { lat: 30, lng: -97 }
+  const partnershipCoord = { lat: 30.01, lng: -97.01 } // ~0.8nm away
+  assert.equal(isWithinTravelRadius(seekerCoord, partnershipCoord, 25), true)
+})
+
+test('isWithinTravelRadius: far-apart coords beyond the stated radius disqualify', () => {
+  const seekerCoord = { lat: 30, lng: -97 }
+  const partnershipCoord = { lat: 35, lng: -100 } // ~330nm away
+  assert.equal(isWithinTravelRadius(seekerCoord, partnershipCoord, 50), false)
+})
+
+test('isWithinTravelRadius: missing radius/coords never disqualify (honesty gate)', () => {
+  const seekerCoord = { lat: 30, lng: -97 }
+  const farCoord = { lat: 35, lng: -100 }
+  assert.equal(isWithinTravelRadius(seekerCoord, farCoord, null), true)
+  assert.equal(isWithinTravelRadius(undefined, farCoord, 50), true)
+  assert.equal(isWithinTravelRadius(seekerCoord, undefined, 50), true)
 })
 
 test('share-type preference must overlap when stated', () => {
