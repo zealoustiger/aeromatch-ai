@@ -1,3 +1,37 @@
+## 2026-07-08T07:00:52Z — Night Shift run: 25 cycles (PASS 0 / FAIL 25) — safety cap (25)
+- Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $12.4626 of $120 cap
+
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+- cycle produced no verdict (exit 1)
+
+### VPS headroom
+- ✅ no headroom issues — peak load 1.8/2 cores, min free mem 5.1 GB, container peaked at 4% of its memory cap (2 samples)
+
+
 ## 2026-07-08T06:01:02Z — Night Shift run: 25 cycles (PASS 0 / FAIL 25) — safety cap (25)
 - Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
 - Night spend so far: $12.4626 of $120 cap
