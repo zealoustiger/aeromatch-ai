@@ -1,3 +1,40 @@
+## 2026-07-08T13:05:35Z — Night Shift run: 25 cycles (PASS 21 / FAIL 4) — safety cap (25)
+- Models: cycles on sonnet; 4 escalated to opus; 8 quality-judged on opus
+- Night spend so far: $118.9981 of $120 cap
+
+- cycle produced no verdict (exit 0)
+- PASS — qa-playwright-1223-pin — pinned Playwright to 1.60.0 so the QA smoke gate launches Chromium again, unblocking every cycle
+- PASS — partnerships-map-list-sync — clicking a map pin's popup on /partnerships now scrolls to and briefly highlights the matching listing card in the list below
+- cycle produced no verdict (exit 124)
+- PASS — partnerships-map-search-area — added a Zillow/Redfin-style Search this area button to the `/partnerships` map that filters the list to listings in the current map viewpo
+- cycle produced no verdict (exit 124)
+- PASS — listing-save-social-proof — real, never-fabricated Saved by N pilots chip (≥2 distinct saves) now on aircraft/partnership/seeker cards
+- PASS — seeker-similar-rail — Added a Similar pilots also seeking comparables rail to pilot-seeking detail pages (`/partnerships/seeking/[id]`), closing the last gap of the back
+- PASS — monetization-intent-cta — shipped a Work with a broker fake-door CTA on aircraft listing pages, and fixed a real pre-existing bug (broken `waitlist` RLS policy that sile
+- PASS — monetization-services-cta — added Financing/Insurance/Escrow-title/Pre-buy-inspection honest fake-door CTAs below the existing broker CTA on aircraft-for-sale listing de
+- PASS — monetization-partnership-cta — added Help me form a partnership and Manage my co-ownership fake-door CTAs to the partnership listing detail page, verified end-to-end (re
+- PASS — monetization-tally-admin — new `/admin/monetization` panel shows real opt-in counts per revenue-path CTA (broker/financing/insurance/escrow/prebuy/partnership formation/
+- PASS — aircraft-rare-find-chip — Added honesty-gated New today (24h freshness) and Rare find — only N like this (scarce make/model, 1–3 active listings) chips to `/aircraft
+- PASS — saved-page-social-proof-parity — Wired the existing Saved by N pilots and Rare find honesty-gated chips into `/saved`, which previously showed comp/deal data but never t
+- cycle produced no verdict (exit 124)
+- PASS — profile-base-favorite-airports — signed-in pilots can now set their base airport + up to 3 favorite airports on /account (seeds the airport-page pilots based here slice)
+- PASS — match-count-travel-radius — the compatibility-matching N matches count on partnership/pilot-seeking pages now honors a seeker's stated travel radius (previously it ignor
+- PASS — airport-pilots-based-here — added a Pilots based at {ICAO} community section to `/airports/[icao]` (anonymous avatars of real signed-up pilots who set that airport as ba
+- PASS — aircraft-map-view — added a View on map clustered-pin map to `/aircraft`, unblocking the last piece of the `[P1][want]` Map Search item (partnerships side already fully 
+- PASS — aircraft-map-search-area — ported /partnerships' Search this area map filter onto /aircraft (floating button, honest Showing M of N in this map area count, hidden-by-are
+- PASS — partnerships-list-map-sync — recovered a stranded branch (finished Eng work never merged, falsely marked shipped in BACKLOG.md) implementing `/partnerships` cards' Show 
+- PASS — aircraft-list-map-sync — `/aircraft` list and map are now synced both directions (pin popup → Show in list highlights the card; card → Show on map pans/zooms to the 
+- PASS — device-saves-social-proof-parity — logged-out /saved now shows real save-count/comp-verdict/rare-find chips matching the signed-in view`
+- PASS — tools-token-sweep — applied the shared warm rounded-2xl design tokens (`.ch-card`/`.ch-panel`) to the `/tools` hub and both calculators (incl. the compact variant embedd
+- PASS — guides-token-sweep — the `/guides` hub and all 8 guide articles now match the site's warm rounded-2xl Etsy × Airbnb card look (`.ch-card`/`.ch-panel`), completing the 5
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 3.3 on 2 cores, sustained ~3 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container neared its memory cap: peak 2.9 GB of 3.2 GB (90%) — raise --memory in the env file before it OOM-kills a build
+- ⚠️ container CPU-throttled ~952s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+- 3 of 25 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-08T07:00:52Z — Night Shift run: 25 cycles (PASS 0 / FAIL 25) — safety cap (25)
 - Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
 - Night spend so far: $12.4626 of $120 cap
