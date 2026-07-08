@@ -107,7 +107,7 @@ export default function CoOwnershipGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -198,7 +198,7 @@ export default function CoOwnershipGuidePage() {
           Typical cost components include:
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Wallet className="h-5 w-5 text-sky-600" /> Fixed costs (shared)
             </h3>
@@ -211,7 +211,7 @@ export default function CoOwnershipGuidePage() {
               <li>State/registration fees</li>
             </ul>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Plane className="h-5 w-5 text-sky-600" /> Hourly costs (per flyer)
             </h3>
@@ -288,7 +288,7 @@ export default function CoOwnershipGuidePage() {
 
         <SectionHeading><span id="pros-cons" />Pros and cons of co-ownership</SectionHeading>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Users className="h-5 w-5 text-sky-600" /> Pros
             </h3>
@@ -300,7 +300,7 @@ export default function CoOwnershipGuidePage() {
               <li>Build equity in a real asset</li>
             </ul>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               Cons &amp; things to watch
             </h3>

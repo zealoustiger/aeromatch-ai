@@ -119,7 +119,7 @@ export default function PrePurchaseInspectionGuidePage() {
         </header>
 
         {/* Prominent disclaimer up top — the advice boundary */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Shield className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -137,7 +137,7 @@ export default function PrePurchaseInspectionGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -187,7 +187,7 @@ export default function PrePurchaseInspectionGuidePage() {
           worth covering on almost any used airplane:
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <ScrollText className="h-5 w-5 text-sky-600" /> Logbooks &amp; AD compliance
             </h3>
@@ -197,7 +197,7 @@ export default function PrePurchaseInspectionGuidePage() {
               Missing or vague records are themselves a finding.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Gauge className="h-5 w-5 text-sky-600" /> Engine
             </h3>
@@ -207,7 +207,7 @@ export default function PrePurchaseInspectionGuidePage() {
               value driver.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Layers className="h-5 w-5 text-sky-600" /> Airframe &amp; corrosion
             </h3>
@@ -217,7 +217,7 @@ export default function PrePurchaseInspectionGuidePage() {
               find after the fact.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Cpu className="h-5 w-5 text-sky-600" /> Avionics &amp; equipment
             </h3>
@@ -226,7 +226,7 @@ export default function PrePurchaseInspectionGuidePage() {
               required equipment (and any ADS-B / transponder items) is present and documented.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <FileText className="h-5 w-5 text-sky-600" /> Paperwork, title &amp; liens
             </h3>
@@ -236,7 +236,7 @@ export default function PrePurchaseInspectionGuidePage() {
               issue can sink an otherwise good deal.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Wrench className="h-5 w-5 text-sky-600" /> Damage history
             </h3>
@@ -253,7 +253,7 @@ export default function PrePurchaseInspectionGuidePage() {
           not the seller or the broker. Beyond that, you want the right qualifications and the right
           experience:
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <ClipboardCheck className="h-5 w-5 text-sky-600" /> What to look for
           </h3>
@@ -277,7 +277,7 @@ export default function PrePurchaseInspectionGuidePage() {
           high-performance, twin, or turbine aircraft cost more, and a deep panels-off or
           cylinders-pulled inspection costs more than a records-focused review.
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Wallet className="h-5 w-5 text-sky-600" /> Budget for the whole picture
           </h3>
@@ -302,7 +302,7 @@ export default function PrePurchaseInspectionGuidePage() {
           None of these automatically kills a deal, but each is a reason to slow down and dig deeper
           before you commit:
         </p>
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <AlertTriangle className="h-5 w-5 text-amber-600" /> Slow down if you see
           </h3>
@@ -333,7 +333,7 @@ export default function PrePurchaseInspectionGuidePage() {
         </div>
 
         {/* Related guides */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>

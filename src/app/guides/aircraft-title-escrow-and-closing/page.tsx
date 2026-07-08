@@ -121,7 +121,7 @@ export default function TitleEscrowClosingGuidePage() {
         </header>
 
         {/* Prominent disclaimer up top — the advice boundary */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Shield className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -137,7 +137,7 @@ export default function TitleEscrowClosingGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -187,7 +187,7 @@ export default function TitleEscrowClosingGuidePage() {
           with the FAA, so a title company or aviation attorney can pull the records and look for trouble.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Search className="h-5 w-5 text-sky-600" /> What a search looks for
             </h3>
@@ -196,7 +196,7 @@ export default function TitleEscrowClosingGuidePage() {
               from a prior sale, tax liens, or transfers that were never properly recorded.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Lock className="h-5 w-5 text-sky-600" /> Why it protects you
             </h3>
@@ -219,7 +219,7 @@ export default function TitleEscrowClosingGuidePage() {
           has to go first. Using an established aviation <strong>title &amp; escrow company</strong> is
           common practice precisely because it removes the &ldquo;who sends first?&rdquo; problem.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Landmark className="h-5 w-5 text-sky-600" /> What an escrow typically handles
           </h3>
@@ -244,7 +244,7 @@ export default function TitleEscrowClosingGuidePage() {
           doesn&apos;t simply carry over automatically.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <FileText className="h-5 w-5 text-sky-600" /> Bill of sale
             </h3>
@@ -253,7 +253,7 @@ export default function TitleEscrowClosingGuidePage() {
               submitted together with the registration application and any lien release.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Plane className="h-5 w-5 text-sky-600" /> Registration &amp; N-number
             </h3>
@@ -274,7 +274,7 @@ export default function TitleEscrowClosingGuidePage() {
           Every deal is a little different, but a typical escrow-based aircraft closing runs roughly in this
           order:
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <ListChecks className="h-5 w-5 text-sky-600" /> A typical sequence
           </h3>
@@ -299,7 +299,7 @@ export default function TitleEscrowClosingGuidePage() {
           aircraft is delivered and based, how it&apos;s used, and the rules in the relevant jurisdiction.
           There is no single answer, and the way a transaction is structured can affect what applies.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Receipt className="h-5 w-5 text-sky-600" /> The honest version
           </h3>
@@ -319,7 +319,7 @@ export default function TitleEscrowClosingGuidePage() {
           None of these automatically kills a deal, but each is a reason to slow down and get it handled
           before funds move:
         </p>
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <AlertTriangle className="h-5 w-5 text-amber-600" /> Slow down if you see
           </h3>
@@ -349,7 +349,7 @@ export default function TitleEscrowClosingGuidePage() {
         </div>
 
         {/* Related guides */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>

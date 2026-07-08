@@ -116,7 +116,7 @@ export default function FindAircraftPartnersGuidePage() {
         </header>
 
         {/* Prominent disclaimer up top — the advice boundary */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Shield className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -132,7 +132,7 @@ export default function FindAircraftPartnersGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -165,7 +165,7 @@ export default function FindAircraftPartnersGuidePage() {
           already gather. Cast a wide net across these:
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Building2 className="h-5 w-5 text-sky-600" /> Flying clubs
             </h3>
@@ -174,7 +174,7 @@ export default function FindAircraftPartnersGuidePage() {
               an equity partnership rather than club dues.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <MapPin className="h-5 w-5 text-sky-600" /> FBOs &amp; flight schools
             </h3>
@@ -183,7 +183,7 @@ export default function FindAircraftPartnersGuidePage() {
               forming, and renters tired of renting are often ready to own a share.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Users className="h-5 w-5 text-sky-600" /> EAA chapters &amp; type clubs
             </h3>
@@ -192,7 +192,7 @@ export default function FindAircraftPartnersGuidePage() {
               connect you with pilots who want the exact aircraft you do.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <FileText className="h-5 w-5 text-sky-600" /> Airport bulletin boards
             </h3>
@@ -216,7 +216,7 @@ export default function FindAircraftPartnersGuidePage() {
           partnership marketplaces let you browse pilots who are already looking to share a plane, filter
           by aircraft type and location, and see how real shares are structured before you reach out.
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-5">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Search className="h-5 w-5 text-sky-600" /> Browse partnerships on ClubHanger
           </h3>
@@ -241,7 +241,7 @@ export default function FindAircraftPartnersGuidePage() {
           asset — so vet a candidate the way you would someone you are going into business with, because
           you are. The things worth checking before you commit:
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <ClipboardCheck className="h-5 w-5 text-sky-600" /> What to look for
           </h3>
@@ -265,7 +265,7 @@ export default function FindAircraftPartnersGuidePage() {
           None of these guarantees a bad partnership, but each is a reason to slow down and ask more
           questions before money changes hands:
         </p>
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <AlertTriangle className="h-5 w-5 text-amber-600" /> Slow down if you see
           </h3>
@@ -297,7 +297,7 @@ export default function FindAircraftPartnersGuidePage() {
           feel more like a flying club, with more calendars to juggle and more people who must agree on
           maintenance and major decisions.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Users className="h-5 w-5 text-sky-600" /> A simple way to size the group
           </h3>
@@ -320,7 +320,7 @@ export default function FindAircraftPartnersGuidePage() {
           Finding a promising partner is the start, not the finish. Move from conversation to specifics —
           while everyone is still friendly — using a short, repeatable path:
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-5">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5">
           <ul className="space-y-2 text-sm text-slate-700">
             {[
               'Talk openly about flying goals, budget, how often each of you expects to fly, and maintenance standards.',
@@ -361,7 +361,7 @@ export default function FindAircraftPartnersGuidePage() {
         </div>
 
         {/* Related guides */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>
