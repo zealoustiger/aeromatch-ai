@@ -23,6 +23,7 @@ import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
 import { countMatchingPartnershipsForSeeker } from '@/lib/matchingQuery'
 import AlertSignup from '@/components/AlertSignup'
+import SimilarSeekers from '@/components/SimilarSeekers'
 
 const CATEGORY_LABELS: Record<string, string> = {
   sel: 'Single-Engine Land',
@@ -497,6 +498,13 @@ export default async function SeekerDetailPage({
       {isOwner && (
         <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
       )}
+
+      {/* "Similar pilots also seeking" — same-make/airport/state comparables rail,
+          closing the last gap of the "similar listing" pattern already shipped on
+          the aircraft and partnership detail pages. Self-suppresses at 0 matches. */}
+      <div className="mt-10">
+        <SimilarSeekers current={s} />
+      </div>
 
       <PartnershipLaunchBanner
         visitorState={visitorRegion}
