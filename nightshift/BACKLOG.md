@@ -968,6 +968,13 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
     the real map: a "10" bubble appears over Palo Alto and clicking it reveals all 10
     individual markers with working popups. **Remaining:** (3) "search this area" region
     filter, (4) sidebar list ↔ map sync; `/aircraft` half still blocked on geocoding.
+  - **Slice 4 — sidebar list ↔ map sync (map → list direction) ✅ SHIPPED via
+    `partnerships-map-list-sync` (2026-07-08)**: a pin's popup now has a "↓ Show in
+    list" button that smooth-scrolls to and briefly highlights (2s blue ring) the
+    matching card below. New `mapListSync.ts` window-CustomEvent helper (mirrors
+    `LOCAL_SAVES_EVENT`), no schema/query change. **Remaining:** (3) "search this
+    area" region filter; the reverse direction (list card → pan/open its map pin);
+    `/aircraft` half still blocked on geocoding.
 ~~- **[P2][want] Saved listings + instant new-match email alerts (Redfin favorites).**~~
   **Slice 1 ✅ SHIPPED via `savesearch-real-alerts` (2026-07-06)** — `saveSearch()` (used by
   `SaveSearchButton` on `/aircraft`, `/partnerships`, `/partnerships/seeking`, and the

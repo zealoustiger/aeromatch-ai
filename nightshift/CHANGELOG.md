@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T09:05:00Z — PASS — partnerships-map-list-sync
+- Pages: /partnerships
+- What: **Clicking a pin's popup on the `/partnerships` map now jumps you straight to that listing's card in the list below** — the map and the list finally talk to each other. Previously the map (opt-in "View on map" toggle) was a dead end for browsing: you'd spot an interesting pin but had to scroll and hunt for the matching card yourself. Now the pin's popup has a "↓ Show in list" button (next to the existing "View listing →" link) that smooth-scrolls the page to the matching card and briefly rings it in blue for ~2s so it's unmistakable which one you were looking at. Clicking a different pin re-triggers the scroll/highlight for the new card.
+- Goal: `[want]` tier — backlog's "Map search (Zillow/Redfin core)" item, slice 4 ("sidebar list ↔ map sync", map → list direction). This was finished Eng work left on `night/partnerships-map-list-sync` by a prior cycle that died before QA (the QA gate itself was broken at the time — see the `qa-playwright-1223-pin` fix directly above, which this cycle's merge picked up first). This cycle's job was QA + land, not new implementation: 3 files changed (`PartnershipCard.tsx`, `PartnershipsLeafletMap.tsx`, new `mapListSync.ts` — a plain `window` CustomEvent, mirroring the existing `LOCAL_SAVES_EVENT` pattern), 100 lines total, no schema/query change (purely client-side, reuses data already on the page).
+- Spec: nightshift/specs/20260708T080311Z-partnerships-map-list-sync.md
+- Verdict: PASS — `npx next build` clean (typecheck + build, no new errors/warnings). `qa-smoke` on `/partnerships` at 1280 + 375: HTTP 200, zero app-console errors, zero horizontal overflow on both. Since this is an interactive/visual feature the smoke gate alone doesn't exercise, also drove the actual interaction with a one-off Playwright script (opened the map, clicked a real marker, clicked "↓ Show in list", confirmed exactly one card got `ring-2 ring-sky-400`, confirmed it cleared after ~2.2s, zero console errors) — matches every acceptance criterion in the spec. Screenshots read and confirmed clean (list layout unaffected at both viewports; map is collapsed-by-default so the pin interaction itself isn't visible in a static "after" screenshot, but the smoke pages render correctly).
+- Screenshots: nightshift/screenshots/partnerships-map-list-sync/
+- Next: reverse direction (list card → pan/open its map pin) is the natural next slice per the spec's "Out of scope"; "search this area" region filter and the `/aircraft` half (still blocked on geocoding `aircraft_for_sale.location`) remain the other open sub-slices of the Map search backlog item.
+
 ## 2026-07-08T08:30:11Z — PASS — qa-playwright-1223-pin
 - Pages: (none — build/QA tooling only; no app route or UI changed)
 - What: Fixed the broken QA smoke gate that was FAILing **every** cycle. The gate
