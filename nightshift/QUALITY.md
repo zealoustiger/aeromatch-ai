@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T10:11:31Z — monetization-services-cta — score 4/5
+- Strengths: Textbook fake-door slice — one file, +40 lines, reuses the shipped `MonetizationIntent` component and `joinWaitlist` action verbatim with zero schema/backend change; every prop (path/label/title/description/className) matches the component signature, the four `path` values (financing/insurance/escrow/prebuy) are distinct so `track('monetization_intent',{path})` and the `joinWaitlist` `source` differ per button as the spec demanded, copy is consistently honest ("we're gauging interest before building this out") with no card claiming the service exists, and out-of-scope items (browse results, partnership page, admin tally) were correctly left untouched.
+- Weaknesses / risks: The 20-token Tailwind className string is duplicated verbatim across all four buttons rather than hoisted to a local const — minor, matches the codebase's inline-className idiom; also the passed `title` prop only feeds the modal's aria-label (the `<h2>` is hardcoded in the component), so the per-button titles are effectively cosmetic — harmless, mirrors the broker CTA's own usage.
+- Follow-up: none
+
 ## 2026-07-07T20:39:43Z — partnerships-map-clustering — score 4/5
 - Strengths: Surgically-scoped fix for a real just-shipped bug (10 KPAO listings stacking invisibly) — wraps the existing `<Marker>` map in `<MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>` with the two required markercluster CSS imports and nothing else; the entire per-marker popup (make/model, airport·city/state, buy-in, "View listing →") is byte-identical, just re-indented, so single pins behave exactly as before; dependency choice is well-justified (react-leaflet-cluster 4.1.3 peer-declares react-leaflet ^5 / react ^19 / leaflet ^1.9, matching installed versions) and the PartnershipsMapView/page were correctly left untouched.
 - Weaknesses / risks: Default `maxClusterRadius` (~80px) is unset, so at low zoom genuinely distinct-but-nearby Bay Area airports (KPAO/KSQL/KHWD) can merge into one bubble — arguably desired UX, but not deliberately tuned; screenshots confirm the KPAO-10 cluster and spiderfy work.
