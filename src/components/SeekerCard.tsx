@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { MapPin, Clock, Search, LineChart, Sparkles, CalendarDays } from 'lucide-react'
+import { MapPin, Clock, Search, LineChart, Sparkles, CalendarDays, Heart } from 'lucide-react'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatPriceK, travelLabel } from '@/lib/utils'
 import type { PartnershipCompVerdict } from '@/lib/partnershipComps'
+import { MIN_SAVES_TO_SHOW } from '@/lib/saveCounts'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SaveListingButton from '@/components/SaveListingButton'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
@@ -47,6 +48,7 @@ export default function SeekerCard({
   seeker,
   budgetVerdict,
   saved = false,
+  saveCount = 0,
 }: {
   seeker: PartnershipSeeker
   /** When set, shows a "~X% below/above market" chip comparing the seeker's stated
@@ -54,6 +56,9 @@ export default function SeekerCard({
    *  page's `SeekerBudgetCheck`; "near" is dropped upstream so it never renders here). */
   budgetVerdict?: PartnershipCompVerdict
   saved?: boolean
+  /** Real cross-user save count (see `saveCounts.ts`) — shows a "Saved by N
+   *  pilots" chip only at/above `MIN_SAVES_TO_SHOW`; never fabricated. */
+  saveCount?: number
 }) {
   const budgetParts: string[] = []
   if (seeker.max_buy_in) budgetParts.push(`${formatPrice(seeker.max_buy_in)} buy-in`)
@@ -93,6 +98,12 @@ export default function SeekerCard({
                 <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                   <Sparkles className="h-3 w-3" />
                   New
+                </span>
+              )}
+              {saveCount >= MIN_SAVES_TO_SHOW && (
+                <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                  <Heart className="h-3 w-3 fill-current" />
+                  Saved by {saveCount} pilots
                 </span>
               )}
               {seeker.total_hours && (

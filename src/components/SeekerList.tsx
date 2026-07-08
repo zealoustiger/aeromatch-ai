@@ -5,6 +5,7 @@ import { getLatestPartnerships } from '@/lib/partnerships'
 import { getSeekers, anySeekerFilter, type SeekerFilters } from '@/lib/seekersQuery'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getSeekerBudgetCheckVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
+import { getSaveCounts } from '@/lib/saveCounts'
 import SeekerCard from './SeekerCard'
 import PartnershipCard from './PartnershipCard'
 import AlertSignup from './AlertSignup'
@@ -44,6 +45,7 @@ export default async function SeekerList({
 
   let verdicts = new Map<string, PartnershipCompVerdict>()
   let savedIds = new Set<string>()
+  let saveCounts = new Map<string, number>()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (hasSupabase) {
@@ -68,6 +70,9 @@ export default async function SeekerList({
     } catch {
       // Non-fatal: just render without filled hearts.
     }
+
+    // Real cross-user save counts for the "Saved by N pilots" chip.
+    saveCounts = await getSaveCounts(seekers.map((s) => s.id), 'seeker')
   }
 
   return (
@@ -78,6 +83,7 @@ export default async function SeekerList({
           seeker={seeker}
           budgetVerdict={verdicts.get(seeker.id)}
           saved={savedIds.has(seeker.id)}
+          saveCount={saveCounts.get(seeker.id) ?? 0}
         />
       ))}
     </div>

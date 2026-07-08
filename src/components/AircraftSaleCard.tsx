@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle } from 'lucide-react'
+import { MapPin, ExternalLink, Gauge, Wrench, TrendingDown, Sparkles, Plane, LineChart, Clock, CalendarClock, AlertTriangle, Heart } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, formatPriceK, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -16,6 +16,7 @@ import type { AvionicsCap, IfrTier } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
 import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
+import { MIN_SAVES_TO_SHOW } from '@/lib/saveCounts'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
 import AircraftTrustBadge from './AircraftTrustBadge'
@@ -253,11 +254,15 @@ export default function AircraftSaleCard({
   saved = false,
   comp = null,
   dealVerdict = null,
+  saveCount = 0,
 }: {
   p: AircraftForSale
   saved?: boolean
   comp?: CompResult | null
   dealVerdict?: ClubHangerDealVerdict | null
+  /** Real cross-user save count (see `saveCounts.ts`) — shows a "Saved by N
+   *  pilots" chip only at/above `MIN_SAVES_TO_SHOW`; never fabricated. */
+  saveCount?: number
 }) {
   const label = aircraftTitle(p)
   // Real harvested source photo when we have one; else a per-make placeholder.
@@ -358,6 +363,12 @@ export default function AircraftSaleCard({
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
                     New
+                  </span>
+                )}
+                {saveCount >= MIN_SAVES_TO_SHOW && (
+                  <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                    <Heart className="h-3 w-3 fill-current" />
+                    Saved by {saveCount} pilots
                   </span>
                 )}
                 {p.registration && (

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays, CalendarClock, AlertTriangle, TrendingDown } from 'lucide-react'
+import { MapPin, Clock, Users, ExternalLink, LineChart, Sparkles, CalendarDays, CalendarClock, AlertTriangle, TrendingDown, Heart } from 'lucide-react'
 import { Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK, formatShareType, aircraftLabel, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -14,6 +14,7 @@ import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
 import type { PartnershipCompVerdict, PartnershipDealCheck } from '@/lib/partnershipComps'
 import { MAP_FOCUS_LISTING_EVENT, MAP_BOUNDS_FILTER_EVENT, type MapFocusListingDetail, type MapBoundsFilterDetail } from '@/lib/mapListSync'
+import { MIN_SAVES_TO_SHOW } from '@/lib/saveCounts'
 import SaveListingButton from './SaveListingButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
@@ -198,6 +199,7 @@ export default function PartnershipCard({
   saved = false,
   comp = null,
   dealVerdict = null,
+  saveCount = 0,
 }: {
   p: Partnership
   saved?: boolean
@@ -208,6 +210,9 @@ export default function PartnershipCard({
   comp?: PartnershipCompVerdict | null
   /** Year+hours-narrowed "Good deal"/"Priced high" verdict — wins over `comp` when set. */
   dealVerdict?: PartnershipDealCheck | null
+  /** Real cross-user save count (see `saveCounts.ts`) — shows a "Saved by N
+   *  pilots" chip only at/above `MIN_SAVES_TO_SHOW`; never fabricated. */
+  saveCount?: number
 }) {
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const shareColor = shareColors[p.share_type] ?? shareColors.other
@@ -302,6 +307,12 @@ export default function PartnershipCard({
                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     <Sparkles className="h-3 w-3" />
                     New
+                  </span>
+                )}
+                {saveCount >= MIN_SAVES_TO_SHOW && (
+                  <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                    <Heart className="h-3 w-3 fill-current" />
+                    Saved by {saveCount} pilots
                   </span>
                 )}
                 {p.registration && (
