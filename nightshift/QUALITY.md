@@ -3,6 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T12:35:04Z — aircraft-list-map-sync — score 4/5
+- Strengths: Faithful, idiomatic port of both partnerships sync slices — every scope item met; the tricky cluster-focus path is preserved verbatim (poll for marker ref + `__parent` before `zoomToShowLayer`, focusNonce so a repeat click re-fires, spiderfy-then-openPopup), event listeners + highlight timers are all torn down, the Set stays server-side so only a boolean crosses the RSC boundary, and `onMap` is honestly gated to the one map-bearing call site.
+- Weaknesses / risks: The ~30-line focus-polling effect (markersRef/clusterRef/`__parent` poll) is now copy-pasted verbatim across AircraftLeafletMap and PartnershipsLeafletMap — a genuine drift risk if the leaflet-cluster timing hack ever needs a fix, though consistent with the codebase's per-page-component convention.
+- Follow-up: none
 ## 2026-07-08T12:16:16Z — aircraft-map-search-area — score 4/5
 - Strengths: Faithful, idiomatic port of the partnerships slice — MapController + gated "Search this area" button, extracted AircraftResultCount, cn()-based card hiding, unmount cleanup and event-listener teardown all clean; pins reuse itemListListings (no extra query) and unfiltered copy is preserved verbatim.
 - Weaknesses / risks: Filtered line "Showing M of N in this map area" uses N = full DB total (page size 60) while the map only ever holds the current page's ≤60 pins, so with >60 results it reads e.g. "Showing 8 of 340" when 340 pins can never exist on that map — a semantic mismatch partnerships (radius-scoped) never surfaced.
