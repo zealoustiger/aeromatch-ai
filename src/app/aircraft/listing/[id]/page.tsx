@@ -1074,6 +1074,46 @@ export default async function AircraftListingDetailPage({
               title="Coming soon — want early access?"
               description="Get matched with a broker who can help you evaluate, negotiate, and close on this aircraft. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
             />
+
+            {/* More service intent signals — same honest fake-door pattern as
+                the broker CTA above, testing demand for the other adjacent
+                high-value services before building any of them. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-1 text-sm font-semibold text-slate-800">More ways we can help</h2>
+              <p className="mb-3 text-sm text-slate-500">
+                We're exploring these too — let us know what you'd use.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <MonetizationIntent
+                  path="financing"
+                  label="Financing"
+                  title="Coming soon — want early access?"
+                  description="Get pre-qualified for aircraft financing before you make an offer. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                />
+                <MonetizationIntent
+                  path="insurance"
+                  label="Insurance quote"
+                  title="Coming soon — want early access?"
+                  description="Get an insurance quote for this aircraft before you buy. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                />
+                <MonetizationIntent
+                  path="escrow"
+                  label="Escrow / title"
+                  title="Coming soon — want early access?"
+                  description="Close the deal with a licensed escrow and title service built for aircraft transactions. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                />
+                <MonetizationIntent
+                  path="prebuy"
+                  label="Pre-buy inspection"
+                  title="Coming soon — want early access?"
+                  description="Line up a pre-purchase inspection with a mechanic near this aircraft before you commit. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
