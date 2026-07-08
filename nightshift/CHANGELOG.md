@@ -391,20 +391,6 @@ Newest first. One entry per cycle. The loop appends here; you read it over coffe
   airports (or a de-duped Barnstormers/Hangar67/Trade-A-Plane Bay Area count) to turn this
   into a real coverage %.
 
-## ⚠️ INFRA NOTE (found this cycle, not a code bug) — unattended drain was silently
-broken 2026-07-06T~12:33Z through 2026-07-07T~19:14Z (~175 cycles, 7 drain runs of 25,
-all FAIL, $0.0000 spend each). Root cause: `/home/night/.claude.json` (the `claude` CLI's
-login/config) went missing on the VPS — every unattended `claude -p` cycle exited
-instantly with `"Not logged in · Please run /login"` before doing any work, so every
-FAIL was a harness auth failure, not a real QA/build failure (confirmed by reading
-`cycle-*.jsonl` result lines directly in `/home/night/state/runs/20260707T130005Z/` —
-all 25 identical). By the time this cycle ran, `.claude.json` existed again and cycles
-were completing normally, so whatever restored it (a fresh `/login`, likely done by a
-human) already happened — nothing for a future cycle to fix here, just flagging the
-~7-hour gap in case the human wants to add a health-check/alert for this failure mode
-(e.g. drain-summary already reports `$0.0000` spend on an all-FAIL run, which is itself
-a strong "auth broke" signal worth paging on).
-
 ## 2026-07-07T13:00:49Z — DRAIN SUMMARY
 - Cycles this run: 25 (PASS 0 / FAIL 25 / ABORT 0)
 - Models: cycles on sonnet; 12 escalated to opus; 0 quality-judged on opus
@@ -1013,4 +999,5 @@ a strong "auth broke" signal worth paging on).
 - Verdict: PASS — `rm -rf .next && npx next build` exit 0 (clean build, 376/376 static pages); `tsc --noEmit` exit 0 (0 type errors). QA against the PRODUCTION build (`npx next start` on port 3630) via `qa-smoke.mjs` at desktop 1280 + mobile 375 on `/partnerships/new`: 2/2 checks pass (HTTP 200, zero app-origin console errors, zero horizontal overflow). Non-visual cycle (form-fill wiring / AI-draft chaining, no CSS/layout change) — screenshots saved for the audit trail; smoke gate is sufficient. Functional confidence: the new `handleGenerate` tail and `handleLookup({ onlyEmpty })` option are a faithful mirror of the proven `PostAircraftForm` chained backfill (same selectors, same missing-core guard, same onlyEmpty semantics). Env note: Playwright browsers absent at /tmp/pw this session; used the bundled builds via `PLAYWRIGHT_BROWSERS_PATH=/app/node_modules/playwright-core/.local-browsers` (chromium + headless-shell 1228).
 - Screenshots: nightshift/screenshots/partnership-ai-faa-backfill/
 - Next: (1) Pillar 1 — "Collapse the post flow to one smart screen" is the remaining open [P1][goal] posting item (reduce required fields to the irreducible set — make/model · airport ICAO · price-or-share · contact — and push the rest to progressive disclosure); paste-and-prefill is now complete across all three forms including FAA-registry chaining. The "paste a source URL" variant remains a BACKLOG follow-up (needs server-side fetch + SSRF mitigation — too large/risky for one unattended cycle). (2) Pillar 3 — "Market position + days-on-market" is done across all surfaces; ready to mark ✅ in BACKLOG. (3) Pillar 2 — Google OAuth remains human-blocked on frozen /auth.
+
 

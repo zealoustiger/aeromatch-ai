@@ -2,6 +2,22 @@
 
 Newest first. Rotated out of CHANGELOG.md to keep the live file small.
 
+## ⚠️ INFRA NOTE (found this cycle, not a code bug) — unattended drain was silently
+broken 2026-07-06T~12:33Z through 2026-07-07T~19:14Z (~175 cycles, 7 drain runs of 25,
+all FAIL, $0.0000 spend each). Root cause: `/home/night/.claude.json` (the `claude` CLI's
+login/config) went missing on the VPS — every unattended `claude -p` cycle exited
+instantly with `"Not logged in · Please run /login"` before doing any work, so every
+FAIL was a harness auth failure, not a real QA/build failure (confirmed by reading
+`cycle-*.jsonl` result lines directly in `/home/night/state/runs/20260707T130005Z/` —
+all 25 identical). By the time this cycle ran, `.claude.json` existed again and cycles
+were completing normally, so whatever restored it (a fresh `/login`, likely done by a
+human) already happened — nothing for a future cycle to fix here, just flagging the
+~7-hour gap in case the human wants to add a health-check/alert for this failure mode
+(e.g. drain-summary already reports `$0.0000` spend on an all-FAIL run, which is itself
+a strong "auth broke" signal worth paging on).
+
+Newest first. Rotated out of CHANGELOG.md to keep the live file small.
+
 ## 2026-06-29T13:24:52Z — DRAIN SUMMARY
 - Cycles this run: 2 (PASS 2 / FAIL 0 / ABORT 0)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
@@ -4541,6 +4557,7 @@ Newest first. Rotated out of CHANGELOG.md to keep the live file small.
 - Staging: pushed to origin/staging — Vercel auto-deploys clubhanger-staging.vercel.app/aircraft
 - Notes: Found uncommitted human WIP in the working tree (scraper adapters hangar67.mjs/aircraftforsale.mjs, ingest-core.mjs, AircraftSaleCard.tsx). Left it untouched — committed only my 6 files by explicit path. This is also why I skipped the other P1 (missing photos): it overlaps that in-flight scraper work.
 - Next: Slice 2 of the filter overhaul — add the secondary Controller-style dimensions with progressive disclosure (avionics, total time / tach-Hobbs, engine time / SMOH), keeping the panel clean at 375px. Also worth a "make exact match" pass: Make currently uses ilike (substring) while Model uses eq; fine today, revisit if make names collide.
+
 
 
 
