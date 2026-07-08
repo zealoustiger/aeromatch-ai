@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T13:05:35Z — DRAIN SUMMARY
+- Cycles this run: 25 (PASS 21 / FAIL 4 / ABORT 0)
+- Models: cycles on sonnet; 4 escalated to opus; 8 quality-judged on opus
+- Night spend so far: $118.9981 of $120 cap
+- Stopped because: safety cap (25)
+- Run: 20260708T080001Z
+
 ## 2026-07-08T12:59:16Z — PASS — guides-token-sweep
 - Pages: /guides, /guides/aircraft-co-ownership, /guides/aircraft-partnership-agreement, /guides/aircraft-pre-purchase-inspection, /guides/aircraft-title-escrow-and-closing, /guides/cost-of-aircraft-co-ownership, /guides/flying-club-vs-co-ownership, /guides/how-to-find-aircraft-partners, /guides/leaseback-vs-co-ownership
 - What: **The Guides hub and all 8 guide articles now match the warm, rounded "Etsy × Airbnb" card look used everywhere else on the site** (`/aircraft`, `/partnerships`, `/tools`, airport pages) — previously they used the older, colder rounded-corner/border style left over from before that visual language existed.
