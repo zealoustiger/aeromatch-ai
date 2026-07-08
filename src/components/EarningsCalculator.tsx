@@ -86,7 +86,7 @@ export default function EarningsCalculator({
 
   if (variant === 'compact') {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-emerald-700">
           <TrendingUp className="h-4 w-4" /> What could this offset?
         </h2>
@@ -117,7 +117,7 @@ export default function EarningsCalculator({
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Inputs */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="ch-panel p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Your aircraft & offer</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <NumberField label="Total monthly fixed" value={monthlyFixedTotal} onChange={setMonthlyFixedTotal} prefix="$" suffix="/mo" step={10} />
@@ -131,7 +131,7 @@ export default function EarningsCalculator({
       </div>
 
       {/* Results */}
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-6 shadow-sm">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-emerald-700">Your offset</h2>
         <div className="space-y-3">
           <Result label="Monthly offset / earnings" value={money(result.monthlyOffset)} big />

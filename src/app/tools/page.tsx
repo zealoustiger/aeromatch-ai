@@ -91,7 +91,7 @@ export default function ToolsHubPage() {
             <Link
               key={t.href}
               href={t.href}
-              className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-sky-300 hover:bg-sky-50"
+              className="ch-card group flex items-start gap-4 border border-[var(--ch-border)] bg-white p-5 transition hover:border-sky-300 hover:bg-sky-50"
             >
               <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
                 <Icon className="h-6 w-6" />
