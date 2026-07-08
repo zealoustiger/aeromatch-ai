@@ -104,7 +104,7 @@ export default function CostGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -171,7 +171,7 @@ export default function CostGuidePage() {
           are the costs co-ownership is best at reducing, because they are shared across the whole
           group. The usual line items:
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Wallet className="h-5 w-5 text-sky-600" /> Fixed / recurring costs (shared by the group)
           </h3>
@@ -197,7 +197,7 @@ export default function CostGuidePage() {
           insight is that fuel is only part of it: a well-run partnership also collects reserves by the
           hour so the expensive, inevitable overhauls are funded before they come due.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Plane className="h-5 w-5 text-sky-600" /> Variable / hourly costs (paid by whoever flies)
           </h3>
@@ -253,7 +253,7 @@ export default function CostGuidePage() {
           equipment, hangar availability, and insurance. Use them to see how the pieces fit, then run
           your own numbers.
         </p>
-        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+        <div className="mt-5 overflow-x-auto ch-panel">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
               <tr className="bg-slate-50 text-left text-slate-500">
@@ -352,7 +352,7 @@ export default function CostGuidePage() {
         </div>
 
         {/* Related guide */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>

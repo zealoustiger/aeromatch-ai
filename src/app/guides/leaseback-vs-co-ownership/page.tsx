@@ -116,7 +116,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
         </header>
 
         {/* Prominent disclaimer up top — this is the advice boundary */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Scale className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -132,7 +132,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -168,7 +168,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
           attack it from opposite ends:
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <TrendingUp className="h-5 w-5 text-sky-600" /> Leaseback
             </h3>
@@ -180,7 +180,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
               utilization.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Users className="h-5 w-5 text-sky-600" /> Co-ownership
             </h3>
@@ -198,7 +198,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
           The clearest way to see the trade-offs is to put the two models next to each other. This is a
           high-level summary of how they typically differ — not a guarantee for any specific deal:
         </p>
-        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+        <div className="mt-5 overflow-x-auto ch-panel">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="bg-slate-50 text-left text-slate-500">
@@ -295,7 +295,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
           <strong>partners control the schedule themselves</strong> through a shared calendar and a few
           fairness rules, with no outside operator to coordinate with.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <CalendarClock className="h-5 w-5 text-sky-600" /> The control trade-off
           </h3>
@@ -315,7 +315,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
           accumulates hours more slowly and wear is shared among people who all have a stake in caring
           for it.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Wrench className="h-5 w-5 text-sky-600" /> Why hours matter to the math
           </h3>
@@ -347,7 +347,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
             specific arrangement you are considering.
           </li>
         </ul>
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Shield className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -360,7 +360,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
 
         <SectionHeading><span id="who" />Who each model is for</SectionHeading>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <TrendingUp className="h-5 w-5 text-sky-600" /> A leaseback can fit if you
             </h3>
@@ -371,7 +371,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
               <li>Have an operator nearby that needs the type you own</li>
             </ul>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Users className="h-5 w-5 text-sky-600" /> Co-ownership can fit if you
             </h3>
@@ -389,7 +389,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
           Start with what you actually want from owning a plane, then let the trade-offs sort
           themselves out. A short way to think it through:
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-5">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5">
           <ul className="space-y-2 text-sm text-slate-700">
             {[
               'Is your priority income/cost-offset (leans leaseback) or shared cost with control (leans co-ownership)?',
@@ -425,7 +425,7 @@ export default function LeasebackVsCoOwnershipGuidePage() {
         </div>
 
         {/* Related guides */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>

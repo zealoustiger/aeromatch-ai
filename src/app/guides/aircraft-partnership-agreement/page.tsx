@@ -116,7 +116,7 @@ export default function PartnershipAgreementGuidePage() {
         </header>
 
         {/* Prominent disclaimer up top — this is the legal-advice boundary */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Scale className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -131,7 +131,7 @@ export default function PartnershipAgreementGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -194,7 +194,7 @@ export default function PartnershipAgreementGuidePage() {
           agreement should set the ground rules even if the booking itself lives in a calendar or app.
           The goal is that no one can monopolize the airplane on the days everyone wants it.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <CalendarClock className="h-5 w-5 text-sky-600" /> Worth deciding up front
           </h3>
@@ -216,7 +216,7 @@ export default function PartnershipAgreementGuidePage() {
           rate, how it is tracked (Hobbs or tach), and when partners are billed.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Wallet className="h-5 w-5 text-sky-600" /> Fixed (shared by share)
             </h3>
@@ -227,7 +227,7 @@ export default function PartnershipAgreementGuidePage() {
               <li>Databases &amp; subscriptions</li>
             </ul>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Plane className="h-5 w-5 text-sky-600" /> Variable (billed per hour)
             </h3>
@@ -259,7 +259,7 @@ export default function PartnershipAgreementGuidePage() {
           overhaul, the annual&apos;s surprises) are already paid for when they arrive instead of
           triggering a sudden assessment.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Wrench className="h-5 w-5 text-sky-600" /> Decisions to write down
           </h3>
@@ -278,7 +278,7 @@ export default function PartnershipAgreementGuidePage() {
           ratings, hours, and recency, and how the aircraft is owned (direct vs. an entity) can affect the
           policy, so this is worth confirming with your insurance broker as you set the partnership up.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <Shield className="h-5 w-5 text-sky-600" /> Spell out in the agreement
           </h3>
@@ -306,7 +306,7 @@ export default function PartnershipAgreementGuidePage() {
           happens when a partner wants out (or can no longer participate), so an exit is an orderly,
           pre-agreed process rather than a crisis.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <DoorOpen className="h-5 w-5 text-sky-600" /> The exit terms to cover
           </h3>
@@ -337,7 +337,7 @@ export default function PartnershipAgreementGuidePage() {
           A quick scan of the topics a solid agreement covers — use it as a starting point for the
           conversation with your partners and, ultimately, with your attorney:
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-5">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5">
           <ul className="space-y-2 text-sm text-slate-700">
             {[
               'Ownership shares, the buy-in for each, and how the aircraft is titled',
@@ -371,7 +371,7 @@ export default function PartnershipAgreementGuidePage() {
         </div>
 
         {/* Related guides */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>

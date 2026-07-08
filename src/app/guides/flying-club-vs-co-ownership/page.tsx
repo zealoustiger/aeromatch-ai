@@ -116,7 +116,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
         </header>
 
         {/* Prominent disclaimer up top — this is the advice boundary */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
             <Scale className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <span>
@@ -132,7 +132,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
         {/* Quick links / table of contents */}
         <nav
           aria-label="In this guide"
-          className="mt-8 rounded-xl border border-sky-100 bg-sky-50 p-5 text-sm"
+          className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm"
         >
           <p className="font-semibold text-slate-900">In this guide</p>
           <ul className="mt-3 grid gap-x-6 gap-y-2 text-sky-700 sm:grid-cols-2">
@@ -167,7 +167,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
           your own — but they answer it from opposite ends:
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Building2 className="h-5 w-5 text-sky-600" /> Flying club
             </h3>
@@ -178,7 +178,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
               handles operations and maintenance.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Users className="h-5 w-5 text-sky-600" /> Co-ownership
             </h3>
@@ -197,7 +197,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
           high-level summary of how they typically differ — not a rule for any specific club or
           partnership:
         </p>
-        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+        <div className="mt-5 overflow-x-auto ch-panel">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="bg-slate-50 text-left text-slate-500">
@@ -293,7 +293,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
           clear mission and want a known, well-cared-for airplane, but means no easy swap to a different
           type and a real squeeze when that single plane is in the shop.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <KeyRound className="h-5 w-5 text-sky-600" /> Variety vs. a known airplane
           </h3>
@@ -314,7 +314,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
           scheduling and fairness rules in the partnership agreement, and you collectively decide how the
           aircraft is equipped and maintained.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <CalendarClock className="h-5 w-5 text-sky-600" /> The access vs. say trade-off
           </h3>
@@ -342,7 +342,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
           good agreement spells out how a partner buys out, how a share is valued, and how a replacement
           is approved.
         </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 ch-panel p-4">
           <h3 className="flex items-center gap-2 font-semibold text-slate-900">
             <DoorOpen className="h-5 w-5 text-sky-600" /> Flexibility vs. commitment
           </h3>
@@ -355,7 +355,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
 
         <SectionHeading><span id="who" />Who each model is for</SectionHeading>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Building2 className="h-5 w-5 text-sky-600" /> A flying club can fit if you
             </h3>
@@ -366,7 +366,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
               <li>Want the operations and maintenance handled for you</li>
             </ul>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="ch-panel p-4">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
               <Users className="h-5 w-5 text-sky-600" /> Co-ownership can fit if you
             </h3>
@@ -384,7 +384,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
           Start with how and how much you actually fly, then let the trade-offs sort themselves out. A
           short way to think it through:
         </p>
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-5">
+        <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5">
           <ul className="space-y-2 text-sm text-slate-700">
             {[
               'How many hours a year will you really fly? Few hours leans club; regular flying leans co-ownership.',
@@ -421,7 +421,7 @@ export default function FlyingClubVsCoOwnershipGuidePage() {
         </div>
 
         {/* Related guides */}
-        <div className="mt-12 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mt-12 ch-panel p-5">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <BookOpen className="h-5 w-5 text-sky-600" /> Keep reading
           </h2>
