@@ -1001,9 +1001,14 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   slice was the one missing link. **Not done, intentionally:** no backfill of
   `saved_searches` rows created before this cycle — they won't have a matching alert until
   re-saved (flagged in CHANGELOG, not silently mutated on a real user's data this cycle).
-- **[P2][want] "Similar planes" comparables on every listing.** Same make/model/region;
-  keeps users browsing (the Zillow "more homes like this" loop). Slice: (1) similar-by-
-  make/model on the detail page; (2) "also near {airport}" variant.
+~~- **[P2][want] "Similar planes" comparables on every listing.**~~ ✅ SHIPPED — same
+  make/model/region "similar" rails were already live on aircraft-for-sale
+  (`SimilarAircraft`) and partnership (`SimilarListings`) detail pages from earlier
+  cycles; **slice done this cycle** via `seeker-similar-rail` (2026-07-08): the third
+  listing type, `/partnerships/seeking/[id]`, now has a matching "Similar pilots also
+  seeking" rail (`SimilarSeekers`/`SeekerRailCard`) ranked by same preferred make →
+  same state → same home airport, excluding the current seeker, self-suppressing at 0
+  matches. All three listing types now have this comparables pattern.
 
 #### Batch from chat — 2026-06-24 (posting/messaging/filter friction)
 
