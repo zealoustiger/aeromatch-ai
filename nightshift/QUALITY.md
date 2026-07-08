@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-08T11:24:11Z — profile-base-favorite-airports — score 4/5
+- Strengths: Faithful to spec — validates every ICAO against the real airports table (mirrors createPartnership), dedupes/caps favorites at 3, drops a favorite matching the base, and has graceful column-not-migrated fallbacks on BOTH the write (retry without favorite_airports) and read paths; upsert onConflict:'user_id' matches saveAvatarConfig exactly, reuses AirportFormInput (which submits the resolved ICAO so exact-match validation is correct), and the client form covers idle/saving/saved/error states with a role="alert" and proper htmlFor label.
+- Weaknesses / risks: The read-side fallback keys off `!profile` rather than an error, so it (a) always fires a second redundant query for brand-new users who simply have no profiles row, and (b) would silently mask a genuine non-column select error by re-querying — minor robustness smell, no user impact.
+- Follow-up: none
+
 ## 2026-07-08T10:54:11Z — saved-page-social-proof-parity — score 4/5
 - Strengths: Correct pure data-wiring; familyCount recorded independent of comp/deal (fixes the rare-family exclusion), active-only aircraft filter avoids off-by-one, `/saved` is the sole caller so the broadened verdicts map carries no regression, clean conventions, zero component churn.
 - Weaknesses / risks: Spec called for save-counts "in parallel with the existing comp-verdict fetches" but the Promise.all sits after three sequential comp-verdict awaits — a 4th serial DB barrier, minor added latency (only the 3 save-count calls parallelize among themselves).
