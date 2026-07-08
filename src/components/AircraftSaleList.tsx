@@ -10,6 +10,7 @@ import { classifyAvionics } from '@/lib/avionicsClassify'
 import { evaluateAircraftTrust } from '@/lib/aircraftTrust'
 import { getSaveCounts } from '@/lib/saveCounts'
 import AircraftSaleCard from './AircraftSaleCard'
+import AircraftResultCount from './AircraftResultCount'
 import AlertSignup from './AlertSignup'
 
 interface Filters {
@@ -961,7 +962,7 @@ function renderList(
 
   return (
     <div>
-      <p className="mb-4 text-sm text-slate-500">
+      <AircraftResultCount total={total}>
         {exact ? (
           <>
             Showing <span className="font-medium text-slate-700">{rangeStart.toLocaleString()}</span>–
@@ -973,7 +974,7 @@ function renderList(
             {total.toLocaleString()} aircraft for sale{approx ? '+' : ''} found
           </>
         )}
-      </p>
+      </AircraftResultCount>
       <div className="space-y-4">
         {listings.map((p) => {
           const key = familyKey(p)
