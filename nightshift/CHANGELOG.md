@@ -2,6 +2,24 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-08T13:12:45Z — PASS — homepage-alert-band
+- Pages: /
+- What: The homepage now has a "Not ready to browse yet?" alert-signup band — a one-field
+  email capture right below the "Priced below market" deals rail and above "Three ways to
+  fly more for less" — for visitors who land on `/` but aren't ready to search yet.
+- Goal: `[goal]` tier (alert experience, P2 slice) — the homepage was the last major page
+  on the site with zero alert entry point. Reuses the existing `AlertSignup` component
+  (`sourcePath="/"`, general no-context copy) — no new component, no schema/action change.
+  Submitting inserts into the existing `alerts` table via `subscribeToAlerts` and fires the
+  existing `alert_subscribed` PostHog event with `source_path: "/"`.
+- Spec: nightshift/specs/20260708T131004Z-homepage-alert-band.md
+- Verdict: PASS. `npx next build` clean; qa-smoke exit 0 on `/` at desktop 1280 + mobile 375
+  (HTTP 200, zero console errors, zero horizontal overflow); screenshots confirm the new
+  band renders correctly on both viewports with no layout regression to any other section.
+- Screenshots: nightshift/screenshots/homepage-alert-band/
+- Next: `[P2][goal]` "Better unsubscribe UX" and "Confirmation-email + confirm-landing
+  polish" are the remaining items in the 🔔 alert-experience backlog section.
+
 ## 2026-07-08T13:05:35Z — DRAIN SUMMARY
 - Cycles this run: 25 (PASS 21 / FAIL 4 / ABORT 0)
 - Models: cycles on sonnet; 4 escalated to opus; 8 quality-judged on opus

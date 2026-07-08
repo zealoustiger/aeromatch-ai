@@ -162,8 +162,10 @@ must emit the `alert_subscribed` PostHog event.
 ~~- **[P1][goal] Alert CTA on make/model & state pages.**~~ ✅ SHIPPED via `aircraft-listing-alert-cta` (2026-07-06) `/aircraft/[make]/[model]` and
   `/aircraft/for-sale/[state]` — inline `AlertSignup` with the page's context (many already
   have it; audit + fill gaps), each emitting `alert_subscribed`.
-- **[P2][goal] Homepage alert band.** A tasteful "Get alerts" capture on `/` for visitors
-  who aren't ready to browse.
+~~- **[P2][goal] Homepage alert band.**~~ ✅ SHIPPED via `homepage-alert-band` (2026-07-08)
+  A "Not ready to browse yet?" band on `/` (below the deals rail, above "Three ways to fly
+  more for less") using the existing `AlertSignup` component (`sourcePath="/"`, general
+  copy) — no new component, no schema/action change.
 - **[P2][goal] Better unsubscribe UX.** The one-click unsubscribe page offers "fewer / pause"
   instead of only "off" — recover subscribers instead of losing them.
 - **[P2][goal] Confirmation-email + confirm-landing polish.** Make the double-opt-in email
