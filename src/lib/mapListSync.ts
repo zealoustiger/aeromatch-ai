@@ -35,3 +35,18 @@ export function filterListByBounds(ids: string[] | null) {
     new CustomEvent<MapBoundsFilterDetail>(MAP_BOUNDS_FILTER_EVENT, { detail: { ids } })
   )
 }
+
+/** Fired on the window when a list card's "Show on map" asks to open/pan the
+ *  map to its pin (the reverse — list → map — direction of the sync above). */
+export const LIST_FOCUS_PIN_EVENT = 'ch:list-focus-pin'
+
+export interface ListFocusPinDetail {
+  id: string
+}
+
+export function focusPinFromList(id: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent<ListFocusPinDetail>(LIST_FOCUS_PIN_EVENT, { detail: { id } })
+  )
+}

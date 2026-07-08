@@ -166,6 +166,10 @@ export default async function PartnershipsPage({
       lng: coords.lng,
     }]
   })
+  // Threaded to PartnershipList so only cards with a resolvable map pin show
+  // "Show on map" (list → map sync) — same filters/query as the map itself, so
+  // ids line up 1:1 with what PartnershipList's own fetch renders.
+  const mapPinIds = new Set(mapPins.map((p) => p.id))
 
   // FAQPage JSON-LD — questions/answers match the visible ModelFaq accordion 1:1.
   const faqJsonLd = buildFaqPageJsonLd(PARTNERSHIPS_FAQS, {
@@ -268,7 +272,7 @@ export default async function PartnershipsPage({
           <PartnershipActiveFilterChips params={params} facets={partnershipFacets} />
           <PartnershipsMapView pins={mapPins} />
           <Suspense fallback={<PartnershipListSkeleton />}>
-            <PartnershipList filters={params} alertContext={alertContext} alertSourcePath={alertSourcePath} />
+            <PartnershipList filters={params} alertContext={alertContext} alertSourcePath={alertSourcePath} mapPinIds={mapPinIds} />
           </Suspense>
 
           {/* Cross-sell to the other marketplace type (planes for sale).

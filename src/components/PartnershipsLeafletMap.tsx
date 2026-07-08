@@ -1,10 +1,10 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
@@ -46,7 +46,18 @@ const markerIcon = new L.Icon({
   shadowSize: [41, 41],
 })
 
-export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
+export default function PartnershipsLeafletMap({
+  pins,
+  focusId,
+  focusNonce,
+}: {
+  pins: MapPin[]
+  /** Listing id to pan/zoom to + open the popup for (list → map sync). */
+  focusId?: string | null
+  /** Bumped by the parent on every focus request so the effect re-fires even
+   *  when the same pin is clicked twice in a row. */
+  focusNonce?: number
+}) {
   const center: [number, number] = [
     pins.reduce((sum, p) => sum + p.lat, 0) / pins.length,
     pins.reduce((sum, p) => sum + p.lng, 0) / pins.length,
@@ -68,6 +79,50 @@ export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
     filterListByBounds(ids)
     setMoved(false)
   }
+
+  // List → map sync: a "Show on map" click on a card looks up this marker and
+  // asks the cluster group to reveal it (spiderfying/zooming out of a cluster
+  // if needed) then opens its popup — the reverse of focusListingFromMap above.
+  const markersRef = useRef<Map<string, L.Marker>>(new Map())
+  // react-leaflet-cluster's types reference `L.MarkerClusterGroup`, a type
+  // leaflet.markercluster doesn't actually ship (no @types package for it) —
+  // fall back to the one method this component calls on it.
+  const clusterRef = useRef<{ zoomToShowLayer: (layer: L.Marker, cb?: () => void) => void } | null>(null)
+
+  useEffect(() => {
+    if (!focusId) return
+    let cancelled = false
+    let attempts = 0
+
+    function tryFocus() {
+      if (cancelled) return
+      const marker = markersRef.current.get(focusId as string)
+      // Right after the map first mounts, the Marker refs (this component) and
+      // the cluster group's async chunk processing (`chunkedLoading` stages
+      // newly-added markers into its cluster tree over animation frames rather
+      // than synchronously) may both still be catching up — the marker may not
+      // be registered yet, or registered but not yet clustered (`__parent`
+      // unset, which `zoomToShowLayer` needs to compute where to zoom). Poll
+      // briefly instead of racing either on the very first open.
+      const clustered = marker && Boolean((marker as unknown as { __parent?: unknown }).__parent)
+      if ((!marker || (clusterRef.current && !clustered)) && attempts < 40) {
+        attempts += 1
+        setTimeout(tryFocus, 50)
+        return
+      }
+      if (!marker) return
+      if (clusterRef.current) {
+        clusterRef.current.zoomToShowLayer(marker, () => marker.openPopup())
+      } else {
+        marker.openPopup()
+      }
+    }
+
+    tryFocus()
+    return () => {
+      cancelled = true
+    }
+  }, [focusId, focusNonce])
 
   return (
     <div className="relative">
@@ -92,43 +147,51 @@ export default function PartnershipsLeafletMap({ pins }: { pins: MapPin[] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>
-        {pins.map((p) => (
-          <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon}>
-            <Popup>
-              <div className="text-sm">
-                <div className="font-semibold text-slate-900">
-                  {p.make} {p.model}
-                </div>
-                <div className="text-slate-600">
-                  {p.airport_name || p.home_airport}
-                  {p.city ? ` · ${p.city}, ${p.state}` : ''}
-                </div>
-                {p.buy_in_price != null && (
-                  <div className="mt-1 text-slate-700">
-                    Buy-in: ${p.buy_in_price.toLocaleString()}
+        <MarkerClusterGroup ref={clusterRef} chunkedLoading showCoverageOnHover={false}>
+          {pins.map((p) => (
+            <Marker
+              key={p.id}
+              position={[p.lat, p.lng]}
+              icon={markerIcon}
+              ref={(m) => {
+                if (m) markersRef.current.set(p.id, m)
+                else markersRef.current.delete(p.id)
+              }}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-semibold text-slate-900">
+                    {p.make} {p.model}
                   </div>
-                )}
-                <div className="mt-1 flex items-center gap-3">
-                  <Link
-                    href={`/partnerships/${p.id}`}
-                    className="font-medium text-sky-600 hover:underline"
-                  >
-                    View listing →
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => focusListingFromMap(p.id)}
-                    className="font-medium text-slate-500 hover:text-slate-700 hover:underline"
-                  >
-                    ↓ Show in list
-                  </button>
+                  <div className="text-slate-600">
+                    {p.airport_name || p.home_airport}
+                    {p.city ? ` · ${p.city}, ${p.state}` : ''}
+                  </div>
+                  {p.buy_in_price != null && (
+                    <div className="mt-1 text-slate-700">
+                      Buy-in: ${p.buy_in_price.toLocaleString()}
+                    </div>
+                  )}
+                  <div className="mt-1 flex items-center gap-3">
+                    <Link
+                      href={`/partnerships/${p.id}`}
+                      className="font-medium text-sky-600 hover:underline"
+                    >
+                      View listing →
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => focusListingFromMap(p.id)}
+                      className="font-medium text-slate-500 hover:text-slate-700 hover:underline"
+                    >
+                      ↓ Show in list
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MarkerClusterGroup>
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
       </MapContainer>
     </div>
   )
