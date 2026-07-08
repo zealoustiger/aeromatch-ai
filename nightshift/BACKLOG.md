@@ -1407,6 +1407,21 @@ thin/doorway pages; real listings + real data per page).
   shows **no percentage** (honesty gate — no real denominator yet). **Still open:**
   slices (3)/(4) — the FAA fleet-count and competitor-union denominators — and (5), the
   gap list. Natural next slice.
+  — **Slice (3) attempted 2026-07-08, ABORTED (honesty gate):** tried sourcing real
+  FAA/AirNav based-aircraft counts for the 11 `BAY_AREA_AIRPORTS` via WebSearch +
+  Wikipedia infobox fetches. Only ~4 of 11 airports (KHWD 446, KLVK 461, KCCR 340, KSQL
+  323/372/460 — conflicting across sources) had any published figure at all, and those
+  spanned wildly different as-of dates (2018-2025); the rest (KPAO, KRHV, KOAK, KSJC,
+  KSFO, KAPC, KNUQ) had no reliable figure in Wikipedia infoboxes, and search-snippet
+  numbers for them were stale/conflicting/implausible (e.g. one source claimed 0 based
+  aircraft at KAPC, a real towered GA airport). Assembling a denominator from this mix
+  would be exactly the "confident but wrong number" GOAL.md calls a trust-destroying
+  LOSS, so this slice was abandoned rather than shipped with fabricated/stale data.
+  **Next attempt should NOT repeat piecemeal web search** — instead pull the official
+  **FAA National Based Aircraft Inventory Program (NBAIP)** dataset or the raw **FAA
+  Form 5010 Airport Master Record** bulk file (both are structured, dated, authoritative
+  downloads, not scattered secondary citations) for all 11 ICAO codes at once, or get a
+  human call on an acceptable data source.
 - **[P2][want] Controller.com — covered indirectly, not by scraping.** Controller actively blocks bots (Cloudflare). Do NOT build Cloudflare-evasion. Get its inventory the clean ways: (a) the same planes are cross-listed — dedupe from Trade-A-Plane + dealer sites by N-number; (b) **dealer/broker outreach** to list directly (also feeds the broker lead-gen monetization model); (c) a human/bookmarklet capture for the Bay-Area beachhead (low volume), reusing the FB-capture pattern. Track Controller Bay-Area listings as a benchmark reference only.
 - **[P3][want] AirMart + AeroTrader — bot-protected, cover indirectly (human-requested 2026-06-23).** Human asked whether we can scrape https://airmart.com/aircraft-for-sale/ and https://www.aerotrader.com/listing/ . **Both block plain HTTP fetch and so don't fit the static-HTML/sitemap adapter pipeline:** AirMart sits behind a **Cloudflare/Kinsta "Just a moment" JS challenge** (`?ki-cf-botcl` redirect, 403 to bots); AeroTrader is behind **AWS WAF** (HTTP 202 hold + `gokuProps`/`awsWafCookieDomainList` captcha JS). Same class as Controller/Hangar67 — **do NOT build bot/Cloudflare/WAF-evasion.** Cover them the clean ways, same playbook as Controller: (a) cross-listing dedupe by **N-number** (most AeroTrader/AirMart planes are also on Trade-A-Plane / Barnstormers / dealer sites we *can* read); (b) **dealer/broker outreach** to list directly; (c) human/bookmarklet capture for the Bay-Area beachhead, reusing the FB-capture pattern. Track each as a **benchmark reference** in the coverage gap list, not as a scraper target. (NOTE: the third site the human asked about, **aircraftforsale.com, is already ingested** — `source='aircraftforsale'`, ~620 listings — no work needed.)
 
@@ -1517,7 +1532,19 @@ Slice it:
   contact card. **Not done, intentionally:** the seller-upgrade CTAs in the post-listing flow (the
   other half of this slice) — a separate placement, left for a follow-up cycle to keep this one
   scoped.
-- **[P2][want] slice 4: surface the tallies** — a small admin panel (or a line in the scoreboard) showing clicks per `path` so we can compare which model has real demand and pick the one to actually build.
+~~- **[P2][want] slice 4: surface the tallies**~~ ✅ SHIPPED via `monetization-tally-admin`
+  (2026-07-08) New `/admin/monetization` tab (`MonetizationTallyPage` +
+  `getMonetizationTally()`) shows real `waitlist` opt-in counts per revenue-path CTA
+  (broker/financing/insurance/escrow/prebuy/partnership_formation/co_ownership_management),
+  sorted highest-first with a % share — honestly labeled as **email opt-ins**, not raw
+  button-clicks (the `monetization_intent` PostHog event fires on every modal open but
+  isn't queried here — a real signal, just not this page's number). Zero-state renders
+  "0" per path (no fabricated numbers) plus a "not enough data" note when the total is 0.
+  Pure read query against the existing `waitlist` table, no schema/dependency change.
+  **The whole "Monetization — intent signals" backlog item (all 4 slices) is now fully
+  shipped.** Not done, intentionally: the seller-upgrade CTAs (Feature this listing / Get
+  it vetted) in the post-listing flow — a separate placement from this item's scope,
+  still open as its own follow-up idea.
 
 ### Monetization (UI only — do NOT activate; human decision)
 - **[P3] Standardized ad placements.** Build reusable, consistently-sized ad-slot blocks (e.g. leaderboard, in-feed, sidebar) with placeholders. Do NOT wire a live paid network — leave activation to the human. Networks to evaluate and summarize for the human (don't pick one autonomously):
