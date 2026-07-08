@@ -190,8 +190,9 @@ export default async function AccountPage() {
             Your pilot profile
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Set your base airport and a few favorites you fly out of often. This helps us
-            show you as a pilot based near an airport in the future.
+            Set your base airport and a few favorites you fly out of often. Your base airport
+            shows up as an anonymous avatar — no name, no bio — on that airport&apos;s public
+            page, so other pilots know you&apos;re around.
           </p>
           <ProfileAirportsForm homeAirport={homeAirport} favoriteAirports={favoriteAirports} />
         </section>

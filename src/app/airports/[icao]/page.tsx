@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Plane, ArrowRight, Search } from 'lucide-react'
+import { MapPin, Plane, ArrowRight, Search, Users } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
@@ -9,6 +9,7 @@ import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES, getAirportOverview 
 import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
 import SeekerCard from '@/components/SeekerCard'
+import AviatorAvatar, { AviatorConfig } from '@/components/AviatorAvatar'
 import { getSeekers } from '@/lib/seekersQuery'
 import { getPartnershipCompVerdicts, getSeekerBudgetCheckVerdicts } from '@/lib/partnershipComps'
 import {
@@ -41,6 +42,32 @@ async function getListings(icaos: string[]): Promise<Partnership[]> {
     .order('created_at', { ascending: false })
     .limit(50)
   return data ?? []
+}
+
+type AirportPilot = { user_id: string; avatar_config: AviatorConfig | null }
+
+/** Real, signed-up pilots who set this airport as their base on /account —
+ *  shown as an anonymous avatar only (name/bio/hours/ratings are dead columns
+ *  today and were never disclosed as publicly shown). `favorite_airports`
+ *  may not be migrated live yet; graceful fallback to base-airport-only match,
+ *  same pattern as `additional_airports` in seekersQuery.ts. */
+async function getPilotsBasedAt(icao: string): Promise<AirportPilot[]> {
+  const supabase = await createServerSupabaseClient()
+  const code = icao.toUpperCase()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('user_id, avatar_config')
+    .or(`home_airport.eq.${code},favorite_airports.cs.{${code}}`)
+    .limit(12)
+  if (error?.message?.includes('favorite_airports')) {
+    const retry = await supabase
+      .from('profiles')
+      .select('user_id, avatar_config')
+      .eq('home_airport', code)
+      .limit(12)
+    return (retry.data as AirportPilot[]) ?? []
+  }
+  return (data as AirportPilot[]) ?? []
 }
 
 export async function generateMetadata({
@@ -95,9 +122,10 @@ export default async function AirportPage({
   if (!airport) notFound()
 
   const nearbyIcaos = await getAirportsWithinRadius(airport.icao, 50)
-  const [allListings, allSeekers] = await Promise.all([
+  const [allListings, allSeekers, pilotsBasedHere] = await Promise.all([
     getListings(nearbyIcaos),
     getSeekers({ airports: airport.icao }),
+    getPilotsBasedAt(airport.icao),
   ])
   const atAirport = allListings.filter((l) => l.home_airport === airport.icao)
   const nearby = allListings.filter((l) => l.home_airport !== airport.icao)
@@ -280,6 +308,28 @@ export default async function AirportPage({
               Post your own seeking listing →
             </Link>
           </div>
+        </section>
+      )}
+
+      {/* Real signed-up pilots who set this as their base airport on /account —
+          anonymous avatar only, no name/bio (never disclosed as public). */}
+      {pilotsBasedHere.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <Users className="h-5 w-5 text-sky-500" />
+            Pilots based at {airport.icao} ({pilotsBasedHere.length})
+          </h2>
+          <div className="flex flex-wrap items-center gap-3">
+            {pilotsBasedHere.map((p) => (
+              <AviatorAvatar key={p.user_id} seed={p.user_id} config={p.avatar_config} size={44} />
+            ))}
+          </div>
+          <Link
+            href="/account"
+            className="mt-4 inline-block text-sm font-medium text-sky-600 hover:text-sky-700"
+          >
+            Based here too? Set it in your pilot profile →
+          </Link>
         </section>
       )}
 
