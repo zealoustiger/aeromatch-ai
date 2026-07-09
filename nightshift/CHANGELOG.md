@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T11:05:07Z — DRAIN SUMMARY
+- Cycles this run: 12 (PASS 9 / FAIL 2 / ABORT 1)
+- Models: cycles on sonnet; 2 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $101.7701 of $120 cap
+- Stopped because: backlog drained
+- Run: 20260709T085108Z
+
 ## 2026-07-09T10:45:00Z — PASS — quickstart-seeker-crosspost
 - Pages: `/searches`
 - What: **Pilots who've saved a partnerships search now get a one-tap nudge to also
