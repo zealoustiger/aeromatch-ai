@@ -1,3 +1,16 @@
+## 2026-07-09T11:27:05Z — Night Shift run: 3 cycles (PASS 2 / FAIL 0) — backlog drained
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $110.6327 of $120 cap
+
+- PASS — airport-facility-ratings — Added a 1-5 star rating widget for curated airport FBOs/flying clubs on `/airports/[icao]` (signed-in only, honesty-gated aggregate at ≥2 ra
+- PASS — partnerships-crosssell-airport-aware — /partnerships' prefer to own outright? cross-sell box now respects the active airport filter (count + samples narrow to nearby air
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 2.4 on 2 cores, sustained ~2 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container CPU-throttled ~67s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+
+
 ## 2026-07-09T11:05:07Z — Night Shift run: 12 cycles (PASS 9 / FAIL 2) — backlog drained
 - Models: cycles on sonnet; 2 escalated to opus; 1 quality-judged on opus
 - Night spend so far: $101.7701 of $120 cap
