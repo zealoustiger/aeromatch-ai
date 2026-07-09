@@ -2,6 +2,63 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T12:23:46Z — PASS — admin-pilot-verify
+- Pages: `/admin/pilots` (new), `/pilots/[id]` (unaffected, used as a QA control)
+- What: **Admins can now grant a pilot the "Verified" checkmark badge.** A new
+  "Verify Pilots" tab in the admin area lists every signed-up pilot profile with
+  a one-click Verify/Unverify button; the badge already rendered publicly on
+  `/pilots/[id]` since June but there was previously no way for anyone — even an
+  admin — to actually turn it on.
+- Goal: `[want]` tier — closed the last open slice ("slice 4: admin verify wiring
+  for the verified badge") of the `[P3][want]` "Pilot profiles + reviews/trust"
+  item, explicitly flagged as the sole remaining piece in the
+  `partnership-listing-reviews` (2026-07-09) CHANGELOG entry. Re-checked tier 1
+  (`[bug]`: none — last 2 cycles PASSed) and tier 2 (`[want]`) fresh via a full
+  backlog scan: nearly every other open `[want]` line is human-blocked (collection-
+  layout redesign awaiting a mock, owner-leads compliance review, Trade-A-Plane/
+  Controller/AirMart/AeroTrader all bot-protected — no evasion built, per
+  FREEZE.md) or a bigger unsliced lift with a documented honest-abort (Bay-Area
+  FAA fleet-count denominator). This was the clearest well-scoped, buildable
+  `[want]` slice. The `[goal]` alert-experience queue (BACKLOG.md's 🔔 section)
+  remains fully drained, so tier 2 was the right lane.
+- How: `profiles.verified` has been trigger-protected (service-role-only writes)
+  since the column shipped, so no non-admin code path could ever set it. New
+  `src/app/admin/pilots/page.tsx` reads all `profiles` rows (service-role client,
+  capped at the most recent 100) and resolves each pilot's email via
+  `admin.auth.admin.getUserById` (same API already used in `actions.ts` for
+  message-notification lookups) purely for admin identification — never shown
+  publicly. New `setPilotVerified` server action in `src/app/admin/pilots/
+  actions.ts` calls the existing `assertAdmin()` (unmodified — no FREEZE.md
+  touch) then flips the boolean via `createAdminClient()`. Added a "Verify
+  Pilots" tab to `AdminTabs.tsx`. No schema/migration needed (column + trigger
+  already live).
+- Spec: nightshift/specs/20260709T122346Z-admin-pilot-verify.md
+- Verdict: PASS. `npx tsc --noEmit` clean. `rm -rf .next && npx next build`
+  clean (all routes compiled, `/admin/pilots` registered). Mandatory
+  `qa-smoke.mjs` against the PRODUCTION build (`npx next start` on port 3000):
+  4/4 checks pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow) at desktop 1280 + mobile 375 on `/admin/pilots` and a real existing
+  pilot's `/pilots/[id]` (unaffected control). Visual cycle → read the
+  screenshots: both viewports render the "Admin only" sign-in gate cleanly (the
+  loop has no admin session to sign in with — same convention as every other
+  admin-page cycle, e.g. `seller-upgrade-cta-post-listing`'s `/admin/
+  monetization` check); no layout break, no overlap. The table/toggle UI itself
+  was verified by direct code review against the identical, already-shipped
+  `admin/listings` moderation pattern (`ActionButton` + server-action form),
+  not by an authenticated screenshot. Killed the `next-server` process after
+  (verified via `ps aux`, 0 remaining). No prod DB rows created or mutated this
+  cycle — read-only against the live `profiles` table (1 real row today), no
+  toggle was actually clicked against it.
+- Screenshots: nightshift/screenshots/admin-pilot-verify/
+- Next: the "Pilot profiles + reviews/trust" backlog item is now fully closed
+  across all 4 slices. `profiles` currently has exactly 1 real row in prod, so
+  this feature is dormant-but-ready until more pilots sign up and set a display
+  name/bio on `/account` — a leading-indicator ship, not a lagging-metric one,
+  consistent with GOAL.md's honesty rule for a cold-start marketplace. A future
+  cycle could add search/pagination to `/admin/pilots` once profile volume grows
+  past the 100-row cap, or wire `verified_ratings` (per-rating verification, not
+  just the overall badge) if that granularity is ever wanted.
+
 ## 2026-07-09T12:13:42Z — PASS — earnings-calculator-upfront-runway
 - Pages: `/tools/earnings-calculator`
 - What: **The aircraft-partnership earnings calculator now tells owners how many
