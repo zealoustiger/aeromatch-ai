@@ -221,6 +221,54 @@ export async function getSeekerCount(): Promise<number> {
   }
 }
 
+/**
+ * Cross-sell data for the aircraft-for-sale / partnership detail pages: real
+ * seeker demand for a make, optionally narrowed to a model. Mirrors
+ * `getForSaleCrossSell`/`getPartnershipCrossSell`'s make→model-level fallback
+ * shape (try model-level first, fall back to make-only) so a visitor sees
+ * "N pilots looking for a Cessna 172" instead of just "N Cessnas" when there's
+ * a model-level match, or the make-only figure when there isn't. Returns null
+ * when make is blank or there are no matching active seekers (self-suppress —
+ * the for-sale/partnership marketplaces have no mock-data fallback either).
+ */
+export async function getSeekerCrossSell(
+  make: string,
+  model?: string | null,
+): Promise<{ count: number; modelLevel: boolean; samples: PartnershipSeeker[] } | null> {
+  const m = make.trim()
+  if (!m) return null
+  const mo = model?.trim() || ''
+  const wanted = m.toLowerCase()
+
+  let pool: PartnershipSeeker[]
+  if (!hasSupabase()) {
+    pool = MOCK_SEEKERS
+  } else {
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data } = await supabase
+        .from('partnership_seekers')
+        .select('*')
+        .eq('status', 'active')
+        .limit(500)
+      pool = (data as PartnershipSeeker[]) ?? []
+    } catch {
+      pool = []
+    }
+  }
+
+  const makeMatches = pool.filter((s) => s.preferred_makes?.some((pm) => pm.toLowerCase() === wanted))
+  if (!makeMatches.length) return null
+
+  if (mo) {
+    const modelMatches = makeMatches.filter((s) => matchesModelFilter(s.preferred_models, [mo]))
+    if (modelMatches.length) {
+      return { count: modelMatches.length, modelLevel: true, samples: sortByTrust(modelMatches).slice(0, 3) }
+    }
+  }
+  return { count: makeMatches.length, modelLevel: false, samples: sortByTrust(makeMatches).slice(0, 3) }
+}
+
 /** Single active seeker listing by id, or null if missing/inactive. */
 export async function getSeekerById(id: string): Promise<PartnershipSeeker | null> {
   if (!hasSupabase()) return MOCK_SEEKERS.find((s) => s.id === id) ?? null

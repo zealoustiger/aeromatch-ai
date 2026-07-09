@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T10:25:30Z — PASS — seeker-crosssell-detail-pages
+- Pages: `/aircraft/listing/[id]`, `/partnerships/[id]`
+- What: **Both aircraft-for-sale and partnership detail pages now show real pilot
+  demand** — a new panel reads "N pilots are looking to co-own a Cessna 182h" (aircraft
+  page) or "N other pilots are also looking for a Cirrus SR22 share" (partnership page),
+  with up to 3 real sample seeker cards and a link to `/partnerships/seeking?make=…`.
+  This is visible to every visitor, not just the listing's owner.
+- Goal: `[want]` tier — closed the last open slice of the long-running "Blend result
+  types + cross-sell" backlog item (BACKLOG.md): the existing cross-sell already linked
+  aircraft-for-sale ↔ partnerships in both directions (slices 1-4); the third
+  marketplace type, pilots-seeking-a-partnership, had no visitor-facing cross-sell yet
+  — only an owner-only "N matches" nudge (`MatchCountNudge`) existed, which a browsing
+  (non-owner) visitor never sees. Re-checked tier 1 (`[bug]`, none — last two cycles
+  PASSed) and tier 2 (`[want]`) fresh: every other open `[want]` line was either already
+  fully shipped but un-struck (fixed inline), blocked on a human decision (collection
+  layout redesign awaiting a mock; owner-leads scraping flagged for compliance review),
+  or a much larger lift (Trade-A-Plane ingestion, Bay-Area coverage benchmark, airport
+  ratings/moderation) — this was the clearest well-scoped, buildable `[want]` slice.
+- How: new `getSeekerCrossSell(make, model?)` in `src/lib/seekersQuery.ts` — mirrors the
+  make→model-level fallback shape already used by `getForSaleCrossSell`/
+  `getPartnershipCrossSell`: tries model-level matches against active
+  `partnership_seekers` first (case-insensitive make match + the existing
+  `matchesModelFilter` helper over the free-text `preferred_models` field), falls back
+  to make-only, returns `null` (no panel) when there are zero matching active seekers.
+  New `SeekerCrossSellPanel` component in each detail page file (mirrors the existing
+  `PartnershipCrossSellPanel`/`ForSaleCrossSellPanel` pattern exactly — same `ch-panel`
+  shell, count line, CTA, horizontal mini-rail) reuses the already-built
+  `SeekerRailCard` (no new component library, no new dependency). No schema/DB change —
+  pure read over the existing `partnership_seekers` table.
+- Spec: nightshift/specs/20260709T102530Z-seeker-crosssell-detail-pages.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (376
+  routes). Visual cycle → read the screenshots. QA against the PRODUCTION build
+  (`npx next start` on port 3801) via `qa-smoke.mjs`: 4/4 checks pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow) at desktop 1280 + mobile 375 on
+  `/aircraft/listing/05b6e870-a62c-45d0-a69b-8e09214ca56a` (real Cessna 182h with 5
+  matching active seekers) and `/partnerships/4dbbf7f7-6d99-4f7f-98ea-b10dbb0e9fe0`
+  (real Cirrus SR22 partnership with 2 matching active seekers). Screenshots confirm
+  both panels render cleanly at both viewports — "Pilots looking to co-own" sits below
+  "Co-ownership available" on the aircraft page; "Other pilots looking" sits below
+  "Prefer to buy outright?" on the partnership page — correct copy, correct sample card,
+  no overlap, no overflow. Killed the `next-server` process after (verified via `ps
+  aux`, 0 remaining). No prod DB rows touched (pure read-only query, no new server
+  action, no signup/listing created).
+- Screenshots: nightshift/screenshots/seeker-crosssell-detail-pages/
+- Next: consider the same seeker cross-sell on the browse/search-results pages
+  (`/aircraft`, `/partnerships`) for parity with how the aircraft↔partnership cross-sell
+  eventually reached both detail and browse surfaces; also consider whether the
+  `/partnerships/seeking/[id]` detail page itself should show a matching aircraft-for-sale
+  cross-sell (the seeker side of the triangle is still one-way in).
+
 ## 2026-07-09T10:14:44Z — PASS — aircraft-browse-broker-cta
 - Pages: `/aircraft`
 - What: **The `/aircraft` browse/search-results page now has a "Work with a broker" CTA** —
