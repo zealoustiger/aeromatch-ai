@@ -2,6 +2,43 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T06:13:21Z — PASS — airport-fbo-flying-clubs
+- Pages: /airports/[icao] (curated: /airports/kads, /airports/kaus, /airports/kfxe, /airports/khwd, /airports/klvk, /airports/koak, /airports/kpao, /airports/krhv, /airports/ksql)
+- What: The airport hub pages for 9 major GA fields (Addison, Austin-Bergstrom, Fort
+  Lauderdale Executive, Hayward, Livermore, Oakland North Field, Palo Alto, Reid-Hillview,
+  San Carlos) now show a "FBOs & flying clubs at {ICAO}" panel — real business names and
+  phone numbers for the fuel/maintenance operators and flying clubs based at that field.
+  Every other airport page (the other ~17,000) is unchanged — no section, no placeholder.
+- Goal: `[want]` tier — slice 1 ("FBO + flight-club sections") of the human-added backlog
+  item "Airport pages as community hubs" (`nightshift/BACKLOG.md` line ~1315). Every
+  name/phone was individually researched and verified this cycle against AirNav.com's
+  listing for the ICAO, the airport's own official tenant directory, or the business's own
+  site — nothing fabricated; businesses that looked closed/stale during verification
+  (dead site, "CLOSED" on a review platform, or the wrong airport) were excluded rather
+  than guessed at. New `AIRPORT_FACILITIES` curated record + `getAirportFacilities()` in
+  `src/lib/seo.ts`, keyed to the exact same 9-airport indexable set as the existing
+  `AIRPORT_OVERVIEWS` prose (no new gating logic). No schema/DB change. **Known scope
+  limit (flagged, not hidden):** this is a point-in-time hand-curated snapshot for the 9
+  curated airports only — the build sandbox has no outbound network access to script a
+  live AirNav/FAA feed (per the existing `/api/faa-lookup` CHANGELOG notes), so it does
+  not scale to the full ~17k-row `airports` table. FBO/club tenancy can change over time,
+  unlike the evergreen prose it sits next to — worth periodic re-verification, documented
+  inline in the code comment.
+- Spec: nightshift/specs/20260709T061321Z-airport-fbo-flying-clubs.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean.
+  `qa-smoke.mjs` on `/airports/kpao` (curated) and `/airports/00aa` (non-curated control,
+  Aero B Ranch Airport, KS) at desktop 1280 + mobile 375: 4/4 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow). Screenshots (visual cycle) confirm
+  the new two-column FBOs/flying-clubs panel renders cleanly on `/airports/kpao` with no
+  layout regression to the existing overview/partnerships/pilots sections, and confirm
+  `/airports/00aa` correctly renders NO facilities section (and no overview prose either —
+  same self-suppress pattern) since it isn't in the curated set.
+- Screenshots: nightshift/screenshots/airport-fbo-flying-clubs/
+- Next: slice 2 (ratings for FBOs/flying clubs) is the one remaining piece of "Airport
+  pages as community hubs" — needs a new schema (rating rows) + moderation, a bigger lift
+  than this slice; a natural next cycle once other higher-priority `[want]`/`[goal]` work
+  is cleared.
+
 ## 2026-07-08T13:14:17Z — DRAIN SUMMARY
 - Cycles this run: 1 (PASS 1 / FAIL 0 / ABORT 0)
 - Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
