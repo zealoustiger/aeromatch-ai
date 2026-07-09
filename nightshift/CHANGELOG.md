@@ -2,6 +2,67 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T08:32:20Z — PASS — match-alert-digest
+- Pages: none directly (new backend cron route, `/api/cron/match-alert-digest`); verified no
+  regression on `/api/cron/alert-digest`, `/matches`, `/listings`, `/partnerships`
+- What: **Partnership and seeker listing owners will now get emailed when a genuinely new
+  compatible listing shows up on the other side of the marketplace** — instead of only finding
+  out by revisiting `/matches` or `/listings` themselves. This closes the last open slice of
+  the long-running "Compatibility matching engine" backlog item, explicitly flagged as "Next"
+  in the last three cycles (`match-nudge-filtered-href`, `listings-match-badge`, `matches-view`).
+- Goal: `[want]` tier — the "new-match email alerts" slice of "Compatibility matching engine +
+  new-match alerts" (BACKLOG.md ~line 1549, checked off this cycle). Every P1 `[want]` item was
+  either already fully shipped (stale-checkbox audit-confirmed: "Map search" ~line 964,
+  "Anonymous-by-default seeker posts" ~line 1691 — both fixed this cycle too), blocked on a
+  pending human decision ("Redesign the collection layout" ~line 909 awaits a mock pick), an
+  ethics-flagged item the owner hasn't yet greenlit further ("Dynamic-location seed personas" /
+  seeker-avatar slice), or too large/risky to slice safely in one cycle (Trade-A-Plane
+  ingestion — external-site ToS risk; airport ratings — greenfield schema+moderation; Bay-Area
+  coverage denominator — spent real effort probing AirNav.com for based-aircraft counts and
+  found the field genuinely absent from its current page format for KPAO, too unreliable to
+  build an honest denominator on tonight). This P2 `[want]` was the next clean, safe, scoped
+  item — and doubles as ALERT-goal-adjacent value since it's literally a new alert surface.
+- How: new `/api/cron/match-alert-digest` (mirrors `alert-digest/route.ts`'s auth/interval
+  structure exactly — same `CRON_SECRET` bearer gate, same weekly-per-row cadence) iterates
+  active, human-posted (`poster_id is not null`) partnerships and seekers, reuses the
+  already-shipped `getMatchingSeekersForPartnership`/`getMatchingPartnershipsForSeeker`
+  (`src/lib/matchingQuery.ts`, zero new matching logic), and counts only matches whose own
+  `created_at` is at/after the listing's last-sent timestamp. Sends to the listing's own
+  `contact_email` column (already on both tables) via the existing `sendEmail()`, linking to
+  the existing `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker` filtered
+  browse URLs. New `buildMatchAlertEmail()` in `src/lib/email.ts`. New additive
+  `match_alert_last_sent_at timestamptz` columns on `partnerships`/`partnership_seekers`
+  (`supabase/schema.sql`). **⚠️ Human: apply this migration against live Supabase before real
+  match-alert emails go out** — confirmed directly (read-only query against the live DB) that
+  neither column exists there yet today; until it's applied, the route's pre-check hits Postgres
+  `42703` and returns `{skipped:'migration-pending'}`, sending nothing — it never falls back to
+  a behavior that could resend/spam every run. Also added a second `vercel.json` cron entry
+  (same `0 8 * * *` schedule as the existing digest).
+- Spec: nightshift/specs/20260709T083220Z-match-alert-digest.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `npx eslint` clean; `rm -rf .next && npx next build`
+  clean (route compiles, listed in the build output). Non-visual cycle (new API route + schema
+  + email template, no UI/page a user sees) — `qa-smoke.mjs` doesn't apply (no page route to
+  smoke), so verification was direct instead: (1) unit-verified `buildMatchAlertEmail()`
+  (singular/plural phrasing, correct link) and the "since" boundary filter against fabricated
+  in-memory data (ad-hoc script, not committed); (2) independently confirmed via a read-only
+  query that the live DB genuinely lacks the new column today, then (3) started the real
+  production build (`next start`) and curled the real route against the real shared DB —
+  returned HTTP 200 `{"skipped":"migration-pending"}`, proving the safety path fires for real
+  and confirming **zero emails were sent** despite a live `RESEND_API_KEY` being configured;
+  also curled `/api/cron/alert-digest` (200, unaffected) and `/matches`, `/listings`,
+  `/partnerships` (all respond as before — the two owner-gated pages correctly 307-redirect to
+  `/auth`) to confirm no regression, then killed the server (verified via `ps aux`, no orphaned
+  `next-server` process left). No prod rows created or modified (read-only + zero-send).
+- Screenshots: none (non-visual, no page to capture)
+- Next: once the human applies the `match_alert_last_sent_at` migration, this cron starts
+  working for real — today's live match count is 0 for every owner (the travel-radius gate,
+  confirmed in the immediately-prior `matches-view` cycle), so the very first real run will
+  also safely send 0 emails and simply light up as genuine new matches appear. The Bay-Area
+  coverage benchmark's denominator (FAA/AirNav based-aircraft counts) remains open — AirNav's
+  current page format doesn't expose that field the way it used to for at least KPAO; worth a
+  fresh look at FAA's own 5010 airport master record data source instead of AirNav next time
+  someone picks that item up.
+
 ## 2026-07-09T08:20:00Z — PASS — matches-view
 - Pages: /matches (new, owner-gated), /listings (added a top link)
 - What: **A new "Your Matches" page (`/matches`) that gathers, in one place, the real

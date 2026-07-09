@@ -273,3 +273,49 @@ Unsubscribe: ${opts.unsubscribeUrl}`
 
   return { subject, html, text }
 }
+
+/**
+ * Build the "new matches on your listing" email for a partnership/seeker owner.
+ * `listingLabel` is the owner's own listing (e.g. "your 2004 Cessna 172S Skyhawk
+ * partnership"); `otherSideLabel` names what showed up (e.g. "pilots seeking a
+ * partnership" / "partnerships"). Unlike the search-alert digest this has no
+ * unsubscribe link — it's tied to the owner's own active listing, the same
+ * unprompted-but-relevant precedent as the existing new-message notification.
+ */
+export function buildMatchAlertEmail(opts: {
+  listingLabel: string
+  otherSideLabel: string
+  count: number
+  matchesUrl: string
+}): { subject: string; html: string; text: string } {
+  const countLabel = opts.count === 1 ? `1 new match` : `${opts.count} new matches`
+  const subject = `${countLabel} for ${opts.listingLabel} on ClubHanger`
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">${escapeHtml(countLabel)}</h1>
+      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
+        ${opts.count === 1 ? 'A new listing' : 'New listings'} for ${escapeHtml(opts.otherSideLabel)}
+        now match ${escapeHtml(opts.listingLabel)} on ClubHanger.
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${escapeAttr(opts.matchesUrl)}"
+           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
+          View your matches
+        </a>
+      </p>
+      <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
+        You&rsquo;re receiving this because you have an active listing on ClubHanger.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${countLabel} for ${opts.listingLabel} on ClubHanger.
+
+View your matches: ${opts.matchesUrl}`
+
+  return { subject, html, text }
+}
