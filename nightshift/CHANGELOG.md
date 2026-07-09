@@ -2,6 +2,49 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T07:35:30Z — PASS — listings-match-badge
+- Pages: /listings (owner's own listings-management page)
+- What: **Your "My Listings" page now shows a "N matches" pill on each active
+  partnership or seeking listing you own**, so you can see at a glance which of your
+  listings have real compatible matches on the other side of the marketplace —
+  without opening each listing's own detail page to find out. Tapping the pill
+  jumps straight to the filtered browse page of just those matches.
+- Goal: `[want]` tier — the "match badges" slice of the long-running "Compatibility
+  matching engine" backlog item (BACKLOG.md ~line 1549, checked off this cycle).
+  New compact `MatchCountBadge.tsx` (a smaller sibling of the existing detail-page
+  `MatchCountNudge` panel) wired into `src/app/listings/page.tsx`'s active
+  partnership/seeker rows, reusing the exact same, already-shipped
+  `countMatchingSeekersForPartnership`/`countMatchingPartnershipsForSeeker` scoring
+  and `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker` href
+  builders the detail pages already use — no new query logic, no schema change.
+- Spec: nightshift/specs/20260709T073530Z-listings-match-badge.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `npx eslint` clean on both changed files;
+  `rm -rf .next && npx next build` clean. Found and killed a stale `next-server`
+  process left over from a prior session (serving an old build) before starting a
+  fresh `next start` for QA — the stale process caused false 500s on first smoke
+  attempt; rebuilt clean, re-ran green. `qa-smoke.mjs` on `/listings` at desktop
+  1280 + mobile 375: 2/2 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow) — this page requires sign-in so the smoke run exercises the
+  `/auth` redirect target, confirmed via screenshot to render cleanly with no
+  regression. **`/listings` is owner-gated (redirects to `/auth` when signed out),
+  and the quarantine trigger forces any `@example.com`-posted row to
+  `status='test'` — invisible to both the active-listings query and the match-count
+  query — so a throwaway QA account cannot exercise this feature end-to-end without
+  defeating the trigger's own purpose.** Instead verified the underlying logic
+  directly against real live data with a read-only, ad-hoc Node script (not
+  committed, not run through the app): re-implemented `isCompatibleMatch` and
+  queried real `status='active'` partnerships/seekers with the service-role key —
+  confirmed 4 of 12 real owned partnerships have ≥1 real compatible seeker match
+  today (e.g. a live Cessna 172S Skyhawk partnership matches 1 active seeker),
+  proving the exact same query functions this cycle wires into `/listings` do
+  produce non-zero counts for real owners. No prod rows created or modified. This
+  mirrors how the original `partnership-seeker-match-count` cycle verified the
+  same owner-gated surface.
+- Screenshots: nightshift/screenshots/listings-match-badge/
+- Next: the standalone `/matches` view (aggregating matches across all your
+  listings on one dedicated page, vs. this cycle's inline pills) and new-match
+  email alerts are the two remaining named slices of the matching-engine item.
+
 ## 2026-07-09T07:31:33Z — PASS — match-nudge-filtered-href
 - Pages: /partnerships/[id] (owner view), /partnerships/seeking/[id] (owner view)
 - What: **The owner-only "N matches" box now links to a browse page that actually
