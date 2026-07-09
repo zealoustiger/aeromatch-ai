@@ -248,7 +248,7 @@ export async function countActivePartnerships(
 export async function getPartnershipCrossSell(
   make: string,
   model?: string | null,
-): Promise<{ count: number; minBuyIn: number | null; modelLevel: boolean } | null> {
+): Promise<{ count: number; minBuyIn: number | null; modelLevel: boolean; samples: Partnership[] } | null> {
   const m = make.trim()
   if (!m) return null
   const mo = model?.trim() || ''
@@ -263,7 +263,12 @@ export async function getPartnershipCrossSell(
       )
       if (modelMatches.length) {
         const prices = modelMatches.map((p) => p.buy_in_price).filter((n): n is number => n != null)
-        return { count: modelMatches.length, minBuyIn: prices.length ? Math.min(...prices) : null, modelLevel: true }
+        return {
+          count: modelMatches.length,
+          minBuyIn: prices.length ? Math.min(...prices) : null,
+          modelLevel: true,
+          samples: modelMatches.slice(0, 3),
+        }
       }
     }
     // Make-level fallback
@@ -272,7 +277,12 @@ export async function getPartnershipCrossSell(
     )
     if (!matches.length) return null
     const prices = matches.map((p) => p.buy_in_price).filter((n): n is number => n != null)
-    return { count: matches.length, minBuyIn: prices.length ? Math.min(...prices) : null, modelLevel: false }
+    return {
+      count: matches.length,
+      minBuyIn: prices.length ? Math.min(...prices) : null,
+      modelLevel: false,
+      samples: matches.slice(0, 3),
+    }
   }
 
   try {
@@ -282,27 +292,39 @@ export async function getPartnershipCrossSell(
     if (mo) {
       const { data: modelData, error: modelError } = await supabase
         .from('partnerships')
-        .select('id, buy_in_price')
+        .select('*')
         .eq('status', 'active')
         .ilike('make', `%${m}%`)
         .ilike('model', `%${mo}%`)
+        .order('created_at', { ascending: false })
         .limit(200)
       if (!modelError && modelData && modelData.length) {
         const prices = modelData.map((p) => p.buy_in_price).filter((n): n is number => n != null)
-        return { count: modelData.length, minBuyIn: prices.length ? Math.min(...prices) : null, modelLevel: true }
+        return {
+          count: modelData.length,
+          minBuyIn: prices.length ? Math.min(...prices) : null,
+          modelLevel: true,
+          samples: modelData.slice(0, 3),
+        }
       }
     }
 
     // Make-level fallback
     const { data, error } = await supabase
       .from('partnerships')
-      .select('id, buy_in_price')
+      .select('*')
       .eq('status', 'active')
       .ilike('make', `%${m}%`)
+      .order('created_at', { ascending: false })
       .limit(200)
     if (error || !data || !data.length) return null
     const prices = data.map((p) => p.buy_in_price).filter((n): n is number => n != null)
-    return { count: data.length, minBuyIn: prices.length ? Math.min(...prices) : null, modelLevel: false }
+    return {
+      count: data.length,
+      minBuyIn: prices.length ? Math.min(...prices) : null,
+      modelLevel: false,
+      samples: data.slice(0, 3),
+    }
   } catch {
     return null
   }

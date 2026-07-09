@@ -338,7 +338,7 @@ export async function getFamilyCompsForBatch(
 export async function getForSaleCrossSell(
   make: string,
   model?: string | null,
-): Promise<{ count: number; minPrice: number | null; modelLevel: boolean } | null> {
+): Promise<{ count: number; minPrice: number | null; modelLevel: boolean; samples: AircraftForSale[] } | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return null
@@ -353,30 +353,42 @@ export async function getForSaleCrossSell(
     if (mo) {
       const { data: modelData, error: modelError } = await supabase
         .from('aircraft_for_sale')
-        .select('id, asking_price')
+        .select('*')
         .eq('status', 'active')
         .ilike('make', `%${m}%`)
         .ilike('model', `%${mo}%`)
+        .order('created_at', { ascending: false })
         .limit(200)
       if (!modelError && modelData && modelData.length) {
         const prices = modelData
           .map((r) => r.asking_price as number | null)
           .filter((n): n is number => n != null && n > 0)
-        return { count: modelData.length, minPrice: prices.length ? Math.min(...prices) : null, modelLevel: true }
+        return {
+          count: modelData.length,
+          minPrice: prices.length ? Math.min(...prices) : null,
+          modelLevel: true,
+          samples: modelData.slice(0, 3),
+        }
       }
     }
 
     const { data, error } = await supabase
       .from('aircraft_for_sale')
-      .select('id, asking_price')
+      .select('*')
       .eq('status', 'active')
       .ilike('make', `%${m}%`)
+      .order('created_at', { ascending: false })
       .limit(200)
     if (error || !data || !data.length) return null
     const prices = data
       .map((r) => r.asking_price as number | null)
       .filter((n): n is number => n != null && n > 0)
-    return { count: data.length, minPrice: prices.length ? Math.min(...prices) : null, modelLevel: false }
+    return {
+      count: data.length,
+      minPrice: prices.length ? Math.min(...prices) : null,
+      modelLevel: false,
+      samples: data.slice(0, 3),
+    }
   } catch {
     return null
   }
