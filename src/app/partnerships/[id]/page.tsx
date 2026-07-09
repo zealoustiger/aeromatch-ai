@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane, ArrowRight, ShieldAlert } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { Partnership } from '@/lib/types'
+import { Partnership, AircraftForSale } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, formatPriceK } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
@@ -28,6 +28,7 @@ import MatchCountNudge from '@/components/MatchCountNudge'
 import { countMatchingSeekersForPartnership } from '@/lib/matchingQuery'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
+import AircraftRailCard from '@/components/AircraftRailCard'
 import ShareListingButton from '@/components/ShareListingButton'
 import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
 import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
@@ -571,7 +572,7 @@ export default async function PartnershipDetailPage({
           </div>
 
           {/* Sidebar — costs shown first on mobile, beside content on desktop */}
-          <div className="space-y-4 order-first lg:order-last">
+          <div className="min-w-0 space-y-4 order-first lg:order-last">
             {/* Cost card */}
             <div className="ch-panel p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Costs</h2>
@@ -680,6 +681,7 @@ export default async function PartnershipDetailPage({
                 model={forSaleCrossSell.modelLevel ? (p.model ?? null) : null}
                 count={forSaleCrossSell.count}
                 minPrice={forSaleCrossSell.minPrice}
+                samples={forSaleCrossSell.samples}
               />
             )}
 
@@ -851,11 +853,14 @@ function ForSaleCrossSellPanel({
   model,
   count,
   minPrice,
+  samples,
 }: {
   make: string
   model: string | null
   count: number
   minPrice: number | null
+  /** Up to 3 real matching for-sale listings to preview inline. Empty → no rail. */
+  samples: AircraftForSale[]
 }) {
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
@@ -884,6 +889,15 @@ function ForSaleCrossSellPanel({
       >
         Browse {label} for sale <ArrowRight className="h-4 w-4" />
       </Link>
+      {samples.length > 0 && (
+        <ul className="mt-4 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+          {samples.map((s) => (
+            <li key={s.id} className="contents">
+              <AircraftRailCard p={s} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -37,7 +37,7 @@ import {
   type ClubHangerEstimate,
   type ClubHangerDealVerdict,
 } from '@/lib/aircraftEstimate'
-import { AircraftForSale } from '@/lib/types'
+import { AircraftForSale, Partnership } from '@/lib/types'
 import { formatPrice, formatPriceK } from '@/lib/utils'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
 import { gradeFromScore, gradeMeta } from '@/lib/listingQuality'
@@ -48,6 +48,7 @@ import PhotoGallery from '@/components/PhotoGallery'
 import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
 import SimilarAircraft from '@/components/SimilarAircraft'
+import PartnershipRailCard from '@/components/PartnershipRailCard'
 import SavedListingNote from '@/components/SavedListingNote'
 import AircraftTrustBadge from '@/components/AircraftTrustBadge'
 import AircraftListingOwnerNudge from '@/components/AircraftListingOwnerNudge'
@@ -998,6 +999,7 @@ export default async function AircraftListingDetailPage({
                 model={crossSell.modelLevel ? (p.model ?? null) : null}
                 count={crossSell.count}
                 minBuyIn={crossSell.minBuyIn}
+                samples={crossSell.samples}
               />
             )}
 
@@ -1645,11 +1647,14 @@ function PartnershipCrossSellPanel({
   model,
   count,
   minBuyIn,
+  samples,
 }: {
   make: string
   model: string | null
   count: number
   minBuyIn: number | null
+  /** Up to 3 real matching partnership listings to preview inline. Empty → no rail. */
+  samples: Partnership[]
 }) {
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
@@ -1678,6 +1683,15 @@ function PartnershipCrossSellPanel({
       >
         Browse {label} partnerships <ArrowRight className="h-4 w-4" />
       </Link>
+      {samples.length > 0 && (
+        <ul className="mt-4 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+          {samples.map((s) => (
+            <li key={s.id} className="contents">
+              <PartnershipRailCard p={s} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
