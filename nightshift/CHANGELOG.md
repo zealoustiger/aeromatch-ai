@@ -2,6 +2,44 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T07:05:00Z — PASS — crosssell-detail-samples
+- Pages: /aircraft/listing/[id] ("Co-ownership available" panel), /partnerships/[id] ("Prefer to buy outright?" panel)
+- What: The two detail-page cross-sell panels between the two marketplace types now
+  show up to 3 real sample listing cards (photo, price, label, link) from the OTHER
+  marketplace, not just a count + CTA link. A shopper looking at a for-sale Piper now
+  sees actual co-ownership shares for similar aircraft right there; a shopper looking
+  at a partnership share sees actual whole aircraft for sale.
+- Goal: `[want]` tier — slice 4 of the long-running "Blend result types + cross-sell"
+  backlog item (BACKLOG.md ~line 1296), the explicitly-flagged "next slice" left after
+  `forsale-crosssell-reverse` (2026-07-03). `getForSaleCrossSell`/`getPartnershipCrossSell`
+  now select full rows (was `id, price` only) and return up to 3 samples from the same
+  matched set (model-level when available, else make-level) — no extra query round-trip.
+  Both panels reuse the existing `AircraftRailCard`/`PartnershipRailCard` mini-rail
+  markup already proven on `MarketplaceCrossSell`. No schema/dependency change.
+  Checked off in BACKLOG.md.
+- **Bonus `[bug]` fix found + fixed this cycle:** QA caught a real mobile (375px)
+  horizontal-overflow regression on `/partnerships/[id]` — its sidebar grid column was
+  missing the `min-w-0` that `/aircraft/listing/[id]`'s sidebar already had, so the new
+  fixed-width rail's flex row pushed the whole page wider than the viewport. Added
+  `min-w-0` to the partnerships sidebar div to match; re-verified 0 overflow after.
+- Spec: nightshift/specs/20260709T065447Z-crosssell-detail-samples.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean.
+  `qa-smoke.mjs` on a live Cessna 172S partnership (make with 250 active for-sale
+  matches) and a live Piper Arrow for-sale listing (make with 5 active partnership
+  matches) at desktop 1280 + mobile 375: 4/4 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow) — one false-start caught a stale `next-server`
+  process left over from a prior session serving an old build (500s + the overflow bug
+  masked/unmasked inconsistently); killed it, rebuilt+restarted clean, re-ran 4/4 green.
+  Visual cycle — screenshots confirm both panels render the sample rail cleanly at both
+  viewports (a tasteful "peek" of the first card, scrollable, no page overflow), no
+  regression to the existing count/CTA copy or surrounding panels. No prod test data
+  created (read-only QA against real existing listings).
+- Screenshots: nightshift/screenshots/crosssell-detail-samples/
+- Next: the "pilots" third result-type blend (mentioned in the same backlog bullet as a
+  future idea) is the one remaining open thread on this item — bigger lift, needs its
+  own scoping. Also worth a sweep: check other narrow-sidebar panels for the same
+  missing-`min-w-0` class of bug before adding more fixed-width rail content to them.
+
 ## 2026-07-09T06:20:59Z — PASS — rail-card-rare-find-parity
 - Pages: / (homepage curated rails), /aircraft/listing/[id] ("Similar aircraft for sale" rail)
 - What: The compact `AircraftRailCard` — used on the homepage curated rails and the
