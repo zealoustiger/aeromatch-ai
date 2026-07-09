@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T12:28:02Z — DRAIN SUMMARY
+- Cycles this run: 3 (PASS 3 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $120.9669 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260709T120003Z
+
 ## 2026-07-09T12:23:46Z — PASS — admin-pilot-verify
 - Pages: `/admin/pilots` (new), `/pilots/[id]` (unaffected, used as a QA control)
 - What: **Admins can now grant a pilot the "Verified" checkmark badge.** A new
