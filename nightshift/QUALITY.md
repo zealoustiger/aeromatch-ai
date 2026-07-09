@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-09T07:04:49Z — crosssell-detail-samples — score 4/5
+- Strengths: Clean, symmetric both-directions change that reuses the EXACT `MarketplaceCrossSell` mini-rail markup (`flex gap-3 overflow-x-auto` + `<li className="contents">` + fixed-width `shrink-0` RailCards); samples come from the same query as count/minPrice (no extra round-trip, correct match-level), self-suppress-at-0 preserved; genuine in-scope bonus fix — added the missing `min-w-0` to the partnership sidebar grid column (mirroring the aircraft-listing counterpart) that the new fixed-width rail would have overflowed on 375px.
+- Weaknesses / risks: Count/minPrice query was widened from `select('id, asking_price')` to `select('*')` on up to 200 rows just to surface 3 samples — a small payload regression accepted to honor the no-extra-round-trip constraint; the in-memory dev fallback branch slices samples without the `created_at` ordering the DB branch applies (cosmetic inconsistency only).
+- Follow-up: none
+
 ## 2026-07-09T06:49:09Z — rail-card-rare-find-parity — score 4/5
 - Strengths: Faithful mirror of AircraftSaleCard's honesty-gated chip — exact copy/threshold/guard, correct null & count-incl-self handling, mutual-exclusivity reasoning sound, DealsRail rightly left inert; clean reuse of already-fetched allComps.
 - Weaknesses / risks: Diverges from spec (duplicates RARE_FIND_MAX + isRareFind logic + tooltip copy instead of exporting/reusing), and the stated RSC-boundary reason for not importing a plain constant is overstated — mild sync-drift risk across the two cards.
