@@ -36,6 +36,7 @@ import PartnershipMarketCheck from '@/components/PartnershipMarketCheck'
 import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import { partnershipBuyInComp, partnershipDealVerdict, PartnerCompResult, PartnershipDealCheck } from '@/lib/partnershipComps'
 import PartnershipDealSignals from '@/components/PartnershipDealSignals'
+import ReviewsSection from '@/components/ReviewsSection'
 import { classifyAvionics, computeIfrSuitability, type AvionicsInfo, type IfrTier } from '@/lib/avionicsClassify'
 import { computeEngineLife, type EngineLifeResult } from '@/lib/engineLife'
 import { computeAirframeUsage, type AirframeUsageResult } from '@/lib/airframeUsage'
@@ -828,6 +829,14 @@ export default async function PartnershipDetailPage({
         <div className="mt-10">
           <SimilarListings current={p} />
         </div>
+
+        {/* Reviews — real listings only; a seed/demo persona's listing isn't a
+            real partnership someone can have actually experienced. */}
+        {!seed && (
+          <div className="mt-10">
+            <ReviewsSection targetId={p.id} ownerId={p.poster_id} />
+          </div>
+        )}
 
         <PartnershipLaunchBanner
           visitorState={visitorRegion}

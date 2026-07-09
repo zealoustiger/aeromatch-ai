@@ -18,6 +18,7 @@ import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail, buildSeedInqui
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
+import { validateReview } from '@/lib/reviewValidation'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
 import { htmlToReadableText } from '@/lib/htmlText'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
@@ -2138,6 +2139,48 @@ export async function deactivateListing(
   }
 
   revalidatePath('/listings')
+}
+
+// Post a review on a partnership listing (`listing_reviews`, RLS-scoped: the insert
+// policy checks `auth.uid() = author_user_id`, so this can use the normal
+// authenticated client — no service-role needed). Scoped to partnerships this slice;
+// `partnership_seekers` reviews are a follow-up (anonymity considerations there).
+export async function postReview(input: {
+  targetId: string
+  rating: number | null
+  body: string
+}): Promise<{ ok?: true; error?: string }> {
+  const validationError = validateReview({ body: input.body, rating: input.rating })
+  if (validationError) return { error: validationError }
+
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Please sign in to post a review.' }
+
+  const { data: target } = await supabase
+    .from('partnerships')
+    .select('poster_id')
+    .eq('id', input.targetId)
+    .maybeSingle()
+  if (target?.poster_id && target.poster_id === user.id) {
+    return { error: 'You can’t review your own listing.' }
+  }
+
+  const { error } = await supabase.from('listing_reviews').insert({
+    target_type: 'partnership',
+    target_id: input.targetId,
+    author_user_id: user.id,
+    rating: input.rating,
+    body: input.body.trim(),
+  })
+
+  if (error) {
+    if (error.code === '23505') return { error: 'You’ve already reviewed this listing.' }
+    return { error: 'Could not post your review. Please try again.' }
+  }
+
+  revalidatePath(`/partnerships/${input.targetId}`)
+  return { ok: true }
 }
 
 export async function relistListing(
