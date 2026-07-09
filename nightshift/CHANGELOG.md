@@ -2,6 +2,43 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T07:11:15Z — PASS — alert-unsubscribe-recover
+- Pages: /alerts/status (unsubscribe landing page), /api/alerts/unsubscribe (email link target)
+- What: Clicking the one-click "Unsubscribe" link in an alert email still immediately
+  turns off that alert, exactly as before — but now the landing page offers a second
+  chance: **"Changed your mind? Get fewer emails instead of none"** with a "Pause
+  instead" button. One tap, no account/sign-in needed, and the alert goes into the
+  same "paused" state the signed-in Alert Manager already supports (skipped by the
+  weekly digest, resumable later), instead of being gone for good.
+- Goal: `[goal]` tier — 🔔 alert-experience queue, "Better unsubscribe UX" (BACKLOG.md,
+  checked off this cycle). New public, token-scoped `pauseAlertByToken` server action
+  (`src/app/actions.ts`) — distinct from the existing `pauseAlert`/`resumeAlert`, which
+  require a signed-in session matching the alert's email; this one is reachable from a
+  bare email link, proven by the same `unsubscribe_token` the link already carries. The
+  unsubscribe route (`src/app/api/alerts/unsubscribe/route.ts`) now forwards that token
+  into the `/alerts/status` redirect; a new `UnsubscribeRecover` client component renders
+  the recovery box only when a token is present on the unsubscribed state, and fires
+  `alert_unsubscribe_recovered` on success. No schema change (`status='paused'` already
+  exists and the digest cron already skips it).
+- Spec: nightshift/specs/20260709T071115Z-alert-unsubscribe-recover.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean.
+  `qa-smoke.mjs` on `/alerts/status` at all 3 states (unsubscribed+token, confirmed,
+  invalid) at desktop 1280 + mobile 375: 6/6 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow). Visual cycle — screenshots confirm the recovery
+  box renders cleanly at both viewports with no regression to the existing copy/CTAs.
+  **Reproduced live, not just via the smoke gate:** created one real test alert row
+  (`qa-alert-unsubscribe-recover-<ts>@example.com`, `status='confirmed'`) with the
+  service-role key, hit the real `/api/alerts/unsubscribe?token=...` route, confirmed
+  the redirect carried the token, drove a real Playwright click on "Pause instead,"
+  and confirmed the row flipped to `status='paused'` in the DB and the UI swapped to
+  the inline "You're paused, not gone" confirmation with no page reload. Test row
+  deleted before ending the cycle (no prod data left behind).
+- Screenshots: nightshift/screenshots/alert-unsubscribe-recover/
+- Next: the "Confirmation-email + confirm-landing polish" item is the next open
+  🔔 alert-experience `[goal]` task (BACKLOG.md). A per-alert digest-frequency setting
+  (truly "fewer" as in less-often, not just paused) would need a schema addition —
+  flagged as a follow-up, not done this cycle.
+
 ## 2026-07-09T07:05:00Z — PASS — crosssell-detail-samples
 - Pages: /aircraft/listing/[id] ("Co-ownership available" panel), /partnerships/[id] ("Prefer to buy outright?" panel)
 - What: The two detail-page cross-sell panels between the two marketplace types now

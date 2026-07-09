@@ -166,8 +166,21 @@ must emit the `alert_subscribed` PostHog event.
   A "Not ready to browse yet?" band on `/` (below the deals rail, above "Three ways to fly
   more for less") using the existing `AlertSignup` component (`sourcePath="/"`, general
   copy) — no new component, no schema/action change.
-- **[P2][goal] Better unsubscribe UX.** The one-click unsubscribe page offers "fewer / pause"
-  instead of only "off" — recover subscribers instead of losing them.
+~~- **[P2][goal] Better unsubscribe UX.**~~ ✅ SHIPPED via `alert-unsubscribe-recover`
+  (2026-07-09) The one-click unsubscribe email link still immediately sets the alert to
+  `status='unsubscribed'` (no regression), but `/alerts/status` now forwards the same
+  `unsubscribe_token` and renders a "Changed your mind? Get fewer emails instead of none"
+  recovery box — a new public, token-scoped `pauseAlertByToken` server action (no session
+  needed, unlike the existing `pauseAlert`/`resumeAlert` which require a signed-in email
+  match) flips the row to the same recoverable `status='paused'` the authenticated
+  `/alerts/manage` flow already uses (digest cron already skips paused alerts — no schema
+  change). Fires `alert_unsubscribe_recovered` on success. Verified end-to-end against a
+  real `@example.com` test alert row (created + deleted this cycle): clicked the real
+  unsubscribe link, confirmed the token carried through, clicked "Pause instead," confirmed
+  the DB row flipped to `paused` and the UI swapped to an inline confirmation with no reload.
+  **Not done, intentionally:** resuming a *paused* alert back to `confirmed` from this public
+  token flow (only `/alerts/manage` does full resume today); a per-alert digest-frequency
+  ("fewer" as in less-often) setting — that's a separate `alerts` schema addition.
 - **[P2][goal] Confirmation-email + confirm-landing polish.** Make the double-opt-in email
   and the `/alerts/status` confirm page best-in-class (clear, warm, on-brand).
 
