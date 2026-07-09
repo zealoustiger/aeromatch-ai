@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T11:27:05Z — DRAIN SUMMARY
+- Cycles this run: 3 (PASS 2 / FAIL 0 / ABORT 1)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $110.6327 of $120 cap
+- Stopped because: backlog drained
+- Run: 20260709T110510Z
+
 ## 2026-07-09T11:20:11Z — PASS — partnerships-crosssell-airport-aware
 - Pages: /partnerships
 - What: **The "Prefer to own outright?" cross-sell box on the main Partnerships page now respects your airport filter — search near an airport and it shows nearby planes, not the whole country.** The `/aircraft` browse page's cross-sell to partnerships already did this (shipped 2026-07-06); the reverse direction on `/partnerships` was the one gap left. Now filtering `/partnerships` by airport (e.g. `?airport=KAUS`) narrows the "Browse N aircraft for sale near KAUS" count and its 4 sample listings to that airport's state, and the copy reads "…near KAUS" — combines with an active make filter too.
