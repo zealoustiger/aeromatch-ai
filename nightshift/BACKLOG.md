@@ -1567,8 +1567,15 @@ These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now 
   since a partnership can't know the seeker's own radius), min_hours/rating (partnership→seeker
   side), max_buyin/max_monthly/share_type (seeker→partnership side); `model` deliberately
   skipped on both (not part of `isCompatibleMatch`, would under-count vs. the shown number).
-  **Remaining, real scope:** a standalone `/matches` view, match
-  badges on browse cards, and new-match alerts.
+  ~~**match badges**~~ ✅ SHIPPED via `listings-match-badge` (2026-07-09): a compact "N
+  matches" pill (new `MatchCountBadge.tsx`, distinct from the detail-page
+  `MatchCountNudge` panel) now appears on each active partnership/seeking row in
+  `/listings` (the owner's own listings-management page), reusing the same
+  `countMatchingSeekersForPartnership`/`countMatchingPartnershipsForSeeker` +
+  `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker` helpers, so an
+  owner sees match counts across all their listings without opening each one.
+  Self-suppresses at 0, no schema change. **Remaining, real scope:** a standalone
+  `/matches` view and new-match alerts.
 - **[P2][want] Listing depth — photo gallery + similar listings.** Multi-photo gallery on the partnership detail page + a "Similar listings" rail. Starting code in `feat/listing-depth` (PR #18): `PhotoGallery.tsx`, `SimilarListings.tsx`. The "richer filters" part of that PR overlaps the P1 Filter UI overhaul — fold it there, don't duplicate.
 - **[P3][want] Pilot profiles + reviews/trust.** Public pilot profile pages, verified badge, reviews. Starting code in `feat/pilot-profiles` (PR #16). ✅ **MIGRATION APPLIED 2026-06-22** — `profiles` + `listing_reviews` tables are live in the shared DB (RLS + admin-only verification trigger; see `supabase/schema.sql`). **No migration needed — build the UI now**, rebasing the `feat/pilot-profiles` code onto current staging and redoing the admin-side wiring against the current tabbed admin. Slice it (profile view → edit → reviews → admin verify).
 

@@ -10,6 +10,13 @@ import RelistListingButton from '@/components/RelistListingButton'
 import AircraftTrustBadge from '@/components/AircraftTrustBadge'
 import TrustBadge from '@/components/TrustBadge'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
+import MatchCountBadge from '@/components/MatchCountBadge'
+import {
+  countMatchingSeekersForPartnership,
+  countMatchingPartnershipsForSeeker,
+  seekerBrowseHrefForPartnership,
+  partnershipBrowseHrefForSeeker,
+} from '@/lib/matchingQuery'
 
 
 export const metadata: Metadata = {
@@ -99,6 +106,16 @@ export default async function MyListingsPage() {
   const pastAircraft: AircraftForSale[] = (pastAircraftRows ?? []) as AircraftForSale[]
   const pastPartnerships: Partnership[] = (pastPartnershipRows ?? []) as Partnership[]
   const pastSeekers: PartnershipSeeker[] = (pastSeekerRows ?? []) as PartnershipSeeker[]
+
+  // Owner-only match counts for active listings — same scoring already used on each
+  // listing's own detail page (MatchCountNudge), surfaced here as a compact pill so an
+  // owner can see it without opening every listing.
+  const partnershipMatchCounts = await Promise.all(
+    partnerships.map((p) => countMatchingSeekersForPartnership(p))
+  )
+  const seekerMatchCounts = await Promise.all(
+    seekers.map((s) => countMatchingPartnershipsForSeeker(s))
+  )
 
   const hasAny = aircraft.length > 0 || partnerships.length > 0 || seekers.length > 0
   const pastCount = pastAircraft.length + pastPartnerships.length + pastSeekers.length
@@ -200,7 +217,7 @@ export default async function MyListingsPage() {
               <Handshake className="h-4 w-4" /> Partnerships ({partnerships.length})
             </h2>
             <ul className="space-y-3">
-              {partnerships.map((p) => (
+              {partnerships.map((p, i) => (
                 <li key={p.id} className="ch-panel flex items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -214,8 +231,12 @@ export default async function MyListingsPage() {
                       {' · '}
                       {formatDate(p.posted_at ?? p.created_at)}
                     </p>
-                    <div className="mt-1.5">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       <TrustBadge p={p} variant="compact" />
+                      <MatchCountBadge
+                        count={partnershipMatchCounts[i]}
+                        href={seekerBrowseHrefForPartnership(p)}
+                      />
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -250,7 +271,7 @@ export default async function MyListingsPage() {
               <UserSearch className="h-4 w-4" /> Pilots seeking ({seekers.length})
             </h2>
             <ul className="space-y-3">
-              {seekers.map((s) => {
+              {seekers.map((s, i) => {
                 const makeLabel = s.preferred_makes?.length
                   ? s.preferred_makes.slice(0, 2).join(', ') + (s.preferred_makes.length > 2 ? '…' : '')
                   : null
@@ -269,8 +290,12 @@ export default async function MyListingsPage() {
                         {' · '}
                         {formatDate(s.created_at)}
                       </p>
-                      <div className="mt-1.5">
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <SeekerTrustBadge s={s} variant="compact" />
+                        <MatchCountBadge
+                          count={seekerMatchCounts[i]}
+                          href={partnershipBrowseHrefForSeeker(s)}
+                        />
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
