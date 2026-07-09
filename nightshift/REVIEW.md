@@ -1,3 +1,26 @@
+## 2026-07-09T08:51:05Z — Night Shift run: 12 cycles (PASS 9 / FAIL 2) — backlog drained
+- Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $56.0011 of $120 cap
+
+- PASS — airport-fbo-flying-clubs — Added a verified FBOs & flying clubs section to the 9 indexable airport hub pages (`/airports/kpao`, `/airports/khwd`, etc.), closing slice 1 
+- cycle produced no verdict (exit 124)
+- PASS — rail-card-rare-find-parity — compact homepage/similar rail cards now show the honesty-gated indigo Rare find chip (≤3 in family), closing the Real-social-proof backlog
+- PASS — crosssell-detail-samples — Both marketplace detail-page cross-sell panels (`/aircraft/listing/[id]` and `/partnerships/[id]`) now show up to 3 real sample listing cards 
+- PASS — alert-unsubscribe-recover — the alert email Unsubscribe link now lands on a page that offers a one-click Pause instead recovery (no sign-in needed), so a subscriber who 
+- PASS — match-nudge-filtered-href — fixed the owner-only N matches nudge on partnership/seeker detail pages so the Browse them link carries airport/radius/hours/ratings/share-ty
+- PASS
+- cycle produced no verdict (exit 124)
+- PASS — matches-view — new owner-gated /matches page aggregating each owner's real cross-listing matches, with count functions refactored behavior-identically and a View all you
+- PASS — match-alert-digest — new `/api/cron/match-alert-digest` weekly cron emails partnership/seeker owners when a genuinely new compatible listing appears on the other side of
+- PASS — alert-confirm-polish — Restyled the alert double-opt-in confirmation email and the `/alerts/status` landing page onto the site's warm cream Etsy×Airbnb tokens (was plai
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 4.0 on 2 cores, sustained ~5 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container CPU-throttled ~494s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+- 2 of 12 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 # Overnight review — 2026-07-08
 
 ## 📊 Traffic (PostHog) — as of 2026-07-08
