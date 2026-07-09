@@ -2,6 +2,75 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T11:08:17Z — PASS — airport-facility-ratings
+- Pages: `/airports/[icao]`
+- What: **Signed-in pilots can now rate a curated airport's FBOs and flying clubs
+  1-5 stars, right on the airport community-hub page.** Each FBO/flying-club listed
+  in the "FBOs & flying clubs at {ICAO}" section (the 9 curated hubs) now has a small
+  star widget: signed-in visitors click 1-5 stars to rate; signed-out visitors see a
+  "Sign in to rate" link. The real aggregate ("4.3 (12)") only shows once a facility
+  has at least 2 genuine ratings — never a fabricated or single-vote number.
+- Goal: `[want]` tier — closed slice 2 ("ratings") of the human-flagged `[P1][want]`
+  "Airport pages as community hubs" item (BACKLOG.md), the last open piece of that
+  3-slice item (slice 1 = FBO/flying-club data, slice 3 = pilots-based-here, both
+  already shipped). Re-checked tier 1 (`[bug]`: none open, last cycle PASSed) and
+  tier 2 (`[want]`) fresh — every other open `[want]` line was either blocked on an
+  explicit human decision (collection-layout redesign awaiting a mock; owner-leads
+  data collection flagged for compliance review; Trade-A-Plane ingestion blocked on
+  DataDome — needs a human call before any further attempt) or a much larger,
+  not-yet-sliced lift (Bay-Area coverage benchmark's remaining denominator, full
+  owner-leads pipeline). This was the clearest well-scoped, buildable `[want]` slice.
+  The `[goal]` alert-experience queue (BACKLOG.md's 🔔 section) is also fully drained
+  as of last night's run — nothing left to pull from tier 3 either.
+- How: new additive `airport_facility_ratings` table (`supabase/schema.sql`) —
+  owner-scoped RLS (`auth.uid() = user_id`), mirroring `saved_listings` exactly, one
+  row per (user, airport, facility) with a unique constraint so re-rating just
+  upserts. New `rateFacility` server action in `src/app/actions.ts` (signed-in only,
+  validates 1-5, upserts, revalidates the airport page) — copied `toggleSavedListing`'s
+  shape. New `src/lib/facilityRatings.ts`: `getFacilityRatingSummaries()` reads the
+  cross-user aggregate via the service-role client (mirrors `saveCounts.ts`'s
+  `getSaveCounts` — RLS only lets a regular client see its own rows, so aggregates
+  need the admin client, never exposing who rated what), gated at `MIN_RATINGS_TO_SHOW
+  = 2`; `getUserFacilityRatings()` reads the signed-in viewer's own ratings via the
+  authed client to pre-fill the widget. New client component
+  `FacilityRatingWidget.tsx` (optimistic star clicks, reverts on failure, fires
+  `track('facility_rated', …)` on success) wired into the existing FBO/flying-club
+  list on `src/app/airports/[icao]/page.tsx`. Deliberately **numeric-only, no
+  free-text comment** — that was the specific reason this item was flagged as "a
+  bigger lift" (schema + moderation); dropping free text removes the abuse surface a
+  moderation queue would otherwise be needed for, so this v1 slice ships without one.
+  Also appended `airport_facility_ratings` to the `sweep_test_accounts` DB function
+  so a future `@example.com` test rater gets cleaned up automatically, same as every
+  other user-owned table.
+- Spec: nightshift/specs/20260709T110817Z-airport-facility-ratings.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean
+  (all routes compiled); `npx eslint` on the 4 changed/new files shows only 2
+  pre-existing unrelated warnings. Visual cycle → read the screenshots: both viewports
+  render the new star widgets cleanly under each FBO/flying-club name at
+  `/airports/kpao` and `/airports/kaus`, no layout shift or overlap. Mandatory
+  `qa-smoke.mjs` against the PRODUCTION build (`npx next start` on port 3000): 4/4
+  pass (HTTP 200, zero app-origin console errors, zero horizontal overflow) at
+  desktop 1280 + mobile 375. ⚠️ **SCHEMA — HUMAN ACTION REQUIRED:** the new
+  `airport_facility_ratings` table + RLS policy (bottom of `supabase/schema.sql`)
+  need to be applied against live Supabase before ratings can actually persist; until
+  then every signed-out visitor correctly sees "Sign in to rate" with no aggregate,
+  and a signed-in submit fails soft (silently reverts the optimistic star, no console
+  error) — confirmed live via the smoke run against today's un-migrated DB, which is
+  exactly why no test account/rows were created this cycle (the write path is
+  gated behind the pending migration by design, same convention as
+  `alerts-manage-page`/`profile-base-favorite-airports`). No `@example.com` rows
+  created or needing cleanup.
+- Screenshots: nightshift/screenshots/airport-facility-ratings/
+- Next: (a) once the migration is applied, spot-check a couple of real ratings land
+  correctly. (b) v2 follow-up: free-text comments + a lightweight admin moderation
+  queue (deliberately out of scope this cycle). (c) the "Airport pages as community
+  hubs" `[P1][want]` item is now fully closed across all 3 slices — the next `[want]`
+  candidates are all either human-blocked (collection-layout mock, owner-leads
+  compliance review, Trade-A-Plane/Controller scraping) or need their own slicing
+  pass (Bay-Area coverage benchmark denominators). A future cycle should either wait
+  on a human unblock or run a plan pass to generate the next `[goal]` alert-experience
+  batch, since that queue drained last night too.
+
 ## 2026-07-09T11:05:07Z — DRAIN SUMMARY
 - Cycles this run: 12 (PASS 9 / FAIL 2 / ABORT 1)
 - Models: cycles on sonnet; 2 escalated to opus; 1 quality-judged on opus
