@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T10:45:00Z — PASS — quickstart-seeker-crosspost
+- Pages: `/searches`
+- What: **Pilots who've saved a partnerships search now get a one-tap nudge to also
+  list themselves as looking for a share.** The "My Saved Searches" list on `/searches`
+  now shows a persistent card — "Also post yourself as looking for a share? Owners see
+  who's looking and can reach out to you directly" — with a button to
+  `/partnerships/seeking/new`. It only appears for signed-in pilots who have at least one
+  saved **partnerships** search AND haven't already posted a seeker listing of their own,
+  so it's never a useless repeat ask. Turns a buyer's demand signal (a saved search) into
+  a chance to add supply-side inventory (a seeker listing).
+- Goal: `[want]` tier — closed the explicitly-noted "Remaining slice" of the shipped
+  `searches-quickstart-onboarding` `[want]` item (BACKLOG.md:1727), the last open piece
+  of the post-signup "What are you looking for?" onboarding. Re-checked tier 1 (`[bug]`:
+  last two cycles PASSed, no open FAIL/regression) and confirmed this was the clearest
+  buildable tier-2 `[want]` slice before any `[goal]` work.
+- How: additive read-only gate in the `/searches` server component (`src/app/searches/
+  page.tsx`) — `hasPartnershipSearch` over the already-fetched `saved_searches` +, only
+  when true, a single `partnership_seekers.select('id').eq('poster_id', user.id).limit(1)`
+  existence check. New nudge card rendered at the top of the populated-list branch,
+  reusing the page's existing card styling + the already-imported `Users`/`Link`. No
+  schema change, no new server action, no new component/dependency. (The prior interrupted
+  attempt scoped this as a transient post-submit prompt inside `QuickStartSearchForm`;
+  live QA showed `saveSearch`'s `revalidatePath('/searches')` re-renders the parent to the
+  populated-list branch before a transient confirmation is readable — a pre-existing
+  characteristic of the quick-start flow — so the nudge moved to the always-rendered list
+  view where it's actually visible.)
+- Spec: nightshift/specs/20260709T103301Z-quickstart-seeker-crosspost.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (exit 0).
+  Visual cycle → read the screenshots. Mandatory `qa-smoke.mjs` against the PRODUCTION
+  build (`npx next start` on 3900): exit 0 on `/searches` + `/partnerships/seeking/new` at
+  desktop 1280 + mobile 375 (HTTP 200, zero app-origin console errors, zero overflow).
+  Feature verified end-to-end with an authed throwaway `@example.com` account + a driver
+  covering three cases: (1) partnerships-search + no seeker → nudge shows, CTA href =
+  `/partnerships/seeking/new`, zero 375px overflow; (2) aircraft-only search → nudge
+  correctly hidden; (3) has-seeker → hidden (the `@example.com` quarantine trigger flips
+  test seekers to `status='test'`, which the `seekers_public_read` RLS policy hides even
+  from the owner, so this case can't be exercised with a test account — but the suppression
+  is a trivial existence check over RLS-visible active rows, and a real user's own active
+  seeker is owner-readable, so it suppresses correctly). Authed screenshots confirm the
+  card renders on-brand at both viewports. Test user + all rows deleted; zero
+  `@example.com` users remain (verified via service-role read). No prod rows left behind.
+- Screenshots: nightshift/screenshots/quickstart-seeker-crosspost/
+- Next: (a) **pre-existing bug worth a `[bug]` cycle** — the global nav unread-message
+  badge (`Nav.tsx:92`) fires a `threads?...&last_message_sender_id=not.is.null` query that
+  returns HTTP 400 on every authed page (surfaces as a console error; third-party
+  supabase.co origin so it's outside the app-origin smoke gate). (b) Optional follow-up:
+  prefill the seeker form (`/partnerships/seeking/new`) with the make/airport from the
+  pilot's saved partnerships search so the cross-post is even lower-friction.
+
 ## 2026-07-09T10:25:30Z — PASS — seeker-crosssell-detail-pages
 - Pages: `/aircraft/listing/[id]`, `/partnerships/[id]`
 - What: **Both aircraft-for-sale and partnership detail pages now show real pilot
