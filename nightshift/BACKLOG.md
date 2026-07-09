@@ -1348,7 +1348,18 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
 **Polish & tools:**
 - **[P2][want] Model pages: richer specs + per-model differentiators.** Fill out specs + a short "what's different about this model" blurb (Wikipedia is fine). Improves the make+model SEO pages. — **specs slice ✅ SHIPPED 2026-06-22T14:05Z** (`model-spec-tables`): a "key specifications" table (seats/engine/hp/cruise/range/useful load/fuel/gear) on the 8 curated high-inventory families (cessna 172/182/150, cirrus sr22/sr20, piper cherokee/arrow, beechcraft bonanza) via `MODEL_SPECS` in `seo.ts`; real representative figures + honest variant footnote; curated-only, no fabricated data on dynamic combos. — **differentiator blurb ✅ SHIPPED 2026-06-23T11:20Z** (`model-differentiator-highlights`): a "What's different about the {Make} {Model}" card (3 scannable bullets — standout trait / who it suits / honest trade-off) on all 8 curated families, between the spec table and the "About" prose; `MODEL_HIGHLIGHTS` + `highlights` field in `seo.ts`; real characteristics only, dynamic combos render nothing. See CHANGELOG. — **mooney, van's, grumman ✅ already curated**; **Diamond DA40 ✅ SHIPPED 2026-06-24T11:53Z** (`model-curate-diamond-da40`): the DA40 family page (previously a thin dynamically-discovered combo) is now fully curated — spec table, "what's different" highlights, FAQs + FAQPage JSON-LD, and "About" prose — same URL/pattern (`da40%`), no duplicate. **Remaining: curate the Diamond DA42 (twin) and DA20 (trainer) families — both have live inventory; same template.** ✅ AUDIT-CONFIRMED FULLY SHIPPED 2026-07-08 (found during `aircraft-list-map-sync`-adjacent backlog scoping) — `seo.ts`'s `MODEL_OVERVIEWS`, `MODEL_SPECS`, `MODEL_HIGHLIGHTS`, and `MODEL_FAQS` all already carry `'diamond/da42'` and `'diamond/da20'` keys, registered in `SEO_MAKE_MODELS`; `getMakeModel`/`resolveMakeModel` (used by `/aircraft/[make]/[model]/page.tsx`, which renders `entry.specTable`/`entry.highlights` when present) pick them up exactly like DA40. Confirmed via direct code read, no code change needed. This item is now fully complete across all curated families.
 - ~~**[P3][want] Nav polish.**~~ ✅ SHIPPED 2026-06-22T12:00Z (see Done + CHANGELOG). Leading icons added to Partnerships (Users), Planes for Sale (Plane), Guides (BookOpen) — Tools already had Calculator; **About** moved out of the top nav (still in the footer). `Nav.tsx` only.
-- **[P2][want] Expand tools/calculators + on-page feedback ask.** More detail in the calculators; add an on-page feedback prompt.
+~~- **[P2][want] Expand tools/calculators + on-page feedback ask.**~~ **Feedback-ask half ✅
+  AUDIT-CONFIRMED ALREADY SHIPPED** — `FeedbackWidget` is mounted globally in
+  `layout.tsx`, so every page (including `/tools/*`) already has an on-page feedback
+  prompt; no code needed. **Calculator-detail half — slice 1 ✅ SHIPPED via
+  `cost-calculator-breakeven-hours` (2026-07-09):** `computeCost` now returns
+  `breakEvenHoursVsRenting` (hours/month needed for a share to cost less than
+  renting; `null` when the wet rate already meets/beats the rental rate — renting
+  never loses in that case), surfaced as a new honest line under the cost
+  calculator's "How it compares" panel. No fabricated numbers — pure derivation
+  from the existing inputs. **Remaining:** the earnings calculator has no
+  equivalent "more detail" pass yet (e.g. a payback-period figure); a natural next
+  slice.
 
 **Data quality — seed pilot-seeking listings (owner-approved approach):**
 - **[P1][want] Seed pilot-seeking listings.** ✅ **SEEDED 2026-06-23** — `scripts/seed-seekers.mjs`
