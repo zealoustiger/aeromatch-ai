@@ -14,6 +14,8 @@ import {
 import AviatorAvatar from '@/components/AviatorAvatar'
 import PartnershipCard from '@/components/PartnershipCard'
 import MessageOwnerButton from '@/components/MessageOwnerButton'
+import { getPartnershipCompVerdicts } from '@/lib/partnershipComps'
+import { getSaveCounts } from '@/lib/saveCounts'
 
 /**
  * Lightweight public member profile for a seed/demo persona (e.g. "Marcus T.").
@@ -89,6 +91,15 @@ export default async function MemberProfilePage({
   const since = memberSinceLabel(persona.memberSince)
   const listings = await personaListings(p)
 
+  // Same proprietary comp/deal-verdict + real save-count signals every other
+  // PartnershipCard call site already gets (e.g. /partnerships/near/[icao], /saved)
+  // — this page rendered bare cards with none of them. Batched, fail-soft.
+  const supabase = await createServerSupabaseClient()
+  const [compVerdicts, saveCounts] = await Promise.all([
+    getPartnershipCompVerdicts(supabase, listings),
+    getSaveCounts(listings.map((l) => l.id), 'partnership'),
+  ])
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <Link
@@ -143,7 +154,13 @@ export default async function MemberProfilePage({
         </h2>
         <div className="space-y-4">
           {listings.map((listing) => (
-            <PartnershipCard key={listing.id} p={listing} />
+            <PartnershipCard
+              key={listing.id}
+              p={listing}
+              comp={compVerdicts.get(listing.id)?.comp ?? null}
+              dealVerdict={compVerdicts.get(listing.id)?.dealVerdict ?? null}
+              saveCount={saveCounts.get(listing.id) ?? 0}
+            />
           ))}
         </div>
       </div>

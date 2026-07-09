@@ -2,6 +2,51 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T08:54:08Z — PASS — member-profile-comp-verdict-parity
+- Pages: `/members/[id]`
+- What: **A pilot's public member-profile page (e.g. "Marcus T.") now shows the same
+  honest "how this deal stacks up" chips and real save count on their partnership
+  listing card that every other page on the site already shows** — this was the one
+  remaining spot where a `PartnershipCard` rendered with none of that signal.
+- Goal: `[goal]` tier, Pillar 3 (buyer analysis) — secondary pillar, pulled because the
+  🔔 alert-experience queue is fully drained (every item in BACKLOG.md's GOAL section is
+  struck off) and tier 1 (`[bug]`) / tier 2 (`[want]`) were re-audited and found empty of
+  clean, unblocked work: every remaining P1 `[want]` is done or blocked (human mock pick,
+  ethics-flagged pending greenlight, needs a human-reviewed schema, or too large/risky —
+  Trade-A-Plane ingestion, Bay-Area coverage benchmark, airport ratings). Pillar 1 and 2
+  are both fully complete outside human-blocked frozen-file edits. Pillar 3 was almost
+  entirely shipped too, but a direct code read of `/members/[id]/page.tsx` confirmed one
+  real, explicitly-flagged gap survived: the "Next" note on the `airport-hub-comp-verdicts`
+  CHANGELOG entry (2026-07-05) called out both `DeviceSavedListings.tsx` and `/members/[id]`
+  as missing comp-verdict parity. The `DeviceSavedListings` half was already quietly fixed
+  by `device-saves-social-proof-parity` (2026-07-08) but never struck off; `/members/[id]`
+  was still genuinely bare. Fixed both bookkeeping and code this cycle.
+- How: `src/app/members/[id]/page.tsx` now calls the same batched
+  `getPartnershipCompVerdicts` (`@/lib/partnershipComps`) and `getSaveCounts`
+  (`@/lib/saveCounts`) helpers `/partnerships/near/[icao]` and `/saved` already use,
+  passing `comp`/`dealVerdict`/`saveCount` into each `PartnershipCard`. No schema, no new
+  component, no new query shape — pure prop-wiring parity fix.
+- Spec: nightshift/specs/20260709T085408Z-member-profile-comp-verdict-parity.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (route
+  compiles). Visual cycle → read the screenshots: `next build` + `next start` on port 3811,
+  `qa-smoke.mjs` against two real seed-persona member pages (Marcus T. / Sarah, found via a
+  read-only service-role query — no rows created) at desktop 1280 + mobile 375: 4/4 pass
+  (HTTP 200, zero app-origin console errors, zero horizontal overflow). Screenshots confirm
+  the page renders identically to before with no layout regression — the comp/deal-verdict
+  chip and save-count chip are correctly dormant on today's low-volume seed data (same
+  documented limitation as every other Pillar 3 comp-verdict surface: needs ≥4 same-family
+  comps / ≥2 real saves to clear the honesty floor), so nothing new renders yet, but the
+  wiring is confirmed correct by code + a clean, unchanged render. Killed the server after
+  (verified via `ps aux`). No prod DB rows created or modified (read-only lookup only).
+- Screenshots: nightshift/screenshots/member-profile-comp-verdict-parity/
+- Next: this closes out Pillar 3's comp-verdict rollout across every `PartnershipCard`/
+  `SeekerCard` render surface in the app. Pillars 1–3 are now essentially exhausted of safe,
+  unblocked work outside human-blocked items (frozen `src/app/auth/**` edits, schema
+  migrations awaiting human application, ethics-flagged seed-persona work, ToS-risky
+  ingestion). The 🔔 alert-experience goal queue is also fully drained. A future cycle
+  hitting all-tiers-empty should emit `ABORT — none — plan needed` per RUNBOOK.md so the
+  Opus/Fable plan pass generates the next batch, rather than inventing marginal polish.
+
 ## 2026-07-09T08:51:05Z — DRAIN SUMMARY
 - Cycles this run: 12 (PASS 9 / FAIL 2 / ABORT 1)
 - Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
