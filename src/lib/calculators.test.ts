@@ -92,4 +92,43 @@ test('earnings calculator — owner offering 2 shares worked example', () => {
   assert.ok(Math.abs(r.fixedCoverage - 0.6667) < 0.001)
   assert.equal(r.netMonthlyFixedAfterDues, 320)
   assert.equal(r.partnersToBreakEvenFixed, 3)
+  assert.equal(r.upfrontCoversMonthsOfFixedCost, 36000 / 960)
+})
+
+test('earnings calculator — upfront buy-in runway (months of fixed cost covered)', () => {
+  // Normal case: both a fixed cost and buy-ins exist, so a runway figure exists.
+  const normal = computeEarnings({
+    monthlyFixedTotal: 960,
+    sharePrice: 18000,
+    sharesOffered: 2,
+    monthlyDuesPerShare: 320,
+    hourlyWet: 85,
+    hourlyCost: 55,
+    expectedHoursPerShare: 10,
+  })
+  assert.equal(normal.upfrontCoversMonthsOfFixedCost, 36000 / 960) // upfrontFromBuyIns / monthlyFixedTotal
+
+  // No buy-in collected (free shares) — nothing to derive a runway from.
+  const noBuyIn = computeEarnings({
+    monthlyFixedTotal: 960,
+    sharePrice: 0,
+    sharesOffered: 2,
+    monthlyDuesPerShare: 320,
+    hourlyWet: 85,
+    hourlyCost: 55,
+    expectedHoursPerShare: 10,
+  })
+  assert.equal(noBuyIn.upfrontCoversMonthsOfFixedCost, null)
+
+  // No fixed cost entered — no divide-by-zero, no fabricated number.
+  const noFixedCost = computeEarnings({
+    monthlyFixedTotal: 0,
+    sharePrice: 18000,
+    sharesOffered: 2,
+    monthlyDuesPerShare: 320,
+    hourlyWet: 85,
+    hourlyCost: 55,
+    expectedHoursPerShare: 10,
+  })
+  assert.equal(noFixedCost.upfrontCoversMonthsOfFixedCost, null)
 })

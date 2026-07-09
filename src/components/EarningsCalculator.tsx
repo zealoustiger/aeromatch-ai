@@ -156,6 +156,12 @@ export default function EarningsCalculator({
             {result.partnersToBreakEvenFixed != null &&
               ` ${result.partnersToBreakEvenFixed} partner${result.partnersToBreakEvenFixed === 1 ? '' : 's'} at these dues fully covers it.`}
           </p>
+          {result.upfrontCoversMonthsOfFixedCost != null && (
+            <p className="mt-3 text-xs text-emerald-800">
+              The {money(result.upfrontFromBuyIns)} upfront from buy-ins alone would cover about{' '}
+              <strong>{result.upfrontCoversMonthsOfFixedCost.toFixed(1)} months</strong> of your full aircraft costs.
+            </p>
+          )}
         </div>
       </div>
     </div>
