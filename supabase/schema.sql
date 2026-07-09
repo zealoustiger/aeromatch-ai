@@ -537,6 +537,14 @@ alter table threads add column if not exists aircraft_for_sale_id uuid reference
 -- + partial unique index threads_aircraft_inquirer_uniq (aircraft_for_sale_id, inquirer_id)
 create unique index if not exists threads_aircraft_inquirer_uniq on threads (aircraft_for_sale_id, inquirer_id) where aircraft_for_sale_id is not null;
 
+-- partnerships / partnership_seekers: new-match email digest bookkeeping
+-- (migration: match_alert_last_sent_at). NULL means "never sent" — the cron
+-- falls back to the listing's own created_at as the "since" cutoff.
+-- ⚠️ Human: apply against live Supabase before the match-alert-digest cron goes
+-- live — the route no-ops safely (sends nothing) until these columns exist.
+alter table partnerships add column if not exists match_alert_last_sent_at timestamptz;
+alter table partnership_seekers add column if not exists match_alert_last_sent_at timestamptz;
+
 -- =====================================================
 -- OUTREACH TARGETS (GTM)  (migration: create_outreach_targets)
 -- Owners we're targeting for ClubHanger partnerships, seeded from FAA registry
