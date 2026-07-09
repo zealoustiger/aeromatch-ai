@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T08:20:00Z — PASS — matches-view
+- Pages: /matches (new, owner-gated), /listings (added a top link)
+- What: **A new "Your Matches" page (`/matches`) that gathers, in one place, the real
+  compatible listings across ALL of your own active listings** — instead of a per-listing
+  count you had to open each listing to see. For every partnership or seeking listing you
+  own that has ≥1 match on the other side of the marketplace, it shows a titled section
+  ("Pilots seeking a match for your 2004 Cessna 172S Skyhawk partnership") with up to 6
+  sample matching cards and a "Browse all N →" link to the filtered browse page. Signed-out
+  visitors are redirected to sign in; owners with no matches yet get an honest empty state
+  pointing to /post. Added a "View all your matches →" link at the top of /listings that
+  only appears when you actually have matches.
+- Goal: `[want]` tier — the standalone `/matches` slice of the long-running "Compatibility
+  matching engine" backlog item (BACKLOG.md ~line 1549, checked off this cycle). Only
+  new-match email alerts remain on that item now.
+- How: new `src/app/matches/page.tsx`. Refactored `src/lib/matchingQuery.ts` so the matched
+  rows (not just a count) are computed once by new `getMatchingSeekersForPartnership`/
+  `getMatchingPartnershipsForSeeker`; the existing `countMatchingSeekersForPartnership`/
+  `countMatchingPartnershipsForSeeker` became thin `(await getMatching…).length` wrappers, so
+  every existing caller (`/listings` match badges, the two detail-page `MatchCountNudge`s) is
+  behavior-identical. Reuses the already-shipped `PartnershipRailCard`/`SeekerRailCard`/
+  `RailScroller` and `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker`
+  helpers. No schema change, no new dependency.
+- Note: this cycle **resumed an interrupted prior run** — the `night/matches-view` branch had
+  the feature built but never QA'd/landed, and the page still carried a leftover "TEMP
+  QA-PREVIEW PATCH" (`void user`) that disabled owner-gating, queried *all* active listings
+  instead of the signed-in owner's own, and left `console.log('DEBUG2 …')` in. Restored proper
+  owner-gating (`redirect('/auth?next=/matches')`), the `.eq('poster_id', user.id)` own-listings
+  filter, and removed the debug before shipping.
+- Verdict: PASS. `npx tsc --noEmit` clean; `npx eslint` clean on all 3 changed files;
+  `rm -rf .next && npx next build` clean. `qa-smoke.mjs` on `/matches` + `/listings` at
+  desktop 1280 + mobile 375: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow) — both pages are owner-gated so the smoke exercises the `/auth`
+  redirect target. **Verified the matching engine end-to-end against real live data** (via a
+  throwaway, never-committed preview route deleted before merge): 23 active partnerships + 13
+  active seekers fetched fine, `isCompatibleMatch` finds 10 compatible-on-paper pairs — but
+  all 10 are currently beyond the seeker's stated `willing_to_travel_nm` (e.g. a KAUG/Maine
+  seeker willing to travel 50nm vs. a KAUS/Austin partnership), so the (correctly-working)
+  travel-radius gate honestly reduces every owner's live matches to 0 today. **The empty
+  state is therefore what real owners see right now** (confirmed via screenshot); the page
+  lights up as nearby compatible listings appear. Also confirmed the **populated** layout
+  (section header + rail composition, desktop + mobile) renders correctly with real card data
+  by temporarily relaxing only the distance gate in the throwaway preview. No prod rows
+  created or modified (all reads). This corrects a prior verification note: the
+  `partnership-seeker-match-count`/`listings-match-badge` "N real matches exist" claims were
+  measured with `isCompatibleMatch` alone (pre-travel-radius) and over-count vs. the shipped
+  behavior — the shipped match badges self-suppress at 0 and are simply invisible today.
+- Screenshots: nightshift/screenshots/matches-view/ (final smoke),
+  nightshift/screenshots/matches-view-populated/ (layout verification)
+- Spec: nightshift/specs/20260709T074335Z-matches-view.md
+- Next: new-match email alerts (the last remaining slice of the matching-engine item) — a
+  bigger lift needing a digest/cron design.
+
 ## 2026-07-09T07:35:30Z — PASS — listings-match-badge
 - Pages: /listings (owner's own listings-management page)
 - What: **Your "My Listings" page now shows a "N matches" pill on each active
