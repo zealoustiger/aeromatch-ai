@@ -9,9 +9,15 @@ import { updateProfile } from '@/app/actions'
 export default function ProfileAirportsForm({
   homeAirport,
   favoriteAirports,
+  displayName,
+  mission,
+  bio,
 }: {
   homeAirport: string | null
   favoriteAirports: string[]
+  displayName: string | null
+  mission: string | null
+  bio: string | null
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -37,6 +43,48 @@ export default function ProfileAirportsForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+      <div>
+        <label htmlFor="display_name" className="mb-1 block text-sm font-medium text-slate-700">
+          Display name <span className="font-normal text-slate-400">(shown on your public profile)</span>
+        </label>
+        <input
+          id="display_name"
+          name="display_name"
+          type="text"
+          maxLength={60}
+          defaultValue={displayName ?? ''}
+          placeholder="e.g. Marcus T."
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        />
+      </div>
+      <div>
+        <label htmlFor="mission" className="mb-1 block text-sm font-medium text-slate-700">
+          Mission <span className="font-normal text-slate-400">(one-line tagline, optional)</span>
+        </label>
+        <input
+          id="mission"
+          name="mission"
+          type="text"
+          maxLength={140}
+          defaultValue={mission ?? ''}
+          placeholder="e.g. Time-building toward my commercial, based at KHWD"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        />
+      </div>
+      <div>
+        <label htmlFor="bio" className="mb-1 block text-sm font-medium text-slate-700">
+          Bio <span className="font-normal text-slate-400">(optional)</span>
+        </label>
+        <textarea
+          id="bio"
+          name="bio"
+          rows={3}
+          maxLength={600}
+          defaultValue={bio ?? ''}
+          placeholder="A bit about your flying background, what you're looking for, etc."
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        />
+      </div>
       <div>
         <label htmlFor="home_airport" className="mb-1 block text-sm font-medium text-slate-700">
           Base airport

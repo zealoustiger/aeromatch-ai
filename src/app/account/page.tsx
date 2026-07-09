@@ -137,17 +137,24 @@ export default async function AccountPage() {
 
   // favorite_airports may not be migrated live yet — fall back to the columns that
   // definitely exist so the page never errors while that migration is pending.
-  let profile: { avatar_config?: unknown; home_airport?: string | null; favorite_airports?: string[] } | null
+  let profile: {
+    avatar_config?: unknown
+    home_airport?: string | null
+    favorite_airports?: string[]
+    display_name?: string | null
+    mission?: string | null
+    bio?: string | null
+  } | null
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('avatar_config, home_airport, favorite_airports')
+    .select('avatar_config, home_airport, favorite_airports, display_name, mission, bio')
     .eq('user_id', user.id)
     .maybeSingle()
   profile = profileData
   if (!profile) {
     const fallback = await supabase
       .from('profiles')
-      .select('avatar_config, home_airport')
+      .select('avatar_config, home_airport, display_name, mission, bio')
       .eq('user_id', user.id)
       .maybeSingle()
     profile = fallback.data
@@ -155,6 +162,9 @@ export default async function AccountPage() {
   const avatarConfig = (profile?.avatar_config ?? null) as AviatorConfig | null
   const homeAirport = (profile?.home_airport ?? null) as string | null
   const favoriteAirports = (profile?.favorite_airports ?? []) as string[]
+  const displayName = (profile?.display_name ?? null) as string | null
+  const mission = (profile?.mission ?? null) as string | null
+  const bio = (profile?.bio ?? null) as string | null
 
   return (
     <div className="ch-surface min-h-screen">
@@ -190,12 +200,18 @@ export default async function AccountPage() {
             Your pilot profile
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Set your base airport and a few favorites you fly out of often. Your base airport
-            shows up as an anonymous avatar — no name, no bio — on that airport&apos;s public
-            page, so other pilots know you&apos;re around. Your avatar, base airport, and any
-            active listings you&apos;ve posted also appear together on your public profile page.
+            Add a display name, a one-line mission, and a short bio, plus your base airport
+            and a few favorites you fly out of often. Your base airport also shows up as an
+            anonymous avatar on that airport&apos;s public page, so other pilots know
+            you&apos;re around. Everything below appears together on your public profile page.
           </p>
-          <ProfileAirportsForm homeAirport={homeAirport} favoriteAirports={favoriteAirports} />
+          <ProfileAirportsForm
+            homeAirport={homeAirport}
+            favoriteAirports={favoriteAirports}
+            displayName={displayName}
+            mission={mission}
+            bio={bio}
+          />
           <Link
             href={`/pilots/${user.id}`}
             className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"

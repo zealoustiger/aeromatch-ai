@@ -104,7 +104,25 @@ export async function updateProfile(formData: FormData): Promise<{ ok: boolean; 
     return { ok: false, error: e instanceof Error ? e.message : 'Invalid airport code.' }
   }
 
-  const basePayload = { user_id: user.id, home_airport, updated_at: new Date().toISOString() }
+  // Blank → null (not ''), so /pilots/[id]'s `display_name || 'ClubHanger member'` and
+  // `mission || bio` fallbacks keep working. Trimmed + length-capped server-side too,
+  // not just via the form's maxLength, since FormData can be posted directly.
+  function trimmedOrNull(raw: string | null, maxLen: number): string | null {
+    const trimmed = (raw ?? '').trim()
+    return trimmed ? trimmed.slice(0, maxLen) : null
+  }
+  const display_name = trimmedOrNull(formData.get('display_name') as string | null, 60)
+  const mission = trimmedOrNull(formData.get('mission') as string | null, 140)
+  const bio = trimmedOrNull(formData.get('bio') as string | null, 600)
+
+  const basePayload = {
+    user_id: user.id,
+    home_airport,
+    display_name,
+    mission,
+    bio,
+    updated_at: new Date().toISOString(),
+  }
   const payload = { ...basePayload, favorite_airports: favorites }
 
   let { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'user_id' })
@@ -117,6 +135,7 @@ export async function updateProfile(formData: FormData): Promise<{ ok: boolean; 
 
   if (error) return { ok: false, error: error.message }
   revalidatePath('/account')
+  revalidatePath(`/pilots/${user.id}`)
   return { ok: true }
 }
 
