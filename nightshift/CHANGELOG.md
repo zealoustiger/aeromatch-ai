@@ -2,6 +2,47 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T07:31:33Z — PASS — match-nudge-filtered-href
+- Pages: /partnerships/[id] (owner view), /partnerships/seeking/[id] (owner view)
+- What: **The owner-only "N matches" box now links to a browse page that actually
+  shows those N matches, not a much bigger unfiltered list.** A listing owner sees
+  "3 pilots seeking a partnership match your listing" — but tapping "Browse them"
+  used to filter only by make, so it could land on a page with dozens of results
+  that had nothing to do with the count. The link now carries every filter
+  dimension the destination browse page supports and the match count actually
+  checks: home airport + travel radius, minimum hours, ratings required, share
+  type, and (for a seeker linking to available partnerships) budget ceilings.
+- Goal: `[want]` tier — a precision fix on the "Compatibility matching engine"
+  backlog item (BACKLOG.md ~line 1549, checked off this cycle). New
+  `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker` helpers in
+  `src/lib/matchingQuery.ts` build the href from the same row data
+  `isCompatibleMatch`/`isWithinTravelRadius` already score; wired into the two
+  existing `MatchCountNudge` call sites (`src/app/partnerships/[id]/page.tsx`,
+  `src/app/partnerships/seeking/[id]/page.tsx`), replacing the make-only inline
+  URL. Deliberately skips `model` on both sides (not a criterion
+  `isCompatibleMatch` checks — adding it would under-count vs. the shown number)
+  and any dimension the destination page can't filter by at all (hourly-rate
+  ceiling; a partnership's own min_hours/ratings on the `/partnerships` side). No
+  schema change, no new dependency/component.
+- Spec: nightshift/specs/20260709T072635Z-match-nudge-filtered-href.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean.
+  Unit-verified the two new pure functions directly (ad-hoc node script, not
+  committed) against bare/fully-populated Partnership/PartnershipSeeker rows —
+  confirmed correct query strings including the "multiple preferred makes → omit
+  `make` rather than falsely narrow to one" and "no home airport → bare
+  `/partnerships`" edge cases. `qa-smoke.mjs` against a real live partnership +
+  seeker detail page AND the two resulting destination browse URLs (with the new
+  params) at desktop 1280 + mobile 375: 8/8 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow). Non-visual cycle (an href/query-string
+  change only, no UI/CSS touched) — screenshots saved for the audit trail but not
+  read per RUNBOOK's non-visual gate. No prod test data created (read-only against
+  real existing listings for both the smoke test and the manual href checks).
+- Screenshots: nightshift/screenshots/match-nudge-filtered-href/,
+  nightshift/screenshots/match-nudge-filtered-href-dest/
+- Next: the backlog item's real remaining scope is unchanged by this cycle — a
+  standalone `/matches` view and match badges on browse cards are the next
+  substantive slices, both bigger lifts than this precision fix.
+
 ## 2026-07-09T07:11:15Z — PASS — alert-unsubscribe-recover
 - Pages: /alerts/status (unsubscribe landing page), /api/alerts/unsubscribe (email link target)
 - What: Clicking the one-click "Unsubscribe" link in an alert email still immediately
