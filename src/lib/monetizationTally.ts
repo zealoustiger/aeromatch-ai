@@ -11,6 +11,8 @@ export const MONETIZATION_PATHS: Record<string, string> = {
   prebuy: 'Pre-buy inspection',
   partnership_formation: 'Help me form a partnership',
   co_ownership_management: 'Manage my co-ownership',
+  feature_listing: 'Feature this listing',
+  listing_vetting: 'Get it vetted',
 }
 
 export interface MonetizationTallyRow {
