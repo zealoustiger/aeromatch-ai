@@ -1666,7 +1666,12 @@ Slice it:
   Escrow-title / Pre-buy inspection CTAs added below the existing broker CTA on
   `/aircraft/listing/[id]` — same `MonetizationIntent` component, distinct `path`/copy
   per button, verified end-to-end (real waitlist row with matching `source`, deleted after).
-  **Not done, intentionally:** the `/aircraft` results-page placement — a natural next slice.
+  ~~**Not done, intentionally: the `/aircraft` results-page placement.**~~ ✅ SHIPPED via
+  `aircraft-browse-broker-cta` (2026-07-09): the same "Work with a broker" `MonetizationIntent`
+  CTA now also renders on the `/aircraft` browse/search-results page, below the inline
+  `AlertSignup` box, gated on a non-empty result list (matches the alert box's own gate). No
+  new component/copy — reused verbatim from the detail-page placement. Not ported to
+  `/partnerships` (not the flagged gap; a future slice if wanted).
 ~~- **[P2][want] slice 3: place partnership formation/management CTAs** on partnership pages~~ ✅
   SHIPPED via `monetization-partnership-cta` (2026-07-08) "Help me form a partnership" +
   "Manage my co-ownership" CTAs (same `MonetizationIntent` component, `path=partnership_formation`/
