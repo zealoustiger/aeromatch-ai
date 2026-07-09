@@ -128,12 +128,16 @@ export default async function HomeRails() {
 
   // Compute year+hours-controlled deal verdict per listing (same logic as browse cards
   // and Similar aircraft rail). Suppress 'fair' to reduce noise — only 'good'/'high'.
+  // Also record each listing's real family size (incl. itself) for the "Rare find"
+  // chip — same allComps array, no extra query.
   const verdicts = new Map<string, 'below' | 'above'>()
+  const familyCounts = new Map<string, number>()
   for (const rail of rails) {
     for (const p of rail.listings) {
       const key = listingFamilyKey.get(p.id)
       if (!key || !p.asking_price) continue
       const allComps = familyCompsMap.get(key) ?? []
+      familyCounts.set(p.id, allComps.length)
       const comps = allComps.filter((c) => c.id !== p.id)
       const verdict = clubHangerDealVerdict(
         { askingPrice: p.asking_price, year: p.year, ttaf: p.ttaf, smoh: p.smoh },
@@ -178,7 +182,11 @@ export default async function HomeRails() {
               <RailScroller>
                 {rail.listings.map((p) => (
                   <li key={p.id} className="shrink-0 snap-start">
-                    <AircraftRailCard p={p} compVerdict={verdicts.get(p.id)} />
+                    <AircraftRailCard
+                      p={p}
+                      compVerdict={verdicts.get(p.id)}
+                      familyCount={familyCounts.get(p.id) ?? null}
+                    />
                   </li>
                 ))}
               </RailScroller>

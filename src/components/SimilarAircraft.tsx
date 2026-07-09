@@ -70,11 +70,14 @@ export default async function SimilarAircraft({ current }: { current: AircraftFo
   // to reduce noise. Honesty floors (≥4 similar-year + similar-hours comps, ±5% dead
   // band) enforced by clubHangerDealVerdict itself (returns null on thin/uncontrolled data).
   // Listings without year or ttaf never receive a verdict — correct self-suppression.
+  // Also record each listing's real family size (incl. itself) for the "Rare find" chip.
   const verdicts = new Map<string, 'below' | 'above'>()
+  const familyCounts = new Map<string, number>()
   for (const p of similar) {
     const key = listingFamily.get(p.id)
     if (!key || !p.asking_price) continue
     const allComps = familyCompsMap.get(key) ?? []
+    familyCounts.set(p.id, allComps.length)
     // Exclude the listing from its own comp set to avoid self-comparison bias.
     const comps = allComps.filter((c) => c.id !== p.id)
     const verdict = clubHangerDealVerdict(
@@ -95,7 +98,11 @@ export default async function SimilarAircraft({ current }: { current: AircraftFo
       <RailScroller>
         {similar.map((p) => (
           <li key={p.id} className="shrink-0 snap-start">
-            <AircraftRailCard p={p} compVerdict={verdicts.get(p.id)} />
+            <AircraftRailCard
+              p={p}
+              compVerdict={verdicts.get(p.id)}
+              familyCount={familyCounts.get(p.id) ?? null}
+            />
           </li>
         ))}
       </RailScroller>

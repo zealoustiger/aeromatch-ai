@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, CalendarClock, AlertTriangle } from 'lucide-react'
+import { MapPin, CalendarClock, AlertTriangle, Gem } from 'lucide-react'
 import { AircraftForSale } from '@/lib/types'
 import { formatPrice, cn } from '@/lib/utils'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -9,6 +9,14 @@ import type { AvionicsCap } from '@/lib/avionicsClassify'
 import { lookupEngineTbo } from '@/lib/engineLife'
 import { computeAnnualStatus } from '@/lib/annualStatus'
 import { computeDamageHistory } from '@/lib/damageHistory'
+
+// Same honesty threshold as AircraftSaleCard's RareFindChip. Duplicated rather
+// than imported: AircraftSaleCard.tsx is a 'use client' module, and importing
+// even a plain constant from a client-component file into a server component
+// (this file, rendered from async Server Components) crosses the RSC client/
+// server boundary — the value doesn't come through as a real number, silently
+// breaking every comparison. Keep this in sync with AircraftSaleCard's copy.
+const RARE_FIND_MAX = 3
 
 const AVIONICS_CHIP_STYLE: Record<string, string> = {
   'glass-panel': 'bg-violet-50 text-violet-700 ring-violet-200',
@@ -104,6 +112,24 @@ function TrustOverlayChip({
   return null
 }
 
+// Rail-card mirror of AircraftSaleCard's RareFindChip — same honesty-gated
+// threshold (RARE_FIND_MAX), same indigo tone, compact copy with the full
+// count in the tooltip (matches TrustOverlayChip's short-label convention).
+// Safe to share the top-left slot with discountPct/compVerdict: both of those
+// require >= MIN_OTHER_COMPS (4) other comps, which a rare (<=3 total) family
+// can never have, so the two states can't collide.
+function RareFindOverlayChip({ count }: { count: number }) {
+  return (
+    <span
+      className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200"
+      title={`Only ${count} of this make + model currently for sale on ClubHanger`}
+    >
+      <Gem className="h-3 w-3" />
+      Rare find
+    </span>
+  )
+}
+
 /**
  * Compact, photo-forward rail card for the homepage curated rails (slice 4).
  * Mirrors the FeaturedListingCard look (rounded photo on top, price-first
@@ -123,6 +149,7 @@ export default function AircraftRailCard({
   p,
   discountPct,
   compVerdict,
+  familyCount = null,
 }: {
   p: AircraftForSale
   /** When set (deals rail), shows an emerald "~X% below average" pill on the
@@ -131,8 +158,14 @@ export default function AircraftRailCard({
   /** When set (similar-aircraft rail), shows a "Good deal" or "Priced high" chip
    *  derived from the family-median estimate. Ignored when discountPct is set. */
   compVerdict?: 'below' | 'above'
+  /** Real count of active, priced listings (incl. this one) in this listing's
+   *  make+model family — powers the "Rare find" chip, same as `AircraftSaleCard`.
+   *  `null`/unresolved means no chip. Ignored when discountPct/compVerdict is set
+   *  (mutually exclusive by construction — see RareFindOverlayChip's comment). */
+  familyCount?: number | null
 }) {
   const label = aircraftTitle(p)
+  const isRareFind = familyCount != null && familyCount >= 1 && familyCount <= RARE_FIND_MAX
   // Real harvested photo when present (homepage rails pass photoOnly, so on the
   // homepage this is always set); else the per-make placeholder.
   const realPhoto = pickRealPhoto(p.images)
@@ -168,6 +201,8 @@ export default function AircraftRailCard({
           <span className="absolute left-2 top-2 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
             Priced high
           </span>
+        ) : isRareFind ? (
+          <RareFindOverlayChip count={familyCount as number} />
         ) : null}
         <TrustOverlayChip annualDue={p.annual_due} damageHistory={p.damage_history} />
         {isPlaceholder ? (
