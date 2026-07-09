@@ -1,3 +1,26 @@
+## 2026-07-09T11:05:07Z — Night Shift run: 12 cycles (PASS 9 / FAIL 2) — backlog drained
+- Models: cycles on sonnet; 2 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $101.7701 of $120 cap
+
+- PASS — member-profile-comp-verdict-parity — `/members/[id]` persona partnership cards now show the same real comp-verdict/deal-check/save-count chips every other listing card o
+- PASS — cost-calculator-breakeven-hours — Added a break-even hours/month vs. renting figure to `/tools/cost-calculator`, the calculator-detail slice of the open `[P2][want]` too
+- PASS — pilot-public-profile — shipped a public `/pilots/[id]` profile page for real signed-up pilots (avatar, home airport, verified badge, listings), linked from `/account` �
+- PASS — profile-bio-edit — Signed-in pilots can now edit display name, mission, and bio on `/account`, which now render on their public `/pilots/[id]` profile page (slice 2 of P
+- PASS — poster-attribution-links — Real user-posted aircraft/partnership listings now show a Posted by {name} link (avatar + home airport) to the poster's public /pilots/[id] pr
+- cycle produced no verdict (exit 124)
+- PASS — partnership-listing-reviews — /partnerships/[id] now has a Reviews section where signed-in non-owner pilots can leave a rating + written review, lighting up the previous
+- PASS — aircraft-browse-broker-cta — Added the Work with a broker monetization fake-door CTA to the `/aircraft` browse results page (previously only on detail pages), closing a 
+- PASS — seeker-crosssell-detail-pages — added a visitor-facing pilots looking cross-sell panel (real seeker demand) to both /aircraft/listing/[id] and /partnerships/[id], closin
+- cycle produced no verdict (exit 124)
+- PASS — quickstart-seeker-crosspost — /searches saved-search list now nudges partnerships searchers (with no seeker listing) to post themselves as looking for a share
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 3.7 on 2 cores, sustained ~3 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container CPU-throttled ~479s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+- 2 of 12 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-09T08:51:05Z — Night Shift run: 12 cycles (PASS 9 / FAIL 2) — backlog drained
 - Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
 - Night spend so far: $56.0011 of $120 cap
