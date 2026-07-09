@@ -1,11 +1,18 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Plane, ArrowRight, Search, Users } from 'lucide-react'
+import { MapPin, Plane, ArrowRight, Search, Users, Building2, Phone } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES, getAirportOverview } from '@/lib/seo'
+import {
+  SITE_URL,
+  SITE_NAME,
+  DEFAULT_OG_IMAGE,
+  STATE_NAMES,
+  getAirportOverview,
+  getAirportFacilities,
+} from '@/lib/seo'
 import { buildAirportJsonLd, buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import PartnershipCard from '@/components/PartnershipCard'
 import SeekerCard from '@/components/SeekerCard'
@@ -166,6 +173,11 @@ export default async function AirportPage({
   // intro. Null for non-curated (thin/noindex) airports → no overview section.
   const overview = getAirportOverview(airport.icao)
 
+  // Community-hub slice 1 (GOAL.md/BACKLOG.md "Airport pages as community hubs"):
+  // real, verified FBOs + flying clubs — curated only for the same indexable set as
+  // the overview prose above; null elsewhere → no section rendered.
+  const facilities = getAirportFacilities(airport.icao)
+
   // Schema.org: an Airport Place node (real codes/coords/region only) + an
   // ItemList of the partnerships shown on the page (in render order: at-airport
   // first, then nearby), each linking to its real /partnerships/[id]. Real data
@@ -236,6 +248,53 @@ export default async function AirportPage({
             {overview.map((para, i) => (
               <p key={i}>{para}</p>
             ))}
+          </div>
+        </section>
+      )}
+
+      {facilities && (facilities.fbos.length > 0 || facilities.flyingClubs.length > 0) && (
+        <section className="ch-panel mb-10 p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <Building2 className="h-5 w-5 text-sky-500" />
+            FBOs &amp; flying clubs at {airport.icao}
+          </h2>
+          <div className="grid gap-6 sm:grid-cols-2">
+            {facilities.fbos.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-slate-500">FBOs</h3>
+                <ul className="space-y-2">
+                  {facilities.fbos.map((f) => (
+                    <li key={f.name} className="text-sm text-slate-700">
+                      <span className="font-medium">{f.name}</span>
+                      {f.phone && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-slate-400">
+                          <Phone className="h-3.5 w-3.5" />
+                          {f.phone}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {facilities.flyingClubs.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-slate-500">Flying clubs</h3>
+                <ul className="space-y-2">
+                  {facilities.flyingClubs.map((f) => (
+                    <li key={f.name} className="text-sm text-slate-700">
+                      <span className="font-medium">{f.name}</span>
+                      {f.phone && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-slate-400">
+                          <Phone className="h-3.5 w-3.5" />
+                          {f.phone}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </section>
       )}

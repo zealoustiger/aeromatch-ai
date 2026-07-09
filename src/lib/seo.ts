@@ -512,6 +512,126 @@ export function getAirportOverview(icao: string): string[] | null {
   return AIRPORT_OVERVIEWS[icao.toLowerCase()] ?? null
 }
 
+export type AirportFacilityEntry = { name: string; phone?: string }
+
+/**
+ * Real FBOs (Fixed-Base Operators) and flying clubs at the same curated, genuinely
+ * indexable airport hubs as `AIRPORT_OVERVIEWS` (`/airports/[icao]` community-hub
+ * slice 1). Every name/phone was individually verified against a primary source
+ * (AirNav.com's listing for the ICAO, the airport's own official tenant directory, or
+ * the business's own site) during this cycle — nothing here is guessed or inferred.
+ * Businesses that looked closed/stale during verification (dead site, "CLOSED" on a
+ * review platform, wrong airport) were excluded rather than included on a guess.
+ * Unlike the evergreen prose above, FBO/club tenancy DOES change over time — this is a
+ * point-in-time hand-curated snapshot (compiled 2026-07), not a live feed, and it only
+ * covers this small curated set, not the full ~17k-row `airports` table (no outbound
+ * network access from the build sandbox to script a live AirNav/FAA pull — see
+ * `/api/faa-lookup` CHANGELOG notes). Revisit periodically rather than treating as
+ * permanent. Keyed by LOWERCASE ICAO; missing key → no section rendered.
+ */
+const AIRPORT_FACILITIES: Record<
+  string,
+  { fbos: AirportFacilityEntry[]; flyingClubs: AirportFacilityEntry[] }
+> = {
+  kads: {
+    fbos: [
+      { name: 'Atlantic Aviation', phone: '972-713-7000' },
+      { name: 'Million Air Dallas', phone: '972-248-1600' },
+      { name: 'Galaxy FBO at Addison', phone: '972-214-2002' },
+    ],
+    flyingClubs: [{ name: 'RFC Dallas' }],
+  },
+  kaus: {
+    fbos: [
+      { name: 'Atlantic Aviation', phone: '512-382-8810' },
+      { name: 'Signature Flight Support', phone: '512-530-5451' },
+      { name: 'Million Air Austin', phone: '737-208-1400' },
+    ],
+    flyingClubs: [{ name: 'Chandelle Flying Club' }, { name: 'Pilot Partner Flyers' }],
+  },
+  kfxe: {
+    fbos: [
+      { name: 'Signature Aviation', phone: '954-351-2003' },
+      { name: 'Banyan Air Service', phone: '954-491-3170' },
+      { name: 'Atlantic Aviation', phone: '954-772-7444' },
+      { name: 'W Aviation FBO', phone: '954-915-7024' },
+      { name: 'Sheltair Aviation', phone: '954-491-2641' },
+    ],
+    flyingClubs: [{ name: 'Flying Educators' }, { name: 'High Speed Aviation Flying Club' }],
+  },
+  khwd: {
+    fbos: [
+      { name: 'APP Jet Center Hayward', phone: '510-259-1347' },
+      { name: 'Signature Aviation', phone: '510-674-2500' },
+      { name: 'Absolute Aero Maintenance', phone: '510-782-6591' },
+      { name: 'AFC Aircraft Works', phone: '626-643-1330' },
+      { name: 'Hayward Hangars', phone: '888-617-0300' },
+      { name: 'South Bay Helicopters', phone: '510-259-1279' },
+    ],
+    flyingClubs: [{ name: 'Alameda Flying Club' }],
+  },
+  klvk: {
+    fbos: [
+      { name: 'Five Rivers Aviation', phone: '925-315-4130' },
+      { name: 'Tri Valley Aviation', phone: '925-455-5802' },
+      { name: 'West Air Aircraft', phone: '925-245-0544' },
+    ],
+    flyingClubs: [
+      { name: 'Bay Area Flying Club', phone: '925-449-5025' },
+      { name: 'Flying Particles' },
+    ],
+  },
+  koak: {
+    fbos: [
+      { name: 'KaiserAir', phone: '510-569-9622' },
+      { name: 'Signature Flight Support', phone: '510-633-1266' },
+    ],
+    flyingClubs: [{ name: 'Alameda Aero Club' }],
+  },
+  kpao: {
+    fbos: [
+      { name: 'Rossi Aircraft', phone: '650-493-3326' },
+      { name: 'Advantage Aviation', phone: '650-494-7248' },
+      { name: 'West Valley Aircraft Services', phone: '650-565-0063' },
+      { name: 'Z.P. Aircraft Maintenance', phone: '650-494-6556' },
+      { name: 'Palo Alto Fuel Service', phone: '650-856-7640' },
+    ],
+    flyingClubs: [
+      { name: 'West Valley Flying Club', phone: '650-856-2030' },
+      { name: 'Stanford Flying Club', phone: '650-858-2200' },
+      { name: 'Sundance Flying Club', phone: '650-494-7768' },
+    ],
+  },
+  krhv: {
+    fbos: [
+      { name: 'Trade Winds Aviation', phone: '408-729-5100' },
+      { name: 'AeroDynamic Aviation', phone: '408-320-9614' },
+      { name: 'Nice Air Aviation', phone: '408-729-3383' },
+    ],
+    flyingClubs: [{ name: 'Squadron 2 Flying Club', phone: '408-648-2008' }, { name: 'Flying Twenty' }],
+  },
+  ksql: {
+    fbos: [
+      { name: 'San Carlos Flight Center', phone: '650-946-1700' },
+      { name: 'Rabbit Aviation Services', phone: '650-591-5857' },
+    ],
+    flyingClubs: [
+      { name: 'San Carlos Flight Center', phone: '650-946-1700' },
+      { name: 'West Valley Flying Club', phone: '650-856-2030' },
+    ],
+  },
+}
+
+/**
+ * Resolve an airport ICAO to its curated FBO + flying-club lists, or null when the
+ * airport isn't curated (→ no section rendered). Mirrors `getAirportOverview`.
+ */
+export function getAirportFacilities(
+  icao: string
+): { fbos: AirportFacilityEntry[]; flyingClubs: AirportFacilityEntry[] } | null {
+  return AIRPORT_FACILITIES[icao.toLowerCase()] ?? null
+}
+
 /**
  * Make+model+STATE intersection FAQs for `/aircraft/[makeSlug]/[modelSlug]/[state]`,
  * keyed by `makeSlug/modelSlug/stateCode` (lowercase USPS). This is the most specific
