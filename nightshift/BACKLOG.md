@@ -1574,8 +1574,24 @@ These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now 
   `countMatchingSeekersForPartnership`/`countMatchingPartnershipsForSeeker` +
   `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker` helpers, so an
   owner sees match counts across all their listings without opening each one.
-  Self-suppresses at 0, no schema change. **Remaining, real scope:** a standalone
-  `/matches` view and new-match alerts.
+  Self-suppresses at 0, no schema change. ~~**a standalone `/matches` view**~~ ✅ SHIPPED
+  via `matches-view` (2026-07-09): a new owner-gated `/matches` page (redirects signed-out
+  → `/auth?next=/matches`) that aggregates, across ALL your own active partnership + seeking
+  listings, the real compatible listings on the other side — one section per own listing that
+  has ≥1 match, showing up to 6 sample cards (reusing the existing `PartnershipRailCard`/
+  `SeekerRailCard`) + a "Browse all N →" link built from the same
+  `seekerBrowseHrefForPartnership`/`partnershipBrowseHrefForSeeker` helpers. Refactored
+  `matchingQuery.ts` so the actual matched rows are computed once by new
+  `getMatchingSeekersForPartnership`/`getMatchingPartnershipsForSeeker`; the existing
+  `countMatching*` functions became thin `(await getMatching…).length` wrappers, so every
+  existing call site (`/listings` badges, detail-page nudges) is behavior-identical. Added a
+  "View all your matches →" link atop `/listings` (only when the owner has ≥1 total match).
+  Honest empty state; no schema change. **Verified end-to-end** against real data: 23 active
+  partnerships + 13 seekers, 10 compatible-on-paper pairs — all currently beyond the seeker's
+  stated `willing_to_travel_nm`, so every owner honestly sees the empty state today (the
+  travel-radius gate is working as designed; the page lights up as nearby compatible listings
+  appear). Populated layout confirmed via a throwaway distance-relaxed preview (deleted before
+  merge). **Remaining, real scope:** new-match alerts.
 - **[P2][want] Listing depth — photo gallery + similar listings.** Multi-photo gallery on the partnership detail page + a "Similar listings" rail. Starting code in `feat/listing-depth` (PR #18): `PhotoGallery.tsx`, `SimilarListings.tsx`. The "richer filters" part of that PR overlaps the P1 Filter UI overhaul — fold it there, don't duplicate.
 - **[P3][want] Pilot profiles + reviews/trust.** Public pilot profile pages, verified badge, reviews. Starting code in `feat/pilot-profiles` (PR #16). ✅ **MIGRATION APPLIED 2026-06-22** — `profiles` + `listing_reviews` tables are live in the shared DB (RLS + admin-only verification trigger; see `supabase/schema.sql`). **No migration needed — build the UI now**, rebasing the `feat/pilot-profiles` code onto current staging and redoing the admin-side wiring against the current tabbed admin. Slice it (profile view → edit → reviews → admin verify).
 

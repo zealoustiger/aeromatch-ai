@@ -119,18 +119,30 @@ export default async function MyListingsPage() {
 
   const hasAny = aircraft.length > 0 || partnerships.length > 0 || seekers.length > 0
   const pastCount = pastAircraft.length + pastPartnerships.length + pastSeekers.length
+  const totalMatches =
+    partnershipMatchCounts.reduce((sum, n) => sum + n, 0) + seekerMatchCounts.reduce((sum, n) => sum + n, 0)
 
   return (
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Plane className="h-6 w-6 text-sky-600" />
-            My Listings
-          </h1>
-          <p className="mt-1 text-slate-500">
-            Aircraft, partnerships, and seeking listings you&apos;ve posted on ClubHanger.
-          </p>
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
+              <Plane className="h-6 w-6 text-sky-600" />
+              My Listings
+            </h1>
+            <p className="mt-1 text-slate-500">
+              Aircraft, partnerships, and seeking listings you&apos;ve posted on ClubHanger.
+            </p>
+          </div>
+          {totalMatches > 0 && (
+            <Link
+              href="/matches"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-100"
+            >
+              View all your matches &rarr;
+            </Link>
+          )}
         </div>
 
         {!hasAny && (

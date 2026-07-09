@@ -5,7 +5,7 @@ import { resolveAirportCoords } from '@/lib/airports'
 import type { Partnership, PartnershipSeeker } from '@/lib/types'
 
 /** Active pilots-seeking-a-partnership listings compatible with this partnership. */
-export async function countMatchingSeekersForPartnership(partnership: Partnership): Promise<number> {
+export async function getMatchingSeekersForPartnership(partnership: Partnership): Promise<PartnershipSeeker[]> {
   const seekers = await getSeekers({})
   const compatible = seekers.filter((s) => isCompatibleMatch(s, partnership))
 
@@ -14,11 +14,11 @@ export async function countMatchingSeekersForPartnership(partnership: Partnershi
 
   return compatible.filter((s) =>
     isWithinTravelRadius(coords[s.home_airport.toUpperCase()], partnershipCoord, s.willing_to_travel_nm)
-  ).length
+  )
 }
 
 /** Active partnership listings compatible with this seeker's stated preferences. */
-export async function countMatchingPartnershipsForSeeker(seeker: PartnershipSeeker): Promise<number> {
+export async function getMatchingPartnershipsForSeeker(seeker: PartnershipSeeker): Promise<Partnership[]> {
   const { listings } = await getPartnershipListings({})
   const compatible = listings.filter((p) => isCompatibleMatch(seeker, p))
 
@@ -27,7 +27,17 @@ export async function countMatchingPartnershipsForSeeker(seeker: PartnershipSeek
 
   return compatible.filter((p) =>
     isWithinTravelRadius(seekerCoord, coords[p.home_airport.toUpperCase()], seeker.willing_to_travel_nm)
-  ).length
+  )
+}
+
+/** Count-only wrapper for callers (owner match badges/nudges) that don't need the rows. */
+export async function countMatchingSeekersForPartnership(partnership: Partnership): Promise<number> {
+  return (await getMatchingSeekersForPartnership(partnership)).length
+}
+
+/** Count-only wrapper for callers (owner match badges/nudges) that don't need the rows. */
+export async function countMatchingPartnershipsForSeeker(seeker: PartnershipSeeker): Promise<number> {
+  return (await getMatchingPartnershipsForSeeker(seeker)).length
 }
 
 /** Default proxy radius (miles) used when linking from a partnership to the seeker
