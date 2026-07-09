@@ -2,6 +2,59 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T12:13:42Z — PASS — earnings-calculator-upfront-runway
+- Pages: `/tools/earnings-calculator`
+- What: **The aircraft-partnership earnings calculator now tells owners how many
+  months of their full aircraft costs the upfront buy-in money alone would cover** —
+  e.g. "The $36,000 upfront from buy-ins alone would cover about 37.5 months of your
+  full aircraft costs," shown right under the existing "Fixed costs covered by dues"
+  bar. The compact embed on `/partnerships/new` is unchanged (no new line there).
+- Goal: `[want]` tier — closed the last open slice explicitly flagged in BACKLOG.md's
+  "Expand tools/calculators" item: the `cost-calculator-breakeven-hours` cycle
+  (2026-07-09) shipped the cost calculator's "break-even hours vs. renting" detail
+  line and noted "the earnings calculator has no equivalent 'more detail' pass yet
+  (e.g. a payback-period figure); a natural next slice." Re-checked tier 1 (`[bug]`:
+  none open — last cycle PASSed; the one candidate that looked like an open `[P1][bug]`,
+  "suppress no-price rows from HomeRails' photoOnly path," turned out stale on direct
+  code read — `fetchAircraftPage`'s global `BUYER_PRICE_FLOOR` gate already covers it,
+  including NULL-price rows, since `.gte()` on a NULL column excludes the row) and
+  tier 2 (`[want]`, via an exhaustive full-file backlog scan) fresh: nearly everything
+  else open is human-blocked (collection-layout mock, owner-leads compliance review,
+  Trade-A-Plane/Controller/AirMart scraping WAF-blocked) or a bigger unsliced lift with
+  a documented honest-abort (Bay-Area FAA fleet-count denominator). This was the
+  clearest well-scoped, buildable `[want]` slice. The `[goal]` alert-experience queue
+  remains fully drained (per BACKLOG.md's own note), so tier 2 was the right lane.
+- How: `computeEarnings` (`src/lib/calculators.ts`) gained
+  `upfrontCoversMonthsOfFixedCost: number | null` = `upfrontFromBuyIns /
+  monthlyFixedTotal` when both are positive, else `null` (no divide-by-zero, no
+  fabricated number) — mirrors the cost calculator's existing `breakEvenHoursVsRenting`
+  derived-insight pattern exactly (same honesty-gated null-when-undeterminable shape).
+  `EarningsCalculator.tsx`'s `full` variant renders the new line conditionally, styled
+  identically to `CostCalculator.tsx`'s break-even note. Added 2 new unit tests (worked
+  example + null edge cases: zero buy-in, zero fixed cost) to `calculators.test.ts`,
+  alongside the existing pattern. No schema/dependency/component change.
+- Spec: nightshift/specs/20260709T121342Z-earnings-calculator-upfront-runway.md
+- Verdict: PASS. `node --experimental-strip-types --test src/lib/calculators.test.ts`:
+  8/8 pass (6 pre-existing + 2 new). `npx tsc --noEmit` clean. `rm -rf .next && npx next
+  build` clean (all routes compiled, no errors). Visual cycle → read the screenshots:
+  both `/tools/earnings-calculator` and (unaffected control) `/tools/cost-calculator`
+  render cleanly at desktop 1280 + mobile 375, new line reads correctly, no
+  overlap/overflow. Mandatory `qa-smoke.mjs` against the PRODUCTION build (`npx next
+  start` on port 3000): 4/4 checks pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow). Killed both `next-server` processes after (verified via `ps
+  aux`, 0 remaining). No prod DB rows touched or created this cycle (pure client-side
+  derived calculation, no server action/query/signup/listing involved).
+- Screenshots: nightshift/screenshots/earnings-calculator-upfront-runway/
+- Next: the "Expand tools/calculators + on-page feedback ask" backlog item is now
+  fully closed across both halves. Tier 2 `[want]` is genuinely thin tonight per the
+  exhaustive scan this cycle ran — remaining open candidates found: (a) earnings-
+  calculator-adjacent, none left; (b) seeker "Model Wanted" filter isn't scoped to the
+  selected Make (small, no schema, a real gap — worth a future cycle); (c) "Merge
+  Available + Seeking into one toggle" (`[P2]`, needs scoping first — could balloon);
+  (d) "Guides: less text-heavy + broaden + engage" (`[P2]`, stale `[goal]` tag,
+  functionally a `[want]` content task). A future cycle should pick one of (b)-(d), or
+  run a plan pass since the `[goal]` alert queue is also drained.
+
 ## 2026-07-09T12:03:06Z — PASS — seller-upgrade-cta-post-listing
 - Pages: `/aircraft/listing/[id]`, `/partnerships/[id]`
 - What: **Right after you post a listing, you now see two extra "coming soon" options —

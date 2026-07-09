@@ -1369,9 +1369,15 @@ Highest-priority steering. Bugs first, then alternate want/goal per the allocati
   renting; `null` when the wet rate already meets/beats the rental rate — renting
   never loses in that case), surfaced as a new honest line under the cost
   calculator's "How it compares" panel. No fabricated numbers — pure derivation
-  from the existing inputs. **Remaining:** the earnings calculator has no
-  equivalent "more detail" pass yet (e.g. a payback-period figure); a natural next
-  slice.
+  from the existing inputs. **Slice 2 ✅ SHIPPED via
+  `earnings-calculator-upfront-runway` (2026-07-09):** `computeEarnings` now also
+  returns `upfrontCoversMonthsOfFixedCost` (months of the aircraft's full monthly
+  fixed cost the one-time partner buy-ins alone would cover, `null` when there's
+  no fixed cost or no buy-in to derive it from — no divide-by-zero, no fabricated
+  number), surfaced as a new line under the earnings calculator's "Fixed costs
+  covered by dues" bar (`full` variant only; the `compact` embed on
+  `/partnerships/new` is unchanged). **This closes the "Expand tools/calculators"
+  item's last open slice — fully complete.**
 
 **Data quality — seed pilot-seeking listings (owner-approved approach):**
 - **[P1][want] Seed pilot-seeking listings.** ✅ **SEEDED 2026-06-23** — `scripts/seed-seekers.mjs`
