@@ -192,9 +192,16 @@ export default async function AccountPage() {
           <p className="mt-2 text-sm text-slate-600">
             Set your base airport and a few favorites you fly out of often. Your base airport
             shows up as an anonymous avatar — no name, no bio — on that airport&apos;s public
-            page, so other pilots know you&apos;re around.
+            page, so other pilots know you&apos;re around. Your avatar, base airport, and any
+            active listings you&apos;ve posted also appear together on your public profile page.
           </p>
           <ProfileAirportsForm homeAirport={homeAirport} favoriteAirports={favoriteAirports} />
+          <Link
+            href={`/pilots/${user.id}`}
+            className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+          >
+            View my public profile &rarr;
+          </Link>
         </section>
 
         {/* Email alerts — saved searches are the alert subscriptions */}
