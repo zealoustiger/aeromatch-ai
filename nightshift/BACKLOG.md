@@ -181,8 +181,17 @@ must emit the `alert_subscribed` PostHog event.
   **Not done, intentionally:** resuming a *paused* alert back to `confirmed` from this public
   token flow (only `/alerts/manage` does full resume today); a per-alert digest-frequency
   ("fewer" as in less-often) setting — that's a separate `alerts` schema addition.
-- **[P2][goal] Confirmation-email + confirm-landing polish.** Make the double-opt-in email
-  and the `/alerts/status` confirm page best-in-class (clear, warm, on-brand).
+~~- **[P2][goal] Confirmation-email + confirm-landing polish.**~~ ✅ SHIPPED via
+  `alert-confirm-polish` (2026-07-09) `buildAlertConfirmEmail()` was a plain white/slate-50
+  template; `/alerts/status` was a bare white page — both out of step with the site's warm
+  cream (`ch-surface`/`ch-panel`) Etsy×Airbnb tokens used everywhere else. The confirm email
+  now renders on a `#faf7f2` cream body with a rounded white card, a small "ClubHanger"
+  header, and friendlier copy ("Almost there — confirm your alerts"); `/alerts/status` (all 3
+  states: confirmed/unsubscribed/invalid) now wraps in `ch-surface` + a `ch-panel` card, and
+  `UnsubscribeRecover`'s "Changed your mind?" box swapped its cold `slate-200/slate-50` for
+  the same warm `#ece6dc`/`#f4efe7` tones so it reads as part of the same card. Pure
+  presentational — no change to confirm/unsubscribe/pause token logic, subject-line logic, or
+  routing. No schema/dependency change.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_

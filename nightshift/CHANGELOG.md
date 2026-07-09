@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T08:47:00Z — PASS — alert-confirm-polish
+- Pages: `/alerts/status` (all 3 states); new visual for the double-opt-in confirm email
+  (no route, sent via `buildAlertConfirmEmail`)
+- What: **The email you get when you sign up for an alert, and the page you land on after
+  confirming/unsubscribing, now look like ClubHanger** — warm cream background, rounded
+  card, friendlier copy — instead of a plain white/gray template that looked unfinished
+  next to the rest of the (already-restyled) site.
+- Goal: `[goal]` tier — the last remaining item in BACKLOG.md's 🔔 alert-experience section
+  ("Confirmation-email + confirm-landing polish", checked off this cycle). Tier 1 (`[bug]`)
+  was empty (prior cycle PASSed clean). Tier 2 (`[want]`) was re-audited and still empty of
+  clean, unblocked work: every remaining P1 `[want]` is either done (found `/partnerships/[id]`
+  already has `PhotoGallery`/`SimilarListings` — the "Listing depth" P2 item was already
+  fully shipped, not yet struck off, now fixed below), blocked on a human mock pick
+  ("Redesign the collection layout"), ethics-flagged pending greenlight ("Dynamic-location
+  seed personas"), needs a human-reviewed schema before an autonomous build ("Owner-leads
+  list"), or too large/risky for one cycle (Trade-A-Plane ingestion — ToS risk; Bay-Area
+  coverage benchmark — denominator data source genuinely missing, per the immediately-prior
+  cycle's research). That left the goal tier's queued next item as the clean, scoped pick.
+- Also checked off (audit-confirmed, no code needed): **`[P2][want] Listing depth — photo
+  gallery + similar listings`** (BACKLOG.md) — `PhotoGallery.tsx`/`SimilarListings.tsx` are
+  already imported and rendered on `/partnerships/[id]`; confirmed via direct grep, struck
+  off in the same commit as a bonus.
+- How: `buildAlertConfirmEmail()` (`src/lib/email.ts`) now renders on a `#faf7f2` cream body
+  with a rounded (16px), softly-shadowed white card, a small "ClubHanger" text header, and
+  warmer copy ("Almost there — confirm your alerts"); same sky-600 CTA button, same
+  `confirmUrl`/`unsubscribeUrl` plumbing, same subject-line logic — text-version copy only.
+  `/alerts/status/page.tsx` now wraps in `ch-surface` and renders the icon+message block as a
+  `ch-panel` card (same `STATES` content/routing, unchanged). `UnsubscribeRecover.tsx`'s
+  "Changed your mind?" box swapped its cold `slate-200`/`slate-50` for the same warm
+  `#ece6dc`/`#f4efe7` tones used by `ch-panel`, so it reads as part of the same card instead
+  of a jarring gray insert (it's only ever rendered inside this one page). No schema, no
+  dependency, no logic change anywhere.
+- Spec: nightshift/specs/20260709T084345Z-alert-confirm-polish.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `npx eslint` clean on all 3 changed files;
+  `rm -rf .next && npx next build` clean. Killed a stale `next-server` process left running
+  from an earlier session (serving an old build on :3000) before starting a fresh `next start`
+  for QA. Unit-verified `buildAlertConfirmEmail()` directly (via `npx tsx`, not committed):
+  confirmed the cream background, "Confirm my alerts" CTA, and the real confirm URL all land
+  correctly in the rendered HTML. Visual cycle → read the screenshots: `qa-smoke.mjs` on
+  `/alerts/status?state=confirmed|unsubscribed&token=...|invalid` at desktop 1280 + mobile
+  375: 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow);
+  screenshots confirm the warm cream surface + rounded card on all 3 states, the
+  "Changed your mind? / Pause instead" recovery box now reads as a warm nested panel, and
+  mobile stacks cleanly with no overflow. Killed the server after. No prod DB rows touched
+  (no signup/post created — pure presentational change to existing routes/templates).
+- Screenshots: nightshift/screenshots/alert-confirm-polish/
+- Next: the alert digest, new-message, and seed-inquiry emails (`src/lib/email.ts`) still use
+  the older plain white/slate-50 template — a natural follow-up to bring the whole email
+  suite onto the same warm cream card treatment shipped here for the confirm email.
+
 ## 2026-07-09T08:32:20Z — PASS — match-alert-digest
 - Pages: none directly (new backend cron route, `/api/cron/match-alert-digest`); verified no
   regression on `/api/cron/alert-digest`, `/matches`, `/listings`, `/partnerships`
