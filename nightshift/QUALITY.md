@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-09T06:49:09Z — rail-card-rare-find-parity — score 4/5
+- Strengths: Faithful mirror of AircraftSaleCard's honesty-gated chip — exact copy/threshold/guard, correct null & count-incl-self handling, mutual-exclusivity reasoning sound, DealsRail rightly left inert; clean reuse of already-fetched allComps.
+- Weaknesses / risks: Diverges from spec (duplicates RARE_FIND_MAX + isRareFind logic + tooltip copy instead of exporting/reusing), and the stated RSC-boundary reason for not importing a plain constant is overstated — mild sync-drift risk across the two cards.
+- Follow-up: none
+
 ## 2026-07-08T13:13:51Z — homepage-alert-band — score 4/5
 - Strengths: Exactly the spec's scope — one purely-additive `<section>` slotted between DealsRail and the explore cards, reuses `AlertSignup sourcePath="/"` (no context → correct general copy) with zero schema/action/dependency changes; Tailwind matches neighbouring sections verbatim (`text-2xl font-bold text-slate-900 sm:text-3xl`, `max-w-2xl`, responsive px), `text-left` override is deliberate for the card, and mobile is safe (form is `flex-col sm:flex-row`, sr-only label already in the component).
 - Weaknesses / risks: The wrapper adds its own `<h2>` + subcopy ("…we'll email you the moment it's listed") directly above `AlertSignup`, which renders its own `<h2>` ("Get new-listing alerts") + near-identical subcopy — two stacked h2s and duplicated messaging, slightly wordy and awkward heading semantics; not material.
