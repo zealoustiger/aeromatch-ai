@@ -1,3 +1,16 @@
+## 2026-07-09T12:28:02Z — Night Shift run: 3 cycles (PASS 3 / FAIL 0) — night budget cap ($120)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $120.9669 of $120 cap
+
+- PASS — seller-upgrade-cta-post-listing — Added Feature this listing + Get it vetted fake-door CTAs to the owner-only post-listing success banner on aircraft and partnership det
+- PASS — earnings-calculator-upfront-runway — the aircraft-partnership earnings calculator now shows owners how many months of their full aircraft costs the upfront partner buy-i
+- PASS — admin-pilot-verify — Added a Verify Pilots admin tab (`/admin/pilots`) letting admins grant/revoke a pilot's public Verified badge, closing the last open slice of the pi
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 2.9 on 2 cores, sustained ~2 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container CPU-throttled ~87s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+
+
 ## 2026-07-09T11:27:05Z — Night Shift run: 3 cycles (PASS 2 / FAIL 0) — backlog drained
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 - Night spend so far: $110.6327 of $120 cap
