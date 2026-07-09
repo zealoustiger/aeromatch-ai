@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckCircle2, BellOff, AlertCircle } from 'lucide-react'
+import UnsubscribeRecover from '@/components/UnsubscribeRecover'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -51,6 +52,8 @@ export default async function AlertStatusPage({
   const params = await searchParams
   const key = resolveState(params.state)
   const { icon: Icon, tint, ring, title, body } = STATES[key]
+  const rawToken = params.token
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -59,6 +62,7 @@ export default async function AlertStatusPage({
       </div>
       <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
       <p className="mt-3 text-base leading-relaxed text-slate-600">{body}</p>
+      {key === 'unsubscribed' && token && <UnsubscribeRecover token={token} />}
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
           href="/aircraft"

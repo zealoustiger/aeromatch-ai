@@ -1047,6 +1047,28 @@ export async function deleteAlert(id: string) {
   return { ok: true }
 }
 
+// Public, token-scoped recovery for the one-click unsubscribe landing page — no
+// session exists there (it's a bare email link), so ownership is proven by the same
+// `unsubscribe_token` the email already carries, not by `loadOwnedAlert`'s signed-in
+// email match. Lets someone who just unsubscribed get "fewer emails" instead of
+// "none" without creating an account. Same recoverable `paused` status the
+// authenticated pause/resume flow uses (digest cron already skips it).
+export async function pauseAlertByToken(token: string) {
+  const trimmed = token?.trim()
+  if (!trimmed) return { error: 'Invalid link.' }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ status: 'paused' })
+    .eq('unsubscribe_token', trimmed)
+    .select('id')
+
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
+  return { ok: true }
+}
+
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
 const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft', '/partnerships/seeking'] as const
 

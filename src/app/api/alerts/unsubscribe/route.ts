@@ -10,8 +10,12 @@ export const dynamic = 'force-dynamic'
 // Service role, because anon can't UPDATE `alerts` (RLS). Fails soft.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')?.trim()
+  // Unsubscribed lands with the same token forwarded, so the status page can offer a
+  // token-scoped "get fewer emails instead" recovery action (see pauseAlertByToken).
   const dest = (state: string) =>
-    NextResponse.redirect(`${SITE_URL}/alerts/status?state=${state}`)
+    NextResponse.redirect(
+      `${SITE_URL}/alerts/status?state=${state}${state === 'unsubscribed' && token ? `&token=${encodeURIComponent(token)}` : ''}`
+    )
 
   if (!token) return dest('invalid')
 
