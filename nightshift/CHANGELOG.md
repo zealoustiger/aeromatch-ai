@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T08:51:05Z — DRAIN SUMMARY
+- Cycles this run: 12 (PASS 9 / FAIL 2 / ABORT 1)
+- Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $56.0011 of $120 cap
+- Stopped because: backlog drained
+- Run: 20260709T060004Z
+
 ## 2026-07-09T08:47:00Z — PASS — alert-confirm-polish
 - Pages: `/alerts/status` (all 3 states); new visual for the double-opt-in confirm email
   (no route, sent via `buildAlertConfirmEmail`)
