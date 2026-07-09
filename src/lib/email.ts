@@ -88,34 +88,39 @@ export function buildAlertConfirmEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Confirm your alerts</h1>
-      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
-        Thanks for signing up${forThing} on ClubHanger. Click below to confirm your
-        email — we&rsquo;ll only message you when a genuinely new matching aircraft is listed.
-      </p>
-      <p style="margin:0 0 24px;">
-        <a href="${escapeAttr(opts.confirmUrl)}"
-           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
-          Confirm my alerts
-        </a>
-      </p>
-      <p style="font-size:13px;line-height:1.6;color:#64748b;margin:0 0 8px;">
-        If you didn&rsquo;t request this, you can ignore this email — you won&rsquo;t hear from us again.
-      </p>
-      <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
-        Prefer not to get these? <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#94a3b8;">Unsubscribe</a>.
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Almost there — confirm your alerts</h1>
+        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
+          Thanks for signing up${forThing} on ClubHanger. One click and you&rsquo;re set — we&rsquo;ll
+          only email you when a genuinely new matching listing shows up, never anything else.
+        </p>
+        <p style="margin:0 0 4px;">
+          <a href="${escapeAttr(opts.confirmUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Confirm my alerts
+          </a>
+        </p>
+        <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+          Didn&rsquo;t request this? No action needed — you won&rsquo;t hear from us again.
+        </p>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        Prefer not to get these? <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
       </p>
     </div>
   </body>
 </html>`
 
-  const text = `Confirm your ClubHanger alerts${forThingText}.
+  const text = `ClubHanger
+
+Almost there — confirm your alerts${forThingText}.
 
 Confirm your email: ${opts.confirmUrl}
 
-If you didn't request this, ignore this email.
+Didn't request this? No action needed — you won't hear from us again.
 Unsubscribe: ${opts.unsubscribeUrl}`
 
   return { subject, html, text }
