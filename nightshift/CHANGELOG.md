@@ -2,6 +2,72 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T10:05:00Z — PASS — partnership-listing-reviews
+- Pages: `/partnerships/[id]`
+- What: **Partnership listings now have a "Reviews" section** — a signed-in pilot
+  who doesn't own the listing can leave a star rating (optional) + a written
+  review, and existing reviews show below with the author's name, avatar, stars,
+  and date. Signed-out visitors see a "sign in to leave a review" prompt; the
+  listing's owner sees "you can't review your own listing." This lights up the
+  `listing_reviews` table (live in the DB since 2026-06-22) which until now had
+  zero UI. Seed/demo persona listings don't show the section (nobody actually
+  partnered with them).
+- Goal: `[want]` tier — slice 3 of `[P3][want] Pilot profiles + reviews/trust`
+  (BACKLOG.md), the exact "Remaining: slice 3 (reviews — listing_reviews UI)"
+  item flagged by last cycle's `poster-attribution-links` entry. Re-audited
+  tiers 1 (`[bug]`, none — last cycle was a PASS) and 2 (`[want]`) fresh: every
+  other open `[want]` line remains blocked exactly as prior cycles found it
+  (human mock pick, ethics-flagged FAA seed, needs a human-reviewed schema, or
+  too large for one cycle). Friction removed: pilots can now build/read trust on
+  a specific partnership listing instead of contacting a total stranger blind.
+- How: new `postReview` server action (`src/app/actions.ts`) scoped to
+  `target_type:'partnership'` — inserts via the normal RLS-respecting
+  `createServerSupabaseClient()` (the `listing_reviews` insert policy checks
+  `auth.uid() = author_user_id`, so no service-role workaround needed, confirmed
+  by a live anon-key probe: public `select` succeeds, unauthenticated `insert`
+  correctly 401s `42501`), blocks self-review (looks up `partnerships.poster_id`)
+  and duplicate review (DB unique constraint `23505` → friendly message),
+  validates through new pure `src/lib/reviewValidation.ts` (unit-tested,
+  6/6 pass: body 3–2000 chars, rating 1–5, light profanity guard). New
+  `src/lib/reviews.ts` (`getReviews` + batched author `getPublicProfile` lookup,
+  same self-suppress-to-"ClubHanger member" fallback `PosterAttribution` uses),
+  `src/components/ReviewsSection.tsx` (server, gates the prompt/owner/
+  already-reviewed/form states) + `src/components/ReviewForm.tsx` (client,
+  `router.refresh()` after a successful post so the new review appears without a
+  full reload). Wired into `/partnerships/[id]` after `<SimilarListings>`,
+  non-seed only. Styled with the site's existing `ch-panel` cream tokens. No
+  schema change (table + RLS already live), no new dependency.
+- Spec: nightshift/specs/20260709T094311Z-partnership-listing-reviews.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build`
+  clean (both before and after removing the temp QA route — confirmed the route
+  is absent from the final build). Unit tests 6/6. Visual cycle → read the
+  screenshots. `qa-smoke.mjs` exit 0 on `/partnerships/[id]` (desktop 1280 +
+  mobile 375, HTTP 200, zero console errors, zero overflow) — the signed-out
+  empty state ("sign in to leave a review" + "No reviews yet — be the first")
+  renders correctly in the real page, well-placed after Similar partnerships.
+  The signed-in write path was verified end-to-end against real prod rows via a
+  temporary, unlinked `noindex` preview route + a Playwright driver: created a
+  throwaway `@example.com` account, signed in with a real session cookie, posted
+  a 4-star review through the actual `postReview` action, confirmed "Thanks —
+  your review is posted." then screenshotted the review rendered in the list
+  (avatar, "ClubHanger member" fallback since the test user had no profile row,
+  4 filled + 1 empty star, date, body) with the form correctly replaced by the
+  "already reviewed" gate — proving post → row created → appears in list →
+  duplicate blocked, at both 1280 + 375, no overflow. Then deleted BOTH the
+  preview route (`src/app/qa-preview-partnership-reviews/`) and the scratch
+  driver, rebuilt to confirm the route is gone, and merged only the real code.
+  All test rows + the throwaway user fully deleted this cycle, verified gone via
+  a service-role read (0 `listing_reviews` rows, 0 `@example.com` users). Killed
+  all `next-server` processes after (verified via `ps aux`, 0 remaining).
+- Screenshots: nightshift/screenshots/partnership-listing-reviews/
+- Next: slice 4 — admin verify wiring for the `verified` badge (admin-only
+  trigger already live). Natural follow-ups once real reviews exist: seeker
+  (`target_type:'seeker'`) reviews with the anonymity model in mind, an
+  aggregate rating badge on `PartnershipCard`/browse pages, and an admin
+  moderation surface for `status='hidden'`. The pre-existing
+  `threads.last_message_at` unread-badge migration is still the oldest
+  outstanding ⚠️ HUMAN ACTION item.
+
 ## 2026-07-09T09:32:00Z — PASS — poster-attribution-links
 - Pages: `/aircraft/listing/[id]`, `/partnerships/[id]`
 - What: **A real user's aircraft-for-sale or partnership listing now shows "Posted by
