@@ -228,6 +228,8 @@ export interface EarningsResult {
   netMonthlyFixedAfterDues: number
   /** Partners needed for dues alone to fully cover the owner's fixed cost. */
   partnersToBreakEvenFixed: number | null
+  /** Months of the aircraft's full monthly fixed cost the one-time buy-ins alone would cover, if set aside as a reserve (null if there's no fixed cost or no buy-in to derive this from). */
+  upfrontCoversMonthsOfFixedCost: number | null
 }
 
 export function computeEarnings(input: EarningsInputs): EarningsResult {
@@ -247,6 +249,8 @@ export function computeEarnings(input: EarningsInputs): EarningsResult {
   const fixedCoverage = monthlyFixedTotal > 0 ? monthlyDuesIncome / monthlyFixedTotal : 0
   const netMonthlyFixedAfterDues = monthlyFixedTotal - monthlyDuesIncome
   const partnersToBreakEvenFixed = duesPerShare > 0 ? Math.ceil(monthlyFixedTotal / duesPerShare) : null
+  const upfrontCoversMonthsOfFixedCost =
+    monthlyFixedTotal > 0 && upfrontFromBuyIns > 0 ? upfrontFromBuyIns / monthlyFixedTotal : null
 
   return {
     monthlyDuesIncome,
@@ -257,5 +261,6 @@ export function computeEarnings(input: EarningsInputs): EarningsResult {
     fixedCoverage,
     netMonthlyFixedAfterDues,
     partnersToBreakEvenFixed,
+    upfrontCoversMonthsOfFixedCost,
   }
 }
