@@ -781,9 +781,13 @@ price history (`previous_price`/`price_changed_at`), comps (`getFamilyComps`).
   `getPartnershipCompVerdicts`/`getSeekerBudgetCheckVerdicts` batch helpers already proven
   elsewhere. Dormant on today's seed data at both audited airports (no make clears the 4-comp
   floor) — verified via a temporary mock-data preview route, screenshotted, then deleted before
-  merge. **Next:** `DeviceSavedListings.tsx` (logged-out `/saved`) has the same gap but needs
-  verdict maps threaded through `hydrateDeviceSaves` (separate cycle); `/members/[id]`'s
-  persona partnership card is missing the same props too but is noindex/lower-value.
+  merge. **`DeviceSavedListings.tsx` gap ✅ SHIPPED via `device-saves-social-proof-parity`
+  (2026-07-08)** — verdict maps now threaded through `hydrateDeviceSaves`, confirmed via direct
+  code read (this line was stale, never struck off). **`/members/[id]` gap ✅ SHIPPED via
+  `member-profile-comp-verdict-parity` (2026-07-09)** — the persona's `PartnershipCard` now
+  receives the same batched `comp`/`dealVerdict`/`saveCount` props (`getPartnershipCompVerdicts`
+  + `getSaveCounts`), matching every other call site. This item is now fully complete across
+  every `PartnershipCard`/`SeekerCard` render surface in the app.
 
 ---
 
