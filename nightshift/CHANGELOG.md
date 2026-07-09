@@ -2,6 +2,46 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T10:14:44Z — PASS — aircraft-browse-broker-cta
+- Pages: `/aircraft`
+- What: **The `/aircraft` browse/search-results page now has a "Work with a broker" CTA** —
+  the same honest "Coming soon — want early access?" fake-door capture already live on the
+  aircraft and partnership detail pages, so a visitor browsing the full list (not just a
+  single listing) can also signal interest in broker help.
+- Goal: `[want]` tier — closed the one named remaining gap flagged by the
+  `monetization-services-cta` cycle ("Not done, intentionally: the `/aircraft` results-page
+  placement — a natural next slice"). Re-audited tiers 1 (`[bug]`, none — last cycle PASSed)
+  and re-scanned tier 2 (`[want]`) fresh this cycle: researched the top open candidate,
+  "Dynamic-location seed seeking personas" (BACKLOG.md), first — live-DB + code audit found
+  its premise doesn't hold in production (the real seed script already distributes seeker
+  listings nationally via the live `airports` table; the literal "Bay Area persona" it
+  describes is a `MOCK_SEEKERS` dev-only fixture that never renders on staging/prod) — logged
+  the finding inline in BACKLOG.md rather than build a fix with no live effect, and moved to
+  this item instead. Every other open `[want]` line remains blocked exactly as prior cycles
+  found it (human mock pick, DB-casing normalization needing a human call, bigger-lift schema
+  work, or out-of-scope bot-evasion).
+- How: `src/app/aircraft/page.tsx` — imported the existing `MonetizationIntent` component
+  (already used identically on `/aircraft/listing/[id]` and `/partnerships/[id]`, no changes
+  to it) and rendered one `path="broker"` CTA directly below the page's inline `AlertSignup`
+  box, gated on `itemListListings.length > 0` (same gate as the alert box, so it never shows
+  on an empty-result page). No new component, no schema/dependency change, no new
+  `waitlist.source` value — reuses the existing `"broker"` path `joinWaitlist` already
+  handles.
+- Spec: nightshift/specs/20260709T101444Z-aircraft-browse-broker-cta.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean. Visual
+  cycle → read the screenshots. `qa-smoke.mjs` exit 0 on `/aircraft` and
+  `/aircraft?make=Cessna` (desktop 1280 + mobile 375, HTTP 200, zero console errors, zero
+  overflow). Screenshots confirm the CTA renders cleanly at both viewports and both URLs —
+  full-width button directly below the alert box, correct spacing above "Aircraft for sale by
+  state," make-aware alert copy unaffected on the filtered URL. Killed the `next-server`
+  process after (verified via `ps aux`, 0 remaining). No prod DB rows touched this cycle (pure
+  UI addition, no new server action).
+- Screenshots: nightshift/screenshots/aircraft-browse-broker-cta/
+- Next: consider the same CTA on `/partnerships` browse results for parity (not the flagged
+  gap this cycle targeted); the "Dynamic-location seed seeking personas" backlog item is now
+  annotated as low-value/dev-only — safe to skip in future scans unless the `MOCK_SEEKERS`
+  fixture is ever surfaced somewhere real.
+
 ## 2026-07-09T10:05:00Z — PASS — partnership-listing-reviews
 - Pages: `/partnerships/[id]`
 - What: **Partnership listings now have a "Reviews" section** — a signed-in pilot
