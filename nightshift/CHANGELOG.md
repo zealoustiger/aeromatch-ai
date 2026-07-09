@@ -2,6 +2,70 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T09:15:02Z — PASS — profile-bio-edit
+- Pages: `/account`, `/pilots/[id]`
+- What: **Signed-up pilots can now edit their display name, a one-line mission,
+  and a short bio from `/account`** — these fields already existed in the
+  database and rendered on the new `/pilots/[id]` public profile page (shipped
+  last cycle), but had no edit surface, so every profile showed the
+  "ClubHanger member" fallback with no name or bio.
+- Goal: `[want]` tier — slice 2 of `[P3][want] Pilot profiles + reviews/trust`
+  (BACKLOG.md), the exact "Remaining" item flagged by last cycle's
+  `pilot-public-profile` entry. Re-audited tiers 1 (`[bug]`, only the known
+  scraper-blocked "real aircraft photos missing" item, not actionable — human
+  data-pipeline dependency) and 2 (`[want]`) fresh this cycle: every other open
+  `[want]` line remains blocked exactly as prior cycles found it (human mock
+  pick — "Redesign the collection layout"; ethics-flagged pending greenlight —
+  "Dynamic-location seed personas"; needs a human-reviewed schema — "Owner-leads
+  list"; too large/risky/ToS-sensitive for one cycle — Trade-A-Plane ingestion,
+  Bay-Area coverage benchmark, Controller/AirMart/AeroTrader coverage; "Airport
+  pages as community hubs" slice 2 (ratings) needs a schema + moderation system,
+  a bigger multi-cycle lift). Pilot-profile slice 2 was the one genuinely open,
+  unblocked, single-cycle-sized `[want]` left.
+- How: `updateProfile` (`src/app/actions.ts`) now also upserts `display_name`,
+  `mission`, `bio` — trimmed and length-capped server-side (60/140/600 chars),
+  blank input saved as `null` (not `''`) so `/pilots/[id]`'s existing
+  `display_name || 'ClubHanger member'` / `mission || bio` fallback logic keeps
+  working unchanged. `ProfileAirportsForm.tsx` gained the 3 corresponding input
+  fields (same one-submit form as the existing airport fields — one save, no
+  new action). `/account/page.tsx` now selects these 3 columns alongside the
+  existing `avatar_config`/`home_airport`/`favorite_airports` query and passes
+  them through. No schema/migration change — the columns already existed live
+  (confirmed: `getPublicProfile` already selected them last cycle), they just
+  had no edit UI.
+- Spec: nightshift/specs/20260709T091502Z-profile-bio-edit.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `npx eslint` clean on all 3 changed
+  files (2 pre-existing unrelated warnings in `actions.ts` untouched by this
+  diff); `rm -rf .next && npx next build` clean. Visual cycle → read the
+  screenshots: `next build` + `next start` on port 3830, `qa-smoke.mjs` against
+  `/account` (logged-out render) + a real `/pilots/[id]` at desktop 1280 +
+  mobile 375: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow). Beyond the smoke gate, end-to-end verified the actual
+  signed-in edit flow against a real throwaway `@example.com` test account
+  (created + fully deleted this cycle via the service-role client, plus its
+  `profiles` row): signed in via a real `@supabase/ssr` session (same cookie
+  format prod expects), filled Display name/Mission/Bio on `/account`,
+  submitted, confirmed the inline "Saved" state, confirmed via a direct
+  service-role read that the `profiles` row updated correctly, then loaded
+  `/pilots/[id]` and confirmed the new display name + mission render — all
+  captured in extra screenshots alongside the smoke-gate ones. One pre-existing,
+  already-documented console 400 appeared on `/account` (the known
+  `threads.last_message_at`-column-not-migrated unread-badge issue from the
+  `nav-unread-badge-migration-fallback` cycle, 2026-07-06) — confirmed via a
+  network-response probe that the failing request is `threads?select=...
+  last_message_at...`, unrelated to any file this cycle touched; the smoke
+  gate's own console-error check (which only inspects the anonymous/logged-out
+  render, where that badge never fires) correctly shows zero errors. Killed the
+  server after (verified via `ps aux`); confirmed zero leftover test users via
+  a service-role `listUsers` scan for the `qa-profile-bio-edit`/`qa-probe400`
+  email prefixes after cleanup.
+- Screenshots: nightshift/screenshots/profile-bio-edit/
+- Next: slice 3 — a `listing_reviews` UI (leave a review on a completed
+  partnership); slice 4 — admin verification wiring for the `verified` badge;
+  linking `/pilots/[id]` from listing-detail "posted by" attribution. The
+  pre-existing `threads.last_message_at` unread-badge migration (flagged again
+  above) is still the oldest outstanding ⚠️ HUMAN ACTION item.
+
 ## 2026-07-09T09:07:38Z — PASS — pilot-public-profile
 - Pages: `/pilots/[id]` (new), `/account`
 - What: **Real signed-up pilots now have a public profile page** — avatar, home
