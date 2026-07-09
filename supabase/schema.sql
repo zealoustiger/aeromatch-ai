@@ -695,6 +695,7 @@ begin
   delete from public.aircraft_for_sale   where poster_id in (select id from _sweep_ids);
   delete from public.partnership_seekers where poster_id in (select id from _sweep_ids);
   delete from public.saved_listings      where user_id  in (select id from _sweep_ids);
+  delete from public.airport_facility_ratings where user_id in (select id from _sweep_ids);
   delete from public.alerts              where email    in (select email from _sweep_ids);
   select count(*) into n from _sweep_ids;
   delete from auth.users where id in (select id from _sweep_ids);
@@ -718,3 +719,34 @@ create policy "alerts_owner_select" on alerts
 -- airports are silently dropped (graceful fallback in updateProfile), so no user-facing
 -- error; the base airport already saves today.
 alter table profiles add column if not exists favorite_airports text[];
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: airport_facility_ratings
+-- Airport community-hub slice 2 ("ratings"): lets a signed-in pilot rate a curated
+-- FBO/flying club shown on /airports/[icao] (1-5 stars, one rating per pilot per
+-- facility, upsertable). facility_name/facility_type identify a facility from the
+-- hardcoded AIRPORT_FACILITIES data in src/lib/seo.ts (not a DB row), so no FK there.
+-- RLS mirrors saved_listings exactly: owner-scoped read/write only — aggregate reads
+-- go through the service-role client (getFacilityRatingSummaries), same pattern as
+-- getSaveCounts, so no public select policy is needed. Apply in the Supabase SQL
+-- editor. Until applied, the rating widget shows no aggregate and submits fail soft
+-- (no error surfaced) — the FBO/flying-club list itself is unaffected.
+create table if not exists airport_facility_ratings (
+  id            uuid        default gen_random_uuid() primary key,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now(),
+  user_id       uuid        references auth.users(id) on delete cascade not null,
+  airport_icao  text        not null,
+  facility_name text        not null,
+  facility_type text        not null,
+  rating        smallint    not null check (rating between 1 and 5),
+  unique(user_id, airport_icao, facility_name)
+);
+
+alter table airport_facility_ratings enable row level security;
+
+create policy "airport_facility_ratings_owner_all" on airport_facility_ratings
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index if not exists airport_facility_ratings_lookup_idx
+  on airport_facility_ratings (airport_icao, facility_name);

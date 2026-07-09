@@ -1181,6 +1181,49 @@ export async function toggleSavedListing(
   return { ok: true, saved: true }
 }
 
+const FACILITY_TYPES = ['fbo', 'flying_club'] as const
+
+/**
+ * Rate a curated FBO/flying club shown on an airport community-hub page (1-5 stars).
+ * Signed-in only. Upserts on (user_id, airport_icao, facility_name) so re-rating just
+ * changes the existing row. Fails soft with a friendly error if the table isn't
+ * migrated onto the live DB yet (⚠️ see supabase/schema.sql: airport_facility_ratings).
+ */
+export async function rateFacility(
+  icao: string,
+  facilityName: string,
+  facilityType: string,
+  rating: number,
+) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sign in to rate this facility.' }
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { error: 'Rating must be between 1 and 5.' }
+  }
+  const safeType = FACILITY_TYPES.includes(facilityType as (typeof FACILITY_TYPES)[number])
+    ? facilityType
+    : 'fbo'
+
+  const { error } = await supabase
+    .from('airport_facility_ratings')
+    .upsert(
+      {
+        user_id: user.id,
+        airport_icao: icao.toUpperCase(),
+        facility_name: facilityName,
+        facility_type: safeType,
+        rating,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,airport_icao,facility_name' },
+    )
+  if (error) return { error: 'Failed to save your rating.' }
+  revalidatePath(`/airports/${icao.toLowerCase()}`)
+  return { ok: true, rating }
+}
+
 /**
  * Attach (or clear) an optional free-text note on a saved listing. The note lives
  * on the per-user saved_listings row, so users can remember why they saved a plane
