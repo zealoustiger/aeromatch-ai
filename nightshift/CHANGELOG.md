@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T12:03:06Z — PASS — seller-upgrade-cta-post-listing
+- Pages: `/aircraft/listing/[id]`, `/partnerships/[id]`
+- What: **Right after you post a listing, you now see two extra "coming soon" options —
+  "Feature this listing" and "Get it vetted" — inside the green "Your listing is live!"
+  confirmation box.** Clicking either opens the same honest "want early access?" popup
+  already used elsewhere on the site (leave your email, no real service yet, no charge).
+  Only the person who just posted sees these — ordinary visitors browsing the listing
+  don't.
+- Goal: `[want]` tier — closed the last named remaining gap from the "Monetization —
+  intent signals" backlog item: the `monetization-tally-admin` cycle (2026-07-08) closed
+  slices 1-4 of that item but explicitly left "the seller-upgrade CTAs (Feature this
+  listing / Get it vetted) in the post-listing flow" as "still open as its own follow-up
+  idea." Re-checked tier 1 (`[bug]`: none — last cycle PASSed, no open regression) and
+  tier 2 (`[want]`) fresh: every other open `[want]` line was either blocked on an
+  explicit human decision (collection-layout mock, owner-leads compliance review,
+  Trade-A-Plane DataDome block), a much bigger lift with an honest prior abort (Bay-Area
+  coverage benchmark's FAA fleet-count denominator — already tried and abandoned once
+  rather than ship a fabricated number), or genuinely complete aside from a human-blocked
+  sub-piece (model-filter DB casing normalization). This was the clearest well-scoped,
+  buildable `[want]` slice — and it reuses an existing, proven component verbatim. The
+  `[goal]` alert-experience queue (BACKLOG.md's 🔔 section) remains fully drained, so this
+  was also the right tier to be working in.
+- How: two new `MonetizationIntent` CTAs (`path="feature_listing"`/`"listing_vetting"`,
+  same honest fake-door pattern as every other monetization CTA — never claims the
+  service exists, just measures demand + captures an optional email into the existing
+  `waitlist` table) added inside the existing owner-only `justPosted` success banner on
+  both `src/app/aircraft/listing/[id]/page.tsx` and `src/app/partnerships/[id]/page.tsx`
+  — the literal "post-listing flow" placement the original monetization brief called for,
+  distinct from the buyer-facing broker/financing/etc. CTAs already live further down both
+  pages. Added both new paths to `MONETIZATION_PATHS` in `src/lib/monetizationTally.ts` so
+  `/admin/monetization` picks up real opt-in counts for them with no other change. 3 files
+  touched, additive — no new component/dependency/color, NO schema/DB/SQL, no FREEZE file.
+- Spec: nightshift/specs/20260709T120306Z-seller-upgrade-cta-post-listing.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (all
+  routes compiled). Visual cycle → read the screenshots: both new buttons render cleanly
+  inside the green success banner on both pages, at both viewports, no overlap/overflow.
+  Mandatory `qa-smoke.mjs` against the PRODUCTION build (`npx next start` on port 3000):
+  6/6 checks pass (HTTP 200, zero app-origin console errors, zero horizontal overflow) at
+  desktop 1280 + mobile 375 on a real Beechcraft Bonanza listing with `?posted=1`, a real
+  Cessna 172S partnership with `?posted=1`, and `/admin/monetization` (renders its
+  logged-out "Admin only" gate cleanly — no error). Killed the `next-server` process after
+  (verified via `ps aux`, 0 remaining). No prod DB rows touched or created this cycle (pure
+  UI addition + a read-only tally-page config change; no signup/post/waitlist row created).
+- Screenshots: nightshift/screenshots/seller-upgrade-cta-post-listing/
+- Next: the "Monetization — intent signals" backlog item is now fully closed across every
+  named slice. The `[want]` tier is thin tonight — most remaining open items are
+  human-blocked (compliance review, scraper WIP, a design mock) or a bigger lift with a
+  documented honest-abort (Bay-Area FAA fleet-count denominator, needs the NBAIP/Form 5010
+  bulk dataset, not piecemeal web search). A future cycle should either wait on a human
+  unblock, tackle that bulk-data pull properly, or run a plan pass since the alert-goal
+  queue is also drained.
+
 ## 2026-07-09T11:27:05Z — DRAIN SUMMARY
 - Cycles this run: 3 (PASS 2 / FAIL 0 / ABORT 1)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus

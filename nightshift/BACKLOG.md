@@ -1692,9 +1692,14 @@ Slice it:
   "0" per path (no fabricated numbers) plus a "not enough data" note when the total is 0.
   Pure read query against the existing `waitlist` table, no schema/dependency change.
   **The whole "Monetization — intent signals" backlog item (all 4 slices) is now fully
-  shipped.** Not done, intentionally: the seller-upgrade CTAs (Feature this listing / Get
-  it vetted) in the post-listing flow — a separate placement from this item's scope,
-  still open as its own follow-up idea.
+  shipped.**
+  ~~Not done, intentionally: the seller-upgrade CTAs (Feature this listing / Get
+  it vetted) in the post-listing flow~~ ✅ SHIPPED via `seller-upgrade-cta-post-listing`
+  (2026-07-09): both CTAs (same `MonetizationIntent` component, `path=feature_listing`/
+  `listing_vetting`) now render inside the owner-only `justPosted` success banner on
+  `/aircraft/listing/[id]` and `/partnerships/[id]` — the exact post-listing moment the
+  original brief called for, distinct from the buyer-facing CTAs already on both pages.
+  Every named slice of the monetization intent-signals item is now closed.
 
 ### Monetization (UI only — do NOT activate; human decision)
 - **[P3] Standardized ad placements.** Build reusable, consistently-sized ad-slot blocks (e.g. leaderboard, in-feed, sidebar) with placeholders. Do NOT wire a live paid network — leave activation to the human. Networks to evaluate and summarize for the human (don't pick one autonomously):
