@@ -1603,7 +1603,11 @@ These shipped as PRs on 6/14 but went stale (35 commits behind staging) and now 
   travel-radius gate is working as designed; the page lights up as nearby compatible listings
   appear). Populated layout confirmed via a throwaway distance-relaxed preview (deleted before
   merge). **Remaining, real scope:** new-match alerts.
-- **[P2][want] Listing depth — photo gallery + similar listings.** Multi-photo gallery on the partnership detail page + a "Similar listings" rail. Starting code in `feat/listing-depth` (PR #18): `PhotoGallery.tsx`, `SimilarListings.tsx`. The "richer filters" part of that PR overlaps the P1 Filter UI overhaul — fold it there, don't duplicate.
+~~- **[P2][want] Listing depth — photo gallery + similar listings.**~~ ✅ AUDIT-CONFIRMED
+  ALREADY SHIPPED 2026-07-09 (found during `alert-confirm-polish`'s `[want]`-tier scoping).
+  `/partnerships/[id]/page.tsx` already imports and renders both `PhotoGallery` (multi-photo
+  gallery) and `SimilarListings` (the "Similar listings" rail) — confirmed via direct grep +
+  code read, no code change needed.
 - **[P3][want] Pilot profiles + reviews/trust.** Public pilot profile pages, verified badge, reviews. Starting code in `feat/pilot-profiles` (PR #16). ✅ **MIGRATION APPLIED 2026-06-22** — `profiles` + `listing_reviews` tables are live in the shared DB (RLS + admin-only verification trigger; see `supabase/schema.sql`). **No migration needed — build the UI now**, rebasing the `feat/pilot-profiles` code onto current staging and redoing the admin-side wiring against the current tabbed admin. Slice it (profile view → edit → reviews → admin verify).
 
 ### Quality — re-QA the original 6/12 audit
