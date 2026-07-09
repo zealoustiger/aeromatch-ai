@@ -56,27 +56,31 @@ export default async function AlertStatusPage({
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken
 
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
-      <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${ring}`}>
-        <Icon className={`h-8 w-8 ${tint}`} />
-      </div>
-      <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-      <p className="mt-3 text-base leading-relaxed text-slate-600">{body}</p>
-      {key === 'unsubscribed' && token && <UnsubscribeRecover token={token} />}
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link
-          href="/aircraft"
-          className="rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-        >
-          Browse aircraft for sale
-        </Link>
-        <Link
-          href="/"
-          className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-        >
-          Back to ClubHanger
-        </Link>
-      </div>
-    </main>
+    <div className="ch-surface min-h-screen">
+      <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
+        <div className="ch-panel w-full px-6 py-10 sm:px-10">
+          <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${ring}`}>
+            <Icon className={`h-8 w-8 ${tint}`} />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+          <p className="mt-3 text-base leading-relaxed text-slate-600">{body}</p>
+          {key === 'unsubscribed' && token && <UnsubscribeRecover token={token} />}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/aircraft"
+              className="rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+            >
+              Browse aircraft for sale
+            </Link>
+            <Link
+              href="/"
+              className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Back to ClubHanger
+            </Link>
+          </div>
+        </div>
+      </main>
+    </div>
   )
 }

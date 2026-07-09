@@ -32,7 +32,7 @@ export default function UnsubscribeRecover({ token }: { token: string }) {
   }
 
   return (
-    <div className="mt-6 w-full max-w-sm rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-left">
+    <div className="mt-6 w-full max-w-sm rounded-lg border border-[#ece6dc] bg-[#f4efe7] px-4 py-4 text-left">
       <p className="text-sm font-medium text-slate-900">Changed your mind?</p>
       <p className="mt-1 text-sm text-slate-600">
         Get fewer emails instead of none — pause this alert instead of unsubscribing
