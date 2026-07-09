@@ -19,6 +19,7 @@ import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import MobileFiltersDrawer from '@/components/MobileFiltersDrawer'
 import ModelFaq from '@/components/ModelFaq'
+import MonetizationIntent from '@/components/MonetizationIntent'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { describeAircraftFilters, STATE_CODES, STATE_NAMES, stateSlug, SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
@@ -315,6 +316,21 @@ export default async function AircraftPage({
               already leads with this same capture, so this would be a duplicate. */}
           {itemListListings.length > 0 && (
             <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
+          )}
+
+          {/* Monetization intent signal — same honest "coming soon" fake-door CTA already
+              live on the aircraft/partnership detail pages, testing broker demand here too.
+              Never claims the service exists; UI + waitlist capture only. Skipped on an
+              empty result list, matching the AlertSignup gate above. */}
+          {itemListListings.length > 0 && (
+            <div className="mt-4">
+              <MonetizationIntent
+                path="broker"
+                label="Work with a broker"
+                title="Coming soon — want early access?"
+                description="Get matched with a broker who can help you evaluate, negotiate, and close on your next aircraft. We're gauging interest before building this out — leave your email and we'll reach out when it's ready."
+              />
+            </div>
           )}
 
           {/* Browse by state — crawlable internal links to the per-state for-sale pages */}

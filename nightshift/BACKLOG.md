@@ -72,6 +72,15 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   (concierge@clubhanger.com) dynamically match airports near the visitor's search. Instead
   of showing a Bay Area persona to a Texas visitor, render the same persona at an airport
   near the visitor's search/location. Keeps the page from looking empty everywhere.
+  **Audit note (2026-07-09):** no `concierge@clubhanger.com` account exists; the real seed
+  mechanism is `scripts/seed-seekers.mjs` → real `partnership_seekers` rows (`poster_id:
+  null`), which already pulls airports dynamically from the live `airports` table and is
+  confirmed geographically diverse in prod today (12 active seed rows spread across
+  MS/MD/ME/CA/KS/TX/NC/AR/WA/OR — no Bay-Area skew). The literal "Bay Area persona" this item
+  describes is `MOCK_SEEKERS` in `src/lib/mockData.ts` (KPAO/Wei C.), a hardcoded fixture used
+  only when `!hasSupabase()` (local dev without env vars) — it never renders on staging/prod,
+  so this item has no live user-facing effect today. Leaving open at P2 in case the mock
+  fixture is ever surfaced somewhere real; not a build target until then.
 ~~- **[agent][bug] `image_is_placeholder` never resets to `true` on partnership edit.**~~
   ✅ SHIPPED via `partnership-edit-placeholder-reset` (2026-07-04) `updatePartnershipListing`
   (`src/app/actions.ts`) only set `image_is_placeholder: false` when photos exist, but never
