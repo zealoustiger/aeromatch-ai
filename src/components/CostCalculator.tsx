@@ -159,6 +159,13 @@ export default function CostCalculator({
             />
           )}
         </div>
+        {rentalRate > 0 && (
+          <p className="mt-3 text-xs text-sky-800">
+            {result.breakEvenHoursVsRenting != null
+              ? <>You need to fly at least <strong>{Math.ceil(result.breakEvenHoursVsRenting)} hrs/month</strong> for this share to beat renting.</>
+              : <>At this wet rate, this share never costs less than renting per month — try a lower wet rate or monthly fixed cost.</>}
+          </p>
+        )}
       </div>
     </div>
   )

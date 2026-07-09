@@ -30,6 +30,21 @@ test('cost calculator — 1/3 C172 share worked example', () => {
   assert.equal(r.vsRentingMonthlySavings, 430)
   assert.equal(Math.round(r.fullOwnershipMonthly!), 1810)
   assert.equal(Math.round(r.vsFullOwnershipMonthlySavings!), 640)
+  assert.equal(r.breakEvenHoursVsRenting, 320 / (160 - 85)) // monthlyFixed / (rentalRate - hourlyWet)
+})
+
+test('cost calculator — break-even hours vs. renting', () => {
+  // Normal case: rental beats wet rate, so a break-even point exists.
+  const normal = computeCost({ buyIn: 0, monthlyFixed: 300, hourlyWet: 80, hoursPerMonth: 10, rentalRate: 150 })
+  assert.equal(normal.breakEvenHoursVsRenting, 300 / (150 - 80))
+
+  // Renting never loses (wet rate >= rental rate) — no break-even exists.
+  const neverBeats = computeCost({ buyIn: 0, monthlyFixed: 300, hourlyWet: 150, hoursPerMonth: 10, rentalRate: 150 })
+  assert.equal(neverBeats.breakEvenHoursVsRenting, null)
+
+  // No rental rate given — no comparison requested, no divide-by-zero.
+  const noRental = computeCost({ buyIn: 0, monthlyFixed: 300, hourlyWet: 80, hoursPerMonth: 10 })
+  assert.equal(noRental.breakEvenHoursVsRenting, null)
 })
 
 test('cost calculator — zero hours falls back to wet rate for $/hr, no divide-by-zero', () => {

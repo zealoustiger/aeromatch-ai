@@ -54,6 +54,8 @@ export interface CostResult {
   fullOwnershipMonthly: number | null
   /** Positive = partnership saves this much vs. full ownership each month (null if share unknown). */
   vsFullOwnershipMonthlySavings: number | null
+  /** Hours/month needed for this share to cost less than renting (null if renting can never lose, i.e. hourlyWet >= rentalRate, or no rentalRate given). */
+  breakEvenHoursVsRenting: number | null
 }
 
 export function computeCost(input: CostInputs): CostResult {
@@ -74,6 +76,10 @@ export function computeCost(input: CostInputs): CostResult {
   const rentingMonthly = rentalRate * hours
   const vsRentingMonthlySavings = rentingMonthly - operatingMonthly
 
+  // Break-even: monthlyFixed + hourlyWet*h = rentalRate*h  =>  h = monthlyFixed / (rentalRate - hourlyWet)
+  const breakEvenHoursVsRenting =
+    rentalRate > hourlyWet ? monthlyFixed / (rentalRate - hourlyWet) : null
+
   // Full ownership: the same hourly, but you carry ALL of the fixed cost
   // (your share's fixed scaled up by 1/fraction).
   let fullOwnershipMonthly: number | null = null
@@ -93,6 +99,7 @@ export function computeCost(input: CostInputs): CostResult {
     vsRentingMonthlySavings,
     fullOwnershipMonthly,
     vsFullOwnershipMonthlySavings,
+    breakEvenHoursVsRenting,
   }
 }
 
