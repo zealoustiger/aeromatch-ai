@@ -2,6 +2,45 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T06:20:59Z — PASS — rail-card-rare-find-parity
+- Pages: / (homepage curated rails), /aircraft/listing/[id] ("Similar aircraft for sale" rail)
+- What: The compact `AircraftRailCard` — used on the homepage curated rails and the
+  listing-detail "Similar aircraft" rail — now renders the same honesty-gated indigo
+  "Rare find" scarcity chip already live on the full `AircraftSaleCard`. It shows when a
+  listing's real make+model family has ≤3 total active priced listings (incl. itself),
+  with the honest count in the tooltip ("Only N of this make + model currently for sale
+  on ClubHanger"). This closes the one named remaining gap of the "Real social proof"
+  backlog item — every aircraft card surface is now at parity.
+- Goal: `[want]` tier — the final open follow-up of `[P2][want] Real social proof (no
+  fabrication)` (BACKLOG.md ~line 1635), which this cycle checks off (closing the whole
+  item). No new slot or layout: the rail card's existing top-left photo overlay already
+  holds `discountPct`/`compVerdict`, both of which require ≥4 other comps and so are
+  mutually exclusive with a rare (≤3) family by construction. `HomeRails`/`SimilarAircraft`
+  pass each listing's real family size from the family-comp array they already fetch — no
+  new query, action, or schema. `RARE_FIND_MAX = 3` duplicated (with a sync comment)
+  rather than imported, since `AircraftSaleCard.tsx` is a `'use client'` module — that
+  file is untouched. `DealsRail`/`MarketplaceCrossSell` deliberately not wired
+  (`familyCount` defaults `null`; deals cards always clear ≥4 comps, so the 1-3 range is
+  unreachable there — wiring would be inert).
+- Note: this cycle was resumed from an interrupted prior run that had implemented + taken
+  screenshots but never QA-gated or landed. Found + confirmed a leftover `DEBUG_RAREFIND2`
+  console.log was only in a stale port-3000 server process (an old build), NOT in the
+  source tree — killed the stale server, rebuilt clean, and removed the prior cycle's
+  stale debug-build crop screenshots from the audit trail. No source debug output shipped.
+- Spec: nightshift/specs/20260709T062059Z-rail-card-rare-find-parity.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean.
+  `qa-smoke.mjs` on `/` and an aircraft listing detail page at desktop 1280 + mobile 375:
+  4/4 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow). Visual
+  cycle — screenshots confirm both pages render correctly with no layout regression to the
+  existing rails, and a live crop shows the "Rare find" indigo chip rendering correctly on
+  a genuinely rare 2023 Diamond DA20 card ("Only 3 … currently for sale"); server HTML
+  positively contains the chip with an honest count-3 tooltip, while common families
+  (SR22/C172/Bonanza) correctly suppress it. No prod test data created (read-only QA).
+- Screenshots: nightshift/screenshots/rail-card-rare-find-parity/
+- Next: the "Real social proof" item is fully closed. Partnership/seeker rail-card rare
+  parity is N/A (no family-comp concept there). Return to the alert-experience `[goal]`
+  queue or any open `[P1][want]` (map search, Trade-A-Plane ingest, Bay-Area benchmark).
+
 ## 2026-07-09T06:13:21Z — PASS — airport-fbo-flying-clubs
 - Pages: /airports/[icao] (curated: /airports/kads, /airports/kaus, /airports/kfxe, /airports/khwd, /airports/klvk, /airports/koak, /airports/kpao, /airports/krhv, /airports/ksql)
 - What: The airport hub pages for 9 major GA fields (Addison, Austin-Bergstrom, Fort
