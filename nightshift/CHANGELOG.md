@@ -2,6 +2,67 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T09:32:00Z — PASS — poster-attribution-links
+- Pages: `/aircraft/listing/[id]`, `/partnerships/[id]`
+- What: **A real user's aircraft-for-sale or partnership listing now shows "Posted by
+  {name}" — with their avatar and home airport — linking to their public pilot
+  profile page,** instead of the poster being invisible/unreachable outside the
+  contact button. Scraped listings and demo personas are unaffected.
+- Goal: `[want]` tier — slice of `[P3][want] Pilot profiles + reviews/trust`
+  (BACKLOG.md). Re-audited tiers 1 (`[bug]`, none found) and 2 (`[want]`) fresh
+  this cycle: every other open `[want]` line remains blocked exactly as prior
+  cycles found it (human mock pick, ethics-flagged, needs a human-reviewed
+  schema, or too large/risky for one cycle — TAP ingestion, Bay-Area benchmark,
+  airport ratings). The last two cycles (`pilot-public-profile`,
+  `profile-bio-edit`) both explicitly flagged "linking `/pilots/[id]` from
+  listing-detail 'posted by' attribution" as the next open, unblocked slice —
+  this cycle built exactly that.
+- How: new `src/components/PosterAttribution.tsx` — avatar (`AviatorAvatar`) +
+  "Posted by {display_name || 'ClubHanger member'}" + home airport, linking to
+  `/pilots/{user_id}`. Wired into `/aircraft/listing/[id]` (real user-posted
+  listings, `p.source === 'user' && p.poster_id`) above the "Contact the
+  seller" card, and `/partnerships/[id]` (non-seed real posters, `!seed &&
+  p.poster_id`) above the "Interested?" contact card — seed/demo personas
+  (e.g. "Marcus T.") keep their existing `/members/[id]` link untouched. Both
+  pages fetch `getPublicProfile(poster_id)` (same helper `/pilots/[id]` already
+  uses) and self-suppress the block entirely when the poster has no `profiles`
+  row yet, so it never links to a 404. **Deliberately NOT done:**
+  `/partnerships/seeking/[id]` — seeker listings are anonymized by design
+  (`anonymizeName` → "First L.", shipped `anonymous-by-default-seeker-posts`,
+  2026-06-22) specifically to protect identity; linking to a full public
+  profile (real name, other listings) would defeat that, so seeker listings are
+  untouched this cycle. No schema, no new dependency.
+- Spec: nightshift/specs/20260709T092546Z-poster-attribution-links.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build`
+  clean. Visual cycle → read the screenshots. QA hit a real constraint: the
+  shared `quarantine_test_listing` DB trigger sets `status='test'` on any row
+  whose `poster_id` belongs to an `@example.com` account, which the
+  `status='active'`-scoped RLS read policy then hides from the normal page
+  query — so a live `@example.com`-poster test listing falls through to the
+  existing (unrelated, untouched) "sold"/404 fallback instead of exercising the
+  real code path, no matter what `status` is written at insert time. Handled
+  with a hybrid verification: (1) a temporary, unlinked `noindex` preview route
+  (`/qa-preview-poster-attribution`) rendered `PosterAttribution` inside both
+  real card layouts (aircraft + partnership) — screenshotted at desktop 1280 +
+  mobile 375 confirming correct avatar/name/home-airport rendering and no
+  overflow, then the route was deleted (`rm -rf`) before this commit, confirmed
+  gone via a clean `next build` with no `/qa-preview-poster-attribution` route
+  in the output; (2) the actual data-wiring guard (`getPublicProfile` +
+  self-suppress) was verified end-to-end against real prod rows: created 2
+  throwaway `@example.com` test accounts + 2 `aircraft_for_sale` rows + 1
+  `partnerships` row via the service-role client, confirmed via `qa-smoke.mjs`
+  (8/8 pass, zero console errors/overflow) that a poster with no `profiles` row
+  renders no attribution block and no error (the partnership case, where a
+  `poster_id`-null row stayed `status='active'` and rendered live); (3) all
+  test rows + both throwaway auth users fully deleted this cycle and verified
+  gone via a follow-up service-role read (zero leftover rows, zero leftover
+  users). Killed all `next-server` processes after (verified via `ps aux`).
+- Screenshots: nightshift/screenshots/poster-attribution-links/
+- Next: slice 3 — a `listing_reviews` UI (leave a review on a completed
+  partnership); slice 4 — admin verification wiring for the `verified` badge.
+  The pre-existing `threads.last_message_at` unread-badge migration is still
+  the oldest outstanding ⚠️ HUMAN ACTION item.
+
 ## 2026-07-09T09:15:02Z — PASS — profile-bio-edit
 - Pages: `/account`, `/pilots/[id]`
 - What: **Signed-up pilots can now edit their display name, a one-line mission,

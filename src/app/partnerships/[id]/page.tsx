@@ -17,6 +17,8 @@ import ContactButtons from '@/components/ContactButtons'
 import MessageOwnerButton from '@/components/MessageOwnerButton'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import { isSeedProfile, personaFromPartnership } from '@/lib/seedProfiles'
+import PosterAttribution from '@/components/PosterAttribution'
+import { getPublicProfile } from '@/lib/publicProfile'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import MonetizationIntent from '@/components/MonetizationIntent'
@@ -170,6 +172,11 @@ export default async function PartnershipDetailPage({
   // of a dead mailto. `persona` shapes the public-facing member identity.
   const seed = isSeedProfile(p)
   const persona = seed ? personaFromPartnership(p) : null
+
+  // Real-poster attribution — the non-seed counterpart to `persona` above; only
+  // when the poster actually has a `profiles` row (self-suppresses otherwise so
+  // we never link to a page that 404s).
+  const posterProfile = !seed && p.poster_id ? await getPublicProfile(p.poster_id) : null
 
   // Scrub the synthetic demo contact so it never reaches the page payload / client
   // props (seed personas are contacted on-site only). Keeps the "real member"
@@ -765,6 +772,7 @@ export default async function PartnershipDetailPage({
                 </>
               ) : (
                 <>
+                  {posterProfile && <PosterAttribution profile={posterProfile} />}
                   {p.contact_name && (
                     <p className="mb-3 text-sm text-sky-700">Contact {p.contact_name}</p>
                   )}

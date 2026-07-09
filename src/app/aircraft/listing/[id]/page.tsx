@@ -56,6 +56,8 @@ import AircraftContactButton from '@/components/AircraftContactButton'
 import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
 import MonetizationIntent from '@/components/MonetizationIntent'
+import PosterAttribution from '@/components/PosterAttribution'
+import { getPublicProfile } from '@/lib/publicProfile'
 
 const DAY_MS = 86_400_000
 
@@ -550,6 +552,11 @@ export default async function AircraftListingDetailPage({
   const { data: { user } } = await supabase.auth.getUser()
   const isOwner = !!user && !!p.poster_id && user.id === p.poster_id
 
+  // Poster attribution — only for real user-posted listings, and only when the
+  // poster actually has a `profiles` row (self-suppresses otherwise so we never
+  // link to a page that 404s).
+  const posterProfile = p.source === 'user' && p.poster_id ? await getPublicProfile(p.poster_id) : null
+
   let savedRowId: string | null = null
   let savedNote: string | null = null
   let notesEnabled = false
@@ -1017,6 +1024,7 @@ export default async function AircraftListingDetailPage({
                 for scraped listings, show the outbound source link. */}
             {p.source === 'user' && p.poster_id ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                {posterProfile && <PosterAttribution profile={posterProfile} />}
                 <h2 className="mb-1 text-sm font-semibold text-slate-800">Contact the seller</h2>
                 <p className="mb-3 text-sm text-slate-500">
                   This aircraft is listed directly on ClubHanger. Message the seller to ask questions or arrange a viewing.
