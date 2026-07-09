@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-09T07:04:49Z — crosssell-detail-samples — score 4/5
+## 2026-07-09T07:18:18Z — alert-unsubscribe-recover — score 4/5
+- Strengths: Tight, well-scoped slice that hits every acceptance criterion — `pauseAlertByToken` correctly does NOT reuse `loadOwnedAlert` (proves ownership via the `unsubscribe_token` the email already carries, admin client, same recoverable `paused` state as the authed flow), returns the exact `{error}`/`{ok}` shape the codebase's other alert actions use; route only forwards the token on the `unsubscribed` state and `encodeURIComponent`s it; client component handles idle/sending/done/error with a soft error, disabled state, and the required `alert_unsubscribe_recovered` PostHog event; no schema change, no touch to the authed manage flow.
+- Weaknesses / risks: A *reused* (still-valid) token re-pauses and returns `{ok}` rather than the "soft error" acceptance-criterion #4 implies for reuse — benign (UI has already swapped to the done state after first click) but a minor semantic gap; unlike `pauseAlert` there's no current-status guard, so a crafted URL could flip a `confirmed` alert to `paused`, harmless since it needs the secret token.
+- Follow-up: none
 - Strengths: Clean, symmetric both-directions change that reuses the EXACT `MarketplaceCrossSell` mini-rail markup (`flex gap-3 overflow-x-auto` + `<li className="contents">` + fixed-width `shrink-0` RailCards); samples come from the same query as count/minPrice (no extra round-trip, correct match-level), self-suppress-at-0 preserved; genuine in-scope bonus fix — added the missing `min-w-0` to the partnership sidebar grid column (mirroring the aircraft-listing counterpart) that the new fixed-width rail would have overflowed on 375px.
 - Weaknesses / risks: Count/minPrice query was widened from `select('id, asking_price')` to `select('*')` on up to 200 rows just to surface 3 samples — a small payload regression accepted to honor the no-extra-round-trip constraint; the in-memory dev fallback branch slices samples without the `created_at` ordering the DB branch applies (cosmetic inconsistency only).
 - Follow-up: none
