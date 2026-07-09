@@ -64,10 +64,13 @@ Monetization/ads = build UI only, never activate a paid network (see FREEZE.md).
   `airport` is set, the count/samples/CTA link narrow to partnerships within 100mi
   (`countActivePartnerships`/`getPartnershipListings` now both accept
   `{airport, radius}`), and the copy reads "See N {make} co-ownership partnerships
-  near {ICAO}…". No schema change. **Not done, intentionally:** the reverse
-  direction (`/partnerships` → aircraft) isn't airport-aware yet from partnerships'
-  own airport filter — same component, different call site, a natural follow-up
-  slice.
+  near {ICAO}…". No schema change. **Reverse direction ✅ SHIPPED via
+  `partnerships-crosssell-airport-aware` (2026-07-09):** `/partnerships` → aircraft
+  cross-sell now also carries `params.airport` into `nearAirport`, `countForSale`
+  (extended with an `{ airport }` opt that resolves the airport's state, mirroring
+  `fetchAircraftPage`'s existing airport→state narrowing), and `fetchAircraftPage`
+  itself (which already supported an `airport` filter — it just wasn't being
+  passed). This item is now fully complete both directions.
 - **[P2][want] Dynamic-location seed seeking personas.** Make the seeded seeking profiles
   (concierge@clubhanger.com) dynamically match airports near the visitor's search. Instead
   of showing a Bay Area persona to a Texas visitor, render the same persona at an airport

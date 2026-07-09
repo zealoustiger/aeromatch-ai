@@ -280,8 +280,13 @@ export default async function PartnershipsPage({
           <MarketplaceCrossSell
             from="partnerships"
             make={params.make}
-            count={await countForSale(params.make)}
-            samples={(await fetchAircraftPage({ make: params.make })).listings}
+            nearAirport={params.airport}
+            count={await countForSale(params.make, { airport: params.airport })}
+            samples={
+              (
+                await fetchAircraftPage({ make: params.make, airport: params.airport })
+              ).listings
+            }
             className="mt-10"
           />
 

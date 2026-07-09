@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T11:20:11Z — PASS — partnerships-crosssell-airport-aware
+- Pages: /partnerships
+- What: **The "Prefer to own outright?" cross-sell box on the main Partnerships page now respects your airport filter — search near an airport and it shows nearby planes, not the whole country.** The `/aircraft` browse page's cross-sell to partnerships already did this (shipped 2026-07-06); the reverse direction on `/partnerships` was the one gap left. Now filtering `/partnerships` by airport (e.g. `?airport=KAUS`) narrows the "Browse N aircraft for sale near KAUS" count and its 4 sample listings to that airport's state, and the copy reads "…near KAUS" — combines with an active make filter too.
+- Goal: `[want]` tier (human-inputted backlog item) — closes the "Not done, intentionally" reverse-direction gap flagged in the `aircraft-crosssell-airport-aware` (2026-07-06) CHANGELOG entry. No `[bug]`/`[goal]` work was pending this cycle.
+- Spec: nightshift/specs/20260709T112011Z-partnerships-crosssell-airport-aware.md
+- Verdict: PASS. `npx next build` clean (compile + typecheck). QA smoke (qa-smoke.mjs) exit 0 across `/partnerships`, `/partnerships?airport=KAUS`, `/partnerships?make=Cessna&airport=KAUS` at desktop 1280 + mobile 375 — HTTP 200, zero console errors, zero overflow on all 6 checks. Visual cycle — screenshots confirmed: unfiltered page shows the nationwide count with no "near" copy (no regression); `?airport=KAUS` shows a materially smaller count (127) and 4 real Texas-based sample listings (Lago Vista/Cleburne/George West, TX) instead of nationwide samples; mobile 375px renders cleanly with no overflow.
+- Screenshots: nightshift/screenshots/partnerships-crosssell-airport-aware/
+- Next: aircraft has no true lat/lng-radius airport-list helper the way partnerships' `resolveAirportList` does (100mi radius, multiple airports) — this slice deliberately mirrors the existing coarser airport→state narrowing `fetchAircraftPage` already used for aircraft, consistent with how `/aircraft`'s own airport filter behaves today. A future slice could add a real radius helper for aircraft if that granularity is ever wanted.
+
 ## 2026-07-09T11:08:17Z — PASS — airport-facility-ratings
 - Pages: `/airports/[icao]`
 - What: **Signed-in pilots can now rate a curated airport's FBOs and flying clubs

@@ -307,16 +307,30 @@ export async function countForSaleState(code: string): Promise<number> {
 }
 
 // Live count of active for-sale listings, optionally narrowed to a make
-// (case-insensitive substring, like the make hub page). Used by the `/partnerships`
-// cross-sell card to show how many planes are for sale the other way (make-aware
-// when a make filter is active). Mirrors `countForSaleState`; returns 0 on any
-// failure.
-export async function countForSale(make?: string): Promise<number> {
+// (case-insensitive substring, like the make hub page) and/or an airport (ICAO).
+// Used by the `/partnerships` cross-sell card to show how many planes are for
+// sale the other way (make/location-aware when those filters are active).
+// The airport narrows to that airport's STATE — same coarse resolution
+// `fetchAircraftPage`'s `filters.airport` already uses for aircraft (no
+// lat/lng radius helper exists for aircraft the way `resolveAirportList` does
+// for partnerships). Mirrors `countForSaleState`/`countActivePartnerships`;
+// returns 0 on any failure.
+export async function countForSale(make?: string, opts?: { airport?: string }): Promise<number> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return 0
   try {
     const supabase = await createServerSupabaseClient()
+    let airportState: string | null = null
+    const airport = opts?.airport?.trim()
+    if (airport) {
+      const { data: apt } = await supabase
+        .from('airports')
+        .select('state')
+        .eq('icao', airport.toUpperCase())
+        .maybeSingle()
+      if (apt?.state) airportState = apt.state
+    }
     let query = supabase
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
@@ -325,6 +339,7 @@ export async function countForSale(make?: string): Promise<number> {
       .not('images', 'eq', '[]')
     const m = make?.trim()
     if (m) query = query.ilike('make', `%${m}%`)
+    if (airportState) query = query.eq('state', airportState)
     const { count, error } = await query
     if (error) return 0
     return count ?? 0
