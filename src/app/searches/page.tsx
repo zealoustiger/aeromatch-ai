@@ -96,6 +96,20 @@ export default async function SearchesPage() {
     .select('*')
     .order('created_at', { ascending: false })
 
+  // Offer the seeker cross-post nudge only to pilots whose saved searches actually
+  // touch the partnerships marketplace, and who haven't already posted themselves as
+  // looking for a share.
+  const hasPartnershipSearch = (searches ?? []).some((s) => (s.path || '/partnerships') === '/partnerships')
+  let showSeekerCrossPost = false
+  if (hasPartnershipSearch) {
+    const { data: ownSeekerListings } = await supabase
+      .from('partnership_seekers')
+      .select('id')
+      .eq('poster_id', user.id)
+      .limit(1)
+    showSeekerCrossPost = !ownSeekerListings?.length
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -186,6 +200,22 @@ export default async function SearchesPage() {
         </div>
       ) : (
         <div className="space-y-4">
+          {showSeekerCrossPost && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+              <Users className="mx-auto mb-2 h-7 w-7 text-sky-600" />
+              <p className="font-semibold text-slate-800">Also post yourself as looking for a share?</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Owners see who's looking and can reach out to you directly — a free, 30-second
+                listing on top of the alerts above.
+              </p>
+              <Link
+                href="/partnerships/seeking/new"
+                className="mt-3 inline-block rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+              >
+                Post a &quot;looking for a share&quot; listing →
+              </Link>
+            </div>
+          )}
           {(searches as SavedSearch[]).map((s) => (
             <div
               key={s.id}
