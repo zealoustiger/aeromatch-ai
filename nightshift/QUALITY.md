@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-09T10:24:00Z — aircraft-browse-broker-cta — score 5/5
+- Strengths: Exact-parity slice that closes the one gap the previous cycle explicitly flagged — reuses `MonetizationIntent` verbatim (same `path="broker"`, same title, `joinWaitlist`/`monetization_intent` event untouched), touches only `src/app/aircraft/page.tsx`, and gates on `itemListListings.length > 0` matching the `AlertSignup` gate right above it so it never clutters an empty result page; description copy is thoughtfully adapted ("your next aircraft" vs the detail page's "this aircraft") since the browse page isn't item-specific; clear comment, sensible `mt-4` spacing, zero new component/dep/schema — textbook scoping.
+- Weaknesses / risks: none material
+- Follow-up: none
+
 ## 2026-07-09T08:40:23Z — match-alert-digest — score 4/5
 - Strengths: Faithful, careful mirror of the existing `alert-digest` route — same CRON_SECRET gate, 7-day window, `result.sent || reason==='no-key'` timestamp-advance guard, and per-side error logging; reuses the shipped `getMatching*`/`*BrowseHref*` helpers with zero new matching logic; correct `42703` (undefined_column) detection that re-throws to a clean `{skipped:'migration-pending'}` 200 no-op so it can never resend/spam pre-migration; only advances `match_alert_last_sent_at` on a real send; types + mockData + additive schema (human-flagged) + vercel cron all updated; good docstrings.
 - Weaknesses / risks: `getSeekers({})`/`getPartnershipListings({})` are re-fetched (full-table + repeated airport-coord resolve) once per listing row rather than hoisted — O(rows) full pulls, immaterial at today's tiny volume but real at scale; freshness filter is a JS string compare (`s.created_at >= since`) with mixed offset formats (`Z` from `toISOString()` vs PostgREST `+00:00`) where the reference does a DB-level `.gte` — only diverges on sub-second ties, so harmless in practice.
