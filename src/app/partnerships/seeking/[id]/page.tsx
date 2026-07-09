@@ -21,7 +21,7 @@ import PartnerShareCostPanel from '@/components/PartnerShareCostPanel'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
-import { countMatchingPartnershipsForSeeker } from '@/lib/matchingQuery'
+import { countMatchingPartnershipsForSeeker, partnershipBrowseHrefForSeeker } from '@/lib/matchingQuery'
 import AlertSignup from '@/components/AlertSignup'
 import SimilarSeekers from '@/components/SimilarSeekers'
 
@@ -442,7 +442,7 @@ export default async function SeekerDetailPage({
             <MatchCountNudge
               count={matchingPartnershipCount}
               label="Available partnerships match what you're looking for."
-              href={`/partnerships${s.preferred_makes?.[0] ? `?make=${encodeURIComponent(s.preferred_makes[0])}` : ''}`}
+              href={partnershipBrowseHrefForSeeker(s)}
             />
           )}
 

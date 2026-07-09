@@ -25,7 +25,7 @@ import SavedListingNote from '@/components/SavedListingNote'
 import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
-import { countMatchingSeekersForPartnership } from '@/lib/matchingQuery'
+import { countMatchingSeekersForPartnership, seekerBrowseHrefForPartnership } from '@/lib/matchingQuery'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
 import AircraftRailCard from '@/components/AircraftRailCard'
@@ -728,7 +728,7 @@ export default async function PartnershipDetailPage({
               <MatchCountNudge
                 count={matchingSeekerCount}
                 label={`Pilot${matchingSeekerCount === 1 ? '' : 's'} seeking a partnership match what you're offering.`}
-                href={`/partnerships/seeking?make=${encodeURIComponent(p.make)}`}
+                href={seekerBrowseHrefForPartnership(p)}
               />
             )}
 
