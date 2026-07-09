@@ -2,6 +2,64 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T09:07:38Z — PASS — pilot-public-profile
+- Pages: `/pilots/[id]` (new), `/account`
+- What: **Real signed-up pilots now have a public profile page** — avatar, home
+  airport, verified badge, member-since, and their active listings all in one
+  place — instead of only the hand-seeded demo personas (`Marcus T.` etc.) having
+  one. Linked from a new "View my public profile →" line on `/account`.
+- Goal: `[want]` tier — slice 1 of `[P3][want] Pilot profiles + reviews/trust`
+  (BACKLOG.md). Re-audited tiers 1 (`[bug]`, empty — prior cycle PASSed clean) and
+  2 (`[want]`) fresh this cycle: every other open `[want]` line is still blocked
+  exactly as the last several cycles found it (human mock pick — "Redesign the
+  collection layout"; ethics-flagged pending greenlight — "Dynamic-location seed
+  personas"; needs a human-reviewed schema — "Owner-leads list"; too large/risky
+  for one cycle — Trade-A-Plane ingestion, Bay-Area coverage benchmark, airport
+  ratings). "Pilot profiles" was the one genuinely open, unblocked `[want]` left:
+  its prerequisite migration (`profiles`/`listing_reviews`) already landed
+  2026-06-22 and nothing had built on it since. Sliced to just the view page this
+  cycle (edit/reviews/admin-verify are explicitly the next slices).
+- How: new `src/lib/publicProfile.ts` (`getPublicProfile` — public-read `profiles`
+  row; `getPublicProfileListings` — active aircraft/partnership/seeker rows by
+  `poster_id`, same shape as `/listings`' own query). New `src/app/pilots/[id]/page.tsx`
+  (`id` = `profiles.user_id`, distinct id space from the seed-persona `/members/[id]`,
+  which is keyed by listing id) renders the header + listings via the existing
+  `AircraftSaleCard`/`PartnershipCard`/`SeekerCard` (no comp/save-count wiring this
+  slice, matching how `/members/[id]` started before its own later parity pass);
+  404s when the id has no `profiles` row. Only shows fields the `profiles` table
+  already documents as `RLS: public read` (display_name, home_airport, bio, mission,
+  avatar, verified, created_at) — never email/phone, and display_name/bio/mission
+  are honestly absent today since no edit UI for them exists yet (matches the
+  `/airports/[icao]` "Pilots based here" precedent's privacy posture). `robots:
+  {index:false}` (low-content page, not part of parked SEO work). One added `Link`
+  on `/account`'s existing "Your pilot profile" section, plus a copy tweak
+  disclosing that active listings now appear alongside the base airport on this
+  page. No schema/dependency change.
+- Spec: nightshift/specs/20260709T090738Z-pilot-public-profile.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `npx eslint` clean on all 3 changed
+  files; `rm -rf .next && npx next build` clean (`/pilots/[id]` registered).
+  Visual cycle → read the screenshots: `next build` + `next start` on port 3820,
+  `qa-smoke.mjs` against `/pilots/<a real profile's user_id, found read-only via
+  service-role>` + `/account` at desktop 1280 + mobile 375: 4/4 pass (HTTP 200,
+  zero app-origin console errors, zero horizontal overflow). Also manually curl'd
+  a random nonexistent uuid → confirmed 404. Screenshots confirm the profile page
+  renders cleanly on-brand (cream surface, `ch-panel` header, real partnership/
+  seeker cards, no overlap/overflow at either viewport) and `/account`'s logged-out
+  render is unaffected (the new link lives in the signed-in branch, verified by
+  code review — `user.id` is already used elsewhere in that same branch — rather
+  than a forged auth session, consistent with how this page's signed-in branch was
+  verified in its original `account-account-settings-page` cycle). Killed the
+  server after (verified via `ps aux`). No prod DB rows created/modified — every
+  check was a read (service-role query to find a real `profiles` row + curl/QA
+  GETs), so no test-data cleanup needed.
+- Screenshots: nightshift/screenshots/pilot-public-profile/
+- Next: slice 2 — an edit UI for `display_name`/`bio`/`mission` on `/account` (so
+  the profile page has more than avatar + airport + listings to show); slice 3 —
+  a `listing_reviews` UI (leave a review on a completed partnership); slice 4 —
+  admin verification wiring for the `verified` badge; and linking `/pilots/[id]`
+  from listing-detail "posted by" attribution once a poster's identity is worth
+  surfacing there.
+
 ## 2026-07-09T09:04:12Z — PASS — cost-calculator-breakeven-hours
 - Pages: `/tools/cost-calculator`
 - What: **The cost calculator now tells you exactly how many hours a month you need
