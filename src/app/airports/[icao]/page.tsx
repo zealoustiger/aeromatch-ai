@@ -19,6 +19,8 @@ import SeekerCard from '@/components/SeekerCard'
 import AviatorAvatar, { AviatorConfig } from '@/components/AviatorAvatar'
 import { getSeekers } from '@/lib/seekersQuery'
 import { getPartnershipCompVerdicts, getSeekerBudgetCheckVerdicts } from '@/lib/partnershipComps'
+import { getFacilityRatingSummaries, getUserFacilityRatings } from '@/lib/facilityRatings'
+import FacilityRatingWidget from '@/components/FacilityRatingWidget'
 import {
   getNearbyPartnerships,
   getIndexableAirportHubs,
@@ -178,6 +180,18 @@ export default async function AirportPage({
   // the overview prose above; null elsewhere → no section rendered.
   const facilities = getAirportFacilities(airport.icao)
 
+  // Community-hub slice 2 ("ratings"): real, honesty-gated aggregate ratings for the
+  // same curated facilities above, plus the signed-in viewer's own prior rating (for
+  // pre-filling the widget). Both self-suppress (empty map) if the table isn't
+  // migrated onto the live DB yet, or there simply aren't enough ratings yet.
+  const facilityNames = facilities
+    ? [...facilities.fbos, ...facilities.flyingClubs].map((f) => f.name)
+    : []
+  const [ratingSummaries, userRatings] = await Promise.all([
+    getFacilityRatingSummaries(airport.icao, facilityNames),
+    getUserFacilityRatings(airport.icao, facilityNames),
+  ])
+
   // Schema.org: an Airport Place node (real codes/coords/region only) + an
   // ItemList of the partnerships shown on the page (in render order: at-airport
   // first, then nearby), each linking to its real /partnerships/[id]. Real data
@@ -262,7 +276,7 @@ export default async function AirportPage({
             {facilities.fbos.length > 0 && (
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-slate-500">FBOs</h3>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {facilities.fbos.map((f) => (
                     <li key={f.name} className="text-sm text-slate-700">
                       <span className="font-medium">{f.name}</span>
@@ -272,6 +286,14 @@ export default async function AirportPage({
                           {f.phone}
                         </span>
                       )}
+                      <FacilityRatingWidget
+                        icao={airport.icao}
+                        facilityName={f.name}
+                        facilityType="fbo"
+                        initialAverage={ratingSummaries.get(f.name)?.average ?? null}
+                        initialCount={ratingSummaries.get(f.name)?.count ?? 0}
+                        initialUserRating={userRatings.get(f.name) ?? null}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -280,7 +302,7 @@ export default async function AirportPage({
             {facilities.flyingClubs.length > 0 && (
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-slate-500">Flying clubs</h3>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {facilities.flyingClubs.map((f) => (
                     <li key={f.name} className="text-sm text-slate-700">
                       <span className="font-medium">{f.name}</span>
@@ -290,6 +312,14 @@ export default async function AirportPage({
                           {f.phone}
                         </span>
                       )}
+                      <FacilityRatingWidget
+                        icao={airport.icao}
+                        facilityName={f.name}
+                        facilityType="flying_club"
+                        initialAverage={ratingSummaries.get(f.name)?.average ?? null}
+                        initialCount={ratingSummaries.get(f.name)?.count ?? 0}
+                        initialUserRating={userRatings.get(f.name) ?? null}
+                      />
                     </li>
                   ))}
                 </ul>
