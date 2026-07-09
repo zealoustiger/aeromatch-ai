@@ -2,16 +2,17 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane, ArrowRight, ShieldAlert } from 'lucide-react'
+import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Plane, ArrowRight, ShieldAlert, Search } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { Partnership, AircraftForSale } from '@/lib/types'
+import { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, formatPriceK } from '@/lib/utils'
 import { getPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
 import { getFamilyAskingPrices, getForSaleCrossSell } from '@/lib/aircraftForSale'
 import { computeImpliedValueCheck, type ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
-import { getSeekerCount } from '@/lib/seekersQuery'
+import { getSeekerCount, getSeekerCrossSell } from '@/lib/seekersQuery'
+import SeekerRailCard from '@/components/SeekerRailCard'
 import ContactBar from '@/components/ContactBar'
 import ContactButtons from '@/components/ContactButtons'
 import MessageOwnerButton from '@/components/MessageOwnerButton'
@@ -317,6 +318,12 @@ export default async function PartnershipDetailPage({
   // of the aircraft-for-sale detail page's `PartnershipCrossSellPanel`. Lets a
   // co-ownership shopper see "N Cessna 172s for sale" if they'd rather buy outright.
   const forSaleCrossSell = p.make ? await getForSaleCrossSell(p.make, p.model) : null
+
+  // Seeker cross-sell — the third leg of "blend result types + cross-sell": other
+  // pilots also actively looking for a share in this make, visible to every visitor
+  // (distinct from the owner-only MatchCountNudge above, which only this listing's
+  // owner sees).
+  const seekerCrossSell = p.make ? await getSeekerCrossSell(p.make, p.model) : null
 
   // Implied aircraft value check — cross-silo sanity check comparing
   // (buy_in × total_shares) against the median asking price of same make/model
@@ -693,6 +700,17 @@ export default async function PartnershipDetailPage({
               />
             )}
 
+            {/* Seeker cross-sell — real pilot demand for this make, visible to every
+                visitor. Self-suppresses when there are no active matching seekers. */}
+            {seekerCrossSell && p.make && (
+              <SeekerCrossSellPanel
+                make={p.make}
+                model={seekerCrossSell.modelLevel ? (p.model ?? null) : null}
+                count={seekerCrossSell.count}
+                samples={seekerCrossSell.samples}
+              />
+            )}
+
             {/* Structure card */}
             <div className="ch-panel p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Structure</h2>
@@ -911,6 +929,55 @@ function ForSaleCrossSellPanel({
           {samples.map((s) => (
             <li key={s.id} className="contents">
               <AircraftRailCard p={s} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+// ─── Seeker Cross-Sell Panel ─────────────────────────────────────────────────
+// Third leg of "blend result types + cross-sell": real pilot demand for this
+// make/model, visible to every visitor (distinct from the owner-only MatchCountNudge).
+
+function SeekerCrossSellPanel({
+  make,
+  model,
+  count,
+  samples,
+}: {
+  make: string
+  model: string | null
+  count: number
+  /** Up to 3 real matching seeker listings to preview inline. Empty → no rail. */
+  samples: PartnershipSeeker[]
+}) {
+  const makeEncoded = encodeURIComponent(make)
+  const label = model ? `${make} ${model}` : make
+  const ctaHref = model
+    ? `/partnerships/seeking?make=${makeEncoded}&model=${encodeURIComponent(model)}`
+    : `/partnerships/seeking?make=${makeEncoded}`
+  return (
+    <div className="ch-panel p-5">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <Search className="h-4 w-4" /> Other pilots looking
+      </h2>
+      <p className="text-sm font-medium text-slate-800">
+        {count === 1 ? '1 other pilot is' : `${count} other pilots are`} also looking for a{' '}
+        {label} share on ClubHanger.
+      </p>
+      <Link
+        href={ctaHref}
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+      >
+        See who&apos;s looking <ArrowRight className="h-4 w-4" />
+      </Link>
+      {samples.length > 0 && (
+        <ul className="mt-4 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+          {samples.map((s) => (
+            <li key={s.id} className="contents">
+              <SeekerRailCard seeker={s} />
             </li>
           ))}
         </ul>
