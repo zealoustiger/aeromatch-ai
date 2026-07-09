@@ -2,6 +2,47 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-09T09:04:12Z — PASS — cost-calculator-breakeven-hours
+- Pages: `/tools/cost-calculator`
+- What: **The cost calculator now tells you exactly how many hours a month you need
+  to fly for a partnership share to actually beat renting** — a new honest,
+  computed line ("You need to fly at least N hrs/month for this share to beat
+  renting") under the existing "How it compares" panel, instead of leaving the
+  pilot to eyeball the two dollar figures.
+- Goal: `[want]` tier — `[P2][want] Expand tools/calculators + on-page feedback ask`
+  (BACKLOG.md). Re-audited tier 1 (`[bug]`, empty — last cycle PASSed clean) and
+  tier 2 (`[want]`) fresh this cycle rather than trusting prior cycles' "tier 2 is
+  fully exhausted" claims verbatim: most open `[want]` lines are genuinely blocked
+  (human mock pick, ethics-flagged, human-reviewed-schema-needed, ToS-risk
+  ingestion, missing denominator data) or already fully shipped but unstruck, but
+  this one line — "more detail in the calculators; add an on-page feedback prompt"
+  — was neither. Its feedback-prompt half turned out to already be shipped
+  site-wide (global `FeedbackWidget` in `layout.tsx`, audit-confirmed, checked off
+  in the same commit); its calculator-detail half had never been sliced or built,
+  so this cycle built the first concrete slice.
+- How: `computeCost` (`src/lib/calculators.ts`) gained
+  `breakEvenHoursVsRenting: number | null` — `monthlyFixed / (rentalRate -
+  hourlyWet)` when `rentalRate > hourlyWet`, else `null` (covers "renting can never
+  lose" and "no rental rate given, no divide-by-zero"). `CostCalculator.tsx`'s
+  `full` variant renders the new line only when `rentalRate > 0`, with an honest
+  fallback message when no break-even exists. Pure derivation from existing
+  inputs — no fabricated numbers, no schema change, `compact` variant untouched.
+- Spec: nightshift/specs/20260709T085937Z-cost-calculator-breakeven-hours.md
+- Verdict: PASS. `node --experimental-strip-types --test src/lib/calculators.test.ts`
+  7/7 green (3 new: normal break-even, "renting never loses" null case, "no
+  rentalRate given" null case); `npx tsc --noEmit` clean; `rm -rf .next && npx next
+  build` clean. Visual cycle → read the screenshots: `next build` + `next start` on
+  port 3812, `qa-smoke.mjs` against `/tools/cost-calculator` at desktop 1280 +
+  mobile 375: 2/2 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow). Screenshots confirm the new "You need to fly at least 5 hrs/month…"
+  line renders cleanly under the comparison panel on both viewports, no overlap or
+  overflow. Killed the server after (verified via `ps aux`). No prod DB rows
+  touched (pure client-side calculator, no signup/post/DB interaction).
+- Screenshots: nightshift/screenshots/cost-calculator-breakeven-hours/
+- Next: the earnings calculator (`/tools/earnings-calculator`) has no equivalent
+  "more detail" pass yet — e.g. a payback-period-on-the-buy-in figure for the
+  owner's side — a natural next slice of this same backlog item.
+
 ## 2026-07-09T08:54:08Z — PASS — member-profile-comp-verdict-parity
 - Pages: `/members/[id]`
 - What: **A pilot's public member-profile page (e.g. "Marcus T.") now shows the same
