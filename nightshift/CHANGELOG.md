@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-10T12:01:42Z — DRAIN SUMMARY
+- Cycles this run: 1 (PASS 0 / FAIL 0 / ABORT 1)
+- Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
+- Night spend so far: $14.1866 of $120 cap
+- Stopped because: backlog drained
+- Run: 20260710T120001Z
+
 ## 2026-07-10T11:01:55Z — DRAIN SUMMARY
 - Cycles this run: 1 (PASS 0 / FAIL 0 / ABORT 1)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
