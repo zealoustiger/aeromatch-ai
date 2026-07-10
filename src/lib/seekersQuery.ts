@@ -184,8 +184,12 @@ export async function getSeekerMakes(): Promise<string[]> {
 /** Model tokens seekers are actually looking for (most-wanted first), parsed out of
  *  the free-text `preferred_models` field — feeds the Model filter's option list.
  *  Mirrors getSeekerMakes()'s ranking, but over comma-split tokens instead of an
- *  array column. */
-export async function getSeekerModels(): Promise<string[]> {
+ *  array column. When `makes` is given, only tokenizes rows whose `preferred_makes`
+ *  overlaps one of them (same `.overlaps` semantics `getSeekers` uses) — narrows the
+ *  option list to models actually wanted by seekers interested in the selected make(s).
+ *  `preferred_models` still isn't stored per-make within a row, so this narrows the
+ *  candidate row pool, not individual tokens to a specific make. */
+export async function getSeekerModels(makes: string[] = []): Promise<string[]> {
   const rank = (values: (string | null | undefined)[]): string[] => {
     const counts = new Map<string, number>()
     for (const raw of values) for (const model of parsePreferredModelTokens(raw)) {
@@ -193,14 +197,23 @@ export async function getSeekerModels(): Promise<string[]> {
     }
     return [...counts.keys()].sort((a, b) => (counts.get(b)! - counts.get(a)!) || a.localeCompare(b))
   }
-  if (!hasSupabase()) return rank(MOCK_SEEKERS.map((s) => s.preferred_models))
+  if (!hasSupabase()) {
+    let pool = MOCK_SEEKERS
+    if (makes.length) {
+      const wanted = new Set(makes.map((m) => m.toLowerCase()))
+      pool = pool.filter((s) => s.preferred_makes?.some((m) => wanted.has(m.toLowerCase())))
+    }
+    return rank(pool.map((s) => s.preferred_models))
+  }
   try {
     const supabase = await createServerSupabaseClient()
-    const { data } = await supabase
+    let query = supabase
       .from('partnership_seekers')
       .select('preferred_models')
       .eq('status', 'active')
       .limit(5000)
+    if (makes.length) query = query.overlaps('preferred_makes', makes)
+    const { data } = await query
     return rank((data ?? []).map((r) => r.preferred_models as string | null))
   } catch {
     return []

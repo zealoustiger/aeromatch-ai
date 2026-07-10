@@ -31,7 +31,9 @@ interface Props {
   /** Makes seekers are looking for, for the make filter (values match stored data). */
   makes?: string[]
   /** Model tokens seekers are looking for, parsed from the free-text `preferred_models`
-   *  field (not scoped by the selected make — the two fields aren't linked in the data). */
+   *  field. Scoped by the caller to seekers who also want the selected make(s), when any
+   *  are active (see `getSeekerModels`'s `makes` param) — individual tokens still aren't
+   *  linked to a specific make within one seeker row. */
   models?: string[]
   /** When set, render an in-panel "Save this search" button above "Clear all
    *  filters" (the base route the saved search reopens). */
@@ -172,8 +174,8 @@ export default function SeekerFilters({ initialValues, makes = [], models = [], 
       </div>
 
       {/* Model wanted — multi-select, parsed from the free-text `preferred_models`
-          field. Not scoped by the selected make above (the two fields aren't linked
-          in the data — a seeker's model list isn't stored per-make). */}
+          field. The option list is scoped to the make(s) selected above when any are
+          active (server-side, via getSeekerModels' makes param). */}
       <div>
         <label className={labelCls}>
           Model Wanted
