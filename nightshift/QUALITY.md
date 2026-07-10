@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-09T10:24:00Z — aircraft-browse-broker-cta — score 5/5
+## 2026-07-10T06:10:03Z — seeker-model-filter-make-scoped — score 4/5
+- Strengths: Exact spec hit and disciplined scoping — `getSeekerModels(makes = [])` mirrors `getSeekers` byte-for-byte on both branches (mock path uses the same `toLowerCase()` Set filter as lines 84-85; live path uses the same `.overlaps('preferred_makes', makes)` as line 120), so casing/OR semantics stay consistent by construction; no schema change, no extra round-trip (same call site), empty-`makes` short-circuits to prior behavior; the three stale "not linked in the data" comments (jsdoc, prop, inline) are all rewritten accurately, honestly preserving the "tokens still aren't per-make within a row" caveat.
+- Weaknesses / risks: page.tsx reimplements `parseMulti` inline (`split/trim/filter`, minus the `new Set` dedupe) because that helper isn't exported — harmless for `.overlaps` but a small duplication that could drift from the canonical parser.
+- Follow-up: none
 - Strengths: Exact-parity slice that closes the one gap the previous cycle explicitly flagged — reuses `MonetizationIntent` verbatim (same `path="broker"`, same title, `joinWaitlist`/`monetization_intent` event untouched), touches only `src/app/aircraft/page.tsx`, and gates on `itemListListings.length > 0` matching the `AlertSignup` gate right above it so it never clutters an empty result page; description copy is thoughtfully adapted ("your next aircraft" vs the detail page's "this aircraft") since the browse page isn't item-specific; clear comment, sensible `mt-4` spacing, zero new component/dep/schema — textbook scoping.
 - Weaknesses / risks: none material
 - Follow-up: none
