@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-10T06:03:40Z — PASS — seeker-model-filter-make-scoped
+- Pages: `/partnerships/seeking`
+- What: **The "Model Wanted" filter on the pilots-seeking-partnerships page now only
+  lists models relevant to the Make(s) you've already picked**, instead of every model
+  any seeker anywhere has ever typed. Pick "Cessna" and the Model list narrows from 9
+  options to the 4 that are actually Cessna models.
+- Goal: `[want]` tier — a fresh full-backlog audit (tier 1 `[bug]`: confirmed empty;
+  tier 3 `[goal]` alert-experience queue: confirmed fully drained, waiting on the smart-
+  model plan pass) found this as the clearest remaining open, unblocked `[want]` slice:
+  BACKLOG.md's `seeker-model-filter` (2026-07-06) entry explicitly flagged "Not scoped
+  by the selected Make" as a known gap, and the `earnings-calculator-upfront-runway`
+  (2026-07-09) CHANGELOG entry's own "Next" note called it out as candidate (b) — small,
+  no schema, real gap. Everything else open in `[want]` is human-blocked (collection-
+  layout redesign awaiting a mock, owner-leads compliance review, TAP/Controller/AirMart/
+  AeroTrader all bot-protected with an explicit no-evasion guardrail, model-variant DB
+  casing normalization deferred as destructive-ish) or a bigger unsliced lift with a
+  documented honest-abort (Bay-Area FAA fleet-count denominator).
+- How: `getSeekerModels()` (`src/lib/seekersQuery.ts`) gained an optional `makes: string[]`
+  param; when non-empty it filters the row pool via `.overlaps('preferred_makes', makes)`
+  (identical semantics to `getSeekers`' own make filter) before tokenizing the free-text
+  `preferred_models` field, on both the live-Supabase and mock-data paths.
+  `/partnerships/seeking/page.tsx` now parses the active `make` query param (same comma-
+  joined convention `SeekerFilters` already uses) and passes it through. Updated the two
+  stale comments in `SeekerFilters.tsx` that described the old "not scoped" behavior. No
+  schema change, no new query round-trip (same call site, one added filter).
+- Spec: nightshift/specs/20260710T060340Z-seeker-model-filter-make-scoped.md
+- Verdict: PASS. `npx tsc --noEmit` clean. `rm -rf .next && npx next build` clean (all
+  routes compiled). Mandatory `qa-smoke.mjs` against the PRODUCTION build (`npx next
+  start` on port 3000): 4/4 checks pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow) at desktop 1280 + mobile 375 on `/partnerships/seeking` and
+  `/partnerships/seeking?make=Cessna`. Non-visual (data/query) cycle → screenshots saved
+  for the audit trail but not read into context per RUNBOOK. Directly verified the actual
+  behavior change via curl against the running production server: unfiltered page renders
+  9 model checkboxes (152/M20/RV-7/SR20/SR22/172/172 G1000/182/Super Cub); `?make=Cessna`
+  correctly narrows to exactly 4 (152/172/172 G1000/182). Killed the `next-server` process
+  after (verified via `ps aux`). No prod DB rows created or mutated — pure read-side query
+  change against existing live `partnership_seekers` data, no signup/listing/alert created.
+- Screenshots: nightshift/screenshots/seeker-model-filter-make-scoped/
+- Next: individual model tokens still aren't linked to a specific make *within* one
+  seeker row (the free-text `preferred_models` field has no per-make structure) — this
+  slice narrows the candidate row pool, the same precision ceiling `getSeekers`' own
+  `.overlaps` narrowing already has. A future slice could apply the same make-scoping
+  pattern to `/aircraft`'s or `/partnerships`' rating/state facet lists if a similar gap
+  is ever found there. `[want]` and `[goal]` (alert-experience) queues are both now fully
+  drained again as of this cycle — the next cycle should check BACKLOG.md's ACTIVATION
+  pillars 2/3 (both previously confirmed fully drained) fresh, or emit
+  `ABORT — none — plan needed` if still empty, so the smart-model plan pass can generate
+  the next `[goal]` batch.
+
 ## 2026-07-09T12:28:02Z — DRAIN SUMMARY
 - Cycles this run: 3 (PASS 3 / FAIL 0 / ABORT 0)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus

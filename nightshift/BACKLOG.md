@@ -1258,7 +1258,17 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   (avoids `.or()`/`ILIKE` escaping risk on free text). Verified against the live DB: unfiltered page
   showed 14 links (13 active seekers + "post new"); `model=172` narrowed to exactly 1 (excluding the
   "172 G1000" row, confirming exact-token match); `model=SR20` narrowed to exactly 2 (both rows
-  containing that token). Not scoped by the selected Make (the two fields aren't linked in the data).
+  containing that token).
+  ~~Not scoped by the selected Make (the two fields aren't linked in the data).~~ ✅ SHIPPED via
+  `seeker-model-filter-make-scoped` (2026-07-10) `getSeekerModels()` now accepts an optional `makes`
+  filter (`.overlaps('preferred_makes', makes)`, same semantics `getSeekers` already uses) applied
+  before tokenizing `preferred_models`, and `/partnerships/seeking/page.tsx` passes the active `make`
+  query param into it — so the Model Wanted option list narrows to tokens from seekers who also want
+  one of the selected make(s) instead of always showing every token site-wide. Verified live: no
+  filter showed 9 tokens (152/M20/RV-7/SR20/SR22/172/172 G1000/182/Super Cub); `make=Cessna` narrowed
+  to exactly 4 (152/172/172 G1000/182). Individual tokens still aren't linked to a specific make
+  within one seeker row (free-text field) — this narrows the candidate row pool, matching the
+  precision `getSeekers`' own `.overlaps` narrowing already has. No schema change.
   ~~**Not done, intentionally:** wiring `model` into the seeker `AlertSignup` source path/alert-digest
   matching (mirrors how `make`-only alert matching already works there) — a natural next slice.~~ ✅
   SHIPPED via `seeker-alert-model-filter` (2026-07-06) `/partnerships/seeking`'s `alertContext`/
