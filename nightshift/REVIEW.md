@@ -1,3 +1,15 @@
+## 2026-07-10T06:21:21Z — Night Shift run: 3 cycles (PASS 2 / FAIL 0) — backlog drained
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $8.2738 of $120 cap
+
+- PASS — seeker-model-filter-make-scoped — /partnerships/seeking's Model Wanted filter now narrows its option list to models actually wanted by seekers who also want the selected
+- PASS — seeker-model-variant-rollup — the `/partnerships/seeking` Model Wanted filter now groups near-duplicate variants (e.g. 172 + 172 G1000) under one 172 (all) checkbox with
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 4.6 on 2 cores, sustained ~4 min — parallel drains are contending; consider more cores or lower --cpus per container
+
+
 ## 2026-07-09T12:28:02Z — Night Shift run: 3 cycles (PASS 3 / FAIL 0) — night budget cap ($120)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 - Night spend so far: $120.9669 of $120 cap
