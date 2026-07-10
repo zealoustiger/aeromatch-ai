@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { X } from 'lucide-react'
 import { STATE_NAMES } from '@/lib/seo'
+import { groupModelVariants } from '@/lib/modelGroups'
 
 type Params = Record<string, string | undefined>
 const BASE = '/partnerships/seeking'
@@ -19,7 +20,16 @@ interface Chip { key: string; label: string; href: string }
 
 /** Removable chips for the active /partnerships/seeking filters (server-rendered,
  *  no client JS). Mirrors PartnershipActiveFilterChips. */
-export default function SeekerActiveFilterChips({ params }: { params: Params }) {
+export default function SeekerActiveFilterChips({
+  params,
+  models,
+}: {
+  params: Params
+  /** Model-token option list (already make-scoped by the caller) — when present,
+   *  fully-selected variant groups collapse to a single "{base} (all)" chip
+   *  (mirrors PartnershipActiveFilterChips); omit and chips stay per-model. */
+  models?: string[]
+}) {
   const chips: Chip[] = []
   const num = (raw: string | undefined): number | null => {
     if (!raw) return null
@@ -78,7 +88,36 @@ export default function SeekerActiveFilterChips({ params }: { params: Params }) 
     chips.push({ key: `make:${make}`, label: `Wants ${make}`, href: buildHref(params, dropFromList('make', make)) })
   }
 
-  for (const model of splitMulti(params.model)) {
+  // Model — multi-select: one removable chip per selected token. When a
+  // multi-variant group's members are ALL selected, collapse them into a single
+  // "{base} (all)" chip (mirrors PartnershipActiveFilterChips); partially selected
+  // groups, singletons, and tokens absent from `models` stay per-token.
+  const selectedModelsList = splitMulti(params.model)
+  const selectedModelSet = new Set(selectedModelsList)
+  const collapsedGroups: { key: string; members: string[] }[] = []
+  const memberToGroupKey = new Map<string, string>()
+  if (models) {
+    for (const g of groupModelVariants(models)) {
+      if (g.members.length < 2) continue // singletons render as plain chips
+      if (g.members.every((mem) => selectedModelSet.has(mem))) {
+        collapsedGroups.push(g)
+        for (const mem of g.members) memberToGroupKey.set(mem, g.key)
+      }
+    }
+  }
+  for (const g of collapsedGroups) {
+    chips.push({
+      key: `modelgroup:${g.key}`,
+      label: `Wants ${g.key} (all)`,
+      href: buildHref(params, (p) => {
+        const next = selectedModelsList.filter((m) => !g.members.includes(m))
+        if (next.length) p.set('model', next.join(','))
+        else p.delete('model')
+      }),
+    })
+  }
+  for (const model of selectedModelsList) {
+    if (memberToGroupKey.has(model)) continue // covered by a collapsed parent chip
     chips.push({ key: `model:${model}`, label: `Wants ${model}`, href: buildHref(params, dropFromList('model', model)) })
   }
 

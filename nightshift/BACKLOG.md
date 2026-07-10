@@ -1239,9 +1239,8 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   today's seed data), so verified via a temporary mock-data preview route (screenshotted, then
   deleted before merge) with a mocked SR20/Sr20 G2/Sr20 G3/SR20-G2 cluster — parent checkbox,
   "Show 4 variants" disclosure, and the collapsed "SR20 (all)" chip all render correctly.
-  **Remaining: still (2) DB casing normalization (human call) and the `/partnerships/seeking`
-  half — see below, that one needs its own approach since seeker rows have no clean `model`
-  column.**
+  **Remaining: still (2) DB casing normalization (human call).** ~~The `/partnerships/seeking`
+  half~~ ✅ SHIPPED via `seeker-model-variant-rollup` (2026-07-10) — see below.
   — **`/partnerships` Model multi-select UI ✅ SHIPPED 2026-07-06** (`partnership-model-multiselect`):
   the prerequisite this line called for ("needs the multi-select UI first") — Make is now a live-facets
   `<select>` and Model a checkbox multi-select scoped to the selected make (`getPartnershipFacets()`,
@@ -1269,6 +1268,16 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   to exactly 4 (152/172/172 G1000/182). Individual tokens still aren't linked to a specific make
   within one seeker row (free-text field) — this narrows the candidate row pool, matching the
   precision `getSeekers`' own `.overlaps` narrowing already has. No schema change.
+  **Variant rollup ✅ SHIPPED via `seeker-model-variant-rollup` (2026-07-10):** the "Model
+  Wanted" filter now groups near-duplicate tokens (e.g. "172" + "172 G1000") under one
+  "{base} (all)" parent checkbox with a collapse-by-default "Show N variants" disclosure,
+  and `SeekerActiveFilterChips` collapses a fully-selected group into one "{base} (all)"
+  chip — both port the existing `groupModelVariants()` helper + `ModelGroupRow`/collapse
+  pattern already shipped on `/aircraft` and `/partnerships` verbatim. No query/schema
+  change (pure client-side grouping of the option list `getSeekerModels()` already
+  returns). Verified live: `model=172,172%20G1000` renders "Wants 172 (all)". This closes
+  the last open piece of the "Model filter: roll up variants" item across all 3 listing
+  types.
   ~~**Not done, intentionally:** wiring `model` into the seeker `AlertSignup` source path/alert-digest
   matching (mirrors how `make`-only alert matching already works there) — a natural next slice.~~ ✅
   SHIPPED via `seeker-alert-model-filter` (2026-07-06) `/partnerships/seeking`'s `alertContext`/

@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
 import { X } from 'lucide-react'
 import SaveSearchButton from './SaveSearchButton'
+import { groupModelVariants } from '@/lib/modelGroups'
 
 const RADIUS = [25, 50, 100, 150, 200]
 
@@ -86,6 +87,24 @@ export default function SeekerFilters({ initialValues, makes = [], models = [], 
     [pushParams]
   )
 
+  // Roll up a parent "(all)" model group: if every member is already selected,
+  // remove them all; otherwise add the missing ones. Mirrors PartnershipFilters'
+  // toggleModelGroup.
+  const toggleModelGroup = useCallback(
+    (members: string[], allSelected: boolean) => {
+      pushParams((params) => {
+        const current = new Set(
+          (params.get('model') ?? '').split(',').map((m) => m.trim()).filter(Boolean)
+        )
+        if (allSelected) members.forEach((m) => current.delete(m))
+        else members.forEach((m) => current.add(m))
+        if (current.size) params.set('model', [...current].join(','))
+        else params.delete('model')
+      })
+    },
+    [pushParams]
+  )
+
   // Home airport is multi-select: the `airports` param is a comma-joined list of
   // ICAO codes OR'd by the query (`.in('home_airport', …)`). Initial codes come from
   // `airports`, falling back to a lone legacy `airport` param so old links / saved
@@ -135,6 +154,10 @@ export default function SeekerFilters({ initialValues, makes = [], models = [], 
   const selectedModels = new Set(
     (initialValues.model ?? '').split(',').map((m) => m.trim()).filter(Boolean)
   )
+  // Roll near-duplicate variants (SR20, Sr20 G2, SR20-G2, …) under one parent so
+  // picking "an SR20" is one click. Single-member groups render as plain checkboxes.
+  // Mirrors PartnershipFilters' Model filter.
+  const modelGroups = useMemo(() => groupModelVariants(models), [models])
   const selectedRatings = new Set(
     (initialValues.rating ?? '').split(',').map((r) => r.trim()).filter(Boolean)
   )
@@ -191,17 +214,30 @@ export default function SeekerFilters({ initialValues, makes = [], models = [], 
           </p>
         ) : (
           <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2.5">
-            {models.map((m) => (
-              <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={selectedModels.has(m)}
-                  onChange={() => toggleMulti('model', m)}
-                  className={checkboxCls}
+            {modelGroups.map((g) =>
+              g.members.length === 1 ? (
+                // Singleton — render as a plain checkbox (unchanged behaviour).
+                <label key={g.key} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={selectedModels.has(g.members[0])}
+                    onChange={() => toggleMulti('model', g.members[0])}
+                    className={checkboxCls}
+                  />
+                  {g.members[0]}
+                </label>
+              ) : (
+                <ModelGroupRow
+                  key={g.key}
+                  groupKey={g.key}
+                  members={g.members}
+                  selected={selectedModels}
+                  onToggleGroup={toggleModelGroup}
+                  onToggleVariant={(m) => toggleMulti('model', m)}
+                  checkboxCls={checkboxCls}
                 />
-                {m}
-              </label>
-            ))}
+              )
+            )}
           </div>
         )}
       </div>
@@ -312,6 +348,77 @@ export default function SeekerFilters({ initialValues, makes = [], models = [], 
           >
             Clear all filters
           </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One rolled-up model family: a parent "{key} (all)" checkbox that selects every
+ * variant in one click, with the individual variants behind a collapse-by-default
+ * "Show N variants" disclosure. The parent reflects all / some (indeterminate) /
+ * none of its members being selected. Mirrors PartnershipFilters' ModelGroupRow.
+ */
+function ModelGroupRow({
+  groupKey,
+  members,
+  selected,
+  onToggleGroup,
+  onToggleVariant,
+  checkboxCls,
+}: {
+  groupKey: string
+  members: string[]
+  selected: Set<string>
+  onToggleGroup: (members: string[], allSelected: boolean) => void
+  onToggleVariant: (model: string) => void
+  checkboxCls: string
+}) {
+  const selectedCount = members.reduce((n, m) => (selected.has(m) ? n + 1 : n), 0)
+  const allSelected = selectedCount === members.length
+  const someSelected = selectedCount > 0 && !allSelected
+  const [open, setOpen] = useState(someSelected)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex flex-1 cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someSelected
+            }}
+            onChange={() => onToggleGroup(members, allSelected)}
+            className={checkboxCls}
+          />
+          <span>
+            {groupKey} <span className="text-slate-400">(all)</span>
+          </span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="shrink-0 text-xs font-medium text-sky-600 transition-colors hover:text-sky-700"
+        >
+          {open ? 'Hide' : `Show ${members.length} variants`}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-1.5 space-y-1.5 border-l border-slate-100 pl-4">
+          {members.map((m) => (
+            <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={selected.has(m)}
+                onChange={() => onToggleVariant(m)}
+                className={checkboxCls}
+              />
+              {m}
+            </label>
+          ))}
         </div>
       )}
     </div>

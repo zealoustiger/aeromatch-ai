@@ -2,6 +2,73 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-10T06:13:13Z — PASS — seeker-model-variant-rollup
+- Pages: `/partnerships/seeking`
+- What: **The "Model Wanted" filter on the pilots-seeking-partnerships page now groups
+  near-duplicate model variants under one parent checkbox** — e.g. "172" and "172 G1000"
+  collapse into a single "172 (all)" option (with a "Show 2 variants" link to still pick
+  just one), instead of listing every variant as its own separate box. Matches the same
+  rollup `/aircraft` and `/partnerships` already have.
+- Goal: `[want]` tier — a fresh full-backlog audit (tier 1 `[bug]`: confirmed empty; tier
+  3 `[goal]` alert-experience queue and both secondary ACTIVATION pillars 2/3: confirmed
+  fully drained/complete outside human-blocked frozen-auth-file items) found this as the
+  clearest remaining open, unblocked `[want]` slice: BACKLOG.md's "Model filter: roll up
+  variants into a parent model" item (`model-filter-variant-rollup` / `partnership-model-
+  rollup`) explicitly flagged "the `/partnerships/seeking` half — that one needs its own
+  approach since seeker rows have no clean `model` column" as its one remaining piece
+  after the aircraft and partnership sides shipped. Confirmed via direct code read (no
+  `groupModelVariants` usage anywhere in `SeekerFilters.tsx`) that this gap was real, not
+  stale bookkeeping. Everything else open in `[want]` is human-blocked (collection-layout
+  redesign awaiting a mock, Trade-A-Plane/Controller/AirMart/AeroTrader all bot-protected
+  with an explicit no-evasion guardrail, model-variant DB casing normalization deferred as
+  destructive-ish) or a bigger unsliced lift with a documented honest-abort (Bay-Area FAA
+  fleet-count denominator, attempted 2026-07-08 and abandoned per the honesty gate).
+- How: unlike the aircraft/partnership sides, the seeker Model filter's option list
+  (`getSeekerModels()`) was already a flat array of free-text tokens (not per-make
+  facets), so the port was simpler than the partnership one: `SeekerFilters.tsx` now
+  computes `groupModelVariants(models)` (existing unit-tested helper,
+  `src/lib/modelGroups.ts`, unchanged) and renders a `ModelGroupRow` (parent "(all)"
+  checkbox + collapse-by-default "Show N variants" disclosure, indeterminate state for
+  partial selection) for multi-member groups — ported verbatim from
+  `PartnershipFilters.tsx`'s identical component, singletons unchanged. `SeekerActiveFilterChips.tsx`
+  gained an optional `models` prop; when a group's members are ALL selected in the URL's
+  comma-joined `model` param, they collapse into one "Wants {base} (all)" removable chip
+  instead of one chip per token — ported from `PartnershipActiveFilterChips.tsx`'s
+  collapse logic, simplified (no per-make facets needed since the token list is already
+  scoped). `/partnerships/seeking/page.tsx` now passes the already-fetched `seekerModels`
+  into the chips component (previously only received `params`). No query/schema/matching-
+  logic change — pure client-side grouping of the option list `getSeekerModels()` already
+  returns; `MobileFiltersDrawer`'s seeker variant reuses `SeekerFilters` directly, so it
+  picked up the same rollup with no separate change.
+- Spec: nightshift/specs/20260710T061313Z-seeker-model-variant-rollup.md
+- Verdict: PASS. `npx tsc --noEmit` clean. `node --experimental-strip-types --test
+  src/lib/modelGroups.test.ts src/lib/seekerModelFilter.test.ts`: 12/12 pass (both files
+  unchanged — confirms no regression to the underlying grouping/matching logic). `rm -rf
+  .next && npx next build` clean (all routes compiled). Mandatory `qa-smoke.mjs` against
+  the PRODUCTION build (`npx next start` on port 3000): 4/4 checks pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow) at desktop 1280 + mobile 375 on
+  `/partnerships/seeking` and `/partnerships/seeking?make=Cessna`. Visual cycle (filter
+  sidebar UI) → read the screenshots: desktop sidebar cleanly shows "172 (all)" +
+  "Show 2 variants" alongside plain singleton checkboxes (152/182/M20/RV-7/SR20/SR22/Super
+  Cub), no layout break; mobile renders cleanly with filters collapsed behind the existing
+  "Filters" button (unchanged convention, not a regression). Directly verified the actual
+  behavior against the running production server: unfiltered page groups "172" + "172
+  G1000" (today's only 2-member cluster in live seed data) under one parent with a working
+  disclosure toggle; `?model=172,172%20G1000` renders exactly one "Wants 172 (all)" active-
+  filter chip (not two separate chips), confirming the collapse logic. Killed the
+  `next-server` process after (verified via `ps aux`). No prod DB rows created or mutated —
+  pure read-side UI/grouping change against existing live `partnership_seekers` data, no
+  signup/listing/alert created.
+- Screenshots: nightshift/screenshots/seeker-model-variant-rollup/
+- Next: DB casing normalization of stored model-variant strings (e.g. unifying "Sr20 G2"
+  vs "SR20-G2" spellings at the source) remains flagged as a human call (destructive-ish
+  data cleanup) across all 3 listing types — the rollup UI already papers over the display
+  inconsistency, so this is cosmetic-data-quality, not user-facing friction. The `[want]`
+  and `[goal]` (alert-experience + ACTIVATION pillars 1-3) queues are all now fully drained
+  again as of this cycle outside human-blocked items — the next cycle should re-scan fresh,
+  or emit `ABORT — none — plan needed` if still empty, so the smart-model plan pass can
+  generate the next `[goal]` batch.
+
 ## 2026-07-10T06:03:40Z — PASS — seeker-model-filter-make-scoped
 - Pages: `/partnerships/seeking`
 - What: **The "Model Wanted" filter on the pilots-seeking-partnerships page now only
