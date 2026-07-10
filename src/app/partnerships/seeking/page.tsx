@@ -106,10 +106,13 @@ export default async function SeekingPartnershipsPage({
   // The make hubs this page should reach so it isn't an internal dead-end.
   const makeLinks = SEO_MAKES.slice(0, 3)
   // Makes seekers actually want — feeds the chip bar + the make filter dropdown.
-  // Models are parsed from the free-text `preferred_models` field — feeds the Model filter.
+  // Models are parsed from the free-text `preferred_models` field — feeds the Model
+  // filter, scoped to the active make selection when one is set (models from seekers
+  // who also want one of those makes), same as /aircraft's make-scoped model list.
+  const selectedMakes = (params.make ?? '').split(',').map((m) => m.trim()).filter(Boolean)
   const [seekerMakes, seekerModels, seekerCount] = await Promise.all([
     getSeekerMakes(),
-    getSeekerModels(),
+    getSeekerModels(selectedMakes),
     getSeekerCount(),
   ])
   const activeFilterCount = ['airports', 'airport', 'state', 'make', 'model', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
