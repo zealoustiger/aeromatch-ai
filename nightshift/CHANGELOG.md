@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-10T06:21:21Z — DRAIN SUMMARY
+- Cycles this run: 3 (PASS 2 / FAIL 0 / ABORT 1)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $8.2738 of $120 cap
+- Stopped because: backlog drained
+- Run: 20260710T060005Z
+
 ## 2026-07-10T06:13:13Z — PASS — seeker-model-variant-rollup
 - Pages: `/partnerships/seeking`
 - What: **The "Model Wanted" filter on the pilots-seeking-partnerships page now groups
