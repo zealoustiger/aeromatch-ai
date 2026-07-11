@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T12:32:04Z — DRAIN SUMMARY
+- Cycles this run: 25 (PASS 22 / FAIL 1 / ABORT 2)
+- Models: cycles on sonnet; 1 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $98.9692 of $120 cap
+- Stopped because: safety cap (25)
+- Run: 20260711T074600Z
+
 ## 2026-07-11T12:31:25Z — PASS — alert-signin-one-click
 - Pages: (shared component — every page that embeds `AlertSignup`) `/alerts`, `/aircraft`, `/aircraft/[make]`, `/aircraft/[make]/[model]`, `/aircraft/[make]/[model]/[state]`, `/aircraft/mission/[mission]`, `/aircraft/listing/[id]`, `/aircraft/for-sale/[state]`, `/airports/[icao]`, `/partnerships`, `/partnerships/seeking`, `/partnerships/make/[make]`, `/partnerships/near/[icao]`, `/partnerships/state/[state]`, `/`, `/not-found`
 - What: **If you're already signed in with a verified email, "getting alerts" anywhere on the site is now one click instead of retyping your email.** Every alert signup box (browse pages, listing pages, make/model/state pages, the `/alerts` landing page, the homepage) used to show the same plain email field to everyone, signed in or not — pure retype friction for anyone who already has an account. Now a signed-in visitor sees "Alert me — we'll email {their email}" as a single button; clicking it turns the alert on immediately (no "check your inbox and click a link" step, since the account's email is already proven). Signed-out visitors see the exact same email-field flow as before — nothing changes for them.
