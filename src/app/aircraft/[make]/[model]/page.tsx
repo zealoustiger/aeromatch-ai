@@ -9,6 +9,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import { getInventoryMakeModels, resolveMakeModel, STATE_NAMES, stateSlug, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -82,6 +83,7 @@ export default async function MakeModelForSalePage({ params }: Props) {
 
   const label = `${entry.make} ${entry.model}`
   const path = `/aircraft/${entry.makeSlug}/${entry.modelSlug}`
+  const alertCounts = await getAlertCounts([label])
   // Curated head-to-head comparisons featuring this family — internal links into the
   // /aircraft/compare/[a-vs-b] family (only present for curated families).
   const comparisons = comparisonsForModel(entry.makeSlug, entry.modelSlug)
@@ -381,7 +383,7 @@ export default async function MakeModelForSalePage({ params }: Props) {
       )}
 
       {/* Email-alerts capture (slice 1) — inline, no account required. */}
-      <AlertSignup context={label} sourcePath={path} />
+      <AlertSignup context={label} sourcePath={path} alertCount={alertCounts.get(label)} />
 
       {/* Listings */}
       <h2 className="mb-4 text-lg font-semibold text-slate-900">
