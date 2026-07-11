@@ -21,6 +21,7 @@ import { getSeekers } from '@/lib/seekersQuery'
 import { getPartnershipCompVerdicts, getSeekerBudgetCheckVerdicts } from '@/lib/partnershipComps'
 import { getFacilityRatingSummaries, getUserFacilityRatings } from '@/lib/facilityRatings'
 import FacilityRatingWidget from '@/components/FacilityRatingWidget'
+import AlertSignup from '@/components/AlertSignup'
 import {
   getNearbyPartnerships,
   getIndexableAirportHubs,
@@ -265,6 +266,14 @@ export default async function AirportPage({
           </div>
         </section>
       )}
+
+      {/* Email-alerts capture — inline, no account required. Same placement convention
+          as the make/model and state pages: after intro/overview prose, before listings. */}
+      <AlertSignup
+        context={airport.icao}
+        sourcePath={`/partnerships?airport=${airport.icao}&radius=50`}
+        noun="partnership"
+      />
 
       {facilities && (facilities.fbos.length > 0 || facilities.flyingClubs.length > 0) && (
         <section className="ch-panel mb-10 p-6">
