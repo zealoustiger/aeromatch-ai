@@ -48,7 +48,13 @@ CYCLE_MODEL="${NS_CYCLE_MODEL:-$(cfgd '.models.cycle' sonnet)}"
 ESCALATE_MODEL="${NS_ESCALATE_MODEL:-$(cfgd '.models.escalate' opus)}"
 JUDGE_MODEL="${NS_JUDGE_MODEL:-$(cfgd '.models.judge' opus)}"
 JUDGE_PCT="${NS_JUDGE_PCT:-$(cfgd '.models.judgePct' 25)}"
-mname() { case "$1" in *sonnet*) echo sonnet;; *opus*) echo opus;; *haiku*) echo haiku;; *) echo "$1";; esac; }
+# Planner: when the backlog drains, generate more [goal] tasks (PLAN_TASK.md) instead of
+# stopping. Task ideation is where model quality matters most, so this runs on Fable by
+# default; a Fable pass that errors falls back to the escalate-tier model once.
+PLAN_MODEL="${NS_PLAN_MODEL:-$(cfgd '.models.plan' claude-fable-5)}"
+PLAN_FALLBACK_MODEL="${NS_PLAN_FALLBACK_MODEL:-$ESCALATE_MODEL}"
+MAX_PLANS="${NS_MAX_PLANS:-2}"   # planner refills allowed per run — runaway guard
+mname() { case "$1" in *sonnet*) echo sonnet;; *opus*) echo opus;; *haiku*) echo haiku;; *fable*) echo fable;; *) echo "$1";; esac; }
 
 # Bounds. NS_FORCE=1 = authorized manual run, ignores the night window + uses a time box.
 # The per-cycle hard cap is MODEL-AWARE: a strong model reasons ~2-3x slower per turn
@@ -132,7 +138,7 @@ HRM="$RUNDIR/headroom.jsonl"
 HM_PID=$!
 trap 'kill "$HM_PID" 2>/dev/null' EXIT
 
-n=0; pass=0; fail=0; abort=0; escalations=0; judged=0; stop_reason="safety cap"
+n=0; pass=0; fail=0; abort=0; escalations=0; judged=0; planned=0; stop_reason="safety cap"
 CYCLE_PROMPT="$(cat "$APP/nightshift/CYCLE_TASK.md")"
 rm -f "$STATE/stop" 2>/dev/null   # clear any stale stop request from a prior run
 
@@ -188,6 +194,23 @@ run_judge() {
     > "$RUNDIR/judge-$n.jsonl" 2> "$RUNDIR/judge-$n.stderr" || true
 }
 
+# Refill the goal queue when the backlog drains. Runs PLAN_TASK.md — task ideation ONLY,
+# never touches product code; it appends [goal] tasks to BACKLOG.md and pushes staging
+# itself. $1 = model, $2 = attempt tag. Sets global: plan_result (the planner's "PLAN — …"
+# line, or "" if the pass produced none). Syncs the working tree to whatever it pushed so
+# the next cycle sees the new tasks.
+run_plan() {
+  local model="$1" tag="$2" out="$RUNDIR/plan-$2.jsonl"
+  echo "  ↳ backlog drained — generating goal tasks on $(mname "$model") (refill $tag)"
+  cat "$APP/nightshift/PLAN_TASK.md" | timeout --signal=INT 900 \
+    claude --dangerously-skip-permissions --model "$model" --output-format stream-json --verbose -p \
+    > "$out" 2> "$RUNDIR/plan-$tag.stderr" || true
+  plan_result=$(grep -E '"type"[[:space:]]*:[[:space:]]*"result"' "$out" 2>/dev/null | tail -1 \
+    | jq -r '.result // ""' 2>/dev/null | grep -oE 'PLAN[^|]*' | tail -1)
+  git -C "$APP" fetch -q origin 2>/dev/null && git -C "$APP" reset -q --hard origin/staging 2>/dev/null || true
+  echo "  ↳ planner ($(mname "$model")): ${plan_result:-(no result)}"
+}
+
 while : ; do
   # Graceful stop request ($STATE/stop, e.g. a dashboard Stop button) ends cleanly here.
   [ -f "$STATE/stop" ] && { stop_reason="stopped by human"; rm -f "$STATE/stop"; break; }
@@ -215,8 +238,22 @@ while : ; do
     run_judge "$slug"
   fi
 
-  # Stop conditions surfaced by the most recent cycle.
-  case "$rline" in ABORT*none*|ABORT*nothing*) stop_reason="backlog drained"; break;; esac
+  # Backlog drained: instead of quitting, run the planner to invent more goal tasks and
+  # keep cycling. Bounded by MAX_PLANS per run + the night budget cap. Only actually stop
+  # if the planner (and its fallback) find nothing new, or the refill cap is hit.
+  case "$rline" in
+    ABORT*none*|ABORT*nothing*)
+      [ "$planned" -ge "$MAX_PLANS" ] && { stop_reason="backlog drained (planner cap $MAX_PLANS)"; break; }
+      over_budget && { stop_reason="night budget cap (\$$MAX_NIGHT_COST)"; break; }
+      planned=$((planned+1))
+      run_plan "$PLAN_MODEL" "$planned"
+      case "$plan_result" in ""|*rror*) run_plan "$PLAN_FALLBACK_MODEL" "${planned}f";; esac
+      case "$plan_result" in
+        *none*|"") stop_reason="backlog drained (planner: nothing to add)"; break;;
+        *)         continue;;   # new [goal] tasks are on staging — loop and build them
+      esac
+      ;;
+  esac
   [ "$apierr" = "429" ] && { stop_reason="rate limited"; break; }
   [ "$apierr" = "401" ] && { stop_reason="auth expired"; break; }
 done
