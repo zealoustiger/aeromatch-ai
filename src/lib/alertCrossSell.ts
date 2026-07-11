@@ -1,12 +1,14 @@
-import { resolveMakeModelFamily, SEO_MAKE_MODELS } from './seo'
+import { resolveMakeModelFamily, SEO_MAKE_MODELS, STATE_NAMES } from './seo'
+import { getAlertMatchCount } from './alertMatchCounts'
 
 /**
  * Post-confirmation cross-sell: given the `source_path` of an alert a visitor just
- * confirmed, suggest one more alert worth having. Two suggestion types, tried in
+ * confirmed, suggest one more alert worth having. Three suggestion types, tried in
  * order: (1) a curated **sibling model** (e.g. a Cessna 172 alert → suggest the
- * 182) when the confirmed alert names a model that maps to one; (2) the
- * **counterpart listing type** for the same make (aircraft ↔ partnerships)
- * otherwise. Only handles the modern query-string source-path shape
+ * 182) when the confirmed alert names a model that maps to one; (2) an **adjacent
+ * state** with real, non-zero live inventory when the confirmed alert names a
+ * state; (3) the **counterpart listing type** for the same make (aircraft ↔
+ * partnerships) otherwise. Only handles the modern query-string source-path shape
  * (`/aircraft?make=...`, `/partnerships?make=...`) that the browse-page inline
  * `AlertSignup` and `/alerts` chips produce — legacy path-segment alerts, no-make
  * alerts, and seeker alerts return null (no suggestion) rather than a weak one.
@@ -21,15 +23,16 @@ export interface AlertCrossSellSuggestion {
 
 function parseNounAndMake(
   sourcePath: string
-): { noun: 'aircraft' | 'partnership' | 'seeker'; make?: string; model?: string } | null {
+): { noun: 'aircraft' | 'partnership' | 'seeker'; make?: string; model?: string; state?: string } | null {
   const [pathOnly, qs] = sourcePath.split('?')
   const p = pathOnly.replace(/\/$/, '')
   if (!qs) return null
   const params = new URLSearchParams(qs)
   const make = params.get('make')?.trim() || undefined
   const model = params.get('model')?.trim() || undefined
-  if (p === '/aircraft') return { noun: 'aircraft', make, model }
-  if (p === '/partnerships') return { noun: 'partnership', make }
+  const state = params.get('state')?.trim().toUpperCase() || undefined
+  if (p === '/aircraft') return { noun: 'aircraft', make, model, state }
+  if (p === '/partnerships') return { noun: 'partnership', make, state }
   if (p === '/partnerships/seeking') return { noun: 'seeker', make }
   return null
 }
@@ -64,14 +67,72 @@ function getSiblingModelSuggestion(make: string, model: string): AlertCrossSellS
   }
 }
 
-export function getCrossSellSuggestion(sourcePath: string | null): AlertCrossSellSuggestion | null {
+// Small, hand-picked pairs of genuinely nearby states — deliberately not all 50
+// (a random/far-flung state is a worse suggestion than none). Matches the same
+// 10-state curated set used by FORSALE_STATE_OVERVIEWS / PARTNERSHIP_STATE_OVERVIEWS
+// elsewhere in the codebase.
+const ADJACENT_STATES: Record<string, string[]> = {
+  CA: ['NV', 'AZ', 'OR'],
+  TX: ['OK', 'NM', 'LA', 'AR'],
+  FL: ['GA', 'AL'],
+  AZ: ['CA', 'NV', 'NM', 'UT'],
+  CO: ['WY', 'UT', 'NM', 'KS'],
+  WA: ['OR', 'ID'],
+  NY: ['NJ', 'PA', 'CT', 'MA', 'VT'],
+  IL: ['WI', 'IN', 'MO', 'IA'],
+  GA: ['FL', 'AL', 'TN', 'NC', 'SC'],
+  NC: ['SC', 'GA', 'TN', 'VA'],
+}
+
+// Only offers a neighbor with a real, non-zero live match count (reusing the same
+// `getAlertMatchCount` the `/alerts/manage` live-count line uses) — an empty-state
+// suggestion is a worse outcome than no suggestion at all (honesty gate).
+async function getNearbyStateSuggestion(
+  noun: 'aircraft' | 'partnership',
+  make: string,
+  state: string
+): Promise<AlertCrossSellSuggestion | null> {
+  const neighbors = ADJACENT_STATES[state]
+  if (!neighbors) return null
+  const path = noun === 'aircraft' ? '/aircraft' : '/partnerships'
+  const subject = `${make} ${noun === 'aircraft' ? 'aircraft' : 'partnerships'}`
+
+  for (const code of neighbors) {
+    const sourcePath = `${path}?make=${encodeURIComponent(make)}&state=${code}`
+    const match = await getAlertMatchCount(sourcePath)
+    if (match && match.count > 0) {
+      const stateName = STATE_NAMES[code] ?? code
+      return {
+        context: `${subject} in ${stateName}`,
+        sourcePath,
+        noun,
+        label: `Also want alerts for ${subject} in ${stateName}? ${match.count} ${match.noun}${
+          match.count === 1 ? '' : 's'
+        } now.`,
+      }
+    }
+  }
+  return null
+}
+
+export async function getCrossSellSuggestion(
+  sourcePath: string | null
+): Promise<AlertCrossSellSuggestion | null> {
   const parsed = parseNounAndMake(sourcePath ?? '')
   if (!parsed?.make) return null
-  const { noun, make, model } = parsed
+  const { noun, make, model, state } = parsed
 
   if (noun === 'aircraft') {
     const sibling = model ? getSiblingModelSuggestion(make, model) : null
     if (sibling) return sibling
+  }
+
+  if ((noun === 'aircraft' || noun === 'partnership') && state) {
+    const nearby = await getNearbyStateSuggestion(noun, make, state)
+    if (nearby) return nearby
+  }
+
+  if (noun === 'aircraft') {
     return {
       context: `${make} co-ownership partnerships`,
       sourcePath: `/partnerships?make=${encodeURIComponent(make)}`,

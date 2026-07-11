@@ -62,7 +62,7 @@ export default async function AlertStatusPage({
   // (admin client — anon has no SELECT on `alerts`, it holds PII) and offer a
   // one-click counterpart suggestion (aircraft ↔ partnerships for the same make).
   // Never shown outside the confirmed state; null when no suggestion applies.
-  let crossSell = null as ReturnType<typeof getCrossSellSuggestion>
+  let crossSell = null as Awaited<ReturnType<typeof getCrossSellSuggestion>>
   if (key === 'confirmed' && token) {
     const admin = createAdminClient()
     const { data } = await admin
@@ -71,7 +71,7 @@ export default async function AlertStatusPage({
       .eq('confirm_token', token)
       .eq('status', 'confirmed')
       .maybeSingle()
-    crossSell = getCrossSellSuggestion(data?.source_path ?? null)
+    crossSell = await getCrossSellSuggestion(data?.source_path ?? null)
   }
 
   return (

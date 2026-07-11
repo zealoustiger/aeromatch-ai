@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T13:12:32Z — PASS — alert-cross-sell-nearby-state
+- Pages: /alerts/status
+- What: **The "also want an alert for X?" prompt you see right after confirming an
+  alert email now has a third suggestion type.** If your confirmed alert named a
+  state (e.g. "Cessna aircraft in California"), it can now suggest a real
+  neighboring state with actual live inventory ("Also want alerts for Cessna
+  aircraft in Nevada? 6 listings now") instead of only ever suggesting the
+  aircraft↔partnerships counterpart or a sibling model. It never suggests a state
+  with zero real matches — falls back to the existing counterpart suggestion
+  instead.
+- Goal: alert experience — closes the last open `[P2][goal]` item in BACKLOG.md's
+  🔔 section ("Cross-sell: nearby-state suggestion on `/alerts/status`"), draining
+  the alert-experience goal queue again. `getCrossSellSuggestion`
+  (`src/lib/alertCrossSell.ts`) is now async and tries, in order: (1) the existing
+  curated sibling-model suggestion, (2) a new nearby-state suggestion — walks a
+  small curated `ADJACENT_STATES` map (same 10-state curated set used by
+  `FORSALE_STATE_OVERVIEWS`/`PARTNERSHIP_STATE_OVERVIEWS` elsewhere) and calls the
+  existing `getAlertMatchCount` (`alertMatchCounts.ts`) per neighbor, offering the
+  first with count > 0 — (3) the existing make-counterpart fallback. No new
+  component (`AlertCrossSell.tsx` already renders any suggestion generically), no
+  schema/migration change.
+- Spec: nightshift/specs/20260711T131232Z-alert-cross-sell-nearby-state.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes incl. `/alerts/status`). Live-verified end-to-end
+  against the real prod DB (read-only counts first, then two throwaway
+  `@example.com` confirmed test alerts): `/aircraft?make=Cessna&state=CA` correctly
+  rendered "Also want alerts for Cessna aircraft in Nevada? 6 listings now" (a real,
+  live count); `/partnerships?make=Cirrus&state=TX` correctly fell back to "Also
+  want alerts for Cirrus aircraft for sale?" since 0 real Cirrus partnerships exist
+  in any of TX's curated neighbors (OK/NM/LA/AR) — proving the honesty gate holds
+  both ways. Playwright-clicked "Yes, alert me" on the first case and confirmed a
+  second `confirmed` alert row was inserted with the exact suggested
+  context/source_path (`Cessna aircraft in Nevada` / `/aircraft?make=Cessna&state=NV`)
+  and zero console errors. QA smoke (production build, not dev) exit 0 on
+  `/alerts/status` (bare) and the real confirmed-token URL, desktop 1280 + mobile
+  375 (4/4 — HTTP 200, zero app-origin console errors, zero horizontal overflow).
+  Visual cycle (renders inside the existing `AlertCrossSell` panel) — screenshots
+  read and confirmed correct at both viewports: suggestion box on-brand, no
+  overlap/overflow, rest of the confirmation page unchanged. All 3 test alert rows
+  deleted immediately after (verified 0 remain). Killed the `next start` server
+  afterward and confirmed via `ps`/`lsof` no orphaned process remained.
+- Screenshots: nightshift/screenshots/alert-cross-sell-nearby-state/
+- Next: the alert-experience `[goal]` queue is fully drained again (per BACKLOG.md's
+  Planner-refill notes) — the next cycle should either pull a `[want]`/`[bug]` if
+  one exists, or emit `ABORT — none — plan needed` so the Opus/Fable plan pass
+  generates the next batch.
+
 ## 2026-07-11T13:03:26Z — PASS — partnership-digest-samples
 - Pages: (none — email/query logic only; no page changed)
 - What: **The weekly alert-digest email now shows real preview cards for partnership
