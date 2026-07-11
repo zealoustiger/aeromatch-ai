@@ -19,6 +19,17 @@ test('percent-off is computed correctly and named in the subject', () => {
   assert.equal(subject, '10% price drop — 2013 Cessna 172S Skyhawk now $180,000')
 })
 
+test('the text body never claims the drop "just" happened — a daily/weekly cron send, not real-time', () => {
+  const { text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  assert.doesNotMatch(text, /just dropped/i)
+  assert.match(text, /dropped 10% this week/)
+})
+
+test('periodLabel overrides the default "this week" wording (e.g. "yesterday" for a daily alert)', () => {
+  const { text } = buildPriceDropEmail({ ...BASE, photoUrl: null, periodLabel: 'yesterday' })
+  assert.match(text, /dropped 10% yesterday/)
+})
+
 test('old and new price are both formatted as USD in the text body', () => {
   const { text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
   assert.match(text, /now \$180,000 \(was \$200,000\)/)

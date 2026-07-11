@@ -669,6 +669,9 @@ export async function GET(req: NextRequest) {
           listingUrl: bestDrop.url,
           manageUrl,
           unsubscribeUrl,
+          // Honesty: this is a daily/weekly cron send, never real-time —
+          // never claim "just dropped".
+          periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
         })
       : buildAlertDigestEmail({
           context: alert.context ?? null,
