@@ -23,6 +23,7 @@ import { getPublicProfile } from '@/lib/publicProfile'
 import ListingViewTracker from '@/components/ListingViewTracker'
 import ReportListing from '@/components/ReportListing'
 import MonetizationIntent from '@/components/MonetizationIntent'
+import AlertSignup from '@/components/AlertSignup'
 import SaveListingButton from '@/components/SaveListingButton'
 import SavedListingNote from '@/components/SavedListingNote'
 import TrustBadge from '@/components/TrustBadge'
@@ -825,6 +826,20 @@ export default async function PartnershipDetailPage({
                 </>
               )}
             </div>
+
+            {/* Alert capture — every partnership detail page gets a
+                make/model-scoped "get alerts" box, mirroring the aircraft
+                listing page's alert CTA, so a visitor who isn't ready to
+                message the poster still has an on-site next step. */}
+            <AlertSignup
+              context={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+              sourcePath={
+                p.make
+                  ? `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
+                  : '/partnerships'
+              }
+              noun="partnership"
+            />
 
             {/* Monetization intent signals — same honest fake-door pattern as
                 the aircraft-for-sale listing page's broker/services CTAs,
