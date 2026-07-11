@@ -1184,6 +1184,42 @@ export async function pauseAlertByToken(token: string) {
   return { ok: true }
 }
 
+// Post-confirmation cross-sell (see AlertCrossSell.tsx / alertCrossSell.ts): a
+// visitor who just confirmed one alert gets offered a one-click counterpart alert
+// (e.g. aircraft ↔ partnerships for the same make) for the SAME already-verified
+// email — no second double-opt-in round trip. `originalToken` proves ownership: it's
+// the confirm_token of an alert already flipped to `confirmed` by /api/alerts/confirm,
+// so the caller has already proven they control that inbox once this cycle.
+export async function subscribeToConfirmedAlert(originalToken: string, context: string, sourcePath: string) {
+  const trimmed = originalToken?.trim()
+  if (!trimmed) return { error: 'Invalid link.' }
+
+  const admin = createAdminClient()
+  const { data: original } = await admin
+    .from('alerts')
+    .select('email, status')
+    .eq('confirm_token', trimmed)
+    .maybeSingle()
+
+  if (!original || original.status !== 'confirmed' || !original.email) {
+    return { error: 'This link is no longer valid.' }
+  }
+
+  const { error } = await admin.from('alerts').insert({
+    email: original.email,
+    context: context || null,
+    source_path: sourcePath || null,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    confirm_token: crypto.randomUUID(),
+    unsubscribe_token: crypto.randomUUID(),
+  })
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
+  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  return { ok: true }
+}
+
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
 const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft', '/partnerships/seeking'] as const
 

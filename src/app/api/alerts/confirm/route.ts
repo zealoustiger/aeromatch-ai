@@ -11,8 +11,14 @@ export const dynamic = 'force-dynamic'
 // bogus token.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')?.trim()
+  // Confirmed lands with the same token forwarded, so the status page can look up
+  // the alert's source_path and offer a token-scoped cross-sell suggestion (see
+  // subscribeToConfirmedAlert) — mirrors the unsubscribe route's existing convention
+  // of forwarding unsubscribe_token on ?state=unsubscribed.
   const dest = (state: string) =>
-    NextResponse.redirect(`${SITE_URL}/alerts/status?state=${state}`)
+    NextResponse.redirect(
+      `${SITE_URL}/alerts/status?state=${state}${state === 'confirmed' && token ? `&token=${encodeURIComponent(token)}` : ''}`
+    )
 
   if (!token) return dest('invalid')
 
