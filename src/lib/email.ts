@@ -320,6 +320,27 @@ export type AlertDigestSample = {
   url: string
 }
 
+/**
+ * Pick the single best price-drop sample from a set — the one with the
+ * largest genuine `%` decrease, not just the most recent — for surfacing via
+ * the rich single-listing `buildPriceDropEmail` template. Samples with no
+ * usable before/after price (missing `previousPrice`/`price`, or no real
+ * decrease) are ignored. Returns null when nothing qualifies.
+ */
+export function pickBestPriceDropSample(samples: AlertDigestSample[]): AlertDigestSample | null {
+  let best: AlertDigestSample | null = null
+  let bestPct = 0
+  for (const s of samples) {
+    if (s.previousPrice == null || s.price == null || s.previousPrice <= s.price) continue
+    const pct = (s.previousPrice - s.price) / s.previousPrice
+    if (!best || pct > bestPct) {
+      best = s
+      bestPct = pct
+    }
+  }
+  return best
+}
+
 function specsLine(s: AlertDigestSample): string {
   const parts: string[] = []
   if (s.year) parts.push(String(s.year))
