@@ -5,6 +5,8 @@ import Link from 'next/link'
 import DeleteSearchButton from '@/components/DeleteSearchButton'
 import RenameSavedSearch from '@/components/RenameSavedSearch'
 import QuickStartSearchForm from '@/components/QuickStartSearchForm'
+import SavedSearchAlertButton from '@/components/SavedSearchAlertButton'
+import { getAlertedSourcePaths } from '@/lib/savedSearchAlerts'
 import type { SavedSearch } from '@/lib/types'
 
 // Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
@@ -110,6 +112,8 @@ export default async function SearchesPage() {
     showSeekerCrossPost = !ownSeekerListings?.length
   }
 
+  const alertedSourcePaths = user.email ? await getAlertedSourcePaths(user.email) : new Set<string>()
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -118,7 +122,7 @@ export default async function SearchesPage() {
           My Saved Searches
         </h1>
         <p className="mt-1 text-slate-500">
-          We'll notify you when new listings match your criteria.
+          Turn on email alerts for any of these with one click below.
         </p>
         <Link
           href="/account"
@@ -234,6 +238,10 @@ export default async function SearchesPage() {
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
+                <SavedSearchAlertButton
+                  searchId={s.id}
+                  alreadySubscribed={alertedSourcePaths.has(`${s.path || '/partnerships'}?${s.search_params}`)}
+                />
                 <Link
                   href={`${s.path || '/partnerships'}?${s.search_params}`}
                   className="flex items-center justify-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"

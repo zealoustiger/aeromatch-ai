@@ -1220,6 +1220,42 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
   return { ok: true }
 }
 
+// Saved-search ↔ alert unification (slice 1, see /searches): one click turns a
+// signed-in user's own saved search into a real, confirmed email alert — no
+// second opt-in round trip, since the account's email is already verified
+// (same no-second-opt-in precedent as subscribeToConfirmedAlert above, here
+// proven by the signed-in session instead of a confirm token).
+export async function subscribeSavedSearchAlert(searchId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) return { error: 'Not authenticated' }
+
+  const { data: search } = await supabase
+    .from('saved_searches')
+    .select('name, search_params, path')
+    .eq('id', searchId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!search) return { error: 'Search not found.' }
+
+  const sourcePath = `${search.path || '/partnerships'}?${search.search_params}`
+
+  const { error } = await supabase.from('alerts').insert({
+    email: user.email,
+    context: search.name || null,
+    source_path: sourcePath,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    confirm_token: crypto.randomUUID(),
+    unsubscribe_token: crypto.randomUUID(),
+  })
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
+  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  return { ok: true, context: search.name as string, sourcePath }
+}
+
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
 const SAVED_SEARCH_PATHS = ['/partnerships', '/aircraft', '/partnerships/seeking'] as const
 
