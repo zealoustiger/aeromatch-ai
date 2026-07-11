@@ -461,6 +461,22 @@ async function SoldListingPage({ p }: { p: AircraftForSale }) {
               </div>
             </div>
           </div>
+
+          {/* Alert capture — the single highest-intent alert moment on the
+              site: a buyer wanted this exact plane and it's gone. Family-
+              scoped when the make/model resolves to a curated page; falls
+              back to a generic/bare-/aircraft alert otherwise (honesty gate —
+              never a listing-id-scoped alert that can't match anything). */}
+          <AlertSignup
+            context={family ? `${family.make} ${family.model}` : undefined}
+            sourcePath={
+              family
+                ? `/aircraft?${new URLSearchParams({ make: family.make, model: family.model }).toString()}`
+                : '/aircraft'
+            }
+            noun="aircraft"
+            className="mt-6"
+          />
         </div>
 
         {/* Same "more like this" rail the active page uses — real, live listings
