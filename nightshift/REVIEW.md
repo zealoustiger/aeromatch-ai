@@ -1,3 +1,17 @@
+## 2026-07-11T13:18:56Z — Night Shift run: 5 cycles (PASS 5 / FAIL 0) — night ended
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $114.5929 of $120 cap
+
+- PASS — price-drop-email-live — Wired the already-built rich single-listing price-drop email into the live daily/weekly alert-digest cron (picks the biggest genuine price cut am
+- PASS — cost-calculator-alert-cta — added a get new-listing alerts capture point to `/tools/cost-calculator` (a new alert entry point where none existed), catching along the way
+- PASS — seeker-alert-match-count-location — /alerts/manage's N pilots match right now count now respects a seeking alert's airport/state filter instead of ignoring location (mir
+- PASS — partnership-digest-samples — the weekly alert-digest email now shows real preview cards (photo, share type, location, buy-in price) for partnership alerts, matching the 
+- PASS — alert-cross-sell-nearby-state — the post-confirmation also want an alert? prompt on `/alerts/status` now offers a real, honesty-gated adjacent-state suggestion (e.g. Ces
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 5.1 on 2 cores, sustained ~19 min — parallel drains are contending; consider more cores or lower --cpus per container
+
+
 ## 2026-07-11T12:32:04Z — Night Shift run: 25 cycles (PASS 22 / FAIL 1) — safety cap (25)
 - Models: cycles on sonnet; 1 escalated to opus; 3 quality-judged on opus
 - Night spend so far: $98.9692 of $120 cap
