@@ -1091,6 +1091,115 @@ export async function deleteAlert(id: string) {
   return { ok: true }
 }
 
+// Shared by both resend entry points below. Re-sends the exact same confirm
+// link (same `confirm_token`, so an older copy of the email still also works)
+// via the same template/send path `subscribeToAlerts` uses for the original.
+// Rate-limited to 1 resend per row per ~10 min via `last_confirm_sent_at` —
+// if that column isn't migrated live yet, the cooldown just can't be enforced
+// (the send still happens; the bookkeeping update below fails soft).
+const RESEND_COOLDOWN_MS = 10 * 60 * 1000
+type ResendableAlert = {
+  id: string
+  email: string
+  status: string
+  context: string | null
+  confirm_token: string | null
+  unsubscribe_token: string | null
+  last_confirm_sent_at?: string | null
+}
+async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient>, alert: ResendableAlert) {
+  if (alert.status !== 'pending') return { error: 'This alert is already confirmed.' }
+  if (!alert.confirm_token || !alert.unsubscribe_token) {
+    return { error: 'Something went wrong. Please try again.' }
+  }
+  if (alert.last_confirm_sent_at) {
+    const elapsed = Date.now() - new Date(alert.last_confirm_sent_at).getTime()
+    if (elapsed < RESEND_COOLDOWN_MS) {
+      const mins = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 60_000)
+      return { error: `Please wait ${mins} more minute${mins === 1 ? '' : 's'} before resending.` }
+    }
+  }
+
+  const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${alert.confirm_token}`
+  const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}`
+  const { subject, html, text } = buildAlertConfirmEmail({
+    context: alert.context || null,
+    confirmUrl,
+    unsubscribeUrl,
+  })
+  await sendEmail({ to: alert.email, subject, html, text })
+
+  await admin.from('alerts').update({ last_confirm_sent_at: new Date().toISOString() }).eq('id', alert.id)
+  // Not-yet-migrated DB (`last_confirm_sent_at` column missing) — the email above
+  // already sent; a failed bookkeeping update just means the next resend can't
+  // be rate-limited until the migration lands, same graceful-fallback pattern
+  // as price_drop_opt_in/frequency.
+  return { ok: true }
+}
+
+const RESEND_COLS = 'id, email, status, source_path, context, confirm_token, unsubscribe_token'
+
+// Owner-scoped: the "Resend confirmation" button on a Pending row in
+// `/alerts/manage`. Ownership proven the same way as pause/resume/delete —
+// `loadOwnedAlert`'s base select doesn't carry the token/context columns this
+// needs, so this re-queries by id directly rather than widening that shared
+// select (which pause/resume/delete/updateAlertCriteria also depend on).
+export async function resendAlertConfirmation(id: string) {
+  const supabase = await createServerSupabaseClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.email) return { error: 'Not authenticated' }
+
+  const admin = createAdminClient()
+  let { data: alert, error } = (await admin
+    .from('alerts')
+    .select(`${RESEND_COLS}, last_confirm_sent_at`)
+    .eq('id', id)
+    .maybeSingle()) as { data: ResendableAlert | null; error: { message: string } | null }
+  if (error?.message?.includes('last_confirm_sent_at')) {
+    ;({ data: alert, error } = (await admin
+      .from('alerts')
+      .select(RESEND_COLS)
+      .eq('id', id)
+      .maybeSingle()) as { data: ResendableAlert | null; error: { message: string } | null })
+  }
+  if (!alert || alert.email.toLowerCase() !== user.email.toLowerCase()) {
+    return { error: 'Alert not found.' }
+  }
+  return sendConfirmationResend(admin, alert)
+}
+
+// Public, no session required: the "Didn't get the email? Resend it" link in
+// `AlertSignup`'s post-submit state. Looked up by the email + sourcePath the
+// visitor just submitted seconds ago in this same browser — the same trust
+// level as the original signup itself (which also just takes a raw email), not
+// a weaker one.
+export async function resendAlertConfirmationByEmail(email: string, sourcePath: string) {
+  const clean = (email || '').toLowerCase().trim()
+  if (!clean || !EMAIL_RE.test(clean)) {
+    return { error: 'Please enter a valid email address.' }
+  }
+
+  const admin = createAdminClient()
+  const lookup = (cols: string) => {
+    const q = admin.from('alerts').select(cols).eq('email', clean)
+    return sourcePath ? q.eq('source_path', sourcePath) : q.is('source_path', null)
+  }
+  let { data: alert, error } = (await lookup(`${RESEND_COLS}, last_confirm_sent_at`).maybeSingle()) as {
+    data: ResendableAlert | null
+    error: { message: string } | null
+  }
+  if (error?.message?.includes('last_confirm_sent_at')) {
+    ;({ data: alert, error } = (await lookup(RESEND_COLS).maybeSingle()) as {
+      data: ResendableAlert | null
+      error: { message: string } | null
+    })
+  }
+  if (!alert) return { error: 'No pending alert found for this email.' }
+  return sendConfirmationResend(admin, alert)
+}
+
 // Rebuilds an editable alert's `source_path`/`context` from submitted criteria
 // fields (make/model/state/price range) — the Edit action on `/alerts/manage`.
 // Ownership proven the same way as pause/resume/delete: `loadOwnedAlert` matches
