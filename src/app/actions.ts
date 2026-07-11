@@ -20,6 +20,7 @@ import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
 import { validateReview } from '@/lib/reviewValidation'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
+import { parseEditableAlertTarget, buildAlertCriteriaUpdate, type AlertCriteriaFields } from '@/lib/alertEditCriteria'
 import { htmlToReadableText } from '@/lib/htmlText'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
@@ -1021,7 +1022,7 @@ async function loadOwnedAlert(id: string) {
   const admin = createAdminClient()
   const { data: alert } = await admin
     .from('alerts')
-    .select('id, email, status')
+    .select('id, email, status, source_path')
     .eq('id', id)
     .maybeSingle()
 
@@ -1063,6 +1064,40 @@ export async function deleteAlert(id: string) {
 
   const { error } = await owned.admin.from('alerts').delete().eq('id', id)
   if (error) return { error: 'Failed to delete alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Rebuilds an editable alert's `source_path`/`context` from submitted criteria
+// fields (make/model/state/price range) — the Edit action on `/alerts/manage`.
+// Ownership proven the same way as pause/resume/delete: `loadOwnedAlert` matches
+// the row's email against the signed-in user's own email via the admin client.
+// Only alerts whose `source_path` is the "modern query-string shape"
+// (`/aircraft?...`, `/partnerships?...`, `/partnerships/seeking?...`) are
+// editable — see `alertEditCriteria.ts` for why legacy path-segment SEO alerts
+// are excluded. The UI shouldn't normally be able to trigger the "can't be
+// edited" branch (it doesn't render an Edit button for those rows), but this
+// still guards a stale client / direct call.
+export async function updateAlertCriteria(id: string, fields: AlertCriteriaFields) {
+  const owned = await loadOwnedAlert(id)
+  if ('error' in owned) return { error: owned.error }
+
+  const target = parseEditableAlertTarget(owned.alert.source_path)
+  if (!target) return { error: "This alert's criteria can't be edited here." }
+
+  const min = fields.minPrice ? parseInt(fields.minPrice, 10) : undefined
+  const max = fields.maxPrice ? parseInt(fields.maxPrice, 10) : undefined
+  if (min !== undefined && max !== undefined && Number.isFinite(min) && Number.isFinite(max) && min > max) {
+    return { error: 'Minimum price must be less than maximum price.' }
+  }
+
+  const { sourcePath, context } = buildAlertCriteriaUpdate(target.type, owned.alert.source_path, fields)
+
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ source_path: sourcePath, context })
+    .eq('id', id)
+  if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }
 }
