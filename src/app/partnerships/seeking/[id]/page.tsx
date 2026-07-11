@@ -126,7 +126,7 @@ export async function generateMetadata({
   const url = `${SITE_URL}/partnerships/seeking/${s.id}`
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: {

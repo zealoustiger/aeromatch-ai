@@ -22,7 +22,7 @@ import type { SavedSearch } from '@/lib/types'
 // Private, per-user utility page — keep it out of the index (no SEO value, and it
 // shouldn't dilute crawl budget while STAGE=INDEXING).
 export const metadata: Metadata = {
-  title: `Account & alerts | ${SITE_NAME}`,
+  title: { absolute: `Account & alerts | ${SITE_NAME}` },
   description: 'Manage your ClubHanger account, email alerts, saved searches and saved listings.',
   robots: { index: false, follow: false },
 }
