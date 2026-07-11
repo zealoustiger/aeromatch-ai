@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, CheckCircle2 } from 'lucide-react'
-import { subscribeToAlerts, resendAlertConfirmationByEmail } from '@/app/actions'
+import { subscribeToAlerts, subscribeSignedInAlert, resendAlertConfirmationByEmail } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -66,6 +67,22 @@ export default function AlertSignup({
   const showPriceDropOption = noun === 'aircraft'
   const [priceDropOptIn, setPriceDropOptIn] = useState(true)
   const [frequency, setFrequency] = useState<AlertFrequency>('weekly')
+  // A signed-in visitor's email is already verified — skip retyping it and
+  // subscribe as already-confirmed (no double-opt-in round trip). Read-only
+  // client-side session check, same pattern as Nav.tsx.
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null)
+  // Distinguishes the confirmed-immediately signed-in path (no "check your
+  // inbox" copy — there's nothing pending) from the normal double-opt-in one.
+  const [confirmedImmediately, setConfirmedImmediately] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setSignedInEmail(data.user?.email ?? null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setSignedInEmail(session?.user?.email ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -95,6 +112,33 @@ export default function AlertSignup({
     setSubmitted(true)
   }
 
+  async function handleSignedInSubmit() {
+    if (pending || !signedInEmail) return
+    setErrorMsg('')
+    setPending(true)
+    const result = await subscribeSignedInAlert(
+      context ?? '',
+      sourcePath,
+      showPriceDropOption ? priceDropOptIn : true,
+      frequency
+    )
+    setPending(false)
+    if (result.error) {
+      setErrorMsg(result.error)
+      return
+    }
+    track('alert_subscribed', {
+      context: context || 'all',
+      source_path: sourcePath,
+      price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
+      frequency,
+      alert_count: showSocialProof ? alertCount : undefined,
+      signed_in: true,
+    })
+    setConfirmedImmediately(true)
+    setSubmitted(true)
+  }
+
   async function handleResend() {
     if (resendState === 'pending') return
     setResendState('pending')
@@ -110,7 +154,17 @@ export default function AlertSignup({
 
   return (
     <section className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
-      {submitted ? (
+      {submitted && confirmedImmediately ? (
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">You&rsquo;re set — alerts are on.</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              We&rsquo;ll email {signedInEmail} the moment {doneCopy}
+            </p>
+          </div>
+        </div>
+      ) : submitted ? (
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
@@ -161,31 +215,44 @@ export default function AlertSignup({
             </div>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-4 flex flex-col gap-2 sm:flex-row"
-            noValidate
-          >
-            <label htmlFor="alert-email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="alert-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              autoComplete="email"
-              className="w-full flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-            />
-            <button
-              type="submit"
-              disabled={pending}
-              className="shrink-0 rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
+          {signedInEmail ? (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleSignedInSubmit}
+                disabled={pending}
+                className="w-full rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
+              >
+                {pending ? 'Saving…' : `Alert me — we'll email ${signedInEmail}`}
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="mt-4 flex flex-col gap-2 sm:flex-row"
+              noValidate
             >
-              {pending ? 'Saving…' : 'Get alerts'}
-            </button>
-          </form>
+              <label htmlFor="alert-email" className="sr-only">
+                Email address
+              </label>
+              <input
+                id="alert-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                autoComplete="email"
+                className="w-full flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+              <button
+                type="submit"
+                disabled={pending}
+                className="shrink-0 rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
+              >
+                {pending ? 'Saving…' : 'Get alerts'}
+              </button>
+            </form>
+          )}
           {showPriceDropOption && (
             <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
               <input
