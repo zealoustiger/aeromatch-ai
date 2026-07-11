@@ -21,6 +21,7 @@ import { SITE_URL } from '@/lib/seo'
 import { validateReview } from '@/lib/reviewValidation'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
 import { parseEditableAlertTarget, buildAlertCriteriaUpdate, type AlertCriteriaFields } from '@/lib/alertEditCriteria'
+import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { htmlToReadableText } from '@/lib/htmlText'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
@@ -961,7 +962,8 @@ export async function subscribeToAlerts(
   email: string,
   context: string,
   sourcePath: string,
-  priceDropOptIn: boolean = true
+  priceDropOptIn: boolean = true,
+  frequency: AlertFrequency = 'weekly'
 ) {
   const clean = (email || '').toLowerCase().trim()
   if (!clean || !EMAIL_RE.test(clean)) {
@@ -985,17 +987,25 @@ export async function subscribeToAlerts(
     confirm_token: confirmToken,
     unsubscribe_token: unsubscribeToken,
   }
-  let { error } = await supabase
-    .from('alerts')
-    .insert({ ...basePayload, price_drop_opt_in: priceDropOptIn })
+  let payload: Record<string, unknown> = {
+    ...basePayload,
+    price_drop_opt_in: priceDropOptIn,
+    frequency: normalizeFrequency(frequency),
+  }
+  let { error } = await supabase.from('alerts').insert(payload)
 
-  // If price_drop_opt_in hasn't been migrated live yet, retry without it — the
-  // core subscription still saves (graceful fallback, same pattern as
-  // profiles.favorite_airports); the opt-out preference just doesn't take
-  // effect until the migration lands (digest cron then treats it as opted in,
-  // which is the column's own default).
-  if (error && error.message?.includes('price_drop_opt_in')) {
-    ;({ error } = await supabase.from('alerts').insert(basePayload))
+  // Neither, either, or both of price_drop_opt_in/frequency may not be
+  // migrated live yet — retry without whichever column(s) the error names
+  // (PostgREST reports one unknown column per error, so this can take up to
+  // two passes). The core subscription still saves either way (graceful
+  // fallback, same pattern as profiles.favorite_airports); the untaken
+  // preference just doesn't take effect until its migration lands (the digest
+  // cron then treats the alert as opted-in / weekly, both column defaults).
+  for (let i = 0; i < 2 && error && error.code !== '23505'; i++) {
+    if (error.message?.includes('frequency')) delete payload.frequency
+    else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
+    else break
+    ;({ error } = await supabase.from('alerts').insert(payload))
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed.
@@ -1128,6 +1138,25 @@ export async function updateAlertPriceDropOptIn(id: string, enabled: boolean) {
   // Not-yet-migrated DB (`price_drop_opt_in` column missing) — no-op rather than
   // surfacing a scary error for what is, until the migration lands, an inert toggle.
   if (error && error.message?.includes('price_drop_opt_in')) return { ok: true }
+  if (error) return { error: 'Failed to update alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Toggle digest cadence (weekly ↔ daily) for one alert. Same ownership proof and
+// persistent-row-switch pattern as updateAlertPriceDropOptIn above, but applies
+// to every alert type (unlike price-drop, cadence isn't aircraft-only).
+export async function updateAlertFrequency(id: string, frequency: AlertFrequency) {
+  const owned = await loadOwnedAlert(id)
+  if ('error' in owned) return { error: owned.error }
+
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ frequency: normalizeFrequency(frequency) })
+    .eq('id', id)
+  // Not-yet-migrated DB (`frequency` column missing) — no-op rather than
+  // surfacing a scary error for what is, until the migration lands, an inert toggle.
+  if (error && error.message?.includes('frequency')) return { ok: true }
   if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }

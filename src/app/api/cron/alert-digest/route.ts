@@ -5,12 +5,16 @@ import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
 import { hasRecentPriceDrop } from '@/lib/priceDrops'
+import { intervalDaysFor, isDigestDue, normalizeFrequency } from '@/lib/alertFrequency'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const PARTS_PRICE_FLOOR = 50_000
-const DIGEST_INTERVAL_DAYS = 7
+// Broadest possible send interval a subscriber can pick (see alertFrequency.ts) —
+// used only as a coarse SQL pre-filter; the actual per-alert due-check (which
+// respects each alert's own weekly/daily choice) happens in the loop below.
+const MIN_DIGEST_INTERVAL_DAYS = intervalDaysFor('daily')
 
 // ─── Source-path parsing ─────────────────────────────────────────────────────
 
@@ -333,7 +337,8 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createAdminClient()
-  const windowStart = new Date(Date.now() - DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const nowIso = new Date().toISOString()
+  const minWindowStart = new Date(Date.now() - MIN_DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
   type DigestAlertRow = {
     id: string
@@ -344,25 +349,43 @@ export async function GET(req: NextRequest) {
     last_digest_at: string | null
     unsubscribe_token: string | null
     price_drop_opt_in?: boolean
+    frequency?: string
   }
 
-  // Fetch confirmed alerts that haven't been digested in 7+ days.
-  let { data: alerts, error: fetchError }: { data: DigestAlertRow[] | null; error: { message: string } | null } =
-    await supabase
-      .from('alerts')
-      .select('id, email, context, source_path, created_at, last_digest_at, unsubscribe_token, price_drop_opt_in')
-      .eq('status', 'confirmed')
-      .or(`last_digest_at.is.null,last_digest_at.lt.${windowStart}`)
+  // Coarse pre-filter: any alert that could possibly be due, at ANY chosen
+  // frequency, must have gone undigested for at least the shortest interval
+  // (daily). The precise per-alert due-check (respecting each alert's own
+  // weekly/daily choice) happens in the loop below via isDigestDue.
+  const baseCols = 'id, email, context, source_path, created_at, last_digest_at, unsubscribe_token'
+  let cols = `${baseCols}, price_drop_opt_in, frequency`
+  let { data: alerts, error: fetchError } = (await supabase
+    .from('alerts')
+    .select(cols)
+    .eq('status', 'confirmed')
+    .or(`last_digest_at.is.null,last_digest_at.lt.${minWindowStart}`)) as unknown as {
+    data: DigestAlertRow[] | null
+    error: { message: string } | null
+  }
 
-  // Not-yet-migrated DB (`price_drop_opt_in` column missing) — retry without it
-  // rather than breaking the whole send run; every alert is then treated as
-  // opted in below, which is the column's own default (current behavior).
-  if (fetchError?.message?.includes('price_drop_opt_in')) {
-    ;({ data: alerts, error: fetchError } = await supabase
+  // Neither, either, or both of price_drop_opt_in/frequency may not be
+  // migrated live yet — retry without whichever column(s) the error names
+  // (PostgREST reports one unknown column per error, so this can take up to
+  // two passes) rather than breaking the whole send run; every alert is then
+  // treated as opted-in / weekly below, both columns' own defaults (current
+  // behavior).
+  for (let i = 0; i < 2 && fetchError && (fetchError.message?.includes('price_drop_opt_in') || fetchError.message?.includes('frequency')); i++) {
+    cols = cols
+      .split(', ')
+      .filter((c) => !fetchError!.message.includes(c))
+      .join(', ')
+    ;({ data: alerts, error: fetchError } = (await supabase
       .from('alerts')
-      .select('id, email, context, source_path, created_at, last_digest_at, unsubscribe_token')
+      .select(cols)
       .eq('status', 'confirmed')
-      .or(`last_digest_at.is.null,last_digest_at.lt.${windowStart}`))
+      .or(`last_digest_at.is.null,last_digest_at.lt.${minWindowStart}`)) as unknown as {
+      data: DigestAlertRow[] | null
+      error: { message: string } | null
+    })
   }
 
   if (fetchError) {
@@ -373,8 +396,15 @@ export async function GET(req: NextRequest) {
   let sent = 0
   let skipped = 0
   let unparseable = 0
+  let notDue = 0
 
   for (const alert of alerts ?? []) {
+    const frequency = normalizeFrequency(alert.frequency)
+    if (!isDigestDue(alert.last_digest_at, frequency, nowIso)) {
+      notDue++
+      continue
+    }
+
     const target = parseSourcePath(alert.source_path)
     if (!target) {
       unparseable++
@@ -382,7 +412,7 @@ export async function GET(req: NextRequest) {
     }
 
     // "Since when?" — use last_digest_at if present; else the signup date.
-    const since = alert.last_digest_at ?? alert.created_at ?? windowStart
+    const since = alert.last_digest_at ?? alert.created_at ?? minWindowStart
 
     const newCount = await countNew(supabase, target, since)
     // Price-drop matching only applies to aircraft-for-sale alerts today —
@@ -426,6 +456,8 @@ export async function GET(req: NextRequest) {
   }
 
   const total = (alerts ?? []).length
-  console.log(`[alert-digest] processed=${total} sent=${sent} skipped=${skipped} unparseable=${unparseable}`)
-  return Response.json({ processed: total, sent, skipped, unparseable })
+  console.log(
+    `[alert-digest] processed=${total} sent=${sent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue}`
+  )
+  return Response.json({ processed: total, sent, skipped, unparseable, notDue })
 }
