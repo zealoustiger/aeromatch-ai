@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckCircle2, BellOff, AlertCircle } from 'lucide-react'
 import UnsubscribeRecover from '@/components/UnsubscribeRecover'
+import AlertCrossSell from '@/components/AlertCrossSell'
+import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -55,6 +58,22 @@ export default async function AlertStatusPage({
   const rawToken = params.token
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken
 
+  // Post-confirmation cross-sell: look up the just-confirmed alert's source_path
+  // (admin client — anon has no SELECT on `alerts`, it holds PII) and offer a
+  // one-click counterpart suggestion (aircraft ↔ partnerships for the same make).
+  // Never shown outside the confirmed state; null when no suggestion applies.
+  let crossSell = null as ReturnType<typeof getCrossSellSuggestion>
+  if (key === 'confirmed' && token) {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('alerts')
+      .select('source_path')
+      .eq('confirm_token', token)
+      .eq('status', 'confirmed')
+      .maybeSingle()
+    crossSell = getCrossSellSuggestion(data?.source_path ?? null)
+  }
+
   return (
     <div className="ch-surface min-h-screen">
       <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -65,6 +84,9 @@ export default async function AlertStatusPage({
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           <p className="mt-3 text-base leading-relaxed text-slate-600">{body}</p>
           {key === 'unsubscribed' && token && <UnsubscribeRecover token={token} />}
+          {key === 'confirmed' && token && crossSell && (
+            <AlertCrossSell originalToken={token} suggestion={crossSell} />
+          )}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/aircraft"
