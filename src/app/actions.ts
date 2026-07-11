@@ -1342,6 +1342,50 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
   return { ok: true }
 }
 
+// Signed-in one-click alert capture (see AlertSignup.tsx): a visitor with a verified
+// session shouldn't have to retype an email we already have. Same no-second-opt-in
+// precedent as subscribeToConfirmedAlert/subscribeSavedSearchAlert above — ownership
+// is proven by the session, so the alert is inserted already `confirmed`, no
+// double-opt-in email sent. Mirrors subscribeToAlerts' graceful degrade for the
+// not-yet-migrated price_drop_opt_in/frequency columns.
+export async function subscribeSignedInAlert(
+  context: string,
+  sourcePath: string,
+  priceDropOptIn: boolean = true,
+  frequency: AlertFrequency = 'weekly'
+) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) return { error: 'Not authenticated' }
+
+  const basePayload = {
+    email: user.email,
+    context: context || null,
+    source_path: sourcePath || null,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    confirm_token: crypto.randomUUID(),
+    unsubscribe_token: crypto.randomUUID(),
+  }
+  let payload: Record<string, unknown> = {
+    ...basePayload,
+    price_drop_opt_in: priceDropOptIn,
+    frequency: normalizeFrequency(frequency),
+  }
+  let { error } = await supabase.from('alerts').insert(payload)
+
+  for (let i = 0; i < 2 && error && error.code !== '23505'; i++) {
+    if (error.message?.includes('frequency')) delete payload.frequency
+    else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
+    else break
+    ;({ error } = await supabase.from('alerts').insert(payload))
+  }
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
+  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  return { ok: true, email: user.email }
+}
+
 // Saved-search ↔ alert unification (slice 1, see /searches): one click turns a
 // signed-in user's own saved search into a real, confirmed email alert — no
 // second opt-in round trip, since the account's email is already verified
