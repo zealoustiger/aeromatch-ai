@@ -118,14 +118,22 @@ export default async function SeekingPartnershipsPage({
   const activeFilterCount = ['airports', 'airport', 'state', 'make', 'model', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   // Filter-aware email-alert source path — mirrors /aircraft's alertSourcePath
-  // pattern so a visitor filtered to a make/model gets alerted on new seekers
-  // wanting that make/model, not every new seeker listing (alert-digest route.ts
-  // parses `make`/`model` off this query string).
+  // pattern so a visitor filtered to a make/model/airport/state gets alerted on
+  // new seekers matching that criteria, not every new seeker listing
+  // (alert-digest route.ts parses make/model/state/airport off this query
+  // string). Uses the legacy single `airport` param, not the multi-select
+  // `airports`, since the cron matcher — like the existing partnership
+  // matcher — only understands one ICAO with no radius (mirrors
+  // /partnerships/page.tsx's identical alertSourcePath pattern).
   const alertMake = params.make?.trim()
   const alertModel = params.model?.trim()
+  const alertState = params.state?.trim().toUpperCase()
+  const alertAirport = params.airport?.trim().toUpperCase()
   const alertContext = [alertMake, alertModel].filter(Boolean).join(' ') || undefined
   const alertQuery = new URLSearchParams(
-    Object.entries({ make: alertMake, model: alertModel }).filter(([, v]) => Boolean(v)) as [string, string][]
+    Object.entries({ make: alertMake, model: alertModel, state: alertState, airport: alertAirport }).filter(
+      ([, v]) => Boolean(v)
+    ) as [string, string][]
   ).toString()
   const alertSourcePath = alertQuery ? `/partnerships/seeking?${alertQuery}` : '/partnerships/seeking'
 

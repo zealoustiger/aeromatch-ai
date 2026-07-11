@@ -36,7 +36,7 @@ type AlertTarget =
       maxTt?: number
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string }
-  | { type: 'seeker'; make?: string; model?: string }
+  | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
   if (!v) return undefined
@@ -76,7 +76,13 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
       }
     }
     if (p === '/partnerships/seeking') {
-      return { type: 'seeker', make: g('make'), model: g('model') }
+      return {
+        type: 'seeker',
+        make: g('make'),
+        model: g('model'),
+        state: g('state')?.toUpperCase(),
+        icao: g('airport')?.toUpperCase(),
+      }
     }
     return {
       type: 'partnership',
@@ -299,8 +305,27 @@ async function countNewSeekers(
   // preferred_makes is a text[] — overlap, not equality, matching the same
   // make-filter semantics getSeekers() uses for the browse page.
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
+  if (target.state) q = q.eq('state', target.state)
+  // Single ICAO, no radius — mirrors countNewPartnerships' icao handling below.
+  // Matches home_airport OR additional_airports, same OR semantics as
+  // seekersQuery.ts's getSeekers(). additional_airports may not be migrated live
+  // yet; retry without it (home_airport-only) on that specific column error,
+  // same graceful-degrade precedent used there.
+  if (target.icao) q = q.or(`home_airport.eq.${target.icao},additional_airports.ov.{${target.icao}}`)
 
-  const { data, error } = await q
+  let { data, error } = await q
+  if (target.icao && error?.message?.includes('additional_airports')) {
+    let retry = supabase
+      .from('partnership_seekers')
+      .select('id, preferred_models')
+      .eq('status', 'active')
+      .gte('created_at', since)
+      .eq('home_airport', target.icao)
+    if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
+    if (target.state) retry = retry.eq('state', target.state)
+    ;({ data, error } = await retry)
+  }
+
   if (error) {
     console.error('[alert-digest] seeker count error:', error.message)
     return 0
