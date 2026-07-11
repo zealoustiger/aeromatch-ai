@@ -72,6 +72,17 @@ test('digest: new + drop counts are named distinctly, never summed', () => {
   assert.match(text, /2 new listings \+ 1 price drop/)
 })
 
+test('digest: dropNoun customizes the drop label (partnership buy-in drops)', () => {
+  const { subject, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 2,
+    dropNoun: 'buy-in drop',
+  })
+  assert.equal(subject, '1 new listing + 2 buy-in drops — Cessna 172 on ClubHanger')
+  assert.match(text, /1 new listing \+ 2 buy-in drops/)
+})
+
 test('digest: with no samples, the email still renders cleanly (CTA-only)', () => {
   const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 3, dropCount: 0, samples: [] })
   assert.doesNotMatch(html, /<img/)
