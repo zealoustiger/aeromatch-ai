@@ -58,6 +58,7 @@ import AircraftListingOwnerNudge from '@/components/AircraftListingOwnerNudge'
 import AircraftContactButton from '@/components/AircraftContactButton'
 import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MonetizationIntent from '@/components/MonetizationIntent'
 import PosterAttribution from '@/components/PosterAttribution'
 import { getPublicProfile } from '@/lib/publicProfile'
@@ -547,6 +548,11 @@ export default async function AircraftListingDetailPage({
     if (sold) return <SoldListingPage p={sold} />
     notFound()
   }
+
+  // Same context string the AlertSignup box below submits with — fetch its real
+  // confirmed-subscriber count once, up front, for the social-proof line.
+  const alertContext = p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined
+  const alertCounts = alertContext ? await getAlertCounts([alertContext]) : new Map<string, number>()
 
   // Fetch the current user's saved row for this listing so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
@@ -1102,13 +1108,14 @@ export default async function AircraftListingDetailPage({
                 always an on-site action available (not just an off-platform
                 exit for scraped listings). */}
             <AlertSignup
-              context={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+              context={alertContext}
               sourcePath={
                 p.make
                   ? `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
                   : '/aircraft'
               }
               noun="aircraft"
+              alertCount={alertContext ? alertCounts.get(alertContext) : undefined}
             />
 
             {/* Monetization intent signal — an honest "coming soon" fake-door CTA

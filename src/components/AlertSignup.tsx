@@ -5,6 +5,7 @@ import { Bell, CheckCircle2 } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { AlertFrequency } from '@/lib/alertFrequency'
+import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -23,6 +24,10 @@ interface Props {
    *  below-the-list placement. Callers embedding this inside a tighter container
    *  (e.g. an empty-state card) pass a smaller margin. */
   className?: string
+  /** Real confirmed-alert count for this exact `context` (see `lib/alertCounts.ts`).
+   *  Only rendered as a social-proof line when it clears `MIN_ALERTS_TO_SHOW` —
+   *  below that, or when omitted, no line renders (honesty gate, never fabricated). */
+  alertCount?: number
 }
 
 /**
@@ -30,11 +35,18 @@ interface Props {
  * no fake urgency — a single email field + button that drops the email + context
  * into the additive `alerts` table (no account required). Sky-blue accent only.
  */
-export default function AlertSignup({ context, sourcePath, noun = 'aircraft', className = 'my-10' }: Props) {
+export default function AlertSignup({
+  context,
+  sourcePath,
+  noun = 'aircraft',
+  className = 'my-10',
+  alertCount,
+}: Props) {
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
   const hasCtx = !!(context && context.trim())
+  const showSocialProof = hasCtx && typeof alertCount === 'number' && alertCount >= MIN_ALERTS_TO_SHOW
   const headline = hasCtx ? `Get alerts for new ${context} listings` : 'Get new-listing alerts'
   const subcopy = hasCtx
     ? `We'll email you when a new ${context} ${noun} is listed. One email field, no account needed.`
@@ -76,6 +88,7 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
       source_path: sourcePath,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
+      alert_count: showSocialProof ? alertCount : undefined,
     })
     setSubmitted(true)
   }
@@ -106,6 +119,11 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
               <p className="mt-1 text-sm text-slate-600">
                 {subcopy}
               </p>
+              {showSocialProof && (
+                <p className="mt-1 text-xs font-medium text-sky-700">
+                  {alertCount} {alertCount === 1 ? 'buyer gets' : 'buyers get'} alerts for {context}
+                </p>
+              )}
             </div>
           </div>
 
