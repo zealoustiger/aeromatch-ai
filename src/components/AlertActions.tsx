@@ -4,15 +4,15 @@ import { useState, useTransition } from 'react'
 import { Pause, Play, Trash2, Send } from 'lucide-react'
 import { pauseAlert, resumeAlert, deleteAlert, resendAlertConfirmation } from '@/app/actions'
 
-export default function AlertActions({ id, status }: { id: string; status: string }) {
+export default function AlertActions({ id, status, token }: { id: string; status: string; token?: string }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [resent, setResent] = useState(false)
 
-  function run(action: (id: string) => Promise<{ ok?: boolean; error?: string }>) {
+  function run(action: (id: string, token?: string) => Promise<{ ok?: boolean; error?: string }>) {
     setError(null)
     startTransition(async () => {
-      const result = await action(id)
+      const result = await action(id, token)
       if (result.error) setError(result.error)
     })
   }
@@ -26,7 +26,7 @@ export default function AlertActions({ id, status }: { id: string; status: strin
     setError(null)
     setResent(false)
     startTransition(async () => {
-      const result = await resendAlertConfirmation(id)
+      const result = await resendAlertConfirmation(id, token)
       if (result.error) setError(result.error)
       else setResent(true)
     })

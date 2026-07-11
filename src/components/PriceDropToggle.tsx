@@ -9,7 +9,16 @@ import { updateAlertPriceDropOptIn } from '@/app/actions'
  * alerts only — price-drop matching doesn't exist for partnerships/seekers, so
  * this never renders for those rows (see /alerts/manage's page.tsx).
  */
-export default function PriceDropToggle({ id, enabled: initialEnabled }: { id: string; enabled: boolean }) {
+export default function PriceDropToggle({
+  id,
+  enabled: initialEnabled,
+  token,
+}: {
+  id: string
+  enabled: boolean
+  /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
+  token?: string
+}) {
   const [enabled, setEnabled] = useState(initialEnabled)
   const [isPending, startTransition] = useTransition()
 
@@ -17,7 +26,7 @@ export default function PriceDropToggle({ id, enabled: initialEnabled }: { id: s
     const next = !enabled
     setEnabled(next)
     startTransition(async () => {
-      const result = await updateAlertPriceDropOptIn(id, next)
+      const result = await updateAlertPriceDropOptIn(id, next, token)
       if (result.error) setEnabled(!next)
     })
   }

@@ -1032,24 +1032,40 @@ export async function subscribeToAlerts(
 }
 
 // Alerts have no user_id (they're settable with no account), so "ownership" is
-// proven by matching the signed-in user's own email against the row — not by an
-// RLS policy, since anon/authenticated has no SELECT on this PII-holding table
-// (see subscribeToAlerts above) and adding write policies would need the same
-// human DDL step the pending `alerts_owner_select` policy is still waiting on.
-// The admin client does the actual read/write; this check is what makes it safe.
-async function loadOwnedAlert(id: string) {
+// proven either by the signed-in user's own email, or — for the majority of
+// subscribers who never created an account — by the `unsubscribe_token` their
+// own alert email already carries (same public, token-scoped ownership proof
+// `pauseAlertByToken` below established). Resolving the token's OWN alert to an
+// email then unlocks every alert for that SAME email, exactly like the
+// session path unlocks every alert for the signed-in user's email — neither
+// path is scoped to a single row's id.
+async function resolveOwnerEmail(admin: ReturnType<typeof createAdminClient>, token?: string) {
+  if (token) {
+    const { data } = await admin.from('alerts').select('email').eq('unsubscribe_token', token).maybeSingle()
+    return data?.email?.toLowerCase() ?? null
+  }
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user?.email) return { error: 'Not authenticated' as const }
+  return user?.email?.toLowerCase() ?? null
+}
 
+// Anon/authenticated has no SELECT on this PII-holding table (see
+// subscribeToAlerts above) and adding write policies would need the same human
+// DDL step the pending `alerts_owner_select` policy is still waiting on. The
+// admin client does the actual read/write; the email match above is what makes
+// this safe.
+async function loadOwnedAlert(id: string, token?: string) {
   const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? ('This link is no longer valid.' as const) : ('Not authenticated' as const) }
+
   const { data: alert } = await admin
     .from('alerts')
     .select('id, email, status, source_path')
     .eq('id', id)
     .maybeSingle()
 
-  if (!alert || alert.email.toLowerCase() !== user.email.toLowerCase()) {
+  if (!alert || alert.email.toLowerCase() !== ownerEmail) {
     return { error: 'Alert not found.' as const }
   }
   return { admin, alert }
@@ -1057,8 +1073,8 @@ async function loadOwnedAlert(id: string) {
 
 // Pause an active alert without losing the subscription — skips it from the
 // alert-digest cron (which only ever queries `status = 'confirmed'`) until resumed.
-export async function pauseAlert(id: string) {
-  const owned = await loadOwnedAlert(id)
+export async function pauseAlert(id: string, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
   if (owned.alert.status !== 'confirmed') return { error: 'Only an active alert can be paused.' }
 
@@ -1068,8 +1084,8 @@ export async function pauseAlert(id: string) {
   return { ok: true }
 }
 
-export async function resumeAlert(id: string) {
-  const owned = await loadOwnedAlert(id)
+export async function resumeAlert(id: string, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
   if (owned.alert.status !== 'paused') return { error: 'Only a paused alert can be resumed.' }
 
@@ -1081,8 +1097,8 @@ export async function resumeAlert(id: string) {
 
 // Deletes the alert row outright (the management page's own delete affordance,
 // distinct from the one-click email `unsubscribe` link, which just flips status).
-export async function deleteAlert(id: string) {
-  const owned = await loadOwnedAlert(id)
+export async function deleteAlert(id: string, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
   const { error } = await owned.admin.from('alerts').delete().eq('id', id)
@@ -1144,14 +1160,11 @@ const RESEND_COLS = 'id, email, status, source_path, context, confirm_token, uns
 // `loadOwnedAlert`'s base select doesn't carry the token/context columns this
 // needs, so this re-queries by id directly rather than widening that shared
 // select (which pause/resume/delete/updateAlertCriteria also depend on).
-export async function resendAlertConfirmation(id: string) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user?.email) return { error: 'Not authenticated' }
-
+export async function resendAlertConfirmation(id: string, token?: string) {
   const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
   let { data: alert, error } = (await admin
     .from('alerts')
     .select(`${RESEND_COLS}, last_confirm_sent_at`)
@@ -1164,7 +1177,7 @@ export async function resendAlertConfirmation(id: string) {
       .eq('id', id)
       .maybeSingle()) as { data: ResendableAlert | null; error: { message: string } | null })
   }
-  if (!alert || alert.email.toLowerCase() !== user.email.toLowerCase()) {
+  if (!alert || alert.email.toLowerCase() !== ownerEmail) {
     return { error: 'Alert not found.' }
   }
   return sendConfirmationResend(admin, alert)
@@ -1210,8 +1223,8 @@ export async function resendAlertConfirmationByEmail(email: string, sourcePath: 
 // are excluded. The UI shouldn't normally be able to trigger the "can't be
 // edited" branch (it doesn't render an Edit button for those rows), but this
 // still guards a stale client / direct call.
-export async function updateAlertCriteria(id: string, fields: AlertCriteriaFields) {
-  const owned = await loadOwnedAlert(id)
+export async function updateAlertCriteria(id: string, fields: AlertCriteriaFields, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
   const target = parseEditableAlertTarget(owned.alert.source_path)
@@ -1239,8 +1252,8 @@ export async function updateAlertCriteria(id: string, fields: AlertCriteriaField
 // ownership proof as pause/resume/delete. Only meaningful for aircraft-type
 // alerts (see alert-digest's countRecentAircraftPriceDrops) — the UI only
 // renders this toggle for those rows.
-export async function updateAlertPriceDropOptIn(id: string, enabled: boolean) {
-  const owned = await loadOwnedAlert(id)
+export async function updateAlertPriceDropOptIn(id: string, enabled: boolean, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
   const { error } = await owned.admin.from('alerts').update({ price_drop_opt_in: enabled }).eq('id', id)
@@ -1255,8 +1268,8 @@ export async function updateAlertPriceDropOptIn(id: string, enabled: boolean) {
 // Toggle digest cadence (weekly ↔ daily) for one alert. Same ownership proof and
 // persistent-row-switch pattern as updateAlertPriceDropOptIn above, but applies
 // to every alert type (unlike price-drop, cadence isn't aircraft-only).
-export async function updateAlertFrequency(id: string, frequency: AlertFrequency) {
-  const owned = await loadOwnedAlert(id)
+export async function updateAlertFrequency(id: string, frequency: AlertFrequency, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
   const { error } = await owned.admin

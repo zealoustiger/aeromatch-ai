@@ -10,7 +10,16 @@ import type { AlertFrequency } from '@/lib/alertFrequency'
  * mirrors PriceDropToggle's pattern — but renders for every alert type (unlike
  * price-drop, cadence isn't aircraft-only).
  */
-export default function FrequencyToggle({ id, frequency: initial }: { id: string; frequency: AlertFrequency }) {
+export default function FrequencyToggle({
+  id,
+  frequency: initial,
+  token,
+}: {
+  id: string
+  frequency: AlertFrequency
+  /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
+  token?: string
+}) {
   const [frequency, setFrequency] = useState(initial)
   const [isPending, startTransition] = useTransition()
 
@@ -18,7 +27,7 @@ export default function FrequencyToggle({ id, frequency: initial }: { id: string
     const next: AlertFrequency = frequency === 'daily' ? 'weekly' : 'daily'
     setFrequency(next)
     startTransition(async () => {
-      const result = await updateAlertFrequency(id, next)
+      const result = await updateAlertFrequency(id, next, token)
       if (result.error) setFrequency(frequency)
     })
   }
