@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
 import { track } from '@/lib/analytics'
+import type { AlertFrequency } from '@/lib/alertFrequency'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -50,13 +51,20 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
   // price-drop tracking, so don't offer a toggle that would silently do nothing.
   const showPriceDropOption = noun === 'aircraft'
   const [priceDropOptIn, setPriceDropOptIn] = useState(true)
+  const [frequency, setFrequency] = useState<AlertFrequency>('weekly')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (pending) return
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeToAlerts(email, context ?? '', sourcePath, showPriceDropOption ? priceDropOptIn : true)
+    const result = await subscribeToAlerts(
+      email,
+      context ?? '',
+      sourcePath,
+      showPriceDropOption ? priceDropOptIn : true,
+      frequency
+    )
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)
@@ -67,6 +75,7 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
       context: context || 'all',
       source_path: sourcePath,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
+      frequency,
     })
     setSubmitted(true)
   }
@@ -136,6 +145,17 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
               Also alert me when the price drops on a match
             </label>
           )}
+          <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+            How often?
+            <select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as AlertFrequency)}
+              className="rounded border-slate-200 bg-white py-0.5 pl-1.5 pr-6 text-xs text-slate-600 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-100"
+            >
+              <option value="weekly">Weekly digest</option>
+              <option value="daily">Daily digest</option>
+            </select>
+          </label>
           {errorMsg && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
         </>
       )}

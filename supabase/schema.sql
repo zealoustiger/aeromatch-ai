@@ -762,3 +762,17 @@ create index if not exists airport_facility_ratings_lookup_idx
 -- and the digest cron treats every alert as opted in — i.e. current behavior is
 -- fully preserved either way.
 alter table alerts add column if not exists price_drop_opt_in boolean not null default true;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_frequency
+-- Lets a subscriber choose their digest cadence — 'weekly' (default, today's
+-- fixed behavior, zero change for existing subscribers) or 'daily'. No 'instant'
+-- option: the live send path is a single daily cron gated per-alert by
+-- last_digest_at, with no event-driven/real-time trigger, so promising instant
+-- delivery would be a fabricated capability (see src/lib/alertFrequency.ts).
+-- Apply in the Supabase SQL editor. Until applied, the capture-form selector and
+-- the /alerts/manage toggle both fail soft (insert/update retries without the
+-- column, same graceful-fallback pattern as price_drop_opt_in) and the digest
+-- cron treats every alert as weekly — i.e. current behavior is fully preserved
+-- either way.
+alter table alerts add column if not exists frequency text not null default 'weekly'
+  check (frequency in ('daily', 'weekly'));

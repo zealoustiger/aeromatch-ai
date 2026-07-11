@@ -5,8 +5,10 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_NAME } from '@/lib/seo'
 import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
+import { normalizeFrequency } from '@/lib/alertFrequency'
 import AlertEditForm from '@/components/AlertEditForm'
 import PriceDropToggle from '@/components/PriceDropToggle'
+import FrequencyToggle from '@/components/FrequencyToggle'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -23,6 +25,7 @@ interface AlertRow {
   created_at: string
   confirmed_at: string | null
   price_drop_opt_in?: boolean
+  frequency?: string
 }
 
 export default async function AlertsManagePage() {
@@ -74,22 +77,34 @@ export default async function AlertsManagePage() {
   let alerts: AlertRow[] = []
   if (email) {
     const admin = createAdminClient()
-    let { data, error }: { data: AlertRow[] | null; error: { message: string } | null } = await admin
+    const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at']
+    let cols = [...baseCols, 'price_drop_opt_in', 'frequency']
+    let { data, error } = (await admin
       .from('alerts')
-      .select('id, context, source_path, status, created_at, confirmed_at, price_drop_opt_in')
+      .select(cols.join(', '))
       .eq('email', email)
       .neq('status', 'unsubscribed')
-      .order('created_at', { ascending: false })
-    // Not-yet-migrated DB (`price_drop_opt_in` column missing) — retry without it
-    // rather than losing the whole page (graceful fallback, same pattern as
-    // profiles.favorite_airports); rows just render with the toggle defaulted on.
-    if (error?.message?.includes('price_drop_opt_in')) {
-      ;({ data, error } = await admin
+      .order('created_at', { ascending: false })) as unknown as {
+      data: AlertRow[] | null
+      error: { message: string } | null
+    }
+    // Neither, either, or both of price_drop_opt_in/frequency may not be
+    // migrated live yet — retry without whichever column(s) the error names
+    // (PostgREST reports one unknown column per error, so this can take up to
+    // two passes) rather than losing the whole page (graceful fallback, same
+    // pattern as profiles.favorite_airports); rows just render with those
+    // toggles defaulted on/weekly.
+    for (let i = 0; i < 2 && error && (error.message?.includes('price_drop_opt_in') || error.message?.includes('frequency')); i++) {
+      cols = cols.filter((c) => !error!.message.includes(c))
+      ;({ data, error } = (await admin
         .from('alerts')
-        .select('id, context, source_path, status, created_at, confirmed_at')
+        .select(cols.join(', '))
         .eq('email', email)
         .neq('status', 'unsubscribed')
-        .order('created_at', { ascending: false }))
+        .order('created_at', { ascending: false })) as unknown as {
+        data: AlertRow[] | null
+        error: { message: string } | null
+      })
     }
     alerts = data ?? []
   }
@@ -163,6 +178,7 @@ export default async function AlertsManagePage() {
                         {target?.type === 'aircraft' ? (
                           <PriceDropToggle id={a.id} enabled={a.price_drop_opt_in ?? true} />
                         ) : null}
+                        <FrequencyToggle id={a.id} frequency={normalizeFrequency(a.frequency)} />
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
                         Subscribed {new Date(a.created_at).toLocaleDateString()}
