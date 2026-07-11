@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T07:48:01Z — PASS — partnership-detail-alert-cta
+- Pages: /partnerships/[id]
+- What: Every partnership listing page now has a "Get alerts for new {Make} {Model} listings" box in the sidebar (right after the contact/message card), so a visitor who isn't ready to message the poster still has a one-field, no-account next step.
+- Goal: alert experience — closes the last remaining listing-detail-page gap (aircraft-for-sale listing pages already had this via `aircraft-listing-alert-cta`; partnership detail was the one type still missing it). Mirrors that page's pattern exactly: `context` = make+model, `sourcePath` = a matchable `/partnerships?make=...&model=...` search (not a listing-id-scoped path), `noun="partnership"`. No schema/action change — reuses the existing `AlertSignup` component and `subscribeToAlerts` action, so it emits `alert_subscribed` with the same `context`/`source_path` payload every other alert surface uses.
+- Spec: nightshift/specs/20260711T074801Z-partnership-detail-alert-cta.md
+- Verdict: PASS. `npx next build` clean (typecheck + build both green). QA smoke (`qa-smoke.mjs`) exit 0 on 2 real active partnership listings × desktop 1280 + mobile 375 (4/4 checks): HTTP 200, zero app-origin console errors, zero horizontal overflow. Visual cycle — screenshots reviewed: the new card renders correctly between the "Interested? / Message" card and "More ways we can help", on-brand cream/sky styling, no overlap, distinct from the unrelated bottom-of-page seeker-demand nudge.
+- Screenshots: nightshift/screenshots/partnership-detail-alert-cta/
+- Next: consider a matching alert CTA on airport pages (next planner-refill item in BACKLOG.md 🔔 GOAL section).
+
 ## 2026-07-11T07:03:05Z — DRAIN SUMMARY
 - Cycles this run: 1 (PASS 0 / FAIL 0 / ABORT 1)
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
