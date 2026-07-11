@@ -362,12 +362,16 @@ function sampleCardHtml(s: AlertDigestSample): string {
  * be honest, and a price drop on an existing listing is not "a new listing."
  * `samples` (optional, up to 3 real matching listings — aircraft alerts only
  * today) render as preview cards above the "view all" CTA; when omitted or
- * empty the email still renders cleanly with the CTA alone.
+ * empty the email still renders cleanly with the CTA alone. `dropNoun`
+ * (default "price drop") names what kind of drop `dropCount` counts — e.g.
+ * partnership alerts pass "buy-in drop" since their "price" is a buy-in
+ * share, not an asking price.
  */
 export function buildAlertDigestEmail(opts: {
   context: string | null
   newCount: number
   dropCount: number
+  dropNoun?: string
   listingsUrl: string
   manageUrl: string
   unsubscribeUrl: string
@@ -377,10 +381,11 @@ export function buildAlertDigestEmail(opts: {
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
   const forThingText = thing ? ` ${thing}` : ''
   const samples = opts.samples ?? []
+  const dropNoun = opts.dropNoun ?? 'price drop'
 
   const parts: string[] = []
   if (opts.newCount > 0) parts.push(opts.newCount === 1 ? '1 new listing' : `${opts.newCount} new listings`)
-  if (opts.dropCount > 0) parts.push(opts.dropCount === 1 ? '1 price drop' : `${opts.dropCount} price drops`)
+  if (opts.dropCount > 0) parts.push(opts.dropCount === 1 ? `1 ${dropNoun}` : `${opts.dropCount} ${dropNoun}s`)
   const countLabel = parts.join(' + ')
   const countLabelText = countLabel
   const total = opts.newCount + opts.dropCount

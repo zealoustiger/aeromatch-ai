@@ -265,6 +265,58 @@ async function countRecentAircraftPriceDrops(
   return (data ?? []).filter((r) => hasRecentPriceDrop(r, since)).length
 }
 
+/**
+ * Count active partnerships matching `target`'s criteria whose most recent
+ * buy-in change was a genuine decrease recorded since `since` — the
+ * partnership analog of `countRecentAircraftPriceDrops`, reusing the same
+ * `hasRecentPriceDrop` helper by remapping the buy-in column names onto its
+ * generic `previous_price`/`asking_price`/`price_changed_at` shape.
+ * `previous_buy_in_price`/`buy_in_price_changed_at` are a pending-migration
+ * column pair (see `supabase/schema.sql`'s `partnership_add_price_history`) —
+ * on a missing-column error this returns 0 rather than failing the digest run,
+ * same graceful-degrade precedent as `countNewSeekers`'s `additional_airports`.
+ */
+async function countRecentPartnershipPriceDrops(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'partnership' }>,
+  since: string
+): Promise<number> {
+  let q = supabase
+    .from('partnerships')
+    .select('buy_in_price, previous_buy_in_price, buy_in_price_changed_at')
+    .eq('status', 'active')
+    .gte('buy_in_price_changed_at', since)
+    .not('previous_buy_in_price', 'is', null)
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.icao) q = q.eq('home_airport', target.icao)
+
+  type Row = {
+    buy_in_price: number | null
+    previous_buy_in_price: number | null
+    buy_in_price_changed_at: string | null
+  }
+  const { data, error } = (await q) as { data: Row[] | null; error: { message: string } | null }
+  if (error) {
+    if (error.message?.includes('previous_buy_in_price') || error.message?.includes('buy_in_price_changed_at')) {
+      return 0
+    }
+    console.error('[alert-digest] partnership price-drop count error:', error.message)
+    return 0
+  }
+  return (data ?? []).filter((r) =>
+    hasRecentPriceDrop(
+      {
+        previous_price: r.previous_buy_in_price,
+        asking_price: r.buy_in_price,
+        price_changed_at: r.buy_in_price_changed_at,
+      },
+      since
+    )
+  ).length
+}
+
 async function countNewPartnerships(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'partnership' }>,
@@ -553,16 +605,21 @@ export async function GET(req: NextRequest) {
     const since = alert.last_digest_at ?? alert.created_at ?? minWindowStart
 
     const newCount = await countNew(supabase, target, since)
-    // Price-drop matching only applies to aircraft-for-sale alerts today —
-    // partnerships track price changes on a different column pair
-    // (previous_buy_in_price/buy_in_price_changed_at) and seekers have no price.
-    // `price_drop_opt_in` defaults to true (both at the DB level and here, when
-    // the column isn't in the row because the migration hasn't landed yet).
+    // Price-drop matching applies to aircraft-for-sale and partnership alerts
+    // (a partnership's "price" is its buy-in share, tracked on the separate
+    // previous_buy_in_price/buy_in_price_changed_at column pair) — seekers have
+    // no price at all. `price_drop_opt_in` defaults to true (both at the DB
+    // level and here, when the column isn't in the row because the migration
+    // hasn't landed yet); there's no partnership-specific opt-out UI today, so
+    // partnership alerts get drop detection on by default, same as aircraft.
     const priceDropOptIn = alert.price_drop_opt_in ?? true
-    const dropCount =
-      target.type === 'aircraft' && priceDropOptIn
+    const dropCount = !priceDropOptIn
+      ? 0
+      : target.type === 'aircraft'
         ? await countRecentAircraftPriceDrops(supabase, target, since)
-        : 0
+        : target.type === 'partnership'
+          ? await countRecentPartnershipPriceDrops(supabase, target, since)
+          : 0
 
     if (newCount === 0 && dropCount === 0) {
       skipped++
@@ -589,6 +646,7 @@ export async function GET(req: NextRequest) {
       samples,
       newCount,
       dropCount,
+      dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
       listingsUrl,
       manageUrl,
       unsubscribeUrl,
