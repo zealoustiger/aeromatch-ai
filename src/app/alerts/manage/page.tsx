@@ -29,13 +29,87 @@ interface AlertRow {
   frequency?: string
 }
 
-export default async function AlertsManagePage() {
+// Email-keyed, not user_id-keyed (alerts require no account). Anon/authenticated
+// has no SELECT on this PII-holding table by design (see actions.ts), so this
+// reads via the service-role client, scoped to the owning email — either the
+// signed-in user's own, or the one resolved from a manage-link token below.
+// A query failure still looks like "no rows" here, never a 500.
+async function fetchAlertsForEmail(email: string): Promise<AlertRow[]> {
+  const admin = createAdminClient()
+  const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at']
+  let cols = [...baseCols, 'price_drop_opt_in', 'frequency']
+  let { data, error } = (await admin
+    .from('alerts')
+    .select(cols.join(', '))
+    .eq('email', email)
+    .neq('status', 'unsubscribed')
+    .order('created_at', { ascending: false })) as unknown as {
+    data: AlertRow[] | null
+    error: { message: string } | null
+  }
+  // Neither, either, or both of price_drop_opt_in/frequency may not be
+  // migrated live yet — retry without whichever column(s) the error names
+  // (PostgREST reports one unknown column per error, so this can take up to
+  // two passes) rather than losing the whole page (graceful fallback, same
+  // pattern as profiles.favorite_airports); rows just render with those
+  // toggles defaulted on/weekly.
+  for (let i = 0; i < 2 && error && (error.message?.includes('price_drop_opt_in') || error.message?.includes('frequency')); i++) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data, error } = (await admin
+      .from('alerts')
+      .select(cols.join(', '))
+      .eq('email', email)
+      .neq('status', 'unsubscribed')
+      .order('created_at', { ascending: false })) as unknown as {
+      data: AlertRow[] | null
+      error: { message: string } | null
+    })
+  }
+  return data ?? []
+}
+
+type SearchParams = Record<string, string | string[] | undefined>
+
+export default async function AlertsManagePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
+  const rawToken = params.token
+  const urlToken = Array.isArray(rawToken) ? rawToken[0] : rawToken
+
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  // Token-scoped path: a subscriber with no account, arriving from the digest
+  // email's "Manage alerts" link. The token proves ownership of the one alert
+  // it was minted for (its own `unsubscribe_token`) — resolving that alert's
+  // email then unlocks every alert for the SAME email, the same trust boundary
+  // the signed-in path below already uses (it also just filters by email, not
+  // user_id). A signed-in session always wins so a stray `?token=` on a
+  // signed-in visit is never forwarded to that visitor's own alert actions.
+  let email = (user?.email ?? '').toLowerCase()
+  let scopeToken: string | undefined
+  let tokenInvalid = false
+  if (!email && urlToken) {
+    const admin = createAdminClient()
+    const { data: anchor } = await admin
+      .from('alerts')
+      .select('email')
+      .eq('unsubscribe_token', urlToken)
+      .maybeSingle()
+    if (anchor?.email) {
+      email = anchor.email.toLowerCase()
+      scopeToken = urlToken
+    } else {
+      tokenInvalid = true
+    }
+  }
+
+  if (!email) {
     return (
       <div className="ch-surface min-h-screen">
         <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -45,7 +119,9 @@ export default async function AlertsManagePage() {
               Your alerts
             </h1>
             <p className="mt-1 text-slate-600">
-              Sign in to see every email alert subscription tied to your account.
+              {tokenInvalid
+                ? 'This link is no longer valid.'
+                : 'Sign in to see every email alert subscription tied to your account.'}
             </p>
           </div>
           <div className="ch-panel p-6">
@@ -69,46 +145,7 @@ export default async function AlertsManagePage() {
     )
   }
 
-  // Email-keyed, not user_id-keyed (alerts require no account). Anon/authenticated
-  // has no SELECT on this PII-holding table by design (see actions.ts), so this
-  // reads via the service-role client, scoped to the signed-in user's own email —
-  // the same ownership-by-email pattern the pause/resume/delete actions use.
-  // A query failure still looks like "no rows" here, never a 500.
-  const email = (user.email ?? '').toLowerCase()
-  let alerts: AlertRow[] = []
-  if (email) {
-    const admin = createAdminClient()
-    const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at']
-    let cols = [...baseCols, 'price_drop_opt_in', 'frequency']
-    let { data, error } = (await admin
-      .from('alerts')
-      .select(cols.join(', '))
-      .eq('email', email)
-      .neq('status', 'unsubscribed')
-      .order('created_at', { ascending: false })) as unknown as {
-      data: AlertRow[] | null
-      error: { message: string } | null
-    }
-    // Neither, either, or both of price_drop_opt_in/frequency may not be
-    // migrated live yet — retry without whichever column(s) the error names
-    // (PostgREST reports one unknown column per error, so this can take up to
-    // two passes) rather than losing the whole page (graceful fallback, same
-    // pattern as profiles.favorite_airports); rows just render with those
-    // toggles defaulted on/weekly.
-    for (let i = 0; i < 2 && error && (error.message?.includes('price_drop_opt_in') || error.message?.includes('frequency')); i++) {
-      cols = cols.filter((c) => !error!.message.includes(c))
-      ;({ data, error } = (await admin
-        .from('alerts')
-        .select(cols.join(', '))
-        .eq('email', email)
-        .neq('status', 'unsubscribed')
-        .order('created_at', { ascending: false })) as unknown as {
-        data: AlertRow[] | null
-        error: { message: string } | null
-      })
-    }
-    alerts = data ?? []
-  }
+  const alerts = await fetchAlertsForEmail(email)
 
   // Real, server-computed "how many listings match this alert right now" per
   // row (GOAL.md: helps a subscriber tell if their alert is well-scoped or
@@ -125,7 +162,7 @@ export default async function AlertsManagePage() {
             Your alerts
           </h1>
           <p className="mt-1 text-slate-600">
-            Every new-listing alert subscribed with <strong>{user.email}</strong>.
+            Every new-listing alert subscribed with <strong>{email}</strong>.
           </p>
         </div>
 
@@ -184,9 +221,9 @@ export default async function AlertsManagePage() {
                             alerts (see alert-digest's countRecentAircraftPriceDrops) —
                             partnerships/seekers get no toggle. */}
                         {target?.type === 'aircraft' ? (
-                          <PriceDropToggle id={a.id} enabled={a.price_drop_opt_in ?? true} />
+                          <PriceDropToggle id={a.id} enabled={a.price_drop_opt_in ?? true} token={scopeToken} />
                         ) : null}
-                        <FrequencyToggle id={a.id} frequency={normalizeFrequency(a.frequency)} />
+                        <FrequencyToggle id={a.id} frequency={normalizeFrequency(a.frequency)} token={scopeToken} />
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
                         Subscribed {new Date(a.created_at).toLocaleDateString()}
@@ -207,6 +244,7 @@ export default async function AlertsManagePage() {
                       status={a.status}
                       sourcePath={a.source_path}
                       target={target}
+                      token={scopeToken}
                     />
                   </li>
                 )

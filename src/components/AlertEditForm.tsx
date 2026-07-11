@@ -25,6 +25,8 @@ interface Props {
   /** Pre-parsed from `source_path` server-side; null when this alert isn't editable
    *  here (legacy path-segment SEO source, or none) — no Edit button renders then. */
   target: EditableAlertTarget | null
+  /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
+  token?: string
 }
 
 /**
@@ -34,7 +36,7 @@ interface Props {
  * state has a single owner and the whole action cluster stays one flex item in
  * the parent `<li>` row — no fragile multi-child flex-wrap layout needed.
  */
-export default function AlertEditForm({ id, status, sourcePath, target }: Props) {
+export default function AlertEditForm({ id, status, sourcePath, target, token }: Props) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +75,7 @@ export default function AlertEditForm({ id, status, sourcePath, target }: Props)
           : target.type === 'partnership'
             ? { make, state, airport }
             : { make, model }
-      const result = await updateAlertCriteria(id, fields)
+      const result = await updateAlertCriteria(id, fields, token)
       if (result.error) {
         setError(result.error)
         return
@@ -95,7 +97,7 @@ export default function AlertEditForm({ id, status, sourcePath, target }: Props)
             View
           </Link>
         ) : null}
-        <AlertActions id={id} status={status} />
+        <AlertActions id={id} status={status} token={token} />
         {target ? (
           <button
             type="button"

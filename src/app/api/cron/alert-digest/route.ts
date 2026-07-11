@@ -638,7 +638,11 @@ export async function GET(req: NextRequest) {
 
     const unsubToken = alert.unsubscribe_token ?? ''
     const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
-    const manageUrl = `${SITE_URL}/alerts/manage`
+    // Token-scoped so an email-only subscriber (no account) can actually manage
+    // alerts from this link instead of hitting the sign-in wall — see
+    // /alerts/manage's token-scoped path. Falls back to the bare URL for the
+    // rare row with no token yet (pre-migration).
+    const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
 
     const { subject, html, text } = buildAlertDigestEmail({
