@@ -2,6 +2,50 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T13:03:26Z — PASS — partnership-digest-samples
+- Pages: (none — email/query logic only; no page changed)
+- What: **The weekly alert-digest email now shows real preview cards for partnership
+  alerts too**, not just aircraft alerts. If your saved partnership alert has new
+  matching listings since your last digest, the email now shows up to 3 real cards —
+  photo, share type (e.g. "1/4 Share"), city/airport, and buy-in price — instead of
+  just a bare "N new listings" line with a button.
+- Goal: `[goal]` tier — tiers 1 (`[bug]`) and 2 (`[want]`) both empty this cycle
+  (re-verified by direct backlog read: no open `[bug]`; every open `[want]` remains
+  genuinely blocked on a human mock/data-access call per its own note). Alert-experience
+  `[P1][goal]` queue is fully shipped; pulled the top open `[P2][goal]` item —
+  "Partnership sample cards in the digest email" — explicitly named as a "natural
+  follow-up" in the `alert-digest-email-redesign` entry and first in the open-item list
+  the last two cycles' `Next:` notes both enumerated.
+- Spec: nightshift/specs/20260711T130326Z-partnership-digest-samples.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0.
+  Added `fetchNewPartnershipSamples` to `alert-digest/route.ts` (mirrors
+  `fetchNewAircraftSamples`'s make/state/icao filter + limit/order pattern against the
+  `partnerships` table) and a `shareType` field on `email.ts`'s `AlertDigestSample`
+  (rendered in place of the aircraft-only `ttaf` in both the HTML and plain-text specs
+  line — partnerships have no TTAF). Wired into the cron handler's existing `samples`
+  computation for `target.type === 'partnership'` when `newCount > 0`. **Live-verified
+  against real prod data (read-only, no writes):** queried 3 real active Piper
+  partnership rows and ran them through the actual shipped `pickRealPhoto`/
+  `getPlaceholderPhoto`/`formatShareType` helpers — correct real-photo vs. honest
+  placeholder-caption branching, correct "1/3 Share"/"1/4 Share" labels, correct
+  city/state fallback to `home_airport`, correct buy-in price. Also fed sample rows
+  through the real `buildAlertDigestEmail` directly — subject/HTML/text all correct,
+  no "TTAF" leakage into partnership cards. Non-visual cycle (query/email-template logic
+  only, no markup a user sees) — QA smoke (`qa-smoke.mjs`, production `next start` build)
+  on `/alerts`, `/alerts/manage`, `/partnerships` (unchanged pages, confirming no
+  regression): 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at desktop 1280 + mobile 375); screenshots saved as audit trail, not read into
+  context (non-visual, per RUNBOOK convention). Killed the QA server + verified no
+  `next`/`next-server` processes remained after.
+- Schema: none — reuses existing `partnerships` columns (`buy_in_price`, `share_type`,
+  `images`, `home_airport`, `city`, `state`).
+- Screenshots: nightshift/screenshots/partnership-digest-samples/
+- Next: the two remaining open `[P2][goal]` alert-experience items are "Saved-search ↔
+  alert unification slice 2 (inline alert settings on `/searches`)" and "Cross-sell:
+  nearby-state suggestion on `/alerts/status`." Also flagged intentionally-not-done here:
+  partnership price-drop preview cards (parity with `fetchAircraftPriceDropSamples`) —
+  a partnership alert with only a buy-in drop still gets the CTA-only fallback.
+
 ## 2026-07-11T13:05:00Z — PASS — seeker-alert-match-count-location
 - Pages: `/alerts/manage`
 - What: **A pilot-seeking alert's "N pilots match right now" number on your alerts

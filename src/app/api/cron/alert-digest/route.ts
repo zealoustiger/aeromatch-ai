@@ -13,6 +13,7 @@ import { matchesModelFilter } from '@/lib/seekerModelFilter'
 import { hasRecentPriceDrop } from '@/lib/priceDrops'
 import { intervalDaysFor, isDigestDue, normalizeFrequency } from '@/lib/alertFrequency'
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { formatShareType } from '@/lib/utils'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -515,6 +516,63 @@ async function fetchAircraftPriceDropSamples(
     .map((row) => toDigestSample(row, row.previous_price))
 }
 
+type PartnershipSampleRow = {
+  id: string
+  make: string | null
+  model: string | null
+  year: number | null
+  buy_in_price: number | null
+  share_type: string | null
+  images: string[] | null
+  home_airport: string | null
+  city: string | null
+  state: string | null
+}
+
+function toPartnershipDigestSample(row: PartnershipSampleRow): AlertDigestSample {
+  const realPhoto = pickRealPhoto(row.images)
+  return {
+    title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Partnership',
+    photoUrl: realPhoto ?? getPlaceholderPhoto(row.make ?? ''),
+    isPlaceholder: !realPhoto,
+    year: row.year,
+    ttaf: null,
+    shareType: row.share_type ? formatShareType(row.share_type) : null,
+    location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
+    price: row.buy_in_price,
+    url: `${SITE_URL}/partnerships/${row.id}`,
+  }
+}
+
+/** Up to `limit` real, newly-listed partnerships matching `target` since
+ *  `since`, for the digest email's preview cards. Mirrors
+ *  `countNewPartnerships`'s filters. */
+async function fetchNewPartnershipSamples(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'partnership' }>,
+  since: string,
+  limit = MAX_DIGEST_SAMPLES
+): Promise<AlertDigestSample[]> {
+  let q = supabase
+    .from('partnerships')
+    .select('id, make, model, year, buy_in_price, share_type, images, home_airport, city, state')
+    .eq('status', 'active')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.icao) q = q.eq('home_airport', target.icao)
+
+  const { data, error } = await q
+  if (error) {
+    console.error('[alert-digest] new-partnership sample error:', error.message)
+    return []
+  }
+  return (data ?? []).map((row) => toPartnershipDigestSample(row as PartnershipSampleRow))
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -632,15 +690,21 @@ export async function GET(req: NextRequest) {
       continue
     }
 
-    // Real preview cards — aircraft alerts only (the only listing type with
-    // photos/price/specs the digest can honestly show). Prefer new-listing
-    // samples; fall back to price-drop samples when there are no new ones.
+    // Real preview cards — aircraft and partnership alerts (the listing types
+    // with photos/price/specs the digest can honestly show; seekers have
+    // none). Aircraft prefers new-listing samples, falling back to
+    // price-drop samples when there are no new ones. Partnerships only have
+    // new-listing samples today (price-drop-sample parity is a separate
+    // slice) — a partnership alert with only a buy-in drop still gets the
+    // CTA-only fallback.
     const samples =
       target.type === 'aircraft'
         ? newCount > 0
           ? await fetchNewAircraftSamples(supabase, target, since)
           : await fetchAircraftPriceDropSamples(supabase, target, since)
-        : []
+        : target.type === 'partnership' && newCount > 0
+          ? await fetchNewPartnershipSamples(supabase, target, since)
+          : []
 
     const unsubToken = alert.unsubscribe_token ?? ''
     const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`

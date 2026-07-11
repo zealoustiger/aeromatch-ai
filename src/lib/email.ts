@@ -319,6 +319,9 @@ export type AlertDigestSample = {
   isPlaceholder: boolean
   year: number | null
   ttaf: number | null
+  /** Formatted share label (e.g. "1/4 Share") — partnership samples only.
+   *  Rendered in place of `ttaf` (aircraft-only) in the specs line. */
+  shareType?: string | null
   location: string | null
   price: number | null
   previousPrice?: number | null
@@ -349,7 +352,8 @@ export function pickBestPriceDropSample(samples: AlertDigestSample[]): AlertDige
 function specsLine(s: AlertDigestSample): string {
   const parts: string[] = []
   if (s.year) parts.push(String(s.year))
-  if (s.ttaf) parts.push(`${s.ttaf.toLocaleString()} TTAF`)
+  if (s.shareType) parts.push(s.shareType)
+  else if (s.ttaf) parts.push(`${s.ttaf.toLocaleString()} TTAF`)
   if (s.location) parts.push(s.location)
   return parts.join(' &middot; ')
 }
@@ -386,9 +390,11 @@ function sampleCardHtml(s: AlertDigestSample): string {
  * matching listing since their last digest. `newCount`/`dropCount` are named
  * distinctly in the copy rather than summed — GOAL.md requires alert content
  * be honest, and a price drop on an existing listing is not "a new listing."
- * `samples` (optional, up to 3 real matching listings — aircraft alerts only
- * today) render as preview cards above the "view all" CTA; when omitted or
- * empty the email still renders cleanly with the CTA alone. `dropNoun`
+ * `samples` (optional, up to 3 real matching listings — aircraft and
+ * partnership new-listing alerts; seeker alerts and partnership price-drop
+ * alerts still get the CTA-only fallback) render as preview cards above the
+ * "view all" CTA; when omitted or empty the email still renders cleanly with
+ * the CTA alone. `dropNoun`
  * (default "price drop") names what kind of drop `dropCount` counts — e.g.
  * partnership alerts pass "buy-in drop" since their "price" is a buy-in
  * share, not an asking price.
@@ -461,7 +467,13 @@ export function buildAlertDigestEmail(opts: {
           : s.price != null
             ? formatUsd(s.price)
             : ''
-      const specs = [s.year, s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null, s.location].filter(Boolean).join(' · ')
+      const specs = [
+        s.year,
+        s.shareType ?? (s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null),
+        s.location,
+      ]
+        .filter(Boolean)
+        .join(' · ')
       return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}\n  ${s.url}`
     })
     .join('\n')
