@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { sendEmail, buildAlertDigestEmail } from '@/lib/email'
+import { sendEmail, buildAlertDigestEmail, type AlertDigestSample } from '@/lib/email'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
 import { hasRecentPriceDrop } from '@/lib/priceDrops'
 import { intervalDaysFor, isDigestDue, normalizeFrequency } from '@/lib/alertFrequency'
+import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+
+const MAX_DIGEST_SAMPLES = 3
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -319,6 +322,116 @@ async function countNew(
   return countNewPartnerships(supabase, target, since)
 }
 
+// ─── Digest email sample listings (aircraft only) ─────────────────────────────
+
+type AircraftSampleRow = {
+  id: string
+  make: string | null
+  model: string | null
+  year: number | null
+  asking_price: number | null
+  previous_price?: number | null
+  images: string[] | null
+  location: string | null
+  ttaf: number | null
+}
+
+function toDigestSample(row: AircraftSampleRow, previousPrice?: number | null): AlertDigestSample {
+  const realPhoto = pickRealPhoto(row.images)
+  return {
+    title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Aircraft',
+    photoUrl: realPhoto ?? getPlaceholderPhoto(row.make ?? ''),
+    isPlaceholder: !realPhoto,
+    year: row.year,
+    ttaf: row.ttaf,
+    location: row.location,
+    price: row.asking_price,
+    previousPrice,
+    url: `${SITE_URL}/aircraft/listing/${row.id}`,
+  }
+}
+
+/** Up to `limit` real, newly-listed aircraft matching `target` since `since`,
+ *  for the digest email's preview cards. Mirrors `countNewAircraft`'s filters. */
+async function fetchNewAircraftSamples(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'aircraft' }>,
+  since: string,
+  limit = MAX_DIGEST_SAMPLES
+): Promise<AlertDigestSample[]> {
+  let q = supabase
+    .from('aircraft_for_sale')
+    .select('id, make, model, year, asking_price, images, location, ttaf')
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+    .gte('first_seen_at', since)
+    .order('first_seen_at', { ascending: false })
+    .limit(limit)
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.model) q = q.eq('model', target.model)
+  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
+  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
+  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
+  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
+  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+
+  const { data, error } = await q
+  if (error) {
+    console.error('[alert-digest] new-aircraft sample error:', error.message)
+    return []
+  }
+  return (data ?? []).map((row) => toDigestSample(row as AircraftSampleRow))
+}
+
+/** Up to `limit` real aircraft matching `target` whose most recent price
+ *  change was a genuine decrease since `since` — same candidate set
+ *  `countRecentAircraftPriceDrops` counts, widened to the columns the digest
+ *  email's preview cards need (photo/year/TTAF/location + before/after price). */
+async function fetchAircraftPriceDropSamples(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'aircraft' }>,
+  since: string,
+  limit = MAX_DIGEST_SAMPLES
+): Promise<AlertDigestSample[]> {
+  let q: any = supabase
+    .from('aircraft_for_sale')
+    .select('id, make, model, year, asking_price, previous_price, images, location, ttaf, price_changed_at')
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+    .gte('price_changed_at', since)
+    .not('previous_price', 'is', null)
+    .order('price_changed_at', { ascending: false })
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.model) q = q.eq('model', target.model)
+  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
+  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
+  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
+  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
+  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+
+  type Row = Omit<AircraftSampleRow, 'previous_price'> & {
+    previous_price: number | null
+    price_changed_at: string | null
+  }
+  const { data, error } = (await q) as { data: Row[] | null; error: { message: string } | null }
+  if (error) {
+    console.error('[alert-digest] price-drop sample error:', error.message)
+    return []
+  }
+  return (data ?? [])
+    .filter((r) => hasRecentPriceDrop(r, since))
+    .slice(0, limit)
+    .map((row) => toDigestSample(row, row.previous_price))
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -431,15 +544,28 @@ export async function GET(req: NextRequest) {
       continue
     }
 
+    // Real preview cards — aircraft alerts only (the only listing type with
+    // photos/price/specs the digest can honestly show). Prefer new-listing
+    // samples; fall back to price-drop samples when there are no new ones.
+    const samples =
+      target.type === 'aircraft'
+        ? newCount > 0
+          ? await fetchNewAircraftSamples(supabase, target, since)
+          : await fetchAircraftPriceDropSamples(supabase, target, since)
+        : []
+
     const unsubToken = alert.unsubscribe_token ?? ''
     const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
+    const manageUrl = `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
 
     const { subject, html, text } = buildAlertDigestEmail({
       context: alert.context ?? null,
+      samples,
       newCount,
       dropCount,
       listingsUrl,
+      manageUrl,
       unsubscribeUrl,
     })
 

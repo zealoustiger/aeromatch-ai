@@ -302,23 +302,81 @@ function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/"/g, '&quot;')
 }
 
+/** One real matching listing shown as a preview card in the digest email.
+ *  `previousPrice` set only for a price-drop sample (renders struck-through
+ *  next to the current price); omitted/undefined for a new-listing sample. */
+export type AlertDigestSample = {
+  title: string
+  photoUrl: string | null
+  /** True when `photoUrl` is a per-make placeholder, not a real harvested
+   *  photo — renders an honest "Not actual plane photo" caption, same
+   *  convention as every listing card site-wide. */
+  isPlaceholder: boolean
+  year: number | null
+  ttaf: number | null
+  location: string | null
+  price: number | null
+  previousPrice?: number | null
+  url: string
+}
+
+function specsLine(s: AlertDigestSample): string {
+  const parts: string[] = []
+  if (s.year) parts.push(String(s.year))
+  if (s.ttaf) parts.push(`${s.ttaf.toLocaleString()} TTAF`)
+  if (s.location) parts.push(s.location)
+  return parts.join(' &middot; ')
+}
+
+function sampleCardHtml(s: AlertDigestSample): string {
+  const photo = s.photoUrl
+    ? `<img src="${escapeAttr(s.photoUrl)}" alt="${escapeAttr(s.title)}" width="88" height="66" style="width:88px;height:66px;object-fit:cover;border-radius:8px;flex-shrink:0;display:block;" />`
+    : ''
+  const specs = specsLine(s)
+  const priceHtml =
+    s.previousPrice != null && s.price != null && s.previousPrice !== s.price
+      ? `<span style="color:#94a3b8;text-decoration:line-through;font-size:12px;margin-right:6px;">${formatUsd(s.previousPrice)}</span><span style="color:#0f172a;font-weight:700;font-size:15px;">${formatUsd(s.price)}</span>`
+      : s.price != null
+        ? `<span style="color:#0f172a;font-weight:700;font-size:15px;">${formatUsd(s.price)}</span>`
+        : ''
+  const placeholderNote = s.isPlaceholder
+    ? `<p style="margin:2px 0 0;font-size:10px;color:#a89f8e;">Not actual plane photo</p>`
+    : ''
+
+  return `<a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;padding:12px 0;border-bottom:1px solid #ece6dc;">
+        ${photo}
+        <div style="min-width:0;">
+          <p style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;">${escapeHtml(s.title)}</p>
+          ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
+          <p style="margin:0;">${priceHtml}</p>
+          ${placeholderNote}
+        </div>
+      </a>`
+}
+
 /**
  * Build the weekly digest email for a confirmed alert subscriber.
  * Sent when there's a new matching listing and/or a genuine price drop on a
  * matching listing since their last digest. `newCount`/`dropCount` are named
  * distinctly in the copy rather than summed — GOAL.md requires alert content
  * be honest, and a price drop on an existing listing is not "a new listing."
+ * `samples` (optional, up to 3 real matching listings — aircraft alerts only
+ * today) render as preview cards above the "view all" CTA; when omitted or
+ * empty the email still renders cleanly with the CTA alone.
  */
 export function buildAlertDigestEmail(opts: {
   context: string | null
   newCount: number
   dropCount: number
   listingsUrl: string
+  manageUrl: string
   unsubscribeUrl: string
+  samples?: AlertDigestSample[]
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
   const forThingText = thing ? ` ${thing}` : ''
+  const samples = opts.samples ?? []
 
   const parts: string[] = []
   if (opts.newCount > 0) parts.push(opts.newCount === 1 ? '1 new listing' : `${opts.newCount} new listings`)
@@ -330,32 +388,58 @@ export function buildAlertDigestEmail(opts: {
     ? `${countLabel} — ${thing} on ClubHanger`
     : `${countLabel} on ClubHanger`
 
+  const samplesHtml = samples.length
+    ? `<div style="margin:0 0 20px;">${samples.map(sampleCardHtml).join('')}</div>`
+    : ''
+  const remaining = total - samples.length
+  const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
+
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">${escapeHtml(countLabel)}</h1>
-      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
-        There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.
-      </p>
-      <p style="margin:0 0 24px;">
-        <a href="${escapeAttr(opts.listingsUrl)}"
-           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
-          View${forThing} listings
-        </a>
-      </p>
-      <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
-        You&rsquo;re receiving this because you signed up for${forThing} alerts on ClubHanger.
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#94a3b8;">Unsubscribe</a>.
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 10px;">${escapeHtml(countLabel)}</h1>
+        <p style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
+          There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.
+        </p>
+        ${samplesHtml}
+        <p style="margin:0;">
+          <a href="${escapeAttr(opts.listingsUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
+            ${ctaLabel}
+          </a>
+        </p>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        &middot;
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
       </p>
     </div>
   </body>
 </html>`
 
+  const sampleLines = samples
+    .map((s) => {
+      const price =
+        s.previousPrice != null && s.price != null && s.previousPrice !== s.price
+          ? `${formatUsd(s.price)} (was ${formatUsd(s.previousPrice)})`
+          : s.price != null
+            ? formatUsd(s.price)
+            : ''
+      const specs = [s.year, s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null, s.location].filter(Boolean).join(' · ')
+      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}\n  ${s.url}`
+    })
+    .join('\n')
+
   const text = `${countLabelText} matching your${forThingText} alert on ClubHanger.
+${sampleLines ? `\n${sampleLines}\n` : ''}
+${ctaLabel}: ${opts.listingsUrl}
 
-View listings: ${opts.listingsUrl}
-
+Manage alerts: ${opts.manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}`
 
   return { subject, html, text }
