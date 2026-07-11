@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T13:05:00Z — PASS — seeker-alert-match-count-location
+- Pages: `/alerts/manage`
+- What: **A pilot-seeking alert's "N pilots match right now" number on your alerts
+  page is now honest about location filters.** If you saved a seeking alert scoped to
+  an airport or state (e.g. "pilots near KPAO"), the count used to ignore that filter
+  entirely and just show the total count of every active pilot seeking a share
+  anywhere — the same over-matching bug the digest cron itself had until it was fixed
+  a few cycles ago (`seeker-alert-airport-state`). The manage page's separate live-count
+  code never got the same fix. Now it does: the count only includes pilots actually near
+  that airport or in that state.
+- Goal: `[goal]` tier — tiers 1 (`[bug]`) and 2 (`[want]`) both empty this cycle (re-verified
+  by direct backlog read: no open `[bug]`; every open `[want]` remains genuinely blocked on a
+  human mock/data-access call per its own note — collection-layout redesign, Trade-A-Plane
+  ingestion, Bay-Area benchmark, owner-leads list). Alert-experience `[P1][goal]` queue is
+  fully shipped (verified: no unstruck `[P1][goal]` entry in the alert section of
+  BACKLOG.md); pulled the top open `[P2][goal]` alert-experience item — explicitly named as
+  the next item in `alert-live-match-count`'s and `seeker-alert-airport-state`'s own `Next:`
+  notes, and first in the P2 queue list the prior cycle's (`cost-calculator-alert-cta`)
+  `Next:` note enumerated.
+- Spec: nightshift/specs/20260711T125644Z-seeker-alert-match-count-location.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0. Extended
+  `alertMatchCounts.ts`'s `seeker` `AlertTarget` with `state`/`icao`, parsed off
+  `/partnerships/seeking?...`'s query string exactly like the digest cron's parser; extended
+  `countActiveSeekers` with the cron's own `.eq('state', ...)` + `.or('home_airport.eq...,
+  additional_airports.ov...')` matching, including the same graceful-degrade retry
+  (home_airport-only) when `additional_airports` isn't migrated live yet. **Live-verified
+  directly against the real prod DB, including calling the actual shipped function** (via
+  `npx tsx`, not a reimplementation): confirmed `additional_airports` genuinely doesn't exist
+  live yet (`42703`), so the retry path is real, not theoretical; `getAlertMatchCount` on
+  `/partnerships/seeking?airport=KGLH` correctly returned `{count: 1}` (vs. `{count: 13}` for
+  the bare/unfiltered path — the actual current total of active seekers), `?state=CA`
+  correctly returned `{count: 2}`, and `?make=Cessna&airport=KGLH` correctly combined both
+  filters. All calls read-only, no writes/rows created. Non-visual cycle (query/counting logic
+  only — no markup/CSS change) — QA smoke (`qa-smoke.mjs`, production `next start` build) on
+  `/alerts/manage`, `/partnerships/seeking`, `/alerts`: 6/6 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at desktop 1280 + mobile 375); screenshots saved as
+  audit trail, not read into context (non-visual, per RUNBOOK convention). Found and killed one
+  unrelated orphaned `next-server` process left over from an earlier drain cycle (not bound to
+  any port) before starting this cycle's own QA server; confirmed no `next`/`next-server`
+  processes remained after stopping it.
+- Schema: none — reuses the existing `home_airport`/`additional_airports`/`state` columns,
+  same graceful-degrade precedent as `seeker-alert-airport-state`.
+- Screenshots: nightshift/screenshots/seeker-alert-match-count-location/
+- Next: the remaining open `[P2][goal]` alert-experience items are "Partnership sample cards
+  in the digest email," "Saved-search ↔ alert unification slice 2 (inline alert settings on
+  `/searches`)," and "Cross-sell: nearby-state suggestion on `/alerts/status`."
+
 ## 2026-07-11T12:59:00Z — PASS — cost-calculator-alert-cta
 - Pages: `/tools/cost-calculator`
 - What: **The cost calculator — where a visitor is actively working out whether a
