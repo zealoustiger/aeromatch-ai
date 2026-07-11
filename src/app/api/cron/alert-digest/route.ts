@@ -335,12 +335,35 @@ export async function GET(req: NextRequest) {
   const supabase = createAdminClient()
   const windowStart = new Date(Date.now() - DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
+  type DigestAlertRow = {
+    id: string
+    email: string
+    context: string | null
+    source_path: string | null
+    created_at: string
+    last_digest_at: string | null
+    unsubscribe_token: string | null
+    price_drop_opt_in?: boolean
+  }
+
   // Fetch confirmed alerts that haven't been digested in 7+ days.
-  const { data: alerts, error: fetchError } = await supabase
-    .from('alerts')
-    .select('id, email, context, source_path, created_at, last_digest_at, unsubscribe_token')
-    .eq('status', 'confirmed')
-    .or(`last_digest_at.is.null,last_digest_at.lt.${windowStart}`)
+  let { data: alerts, error: fetchError }: { data: DigestAlertRow[] | null; error: { message: string } | null } =
+    await supabase
+      .from('alerts')
+      .select('id, email, context, source_path, created_at, last_digest_at, unsubscribe_token, price_drop_opt_in')
+      .eq('status', 'confirmed')
+      .or(`last_digest_at.is.null,last_digest_at.lt.${windowStart}`)
+
+  // Not-yet-migrated DB (`price_drop_opt_in` column missing) — retry without it
+  // rather than breaking the whole send run; every alert is then treated as
+  // opted in below, which is the column's own default (current behavior).
+  if (fetchError?.message?.includes('price_drop_opt_in')) {
+    ;({ data: alerts, error: fetchError } = await supabase
+      .from('alerts')
+      .select('id, email, context, source_path, created_at, last_digest_at, unsubscribe_token')
+      .eq('status', 'confirmed')
+      .or(`last_digest_at.is.null,last_digest_at.lt.${windowStart}`))
+  }
 
   if (fetchError) {
     console.error('[alert-digest] fetch error:', fetchError.message)
@@ -365,8 +388,13 @@ export async function GET(req: NextRequest) {
     // Price-drop matching only applies to aircraft-for-sale alerts today —
     // partnerships track price changes on a different column pair
     // (previous_buy_in_price/buy_in_price_changed_at) and seekers have no price.
+    // `price_drop_opt_in` defaults to true (both at the DB level and here, when
+    // the column isn't in the row because the migration hasn't landed yet).
+    const priceDropOptIn = alert.price_drop_opt_in ?? true
     const dropCount =
-      target.type === 'aircraft' ? await countRecentAircraftPriceDrops(supabase, target, since) : 0
+      target.type === 'aircraft' && priceDropOptIn
+        ? await countRecentAircraftPriceDrops(supabase, target, since)
+        : 0
 
     if (newCount === 0 && dropCount === 0) {
       skipped++

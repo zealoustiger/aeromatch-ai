@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_NAME } from '@/lib/seo'
 import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
 import AlertEditForm from '@/components/AlertEditForm'
+import PriceDropToggle from '@/components/PriceDropToggle'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ interface AlertRow {
   status: string
   created_at: string
   confirmed_at: string | null
+  price_drop_opt_in?: boolean
 }
 
 export default async function AlertsManagePage() {
@@ -72,13 +74,24 @@ export default async function AlertsManagePage() {
   let alerts: AlertRow[] = []
   if (email) {
     const admin = createAdminClient()
-    const { data } = await admin
+    let { data, error }: { data: AlertRow[] | null; error: { message: string } | null } = await admin
       .from('alerts')
-      .select('id, context, source_path, status, created_at, confirmed_at')
+      .select('id, context, source_path, status, created_at, confirmed_at, price_drop_opt_in')
       .eq('email', email)
       .neq('status', 'unsubscribed')
       .order('created_at', { ascending: false })
-    alerts = (data ?? []) as AlertRow[]
+    // Not-yet-migrated DB (`price_drop_opt_in` column missing) — retry without it
+    // rather than losing the whole page (graceful fallback, same pattern as
+    // profiles.favorite_airports); rows just render with the toggle defaulted on.
+    if (error?.message?.includes('price_drop_opt_in')) {
+      ;({ data, error } = await admin
+        .from('alerts')
+        .select('id, context, source_path, status, created_at, confirmed_at')
+        .eq('email', email)
+        .neq('status', 'unsubscribed')
+        .order('created_at', { ascending: false }))
+    }
+    alerts = data ?? []
   }
 
   return (
@@ -117,44 +130,53 @@ export default async function AlertsManagePage() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {alerts.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate font-semibold text-slate-900">
-                        {a.context || 'New listings'}
-                      </p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          a.status === 'paused'
-                            ? 'bg-slate-100 text-slate-600'
+              {alerts.map((a) => {
+                const target = parseEditableAlertTarget(a.source_path)
+                return (
+                  <li
+                    key={a.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold text-slate-900">
+                          {a.context || 'New listings'}
+                        </p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            a.status === 'paused'
+                              ? 'bg-slate-100 text-slate-600'
+                              : a.confirmed_at
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {a.status === 'paused'
+                            ? 'Paused'
                             : a.confirmed_at
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-amber-50 text-amber-700'
-                        }`}
-                      >
-                        {a.status === 'paused'
-                          ? 'Paused'
-                          : a.confirmed_at
-                            ? 'Active'
-                            : 'Pending confirmation'}
-                      </span>
+                              ? 'Active'
+                              : 'Pending confirmation'}
+                        </span>
+                        {/* Price-drop matching only exists for aircraft-for-sale
+                            alerts (see alert-digest's countRecentAircraftPriceDrops) —
+                            partnerships/seekers get no toggle. */}
+                        {target?.type === 'aircraft' ? (
+                          <PriceDropToggle id={a.id} enabled={a.price_drop_opt_in ?? true} />
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        Subscribed {new Date(a.created_at).toLocaleDateString()}
+                      </p>
                     </div>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      Subscribed {new Date(a.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <AlertEditForm
-                    id={a.id}
-                    status={a.status}
-                    sourcePath={a.source_path}
-                    target={parseEditableAlertTarget(a.source_path)}
-                  />
-                </li>
-              ))}
+                    <AlertEditForm
+                      id={a.id}
+                      status={a.status}
+                      sourcePath={a.source_path}
+                      target={target}
+                    />
+                  </li>
+                )
+              })}
             </ul>
           )}
         </section>

@@ -960,7 +960,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export async function subscribeToAlerts(
   email: string,
   context: string,
-  sourcePath: string
+  sourcePath: string,
+  priceDropOptIn: boolean = true
 ) {
   const clean = (email || '').toLowerCase().trim()
   if (!clean || !EMAIL_RE.test(clean)) {
@@ -976,14 +977,26 @@ export async function subscribeToAlerts(
   // public SELECT, to protect PII), and PostgREST upsert needs SELECT to detect
   // conflicts — so we insert and treat a unique-violation (same email+context)
   // as an idempotent success rather than an error.
-  const { error } = await supabase.from('alerts').insert({
+  const basePayload = {
     email: clean,
     context: context || null,
     source_path: sourcePath || null,
     status: 'pending',
     confirm_token: confirmToken,
     unsubscribe_token: unsubscribeToken,
-  })
+  }
+  let { error } = await supabase
+    .from('alerts')
+    .insert({ ...basePayload, price_drop_opt_in: priceDropOptIn })
+
+  // If price_drop_opt_in hasn't been migrated live yet, retry without it — the
+  // core subscription still saves (graceful fallback, same pattern as
+  // profiles.favorite_airports); the opt-out preference just doesn't take
+  // effect until the migration lands (digest cron then treats it as opted in,
+  // which is the column's own default).
+  if (error && error.message?.includes('price_drop_opt_in')) {
+    ;({ error } = await supabase.from('alerts').insert(basePayload))
+  }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed.
   // Idempotent success, and crucially we skip the email so a re-submit can't be
@@ -1097,6 +1110,24 @@ export async function updateAlertCriteria(id: string, fields: AlertCriteriaField
     .from('alerts')
     .update({ source_path: sourcePath, context })
     .eq('id', id)
+  if (error) return { error: 'Failed to update alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Toggle price-drop matching on/off for one alert, independent of the criteria
+// edit form above (a persistent per-row switch, not hidden behind "Edit"). Same
+// ownership proof as pause/resume/delete. Only meaningful for aircraft-type
+// alerts (see alert-digest's countRecentAircraftPriceDrops) — the UI only
+// renders this toggle for those rows.
+export async function updateAlertPriceDropOptIn(id: string, enabled: boolean) {
+  const owned = await loadOwnedAlert(id)
+  if ('error' in owned) return { error: owned.error }
+
+  const { error } = await owned.admin.from('alerts').update({ price_drop_opt_in: enabled }).eq('id', id)
+  // Not-yet-migrated DB (`price_drop_opt_in` column missing) — no-op rather than
+  // surfacing a scary error for what is, until the migration lands, an inert toggle.
+  if (error && error.message?.includes('price_drop_opt_in')) return { ok: true }
   if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }
