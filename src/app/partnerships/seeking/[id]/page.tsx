@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -7,10 +8,12 @@ import { getSeekerCount } from '@/lib/seekersQuery'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { PartnershipSeeker } from '@/lib/types'
 import { anonymizeName, formatPrice, formatShareType, travelLabel } from '@/lib/utils'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import AviatorAvatar from '@/components/AviatorAvatar'
 import SeekerContactBar from '@/components/SeekerContactBar'
 import SaveListingButton from '@/components/SaveListingButton'
 import SavedListingNote from '@/components/SavedListingNote'
+import ShareListingButton from '@/components/ShareListingButton'
 import PartnershipCard from '@/components/PartnershipCard'
 import { getPartnershipListings } from '@/lib/partnershipsQuery'
 import { MOCK_SEEKERS } from '@/lib/mockData'
@@ -101,6 +104,43 @@ async function getSeeker(id: string): Promise<PartnershipSeeker | null> {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase.from('partnership_seekers').select('*').eq('id', id).single()
   return data
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const s = await getSeeker(id)
+  if (!s) return { title: 'Listing not found' }
+
+  const location = [s.home_airport, s.city, s.state].filter(Boolean).join(', ')
+  const title = `${s.title} | ${SITE_NAME}`
+  const description =
+    s.description?.slice(0, 155) ??
+    `A pilot looking for a partnership share${location ? ` near ${location}` : ''}${
+      s.max_buy_in ? ` — up to ${formatPrice(s.max_buy_in)} buy-in` : ''
+    }. See the full listing on ClubHanger.`
+
+  const url = `${SITE_URL}/partnerships/seeking/${s.id}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+      siteName: SITE_NAME,
+      // Seeker listings have no photo (the avatar is a generated SVG, not a real
+      // photo), so this always falls back to the site default — never fabricated.
+      images: [{ url: DEFAULT_OG_IMAGE, alt: s.title }],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [DEFAULT_OG_IMAGE] },
+  }
 }
 
 export default async function SeekerDetailPage({
@@ -200,7 +240,10 @@ export default async function SeekerDetailPage({
           <ChevronLeft className="h-4 w-4" /> Back to Seeking Listings
         </Link>
         <div className="flex flex-col items-end gap-2">
-          <SaveListingButton listingId={s.id} listingType="seeker" initialSaved={!!savedRowId} variant="full" />
+          <div className="flex items-center gap-2">
+            <ShareListingButton url={`${SITE_URL}/partnerships/seeking/${s.id}`} />
+            <SaveListingButton listingId={s.id} listingType="seeker" initialSaved={!!savedRowId} variant="full" />
+          </div>
           {notesEnabled && savedRowId && (
             <SavedListingNote savedRowId={savedRowId} note={savedNote} />
           )}
