@@ -1,3 +1,38 @@
+## 2026-07-11T12:32:04Z — Night Shift run: 25 cycles (PASS 22 / FAIL 1) — safety cap (25)
+- Models: cycles on sonnet; 1 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $98.9692 of $120 cap
+
+- PASS — partnership-detail-alert-cta — added a make/model-scoped Get alerts capture box to every /partnerships/[id] page sidebar, closing the last remaining listing-detail alert
+- cycle produced no verdict (exit 124)
+- PASS — alert-manage-edit-criteria — signed-in users can now edit an existing alert's make/model/state/price criteria inline on /alerts/manage instead of deleting and re-creatin
+- PASS — aircraft-price-drop-alerts — weekly alert-digest email now notifies subscribers on genuine aircraft price drops (not just new listings), reusing existing `previous_price
+- PASS — price-drop-email-template — Built a dedicated price-drop notification email (photo, struck-through old/bold new price, percent-off badge, CTA) plus a dev-only preview ro
+- PASS — alert-price-drop-opt-in — Added a Also alert me when the price drops on a match checkbox (default on) to aircraft alert signup boxes and a matching On/Off toggle per ale
+- PASS — alert-digest-frequency — added a Weekly/Daily digest cadence choice at alert capture (all listing types) and on `/alerts/manage`, scoped down from the backlog's instant 
+- PASS — alert-digest-email-redesign — Rebuilt the weekly alert-digest email from a plain slate count-only notice into a warm-cream, on-brand email with real matching-listing pre
+- PASS — airport-alert-cta — added the email-only Get alerts for new listings signup to every `/airports/[icao]` page (partnerships-scoped, matching the page's own search link), 
+- PASS — alert-social-proof-count — added a live, honesty-gated N buyers get alerts for this line to the aircraft listing-detail and make/model alert-capture boxes, closing out t
+- PASS — alert-cross-sell — Confirming an aircraft or partnerships alert now offers a one-click counterpart alert suggestion (e.g. Cessna aircraft → Cessna partnerships) on `/a
+- PASS — seeker-share-metadata — pilot-seeking listing pages (`/partnerships/seeking/[id]`) now get real OG/Twitter share cards and a copy-link Share button, matching the pattern
+- PASS — fix-double-site-suffix-title — fixed the doubled 
+- ABORT — none — plan needed`
+- PASS — sold-listing-alert-cta — Added an alert-signup box to the sold/removed aircraft listing page, the highest-intent alert moment on the site (buyer wanted this exact plane,
+- PASS — branded-404-alert-catch — Replaced Next's bare default 404 with an on-brand ClubHanger not-found page (friendly copy, links to browse aircraft/partnerships, and a Get ne
+- PASS — alert-live-match-count — Added an honest N listings match right now line to each alert on `/alerts/manage`, so subscribers can tell if an alert is well-scoped or dead.
+- PASS — saved-search-alert-button — Added a one-click Get email alerts button to every row on `/searches` that turns a saved search into a real, working email alert, and fixed `
+- PASS — alert-resend-confirmation — added a Resend confirmation email link on the alert signup form's post-submit state and a Resend button on pending alerts in /alerts/manage, 
+- PASS — seeker-alert-airport-state — Pilot-seeking alerts saved with an airport/state filter on `/partnerships/seeking` no longer silently over-match on any new seeker anywhere;
+- PASS — partnership-price-drop-alerts — partnership (buy-in) alerts now count genuine price drops in the weekly digest, labeled honestly as buy-in drop(s) distinct from new-list
+- PASS — alert-cross-sell-sibling-model — the post-alert-confirmation cross-sell now suggests a curated sibling model (e.g. Cessna 172 → 182, SR20 → SR22) before falling back
+- ABORT — none — plan needed`
+- PASS — alert-manage-by-token — `/alerts/manage?token=<unsubscribe_token>` now lets email-only alert subscribers (no account) pause/resume/delete/edit/toggle their alerts from t
+- PASS — alert-signin-one-click — Signed-in visitors now see a single Alert me — we'll email {their email} button instead of an email field on every alert signup box site-wide,
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.0 on 2 cores, sustained ~15 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 25 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-11T07:03:05Z — Night Shift run: 1 cycles (PASS 0 / FAIL 0) — backlog drained
 - Models: cycles on sonnet; 0 escalated to opus; 0 quality-judged on opus
 - Night spend so far: $3.4049 of $120 cap
