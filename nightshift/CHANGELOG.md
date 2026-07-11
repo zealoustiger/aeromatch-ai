@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T13:18:56Z — DRAIN SUMMARY
+- Cycles this run: 5 (PASS 5 / FAIL 0 / ABORT 0)
+- Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $114.5929 of $120 cap
+- Stopped because: night ended
+- Run: 20260711T123207Z
+
 ## 2026-07-11T13:12:32Z — PASS — alert-cross-sell-nearby-state
 - Pages: /alerts/status
 - What: **The "also want an alert for X?" prompt you see right after confirming an
