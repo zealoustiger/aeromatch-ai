@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Bell, ExternalLink, LogIn } from 'lucide-react'
+import { Bell, LogIn } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_NAME } from '@/lib/seo'
-import AlertActions from '@/components/AlertActions'
+import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
+import AlertEditForm from '@/components/AlertEditForm'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -146,18 +147,12 @@ export default async function AlertsManagePage() {
                       Subscribed {new Date(a.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {a.source_path ? (
-                      <Link
-                        href={a.source_path}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        View
-                      </Link>
-                    ) : null}
-                    <AlertActions id={a.id} status={a.status} />
-                  </div>
+                  <AlertEditForm
+                    id={a.id}
+                    status={a.status}
+                    sourcePath={a.source_path}
+                    target={parseEditableAlertTarget(a.source_path)}
+                  />
                 </li>
               ))}
             </ul>

@@ -1,0 +1,237 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import Link from 'next/link'
+import { ExternalLink, Pencil, CheckCircle2, X } from 'lucide-react'
+import { updateAlertCriteria } from '@/app/actions'
+import type { EditableAlertTarget } from '@/lib/alertEditCriteria'
+import AlertActions from '@/components/AlertActions'
+
+const US_STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
+  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
+  'VA', 'WA', 'WV', 'WI', 'WY',
+]
+
+const inputClass =
+  'w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100'
+const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500'
+
+interface Props {
+  id: string
+  status: string
+  sourcePath: string | null
+  /** Pre-parsed from `source_path` server-side; null when this alert isn't editable
+   *  here (legacy path-segment SEO source, or none) — no Edit button renders then. */
+  target: EditableAlertTarget | null
+}
+
+/**
+ * Wraps the existing View link + `AlertActions` (Pause/Resume/Delete, unchanged)
+ * with a new "Edit" toggle that expands an inline criteria form. Kept as one
+ * component (rather than a separate toggle + panel) so the open/pre-filled-field
+ * state has a single owner and the whole action cluster stays one flex item in
+ * the parent `<li>` row — no fragile multi-child flex-wrap layout needed.
+ */
+export default function AlertEditForm({ id, status, sourcePath, target }: Props) {
+  const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  const [make, setMake] = useState('')
+  const [model, setModel] = useState('')
+  const [state, setState] = useState('')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [airport, setAirport] = useState('')
+
+  function openEdit() {
+    if (!target) return
+    // Re-seed from the current `target` prop every time the form opens, rather
+    // than only at mount, so a just-saved edit (new source_path from the parent
+    // server component re-render) is reflected next time this row is reopened.
+    setMake(target.make)
+    setModel('model' in target ? target.model : '')
+    setState('state' in target ? target.state : '')
+    setMinPrice('minPrice' in target ? target.minPrice : '')
+    setMaxPrice('maxPrice' in target ? target.maxPrice : '')
+    setAirport('airport' in target ? target.airport : '')
+    setError(null)
+    setOpen(true)
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!target) return
+    setError(null)
+    startTransition(async () => {
+      const fields =
+        target.type === 'aircraft'
+          ? { make, model, state, minPrice, maxPrice }
+          : target.type === 'partnership'
+            ? { make, state, airport }
+            : { make, model }
+      const result = await updateAlertCriteria(id, fields)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setOpen(false)
+      setSaved(true)
+    })
+  }
+
+  return (
+    <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto">
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {sourcePath ? (
+          <Link
+            href={sourcePath}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            View
+          </Link>
+        ) : null}
+        <AlertActions id={id} status={status} />
+        {target ? (
+          <button
+            type="button"
+            onClick={() => (open ? setOpen(false) : openEdit())}
+            title="Edit this alert's criteria"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {open ? 'Cancel' : 'Edit'}
+          </button>
+        ) : null}
+      </div>
+
+      {open && target ? (
+        <form
+          onSubmit={handleSubmit}
+          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 sm:w-96"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div className={target.type === 'partnership' ? 'col-span-2' : ''}>
+              <label className={labelClass}>Make</label>
+              <input
+                type="text"
+                value={make}
+                onChange={(e) => setMake(e.target.value)}
+                placeholder="Any make"
+                className={inputClass}
+              />
+            </div>
+
+            {target.type !== 'partnership' ? (
+              <div>
+                <label className={labelClass}>Model</label>
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="Any model"
+                  className={inputClass}
+                />
+              </div>
+            ) : null}
+
+            {target.type !== 'seeker' ? (
+              <div>
+                <label className={labelClass}>State</label>
+                <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
+                  <option value="">Any state</option>
+                  {US_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            {target.type === 'partnership' ? (
+              <div>
+                <label className={labelClass}>Home airport</label>
+                <input
+                  type="text"
+                  value={airport}
+                  onChange={(e) => setAirport(e.target.value.toUpperCase())}
+                  placeholder="e.g. KHWD"
+                  className={inputClass}
+                />
+              </div>
+            ) : null}
+
+            {target.type === 'aircraft' ? (
+              <>
+                <div>
+                  <label className={labelClass}>Min price ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    placeholder="Min"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Max price ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    placeholder="Max"
+                    className={inputClass}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={isPending}
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
+            >
+              {isPending ? 'Saving…' : 'Save changes'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {saved ? (
+        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+          <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-sm text-white shadow-2xl">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            <span>Alert updated</span>
+            <button
+              type="button"
+              onClick={() => setSaved(false)}
+              aria-label="Dismiss"
+              className="-mr-1 rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
