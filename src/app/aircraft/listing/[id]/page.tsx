@@ -487,7 +487,7 @@ export async function generateMetadata({
     if (sold) {
       const label = aircraftLabel(sold)
       return {
-        title: `${label} — sold | ${SITE_NAME}`,
+        title: { absolute: `${label} — sold | ${SITE_NAME}` },
         description: `This ${label} is no longer listed for sale. Browse similar aircraft for sale on ClubHanger.`,
         robots: { index: false, follow: true },
         alternates: { canonical: `${SITE_URL}/aircraft/listing/${sold.id}` },
@@ -513,7 +513,7 @@ export async function generateMetadata({
   const ogImage = realPhoto ?? DEFAULT_OG_IMAGE
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: {

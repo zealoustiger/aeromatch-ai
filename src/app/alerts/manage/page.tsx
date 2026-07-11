@@ -12,7 +12,7 @@ import FrequencyToggle from '@/components/FrequencyToggle'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
-  title: `Your alerts | ${SITE_NAME}`,
+  title: { absolute: `Your alerts | ${SITE_NAME}` },
   description: 'See every email alert subscription tied to your account.',
   robots: { index: false, follow: false },
 }
