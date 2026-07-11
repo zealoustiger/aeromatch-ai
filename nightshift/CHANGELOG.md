@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-11T12:59:00Z — PASS — cost-calculator-alert-cta
+- Pages: `/tools/cost-calculator`
+- What: **The cost calculator — where a visitor is actively working out whether a
+  partnership share pencils out — now offers to alert them about new partnership
+  listings.** Previously the page had zero alert capture (verified: no `AlertSignup`
+  anywhere under `/tools`), so someone who ran the numbers and liked what they saw had no
+  way to ask us to tell them when a real listing showed up; they just had to remember to
+  come back. A "Get new-listing alerts" box now sits below the explainer copy.
+- Goal: `[goal]` tier — tiers 1 (`[bug]`) and 2 (`[want]`) both empty this cycle (re-verified
+  by direct backlog read: no open `[bug]`; every open `[want]` remains blocked on a human
+  mock/data-access call per its own note — collection-layout redesign, Trade-A-Plane
+  ingestion, Bay-Area benchmark). Alert-experience `[P1][goal]` queue is fully shipped
+  (verified: no unstruck `[P1][goal]` entry in the alert section of BACKLOG.md), so pulled
+  the top open `[P2][goal]` alert item: "Contextual alert CTA on `/tools/cost-calculator`"
+  (BACKLOG.md, alert-experience refill section) — still ahead of the older, lower-priority
+  ACTIVATION pillars per GOAL.md ("do alerts before the older activation pillars").
+- Spec: nightshift/specs/20260711T124726Z-cost-calculator-alert-cta.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0.
+  **Deviated from the backlog item's literal text, and caught a second bug while doing it —
+  both explained in the spec's "Deviation" section:** (1) the item assumed the calculator
+  collects make/model to prefill "Get alerts when a {make} {model} is listed" — false by
+  reading `CostCalculator.tsx` (buy-in/monthly-fixed/wet-rate/hours/rental-rate only, zero
+  aircraft-identity field), so that exact CTA copy would have been fabricated context;
+  shipped a general `AlertSignup` (`noun="partnership"`, no `context`) instead — still a
+  genuinely new capture point. (2) The obvious `sourcePath="/tools/cost-calculator"` would
+  have silently created a dead alert: `alert-digest/route.ts`'s `parseSourcePath` only
+  recognizes real site routes and returns `null` (counted `unparseable`, permanently
+  skipped) for anything else — a visitor would get the "we'll email you" promise and never
+  receive anything. Pointed `sourcePath` at `/partnerships` (bare, all-partnerships, already
+  supported by `parseSourcePath`/`alertMatchCounts`/`alertEditCriteria`) instead. Verified
+  end-to-end against the real prod DB: real browser click-through submit with a throwaway
+  `qa-cost-calculator-alert-cta-<ts>@example.com` address, confirmed the inserted `alerts`
+  row has `source_path: '/partnerships'` and `context: null` (service-role read), then
+  deleted that exact row (service-role delete, confirmed 0 remaining) — no residual test
+  data. Visual cycle — QA smoke (`qa-smoke.mjs`, production `next start` build) on
+  `/tools/cost-calculator` + `/tools/earnings-calculator` (control, unchanged): 4/4 pass
+  (HTTP 200, zero app-origin console errors, zero horizontal overflow at desktop 1280 +
+  mobile 375); desktop + mobile screenshots reviewed — new section renders cleanly below the
+  explainer copy, on-brand sky-blue card, no layout crowding, footer unaffected. Confirmed no
+  stray `next-server` process left running after QA.
+- Schema: none.
+- Screenshots: nightshift/screenshots/cost-calculator-alert-cta/
+- Next: the calculator's `variant="compact"` embed (used e.g. on `/partnerships/[id]`) could
+  get the same general alert CTA if it proves out here; the P2 alert-experience queue's
+  remaining items are "Seeker alerts: airport/state in the live match count," "Partnership
+  sample cards in the digest email," "Saved-search ↔ alert unification slice 2," and
+  "Cross-sell: nearby-state suggestion on `/alerts/status`."
+
 ## 2026-07-11T12:39:00Z — PASS — price-drop-email-live
 - Pages: (no page — cron/email logic only) `/api/cron/alert-digest`, price-drop notification emails
 - What: **The best-in-aviation single-listing price-drop email — built weeks ago but stuck behind a dev-only preview link — is now actually live.** When an aircraft alert's weekly/daily check finds a genuine price drop and no new listings to also report, subscribers now get the rich single-listing email (real photo, struck-through old price next to the new one, "View listing" button) featuring the biggest genuine price cut, instead of the old bare "1 price drop" line with no detail. Alerts that also have new listings that period are unaffected — they still get the combined digest so nothing gets dropped.

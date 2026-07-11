@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Calculator } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import CostCalculator from '@/components/CostCalculator'
+import AlertSignup from '@/components/AlertSignup'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Cost Calculator — True Cost of Co-Ownership',
@@ -56,6 +57,13 @@ export default function CostCalculatorPage() {
           .
         </p>
       </div>
+
+      {/* sourcePath must be a real, matchable route (see alert-digest's
+          parseSourcePath) — "/tools/cost-calculator" itself isn't one, which
+          would silently create an alert that can never fire. Point it at
+          "/partnerships" (bare, all-partnerships) so a "get new-listing
+          alerts" promise here is actually kept. */}
+      <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" />
     </div>
     </div>
   )
