@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { sendEmail, buildAlertDigestEmail, type AlertDigestSample } from '@/lib/email'
+import {
+  sendEmail,
+  buildAlertDigestEmail,
+  buildPriceDropEmail,
+  pickBestPriceDropSample,
+  type AlertDigestSample,
+} from '@/lib/email'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
@@ -645,16 +651,38 @@ export async function GET(req: NextRequest) {
     const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
 
-    const { subject, html, text } = buildAlertDigestEmail({
-      context: alert.context ?? null,
-      samples,
-      newCount,
-      dropCount,
-      dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
-      listingsUrl,
-      manageUrl,
-      unsubscribeUrl,
-    })
+    // When this send is purely about a price drop on an aircraft alert (no
+    // new listings to also report), feature the single best real drop via
+    // the rich single-listing template instead of the aggregate digest's
+    // bare "+1 price drop" count line. Falls back to the aggregate digest if,
+    // for any reason, no sample qualifies (e.g. the count and sample queries
+    // disagree at the edge) — never silently drops the notification.
+    const bestDrop =
+      target.type === 'aircraft' && newCount === 0 && dropCount > 0 ? pickBestPriceDropSample(samples) : null
+
+    const { subject, html, text } = bestDrop
+      ? buildPriceDropEmail({
+          title: bestDrop.title,
+          photoUrl: bestDrop.photoUrl,
+          previousPrice: bestDrop.previousPrice as number,
+          askingPrice: bestDrop.price as number,
+          listingUrl: bestDrop.url,
+          manageUrl,
+          unsubscribeUrl,
+          // Honesty: this is a daily/weekly cron send, never real-time —
+          // never claim "just dropped".
+          periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
+        })
+      : buildAlertDigestEmail({
+          context: alert.context ?? null,
+          samples,
+          newCount,
+          dropCount,
+          dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
+          listingsUrl,
+          manageUrl,
+          unsubscribeUrl,
+        })
 
     const result = await sendEmail({ to: alert.email, subject, html, text })
 

@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildPriceDropEmail, buildAlertDigestEmail } from './email.ts'
+import { buildPriceDropEmail, buildAlertDigestEmail, pickBestPriceDropSample } from './email.ts'
 
 const BASE = {
   title: '2013 Cessna 172S Skyhawk',
@@ -17,6 +17,17 @@ const BASE = {
 test('percent-off is computed correctly and named in the subject', () => {
   const { subject } = buildPriceDropEmail({ ...BASE, photoUrl: null })
   assert.equal(subject, '10% price drop — 2013 Cessna 172S Skyhawk now $180,000')
+})
+
+test('the text body never claims the drop "just" happened — a daily/weekly cron send, not real-time', () => {
+  const { text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  assert.doesNotMatch(text, /just dropped/i)
+  assert.match(text, /dropped 10% this week/)
+})
+
+test('periodLabel overrides the default "this week" wording (e.g. "yesterday" for a daily alert)', () => {
+  const { text } = buildPriceDropEmail({ ...BASE, photoUrl: null, periodLabel: 'yesterday' })
+  assert.match(text, /dropped 10% yesterday/)
 })
 
 test('old and new price are both formatted as USD in the text body', () => {
@@ -165,4 +176,42 @@ test('digest: footer includes both Manage alerts and Unsubscribe links', () => {
   assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage"/)
   assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage/)
   assert.match(text, /Unsubscribe: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=xyz/)
+})
+
+const sample = (overrides: Partial<Parameters<typeof pickBestPriceDropSample>[0][number]>) => ({
+  title: 'Aircraft',
+  photoUrl: null,
+  isPlaceholder: false,
+  year: 2010,
+  ttaf: 2000,
+  location: null,
+  price: 100_000,
+  previousPrice: 120_000,
+  url: 'https://clubhanger.com/aircraft/listing/x',
+  ...overrides,
+})
+
+test('pickBestPriceDropSample: picks the largest % decrease, not the first/most-recent', () => {
+  const best = pickBestPriceDropSample([
+    sample({ title: 'Small drop', previousPrice: 200_000, price: 190_000 }), // 5%
+    sample({ title: 'Big drop', previousPrice: 200_000, price: 150_000 }), // 25%
+    sample({ title: 'Medium drop', previousPrice: 200_000, price: 170_000 }), // 15%
+  ])
+  assert.equal(best?.title, 'Big drop')
+})
+
+test('pickBestPriceDropSample: ignores samples with no genuine decrease or missing prices', () => {
+  const best = pickBestPriceDropSample([
+    sample({ title: 'No previous price', previousPrice: undefined, price: 100_000 }),
+    sample({ title: 'No price', previousPrice: 120_000, price: null }),
+    sample({ title: 'Price went up', previousPrice: 100_000, price: 120_000 }),
+    sample({ title: 'Flat', previousPrice: 100_000, price: 100_000 }),
+    sample({ title: 'Genuine drop', previousPrice: 120_000, price: 100_000 }),
+  ])
+  assert.equal(best?.title, 'Genuine drop')
+})
+
+test('pickBestPriceDropSample: returns null for an empty or all-disqualified list', () => {
+  assert.equal(pickBestPriceDropSample([]), null)
+  assert.equal(pickBestPriceDropSample([sample({ previousPrice: 100_000, price: 100_000 })]), null)
 })

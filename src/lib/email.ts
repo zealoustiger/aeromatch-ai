@@ -223,7 +223,10 @@ Reply in-thread: ${opts.threadUrl}`
  * with enough detail (photo, old-vs-new price) to be useful standalone,
  * matching GOAL.md's "best listing alert email in aviation" bar. `photoUrl`
  * is optional — the layout degrades gracefully (no broken `<img>`) when a
- * listing has no usable photo.
+ * listing has no usable photo. `periodLabel` (default "this week") names how
+ * recently the drop happened — the send path is a daily/weekly cron, never
+ * real-time, so the copy must never claim "just dropped" (GOAL.md honesty
+ * rule); pass "yesterday" for a daily-frequency alert.
  */
 export function buildPriceDropEmail(opts: {
   title: string
@@ -233,6 +236,7 @@ export function buildPriceDropEmail(opts: {
   listingUrl: string
   manageUrl: string
   unsubscribeUrl: string
+  periodLabel?: string
 }): { subject: string; html: string; text: string } {
   const pct = Math.round(((opts.previousPrice - opts.askingPrice) / opts.previousPrice) * 100)
   const oldPrice = formatUsd(opts.previousPrice)
@@ -277,7 +281,8 @@ export function buildPriceDropEmail(opts: {
   </body>
 </html>`
 
-  const text = `${opts.title} just dropped ${pct}% — now ${newPrice} (was ${oldPrice})
+  const periodLabel = opts.periodLabel ?? 'this week'
+  const text = `${opts.title} dropped ${pct}% ${periodLabel} — now ${newPrice} (was ${oldPrice})
 
 View listing: ${opts.listingUrl}
 
@@ -318,6 +323,27 @@ export type AlertDigestSample = {
   price: number | null
   previousPrice?: number | null
   url: string
+}
+
+/**
+ * Pick the single best price-drop sample from a set — the one with the
+ * largest genuine `%` decrease, not just the most recent — for surfacing via
+ * the rich single-listing `buildPriceDropEmail` template. Samples with no
+ * usable before/after price (missing `previousPrice`/`price`, or no real
+ * decrease) are ignored. Returns null when nothing qualifies.
+ */
+export function pickBestPriceDropSample(samples: AlertDigestSample[]): AlertDigestSample | null {
+  let best: AlertDigestSample | null = null
+  let bestPct = 0
+  for (const s of samples) {
+    if (s.previousPrice == null || s.price == null || s.previousPrice <= s.price) continue
+    const pct = (s.previousPrice - s.price) / s.previousPrice
+    if (!best || pct > bestPct) {
+      best = s
+      bestPct = pct
+    }
+  }
+  return best
 }
 
 function specsLine(s: AlertDigestSample): string {
