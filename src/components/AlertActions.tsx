@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Pause, Play, Trash2 } from 'lucide-react'
-import { pauseAlert, resumeAlert, deleteAlert } from '@/app/actions'
+import { Pause, Play, Trash2, Send } from 'lucide-react'
+import { pauseAlert, resumeAlert, deleteAlert, resendAlertConfirmation } from '@/app/actions'
 
 export default function AlertActions({ id, status }: { id: string; status: string }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [resent, setResent] = useState(false)
 
   function run(action: (id: string) => Promise<{ ok?: boolean; error?: string }>) {
     setError(null)
@@ -21,8 +22,29 @@ export default function AlertActions({ id, status }: { id: string; status: strin
     run(deleteAlert)
   }
 
+  function handleResend() {
+    setError(null)
+    setResent(false)
+    startTransition(async () => {
+      const result = await resendAlertConfirmation(id)
+      if (result.error) setError(result.error)
+      else setResent(true)
+    })
+  }
+
   return (
     <div className="flex shrink-0 items-center gap-1.5">
+      {status === 'pending' ? (
+        <button
+          onClick={handleResend}
+          disabled={isPending}
+          title="Resend the confirmation email"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 disabled:opacity-50"
+        >
+          <Send className="h-3.5 w-3.5" />
+          {resent ? 'Sent!' : 'Resend'}
+        </button>
+      ) : null}
       {status === 'confirmed' ? (
         <button
           onClick={() => run(pauseAlert)}

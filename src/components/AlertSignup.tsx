@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Bell, CheckCircle2 } from 'lucide-react'
-import { subscribeToAlerts } from '@/app/actions'
+import { subscribeToAlerts, resendAlertConfirmationByEmail } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
@@ -58,6 +58,8 @@ export default function AlertSignup({
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [pending, setPending] = useState(false)
+  const [resendState, setResendState] = useState<'idle' | 'pending' | 'sent' | 'error'>('idle')
+  const [resendError, setResendError] = useState('')
   // Price-drop matching only exists for aircraft-for-sale alerts today (see
   // alert-digest's countRecentAircraftPriceDrops) — partnerships/seekers have no
   // price-drop tracking, so don't offer a toggle that would silently do nothing.
@@ -93,6 +95,19 @@ export default function AlertSignup({
     setSubmitted(true)
   }
 
+  async function handleResend() {
+    if (resendState === 'pending') return
+    setResendState('pending')
+    setResendError('')
+    const result = await resendAlertConfirmationByEmail(email, sourcePath)
+    if (result.error) {
+      setResendError(result.error)
+      setResendState('error')
+      return
+    }
+    setResendState('sent')
+  }
+
   return (
     <section className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
       {submitted ? (
@@ -103,6 +118,25 @@ export default function AlertSignup({
             <p className="mt-1 text-sm text-slate-600">
               We just emailed you a confirmation link. Click it to start getting alerts when
               {' '}{doneCopy}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              {resendState === 'sent' ? (
+                'Sent! Check your inbox again in a moment.'
+              ) : resendState === 'error' ? (
+                resendError
+              ) : (
+                <>
+                  Didn&rsquo;t get it?{' '}
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendState === 'pending'}
+                    className="font-medium text-sky-700 underline-offset-2 hover:underline disabled:opacity-60"
+                  >
+                    {resendState === 'pending' ? 'Resending…' : 'Resend confirmation email'}
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>

@@ -776,3 +776,13 @@ alter table alerts add column if not exists price_drop_opt_in boolean not null d
 -- either way.
 alter table alerts add column if not exists frequency text not null default 'weekly'
   check (frequency in ('daily', 'weekly'));
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_last_confirm_sent_at
+-- Lets a subscriber whose double-opt-in confirmation email got lost request it
+-- again from `/alerts/manage` (Pending rows) or right after submitting
+-- `AlertSignup`, rate-limited to 1 resend per row per ~10 minutes. Nullable, no
+-- default needed. Apply in the Supabase SQL editor. Until applied, the resend
+-- action still sends the email (it just can't enforce the cooldown — the
+-- update after sending fails soft and is skipped, same graceful-fallback
+-- pattern as price_drop_opt_in/frequency above).
+alter table alerts add column if not exists last_confirm_sent_at timestamptz;
