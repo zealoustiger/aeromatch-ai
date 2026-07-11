@@ -217,6 +217,80 @@ Reply in-thread: ${opts.threadUrl}`
   return { subject, html, text }
 }
 
+/**
+ * Build the price-drop notification email for one specific matching listing —
+ * distinct from `buildAlertDigestEmail`'s aggregate weekly count, this fires
+ * with enough detail (photo, old-vs-new price) to be useful standalone,
+ * matching GOAL.md's "best listing alert email in aviation" bar. `photoUrl`
+ * is optional — the layout degrades gracefully (no broken `<img>`) when a
+ * listing has no usable photo.
+ */
+export function buildPriceDropEmail(opts: {
+  title: string
+  photoUrl: string | null
+  previousPrice: number
+  askingPrice: number
+  listingUrl: string
+  manageUrl: string
+  unsubscribeUrl: string
+}): { subject: string; html: string; text: string } {
+  const pct = Math.round(((opts.previousPrice - opts.askingPrice) / opts.previousPrice) * 100)
+  const oldPrice = formatUsd(opts.previousPrice)
+  const newPrice = formatUsd(opts.askingPrice)
+  const subject = `${pct}% price drop — ${opts.title} now ${newPrice}`
+
+  const photo = opts.photoUrl
+    ? `<img src="${escapeAttr(opts.photoUrl)}" alt="${escapeAttr(opts.title)}" width="472" style="display:block;width:100%;max-width:472px;height:auto;border-radius:12px;margin:0 0 18px;" />`
+    : ''
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        ${photo}
+        <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)}</h1>
+        <p style="margin:0 0 14px;">
+          <span style="display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;">
+            ${pct}% price drop
+          </span>
+        </p>
+        <p style="margin:0 0 22px;">
+          <span style="color:#94a3b8;text-decoration:line-through;font-size:15px;margin-right:8px;">${oldPrice}</span>
+          <span style="color:#0f172a;font-weight:700;font-size:22px;">${newPrice}</span>
+        </p>
+        <p style="margin:0;">
+          <a href="${escapeAttr(opts.listingUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            View listing
+          </a>
+        </p>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you have an alert set up on ClubHanger.
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        &middot;
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${opts.title} just dropped ${pct}% — now ${newPrice} (was ${oldPrice})
+
+View listing: ${opts.listingUrl}
+
+Manage alerts: ${opts.manageUrl}
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
+function formatUsd(n: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
