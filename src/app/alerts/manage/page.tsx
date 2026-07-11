@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_NAME } from '@/lib/seo'
 import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { normalizeFrequency } from '@/lib/alertFrequency'
 import AlertEditForm from '@/components/AlertEditForm'
 import PriceDropToggle from '@/components/PriceDropToggle'
@@ -109,6 +110,12 @@ export default async function AlertsManagePage() {
     alerts = data ?? []
   }
 
+  // Real, server-computed "how many listings match this alert right now" per
+  // row (GOAL.md: helps a subscriber tell if their alert is well-scoped or
+  // dead). Runs in parallel; a row whose source_path isn't a recognized shape
+  // gets `null` back and renders no count line — never a fake 0.
+  const matchCounts = await Promise.all(alerts.map((a) => getAlertMatchCount(a.source_path)))
+
   return (
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -145,8 +152,9 @@ export default async function AlertsManagePage() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {alerts.map((a) => {
+              {alerts.map((a, i) => {
                 const target = parseEditableAlertTarget(a.source_path)
+                const match = matchCounts[i]
                 return (
                   <li
                     key={a.id}
@@ -182,6 +190,16 @@ export default async function AlertsManagePage() {
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
                         Subscribed {new Date(a.created_at).toLocaleDateString()}
+                        {match ? (
+                          <>
+                            {' · '}
+                            <span className={match.count > 0 ? 'text-slate-500' : 'text-amber-600'}>
+                              {match.count} {match.noun}
+                              {match.count === 1 ? '' : 's'} match{match.count === 1 ? 'es' : ''} right
+                              now
+                            </span>
+                          </>
+                        ) : null}
                       </p>
                     </div>
                     <AlertEditForm

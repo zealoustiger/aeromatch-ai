@@ -1,0 +1,241 @@
+import { createAdminClient } from './supabase-admin'
+import { getStateBySlug, getMakeBySlug, getMakeModel } from './seo'
+import { matchesModelFilter } from './seekerModelFilter'
+
+/**
+ * "How many listings match this alert right now" for `/alerts/manage`.
+ *
+ * Deliberately a separate parser from alert-digest's `parseSourcePath`
+ * (`src/app/api/cron/alert-digest/route.ts`) rather than an import from it —
+ * same precedent as `alertEditCriteria.ts` (see its header comment): the cron
+ * route is a live production send path with no test harness, so it's left
+ * untouched this cycle. The shapes handled below mirror the cron's parser
+ * shape-for-shape so a count here stays honest with what the digest would
+ * actually match. If the two ever need to share more logic, extracting a
+ * common module is a follow-up, not this slice.
+ */
+
+type AlertTarget =
+  | {
+      type: 'aircraft'
+      make?: string
+      model?: string
+      modelPattern?: string
+      notModelPattern?: string
+      state?: string
+      minPrice?: number
+      maxPrice?: number
+      minYear?: number
+      maxYear?: number
+      maxTt?: number
+    }
+  | { type: 'partnership'; make?: string; state?: string; icao?: string }
+  | { type: 'seeker'; make?: string; model?: string }
+
+const numOrUndef = (v: string | undefined): number | undefined => {
+  if (!v) return undefined
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? n : undefined
+}
+
+function parseSourcePath(raw: string | null): AlertTarget | null {
+  const [pathOnly, qs] = (raw ?? '').split('?')
+  const p = pathOnly.toLowerCase().replace(/\/$/, '') || '/'
+
+  if (qs && (p === '/aircraft' || p === '/partnerships' || p === '/partnerships/seeking')) {
+    const params = new URLSearchParams(qs)
+    const g = (k: string) => params.get(k)?.trim() || undefined
+    if (p === '/aircraft') {
+      return {
+        type: 'aircraft',
+        make: g('make'),
+        model: g('model'),
+        state: g('state')?.toUpperCase(),
+        minPrice: numOrUndef(g('min_price')),
+        maxPrice: numOrUndef(g('max_price')),
+        minYear: numOrUndef(g('min_year')),
+        maxYear: numOrUndef(g('max_year')),
+        maxTt: numOrUndef(g('max_tt')),
+      }
+    }
+    if (p === '/partnerships/seeking') {
+      return { type: 'seeker', make: g('make'), model: g('model') }
+    }
+    return {
+      type: 'partnership',
+      make: g('make'),
+      state: g('state')?.toUpperCase(),
+      icao: g('airport')?.toUpperCase(),
+    }
+  }
+
+  // ── Aircraft paths ────────────────────────────────────────────────────────
+
+  const forSaleState = p.match(/^\/aircraft\/for-sale\/(.+)$/)
+  if (forSaleState) {
+    const entry = getStateBySlug(forSaleState[1])
+    return entry ? { type: 'aircraft', state: entry.code } : null
+  }
+
+  // /aircraft/mission/... → complex preset, skip
+  if (p.startsWith('/aircraft/mission/')) return null
+
+  const makeModelState = p.match(/^\/aircraft\/([^/]+)\/([^/]+)\/([a-z]{2})$/)
+  if (makeModelState) {
+    const [, makeSlug, modelSlug, stateCode] = makeModelState
+    const target = resolveAircraftMakeModel(makeSlug, modelSlug)
+    if (!target) return null
+    return { ...target, state: stateCode.toUpperCase() }
+  }
+
+  const makeModel = p.match(/^\/aircraft\/([^/]+)\/([^/]+)$/)
+  if (makeModel) {
+    return resolveAircraftMakeModel(makeModel[1], makeModel[2])
+  }
+
+  const makeOnly = p.match(/^\/aircraft\/([^/]+)$/)
+  if (makeOnly) {
+    const makeEntry = getMakeBySlug(makeOnly[1])
+    if (!makeEntry) return null
+    return { type: 'aircraft', make: makeEntry.filter }
+  }
+
+  if (p === '/aircraft') return { type: 'aircraft' }
+
+  // ── Partnership paths ─────────────────────────────────────────────────────
+
+  const nearIcao = p.match(/^\/partnerships\/near\/([a-z0-9]{3,4})$/)
+  if (nearIcao) return { type: 'partnership', icao: nearIcao[1].toUpperCase() }
+
+  const pMake = p.match(/^\/partnerships\/make\/([^/]+)$/)
+  if (pMake) {
+    const makeEntry = getMakeBySlug(pMake[1])
+    if (!makeEntry) return null
+    return { type: 'partnership', make: makeEntry.filter }
+  }
+
+  const pState = p.match(/^\/partnerships\/state\/([a-z]{2})$/)
+  if (pState) return { type: 'partnership', state: pState[1].toUpperCase() }
+
+  if (p === '/partnerships/seeking') return { type: 'seeker' }
+
+  if (p === '/partnerships') return { type: 'partnership' }
+
+  return null
+}
+
+/** Resolve a make+model slug pair to an aircraft AlertTarget, or null if unknown. */
+function resolveAircraftMakeModel(
+  makeSlug: string,
+  modelSlug: string
+): Extract<AlertTarget, { type: 'aircraft' }> | null {
+  const makeEntry = getMakeBySlug(makeSlug)
+  if (!makeEntry) return null
+
+  const seoEntry = getMakeModel(makeSlug, modelSlug)
+  if (seoEntry) {
+    return {
+      type: 'aircraft',
+      make: seoEntry.make,
+      modelPattern: seoEntry.modelPattern,
+      notModelPattern: seoEntry.notModelPattern,
+    }
+  }
+
+  return {
+    type: 'aircraft',
+    make: makeEntry.filter,
+    modelPattern: `${modelSlug}%`,
+  }
+}
+
+// Same floor the digest cron applies (sub-$50k listings are parts/project
+// aircraft, not real inventory a buyer alert should count as a "match").
+const PARTS_PRICE_FLOOR = 50_000
+
+async function countActiveAircraft(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'aircraft' }>
+): Promise<number> {
+  let q = supabase
+    .from('aircraft_for_sale')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.model) q = q.eq('model', target.model)
+  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
+  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
+  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
+  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
+  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+
+  const { count, error } = await q
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
+async function countActivePartnerships(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'partnership' }>
+): Promise<number> {
+  let q = supabase.from('partnerships').select('id', { count: 'exact', head: true }).eq('status', 'active')
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.icao) q = q.eq('home_airport', target.icao)
+
+  const { count, error } = await q
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
+async function countActiveSeekers(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'seeker' }>
+): Promise<number> {
+  let q = supabase.from('partnership_seekers').select('id, preferred_models').eq('status', 'active')
+
+  if (target.make) q = q.overlaps('preferred_makes', [target.make])
+
+  const { data, error } = await q
+  if (error) throw new Error(error.message)
+  const rows = data ?? []
+  if (!target.model) return rows.length
+
+  const wanted = target.model.split(',').map((m) => m.trim()).filter(Boolean)
+  return rows.filter((r) => matchesModelFilter(r.preferred_models as string | null, wanted)).length
+}
+
+export interface AlertMatchCount {
+  count: number
+  /** What's being counted, so the caller can word the line correctly. */
+  noun: 'listing' | 'pilot'
+}
+
+/**
+ * Count active matches for one alert's `source_path` right now. Returns `null`
+ * (never a fake `0`) when the path isn't a recognized shape, or on any query
+ * error — callers should render no count line in that case.
+ */
+export async function getAlertMatchCount(sourcePath: string | null): Promise<AlertMatchCount | null> {
+  const target = parseSourcePath(sourcePath)
+  if (!target) return null
+  try {
+    const admin = createAdminClient()
+    if (target.type === 'aircraft') {
+      return { count: await countActiveAircraft(admin, target), noun: 'listing' }
+    }
+    if (target.type === 'seeker') {
+      return { count: await countActiveSeekers(admin, target), noun: 'pilot' }
+    }
+    return { count: await countActivePartnerships(admin, target), noun: 'listing' }
+  } catch (err) {
+    console.error('[alertMatchCounts] count error:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
