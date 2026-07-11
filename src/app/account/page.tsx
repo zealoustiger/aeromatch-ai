@@ -227,8 +227,16 @@ export default async function AccountPage() {
             Email alerts
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            We&apos;ll email you when new listings match a search you&apos;ve saved — and only
-            those searches. Saving a search turns on its alerts automatically, no extra step.
+            Saving a search doesn&apos;t turn on email alerts by itself — head to{' '}
+            <Link href="/searches" className="text-sky-600 underline-offset-2 hover:underline">
+              Saved Searches
+            </Link>{' '}
+            and tap <strong className="text-slate-700">Get email alerts</strong> on any search
+            you want to hear about. Your active alerts live on{' '}
+            <Link href="/alerts/manage" className="text-sky-600 underline-offset-2 hover:underline">
+              Manage alerts
+            </Link>
+            .
           </p>
 
           {searches.length === 0 ? (
@@ -248,8 +256,8 @@ export default async function AccountPage() {
                 <Link href="/partnerships/seeking" className="text-sky-600 underline-offset-2 hover:underline">
                   pilots seeking a partnership
                 </Link>{' '}
-                and tap <strong className="text-slate-600">Save this search</strong> to turn on
-                alerts.
+                and tap <strong className="text-slate-600">Save this search</strong>, then turn
+                on alerts for it from Saved Searches.
               </p>
             </div>
           ) : (
