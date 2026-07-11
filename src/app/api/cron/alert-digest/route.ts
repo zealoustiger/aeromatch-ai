@@ -4,6 +4,7 @@ import { sendEmail, buildAlertDigestEmail } from '@/lib/email'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
+import { hasRecentPriceDrop } from '@/lib/priceDrops'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -203,6 +204,54 @@ async function countNewAircraft(
   return count ?? 0
 }
 
+/**
+ * Count active aircraft matching `target`'s criteria whose most recent price
+ * change was a genuine decrease recorded since `since` (GOAL.md: "new-listing
+ * AND price-drop alerts"). Mirrors `countNewAircraft`'s filter fields exactly,
+ * so a price-drop match respects the same alert criteria as a new-listing
+ * match. `previous_price`/`asking_price` comparison can't be pushed into a
+ * PostgREST head-count filter (no column-to-column operator), so — like
+ * `countNewSeekers` below — this fetches the narrowed candidate set and
+ * filters in JS via the shared `hasRecentPriceDrop` helper.
+ */
+async function countRecentAircraftPriceDrops(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'aircraft' }>,
+  since: string
+): Promise<number> {
+  // `q` is typed `any` here (not the usual PostgrestFilterBuilder inference) —
+  // selecting concrete columns (vs. the head:true count-only selects elsewhere
+  // in this file) combined with this many chained conditional reassignments
+  // hits a real "type instantiation excessively deep" TS limit on the
+  // supabase-js builder generics.
+  let q: any = supabase
+    .from('aircraft_for_sale')
+    .select('asking_price, previous_price, price_changed_at')
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+    .gte('price_changed_at', since)
+    .not('previous_price', 'is', null)
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.model) q = q.eq('model', target.model)
+  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
+  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
+  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
+  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
+  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+
+  type Row = { asking_price: number | null; previous_price: number | null; price_changed_at: string | null }
+  const { data, error } = (await q) as { data: Row[] | null; error: { message: string } | null }
+  if (error) {
+    console.error('[alert-digest] price-drop count error:', error.message)
+    return 0
+  }
+  return (data ?? []).filter((r) => hasRecentPriceDrop(r, since)).length
+}
+
 async function countNewPartnerships(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'partnership' }>,
@@ -312,9 +361,14 @@ export async function GET(req: NextRequest) {
     // "Since when?" — use last_digest_at if present; else the signup date.
     const since = alert.last_digest_at ?? alert.created_at ?? windowStart
 
-    const count = await countNew(supabase, target, since)
+    const newCount = await countNew(supabase, target, since)
+    // Price-drop matching only applies to aircraft-for-sale alerts today —
+    // partnerships track price changes on a different column pair
+    // (previous_buy_in_price/buy_in_price_changed_at) and seekers have no price.
+    const dropCount =
+      target.type === 'aircraft' ? await countRecentAircraftPriceDrops(supabase, target, since) : 0
 
-    if (count === 0) {
+    if (newCount === 0 && dropCount === 0) {
       skipped++
       continue
     }
@@ -325,7 +379,8 @@ export async function GET(req: NextRequest) {
 
     const { subject, html, text } = buildAlertDigestEmail({
       context: alert.context ?? null,
-      count,
+      newCount,
+      dropCount,
       listingsUrl,
       unsubscribeUrl,
     })

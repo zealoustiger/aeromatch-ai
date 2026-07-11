@@ -230,20 +230,28 @@ function escapeAttr(s: string): string {
 
 /**
  * Build the weekly digest email for a confirmed alert subscriber.
- * Sent when there are new matching listings since their last digest.
- * Simple: count + link back to the page — no per-listing details.
+ * Sent when there's a new matching listing and/or a genuine price drop on a
+ * matching listing since their last digest. `newCount`/`dropCount` are named
+ * distinctly in the copy rather than summed — GOAL.md requires alert content
+ * be honest, and a price drop on an existing listing is not "a new listing."
  */
 export function buildAlertDigestEmail(opts: {
   context: string | null
-  count: number
+  newCount: number
+  dropCount: number
   listingsUrl: string
   unsubscribeUrl: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
   const forThingText = thing ? ` ${thing}` : ''
-  const countLabel = opts.count === 1 ? '1 new listing' : `${opts.count} new listings`
+
+  const parts: string[] = []
+  if (opts.newCount > 0) parts.push(opts.newCount === 1 ? '1 new listing' : `${opts.newCount} new listings`)
+  if (opts.dropCount > 0) parts.push(opts.dropCount === 1 ? '1 price drop' : `${opts.dropCount} price drops`)
+  const countLabel = parts.join(' + ')
   const countLabelText = countLabel
+  const total = opts.newCount + opts.dropCount
   const subject = thing
     ? `${countLabel} — ${thing} on ClubHanger`
     : `${countLabel} on ClubHanger`
@@ -254,7 +262,7 @@ export function buildAlertDigestEmail(opts: {
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
       <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">${escapeHtml(countLabel)}</h1>
       <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
-        There ${opts.count === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.
+        There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.
       </p>
       <p style="margin:0 0 24px;">
         <a href="${escapeAttr(opts.listingsUrl)}"
