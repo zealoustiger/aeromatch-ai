@@ -45,20 +45,29 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [pending, setPending] = useState(false)
+  // Price-drop matching only exists for aircraft-for-sale alerts today (see
+  // alert-digest's countRecentAircraftPriceDrops) — partnerships/seekers have no
+  // price-drop tracking, so don't offer a toggle that would silently do nothing.
+  const showPriceDropOption = noun === 'aircraft'
+  const [priceDropOptIn, setPriceDropOptIn] = useState(true)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (pending) return
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeToAlerts(email, context ?? '', sourcePath)
+    const result = await subscribeToAlerts(email, context ?? '', sourcePath, showPriceDropOption ? priceDropOptIn : true)
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)
       return
     }
     // Conversion signal for the "alerts vs post" nav experiment.
-    track('alert_subscribed', { context: context || 'all', source_path: sourcePath })
+    track('alert_subscribed', {
+      context: context || 'all',
+      source_path: sourcePath,
+      price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
+    })
     setSubmitted(true)
   }
 
@@ -116,6 +125,17 @@ export default function AlertSignup({ context, sourcePath, noun = 'aircraft', cl
               {pending ? 'Saving…' : 'Get alerts'}
             </button>
           </form>
+          {showPriceDropOption && (
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={priceDropOptIn}
+                onChange={(e) => setPriceDropOptIn(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+              />
+              Also alert me when the price drops on a match
+            </label>
+          )}
           {errorMsg && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
         </>
       )}

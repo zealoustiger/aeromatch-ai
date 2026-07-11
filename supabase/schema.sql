@@ -750,3 +750,15 @@ create policy "airport_facility_ratings_owner_all" on airport_facility_ratings
 
 create index if not exists airport_facility_ratings_lookup_idx
   on airport_facility_ratings (airport_icao, facility_name);
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_price_drop_opt_in
+-- Lets a subscriber turn OFF price-drop matches on an alert while keeping the
+-- new-listing alert (default true — everyone keeps getting price-drop matches,
+-- the same behavior as today, unless they explicitly opt out). Only meaningful
+-- for aircraft-for-sale alerts today — partnerships/seekers have no price-drop
+-- tracking. Apply in the Supabase SQL editor. Until applied, the capture-form
+-- checkbox and the /alerts/manage toggle both fail soft (insert/update retries
+-- without the column, same graceful-fallback pattern as profiles.favorite_airports)
+-- and the digest cron treats every alert as opted in — i.e. current behavior is
+-- fully preserved either way.
+alter table alerts add column if not exists price_drop_opt_in boolean not null default true;
