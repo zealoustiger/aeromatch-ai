@@ -1,6 +1,7 @@
 import { createAdminClient } from './supabase-admin'
 import { getStateBySlug, getMakeBySlug, getMakeModel } from './seo'
 import { matchesModelFilter } from './seekerModelFilter'
+import { getAirportsWithinRadius } from './airports'
 
 /**
  * "How many listings match this alert right now" for `/alerts/manage`.
@@ -29,7 +30,7 @@ type AlertTarget =
       maxYear?: number
       maxTt?: number
     }
-  | { type: 'partnership'; make?: string; state?: string; icao?: string }
+  | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
@@ -72,6 +73,7 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
       make: g('make'),
       state: g('state')?.toUpperCase(),
       icao: g('airport')?.toUpperCase(),
+      radius: numOrUndef(g('radius')),
     }
   }
 
@@ -185,6 +187,20 @@ async function countActiveAircraft(
   return count ?? 0
 }
 
+/**
+ * Resolve a partnership target's airport filter to the ICAO list a query
+ * should match: the radius-expanded set (reusing the same haversine helper
+ * `/partnerships?airport=…&radius=…` search results use) when `radius` is
+ * set, or just the single ICAO otherwise. `undefined` means no airport filter.
+ */
+async function resolveIcaoList(
+  target: Extract<AlertTarget, { type: 'partnership' }>
+): Promise<string[] | undefined> {
+  if (!target.icao) return undefined
+  if (target.radius && target.radius > 0) return getAirportsWithinRadius(target.icao, target.radius)
+  return [target.icao]
+}
+
 async function countActivePartnerships(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'partnership' }>
@@ -193,7 +209,8 @@ async function countActivePartnerships(
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
   if (target.state) q = q.eq('state', target.state)
-  if (target.icao) q = q.eq('home_airport', target.icao)
+  const icaoList = await resolveIcaoList(target)
+  if (icaoList) q = q.in('home_airport', icaoList)
 
   const { count, error } = await q
   if (error) throw new Error(error.message)

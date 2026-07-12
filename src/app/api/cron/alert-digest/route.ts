@@ -14,6 +14,7 @@ import { hasRecentPriceDrop } from '@/lib/priceDrops'
 import { intervalDaysFor, isDigestDue, normalizeFrequency } from '@/lib/alertFrequency'
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
+import { getAirportsWithinRadius } from '@/lib/airports'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -42,7 +43,7 @@ type AlertTarget =
       maxYear?: number
       maxTt?: number
     }
-  | { type: 'partnership'; make?: string; state?: string; icao?: string }
+  | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
@@ -96,6 +97,7 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
       make: g('make'),
       state: g('state')?.toUpperCase(),
       icao: g('airport')?.toUpperCase(),
+      radius: numOrUndef(g('radius')),
     }
   }
 
@@ -189,6 +191,20 @@ function resolveAircraftMakeModel(
     make: makeEntry.filter,
     modelPattern: `${modelSlug}%`,
   }
+}
+
+/**
+ * Resolve a partnership target's airport filter to the ICAO list a query
+ * should match: the radius-expanded set (reusing the same haversine helper
+ * `/partnerships?airport=…&radius=…` search results use) when `radius` is
+ * set, or just the single ICAO otherwise. `undefined` means no airport filter.
+ */
+async function resolveIcaoList(
+  target: Extract<AlertTarget, { type: 'partnership' }>
+): Promise<string[] | undefined> {
+  if (!target.icao) return undefined
+  if (target.radius && target.radius > 0) return getAirportsWithinRadius(target.icao, target.radius)
+  return [target.icao]
 }
 
 // ─── Count new listings ───────────────────────────────────────────────────────
@@ -297,7 +313,8 @@ async function countRecentPartnershipPriceDrops(
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
   if (target.state) q = q.eq('state', target.state)
-  if (target.icao) q = q.eq('home_airport', target.icao)
+  const icaoList = await resolveIcaoList(target)
+  if (icaoList) q = q.in('home_airport', icaoList)
 
   type Row = {
     buy_in_price: number | null
@@ -337,7 +354,8 @@ async function countNewPartnerships(
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
   if (target.state) q = q.eq('state', target.state)
-  if (target.icao) q = q.eq('home_airport', target.icao)
+  const icaoList = await resolveIcaoList(target)
+  if (icaoList) q = q.in('home_airport', icaoList)
 
   const { count, error } = await q
   if (error) {
@@ -563,7 +581,8 @@ async function fetchNewPartnershipSamples(
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
   if (target.state) q = q.eq('state', target.state)
-  if (target.icao) q = q.eq('home_airport', target.icao)
+  const icaoList = await resolveIcaoList(target)
+  if (icaoList) q = q.in('home_airport', icaoList)
 
   const { data, error } = await q
   if (error) {
