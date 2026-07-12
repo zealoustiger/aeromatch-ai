@@ -7,6 +7,7 @@ import {
   buildPriceDropEmail,
   buildAlertDigestEmail,
   buildCombinedAlertDigestEmail,
+  buildListingUnavailableEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
 } from './email.ts'
@@ -416,4 +417,46 @@ test('buildListUnsubscribeHeaders: wraps the URL in angle brackets and sets the 
 test('buildListUnsubscribeHeaders: returns undefined with no URL (non-alert emails stay header-free)', () => {
   assert.equal(buildListUnsubscribeHeaders(undefined), undefined)
   assert.equal(buildListUnsubscribeHeaders(''), undefined)
+})
+
+// ─── buildListingUnavailableEmail (watch-alert honesty gate) ───────────────
+
+const UNAVAILABLE_BASE = {
+  title: '2013 Cessna 172S Skyhawk',
+  browseUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172',
+  manageUrl: 'https://clubhanger.com/alerts/manage',
+  unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+}
+
+test('buildListingUnavailableEmail: subject names the listing as no longer available', () => {
+  const { subject } = buildListingUnavailableEmail(UNAVAILABLE_BASE)
+  assert.equal(subject, '2013 Cessna 172S Skyhawk is no longer available')
+})
+
+test('buildListingUnavailableEmail: never claims a percent/badge-style drop — this is a removal notice, not a deal', () => {
+  const { html, text } = buildListingUnavailableEmail(UNAVAILABLE_BASE)
+  assert.doesNotMatch(html, /%\s*price drop/i)
+  assert.match(text, /sold or taken off the market/)
+})
+
+test('buildListingUnavailableEmail: browse/manage/unsubscribe links all appear in both html and text', () => {
+  const { html, text } = buildListingUnavailableEmail(UNAVAILABLE_BASE)
+  for (const url of [UNAVAILABLE_BASE.browseUrl, UNAVAILABLE_BASE.manageUrl, UNAVAILABLE_BASE.unsubscribeUrl]) {
+    assert.ok(text.includes(url), `expected text to include ${url}`)
+  }
+  assert.ok(html.includes(UNAVAILABLE_BASE.manageUrl), 'expected html to include manageUrl')
+  assert.ok(html.includes(UNAVAILABLE_BASE.unsubscribeUrl), 'expected html to include unsubscribeUrl')
+  assert.ok(
+    html.includes(UNAVAILABLE_BASE.browseUrl.replace('&', '&amp;')),
+    'expected html to include the HTML-escaped browseUrl'
+  )
+})
+
+test('buildListingUnavailableEmail: listing title is HTML-escaped', () => {
+  const { html } = buildListingUnavailableEmail({
+    ...UNAVAILABLE_BASE,
+    title: 'Cessna 172 <script>alert(1)</script>',
+  })
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&lt;script&gt;/)
 })

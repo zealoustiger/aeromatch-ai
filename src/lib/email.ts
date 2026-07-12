@@ -388,6 +388,62 @@ Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (sw
   return { subject, html, text }
 }
 
+/**
+ * "The listing you were watching for a price drop is no longer available."
+ * Sent exactly once by the alert-digest cron when a `listingId`-scoped watch
+ * alert's target row goes missing or leaves `status: 'active'` (sold,
+ * removed, etc.) — GOAL.md's honesty gate: say so once rather than the alert
+ * silently never firing again with no explanation. The cron pauses the alert
+ * right after this sends, so it's genuinely a one-time notice.
+ */
+export function buildListingUnavailableEmail(opts: {
+  title: string
+  browseUrl: string
+  manageUrl: string
+  unsubscribeUrl: string
+}): { subject: string; html: string; text: string } {
+  const subject = `${opts.title} is no longer available`
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)} is no longer available</h1>
+        <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+          It&rsquo;s been sold or taken off the market, so we&rsquo;ve stopped watching it for a
+          price drop &mdash; this is the last email you&rsquo;ll get about this listing.
+        </p>
+        <p style="margin:0;">
+          <a href="${escapeAttr(opts.browseUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Browse similar aircraft
+          </a>
+        </p>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you had a watch alert set up on ClubHanger.
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        &middot;
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${opts.title} is no longer available
+
+It's been sold or taken off the market, so we've stopped watching it for a price drop — this is the last email you'll get about this listing.
+
+Browse similar aircraft: ${opts.browseUrl}
+
+Manage alerts: ${opts.manageUrl}
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
 function formatUsd(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }

@@ -51,6 +51,14 @@ interface Props {
    *  make/model pages both use `/aircraft?make=…&model=…`). Omit rather than
    *  fabricate a default when a call site doesn't have one. */
   source?: string
+  /** True for the single-listing "watch this listing's price" capture point
+   *  (`/aircraft/listing/[id]`'s dedicated watch box, `sourcePath` carries
+   *  `?watch=price`) — distinct copy (this is about ONE known listing, not a
+   *  family search) and hides the price-drop/deal-only checkboxes, neither of
+   *  which applies to watching a single already-known listing: price-drop
+   *  matching is implicit (the entire point of a watch), and "only good
+   *  deals" has no meaning against a single item. */
+  watchOnly?: boolean
 }
 
 /** Layers `deal=good` onto a source_path's existing query string when the
@@ -75,6 +83,7 @@ export default function AlertSignup({
   alertCount,
   matchCount,
   source,
+  watchOnly = false,
 }: Props) {
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
@@ -82,13 +91,21 @@ export default function AlertSignup({
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
   const hasCtx = !!(context && context.trim())
   const showSocialProof = hasCtx && typeof alertCount === 'number' && alertCount >= MIN_ALERTS_TO_SHOW
-  const headline = hasCtx ? `Get alerts for new ${context} listings` : 'Get new-listing alerts'
-  const subcopy = hasCtx
-    ? `We'll email you when a new ${context} ${noun} is listed. One email field, no account needed.`
-    : `We'll email you the moment a new listing appears. One email field, no account needed.`
-  const doneCopy = hasCtx
-    ? `new ${context} listings appear. No spam — just relevant ${nounPlural}.`
-    : `new listings appear. No spam — just relevant listings.`
+  const headline = watchOnly
+    ? 'Alert me if the price drops'
+    : hasCtx
+      ? `Get alerts for new ${context} listings`
+      : 'Get new-listing alerts'
+  const subcopy = watchOnly
+    ? "We'll email you the moment the price on this listing drops. One email field, no account needed."
+    : hasCtx
+      ? `We'll email you when a new ${context} ${noun} is listed. One email field, no account needed.`
+      : `We'll email you the moment a new listing appears. One email field, no account needed.`
+  const doneCopy = watchOnly
+    ? 'the price on this listing drops.'
+    : hasCtx
+      ? `new ${context} listings appear. No spam — just relevant ${nounPlural}.`
+      : `new listings appear. No spam — just relevant listings.`
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -98,7 +115,7 @@ export default function AlertSignup({
   // Price-drop matching only exists for aircraft-for-sale alerts today (see
   // alert-digest's countRecentAircraftPriceDrops) — partnerships/seekers have no
   // price-drop tracking, so don't offer a toggle that would silently do nothing.
-  const showPriceDropOption = noun === 'aircraft'
+  const showPriceDropOption = noun === 'aircraft' && !watchOnly
   const [priceDropOptIn, setPriceDropOptIn] = useState(true)
   // "Only good deals" — the first smart-alert type (GOAL.md's "smart, honest
   // alert content" clause). Only exists for aircraft (clubHangerDealVerdict has
@@ -107,7 +124,7 @@ export default function AlertSignup({
   // directly in source_path's query string (deal=good), not a DB column, so the
   // cron's existing parseSourcePath can read it the same way it reads
   // make/model/min_price/etc.
-  const showDealOnlyOption = noun === 'aircraft'
+  const showDealOnlyOption = noun === 'aircraft' && !watchOnly
   const [dealOnly, setDealOnly] = useState(false)
   const [frequency, setFrequency] = useState<AlertFrequency>('weekly')
   // A signed-in visitor's email is already verified — skip retyping it and
@@ -348,7 +365,7 @@ export default function AlertSignup({
                 disabled={pending}
                 className="shrink-0 rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
               >
-                {pending ? 'Saving…' : 'Get alerts'}
+                {pending ? 'Saving…' : watchOnly ? 'Watch price' : 'Get alerts'}
               </button>
             </form>
           )}
