@@ -77,6 +77,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 export function buildAlertConfirmEmail(opts: {
   context: string | null
   confirmUrl: string
+  manageUrl: string
   unsubscribeUrl: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
@@ -108,7 +109,8 @@ export function buildAlertConfirmEmail(opts: {
         </p>
       </div>
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
-        Prefer not to get these? <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a> &middot;
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
       </p>
     </div>
   </body>
@@ -121,6 +123,7 @@ Almost there — confirm your alerts${forThingText}.
 Confirm your email: ${opts.confirmUrl}
 
 Didn't request this? No action needed — you won't hear from us again.
+Manage alerts: ${opts.manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}`
 
   return { subject, html, text }
