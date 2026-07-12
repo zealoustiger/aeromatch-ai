@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import {
   buildPriceDropEmail,
   buildAlertDigestEmail,
+  buildCombinedAlertDigestEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
 } from './email.ts'
@@ -273,6 +274,108 @@ const sample = (overrides: Partial<Parameters<typeof pickBestPriceDropSample>[0]
   previousPrice: 120_000,
   url: 'https://clubhanger.com/aircraft/listing/x',
   ...overrides,
+})
+
+// ─── buildCombinedAlertDigestEmail ─────────────────────────────────────────
+
+test('combined: subject states an honest total across all sections, never a single alert\'s count', () => {
+  const { subject } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 2, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172' },
+      { context: 'Cirrus SR22', newCount: 0, dropCount: 1, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus&model=SR22' },
+    ],
+  })
+  assert.equal(subject, '2 new listings + 1 price drop across your 2 alerts on ClubHanger')
+})
+
+test('combined: each section keeps its own context, count line, and CTA — never merged into one', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 2, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172' },
+      { context: 'Cirrus SR22', newCount: 0, dropCount: 1, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus&model=SR22' },
+    ],
+  })
+  assert.match(html, />Cessna 172</)
+  assert.match(html, />2 new listings</)
+  assert.match(html, />Cirrus SR22</)
+  assert.match(html, />1 price drop</)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cirrus&amp;model=SR22"/)
+  assert.match(text, /Cessna 172 — 2 new listings/)
+  assert.match(text, /Cirrus SR22 — 1 price drop/)
+})
+
+test('combined: dropNoun customizes a partnership section\'s own drop label independent of other sections (the overall total across mixed noun types stays generic)', () => {
+  const { text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: null, newCount: 0, dropCount: 1, dropNoun: 'buy-in drop', listingsUrl: 'https://clubhanger.com/partnerships' },
+    ],
+  })
+  assert.match(text, /Your alert — 1 buy-in drop/)
+})
+
+test('combined: a section with no context falls back to "Your alert" instead of a blank heading', () => {
+  const { html } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: null, newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.match(html, />Your alert</)
+})
+
+test('combined: sample cards render within their own section', () => {
+  const { html } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
+        samples: [
+          {
+            title: '2015 Cessna 172S Skyhawk',
+            photoUrl: null,
+            isPlaceholder: false,
+            year: 2015,
+            ttaf: 1240,
+            location: 'Austin, TX',
+            price: 219_000,
+            url: 'https://clubhanger.com/aircraft/listing/preview-1',
+          },
+        ],
+      },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.match(html, /2015 Cessna 172S Skyhawk/)
+  assert.match(html, /\$219,000/)
+})
+
+test('combined: footer carries the shared Manage/Unsubscribe links (already multi-token-scoped by the caller)', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?token=a"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b"/)
+  assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage\?token=a/)
+  assert.match(text, /Unsubscribe from these: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b/)
 })
 
 test('pickBestPriceDropSample: picks the largest % decrease, not the first/most-recent', () => {
