@@ -671,14 +671,18 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   test alerts (deleted after, 0 remain): a Cessna-make alert rendered "...weekly digest...
   409 listings match right now..." (frequency column absent → correctly defaulted to
   weekly), and a nonexistent-make alert rendered the honest zero-case sentence.
-- **[P2][goal] "Send me a sample digest" on `/alerts/manage`.** A subscriber can't see
-  what their alert email will look like until the cron happens to fire — and has no way to
-  reassure themselves the alert works. Per-alert owner-scoped action (via the existing
-  `resolveOwnerEmail` session-or-token pattern, rate-limited via the `last_confirm_sent_at`
-  cooldown precedent) that builds a real `buildAlertDigestEmail` from the alert's live
-  criteria and samples, clearly labeled as a sample ("your real digest arrives
-  {frequency}"), sent to the owner's email only. Doubles as an "is my alert working?"
-  check. No new capture point.
+~~- **[P2][goal] "Send me a sample digest" on `/alerts/manage`.**~~ ✅ SHIPPED via
+  `alert-sample-digest` (2026-07-12) A subscriber can't see what their alert email will
+  look like until the cron happens to fire — and has no way to reassure themselves the
+  alert works. New "Send sample" button on each confirmed row (owner-scoped via the
+  existing `resolveOwnerEmail` session-or-token pattern, rate-limited via the
+  `last_confirm_sent_at` cooldown precedent — safe to share since that column is only
+  ever touched for a `pending` row's confirm-resend) builds a real `buildAlertDigestEmail`
+  from the alert's live matching listings via new `getAlertDigestPreview`, clearly labeled
+  as a sample (subject prefixed "Sample:", on-brand banner: "your real {frequency} digest
+  arrives automatically when there's a genuine match"), sent to the owner's own email
+  only. Honest zero-case: an alert with no live matches sends "0 current matches," never
+  a fabricated listing. No new capture point, no schema change.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
