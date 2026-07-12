@@ -213,6 +213,39 @@ test('digest: with frequencyUrl (daily alert), the footer adds a "Get fewer emai
   assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
 })
 
+test('digest: sampleNote prefixes the subject with "Sample:" and renders a sample banner', () => {
+  const { subject, html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 2,
+    dropCount: 0,
+    sampleNote: "your real weekly digest arrives automatically when there's a genuine match.",
+  })
+  assert.equal(subject, 'Sample: 2 current matches — Cessna 172 on ClubHanger')
+  assert.match(html, /Sample email/)
+  assert.match(html, /your real weekly digest arrives automatically/)
+  assert.match(text, /^SAMPLE EMAIL — your real weekly digest arrives automatically/)
+  assert.doesNotMatch(subject, /new listing/)
+})
+
+test('digest: without sampleNote, no sample banner renders and subject/copy are unchanged', () => {
+  const { subject, html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 0 })
+  assert.equal(subject, '2 new listings — Cessna 172 on ClubHanger')
+  assert.doesNotMatch(html, /Sample email/)
+  assert.doesNotMatch(text, /SAMPLE EMAIL/)
+})
+
+test('digest: sampleNote honestly renders a genuine zero match count, not a fabricated one', () => {
+  const { subject, html } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 0,
+    dropCount: 0,
+    samples: [],
+    sampleNote: "your real weekly digest arrives automatically when there's a genuine match.",
+  })
+  assert.equal(subject, 'Sample: 0 current matches — Cessna 172 on ClubHanger')
+  assert.match(html, /0 current matches for your Cessna 172 alert right now/)
+})
+
 test('price drop: without frequencyUrl (weekly alert), no "Get fewer emails" link renders', () => {
   const { html, text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
   assert.doesNotMatch(html, /Get fewer emails/)

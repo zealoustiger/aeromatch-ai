@@ -513,38 +513,59 @@ export function buildAlertDigestEmail(opts: {
    *  third footer link alongside Manage/Unsubscribe. */
   frequencyUrl?: string
   samples?: AlertDigestSample[]
+  /** When set, renders this send as an honest preview rather than a real
+   *  digest firing: subject gets a `Sample: ` prefix, and an on-brand banner
+   *  with this cadence line (e.g. "your real weekly digest arrives
+   *  automatically when there's a genuine match.") renders at the top of both
+   *  bodies. Also switches the count/body copy from "new this week" framing
+   *  to honest "current matches" framing, since a sample's matches aren't
+   *  necessarily new. Used by the owner-scoped "Send me a sample digest"
+   *  action so a preview can never be mistaken for a real alert firing. */
+  sampleNote?: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
   const forThingText = thing ? ` ${thing}` : ''
   const samples = opts.samples ?? []
   const dropNoun = opts.dropNoun ?? 'price drop'
-
-  const parts: string[] = []
-  if (opts.newCount > 0) parts.push(opts.newCount === 1 ? '1 new listing' : `${opts.newCount} new listings`)
-  if (opts.dropCount > 0) parts.push(opts.dropCount === 1 ? `1 ${dropNoun}` : `${opts.dropCount} ${dropNoun}s`)
-  const countLabel = parts.join(' + ')
-  const countLabelText = countLabel
+  const isSample = !!opts.sampleNote
   const total = opts.newCount + opts.dropCount
-  const subject = thing
-    ? `${countLabel} — ${thing} on ClubHanger`
-    : `${countLabel} on ClubHanger`
+
+  let countLabel: string
+  if (isSample) {
+    countLabel = total === 1 ? '1 current match' : `${total} current matches`
+  } else {
+    const parts: string[] = []
+    if (opts.newCount > 0) parts.push(opts.newCount === 1 ? '1 new listing' : `${opts.newCount} new listings`)
+    if (opts.dropCount > 0) parts.push(opts.dropCount === 1 ? `1 ${dropNoun}` : `${opts.dropCount} ${dropNoun}s`)
+    countLabel = parts.join(' + ')
+  }
+  const countLabelText = countLabel
+  const subjectBase = thing ? `${countLabel} — ${thing} on ClubHanger` : `${countLabel} on ClubHanger`
+  const subject = isSample ? `Sample: ${subjectBase}` : subjectBase
 
   const samplesHtml = samples.length
     ? `<div style="margin:0 0 20px;">${samples.map(sampleCardHtml).join('')}</div>`
     : ''
   const remaining = total - samples.length
   const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
+  const bodyCopy = isSample
+    ? `${countLabel} for your${forThing} alert right now.`
+    : `There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.`
+  const sampleBannerHtml = isSample
+    ? `<p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;">Sample email &mdash; ${escapeHtml(opts.sampleNote!)}</p>`
+    : ''
 
   const html = `<!doctype html>
 <html>
   <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
       <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      ${sampleBannerHtml}
       <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
         <h1 style="font-size:20px;font-weight:700;margin:0 0 10px;">${escapeHtml(countLabel)}</h1>
         <p style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
-          There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.
+          ${bodyCopy}
         </p>
         ${samplesHtml}
         <p style="margin:0;">
@@ -583,7 +604,12 @@ export function buildAlertDigestEmail(opts: {
     })
     .join('\n')
 
-  const text = `${countLabelText} matching your${forThingText} alert on ClubHanger.
+  const bodyCopyText = isSample
+    ? `${countLabelText} for your${forThingText} alert right now.`
+    : `${countLabelText} matching your${forThingText} alert on ClubHanger.`
+  const sampleBannerText = isSample ? `SAMPLE EMAIL — ${opts.sampleNote}\n\n` : ''
+
+  const text = `${sampleBannerText}${bodyCopyText}
 ${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${opts.listingsUrl}
 
