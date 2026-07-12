@@ -695,14 +695,21 @@ post-contact components). Entry points and management are broad and refill #6 co
 deliverability/expectation-setting — this refill shifts weight to never-spam consolidation,
 the conversion denominator, and the highest-intent alert type still missing._
 
-- **[P1][goal] One combined email per subscriber per cron pass — never two alert emails in
-  the same inbox on the same day.** The digest cron loops alerts and calls `sendEmail` once
-  per row, so a subscriber with 3 due alerts (common now that cross-sell/manage-new-alert
-  actively create multiples) gets 3 separate emails in one pass — exactly the "spam" feel
-  GOAL.md forbids. Group due alerts by email in `alert-digest/route.ts` and send ONE
-  `buildAlertDigestEmail` with a per-alert section (each keeping its own criteria-echo line,
-  sample cards, and honest counts); single-alert sends byte-for-byte unchanged. Improves the
-  digest surface + deliverability; no new capture point (no `alert_subscribed`).
+~~- **[P1][goal] One combined email per subscriber per cron pass — never two alert emails in
+  the same inbox on the same day.**~~ ✅ SHIPPED via `alert-digest-combine` (2026-07-12) The
+  digest cron loops alerts and calls `sendEmail` once per row, so a subscriber with 3 due
+  alerts (common now that cross-sell/manage-new-alert actively create multiples) got 3
+  separate emails in one pass — exactly the "spam" feel GOAL.md forbids.
+  `alert-digest/route.ts` now computes each alert's due/match data first, groups the due,
+  matching ones by email, and sends exactly ONE email per group: a lone alert uses the exact
+  same single-alert build path as before (byte-for-byte unchanged — same `bestDrop`/
+  `buildAlertDigestEmail` branching); 2+ alerts get one new `buildCombinedAlertDigestEmail`
+  send with a per-alert section (own context line, own honest new/drop counts, own sample
+  cards). The combined email's one Unsubscribe link now covers every alert it included
+  (`unsubscribe/route.ts`'s `applyUnsubscribe` accepts a comma-separated token list) so it's
+  never a partial "dead end." `last_digest_at` updates for every alert in a combined send.
+  No `frequencyUrl` in the combined send (per-alert daily→weekly toggle, ambiguous across
+  multiple alerts — Manage alerts covers it per-alert instead); no new capture point.
 - **[P1][goal] "Watch this listing" — price-drop alert for one specific aircraft.** The
   highest-intent alert we don't offer: a buyer eyeing a particular plane can only subscribe
   to the whole family search. Add "Alert me if this price drops" on
