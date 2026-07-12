@@ -866,14 +866,17 @@ export async function GET(req: NextRequest) {
     const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
 
-    // When this send is purely about a price drop on an aircraft alert (no
-    // new listings to also report), feature the single best real drop via
-    // the rich single-listing template instead of the aggregate digest's
-    // bare "+1 price drop" count line. Falls back to the aggregate digest if,
-    // for any reason, no sample qualifies (e.g. the count and sample queries
-    // disagree at the edge) — never silently drops the notification.
+    // When this send is purely about a price drop (no new listings to also
+    // report) on an aircraft OR partnership alert, feature the single best
+    // real drop via the rich single-listing template instead of the
+    // aggregate digest's bare "+1 price/buy-in drop" count line. Falls back
+    // to the aggregate digest if, for any reason, no sample qualifies (e.g.
+    // the count and sample queries disagree at the edge) — never silently
+    // drops the notification.
     const bestDrop =
-      target.type === 'aircraft' && newCount === 0 && dropCount > 0 ? pickBestPriceDropSample(samples) : null
+      (target.type === 'aircraft' || target.type === 'partnership') && newCount === 0 && dropCount > 0
+        ? pickBestPriceDropSample(samples)
+        : null
 
     const { subject, html, text } = bestDrop
       ? buildPriceDropEmail({
@@ -887,6 +890,8 @@ export async function GET(req: NextRequest) {
           // Honesty: this is a daily/weekly cron send, never real-time —
           // never claim "just dropped".
           periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
+          dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
+          shareType: target.type === 'partnership' ? bestDrop.shareType : undefined,
         })
       : buildAlertDigestEmail({
           context: alert.context ?? null,

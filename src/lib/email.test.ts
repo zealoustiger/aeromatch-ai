@@ -58,6 +58,23 @@ test('the struck-through old price and bold new price both appear in the HTML', 
   assert.match(html, />\s*10% price drop\s*</)
 })
 
+test('dropNoun customizes the subject/badge label (partnership buy-in drops)', () => {
+  const { subject, html } = buildPriceDropEmail({ ...BASE, photoUrl: null, dropNoun: 'buy-in drop' })
+  assert.equal(subject, '10% buy-in drop — 2013 Cessna 172S Skyhawk now $180,000')
+  assert.match(html, />\s*10% buy-in drop\s*</)
+})
+
+test('shareType renders as a subtitle in the HTML and inline in the text body', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    dropNoun: 'buy-in drop',
+    shareType: '1/4 Share',
+  })
+  assert.match(html, />1\/4 Share</)
+  assert.match(text, /2013 Cessna 172S Skyhawk \(1\/4 Share\) dropped 10% this week/)
+})
+
 test('listing title is HTML-escaped', () => {
   const { html } = buildPriceDropEmail({
     ...BASE,
