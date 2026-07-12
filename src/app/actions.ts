@@ -1347,6 +1347,32 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
   return { ok: true }
 }
 
+// Manage-page cross-sell (see ManageAlertCrossSell.tsx): same one-click,
+// no-second-opt-in precedent as subscribeToConfirmedAlert above, but proves
+// ownership the way every other /alerts/manage action does — session first,
+// else the page's own unsubscribe-token scope — since there's no status-page
+// confirm_token to hand this component.
+export async function subscribeManageCrossSell(context: string, sourcePath: string, token?: string) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const { error } = await admin.from('alerts').insert({
+    email: ownerEmail,
+    context: context || null,
+    source_path: sourcePath || null,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    confirm_token: crypto.randomUUID(),
+    unsubscribe_token: crypto.randomUUID(),
+  })
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
+  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
 // Signed-in one-click alert capture (see AlertSignup.tsx): a visitor with a verified
 // session shouldn't have to retype an email we already have. Same no-second-opt-in
 // precedent as subscribeToConfirmedAlert/subscribeSavedSearchAlert above — ownership

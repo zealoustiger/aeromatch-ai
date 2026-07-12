@@ -7,9 +7,11 @@ import { SITE_NAME } from '@/lib/seo'
 import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { normalizeFrequency } from '@/lib/alertFrequency'
+import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import AlertEditForm from '@/components/AlertEditForm'
 import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
+import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -153,6 +155,21 @@ export default async function AlertsManagePage({
   // gets `null` back and renders no count line — never a fake 0.
   const matchCounts = await Promise.all(alerts.map((a) => getAlertMatchCount(a.source_path)))
 
+  // Cross-sell (see ManageAlertCrossSell.tsx / GOAL.md's "digest → manage → grow
+  // loop"): try each confirmed alert's source_path (most recent first) until one
+  // yields a suggestion the visitor doesn't already have — never a duplicate or
+  // forced suggestion. At most one box for the whole page.
+  const existingPaths = new Set(alerts.map((a) => a.source_path).filter(Boolean))
+  let crossSell = null as Awaited<ReturnType<typeof getCrossSellSuggestion>>
+  for (const a of alerts) {
+    if (a.status !== 'confirmed') continue
+    const suggestion = await getCrossSellSuggestion(a.source_path)
+    if (suggestion && !existingPaths.has(suggestion.sourcePath)) {
+      crossSell = suggestion
+      break
+    }
+  }
+
   return (
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -251,6 +268,7 @@ export default async function AlertsManagePage({
               })}
             </ul>
           )}
+          {crossSell && <ManageAlertCrossSell token={scopeToken} suggestion={crossSell} />}
         </section>
       </div>
     </div>
