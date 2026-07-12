@@ -333,16 +333,25 @@ un-built by direct code read this pass._
   it), and include it in the event payload — consistent with the values the non-AlertSignup
   emitters already use (`saved_search`, `cross_sell`). No new surface, no schema change —
   makes every existing surface measurable.
-- **[P1][goal] Honor `radius` in partnership alert matching — the airport-page alerts
-  under-match what they promise.** Honesty gap on a shipped surface (verified by code read):
-  `airport-alert-cta` stores `sourcePath=/partnerships?airport=<ICAO>&radius=50` and the page
-  promises "near KPAO," but both the digest cron (`alert-digest/route.ts` — "Single ICAO, no
-  radius") and `alertMatchCounts.ts` match the exact ICAO only, so subscribers were promised a
-  50-mile net and get exact-airport matches, and `/alerts/manage`'s live count under-reports
-  the same way. Reuse the nearby-airport expansion the `/partnerships?airport=…&radius=…`
-  search page itself uses to widen the ICAO set in both matchers (cron + match count in one
-  slice, same pairing precedent as `seeker-alert-match-count-location`). No schema change, no
-  new capture point — fixes every airport-page alert already in the table.
+~~- **[P1][goal] Honor `radius` in partnership alert matching — the airport-page alerts
+  under-match what they promise.**~~ ✅ SHIPPED via `partnership-alert-radius-match`
+  (2026-07-12) Honesty gap on a shipped surface: `airport-alert-cta` stores
+  `sourcePath=/partnerships?airport=<ICAO>&radius=50` and the page promises "near KPAO," but
+  both the digest cron (`alert-digest/route.ts`) and `alertMatchCounts.ts` matched the exact
+  ICAO only. Added a `radius` field to both files' `AlertTarget` partnership variant + parsed
+  it from the query string, and a shared `resolveIcaoList` helper (one copy per file, matching
+  each file's existing "deliberately separate parser" precedent) that calls the existing
+  `getAirportsWithinRadius` (`src/lib/airports.ts` — the same haversine helper the live
+  `/partnerships?airport=…&radius=…` search page already uses) and swaps `.eq('home_airport',
+  icao)` for `.in('home_airport', list)` in all 4 affected queries (`countNewPartnerships`,
+  `countRecentPartnershipPriceDrops`, `fetchNewPartnershipSamples` in the cron;
+  `countActivePartnerships` in the match-count lib). No radius → unchanged exact-match
+  behavior; seeker/`near/[icao]` paths untouched (no radius param on those). No schema change,
+  no new capture point. Live-verified against the real prod DB: a real `@example.com` test
+  alert on `/partnerships?airport=KHWD&radius=50` showed "4 listings match right now" on
+  `/alerts/manage` (verified independently via direct query: 2 exact-ICAO matches vs. 4 across
+  the 9-airport 50mi radius set) — before this fix it would have shown 2. Test row deleted
+  after (0 remain).
 - **[P1][goal] "You already get alerts for this" state in `AlertSignup` for signed-in
   users.** The signed-in one-click path (`alert-signin-one-click`) still renders "Alert me —
   we'll email {email}" even when that user already has a live alert for the same
