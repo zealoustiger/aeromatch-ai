@@ -14,6 +14,7 @@ import FrequencyToggle from '@/components/FrequencyToggle'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
 import NewAlertForm from '@/components/NewAlertForm'
 import ManageLinkRequestForm from '@/components/ManageLinkRequestForm'
+import AlertSubscriberMarker from '@/components/AlertSubscriberMarker'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -182,6 +183,9 @@ export default async function AlertsManagePage({
 
   return (
     <div className="ch-surface min-h-screen">
+      {/* Owner resolved (session or valid token) — mark this browser a subscriber
+          so the nav's "Get alerts" CTA becomes "My alerts". Boolean flag only. */}
+      <AlertSubscriberMarker />
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
