@@ -352,15 +352,19 @@ un-built by direct code read this pass._
   `/alerts/manage` (verified independently via direct query: 2 exact-ICAO matches vs. 4 across
   the 9-airport 50mi radius set) — before this fix it would have shown 2. Test row deleted
   after (0 remain).
-- **[P1][goal] "You already get alerts for this" state in `AlertSignup` for signed-in
-  users.** The signed-in one-click path (`alert-signin-one-click`) still renders "Alert me —
-  we'll email {email}" even when that user already has a live alert for the same
-  `source_path` (the insert is idempotent, but the UI misleads and the click is a silent
-  no-op). Mirror `/searches`' state-on-load pattern: reuse `getAlertDetailsBySourcePath` to
-  detect the existing alert and render "✓ You get {Weekly} alerts for this — Manage" linking
-  `/alerts/manage` instead of the capture button (and don't fire a duplicate
-  `alert_subscribed` for a no-op). Turns every capture point into a management entry point
-  for existing subscribers; no schema change.
+~~- **[P1][goal] "You already get alerts for this" state in `AlertSignup` for signed-in
+  users.**~~ ✅ SHIPPED via `alert-signup-already-subscribed` (2026-07-12) The signed-in
+  one-click path (`alert-signin-one-click`) still rendered "Alert me — we'll email {email}"
+  even when that user already had a live alert for the same `source_path` (the insert is
+  idempotent, but the UI misled and the click was a silent no-op). New read-only server action
+  `getExistingAlertForSourcePath` (reuses `getAlertDetailsBySourcePath`) + a client
+  `useEffect`/render branch in `AlertSignup.tsx` now detect the existing alert and render
+  "✓ You're already getting alerts for this" with the email + digest frequency and a
+  "Manage alerts" link to `/alerts/manage`, taking priority over the capture button — never
+  fires a duplicate `alert_subscribed`. Two files, no new props to the 17 server call sites,
+  no schema change. Live-verified against prod DB with a throwaway `@example.com` alert +
+  minted session (matching page → "already" state, no button; non-matching page → normal
+  button unchanged); test data deleted after.
 ~~- **[P1][goal] "Manage alerts" link in the confirmation email + on `/alerts/status`'s
   confirmed panel.**~~ ✅ SHIPPED via `alert-confirm-manage-link` (2026-07-12) The
   explicitly-flagged not-done follow-up from `alert-manage-by-token`: `buildAlertConfirmEmail`
