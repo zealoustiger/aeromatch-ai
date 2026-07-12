@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-12T12:24:16Z — DRAIN SUMMARY
+- Cycles this run: 15 (PASS 12 / FAIL 1 / ABORT 2)
+- Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $123.2147 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260712T093802Z
+
 ## 20260712T121414Z — PASS — alert-matchcount-rollout
 - Pages: /aircraft/[make] (e.g. /aircraft/cessna), /aircraft/for-sale/[state] (e.g. /aircraft/for-sale/california), /partnerships/near/[icao], /partnerships/make/[make], /partnerships/state/[state], /partnerships/seeking, plus the empty-result states on /aircraft, /partnerships, and /partnerships/seeking
 - What: **The "get alerts" box on six more pages now tells you exactly how many real listings it's watching, not just that you can sign up.** A cycle two nights ago added this "N match right now" line to the make/model and single-listing pages; it was missing everywhere else. Now the make-only page ("288 aircraft match right now"), the state page, the near-your-airport partnerships page, the partnership make/state hub pages, and the pilots-seeking-partnerships page (with your active filters applied) all show the same honest, live count. And when a search genuinely has zero matches, the alert box now says so honestly instead of showing nothing — "None available right now — be first to know when one lists."
