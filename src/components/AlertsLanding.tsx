@@ -23,21 +23,49 @@ interface Interest {
   /** Matchable search path (must start with /aircraft or /partnerships). */
   sourcePath: string
   noun: 'aircraft' | 'partnership' | 'seeker'
+  /** `alert_subscribed` placement tag — distinguishes the honesty-gated "popular"
+   *  chips (server-verified to have live matches) from the generic catch-all ones. */
+  source: string
 }
 
-const INTERESTS: Interest[] = [
-  { label: 'All aircraft for sale', context: '', sourcePath: '/aircraft', noun: 'aircraft' },
-  { label: 'Cessna 172', context: 'Cessna 172', sourcePath: '/aircraft?make=Cessna&model=172', noun: 'aircraft' },
-  { label: 'Cirrus SR22', context: 'Cirrus SR22', sourcePath: '/aircraft?make=Cirrus&model=SR22', noun: 'aircraft' },
-  { label: 'Piper Cherokee', context: 'Piper Cherokee', sourcePath: '/aircraft?make=Piper&model=Cherokee', noun: 'aircraft' },
-  { label: 'Beechcraft Bonanza', context: 'Beechcraft Bonanza', sourcePath: '/aircraft?make=Beechcraft&model=Bonanza', noun: 'aircraft' },
-  { label: 'Partnership shares', context: '', sourcePath: '/partnerships', noun: 'partnership' },
-  { label: 'Pilots seeking a partnership', context: '', sourcePath: '/partnerships/seeking', noun: 'seeker' },
+/** A curated popular-alert candidate the server has confirmed has ≥1 live match
+ *  right now (see `src/app/alerts/page.tsx`'s `getPopularChips`). Never rendered
+ *  canned — a candidate with 0 live matches is dropped before it reaches this
+ *  component at all. */
+export interface PopularChip {
+  label: string
+  context: string
+  sourcePath: string
+  noun: 'aircraft' | 'partnership' | 'seeker'
+  count: number
+}
+
+const BASE_INTERESTS: Interest[] = [
+  { label: 'All aircraft for sale', context: '', sourcePath: '/aircraft', noun: 'aircraft', source: 'alerts_landing' },
+  { label: 'Partnership shares', context: '', sourcePath: '/partnerships', noun: 'partnership', source: 'alerts_landing' },
+  { label: 'Pilots seeking a partnership', context: '', sourcePath: '/partnerships/seeking', noun: 'seeker', source: 'alerts_landing' },
 ]
 
-export default function AlertsLanding() {
+interface Props {
+  /** Server-verified popular alert chips (see `page.tsx`) — honesty-gated, may be
+   *  empty (e.g. on a DB error) in which case only the catch-all chips render. */
+  popularChips?: PopularChip[]
+}
+
+export default function AlertsLanding({ popularChips = [] }: Props) {
+  const interests: Interest[] = [
+    BASE_INTERESTS[0],
+    ...popularChips.map((c) => ({
+      label: c.label,
+      context: c.context,
+      sourcePath: c.sourcePath,
+      noun: c.noun,
+      source: 'alerts_landing_popular',
+    })),
+    ...BASE_INTERESTS.slice(1),
+  ]
   const [sel, setSel] = useState(0)
-  const active = INTERESTS[sel]
+  const active = interests[sel]
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:py-16">
@@ -60,7 +88,7 @@ export default function AlertsLanding() {
       <div className="mt-8">
         <p className="mb-2 text-sm font-medium text-slate-500">What do you want alerts for?</p>
         <div className="flex flex-wrap gap-2">
-          {INTERESTS.map((it, i) => (
+          {interests.map((it, i) => (
             <button
               key={it.sourcePath}
               onClick={() => setSel(i)}
@@ -78,7 +106,7 @@ export default function AlertsLanding() {
       </div>
 
       {/* Email capture — remounts per selection so its submit state resets */}
-      <AlertSignup key={active.sourcePath} context={active.context} sourcePath={active.sourcePath} noun={active.noun} source="alerts_landing" />
+      <AlertSignup key={active.sourcePath} context={active.context} sourcePath={active.sourcePath} noun={active.noun} source={active.source} />
 
       {/* Trust row */}
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
