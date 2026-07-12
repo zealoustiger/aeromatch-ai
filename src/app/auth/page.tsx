@@ -5,14 +5,32 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Plane, Mail, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { autoNameSearch } from '@/lib/savedSearchName'
 
 interface AuthContext {
   heading: string
   subtext: string
 }
 
+// Mirrors SaveSearchButton's SAVE_INTENT_PARAM — kept as a literal here rather than a shared
+// import since that component is client-only and this needs no other part of it.
+const SAVE_INTENT_PARAM = 'saveSearch'
+
 function deriveAuthContext(next: string): AuthContext {
-  const p = next.split('?')[0]
+  const [p, query = ''] = next.split('?')
+
+  // A "Save this search" round-trip: name the actual search instead of generic copy, so a
+  // visitor who gets distracted mid-flow has a concrete reason to come back and click the link.
+  const params = new URLSearchParams(query)
+  if (params.get(SAVE_INTENT_PARAM) === '1') {
+    params.delete(SAVE_INTENT_PARAM)
+    const name = autoNameSearch(params.toString(), p)
+    return {
+      heading: 'Sign in to save your search',
+      subtext: `Your ${name} search is saved the instant you click the link below — no extra steps.`,
+    }
+  }
+
   if (p === '/aircraft/new') {
     return { heading: 'Sign in to post your aircraft listing', subtext: "We'll email you a magic link — then you're right back on the form." }
   }
