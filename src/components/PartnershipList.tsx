@@ -97,7 +97,7 @@ function renderList(
         <p className="mt-1 text-sm text-slate-400">Be the first — post a listing and get discovered.</p>
         {alertSourcePath && (
           <div className="mt-6 text-left">
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" className="mt-0" source="empty_state" />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" className="mt-0" source="empty_state" matchCount={0} />
           </div>
         )}
       </div>

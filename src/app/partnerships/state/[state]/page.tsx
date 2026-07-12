@@ -9,7 +9,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import AlertSignup from '@/components/AlertSignup'
 import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
-import { getPartnershipListings } from '@/lib/partnershipsQuery'
+import { getPartnershipListings, countPartnershipsByState } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -66,6 +66,12 @@ export default async function StatePartnershipsPage({ params }: Props) {
     name: `Aircraft partnerships in ${name}`,
     url: `${SITE_URL}/partnerships/state/${state.toLowerCase()}`,
   })
+
+  // Exact live supply count for the alert box's match-expectation line — same
+  // helper `/partnerships/browse` already uses to label this exact state link, so
+  // this page can never disagree with it. `listings` above isn't reused here since
+  // it isn't guaranteed to be the exact unpaginated total.
+  const matchCount = await countPartnershipsByState(code)
 
   // Curated states only (priority ca/tx/fl + a few distinctive GA states); others
   // render no FAQ — never templated boilerplate across all 50 states (GOAL.md).
@@ -144,6 +150,7 @@ export default async function StatePartnershipsPage({ params }: Props) {
         sourcePath={`/partnerships/state/${state.toLowerCase()}`}
         noun="partnership"
         source="partnership_state_page"
+        matchCount={matchCount}
       />
 
       {/* Co-ownership FAQ (curated states only) */}

@@ -254,7 +254,7 @@ export default async function MakeForSalePage({ params }: Props) {
       )}
 
       {/* Email-alerts capture — inline, no account required. */}
-      <AlertSignup context={entry.make} sourcePath={path} source="make_page" />
+      <AlertSignup context={entry.make} sourcePath={path} source="make_page" matchCount={total} />
 
       {/* All listings for the make */}
       <h2 className="mb-4 text-lg font-semibold text-slate-900">

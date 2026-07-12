@@ -17,6 +17,7 @@ import AlertSignup from '@/components/AlertSignup'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import { getSeekerMakes, getSeekerModels, getSeekerCount } from '@/lib/seekersQuery'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -136,6 +137,11 @@ export default async function SeekingPartnershipsPage({
     ) as [string, string][]
   ).toString()
   const alertSourcePath = alertQuery ? `/partnerships/seeking?${alertQuery}` : '/partnerships/seeking'
+  // Live "what will this alert actually match" count — same helper the listing-
+  // detail and /alerts/manage pages already use — scoped to this exact filtered
+  // sourcePath so an active make/model/state/airport filter narrows the count
+  // honestly instead of showing the sitewide `seekerCount` above.
+  const matchResult = await getAlertMatchCount(alertSourcePath)
 
   return (
     <div className="ch-surface min-h-screen">
@@ -241,7 +247,7 @@ export default async function SeekingPartnershipsPage({
 
         {/* Email-alerts capture — inline, no account required. Backed by the same
             double-opt-in `alerts` pipeline the aircraft/partnership browse pages use. */}
-        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" source="seeking_page" />
+        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" source="seeking_page" matchCount={matchResult?.count} />
 
         {/* Cross-links so crawlers (and pilots) reach the partnership hub families. */}
         <div className="mt-8 ch-panel p-6">

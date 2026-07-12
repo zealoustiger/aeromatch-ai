@@ -349,7 +349,7 @@ export default function AlertSignup({
                 <p className="mt-1 text-xs font-medium text-emerald-700">
                   {matchCount! > 0
                     ? `${matchCount} ${matchCount === 1 ? noun : nounPlural} match${matchCount === 1 ? 'es' : ''} right now — we'll email you when the next one lists.`
-                    : `None for sale right now — be first to know when one lists.`}
+                    : `None ${noun === 'aircraft' ? 'for sale' : 'available'} right now — be first to know when one lists.`}
                 </p>
               )}
               {showSocialProof && (
