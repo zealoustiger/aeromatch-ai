@@ -157,7 +157,7 @@ export default async function StateAircraftForSalePage({ params }: Props) {
       )}
 
       {/* Email-alerts capture (slice 1) — inline, no account required. */}
-      <AlertSignup context={entry.name} sourcePath={path} />
+      <AlertSignup context={entry.name} sourcePath={path} source="state_page" />
 
       {/* Listings */}
       <Suspense fallback={<ListSkeleton />}>

@@ -250,7 +250,7 @@ export default async function HomePage() {
           <p className="mt-2 text-lg text-slate-500">
             Tell us what you&apos;re looking for and we&apos;ll email you the moment it&apos;s listed.
           </p>
-          <AlertSignup sourcePath="/" className="mt-8 text-left" />
+          <AlertSignup sourcePath="/" className="mt-8 text-left" source="homepage_band" />
         </div>
       </section>
 

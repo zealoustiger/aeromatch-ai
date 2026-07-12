@@ -31,7 +31,7 @@ export default function NotFound() {
         </Link>
       </div>
 
-      <AlertSignup sourcePath="/" className="mt-12 w-full text-left" />
+      <AlertSignup sourcePath="/" className="mt-12 w-full text-left" source="not_found" />
     </div>
   )
 }

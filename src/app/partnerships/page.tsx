@@ -296,7 +296,7 @@ export default async function PartnershipsPage({
               the list is empty — PartnershipList's own empty state already leads
               with this same capture, so this would be a duplicate. */}
           {itemListListings.length > 0 && (
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" source="browse_footer" />
           )}
         </div>
       </div>

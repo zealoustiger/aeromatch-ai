@@ -383,7 +383,7 @@ export default async function MakeModelForSalePage({ params }: Props) {
       )}
 
       {/* Email-alerts capture (slice 1) — inline, no account required. */}
-      <AlertSignup context={label} sourcePath={path} alertCount={alertCounts.get(label)} />
+      <AlertSignup context={label} sourcePath={path} alertCount={alertCounts.get(label)} source="make_model_page" />
 
       {/* Listings */}
       <h2 className="mb-4 text-lg font-semibold text-slate-900">

@@ -179,6 +179,7 @@ export default async function MakePartnershipsPage({ params }: Props) {
         context={entry.name}
         sourcePath={`/partnerships/make/${entry.slug}`}
         noun="partnership"
+        source="partnership_make_page"
       />
 
       {/* Co-ownership FAQ (curated makes only) */}
