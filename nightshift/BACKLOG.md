@@ -733,14 +733,17 @@ the conversion denominator, and the highest-intent alert type still missing._
   the "unavailable" notice into the combined multi-alert digest (rare overlap — always its own
   dedicated email, matching the `alert-digest-combine` precedent); `/alerts/manage` enrichment
   specific to watch alerts (the generic parsers there already degrade gracefully for this shape).
-- **[P1][goal] `alert_capture_viewed` impression event — the missing denominator for "prove
-  it converts".** All ~24 capture points emit `alert_subscribed` with a `source` tag, but
-  nothing records how often each placement was *seen*, so per-placement conversion rate is
-  uncomputable. Fire a once-per-mount `alert_capture_viewed` from `AlertSignup` (and
-  `QuickStartSearchForm`'s alert) via IntersectionObserver when the box actually scrolls
-  into view, carrying the same `source`/`context`/`source_path`/`match_count` payload shape
-  as `alert_subscribed`. One shared-component change instruments every surface; no schema
-  change, no new UI.
+~~- **[P1][goal] `alert_capture_viewed` impression event — the missing denominator for "prove
+  it converts".**~~ ✅ SHIPPED via `alert-capture-viewed-event` (2026-07-12) All ~24 capture
+  points emit `alert_subscribed` with a `source` tag, but nothing recorded how often each
+  placement was *seen*, so per-placement conversion rate was uncomputable. `AlertSignup` now
+  fires a once-per-mount `alert_capture_viewed` (via `IntersectionObserver`, threshold 0.5)
+  the moment the box actually scrolls into view — regardless of which internal state it's
+  rendering (idle form / already-subscribed / existing-alert) — carrying the same
+  `context`/`source_path`/`source`/`match_count` shape as `alert_subscribed` so the two join
+  per placement. `QuickStartSearchForm`'s own inline alert-capture form (doesn't render
+  `AlertSignup`) got the same instrumentation independently. One shared-component change
+  instruments every surface; no schema change, no new UI.
 - **[P1][goal] Live-match expectation line on the remaining capture surfaces.** The flagged
   follow-up from `alert-match-count-expectation`: `matchCount` is wired on only
   `/aircraft/[make]/[model]` + `/aircraft/listing/[id]` (+ post-contact boxes). Thread it
