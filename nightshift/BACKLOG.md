@@ -599,16 +599,16 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   against the real prod DB with a throwaway `@example.com` test alert (row deleted after, 0
   remain): the route redirected correctly and left `status` untouched even though the
   `frequency` column genuinely doesn't exist yet on the shared table.
-- **[P1][goal] Live-match expectation line at capture in `AlertSignup`.** Capture boxes
-  show subscriber social proof but nothing about what the alert will actually DO.
-  `getAlertMatchCount` (`alertMatchCounts.ts`) already computes honest live-match counts
-  for `/alerts/manage` — no capture surface uses it (verified). Add an optional
-  `matchCount` prop rendering "N listings match right now — we'll email you when the next
-  one lists" (and at a genuine 0, the strongest alert pitch there is: "None for sale right
-  now — be first to know when one lists"). Wire it on listing-detail + make/model pages
-  first — they already fetch `alertCount` server-side, so the plumbing pattern exists.
-  Include `match_count` in the `alert_subscribed` payload so its conversion lift is
-  measurable.
+~~- **[P1][goal] Live-match expectation line at capture in `AlertSignup`.**~~ ✅ SHIPPED
+  via `alert-match-count-expectation` (2026-07-12) New optional `matchCount` prop on
+  `AlertSignup` renders "N listings match right now — we'll email you when the next one
+  lists" (honest 0-case: "None for sale right now — be first to know when one lists"),
+  wired on `/aircraft/[make]/[model]` (reusing the page's own live `countMakeModel`
+  result, no new query) and `/aircraft/listing/[id]` (via `getAlertMatchCount`, threaded
+  through to `AircraftContactButton`/`PhoneContactLink`'s post-contact cross-sell boxes
+  too). `alert_subscribed` now carries `match_count`. **Remaining:** the other
+  `AlertSignup` call sites (browse/filter, homepage, empty-states, partnership/seeker
+  pages) — natural follow-up slices.
 - **[P1][goal] "Only good deals" aircraft alert filter — the first smart-alert type.**
   GOAL.md's "smart, honest alert content" clause, unstarted: `clubHangerDealVerdict`
   (`aircraftComps.ts`/`aircraftEstimate.ts`, honesty-floored at ≥4 comps + dead-band)
