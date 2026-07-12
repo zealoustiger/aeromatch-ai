@@ -433,15 +433,25 @@ candidate below was verified un-built by direct code read this pass (signed-out
 `/alerts/manage` is a sign-in dead end; `Nav.tsx`'s "Get alerts" is static; the digest cron
 has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
 
-- **[P1][goal] "Email me my manage link" — self-serve manage access for email-only
-  subscribers.** Token-scoped `/alerts/manage` shipped, but the token only arrives inside
-  alert emails — a no-account subscriber who deleted them has NO path back in (the
-  signed-out page is a sign-in dead end today, confirmed by code read). Add an email field
-  to that signed-out state (+ a small link on `/alerts`): if confirmed/paused alerts exist
-  for that email, send a manage link reusing the existing email send path +
-  `unsubscribe_token`; always show the same neutral "if you have alerts, a link is on its
-  way" response (no email enumeration) and rate-limit reusing the `last_confirm_sent_at`
-  pattern. Improves the management surface; no new capture point, so no `alert_subscribed`.
+~~- **[P1][goal] "Email me my manage link" — self-serve manage access for email-only
+  subscribers.**~~ ✅ SHIPPED via `alerts-manage-link-email` (2026-07-12) Token-scoped
+  `/alerts/manage` shipped, but the token only arrived inside alert emails — a no-account
+  subscriber who deleted them had NO path back in. Added an "Email me my manage link"
+  form to the signed-out `/alerts/manage` state (new `ManageLinkRequestForm.tsx` +
+  `requestAlertsManageLink` action) + a "Already set up alerts? Manage them" link on the
+  `/alerts` landing page. Looks up the most recent non-unsubscribed alert for the
+  submitted email, sends a new `buildManageLinkEmail` template pointing at
+  `/alerts/manage?token=<unsubscribe_token>`, rate-limited via the existing
+  `last_confirm_sent_at` column/cooldown (same graceful-degrade-if-not-migrated-live
+  pattern as `alert-resend-confirmation`). **Always returns the identical neutral
+  "if that email has alerts, a link is on its way" response** whether or not the email
+  has alerts — no enumeration. Live-verified via a real Playwright browser session
+  against the real prod DB: a throwaway `@example.com` confirmed test alert + a
+  nonexistent email both rendered the exact same success message; confirmed
+  `last_confirm_sent_at` still doesn't exist live today (joins the existing pending-DDL
+  list), so the cooldown can't yet be enforced, matching every other `alerts.*` column in
+  this state. Test alert row deleted after (0 remain). No schema change, no new capture
+  point (no `alert_subscribed`, per scope).
 ~~- **[P1][goal] "New alert" builder on `/alerts/manage`.**~~ ✅ SHIPPED via
   `alerts-manage-new-alert` (2026-07-12) The manage page could edit/pause/delete but not
   CREATE — a subscriber wanting one more alert had to go hunt for a capture box elsewhere.
