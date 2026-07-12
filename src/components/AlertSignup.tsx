@@ -1,12 +1,19 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Bell, CheckCircle2 } from 'lucide-react'
-import { subscribeToAlerts, subscribeSignedInAlert, resendAlertConfirmationByEmail } from '@/app/actions'
+import {
+  subscribeToAlerts,
+  subscribeSignedInAlert,
+  resendAlertConfirmationByEmail,
+  getExistingAlertForSourcePath,
+} from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
+import type { SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -74,6 +81,11 @@ export default function AlertSignup({
   // Distinguishes the confirmed-immediately signed-in path (no "check your
   // inbox" copy — there's nothing pending) from the normal double-opt-in one.
   const [confirmedImmediately, setConfirmedImmediately] = useState(false)
+  // Whether the signed-in visitor already has a live alert for this exact
+  // sourcePath — when set, the one-click button (a silent idempotent no-op
+  // per subscribeSignedInAlert's 23505 handling) is replaced with an honest
+  // "already getting alerts" state instead.
+  const [existingAlert, setExistingAlert] = useState<SavedSearchAlertDetail | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -83,6 +95,20 @@ export default function AlertSignup({
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!signedInEmail) {
+      setExistingAlert(null)
+      return
+    }
+    let cancelled = false
+    getExistingAlertForSourcePath(sourcePath).then((detail) => {
+      if (!cancelled) setExistingAlert(detail)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [signedInEmail, sourcePath])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -192,6 +218,24 @@ export default function AlertSignup({
                 </>
               )}
             </p>
+          </div>
+        </div>
+      ) : existingAlert ? (
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              You&rsquo;re already getting alerts for this.
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              We email {signedInEmail} a {existingAlert.frequency === 'daily' ? 'daily' : 'weekly'} digest when {doneCopy}
+            </p>
+            <Link
+              href="/alerts/manage"
+              className="mt-2 inline-block text-sm font-medium text-sky-700 underline-offset-2 hover:underline"
+            >
+              Manage alerts
+            </Link>
           </div>
         </div>
       ) : (
