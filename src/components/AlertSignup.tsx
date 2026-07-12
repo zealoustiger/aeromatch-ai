@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import {
@@ -163,6 +163,35 @@ export default function AlertSignup({
     }
   }, [signedInEmail, sourcePath])
 
+  // Impression denominator for "prove it converts" — fires once when the box
+  // actually scrolls into view (not just mounts, since most placements sit
+  // below the fold), regardless of which internal state it's rendering.
+  // Same payload shape as `alert_subscribed` so the two can be joined per
+  // placement to get a real per-surface conversion rate.
+  const sectionRef = useRef<HTMLElement>(null)
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (viewedRef.current || !entry.isIntersecting) return
+        viewedRef.current = true
+        track('alert_capture_viewed', {
+          context: context || 'all',
+          source_path: sourcePath,
+          source,
+          match_count: hasMatchCount ? matchCount : undefined,
+        })
+        observer.disconnect()
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (pending) return
@@ -244,7 +273,7 @@ export default function AlertSignup({
   }
 
   return (
-    <section className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
+    <section ref={sectionRef} className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
       {submitted && confirmedImmediately ? (
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />

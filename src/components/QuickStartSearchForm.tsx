@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, CheckCircle2, Plane, Users } from 'lucide-react'
 import { saveSearch, subscribeToAlerts } from '@/app/actions'
@@ -24,6 +24,28 @@ export default function QuickStartSearchForm({ userEmail }: { userEmail: string 
   const [pending, setPending] = useState(false)
   const [done, setDone] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Impression denominator for "prove it converts" — same fire-once-on-scroll-
+  // into-view instrumentation as AlertSignup (this form has its own inline
+  // alert capture, so it needs its own event rather than sharing that
+  // component). Uses the pre-interaction default (aircraft, no filters) as
+  // source_path since nothing's been picked yet at impression time.
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    const el = formRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (viewedRef.current || !entry.isIntersecting) return
+        viewedRef.current = true
+        track('alert_capture_viewed', { context: 'all', source_path: '/aircraft', source: 'saved_search' })
+        observer.disconnect()
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
