@@ -400,13 +400,12 @@ un-built by direct code read this pass._
   layout with the struck-through old buy-in; graceful-degrade on the not-yet-migrated columns,
   same as the count path. No new capture point — email-quality parity per GOAL.md's
   "best listing alert email in aviation."
-- **[P2][goal] Alerts entry point in the global footer.** Verified by code read: `Footer.tsx`
-  contains no alerts link — the site-wide chrome, present on every page, is the one surface
-  with zero alert entry. Add an "Email alerts" link to `/alerts` in the footer's existing
-  link columns (additive footer link, not the ask-a-human IA reordering), and while there
-  audit that the `/alerts` landing copy still reflects the current feature set (daily/weekly
-  frequency, price-drop alerts, no-account manage-by-token). Entry-points-everywhere per
-  GOAL.md; the landing's own capture already emits `alert_subscribed`.
+- ~~**[P2][goal] Alerts entry point in the global footer.**~~ ✅ SHIPPED via
+  `footer-alerts-link` (2026-07-12) Added a "Get email alerts" link as the first item in
+  the footer's "Explore" column (site-wide, every page). Audited `/alerts` landing copy
+  against the current feature set — `AlertsLanding`/`AlertSignup` already accurately
+  state no-account, price-drop opt-in, one-click unsubscribe, and the daily/weekly
+  frequency selector already renders inline in the signup form; no copy changes needed.
 - **[P2][goal] Cross-sell suggestion on `/alerts/manage` (digest → manage → grow loop).**
   Cross-sell currently exists only on `/alerts/status` in the seconds after confirming.
   Reuse `getCrossSellSuggestion` + the `subscribeToConfirmedAlert` one-click precedent to
