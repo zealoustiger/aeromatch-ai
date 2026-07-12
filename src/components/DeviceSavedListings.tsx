@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Heart, Plane, Smartphone, ArrowRight } from 'lucide-react'
 import PartnershipCard from './PartnershipCard'
 import AircraftSaleCard from './AircraftSaleCard'
 import SeekerCard from './SeekerCard'
+import AlertSignup from './AlertSignup'
 import { getLocalSaves, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
 import { hydrateDeviceSaves } from '@/app/actions'
+import { deriveSavedAlertContext } from '@/lib/savedAlertContext'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import type { AircraftCompVerdict } from '@/lib/aircraftComps'
 import type { PartnershipCardVerdict, PartnershipCompVerdict } from '@/lib/partnershipComps'
@@ -83,6 +85,10 @@ export default function DeviceSavedListings() {
   }, [])
 
   const total = partnerships.length + aircraft.length + seekers.length
+  const savedAlertCtx = useMemo(
+    () => deriveSavedAlertContext(partnerships, aircraft),
+    [partnerships, aircraft]
+  )
 
   if (loading) {
     return (
@@ -119,6 +125,7 @@ export default function DeviceSavedListings() {
           </Link>{' '}
           to see saves synced across your devices.
         </p>
+        <AlertSignup sourcePath="/" source="saved_page_device" className="mt-8" />
       </div>
     )
   }
@@ -210,6 +217,17 @@ export default function DeviceSavedListings() {
             ))}
           </div>
         </section>
+      )}
+
+      {savedAlertCtx ? (
+        <AlertSignup
+          context={savedAlertCtx.context}
+          sourcePath={savedAlertCtx.sourcePath}
+          noun={savedAlertCtx.noun}
+          source="saved_page_device"
+        />
+      ) : (
+        <AlertSignup sourcePath="/" source="saved_page_device" />
       )}
 
       <p className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-slate-400">
