@@ -544,14 +544,15 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   the status flip if the column isn't migrated live yet (confirmed live today — column
   genuinely absent, verified via a real Supabase update erroring with "Could not find the
   'frequency' column").
-- **[P1][goal] Seeker sample cards in the digest email (last parity gap).** Aircraft and
-  partnership alerts both render up to 3 rich preview cards in the digest; seeker alerts
-  still get the CTA-only fallback (confirmed: no seeker sample fetch exists in
-  `alert-digest/route.ts`). Add `fetchNewSeekerSamples` mirroring
-  `fetchNewPartnershipSamples`' filter/limit/order pattern, with honest seeker-shaped card
-  fields (looking-for make/model, home airport, state — no price/TTAF fabrication; skip
-  the photo slot or use the placeholder-caption convention). Email-only cycle — same
-  no-live-cron-send precedent as the other digest slices.
+~~- **[P1][goal] Seeker sample cards in the digest email (last parity gap).**~~ ✅ SHIPPED
+  via `seeker-digest-sample-cards` (2026-07-12) Aircraft and partnership alerts both
+  render up to 3 rich preview cards in the digest; seeker alerts still got the CTA-only
+  fallback (confirmed: no seeker sample fetch existed in `alert-digest/route.ts`). Added
+  `fetchNewSeekerSamples` (mirrors `countNewSeekers`'s make/state/`additional_airports`-
+  aware icao/free-text-model filters, selecting card columns instead of a head-only
+  count) + a new `lookingFor` field on `AlertDigestSample` for an honest "looking for"
+  summary (make(s) + model(s), e.g. "Cessna, Cirrus · 172, SR20") — no price/TTAF
+  fabrication, no photo slot (skipped, not a placeholder-plane-photo). See CHANGELOG.
 - **[P1][goal] Partnership single-listing buy-in-drop email.** The rich per-listing
   `buildPriceDropEmail` template (fired when a drop is an alert's ONLY news) is
   aircraft-only — a partnership alert in that state gets aggregate digest cards, not the
