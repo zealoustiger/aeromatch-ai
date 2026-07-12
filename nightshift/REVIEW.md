@@ -1,3 +1,28 @@
+## 2026-07-12T12:24:16Z — Night Shift run: 15 cycles (PASS 12 / FAIL 1) — night budget cap ($120)
+- Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $123.2147 of $120 cap
+
+- ABORT — none — plan needed`
+- PASS — alert-list-unsubscribe-header — Added RFC 8058 `List-Unsubscribe`/`List-Unsubscribe-Post` one-click headers to every alert email (confirm, resend, manage-link, digest, p
+- PASS — alert-fewer-emails-footer — Daily-cadence alert emails (digest + price-drop) now carry a one-click Get fewer emails footer link that instantly switches the alert to week
+- PASS — alert-match-count-expectation — added a live N listings match right now expectation line to `AlertSignup` on make/model and listing-detail pages, wired to real inventory
+- PASS — alert-deal-only-filter — Added an Only email me good deals checkbox to aircraft alert signup boxes site-wide, so subscribers can opt into only getting emailed when a lis
+- PASS — guides-alert-capture — added a partnership `AlertSignup` capture box to all 8 `/guides/*` guide pages plus the `/guides` index (previously zero alert entry points there)
+- PASS — saved-page-alert-capture — Added a get new-listing alerts box to `/saved` (signed-in and logged-out device-saves views), naming the visitor's most-common saved make when
+- PASS — alert-status-whats-next — `/alerts/status`'s confirmation panel now tells subscribers their real alert cadence and live match count (honest zero-case) instead of generic
+- PASS — alert-sample-digest — Added a Send sample button on each confirmed alert row on `/alerts/manage` that emails the subscriber a real, honestly-labeled preview of their dig
+- ABORT — none — plan needed
+- PASS — alert-digest-combine — The alert-digest cron now sends one combined email per subscriber per pass (with a per-alert section) instead of a separate email for each due ale
+- cycle produced no verdict (exit 124)
+- PASS — listing-watch-price-alert — buyers can now set a watch this listing price-drop alert on a single aircraft listing page; sold/removed listings send one honest no longer a
+- PASS — alert-capture-viewed-event — Added a fire-once-on-scroll-into-view `alert_capture_viewed` event to `AlertSignup` (used across ~24 alert placements) and `QuickStartSearch
+- PASS — alert-matchcount-rollout — wired the live N match right now alert-box line into 6 more pages (aircraft make/state pages, partnership near/make/state/seeking pages) and h
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.1 on 2 cores, sustained ~15 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 15 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-12T09:37:58Z — Night Shift run: 21 cycles (PASS 16 / FAIL 2) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 2 escalated to opus; 5 quality-judged on opus
 - Night spend so far: $65.5754 of $120 cap
