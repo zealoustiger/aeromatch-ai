@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-12T09:37:58Z — DRAIN SUMMARY
+- Cycles this run: 21 (PASS 16 / FAIL 2 / ABORT 3)
+- Models: cycles on sonnet; 2 escalated to opus; 5 quality-judged on opus
+- Night spend so far: $65.5754 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260712T060004Z
+
 ## 20260712T093135Z — PASS — partnership-price-drop-email
 - Pages: (none — cron/email logic only, no page rendered)
 - What: **A partnership alert whose only news is a genuine buy-in-price drop now gets the same rich, single-listing "price drop" email aircraft subscribers already get — real photo, struck-through old price vs. new price, one clear "View listing" button — instead of a bare "+1 buy-in drop" line buried in the generic digest.** The card also honestly labels the share size (e.g. "1/4 Share") and says "buy-in drop" instead of "price drop," since a partnership's price is a buy-in share, not an asking price.
