@@ -36,6 +36,14 @@ interface Props {
    *  Only rendered as a social-proof line when it clears `MIN_ALERTS_TO_SHOW` —
    *  below that, or when omitted, no line renders (honesty gate, never fabricated). */
   alertCount?: number
+  /** Which literal placement rendered this box, e.g. "listing_detail",
+   *  "make_model_page", "empty_state", "homepage_band" — carried into the
+   *  `alert_subscribed` analytics event only (never reaches the DB write) so
+   *  conversion can be attributed per-placement instead of just per-`sourcePath`
+   *  (which several distinct placements share, e.g. listing-detail and
+   *  make/model pages both use `/aircraft?make=…&model=…`). Omit rather than
+   *  fabricate a default when a call site doesn't have one. */
+  source?: string
 }
 
 /**
@@ -49,6 +57,7 @@ export default function AlertSignup({
   noun = 'aircraft',
   className = 'my-10',
   alertCount,
+  source,
 }: Props) {
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
@@ -131,6 +140,7 @@ export default function AlertSignup({
     track('alert_subscribed', {
       context: context || 'all',
       source_path: sourcePath,
+      source,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
@@ -156,6 +166,7 @@ export default function AlertSignup({
     track('alert_subscribed', {
       context: context || 'all',
       source_path: sourcePath,
+      source,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,

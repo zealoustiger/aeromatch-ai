@@ -833,6 +833,7 @@ export default async function PartnershipDetailPage({
                 message the poster still has an on-site next step. */}
             <AlertSignup
               context={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+              source="partnership_detail"
               sourcePath={
                 p.make
                   ? `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`

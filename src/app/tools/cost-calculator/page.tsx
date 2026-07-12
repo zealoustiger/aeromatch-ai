@@ -63,7 +63,7 @@ export default function CostCalculatorPage() {
           would silently create an alert that can never fire. Point it at
           "/partnerships" (bare, all-partnerships) so a "get new-listing
           alerts" promise here is actually kept. */}
-      <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" />
+      <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" source="cost_calculator" />
     </div>
     </div>
   )

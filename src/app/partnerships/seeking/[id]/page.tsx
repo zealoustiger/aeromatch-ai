@@ -539,7 +539,7 @@ export default async function SeekerDetailPage({
           above: a seeker with 0 (or a full page of) matches today can still get
           notified the moment a new one appears. Renders independent of match count. */}
       {isOwner && (
-        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" />
+        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" source="seeking_detail" />
       )}
 
       {/* "Similar pilots also seeking" — same-make/airport/state comparables rail,

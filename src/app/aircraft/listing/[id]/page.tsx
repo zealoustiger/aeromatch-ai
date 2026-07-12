@@ -469,6 +469,7 @@ async function SoldListingPage({ p }: { p: AircraftForSale }) {
               never a listing-id-scoped alert that can't match anything). */}
           <AlertSignup
             context={family ? `${family.make} ${family.model}` : undefined}
+            source="sold_listing"
             sourcePath={
               family
                 ? `/aircraft?${new URLSearchParams({ make: family.make, model: family.model }).toString()}`
@@ -1125,6 +1126,7 @@ export default async function AircraftListingDetailPage({
                 exit for scraped listings). */}
             <AlertSignup
               context={alertContext}
+              source="listing_detail"
               sourcePath={
                 p.make
                   ? `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`

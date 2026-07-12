@@ -196,7 +196,7 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
       </div>
 
       {/* Email-alerts capture — inline, no account required. */}
-      <AlertSignup context={`${label} in ${st.name}`} sourcePath={path} />
+      <AlertSignup context={`${label} in ${st.name}`} sourcePath={path} source="make_model_state_page" />
 
       {/* Listings */}
       <Suspense fallback={<ListSkeleton />}>

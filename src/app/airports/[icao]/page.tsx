@@ -273,6 +273,7 @@ export default async function AirportPage({
         context={airport.icao}
         sourcePath={`/partnerships?airport=${airport.icao}&radius=50`}
         noun="partnership"
+        source="airport_page"
       />
 
       {facilities && (facilities.fbos.length > 0 || facilities.flyingClubs.length > 0) && (

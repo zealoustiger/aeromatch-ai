@@ -146,6 +146,7 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
         context={`${airport.icao} area`}
         sourcePath={`/partnerships/near/${airport.icao.toLowerCase()}`}
         noun="partnership"
+        source="partnerships_near_airport"
       />
 
       {/* Cross-links */}

@@ -77,7 +77,7 @@ export default function AlertsLanding() {
       </div>
 
       {/* Email capture — remounts per selection so its submit state resets */}
-      <AlertSignup key={active.sourcePath} context={active.context} sourcePath={active.sourcePath} noun={active.noun} />
+      <AlertSignup key={active.sourcePath} context={active.context} sourcePath={active.sourcePath} noun={active.noun} source="alerts_landing" />
 
       {/* Trust row */}
       <div className="mt-4 grid gap-3 sm:grid-cols-3">

@@ -142,6 +142,7 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
           <AlertSignup
             context={`${m.label} aircraft for sale`}
             sourcePath={basePath}
+            source="mission_page"
           />
 
           {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}

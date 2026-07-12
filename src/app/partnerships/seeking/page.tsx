@@ -241,7 +241,7 @@ export default async function SeekingPartnershipsPage({
 
         {/* Email-alerts capture — inline, no account required. Backed by the same
             double-opt-in `alerts` pipeline the aircraft/partnership browse pages use. */}
-        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" />
+        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" source="seeking_page" />
 
         {/* Cross-links so crawlers (and pilots) reach the partnership hub families. */}
         <div className="mt-8 ch-panel p-6">

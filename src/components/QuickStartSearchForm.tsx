@@ -62,7 +62,7 @@ export default function QuickStartSearchForm({ userEmail }: { userEmail: string 
       setErrorMsg(alertResult.error)
       return
     }
-    track('alert_subscribed', { context: context || 'all', source_path: sourcePath })
+    track('alert_subscribed', { context: context || 'all', source_path: sourcePath, source: 'saved_search' })
     setDone(true)
     router.refresh()
   }

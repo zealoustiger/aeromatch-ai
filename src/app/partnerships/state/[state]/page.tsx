@@ -143,6 +143,7 @@ export default async function StatePartnershipsPage({ params }: Props) {
         context={name}
         sourcePath={`/partnerships/state/${state.toLowerCase()}`}
         noun="partnership"
+        source="partnership_state_page"
       />
 
       {/* Co-ownership FAQ (curated states only) */}

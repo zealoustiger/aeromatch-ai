@@ -315,7 +315,7 @@ export default async function AircraftPage({
               Skipped when the list is empty — AircraftSaleList's own empty state
               already leads with this same capture, so this would be a duplicate. */}
           {itemListListings.length > 0 && (
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} source="browse_footer" />
           )}
 
           {/* Monetization intent signal — same honest "coming soon" fake-door CTA already

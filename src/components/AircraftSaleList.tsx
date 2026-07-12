@@ -959,7 +959,7 @@ function renderList(
         </p>
         {alertSourcePath && (
           <div className="mt-6 text-left">
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} className="mt-0" />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} className="mt-0" source="empty_state" />
           </div>
         )}
       </div>
