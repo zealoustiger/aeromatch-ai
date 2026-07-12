@@ -531,15 +531,19 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   `/alerts`; a real `@example.com` subscribe swapped the nav to "My alerts" → `/alerts/manage`
   with no reload and 0 console errors; localStorage held only `{flag:"1"}`; test alert row
   deleted after (0 remain).
-- **[P1][goal] Unsubscribe recovery: offer "fewer," literally.** GOAL.md says one-click
-  unsubscribe should offer "fewer instead of none," but `/alerts/status`'s recovery box
-  only offers pause (all-or-nothing). Now that `alerts.frequency` exists (shipped after
-  that box), add a token-scoped "Switch to weekly instead" option for daily-frequency
-  alerts (new `updateAlertFrequencyByToken`, mirroring `pauseAlertByToken`'s public
-  token-scoped precedent) plus a "Manage all your alerts" link carrying the same token to
-  `/alerts/manage`. Improves the unsubscribe surface; emit an
-  `alert_unsubscribe_recovered` variant payload (`action: 'weekly'` vs `'paused'`) so
-  recovery modes are measurable.
+~~- **[P1][goal] Unsubscribe recovery: offer "fewer," literally.**~~ ✅ SHIPPED via
+  `unsubscribe-recovery-weekly` (2026-07-12) GOAL.md says one-click unsubscribe should
+  offer "fewer instead of none," but `/alerts/status`'s recovery box only offered pause
+  (all-or-nothing). New public, token-scoped `updateAlertFrequencyByToken` (mirrors
+  `pauseAlertByToken`) revives the alert to `status='confirmed', frequency='weekly'`;
+  `UnsubscribeRecover.tsx` now renders a "Switch to weekly instead" button alongside
+  "Pause instead" when the alert's current frequency is `daily`, plus a "Manage all your
+  alerts" link (`/alerts/manage?token=...`) always shown. Fires
+  `alert_unsubscribe_recovered` with `{ action: 'paused' | 'weekly' }`. Same
+  graceful-degrade precedent as every other `alerts.frequency` write: retries with just
+  the status flip if the column isn't migrated live yet (confirmed live today — column
+  genuinely absent, verified via a real Supabase update erroring with "Could not find the
+  'frequency' column").
 - **[P1][goal] Seeker sample cards in the digest email (last parity gap).** Aircraft and
   partnership alerts both render up to 3 rich preview cards in the digest; seeker alerts
   still get the CTA-only fallback (confirmed: no seeker sample fetch exists in
