@@ -149,14 +149,21 @@ must emit the `alert_subscribed` PostHog event.
      ("just email me new matches") as a lower-friction alternative alongside it —
      mirroring how `/aircraft` and `/partnerships` already do below empty/zero-result
      states? Two similar-sounding CTAs on one page needs care so it doesn't read as
-     redundant/confusing.
-  2. Independent of (1): can `/auth`'s copy for the `saveSearch` intent be more
+     redundant/confusing. **Still open** — a bigger product call, may need a human
+     decision rather than an agent choosing unilaterally.
+  2. ~~Independent of (1): can `/auth`'s copy for the `saveSearch` intent be more
      concrete about what's waiting for them ("Your Cessna 172 search is saved as soon
-     as you click the link") so the round-trip has better follow-through? Check
-     `deriveAuthContext()` in `src/app/auth/page.tsx` — it already branches copy per
-     `next` path/intent; `saveSearch` isn't a case there.
-  Scope as ONE cycle's slice (probably (2), copy-only, lowest risk); (1) is a bigger
-  product call and may need a human decision rather than an agent choosing unilaterally.
+     as you click the link") so the round-trip has better follow-through?~~ ✅ SHIPPED
+     via `auth-savesearch-concrete-copy` (2026-07-12) `deriveAuthContext()` in
+     `src/app/auth/page.tsx` now detects the `saveSearch=1` round-trip marker and names
+     the actual search via the existing `autoNameSearch()` helper — e.g. "Your Cessna
+     172 for sale under $80k search is saved the instant you click the link below — no
+     extra steps," in place of the generic "Sign in to ClubHanger" copy. Verified live
+     (real browser, not just curl — this page's heading renders client-side post-
+     hydration) for all 3 `SaveSearchButton` basePaths (`/aircraft`, `/partnerships`,
+     `/partnerships/seeking`); all pre-existing `deriveAuthContext` cases (listing
+     contact, post flows, `/saved`, generic default) confirmed unchanged. No schema/
+     component-signature change.
 
 ~~- **[P1][goal] Alert CTA on every aircraft listing page.**~~ ✅ SHIPPED via
   `aircraft-listing-alert-cta` (2026-07-06) A prominent "Alert me for {make} {model}"

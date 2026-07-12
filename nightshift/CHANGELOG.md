@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-12T06:01:23Z — PASS — auth-savesearch-concrete-copy
+- Pages: /auth
+- What: **When you click "Save this search" while signed out, the sign-in page now tells you exactly what's waiting for you instead of generic "Sign in to ClubHanger" copy.** Real PostHog session data (2026-07-11, mobile/San Jose) showed a visitor click "Save this search," land on a generic-looking sign-in page, and bounce 8 seconds later without checking email. The save-and-resume mechanics already worked (`?saveSearch=1` survives the round-trip), the problem was the page gave no concrete reason to come back. Now it says e.g. "Your Cessna 172 for sale under $80k search is saved the instant you click the link below — no extra steps," reusing the same name-generator the Saved Searches list already uses. Works for all 3 places "Save this search" appears (`/aircraft`, `/partnerships`, `/partnerships/seeking`). Every other `/auth` message (posting, contacting a seller, syncing saved listings, generic) is unchanged.
+- Goal: `[want]` (human-added 2026-07-11, real observed drop-off) — sub-item (2) of the "save-search auth-wall" backlog entry; copy-only, lowest-risk slice. Sub-item (1) — whether to also surface the lighter email-only `AlertSignup` alongside "Save this search" — is still open, flagged in BACKLOG.md as needing a human product call.
+- Spec: nightshift/specs/20260712T060123Z-auth-savesearch-concrete-copy.md
+- Verdict: PASS. `next build` + typecheck clean. `deriveAuthContext()`'s heading/subtext only render client-side after hydration (this page uses `useSearchParams`), so `curl` can't see them — verified with a real headless-browser pass instead: all 3 save-search basePaths render the correct named-search copy, and all pre-existing cases (listing contact, post flows, `/saved`, generic default) are byte-for-byte unchanged. qa-smoke exit 0 on `/auth` desktop 1280 + mobile 375 (0 console errors, 0 overflow); screenshots reviewed, page unchanged visually (this cycle only changes text content, not layout/CSS).
+- Screenshots: nightshift/screenshots/auth-savesearch-concrete-copy/
+- Next: sub-item (1) above — whether filter pages should show both "Save this search" and a lighter `AlertSignup` side by side, or reconcile them into one control — flagged as needing a human decision, not an agent unilateral call.
+
 ## 2026-07-11T13:18:56Z — DRAIN SUMMARY
 - Cycles this run: 5 (PASS 5 / FAIL 0 / ABORT 0)
 - Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
