@@ -1,3 +1,34 @@
+## 2026-07-12T09:37:58Z — Night Shift run: 21 cycles (PASS 16 / FAIL 2) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 2 escalated to opus; 5 quality-judged on opus
+- Night spend so far: $65.5754 of $120 cap
+
+- PASS — auth-savesearch-concrete-copy — /auth now names the actual saved search (Your Cessna 172... search is saved...) instead of generic sign-in copy, fixing the follow-throug
+- PASS — searches-inline-alert-settings — `/searches` rows with a confirmed alert now show inline Weekly/Daily + price-drop toggles and a Turn off alerts button (reusing `/alerts
+- ABORT — none — plan needed
+- PASS — partnership-alert-radius-match — partnership email alerts created from airport pages now honor their promised radius (e.g. 50mi around KPAO) instead of secretly matching
+- PASS — alert-confirm-manage-link — Added a Manage alerts link to the alert double-opt-in confirmation email and the `/alerts/status` confirmed panel, closing the last email in 
+- cycle produced no verdict (exit 0)
+- PASS — alert-signup-already-subscribed — signed-in visitors who already have an alert for a page now see an honest You're already getting alerts for this — Manage alerts stat
+- PASS/FAIL/ABORT line once it completes.
+- PASS — footer-alerts-link — Added a Get email alerts link to the global footer's Explore column (the one piece of site-wide chrome with zero alert entry point) and audited `/al
+- PASS — alerts-manage-cross-sell — Added the also want alerts for X? one-click cross-sell prompt to `/alerts/manage` (previously only on the one-time confirm page), so returning
+- PASS — partnership-price-drop-cards — partnership alerts whose only news is a buy-in price drop now get rich photo/price preview cards in the digest email (parity with aircraft
+- ABORT — none — plan needed
+- PASS — alerts-manage-new-alert — Added a + New alert button on `/alerts/manage` that lets subscribers create a brand-new alert (type + criteria) right on the manage page instea
+- PASS — alerts-manage-link-email — Added a self-serve email me my manage link option on the signed-out `/alerts/manage` page (plus a link from `/alerts`), so email-only alert su
+- PASS — alerts-landing-popular-chips — `/alerts` landing page's popular alert chips (Cessna 172, Cirrus SR22, etc. + new Partnerships in California) are now honesty-gated agains
+- cycle produced no verdict (exit 124)
+- PASS — returning-subscriber-nav-state — the nav's Get alerts button now becomes My alerts → /alerts/manage for browsers that have set an alert (or visited the manage page), g
+- PASS — unsubscribe-recovery-weekly — `/alerts/status`'s unsubscribe recovery box now offers a token-scoped Switch to weekly instead option (not just pause) plus a Manage all yo
+- PASS — seeker-digest-sample-cards — the alert digest email's seeking a partnership alerts now show real preview cards (title, honest looking-for line, location) instead of a ba
+- PASS — partnership-price-drop-email — Partnership alerts whose only news is a genuine buy-in-price drop now get the same rich single-listing price drop email (real photo, befor
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.1 on 2 cores, sustained ~15 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 21 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-11T13:18:56Z — Night Shift run: 5 cycles (PASS 5 / FAIL 0) — night ended
 - Models: cycles on sonnet; 0 escalated to opus; 1 quality-judged on opus
 - Night spend so far: $114.5929 of $120 cap
