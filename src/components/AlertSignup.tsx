@@ -10,6 +10,7 @@ import {
   getExistingAlertForSourcePath,
 } from '@/app/actions'
 import { track } from '@/lib/analytics'
+import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
@@ -145,6 +146,9 @@ export default function AlertSignup({
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
     })
+    // This browser now belongs to a subscriber — the nav's "Get alerts" CTA
+    // becomes "My alerts" (see lib/alertSubscriberFlag.ts). Boolean only.
+    markAlertSubscriber()
     setSubmitted(true)
   }
 
@@ -172,6 +176,7 @@ export default function AlertSignup({
       alert_count: showSocialProof ? alertCount : undefined,
       signed_in: true,
     })
+    markAlertSubscriber()
     setConfirmedImmediately(true)
     setSubmitted(true)
   }

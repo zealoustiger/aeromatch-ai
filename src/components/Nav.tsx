@@ -11,6 +11,7 @@ import type { User } from '@supabase/supabase-js'
 import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
 import { localSaveCount, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
+import { isAlertSubscriber, ALERT_SUBSCRIBER_EVENT } from '@/lib/alertSubscriberFlag'
 
 // About lives in the footer (declutter the top nav per the human's nav-polish ask).
 const links: { href: string; label: string; icon?: LucideIcon }[] = [
@@ -41,6 +42,10 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [deviceSaveCount, setDeviceSaveCount] = useState(0)
+  // Whether this browser belongs to a known alert subscriber (per-browser
+  // localStorage hint, boolean only — see lib/alertSubscriberFlag.ts). When true,
+  // the primary "Get alerts" capture CTA becomes "My alerts" → /alerts/manage.
+  const [alertSubscriber, setAlertSubscriber] = useState(false)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
@@ -120,8 +125,28 @@ export default function Nav() {
     return () => window.removeEventListener(LOCAL_SAVES_EVENT, sync)
   }, [user])
 
+  // Read the per-browser subscriber flag after mount (localStorage is client-only,
+  // so the first render always shows the default "Get alerts" and never mismatches
+  // the server HTML). Re-read on same-tab changes (a fresh subscribe fires
+  // ALERT_SUBSCRIBER_EVENT) and cross-tab changes (the native `storage` event).
+  useEffect(() => {
+    const sync = () => setAlertSubscriber(isAlertSubscriber())
+    sync()
+    window.addEventListener(ALERT_SUBSCRIBER_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(ALERT_SUBSCRIBER_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+
   // Close mobile menu on route change
   useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  // Returning subscribers get a one-click path to manage; everyone else keeps the
+  // capture CTA. `/alerts/manage` still proves ownership itself — this is just the label.
+  const alertsHref = alertSubscriber ? '/alerts/manage' : '/alerts'
+  const alertsLabel = alertSubscriber ? 'My alerts' : 'Get alerts'
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -170,11 +195,11 @@ export default function Nav() {
               Post a listing
             </Link>
             <Link
-              href="/alerts"
+              href={alertsHref}
               className="flex items-center gap-1.5 rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
               <Bell className="h-3.5 w-3.5" />
-              Get alerts
+              {alertsLabel}
             </Link>
             {user ? (
               <ProfileMenu user={user} isAdmin={isAdmin} onSignOut={handleSignOut} avatarConfig={avatarConfig} unreadCount={unreadCount} />
@@ -209,11 +234,11 @@ export default function Nav() {
           {/* Mobile right: Alerts CTA + hamburger (posting lives in the menu) */}
           <div className="flex items-center gap-2 sm:hidden">
             <Link
-              href="/alerts"
+              href={alertsHref}
               className="flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
               <Bell className="h-3.5 w-3.5" />
-              Alerts
+              {alertSubscriber ? 'My alerts' : 'Alerts'}
             </Link>
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -266,14 +291,14 @@ export default function Nav() {
             </Link>
           ))}
           <Link
-            href="/alerts"
+            href={alertsHref}
             className={cn(
               'flex items-center gap-2 py-4 text-base font-medium transition-colors',
               pathname.startsWith('/alerts') ? 'text-sky-700' : 'text-slate-700'
             )}
           >
             <Bell className="h-4 w-4" />
-            Get alerts
+            {alertsLabel}
           </Link>
           <Link
             href="/post"
