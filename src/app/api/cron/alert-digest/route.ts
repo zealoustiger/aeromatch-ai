@@ -640,6 +640,88 @@ async function fetchPartnershipPriceDropSamples(
     .map((row) => toPartnershipDigestSample(row, row.previous_buy_in_price))
 }
 
+type SeekerSampleRow = {
+  id: string
+  title: string | null
+  preferred_makes: string[] | null
+  preferred_models: string | null
+  home_airport: string | null
+  city: string | null
+  state: string | null
+}
+
+function toSeekerDigestSample(row: SeekerSampleRow): AlertDigestSample {
+  const lookingFor =
+    [row.preferred_makes?.length ? row.preferred_makes.join(', ') : null, row.preferred_models || null]
+      .filter(Boolean)
+      .join(' · ') || null
+  return {
+    title: row.title || 'Pilot seeking a partnership',
+    photoUrl: null,
+    isPlaceholder: false,
+    year: null,
+    ttaf: null,
+    lookingFor,
+    location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
+    price: null,
+    url: `${SITE_URL}/partnerships/seeking/${row.id}`,
+  }
+}
+
+const SEEKER_SAMPLE_COLS = 'id, title, preferred_makes, preferred_models, home_airport, city, state, created_at'
+
+/** Up to `limit` real, newly-posted seekers matching `target` since `since`,
+ *  for the digest email's preview cards. Mirrors `countNewSeekers`'s filters
+ *  (make overlap, state equality, the same `additional_airports`-aware icao OR
+ *  with graceful-degrade retry, and the free-text `preferred_models` match via
+ *  `matchesModelFilter` done in JS since it has no DB column of its own) but
+ *  selects the columns a preview card needs instead of a head-only count. No
+ *  DB-side limit before the JS model filter, same as `countNewSeekers` — cold
+ *  start volumes make this cheap; sliced to `limit` after filtering. */
+async function fetchNewSeekerSamples(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'seeker' }>,
+  since: string,
+  limit = MAX_DIGEST_SAMPLES
+): Promise<AlertDigestSample[]> {
+  let q = supabase
+    .from('partnership_seekers')
+    .select(SEEKER_SAMPLE_COLS)
+    .eq('status', 'active')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+
+  if (target.make) q = q.overlaps('preferred_makes', [target.make])
+  if (target.state) q = q.eq('state', target.state)
+  if (target.icao) q = q.or(`home_airport.eq.${target.icao},additional_airports.ov.{${target.icao}}`)
+
+  let { data, error } = await q
+  if (target.icao && error?.message?.includes('additional_airports')) {
+    let retry = supabase
+      .from('partnership_seekers')
+      .select(SEEKER_SAMPLE_COLS)
+      .eq('status', 'active')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .eq('home_airport', target.icao)
+    if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
+    if (target.state) retry = retry.eq('state', target.state)
+    ;({ data, error } = await retry)
+  }
+
+  if (error) {
+    console.error('[alert-digest] new-seeker sample error:', error.message)
+    return []
+  }
+
+  let rows = (data ?? []) as SeekerSampleRow[]
+  if (target.model) {
+    const wanted = target.model.split(',').map((m) => m.trim()).filter(Boolean)
+    rows = rows.filter((r) => matchesModelFilter(r.preferred_models, wanted))
+  }
+  return rows.slice(0, limit).map(toSeekerDigestSample)
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -757,10 +839,11 @@ export async function GET(req: NextRequest) {
       continue
     }
 
-    // Real preview cards — aircraft and partnership alerts (the listing types
-    // with photos/price/specs the digest can honestly show; seekers have
-    // none). Both prefer new-listing samples, falling back to price-drop
-    // samples when there are no new ones — same precedent as aircraft.
+    // Real preview cards — aircraft, partnership, and seeker alerts. Aircraft
+    // and partnership prefer new-listing samples, falling back to price-drop
+    // samples when there are no new ones; seekers have no price at all, so
+    // they only ever get new-listing samples (dropCount is always 0 for
+    // seekers — see below).
     const samples =
       target.type === 'aircraft'
         ? newCount > 0
@@ -770,7 +853,9 @@ export async function GET(req: NextRequest) {
           ? newCount > 0
             ? await fetchNewPartnershipSamples(supabase, target, since)
             : await fetchPartnershipPriceDropSamples(supabase, target, since)
-          : []
+          : newCount > 0
+            ? await fetchNewSeekerSamples(supabase, target, since)
+            : []
 
     const unsubToken = alert.unsubscribe_token ?? ''
     const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
