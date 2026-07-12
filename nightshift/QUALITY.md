@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-12T07:44:46Z — alerts-manage-cross-sell — score 4/5
+- Strengths: Disciplined mirror of the shipped `AlertCrossSell`/`subscribeToConfirmedAlert` precedent — the new server action reuses the exact `resolveOwnerEmail` (session-or-token) ownership proof every other manage-page action uses and the same idempotent-on-23505 insert, the client component is a faithful copy of the existing one-click accept/dismiss/done/error UI, and the page loop is honest: sources suggestions only from `confirmed` alerts, dedups the candidate `sourcePath` against *all* the visitor's alerts (so paused ones aren't re-offered), and renders at most one box — no forced/duplicate suggestion, correct empty state.
+- Weaknesses / risks: none material — the per-alert `getCrossSellSuggestion` calls run sequentially in a `for…await` loop (each may fan out to several `getAlertMatchCount` queries), just above a `Promise.all` doing the parallel thing for match counts; negligible at realistic alert counts but a minor missed-polish inconsistency. Sibling-model suggestions insert a path-segment `source_path` that the parser can't re-read, so the 182→210 chain dead-ends — documented, matches status-page behavior, not a bug.
+- Follow-up: none
+
 ## 2026-07-12T07:32:00Z — footer-alerts-link — score 5/5
 - Strengths: Exact, minimal execution — one object appended to the top of the existing `exploreLinks` array, rendered through the same `.map` as every sibling link so desktop/mobile and a11y come for free with zero new markup; label "Get email alerts" is action-oriented and consistent with neighbors ("Browse partnerships", "Post a partnership") rather than the blander "Email alerts" the spec floated; no other footer link/section touched, and the landing-copy audit was correctly resolved as a documented no-op rather than a silent skip.
 - Weaknesses / risks: none material — trivially scoped change with no edge cases to miss.
