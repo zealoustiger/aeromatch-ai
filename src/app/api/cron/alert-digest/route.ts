@@ -547,7 +547,7 @@ type PartnershipSampleRow = {
   state: string | null
 }
 
-function toPartnershipDigestSample(row: PartnershipSampleRow): AlertDigestSample {
+function toPartnershipDigestSample(row: PartnershipSampleRow, previousPrice?: number | null): AlertDigestSample {
   const realPhoto = pickRealPhoto(row.images)
   return {
     title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Partnership',
@@ -558,6 +558,7 @@ function toPartnershipDigestSample(row: PartnershipSampleRow): AlertDigestSample
     shareType: row.share_type ? formatShareType(row.share_type) : null,
     location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
     price: row.buy_in_price,
+    previousPrice,
     url: `${SITE_URL}/partnerships/${row.id}`,
   }
 }
@@ -590,6 +591,53 @@ async function fetchNewPartnershipSamples(
     return []
   }
   return (data ?? []).map((row) => toPartnershipDigestSample(row as PartnershipSampleRow))
+}
+
+/** Up to `limit` real partnerships matching `target` whose most recent
+ *  buy-in change was a genuine decrease since `since` — same candidate set
+ *  `countRecentPartnershipPriceDrops` counts, widened to the columns the
+ *  digest email's preview cards need (photo/year/share type/location +
+ *  before/after buy-in). Mirrors `fetchAircraftPriceDropSamples`. */
+async function fetchPartnershipPriceDropSamples(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'partnership' }>,
+  since: string,
+  limit = MAX_DIGEST_SAMPLES
+): Promise<AlertDigestSample[]> {
+  let q: any = supabase
+    .from('partnerships')
+    .select('id, make, model, year, buy_in_price, previous_buy_in_price, share_type, images, home_airport, city, state, buy_in_price_changed_at')
+    .eq('status', 'active')
+    .gte('buy_in_price_changed_at', since)
+    .not('previous_buy_in_price', 'is', null)
+    .order('buy_in_price_changed_at', { ascending: false })
+
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.state) q = q.eq('state', target.state)
+  const icaoList = await resolveIcaoList(target)
+  if (icaoList) q = q.in('home_airport', icaoList)
+
+  type Row = PartnershipSampleRow & {
+    previous_buy_in_price: number | null
+    buy_in_price_changed_at: string | null
+  }
+  const { data, error } = (await q) as { data: Row[] | null; error: { message: string } | null }
+  if (error) {
+    if (error.message?.includes('previous_buy_in_price') || error.message?.includes('buy_in_price_changed_at')) {
+      return []
+    }
+    console.error('[alert-digest] partnership price-drop sample error:', error.message)
+    return []
+  }
+  return (data ?? [])
+    .filter((r) =>
+      hasRecentPriceDrop(
+        { previous_price: r.previous_buy_in_price, asking_price: r.buy_in_price, price_changed_at: r.buy_in_price_changed_at },
+        since
+      )
+    )
+    .slice(0, limit)
+    .map((row) => toPartnershipDigestSample(row, row.previous_buy_in_price))
 }
 
 // ─── Cron handler ─────────────────────────────────────────────────────────────
@@ -711,18 +759,17 @@ export async function GET(req: NextRequest) {
 
     // Real preview cards — aircraft and partnership alerts (the listing types
     // with photos/price/specs the digest can honestly show; seekers have
-    // none). Aircraft prefers new-listing samples, falling back to
-    // price-drop samples when there are no new ones. Partnerships only have
-    // new-listing samples today (price-drop-sample parity is a separate
-    // slice) — a partnership alert with only a buy-in drop still gets the
-    // CTA-only fallback.
+    // none). Both prefer new-listing samples, falling back to price-drop
+    // samples when there are no new ones — same precedent as aircraft.
     const samples =
       target.type === 'aircraft'
         ? newCount > 0
           ? await fetchNewAircraftSamples(supabase, target, since)
           : await fetchAircraftPriceDropSamples(supabase, target, since)
-        : target.type === 'partnership' && newCount > 0
-          ? await fetchNewPartnershipSamples(supabase, target, since)
+        : target.type === 'partnership'
+          ? newCount > 0
+            ? await fetchNewPartnershipSamples(supabase, target, since)
+            : await fetchPartnershipPriceDropSamples(supabase, target, since)
           : []
 
     const unsubToken = alert.unsubscribe_token ?? ''
