@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-12T11:02:06Z — alert-status-whats-next — score 4/5
+## 2026-07-12T12:10:48Z — alert-capture-viewed-event — score 4/5
+- Strengths: Clean, well-scoped impression instrumentation — observer on the outer `<section>`/form so it fires regardless of funnel state per spec, correct fire-once guard (`viewedRef` + `disconnect()`), SSR-safe (`typeof IntersectionObserver` check), proper cleanup, same field shape as `alert_subscribed`, and thoughtful "why" comments; two near-identical blocks but extracting a hook for only 2 call sites would be over-engineering.
+- Weaknesses / risks: `threshold: 0.5` means a capture box taller than a small mobile viewport can never reach 50% intersection ratio and would never fire, undercounting the denominator on exactly the below-the-fold mobile placements this targets; minor join nuance — impression logs base `sourcePath` while `alert_subscribed` logs `effectiveSourcePath` (may carry `deal=good`), so the two won't key-match exactly when deal-only is toggled (defensible, since impression is pre-interaction).
+- Follow-up: none
 - Strengths: Honest enrichment — reuses the existing admin fetch, follows `/alerts/manage`'s frequency graceful-degrade retry precedent, correct noun (listing/pilot) and plurality ("1 pilot matches" / "3 pilots match"), truthful zero-case, and no crash risk since `getAlertMatchCount` swallows its own errors to null; scoped to one file per spec, no schema change, other states untouched.
 - Weaknesses / risks: Partial deviation from acceptance criterion #3 — when the frequency column errors or the count returns null it still renders enriched cadence copy ("a weekly digest…") rather than the spec's stated static fallback; stays honest only because 'weekly' is the true system default when the column is absent (`normalizeFrequency` default), which is correct but undocumented at the call site.
 - Follow-up: none
