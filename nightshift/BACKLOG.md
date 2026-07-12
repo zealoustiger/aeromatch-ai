@@ -406,15 +406,21 @@ un-built by direct code read this pass._
   against the current feature set — `AlertsLanding`/`AlertSignup` already accurately
   state no-account, price-drop opt-in, one-click unsubscribe, and the daily/weekly
   frequency selector already renders inline in the signup form; no copy changes needed.
-- **[P2][goal] Cross-sell suggestion on `/alerts/manage` (digest → manage → grow loop).**
-  Cross-sell currently exists only on `/alerts/status` in the seconds after confirming.
-  Reuse `getCrossSellSuggestion` + the `subscribeToConfirmedAlert` one-click precedent to
-  show one honest "Also want alerts for {sibling model / neighboring state}?" box on
-  `/alerts/manage` when ownership is proven (session or `?token=`) — the digest email's
-  "Manage alerts" link already carries the token, so every digest becomes a growth loop.
-  Honesty gate: only render when the suggestion has a real non-zero live match count (the
-  helper already supports this) and the email doesn't already have an alert with that
-  `source_path`. Emits `alert_subscribed` with source `manage_cross_sell`. No schema change.
+~~- **[P2][goal] Cross-sell suggestion on `/alerts/manage` (digest → manage → grow loop).**~~
+  ✅ SHIPPED via `alerts-manage-cross-sell` (2026-07-12) New `subscribeManageCrossSell`
+  server action (proves ownership via `resolveOwnerEmail` — session or the page's own
+  `?token=`, same as every other manage-page action) + `ManageAlertCrossSell.tsx` client
+  component render one honest "Also want alerts for the {sibling}?" box on
+  `/alerts/manage`, trying each confirmed alert's `source_path` (newest first) via the
+  existing `getCrossSellSuggestion` until one isn't already among the visitor's alerts.
+  Live-verified end-to-end (real click, not `.click()`) against the real prod DB with a
+  throwaway `@example.com` confirmed test alert: the box rendered "Also want alerts for
+  the Cessna 182?", clicking "Yes, alert me" inserted a real second `confirmed` alert row
+  with the correct `source_path`, no second opt-in email, no duplicate; a follow-up load
+  correctly showed no box once every reachable candidate was already subscribed (honest
+  dedup, not a bug — the further 182→210 chain needs a query-string-shaped seed, and the
+  182 alert's own curated URL is path-segment style, matching `/alerts/status`'s existing,
+  documented behavior). Both test rows deleted after (0 remain). No schema change.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
