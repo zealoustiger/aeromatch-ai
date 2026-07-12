@@ -710,7 +710,7 @@ the conversion denominator, and the highest-intent alert type still missing._
   never a partial "dead end." `last_digest_at` updates for every alert in a combined send.
   No `frequencyUrl` in the combined send (per-alert daily→weekly toggle, ambiguous across
   multiple alerts — Manage alerts covers it per-alert instead); no new capture point.
-- **[P1][goal] "Watch this listing" — price-drop alert for one specific aircraft.** The
+- ~~**[P1][goal] "Watch this listing" — price-drop alert for one specific aircraft.**~~ ✅ SHIPPED via `listing-watch-price-alert` (2026-07-12) The
   highest-intent alert we don't offer: a buyer eyeing a particular plane can only subscribe
   to the whole family search. Add "Alert me if this price drops" on
   `/aircraft/listing/[id]` (reuse `AlertSignup` incl. the signed-in one-click path), encoded
@@ -719,6 +719,20 @@ the conversion denominator, and the highest-intent alert type still missing._
   `buildPriceDropEmail` off that row's own `previous_price`/`price_changed_at`. Honesty
   gate: if the listing has sold/been removed, say so once rather than staying silent
   forever. New capture point → emits `alert_subscribed` with `source: 'listing_watch'`.
+  Shipped: new `watchOnly` `AlertSignup` variant (distinct "Alert me if the price drops"
+  copy, "Watch price" button, hides the price-drop/deal-only checkboxes — implicit for a
+  single known listing) rendered below the family alert box on the listing sidebar. Cron's
+  `resolveTarget` learns the `/aircraft/listing/<id>?watch=price` shape (checked before the
+  make/model regex so "listing" isn't misparsed as a make) → `{type:'aircraft', listingId}`,
+  routed through new `resolveListingWatch` which either reuses the existing single-listing
+  `buildPriceDropEmail` path on a genuine drop or, on a sold/removed row, sends exactly one
+  new `buildListingUnavailableEmail` and pauses the alert (honesty gate — never silent, never
+  repeating). A transient query error is treated as "nothing to report", never a fabricated
+  removal. New unit tests for `buildListingUnavailableEmail` (subject, no false drop-badge,
+  all links present in html+text, title HTML-escaping). **Not done, intentionally:** bundling
+  the "unavailable" notice into the combined multi-alert digest (rare overlap — always its own
+  dedicated email, matching the `alert-digest-combine` precedent); `/alerts/manage` enrichment
+  specific to watch alerts (the generic parsers there already degrade gracefully for this shape).
 - **[P1][goal] `alert_capture_viewed` impression event — the missing denominator for "prove
   it converts".** All ~24 capture points emit `alert_subscribed` with a `source` tag, but
   nothing records how often each placement was *seen*, so per-placement conversion rate is
