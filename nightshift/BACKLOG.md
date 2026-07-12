@@ -391,15 +391,20 @@ un-built by direct code read this pass._
   &token=<confirm_token>` rendered "Manage your alerts" linking `/alerts/manage?token=
   <real unsubscribe_token>`, which correctly loaded that alert (not an invalid-link state); a
   bogus token showed no link, no crash. Row deleted after (0 remain).
-- **[P2][goal] Partnership buy-in-drop preview cards in the digest email.** The flagged
-  not-done parity slice from `partnership-digest-samples`: a partnership alert whose window
-  contains only a buy-in drop still gets the CTA-only fallback while aircraft alerts get rich
-  per-listing drop cards. Add `fetchPartnershipPriceDropSamples` (mirror
+~~- **[P2][goal] Partnership buy-in-drop preview cards in the digest email.**~~ ✅ SHIPPED
+  via `partnership-price-drop-cards` (2026-07-12) The flagged not-done parity slice from
+  `partnership-digest-samples`: a partnership alert whose window contains only a buy-in drop
+  no longer gets the CTA-only fallback — it now gets the same rich per-listing drop cards
+  aircraft alerts already have. New `fetchPartnershipPriceDropSamples` (mirrors
   `fetchAircraftPriceDropSamples`, remapping `previous_buy_in_price`/`buy_in_price_changed_at`
-  the way `countRecentPartnershipPriceDrops` already does) and render the existing sample-card
-  layout with the struck-through old buy-in; graceful-degrade on the not-yet-migrated columns,
-  same as the count path. No new capture point — email-quality parity per GOAL.md's
-  "best listing alert email in aviation."
+  the same way `countRecentPartnershipPriceDrops` already does) wired in as the fallback when
+  a partnership alert has `newCount === 0 && dropCount > 0`; `toPartnershipDigestSample` gains
+  the same optional `previousPrice` param `toDigestSample` already has. No `email.ts` change —
+  `AlertDigestSample.previousPrice`/`shareType` and the card renderer already supported this
+  generically. Graceful-degrades to `[]` on the not-yet-migrated-live column error, same as
+  the count path (confirmed live: `previous_buy_in_price` still doesn't exist on the real prod
+  DB today). No schema change (columns already declared in `schema.sql`, just pending human
+  DDL application — joins the existing pending-migration list).
 - ~~**[P2][goal] Alerts entry point in the global footer.**~~ ✅ SHIPPED via
   `footer-alerts-link` (2026-07-12) Added a "Get email alerts" link as the first item in
   the footer's "Explore" column (site-wide, every page). Audited `/alerts` landing copy
@@ -1728,6 +1733,7 @@ thin/doorway pages; real listings + real data per page).
 ### Inventory coverage & ingestion — 2026-06-20
 **Goal: measurably cover the real available inventory, starting with the Bay Area.** We currently ingest Barnstormers (827 / 96 CA), AircraftForSale.com (620 / 48 CA), Hangar67 (409 / 26 CA) — but NOT the two biggest GA marketplaces, **Trade-A-Plane** and **Controller.com**. That's our biggest coverage blind spot.
 - **[P1][want] Add Trade-A-Plane ingestion.** TAP is likely the largest source of Bay-Area piston-GA for-sale listings and we capture 0. Extend the scraper/ingest pipeline: (1) fetch + parse TAP search results (filter by state/region, **Bay Area / CA first**); (2) normalize → `aircraft_for_sale` with `source='tradeaplane'`, `source_url`, `source_id`, make/model/year/price/location/state/photos; (3) dedupe against existing rows by **N-number (registration)** where available, else make+model+year+price+seller fuzzy; (4) schedule/repeat. Respect robots/ToS; capture for aggregation, link back to the source.
+  **Audit note (2026-07-12, `partnership-price-drop-cards` cycle):** confirmed `trade-a-plane.com` is behind a **DataDome bot-challenge** (`curl -I` on `/search` returns a JS-challenge page referencing `geo.captcha-delivery.com`, not real listing HTML) — same class as Controller/AirMart/AeroTrader, already documented a few items below as "do NOT build bot/Cloudflare/WAF-evasion." This item as written (direct fetch+parse) is **not buildable without evasion, which is off-limits.** Reclassify as the same "cover indirectly" playbook: cross-listing dedupe by N-number from sources we *can* read (Barnstormers/aircraftforsale.com/dealer sites), dealer/broker outreach, or human/bookmarklet capture — not a direct-scrape target. Leaving open at P1 since Bay-Area coverage is still a real gap; just not solvable by extending the scraper as literally described.
   **Audit note (2026-07-11, `alert-digest-frequency` cycle's `[want]`-tier scoping):** this item's premise doesn't hold — `www.trade-a-plane.com/robots.txt` (and by extension its listing pages) is behind a **DataDome JS challenge** ("Please enable JS and disable any ad blocker" + `captcha-delivery.com` script), same class as Controller/Hangar67/AirMart/AeroTrader, **not** a plain static-HTML/sitemap site the existing adapter pipeline can read. Per the standing guardrail (see the AirMart+AeroTrader item below), do NOT build bot/DataDome-evasion. Re-tag mentally as blocked-same-as-AirMart/AeroTrader/Controller until a clean path exists (cross-listing dedupe, dealer/broker outreach, or human/bookmarklet capture) — leaving the `[want]` tag/priority as-is since a human may want to revisit via one of those clean paths.
   — **BLOCKED 2026-07-06** (`alerts-manage-page` cycle's tier-2 audit, live-checked, not
   fixed): `trade-a-plane.com` sits behind **DataDome bot-protection** — every request,
