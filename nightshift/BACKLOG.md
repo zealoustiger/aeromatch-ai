@@ -518,14 +518,19 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   plus a clean `tsc`/`next build` and `qa-smoke.mjs` regression pass on real (scraped)
   listing pages. This will be observable the moment a real user posts their own
   aircraft and/or the `contact_phone` migration is applied.
-- **[P1][goal] Returning-subscriber nav state: "Get alerts" → "My alerts".** After a
-  successful subscribe (or a visit to a token/session manage page), set a small
-  localStorage flag; `Nav.tsx`'s "Get alerts" CTA then renders "My alerts" →
-  `/alerts/manage` for that browser. Store ONLY the boolean flag — never the token or
-  email in localStorage (the manage page itself still proves ownership via session/token,
-  or the new email-me-my-link flow above). Makes management one click from every page for
-  known subscribers while capture stays the default for everyone else. No new capture
-  point; no `alert_subscribed`.
+~~- **[P1][goal] Returning-subscriber nav state: "Get alerts" → "My alerts".**~~ ✅ SHIPPED
+  via `returning-subscriber-nav-state` (2026-07-12) New SSR-safe boolean-only localStorage
+  flag (`src/lib/alertSubscriberFlag.ts`, mirrors `localSaves.ts`) is set on a successful
+  subscribe (both `AlertSignup` paths) and on an authenticated `/alerts/manage` visit (new
+  `AlertSubscriberMarker`, rendered only on the resolved-owner branch, never the signed-out
+  dead end). `Nav.tsx` reads it after mount (+ same-tab change event + cross-tab `storage`
+  event) and swaps the desktop CTA, mobile top CTA, and mobile-menu row to "My alerts" →
+  `/alerts/manage`. Stores ONLY `'1'` — never token/email/PII; the manage page still proves
+  ownership via session/token. No new capture point, no `alert_subscribed`, no schema change.
+  Live-verified end-to-end (real browser + real prod DB): fresh browser shows "Get alerts" →
+  `/alerts`; a real `@example.com` subscribe swapped the nav to "My alerts" → `/alerts/manage`
+  with no reload and 0 console errors; localStorage held only `{flag:"1"}`; test alert row
+  deleted after (0 remain).
 - **[P1][goal] Unsubscribe recovery: offer "fewer," literally.** GOAL.md says one-click
   unsubscribe should offer "fewer instead of none," but `/alerts/status`'s recovery box
   only offers pause (all-or-nothing). Now that `alerts.frequency` exists (shipped after
