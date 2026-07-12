@@ -6,6 +6,7 @@ import AlertCrossSell from '@/components/AlertCrossSell'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -75,16 +76,51 @@ export default async function AlertStatusPage({
   // `token` param carries.
   let crossSell = null as Awaited<ReturnType<typeof getCrossSellSuggestion>>
   let manageToken: string | null = null
+  let confirmedBody: string | null = null
   if (key === 'confirmed' && token) {
     const admin = createAdminClient()
-    const { data } = await admin
+    let cols = ['source_path', 'unsubscribe_token', 'frequency']
+    let { data, error } = (await admin
       .from('alerts')
-      .select('source_path, unsubscribe_token')
+      .select(cols.join(', '))
       .eq('confirm_token', token)
       .eq('status', 'confirmed')
-      .maybeSingle()
+      .maybeSingle()) as unknown as {
+      data: { source_path: string | null; unsubscribe_token: string | null; frequency?: string } | null
+      error: { message: string } | null
+    }
+    // `frequency` may not be migrated live yet — same graceful-degrade retry
+    // precedent as `/alerts/manage`'s fetchAlertsForEmail.
+    if (error?.message?.includes('frequency')) {
+      cols = cols.filter((c) => c !== 'frequency')
+      ;({ data, error } = (await admin
+        .from('alerts')
+        .select(cols.join(', '))
+        .eq('confirm_token', token)
+        .eq('status', 'confirmed')
+        .maybeSingle()) as unknown as {
+        data: { source_path: string | null; unsubscribe_token: string | null } | null
+        error: { message: string } | null
+      })
+    }
     crossSell = await getCrossSellSuggestion(data?.source_path ?? null)
     manageToken = data?.unsubscribe_token ?? null
+
+    // "What happens next": name the alert's real cadence + live match count
+    // instead of the generic static copy, when the data's genuinely available.
+    if (data?.source_path) {
+      const cadence = normalizeFrequency((data as { frequency?: string }).frequency)
+      const match = await getAlertMatchCount(data.source_path)
+      const cadenceLabel = cadence === 'daily' ? 'a daily digest' : 'a weekly digest'
+      let sentence = `You're confirmed — we'll send ${cadenceLabel} whenever there's a new match, and nothing else.`
+      if (match) {
+        const nounLabel = match.noun === 'pilot' ? (match.count === 1 ? 'pilot matches' : 'pilots match') : (match.count === 1 ? 'listing matches' : 'listings match')
+        sentence += match.count > 0
+          ? ` ${match.count} ${nounLabel} right now — you'll hear about the next one too.`
+          : ` None match right now — you'll be first to know when one does.`
+      }
+      confirmedBody = sentence
+    }
   }
 
   // The recovery box's "Switch to weekly instead" option only makes sense for an
@@ -106,7 +142,7 @@ export default async function AlertStatusPage({
             <Icon className={`h-8 w-8 ${tint}`} />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-          <p className="mt-3 text-base leading-relaxed text-slate-600">{body}</p>
+          <p className="mt-3 text-base leading-relaxed text-slate-600">{confirmedBody ?? body}</p>
           {key === 'unsubscribed' && token && (
             <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} />
           )}

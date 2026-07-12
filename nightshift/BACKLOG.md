@@ -657,13 +657,20 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   back to the existing generic no-context box on a tie or when there are no makes at all
   (honesty gate). Make-level only this slice — **next: model-level scoping** when saves
   cluster on a specific model, not just a make.
-- **[P2][goal] "What happens next" on `/alerts/status`'s confirmed panel.** The confirmed
-  state is static copy today (verified — fixed `body` string). Enrich it with the alert's
-  real cadence ("your weekly digest") from the row the token lookup already fetches, plus
-  the live match count via existing `getAlertMatchCount` ("12 listings match right now —
-  you'll hear when the next one lists"), both graceful-degrading to today's copy. Sets
-  honest cadence expectations at the moment trust is highest; no schema change, no new
-  capture point.
+~~- **[P2][goal] "What happens next" on `/alerts/status`'s confirmed panel.**~~ ✅ SHIPPED
+  via `alert-status-whats-next` (2026-07-12) The confirmed state's `body` was a fixed
+  string; now the `key === 'confirmed' && token` branch also selects `frequency` (same
+  graceful-degrade retry precedent as `/alerts/manage`'s `fetchAlertsForEmail` — confirmed
+  live today the column genuinely doesn't exist yet) and calls the existing
+  `getAlertMatchCount(source_path)`, then renders "You're confirmed — we'll send a
+  {weekly/daily} digest whenever there's a new match, and nothing else. N
+  listings/pilots match right now — you'll hear about the next one too." (honest zero-case:
+  "None match right now — you'll be first to know when one does."), falling back to the
+  original generic copy whenever `source_path` is missing. No schema change, no new capture
+  point. Live-verified against the real prod DB with two throwaway `@example.com` confirmed
+  test alerts (deleted after, 0 remain): a Cessna-make alert rendered "...weekly digest...
+  409 listings match right now..." (frequency column absent → correctly defaulted to
+  weekly), and a nonexistent-make alert rendered the honest zero-case sentence.
 - **[P2][goal] "Send me a sample digest" on `/alerts/manage`.** A subscriber can't see
   what their alert email will look like until the cron happens to fire — and has no way to
   reassure themselves the alert works. Per-alert owner-scoped action (via the existing
