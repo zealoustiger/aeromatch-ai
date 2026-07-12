@@ -576,17 +576,18 @@ header anywhere in `src/`; `/saved` and all 8 `/guides/*` pages render zero `Ale
 `confirm` + `unsubscribe` routes). Entry points and management are now broad — this refill
 shifts weight to deliverability, expectation-setting, and the first smart-alert type._
 
-- **[P1][goal] RFC 8058 `List-Unsubscribe` one-click headers on every alert email.**
-  Deliverability IS the alert experience — an email Gmail throttles or spam-folders is an
-  alert that never fired. Verified missing: `sendEmail` (`src/lib/email.ts`) posts to Resend
-  with no custom headers, so none of our alert emails carry `List-Unsubscribe` /
-  `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which Gmail/Yahoo bulk-sender rules
-  have required since 2024 and which also powers the mail client's native "Unsubscribe"
-  affordance. Thread each email's existing unsubscribe-token URL through Resend's `headers`
-  field from every builder call site (digest, price-drop, confirm, manage-link); per the RFC
-  the one-click POST must unsubscribe with no interstitial page — verify
-  `/api/alerts/unsubscribe` accepts POST (add a handler if it's GET-only, reusing the same
-  token logic). Improves every alert email; no new capture point (no `alert_subscribed`).
+~~- **[P1][goal] RFC 8058 `List-Unsubscribe` one-click headers on every alert email.**~~
+  ✅ SHIPPED via `alert-list-unsubscribe-header` (2026-07-12) New pure
+  `buildListUnsubscribeHeaders(unsubscribeUrl?)` in `src/lib/email.ts`; `sendEmail` threads
+  it into Resend's `headers` field (`List-Unsubscribe` + `List-Unsubscribe-Post:
+  List-Unsubscribe=One-Click`) whenever a caller passes `unsubscribeUrl` — now true at all
+  four alert-email call sites (confirm, confirm-resend, manage-link, digest/price-drop).
+  `/api/alerts/unsubscribe` gained a `POST` handler (RFC 8058's one-click target) sharing
+  the existing GET's token→DB-update logic but returning a plain non-redirecting `200`; GET
+  behavior is unchanged (still redirects to `/alerts/status`). Verified live against the
+  real prod DB with a throwaway `@example.com` test alert: GET still redirects and flips
+  the row exactly as before; POST returns `200` with no redirect and flips the same row;
+  POST with no token returns `400`. Row deleted after (0 rows remain).
 - **[P1][goal] One-click "get fewer emails" link in alert-email footers.** The digest and
   price-drop footers today offer only Manage + Unsubscribe — all-or-nothing at the exact
   moment of annoyance. Add a token-scoped "Too many emails? Switch to weekly" footer link
