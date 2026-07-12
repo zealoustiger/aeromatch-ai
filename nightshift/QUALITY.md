@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-12T11:02:06Z — alert-status-whats-next — score 4/5
+- Strengths: Honest enrichment — reuses the existing admin fetch, follows `/alerts/manage`'s frequency graceful-degrade retry precedent, correct noun (listing/pilot) and plurality ("1 pilot matches" / "3 pilots match"), truthful zero-case, and no crash risk since `getAlertMatchCount` swallows its own errors to null; scoped to one file per spec, no schema change, other states untouched.
+- Weaknesses / risks: Partial deviation from acceptance criterion #3 — when the frequency column errors or the count returns null it still renders enriched cadence copy ("a weekly digest…") rather than the spec's stated static fallback; stays honest only because 'weekly' is the true system default when the column is absent (`normalizeFrequency` default), which is correct but undocumented at the call site.
+- Follow-up: none
+
 ## 2026-07-12T10:50:41Z — saved-page-alert-capture — score 4/5
 - Strengths: Pure, well-documented `deriveSavedAlertContext` helper with a correct plurality/tie scan (each new max resets the `tied` flag, so no false ties or missed ties across orderings) that honestly returns null on a tie or empty makes; seeker saves deliberately excluded with a reason; all four placements wired (signed-in list + empty-state, device list + empty-state) reusing existing `AlertSignup` props with zero changes to it; server `deriveSavedAlertContext` mirrored client-side via `useMemo`, matching each file's conventions.
 - Weaknesses / risks: none material — noun tiebreak silently defaults to 'aircraft' and the generic fallback hardcodes `sourcePath="/"`, both reasonable.
