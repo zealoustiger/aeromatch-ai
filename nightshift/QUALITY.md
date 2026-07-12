@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-12T07:32:00Z — footer-alerts-link — score 5/5
+- Strengths: Exact, minimal execution — one object appended to the top of the existing `exploreLinks` array, rendered through the same `.map` as every sibling link so desktop/mobile and a11y come for free with zero new markup; label "Get email alerts" is action-oriented and consistent with neighbors ("Browse partnerships", "Post a partnership") rather than the blander "Email alerts" the spec floated; no other footer link/section touched, and the landing-copy audit was correctly resolved as a documented no-op rather than a silent skip.
+- Weaknesses / risks: none material — trivially scoped change with no edge cases to miss.
+- Follow-up: none
+
 ## 2026-07-12T06:38:17Z — partnership-alert-radius-match — score 5/5
 - Strengths: Exact, disciplined spec adherence — reuses the existing `getAirportsWithinRadius` haversine helper (same one the live search page uses) instead of reinventing, adds a well-documented `resolveIcaoList` per file (honoring each file's "deliberately separate parser" precedent), and swaps `.eq`→`.in` in all 4 queries; backward-compat is precise (the `radius > 0` guard makes `radius=0`/absent fall back to exact-ICAO), the parse lands only in the bare-`/partnerships` branch so seeker and `near/[icao]` paths stay untouched, and it was live-verified against prod (KHWD radius=50 → 4 vs 2 exact).
 - Weaknesses / risks: none material — the inherited perf cost (`getAirportsWithinRadius` full-scans the `airports` table once per matching alert in the cron loop) is real but explicitly out of scope and pre-existing, not introduced here.
