@@ -588,15 +588,17 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   real prod DB with a throwaway `@example.com` test alert: GET still redirects and flips
   the row exactly as before; POST returns `200` with no redirect and flips the same row;
   POST with no token returns `400`. Row deleted after (0 rows remain).
-- **[P1][goal] One-click "get fewer emails" link in alert-email footers.** The digest and
-  price-drop footers today offer only Manage + Unsubscribe — all-or-nothing at the exact
-  moment of annoyance. Add a token-scoped "Too many emails? Switch to weekly" footer link
-  shown for daily-frequency alerts: new GET-able `/api/alerts/frequency` route (mirrors
-  `/api/alerts/unsubscribe`'s token pattern; reuses the shipped
-  `updateAlertFrequencyByToken`) landing on `/alerts/status` with an honest "you're on
-  weekly now" state. Completes GOAL.md's "fewer instead of none" *inside the email itself*,
-  before the unsubscribe click ever happens. Graceful-degrades while `alerts.frequency` is
-  pending live DDL (same precedent as `unsubscribe-recovery-weekly`). No new capture point.
+~~- **[P1][goal] One-click "get fewer emails" link in alert-email footers.**~~ ✅ SHIPPED
+  via `alert-fewer-emails-footer` (2026-07-12) New GET-only `/api/alerts/frequency` route
+  (mirrors `/api/alerts/unsubscribe`'s token pattern) flips a daily alert's `frequency` to
+  `weekly` and redirects to a new `/alerts/status?state=weekly` confirmation panel.
+  `buildAlertDigestEmail`/`buildPriceDropEmail` gained an optional `frequencyUrl` footer
+  link ("Get fewer emails"), wired from the digest cron only when `frequency === 'daily'`
+  (a weekly alert has no lighter cadence to offer). Graceful-degrades exactly like
+  `updateAlertFrequencyByToken` while `alerts.frequency` is pending live DDL — verified live
+  against the real prod DB with a throwaway `@example.com` test alert (row deleted after, 0
+  remain): the route redirected correctly and left `status` untouched even though the
+  `frequency` column genuinely doesn't exist yet on the shared table.
 - **[P1][goal] Live-match expectation line at capture in `AlertSignup`.** Capture boxes
   show subscriber social proof but nothing about what the alert will actually DO.
   `getAlertMatchCount` (`alertMatchCounts.ts`) already computes honest live-match counts
