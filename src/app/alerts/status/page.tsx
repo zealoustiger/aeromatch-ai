@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CheckCircle2, BellOff, AlertCircle } from 'lucide-react'
+import { CheckCircle2, BellOff, AlertCircle, MailOpen } from 'lucide-react'
 import UnsubscribeRecover from '@/components/UnsubscribeRecover'
 import AlertCrossSell from '@/components/AlertCrossSell'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
@@ -32,6 +32,13 @@ const STATES = {
     title: 'You have been unsubscribed',
     body: "You won't receive any more alert emails for this subscription. You can sign up again anytime from any aircraft page.",
   },
+  weekly: {
+    icon: MailOpen,
+    tint: 'text-emerald-600',
+    ring: 'bg-emerald-50',
+    title: "You're on weekly emails now",
+    body: "This alert will email you at most once a week instead of daily — same matches, fewer emails. You're still subscribed, nothing else changed.",
+  },
   invalid: {
     icon: AlertCircle,
     tint: 'text-amber-600',
@@ -45,7 +52,7 @@ type StateKey = keyof typeof STATES
 
 function resolveState(raw: string | string[] | undefined): StateKey {
   const v = Array.isArray(raw) ? raw[0] : raw
-  return v === 'confirmed' || v === 'unsubscribed' ? v : 'invalid'
+  return v === 'confirmed' || v === 'unsubscribed' || v === 'weekly' ? v : 'invalid'
 }
 
 export default async function AlertStatusPage({
@@ -109,6 +116,13 @@ export default async function AlertStatusPage({
           {key === 'confirmed' && manageToken && (
             <p className="mt-4 text-sm text-slate-500">
               <Link href={`/alerts/manage?token=${manageToken}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'weekly' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
                 Manage your alerts
               </Link>
             </p>

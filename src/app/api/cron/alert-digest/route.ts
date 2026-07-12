@@ -865,6 +865,10 @@ export async function GET(req: NextRequest) {
     // rare row with no token yet (pre-migration).
     const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
+    // Only offer "fewer emails" for a daily-cadence alert — a weekly one has
+    // no lighter cadence left to switch to.
+    const frequencyUrl =
+      frequency === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
 
     // When this send is purely about a price drop (no new listings to also
     // report) on an aircraft OR partnership alert, feature the single best
@@ -887,6 +891,7 @@ export async function GET(req: NextRequest) {
           listingUrl: bestDrop.url,
           manageUrl,
           unsubscribeUrl,
+          frequencyUrl,
           // Honesty: this is a daily/weekly cron send, never real-time —
           // never claim "just dropped".
           periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
@@ -902,6 +907,7 @@ export async function GET(req: NextRequest) {
           listingsUrl,
           manageUrl,
           unsubscribeUrl,
+          frequencyUrl,
         })
 
     const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })

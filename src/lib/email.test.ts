@@ -198,6 +198,35 @@ test('digest: footer includes both Manage alerts and Unsubscribe links', () => {
   assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage"/)
   assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage/)
   assert.match(text, /Unsubscribe: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=xyz/)
+  assert.doesNotMatch(html, /Get fewer emails/)
+  assert.doesNotMatch(text, /Get fewer emails/)
+})
+
+test('digest: with frequencyUrl (daily alert), the footer adds a "Get fewer emails" link', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz"[^>]*>Get fewer emails<\/a>/)
+  assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
+})
+
+test('price drop: without frequencyUrl (weekly alert), no "Get fewer emails" link renders', () => {
+  const { html, text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  assert.doesNotMatch(html, /Get fewer emails/)
+  assert.doesNotMatch(text, /Get fewer emails/)
+})
+
+test('price drop: with frequencyUrl (daily alert), the footer adds a "Get fewer emails" link', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz"[^>]*>Get fewer emails<\/a>/)
+  assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
 })
 
 const sample = (overrides: Partial<Parameters<typeof pickBestPriceDropSample>[0][number]>) => ({
