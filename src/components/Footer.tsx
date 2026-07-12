@@ -5,6 +5,7 @@ import { STATE_NAMES, SEO_MAKES } from '@/lib/seo'
 const POPULAR_STATES = ['TX', 'FL', 'CA', 'AZ', 'WA', 'CO', 'GA', 'NC', 'OH', 'NY']
 
 const exploreLinks = [
+  { href: '/alerts', label: 'Get email alerts' },
   { href: '/partnerships', label: 'Browse partnerships' },
   { href: '/partnerships/seeking', label: 'Pilots seeking shares' },
   { href: '/aircraft', label: 'Aircraft for sale' },
