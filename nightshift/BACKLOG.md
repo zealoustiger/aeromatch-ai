@@ -633,13 +633,19 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   **Not done, intentionally:** a "deal-only" toggle in the `/alerts/manage` edit form (an
   existing deal-only alert keeps working after an unrelated edit since the form layers
   unknown params through untouched — just not toggleable from that UI yet).
-- **[P2][goal] Alert capture on the 8 `/guides/*` pages.** Verified: nothing under
-  `src/app/guides/` renders `AlertSignup` — a reader who just finished "flying club vs
-  co-ownership" is a hot partnership prospect with zero capture on the page. Add a
-  partnership-noun `AlertSignup` (source `guide_page`, `sourcePath=/partnerships` — the
-  bare parseable path, per the cost-calculator precedent) after the article body on each
-  guide + the `/guides` index. This is an alert entry point on existing pages, not SEO
-  expansion (no new pages, no metadata changes). Emits `alert_subscribed`.
+~~- **[P2][goal] Alert capture on the 8 `/guides/*` pages.**~~ ✅ SHIPPED via
+  `guides-alert-capture` (2026-07-12) Every guide article
+  (`aircraft-co-ownership`, `aircraft-partnership-agreement`,
+  `aircraft-pre-purchase-inspection`, `aircraft-title-escrow-and-closing`,
+  `cost-of-aircraft-co-ownership`, `flying-club-vs-co-ownership`,
+  `how-to-find-aircraft-partners`, `leaseback-vs-co-ownership`) plus the `/guides` index
+  now render `<AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_page" />`
+  right after the article body / CTA — exact same props/reasoning as the existing
+  `/tools/cost-calculator` precedent (bare `/partnerships` sourcePath so the digest cron
+  can actually match it, no `context` since a guide reader isn't scoped to one make/model).
+  No new component, no schema/metadata change. Verified via `next build` + QA smoke (18/18
+  checks pass: 9 pages × 2 viewports, 200/no console errors/no overflow) and visual review
+  of the screenshots (desktop + mobile) — box renders cleanly below each page's existing CTA.
 - **[P2][goal] Alert capture on `/saved` — "alerts for listings like your saves."**
   Verified: `/saved` renders saved aircraft/partnership/seeker cards (both the signed-in
   and device-saves branches) with no alert capture at all, yet a save is proven purchase
