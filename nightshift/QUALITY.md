@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-12T10:50:41Z — saved-page-alert-capture — score 4/5
+- Strengths: Pure, well-documented `deriveSavedAlertContext` helper with a correct plurality/tie scan (each new max resets the `tied` flag, so no false ties or missed ties across orderings) that honestly returns null on a tie or empty makes; seeker saves deliberately excluded with a reason; all four placements wired (signed-in list + empty-state, device list + empty-state) reusing existing `AlertSignup` props with zero changes to it; server `deriveSavedAlertContext` mirrored client-side via `useMemo`, matching each file's conventions.
+- Weaknesses / risks: none material — noun tiebreak silently defaults to 'aircraft' and the generic fallback hardcodes `sourcePath="/"`, both reasonable.
+- Follow-up: none
+
 ## 2026-07-12T09:52:41Z — alert-list-unsubscribe-header — score 5/5
 - Strengths: Exactly the spec, no more — pure `buildListUnsubscribeHeaders` returns `undefined` (not `{}`) so callers spread cleanly and non-alert sends stay header-free, `sendEmail` conditionally injects the Resend `headers` field with zero behavior change otherwise; the GET→POST refactor extracts a shared fail-soft `applyUnsubscribe` leaving GET's redirect path byte-for-byte identical, and the POST handler correctly returns a fast non-interactive 200 per RFC 8058; all four send sites (confirm, resend, manage-link, digest/price-drop) wired, manage-link's previously-uncomputed URL built from the in-scope token; tests cover both helper branches; comments match the file's voice.
 - Weaknesses / risks: none material — POST returns 200 even for an invalid/unknown token (a defensible RFC-8058 choice to avoid client retries and not leak token validity, though it diverges slightly from GET's 'invalid' signalling).
