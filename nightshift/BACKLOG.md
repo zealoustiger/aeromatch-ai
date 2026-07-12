@@ -132,6 +132,32 @@ you PASS one of these, **mark it ✅ SHIPPED here in the same cycle** (strike + 
 The `/alerts` landing + `AlertSignup` already exist — build on them; each new capture point
 must emit the `alert_subscribed` PostHog event.
 
+- **[P1][want] "Save this search" loses users at the magic-link auth wall — reconcile
+  with the lighter `AlertSignup` capture.** Real observed drop-off (2026-07-11 PostHog
+  session, mobile/San Jose): visitor filtered `/partnerships` by make+model, clicked
+  "Save this search," landed on `/auth`, bounced back to `/partnerships` 8 seconds
+  later. 0 new `auth.users`, 0 `saved_searches` rows created that day — did not check
+  email / click the magic link. `SaveSearchButton.tsx` already has a clever
+  save-and-resume trick (`?saveSearch=1` marker survives the auth round-trip and
+  auto-completes on return per `SAVE_INTENT_PARAM`), so this isn't broken — the user
+  just never came back. But it means every non-returning visitor's "save" intent is
+  silently lost, and it sits awkwardly next to all the `AlertSignup` capture points
+  shipped above this cycle, which need only an email (no magic link, no account) to
+  fire `alert_subscribed`. Two things to reconcile:
+  1. Does "Save this search" (full-auth, syncs to `/searches` + `/account`) need to be
+     the *only* path, or should filter pages also surface the lighter `AlertSignup`
+     ("just email me new matches") as a lower-friction alternative alongside it —
+     mirroring how `/aircraft` and `/partnerships` already do below empty/zero-result
+     states? Two similar-sounding CTAs on one page needs care so it doesn't read as
+     redundant/confusing.
+  2. Independent of (1): can `/auth`'s copy for the `saveSearch` intent be more
+     concrete about what's waiting for them ("Your Cessna 172 search is saved as soon
+     as you click the link") so the round-trip has better follow-through? Check
+     `deriveAuthContext()` in `src/app/auth/page.tsx` — it already branches copy per
+     `next` path/intent; `saveSearch` isn't a case there.
+  Scope as ONE cycle's slice (probably (2), copy-only, lowest risk); (1) is a bigger
+  product call and may need a human decision rather than an agent choosing unilaterally.
+
 ~~- **[P1][goal] Alert CTA on every aircraft listing page.**~~ ✅ SHIPPED via
   `aircraft-listing-alert-cta` (2026-07-06) A prominent "Alert me for {make} {model}"
   capture on `/aircraft/listing/[id]` (prefill make+model context, sourcePath a
