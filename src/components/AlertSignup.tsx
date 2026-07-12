@@ -53,6 +53,15 @@ interface Props {
   source?: string
 }
 
+/** Layers `deal=good` onto a source_path's existing query string when the
+ *  visitor checked "only good deals" — mirrors how min_price/max_price/etc.
+ *  already ride in source_path, so the cron's parseSourcePath needs no new
+ *  storage, just a new query param to read. */
+function withDealOnly(sourcePath: string, dealOnly: boolean): string {
+  if (!dealOnly) return sourcePath
+  return sourcePath.includes('?') ? `${sourcePath}&deal=good` : `${sourcePath}?deal=good`
+}
+
 /**
  * Inline, low-friction email capture for new-listing alerts. NOT a modal/popup,
  * no fake urgency — a single email field + button that drops the email + context
@@ -91,6 +100,15 @@ export default function AlertSignup({
   // price-drop tracking, so don't offer a toggle that would silently do nothing.
   const showPriceDropOption = noun === 'aircraft'
   const [priceDropOptIn, setPriceDropOptIn] = useState(true)
+  // "Only good deals" — the first smart-alert type (GOAL.md's "smart, honest
+  // alert content" clause). Only exists for aircraft (clubHangerDealVerdict has
+  // no partnership/seeker equivalent wired to alerts). Default unchecked — this
+  // narrows what fires, so it should be an opt-in, not a surprise. Encoded
+  // directly in source_path's query string (deal=good), not a DB column, so the
+  // cron's existing parseSourcePath can read it the same way it reads
+  // make/model/min_price/etc.
+  const showDealOnlyOption = noun === 'aircraft'
+  const [dealOnly, setDealOnly] = useState(false)
   const [frequency, setFrequency] = useState<AlertFrequency>('weekly')
   // A signed-in visitor's email is already verified — skip retyping it and
   // subscribe as already-confirmed (no double-opt-in round trip). Read-only
@@ -133,10 +151,11 @@ export default function AlertSignup({
     if (pending) return
     setErrorMsg('')
     setPending(true)
+    const effectiveSourcePath = withDealOnly(sourcePath, showDealOnlyOption && dealOnly)
     const result = await subscribeToAlerts(
       email,
       context ?? '',
-      sourcePath,
+      effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency
     )
@@ -148,12 +167,13 @@ export default function AlertSignup({
     // Conversion signal for the "alerts vs post" nav experiment.
     track('alert_subscribed', {
       context: context || 'all',
-      source_path: sourcePath,
+      source_path: effectiveSourcePath,
       source,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
       match_count: hasMatchCount ? matchCount : undefined,
+      deal_only: showDealOnlyOption && dealOnly ? true : undefined,
     })
     // This browser now belongs to a subscriber — the nav's "Get alerts" CTA
     // becomes "My alerts" (see lib/alertSubscriberFlag.ts). Boolean only.
@@ -165,9 +185,10 @@ export default function AlertSignup({
     if (pending || !signedInEmail) return
     setErrorMsg('')
     setPending(true)
+    const effectiveSourcePath = withDealOnly(sourcePath, showDealOnlyOption && dealOnly)
     const result = await subscribeSignedInAlert(
       context ?? '',
-      sourcePath,
+      effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency
     )
@@ -178,13 +199,14 @@ export default function AlertSignup({
     }
     track('alert_subscribed', {
       context: context || 'all',
-      source_path: sourcePath,
+      source_path: effectiveSourcePath,
       source,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
       match_count: hasMatchCount ? matchCount : undefined,
       signed_in: true,
+      deal_only: showDealOnlyOption && dealOnly ? true : undefined,
     })
     markAlertSubscriber()
     setConfirmedImmediately(true)
@@ -339,6 +361,17 @@ export default function AlertSignup({
                 className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
               />
               Also alert me when the price drops on a match
+            </label>
+          )}
+          {showDealOnlyOption && (
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={dealOnly}
+                onChange={(e) => setDealOnly(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+              />
+              Only email me good deals (ClubHanger Deal Check)
             </label>
           )}
           <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
