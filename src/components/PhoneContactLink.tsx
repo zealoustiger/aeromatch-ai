@@ -14,11 +14,13 @@ export default function PhoneContactLink({
   alertContext,
   alertSourcePath,
   alertCount,
+  matchCount,
 }: {
   phone: string
   alertContext?: string
   alertSourcePath: string
   alertCount?: number
+  matchCount?: number
 }) {
   const [clicked, setClicked] = useState(false)
 
@@ -42,6 +44,7 @@ export default function PhoneContactLink({
             sourcePath={alertSourcePath}
             noun="aircraft"
             alertCount={alertCount}
+            matchCount={matchCount}
             className="my-0"
           />
         </div>

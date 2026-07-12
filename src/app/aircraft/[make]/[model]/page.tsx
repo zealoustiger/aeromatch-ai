@@ -382,8 +382,10 @@ export default async function MakeModelForSalePage({ params }: Props) {
         </section>
       )}
 
-      {/* Email-alerts capture (slice 1) — inline, no account required. */}
-      <AlertSignup context={label} sourcePath={path} alertCount={alertCounts.get(label)} source="make_model_page" />
+      {/* Email-alerts capture (slice 1) — inline, no account required. `matchCount`
+          reuses the page's own live `n` (same query backing the H1/thin-page guard
+          above) — no extra fetch. */}
+      <AlertSignup context={label} sourcePath={path} alertCount={alertCounts.get(label)} matchCount={n} source="make_model_page" />
 
       {/* Listings */}
       <h2 className="mb-4 text-lg font-semibold text-slate-900">

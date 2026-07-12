@@ -37,6 +37,12 @@ interface Props {
    *  Only rendered as a social-proof line when it clears `MIN_ALERTS_TO_SHOW` —
    *  below that, or when omitted, no line renders (honesty gate, never fabricated). */
   alertCount?: number
+  /** Live count of listings that match this alert's search RIGHT NOW (see
+   *  `lib/alertMatchCounts.ts`'s `getAlertMatchCount`) — distinct from `alertCount`
+   *  above (which counts other subscribers, not matching inventory). Renders "what
+   *  this alert will actually do" copy, including the honest 0-match case. Omit
+   *  rather than fabricate when the caller's source_path isn't a recognized shape. */
+  matchCount?: number
   /** Which literal placement rendered this box, e.g. "listing_detail",
    *  "make_model_page", "empty_state", "homepage_band" — carried into the
    *  `alert_subscribed` analytics event only (never reaches the DB write) so
@@ -58,10 +64,12 @@ export default function AlertSignup({
   noun = 'aircraft',
   className = 'my-10',
   alertCount,
+  matchCount,
   source,
 }: Props) {
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
+  const hasMatchCount = typeof matchCount === 'number'
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
   const hasCtx = !!(context && context.trim())
   const showSocialProof = hasCtx && typeof alertCount === 'number' && alertCount >= MIN_ALERTS_TO_SHOW
@@ -145,6 +153,7 @@ export default function AlertSignup({
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
+      match_count: hasMatchCount ? matchCount : undefined,
     })
     // This browser now belongs to a subscriber — the nav's "Get alerts" CTA
     // becomes "My alerts" (see lib/alertSubscriberFlag.ts). Boolean only.
@@ -174,6 +183,7 @@ export default function AlertSignup({
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
+      match_count: hasMatchCount ? matchCount : undefined,
       signed_in: true,
     })
     markAlertSubscriber()
@@ -267,6 +277,13 @@ export default function AlertSignup({
               <p className="mt-1 text-sm text-slate-600">
                 {subcopy}
               </p>
+              {hasMatchCount && (
+                <p className="mt-1 text-xs font-medium text-emerald-700">
+                  {matchCount! > 0
+                    ? `${matchCount} ${matchCount === 1 ? noun : nounPlural} match${matchCount === 1 ? 'es' : ''} right now — we'll email you when the next one lists.`
+                    : `None for sale right now — be first to know when one lists.`}
+                </p>
+              )}
               {showSocialProof && (
                 <p className="mt-1 text-xs font-medium text-sky-700">
                   {alertCount} {alertCount === 1 ? 'buyer gets' : 'buyers get'} alerts for {context}
