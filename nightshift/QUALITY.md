@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-12T09:29:41Z — seeker-digest-sample-cards — score 4/5
+## 2026-07-12T09:52:41Z — alert-list-unsubscribe-header — score 5/5
+- Strengths: Exactly the spec, no more — pure `buildListUnsubscribeHeaders` returns `undefined` (not `{}`) so callers spread cleanly and non-alert sends stay header-free, `sendEmail` conditionally injects the Resend `headers` field with zero behavior change otherwise; the GET→POST refactor extracts a shared fail-soft `applyUnsubscribe` leaving GET's redirect path byte-for-byte identical, and the POST handler correctly returns a fast non-interactive 200 per RFC 8058; all four send sites (confirm, resend, manage-link, digest/price-drop) wired, manage-link's previously-uncomputed URL built from the in-scope token; tests cover both helper branches; comments match the file's voice.
+- Weaknesses / risks: none material — POST returns 200 even for an invalid/unknown token (a defensible RFC-8058 choice to avoid client retries and not leak token validity, though it diverges slightly from GET's 'invalid' signalling).
+- Follow-up: none
 - Strengths: Faithful mirror of the `fetchNewPartnershipSamples`/`countNewSeekers` precedent — `fetchNewSeekerSamples` reproduces the seeker filters exactly (make `overlaps`, state `eq`, the `additional_airports`-aware icao `.or()` with the same graceful-degrade retry, and the JS `matchesModelFilter` free-text model match), `toSeekerDigestSample` honestly emits no fabricated price/ttaf/photo with sensible title/location fallbacks, the specs line cleanly prioritizes `lookingFor` over `shareType`/`ttaf` in both HTML and plain-text, and the GET wiring correctly gates on `newCount > 0` with no price-drop path for seekers; scope respected and the out-of-scope P1 buy-in-drop email was deferred.
 - Weaknesses / risks: none material — the query-building is duplicated between the main call and the icao retry (an already-accepted project pattern in `countNewSeekers`), and the empty-`<p>` price guard would technically alter output for any *aircraft/partnership* sample with a null price, a harmless deviation from the "byte-for-byte unchanged" claim that only bites a degenerate case.
 - Follow-up: none
