@@ -609,20 +609,30 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   too). `alert_subscribed` now carries `match_count`. **Remaining:** the other
   `AlertSignup` call sites (browse/filter, homepage, empty-states, partnership/seeker
   pages) — natural follow-up slices.
-- **[P1][goal] "Only good deals" aircraft alert filter — the first smart-alert type.**
-  GOAL.md's "smart, honest alert content" clause, unstarted: `clubHangerDealVerdict`
-  (`aircraftComps.ts`/`aircraftEstimate.ts`, honesty-floored at ≥4 comps + dead-band)
-  classifies deals sitewide, but alerts can't use it — no competitor offers "email me only
-  when a good deal lists." Slice: an "Only email me good deals" checkbox (default
-  unchecked) on aircraft-noun `AlertSignup`, encoded as `deal=good` in `source_path`'s
-  query string (no schema change — layered params already survive `updateAlertCriteria`'s
-  rebuild); the digest cron's `countNewAircraft`/`fetchNewAircraftSamples` JS-filter
-  matches through the existing verdict helper when the flag is present (same
-  post-fetch-filter precedent as the price-drop counts), so a deal-only alert only fires
-  on verdict-passing listings — and stays silent rather than fabricating when comps are
-  below the honesty floor. `alert_subscribed` carries `deal_only`. If comps-in-cron proves
-  too heavy for one cycle, slice further: capture + manage-edit + count path only, sample
-  cards next.
+~~- **[P1][goal] "Only good deals" aircraft alert filter — the first smart-alert type.**~~
+  ✅ SHIPPED via `alert-deal-only-filter` (2026-07-12) New "Only email me good deals
+  (ClubHanger Deal Check)" checkbox (default unchecked) on aircraft-noun `AlertSignup`,
+  encoded as `deal=good` layered onto `source_path`'s query string (no schema change).
+  New exported `filterToGoodDeals()` in `aircraftComps.ts` batches a family-comp query
+  (same batching precedent as `getAircraftCompVerdicts`) and narrows a set of candidate
+  rows to verdict `'good'` only — never fabricates when comps are thin (honesty floor
+  reused as-is from `clubHangerDealVerdict`). Wired into all four cron paths:
+  `countNewAircraft`/`countRecentAircraftPriceDrops` (count) and
+  `fetchNewAircraftSamples`/`fetchAircraftPriceDropSamples` (digest sample cards) — both
+  new-listing AND price-drop matches respect the flag. **Found + fixed a real bug during
+  QA, not just scoped-down at spec time:** the make/model page's `AlertSignup` passes its
+  own SEO path (`/aircraft/cessna/172`) as `sourcePath`, not the `/aircraft?make=…` shape
+  — `parseSourcePath`'s original bare-path-only `deal=good` read would have silently
+  dropped the flag for that capture point (checkbox shown, promise not honored). Fixed by
+  applying the `deal=good` read universally, after target resolution, regardless of which
+  path shape produced it — verified via a live `tsx` import against 6 real path shapes.
+  Live-verified end-to-end against real prod data (read-only `filterToGoodDeals` query
+  narrowed 30 real Cirrus SR22 listings to 3 genuine deals) and via a real Playwright
+  submit against `/aircraft/cessna/172` (throwaway `@example.com` row confirmed
+  `source_path=/aircraft/cessna/172?deal=good` in the DB, then deleted — 0 rows remain).
+  **Not done, intentionally:** a "deal-only" toggle in the `/alerts/manage` edit form (an
+  existing deal-only alert keeps working after an unrelated edit since the form layers
+  unknown params through untouched — just not toggleable from that UI yet).
 - **[P2][goal] Alert capture on the 8 `/guides/*` pages.** Verified: nothing under
   `src/app/guides/` renders `AlertSignup` — a reader who just finished "flying club vs
   co-ownership" is a hot partnership prospect with zero capture on the page. Add a

@@ -270,3 +270,76 @@ export async function getAircraftCompVerdicts(
   }
   return verdicts
 }
+
+/** Minimal shape `filterToGoodDeals` needs from a candidate row. */
+export interface DealOnlyCandidate {
+  id: string
+  make: string | null
+  model: string | null
+  asking_price: number | null
+  year: number | null
+  ttaf: number | null
+  smoh?: number | null
+}
+
+/**
+ * Narrow a set of candidate aircraft rows (e.g. an alert's new-listing or
+ * price-drop matches) down to the ones whose ClubHanger Deal Check verdict is
+ * `'good'` — powers the "only email me good deals" alert filter
+ * (`deal=good` in an alert's `source_path`).
+ *
+ * `supabase` is untyped (`any`) so this works with either the admin client
+ * (used from the alert-digest cron) or the server client without fighting
+ * their distinct generic types — same precedent `alert-digest/route.ts`
+ * already uses for its own complex chained query builders.
+ *
+ * Honesty gate (GOAL.md): a candidate with no verdict at all — thin comps,
+ * missing year/hours — is NEVER included. Silence beats a fabricated "good
+ * deal". Fails soft to an empty array on any query error, same precedent as
+ * `getAircraftCompVerdicts`.
+ */
+export async function filterToGoodDeals<T extends DealOnlyCandidate>(
+  supabase: any,
+  candidates: T[]
+): Promise<T[]> {
+  if (candidates.length === 0) return []
+  try {
+    const priced = candidates.filter(
+      (c) => c.make && c.asking_price != null && c.asking_price >= AIRCRAFT_COMP_PRICE_FLOOR
+    )
+    if (priced.length === 0) return []
+    const uniqueMakes = [...new Set(priced.map((c) => c.make as string))]
+
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('id, make, model, asking_price, year, ttaf, smoh')
+      .eq('status', 'active')
+      .in('make', uniqueMakes)
+      .gte('asking_price', AIRCRAFT_COMP_PRICE_FLOOR)
+      .limit(2000)
+    if (error || !data) return []
+
+    type CompRow = { id: string; make: string | null; model: string | null; asking_price: number; year: number | null; ttaf: number | null; smoh: number | null }
+    const familyCompMap = new Map<string, CompRow[]>()
+    for (const row of data as CompRow[]) {
+      const key = familyKey(row)
+      if (!key) continue
+      const entries = familyCompMap.get(key) ?? []
+      entries.push(row)
+      familyCompMap.set(key, entries)
+    }
+
+    return priced.filter((c) => {
+      const key = familyKey(c)
+      if (!key) return false
+      const comps = (familyCompMap.get(key) ?? []).filter((row) => row.id !== c.id)
+      const verdict = clubHangerDealVerdict(
+        { askingPrice: c.asking_price, year: c.year, ttaf: c.ttaf, smoh: c.smoh },
+        comps
+      )
+      return verdict?.verdict === 'good'
+    })
+  } catch {
+    return []
+  }
+}

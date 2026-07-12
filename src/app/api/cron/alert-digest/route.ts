@@ -15,6 +15,7 @@ import { intervalDaysFor, isDigestDue, normalizeFrequency } from '@/lib/alertFre
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
+import { filterToGoodDeals } from '@/lib/aircraftComps'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -42,6 +43,10 @@ type AlertTarget =
       minYear?: number
       maxYear?: number
       maxTt?: number
+      /** "Only email me good deals" — narrows matches to a 'good'
+       *  `clubHangerDealVerdict` (see `filterToGoodDeals`). Set via `deal=good`
+       *  in the alert's source_path query string; no schema/DB storage. */
+      dealOnly?: boolean
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
@@ -60,7 +65,24 @@ const numOrUndef = (v: string | undefined): number | undefined => {
 function parseSourcePath(raw: string | null): AlertTarget | null {
   const [pathOnly, qs] = (raw ?? '').split('?')
   const p = pathOnly.toLowerCase().replace(/\/$/, '') || '/'
+  const target = resolveTarget(p, qs)
 
+  // `deal=good` can ride on ANY aircraft source_path shape, not just the bare
+  // `/aircraft?...` one — e.g. AlertSignup on the make/model page passes the
+  // page's own SEO path (`/aircraft/cessna/172`) as sourcePath, so a checked
+  // "only good deals" box produces `/aircraft/cessna/172?deal=good`. The bare-
+  // path branch below already reads `deal` off its own qs; every OTHER
+  // aircraft branch (path-segment SEO routes) never looks at qs at all, so
+  // apply it once here, after resolution, so it's honored no matter which
+  // branch produced the target.
+  if (target?.type === 'aircraft' && qs && !target.dealOnly) {
+    const params = new URLSearchParams(qs)
+    if (params.get('deal') === 'good') target.dealOnly = true
+  }
+  return target
+}
+
+function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
   // Bare /aircraft, /partnerships, or /partnerships/seeking WITH a query string →
   // the filter shape the browse pages' inline AlertSignup and the /alerts landing
   // chips actually produce (e.g. "/aircraft?make=Cessna&model=172"). Must be
@@ -81,6 +103,7 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
         minYear: numOrUndef(g('min_year')),
         maxYear: numOrUndef(g('max_year')),
         maxTt: numOrUndef(g('max_tt')),
+        dealOnly: g('deal') === 'good',
       }
     }
     if (p === '/partnerships/seeking') {
@@ -207,6 +230,25 @@ async function resolveIcaoList(
   return [target.icao]
 }
 
+/** Applies the aircraft AlertTarget's filter fields to an already-`any`-typed
+ *  query builder — shared by the deal-only branches below (which need a real,
+ *  non-head select and so can't reuse the typed `q` chains the non-deal-only
+ *  paths use). Not used by the non-deal-only paths, which keep their existing
+ *  typed chains unchanged. */
+function applyAircraftFilters(q: any, target: Extract<AlertTarget, { type: 'aircraft' }>): any {
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.model) q = q.eq('model', target.model)
+  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
+  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.state) q = q.eq('state', target.state)
+  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
+  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
+  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
+  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  return q
+}
+
 // ─── Count new listings ───────────────────────────────────────────────────────
 
 async function countNewAircraft(
@@ -214,6 +256,26 @@ async function countNewAircraft(
   target: Extract<AlertTarget, { type: 'aircraft' }>,
   since: string
 ): Promise<number> {
+  // A deal-only alert needs the actual rows (make/year/ttaf/smoh) to run
+  // through filterToGoodDeals — a head-only count can't narrow by verdict, so
+  // it gets its own real (non-head) select instead of `count: 'exact', head: true`.
+  if (target.dealOnly) {
+    let dq: any = supabase
+      .from('aircraft_for_sale')
+      .select('id, make, model, asking_price, year, ttaf, smoh')
+      .eq('status', 'active')
+      .gte('asking_price', PARTS_PRICE_FLOOR)
+      .gte('first_seen_at', since)
+    dq = applyAircraftFilters(dq, target)
+    const { data, error } = await dq
+    if (error) {
+      console.error('[alert-digest] aircraft deal-only count error:', error.message)
+      return 0
+    }
+    const goodDeals = await filterToGoodDeals(supabase, (data ?? []) as any[])
+    return goodDeals.length
+  }
+
   let q = supabase
     .from('aircraft_for_sale')
     .select('id', { count: 'exact', head: true })
@@ -262,30 +324,40 @@ async function countRecentAircraftPriceDrops(
   // supabase-js builder generics.
   let q: any = supabase
     .from('aircraft_for_sale')
-    .select('asking_price, previous_price, price_changed_at')
+    .select(
+      target.dealOnly
+        ? 'id, make, model, asking_price, previous_price, price_changed_at, year, ttaf, smoh'
+        : 'asking_price, previous_price, price_changed_at'
+    )
     .eq('status', 'active')
     .gte('asking_price', PARTS_PRICE_FLOOR)
     .gte('price_changed_at', since)
     .not('previous_price', 'is', null)
 
-  if (target.make) q = q.ilike('make', `%${target.make}%`)
-  if (target.model) q = q.eq('model', target.model)
-  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
-  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
-  if (target.state) q = q.eq('state', target.state)
-  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
-  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
-  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
-  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
-  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  q = applyAircraftFilters(q, target)
 
-  type Row = { asking_price: number | null; previous_price: number | null; price_changed_at: string | null }
+  type Row = {
+    id?: string
+    make?: string | null
+    model?: string | null
+    asking_price: number | null
+    previous_price: number | null
+    price_changed_at: string | null
+    year?: number | null
+    ttaf?: number | null
+    smoh?: number | null
+  }
   const { data, error } = (await q) as { data: Row[] | null; error: { message: string } | null }
   if (error) {
     console.error('[alert-digest] price-drop count error:', error.message)
     return 0
   }
-  return (data ?? []).filter((r) => hasRecentPriceDrop(r, since)).length
+  const dropped = (data ?? []).filter((r) => hasRecentPriceDrop(r, since))
+  if (target.dealOnly) {
+    const goodDeals = await filterToGoodDeals(supabase, dropped as any[])
+    return goodDeals.length
+  }
+  return dropped.length
 }
 
 /**
@@ -436,6 +508,7 @@ type AircraftSampleRow = {
   images: string[] | null
   location: string | null
   ttaf: number | null
+  smoh?: number | null
 }
 
 function toDigestSample(row: AircraftSampleRow, previousPrice?: number | null): AlertDigestSample {
@@ -461,32 +534,30 @@ async function fetchNewAircraftSamples(
   since: string,
   limit = MAX_DIGEST_SAMPLES
 ): Promise<AlertDigestSample[]> {
-  let q = supabase
+  // A deal-only alert can't apply the DB-side `.limit(limit)` before knowing
+  // which candidates are actually good deals — fetch a wider pool (still
+  // bounded), narrow through filterToGoodDeals, then slice to `limit`, same
+  // fetch-then-JS-filter-then-slice precedent fetchNewSeekerSamples uses for
+  // its own DB-column-less filter.
+  let q: any = supabase
     .from('aircraft_for_sale')
-    .select('id, make, model, year, asking_price, images, location, ttaf')
+    .select(target.dealOnly ? 'id, make, model, year, asking_price, images, location, ttaf, smoh' : 'id, make, model, year, asking_price, images, location, ttaf')
     .eq('status', 'active')
     .gte('asking_price', PARTS_PRICE_FLOOR)
     .gte('first_seen_at', since)
     .order('first_seen_at', { ascending: false })
-    .limit(limit)
+    .limit(target.dealOnly ? 200 : limit)
 
-  if (target.make) q = q.ilike('make', `%${target.make}%`)
-  if (target.model) q = q.eq('model', target.model)
-  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
-  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
-  if (target.state) q = q.eq('state', target.state)
-  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
-  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
-  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
-  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
-  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  q = applyAircraftFilters(q, target)
 
   const { data, error } = await q
   if (error) {
     console.error('[alert-digest] new-aircraft sample error:', error.message)
     return []
   }
-  return (data ?? []).map((row) => toDigestSample(row as AircraftSampleRow))
+  const rows = (data ?? []) as AircraftSampleRow[]
+  const narrowed = target.dealOnly ? await filterToGoodDeals(supabase, rows as any[]) : rows
+  return (narrowed as AircraftSampleRow[]).slice(0, limit).map((row) => toDigestSample(row))
 }
 
 /** Up to `limit` real aircraft matching `target` whose most recent price
@@ -501,23 +572,14 @@ async function fetchAircraftPriceDropSamples(
 ): Promise<AlertDigestSample[]> {
   let q: any = supabase
     .from('aircraft_for_sale')
-    .select('id, make, model, year, asking_price, previous_price, images, location, ttaf, price_changed_at')
+    .select('id, make, model, year, asking_price, previous_price, images, location, ttaf, smoh, price_changed_at')
     .eq('status', 'active')
     .gte('asking_price', PARTS_PRICE_FLOOR)
     .gte('price_changed_at', since)
     .not('previous_price', 'is', null)
     .order('price_changed_at', { ascending: false })
 
-  if (target.make) q = q.ilike('make', `%${target.make}%`)
-  if (target.model) q = q.eq('model', target.model)
-  if (target.modelPattern) q = q.ilike('model', target.modelPattern)
-  if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
-  if (target.state) q = q.eq('state', target.state)
-  if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
-  if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
-  if (target.minYear !== undefined) q = q.gte('year', target.minYear)
-  if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
-  if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  q = applyAircraftFilters(q, target)
 
   type Row = Omit<AircraftSampleRow, 'previous_price'> & {
     previous_price: number | null
@@ -528,10 +590,9 @@ async function fetchAircraftPriceDropSamples(
     console.error('[alert-digest] price-drop sample error:', error.message)
     return []
   }
-  return (data ?? [])
-    .filter((r) => hasRecentPriceDrop(r, since))
-    .slice(0, limit)
-    .map((row) => toDigestSample(row, row.previous_price))
+  const dropped = (data ?? []).filter((r) => hasRecentPriceDrop(r, since))
+  const narrowed = target.dealOnly ? await filterToGoodDeals(supabase, dropped as any[]) : dropped
+  return (narrowed as Row[]).slice(0, limit).map((row) => toDigestSample(row, row.previous_price))
 }
 
 type PartnershipSampleRow = {
