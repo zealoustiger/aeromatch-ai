@@ -6,7 +6,7 @@ import DeleteSearchButton from '@/components/DeleteSearchButton'
 import RenameSavedSearch from '@/components/RenameSavedSearch'
 import QuickStartSearchForm from '@/components/QuickStartSearchForm'
 import SavedSearchAlertButton from '@/components/SavedSearchAlertButton'
-import { getAlertedSourcePaths } from '@/lib/savedSearchAlerts'
+import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import type { SavedSearch } from '@/lib/types'
 
 // Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
@@ -112,7 +112,9 @@ export default async function SearchesPage() {
     showSeekerCrossPost = !ownSeekerListings?.length
   }
 
-  const alertedSourcePaths = user.email ? await getAlertedSourcePaths(user.email) : new Set<string>()
+  const alertDetails = user.email
+    ? await getAlertDetailsBySourcePath(user.email)
+    : new Map<string, SavedSearchAlertDetail>()
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -223,7 +225,7 @@ export default async function SearchesPage() {
           {(searches as SavedSearch[]).map((s) => (
             <div
               key={s.id}
-              className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -237,10 +239,11 @@ export default async function SearchesPage() {
                   Saved {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
+              <div className="flex w-full shrink-0 flex-col items-stretch gap-1 sm:w-auto sm:flex-row sm:items-center">
                 <SavedSearchAlertButton
                   searchId={s.id}
-                  alreadySubscribed={alertedSourcePaths.has(`${s.path || '/partnerships'}?${s.search_params}`)}
+                  alert={alertDetails.get(`${s.path || '/partnerships'}?${s.search_params}`) ?? null}
+                  isAircraft={s.path === '/aircraft'}
                 />
                 <Link
                   href={`${s.path || '/partnerships'}?${s.search_params}`}

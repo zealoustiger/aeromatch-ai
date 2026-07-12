@@ -1419,7 +1419,28 @@ export async function subscribeSavedSearchAlert(searchId: string) {
 
   // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
   if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
-  return { ok: true, context: search.name as string, sourcePath }
+
+  // `alerts` has no SELECT policy for the authenticated client (PII protection —
+  // see savedSearchAlerts.ts), so `.select()` on the insert above can't return the
+  // row. Look it up via the admin client instead (covers both the fresh-insert and
+  // the idempotent-conflict path identically) so the caller can render the
+  // frequency/price-drop toggles inline without a full page reload.
+  const admin = createAdminClient()
+  const { data: row } = await admin
+    .from('alerts')
+    .select('id, frequency, price_drop_opt_in')
+    .eq('email', user.email)
+    .eq('source_path', sourcePath)
+    .maybeSingle()
+
+  return {
+    ok: true,
+    context: search.name as string,
+    sourcePath,
+    alertId: row?.id as string | undefined,
+    frequency: normalizeFrequency((row as { frequency?: string } | null)?.frequency),
+    priceDropOptIn: (row as { price_drop_opt_in?: boolean } | null)?.price_drop_opt_in ?? true,
+  }
 }
 
 // Marketplaces a search can be saved from. Anything else falls back to partnerships.
