@@ -16,6 +16,7 @@ export default function AircraftContactButton({
   alertContext,
   alertSourcePath,
   alertCount,
+  matchCount,
 }: {
   aircraftId: string
   posterId: string
@@ -26,6 +27,7 @@ export default function AircraftContactButton({
   alertContext?: string
   alertSourcePath: string
   alertCount?: number
+  matchCount?: number
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -149,6 +151,7 @@ export default function AircraftContactButton({
           sourcePath={alertSourcePath}
           noun="aircraft"
           alertCount={alertCount}
+          matchCount={matchCount}
           className="my-0"
         />
         <button

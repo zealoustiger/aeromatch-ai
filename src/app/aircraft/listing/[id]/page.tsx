@@ -60,6 +60,7 @@ import PhoneContactLink from '@/components/PhoneContactLink'
 import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
 import { getAlertCounts } from '@/lib/alertCounts'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import MonetizationIntent from '@/components/MonetizationIntent'
 import PosterAttribution from '@/components/PosterAttribution'
 import { getPublicProfile } from '@/lib/publicProfile'
@@ -575,6 +576,11 @@ export default async function AircraftListingDetailPage({
     ? `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
     : '/aircraft'
   const alertCount = alertContext ? alertCounts.get(alertContext) : undefined
+  // Live "what will this alert actually match" count — same helper that powers
+  // /alerts/manage's live-match line — distinct from alertCount above (subscribers,
+  // not inventory). null (unrecognized source_path shape) renders no line.
+  const matchResult = await getAlertMatchCount(alertSourcePath)
+  const matchCount = matchResult?.count
 
   // Fetch the current user's saved row for this listing so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
@@ -1100,6 +1106,7 @@ export default async function AircraftListingDetailPage({
                   alertContext={alertContext}
                   alertSourcePath={alertSourcePath}
                   alertCount={alertCount}
+                  matchCount={matchCount}
                 />
                 {p.contact_phone && (
                   <PhoneContactLink
@@ -1107,6 +1114,7 @@ export default async function AircraftListingDetailPage({
                     alertContext={alertContext}
                     alertSourcePath={alertSourcePath}
                     alertCount={alertCount}
+                    matchCount={matchCount}
                   />
                 )}
               </div>
@@ -1141,6 +1149,7 @@ export default async function AircraftListingDetailPage({
               sourcePath={alertSourcePath}
               noun="aircraft"
               alertCount={alertCount}
+              matchCount={matchCount}
             />
 
             {/* Monetization intent signal — an honest "coming soon" fake-door CTA
