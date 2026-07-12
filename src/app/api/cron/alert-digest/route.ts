@@ -3,9 +3,11 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import {
   sendEmail,
   buildAlertDigestEmail,
+  buildCombinedAlertDigestEmail,
   buildPriceDropEmail,
   pickBestPriceDropSample,
   type AlertDigestSample,
+  type AlertDigestSection,
 } from '@/lib/email'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
@@ -857,10 +859,23 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: fetchError.message }, { status: 500 })
   }
 
-  let sent = 0
   let skipped = 0
   let unparseable = 0
   let notDue = 0
+
+  // Prepared, due, matching alerts — computed up front (unchanged per-alert
+  // logic) and grouped by email below, so a subscriber with multiple due
+  // alerts in this pass gets ONE combined email instead of one per alert
+  // (GOAL.md: "never spam"; see alert-digest-combine).
+  type Prepared = {
+    alert: DigestAlertRow
+    frequency: ReturnType<typeof normalizeFrequency>
+    target: AlertTarget
+    newCount: number
+    dropCount: number
+    samples: AlertDigestSample[]
+  }
+  const prepared: Prepared[] = []
 
   for (const alert of alerts ?? []) {
     const frequency = normalizeFrequency(alert.frequency)
@@ -918,74 +933,140 @@ export async function GET(req: NextRequest) {
             ? await fetchNewSeekerSamples(supabase, target, since)
             : []
 
-    const unsubToken = alert.unsubscribe_token ?? ''
-    const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
-    // Token-scoped so an email-only subscriber (no account) can actually manage
-    // alerts from this link instead of hitting the sign-in wall — see
-    // /alerts/manage's token-scoped path. Falls back to the bare URL for the
-    // rare row with no token yet (pre-migration).
-    const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
-    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
-    // Only offer "fewer emails" for a daily-cadence alert — a weekly one has
-    // no lighter cadence left to switch to.
-    const frequencyUrl =
-      frequency === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
+    prepared.push({ alert, frequency, target, newCount, dropCount, samples })
+  }
 
-    // When this send is purely about a price drop (no new listings to also
-    // report) on an aircraft OR partnership alert, feature the single best
-    // real drop via the rich single-listing template instead of the
-    // aggregate digest's bare "+1 price/buy-in drop" count line. Falls back
-    // to the aggregate digest if, for any reason, no sample qualifies (e.g.
-    // the count and sample queries disagree at the edge) — never silently
-    // drops the notification.
-    const bestDrop =
-      (target.type === 'aircraft' || target.type === 'partnership') && newCount === 0 && dropCount > 0
-        ? pickBestPriceDropSample(samples)
-        : null
+  // Group by email (lowercased — the same normalization every other alert
+  // surface uses for this column) so two alerts signed up with different
+  // casing of the same address still combine into one send.
+  const byEmail = new Map<string, Prepared[]>()
+  for (const p of prepared) {
+    const key = p.alert.email.toLowerCase()
+    const group = byEmail.get(key)
+    if (group) group.push(p)
+    else byEmail.set(key, [p])
+  }
 
-    const { subject, html, text } = bestDrop
-      ? buildPriceDropEmail({
-          title: bestDrop.title,
-          photoUrl: bestDrop.photoUrl,
-          previousPrice: bestDrop.previousPrice as number,
-          askingPrice: bestDrop.price as number,
-          listingUrl: bestDrop.url,
-          manageUrl,
-          unsubscribeUrl,
-          frequencyUrl,
-          // Honesty: this is a daily/weekly cron send, never real-time —
-          // never claim "just dropped".
-          periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
-          dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
-          shareType: target.type === 'partnership' ? bestDrop.shareType : undefined,
-        })
-      : buildAlertDigestEmail({
-          context: alert.context ?? null,
-          samples,
-          newCount,
-          dropCount,
-          dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
-          listingsUrl,
-          manageUrl,
-          unsubscribeUrl,
-          frequencyUrl,
-        })
+  let sent = 0
+  let emailsSent = 0
 
-    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+  for (const group of byEmail.values()) {
+    if (group.length === 1) {
+      // Exactly one due, matching alert for this email — same single-alert
+      // build/send path as before this cycle, byte-for-byte.
+      const { alert, frequency, target, newCount, dropCount, samples } = group[0]
+
+      const unsubToken = alert.unsubscribe_token ?? ''
+      const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
+      // Token-scoped so an email-only subscriber (no account) can actually manage
+      // alerts from this link instead of hitting the sign-in wall — see
+      // /alerts/manage's token-scoped path. Falls back to the bare URL for the
+      // rare row with no token yet (pre-migration).
+      const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
+      const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
+      // Only offer "fewer emails" for a daily-cadence alert — a weekly one has
+      // no lighter cadence left to switch to.
+      const frequencyUrl =
+        frequency === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
+
+      // When this send is purely about a price drop (no new listings to also
+      // report) on an aircraft OR partnership alert, feature the single best
+      // real drop via the rich single-listing template instead of the
+      // aggregate digest's bare "+1 price/buy-in drop" count line. Falls back
+      // to the aggregate digest if, for any reason, no sample qualifies (e.g.
+      // the count and sample queries disagree at the edge) — never silently
+      // drops the notification.
+      const bestDrop =
+        (target.type === 'aircraft' || target.type === 'partnership') && newCount === 0 && dropCount > 0
+          ? pickBestPriceDropSample(samples)
+          : null
+
+      const { subject, html, text } = bestDrop
+        ? buildPriceDropEmail({
+            title: bestDrop.title,
+            photoUrl: bestDrop.photoUrl,
+            previousPrice: bestDrop.previousPrice as number,
+            askingPrice: bestDrop.price as number,
+            listingUrl: bestDrop.url,
+            manageUrl,
+            unsubscribeUrl,
+            frequencyUrl,
+            // Honesty: this is a daily/weekly cron send, never real-time —
+            // never claim "just dropped".
+            periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
+            dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
+            shareType: target.type === 'partnership' ? bestDrop.shareType : undefined,
+          })
+        : buildAlertDigestEmail({
+            context: alert.context ?? null,
+            samples,
+            newCount,
+            dropCount,
+            dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
+            listingsUrl,
+            manageUrl,
+            unsubscribeUrl,
+            frequencyUrl,
+          })
+
+      const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+
+      if (result.sent || result.reason === 'no-key') {
+        // Update last_digest_at so we don't re-send for the same window.
+        await supabase
+          .from('alerts')
+          .update({ last_digest_at: new Date().toISOString() })
+          .eq('id', alert.id)
+        sent++
+        emailsSent++
+      }
+      continue
+    }
+
+    // 2+ due, matching alerts for this email in the same pass — one combined
+    // email, one section per alert, rather than one email per alert.
+    const sections: AlertDigestSection[] = group.map(({ alert, target, newCount, dropCount, samples }) => ({
+      context: alert.context ?? null,
+      newCount,
+      dropCount,
+      dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
+      listingsUrl: `${SITE_URL}${alert.source_path ?? '/aircraft'}`,
+      samples,
+    }))
+
+    // Any alert's token resolves the same email on /alerts/manage (it looks
+    // up the owning email, then lists every alert for it), so the first
+    // alert's token is enough for the shared Manage link. The Unsubscribe
+    // link instead carries every alert's token (comma-separated) so one
+    // click opts out of every alert this email covered — not just the first
+    // — matching applyUnsubscribe's multi-token support.
+    const firstToken = group[0].alert.unsubscribe_token ?? ''
+    const manageUrl = firstToken ? `${SITE_URL}/alerts/manage?token=${firstToken}` : `${SITE_URL}/alerts/manage`
+    const allTokens = group.map((p) => p.alert.unsubscribe_token).filter(Boolean).join(',')
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${allTokens}`
+
+    const { subject, html, text } = buildCombinedAlertDigestEmail({ sections, manageUrl, unsubscribeUrl })
+    const email = group[0].alert.email
+
+    const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl })
 
     if (result.sent || result.reason === 'no-key') {
-      // Update last_digest_at so we don't re-send for the same window.
+      const nowStamp = new Date().toISOString()
       await supabase
         .from('alerts')
-        .update({ last_digest_at: new Date().toISOString() })
-        .eq('id', alert.id)
-      sent++
+        .update({ last_digest_at: nowStamp })
+        .in(
+          'id',
+          group.map((p) => p.alert.id)
+        )
+      sent += group.length
+      emailsSent++
     }
   }
 
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue}`
   )
-  return Response.json({ processed: total, sent, skipped, unparseable, notDue })
+  return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue })
 }

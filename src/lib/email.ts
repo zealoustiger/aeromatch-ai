@@ -619,6 +619,121 @@ Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (sw
   return { subject, html, text }
 }
 
+/** One alert's contribution to a combined digest email — the same
+ *  context/counts/dropNoun/samples/listingsUrl fields `buildAlertDigestEmail`
+ *  takes for a single alert, minus the manage/unsubscribe/frequency links
+ *  (the combined email carries those once, at the footer, instead). */
+export type AlertDigestSection = {
+  context: string | null
+  newCount: number
+  dropCount: number
+  dropNoun?: string
+  listingsUrl: string
+  samples?: AlertDigestSample[]
+}
+
+/**
+ * Build ONE email covering 2+ due alerts for the same subscriber — used when
+ * a cron pass finds more than one alert due at once, so a subscriber with
+ * e.g. 3 due alerts gets a single inbox item instead of 3 separate ones
+ * (GOAL.md: "never spam"). Each section keeps its own honest criteria-echo
+ * line, sample cards, and new/drop counts — never summed together across
+ * alerts, same honesty convention as `buildAlertDigestEmail`. The overall
+ * subject states a real total across every included alert. The
+ * manage/unsubscribe links are shared once at the footer; the caller is
+ * responsible for scoping `unsubscribeUrl` to cover every alert included in
+ * `sections` (see the alert-digest cron's multi-token unsubscribe). For
+ * exactly one due alert, callers should use `buildAlertDigestEmail` directly
+ * instead — this function is for 2+, and doesn't offer a `frequencyUrl`
+ * (a per-alert daily→weekly toggle that's ambiguous across multiple alerts
+ * in one send; Manage alerts covers it per-alert instead).
+ */
+export function buildCombinedAlertDigestEmail(opts: {
+  sections: AlertDigestSection[]
+  manageUrl: string
+  unsubscribeUrl: string
+}): { subject: string; html: string; text: string } {
+  const sections = opts.sections
+  const totalNew = sections.reduce((n, s) => n + s.newCount, 0)
+  const totalDrop = sections.reduce((n, s) => n + s.dropCount, 0)
+
+  const overallParts: string[] = []
+  if (totalNew > 0) overallParts.push(totalNew === 1 ? '1 new listing' : `${totalNew} new listings`)
+  if (totalDrop > 0) overallParts.push(totalDrop === 1 ? '1 price drop' : `${totalDrop} price drops`)
+  const overallLabel = overallParts.join(' + ')
+  const subject = `${overallLabel} across your ${sections.length} alerts on ClubHanger`
+
+  const sectionParts = sections.map((s, i) => {
+    const thing = (s.context || '').trim()
+    const heading = thing || 'Your alert'
+    const forThing = thing ? ` ${thing}` : ''
+    const dropNoun = s.dropNoun ?? 'price drop'
+    const countParts: string[] = []
+    if (s.newCount > 0) countParts.push(s.newCount === 1 ? '1 new listing' : `${s.newCount} new listings`)
+    if (s.dropCount > 0) countParts.push(s.dropCount === 1 ? `1 ${dropNoun}` : `${s.dropCount} ${dropNoun}s`)
+    const countLabel = countParts.join(' + ')
+    const samples = s.samples ?? []
+    const remaining = s.newCount + s.dropCount - samples.length
+    const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
+    const samplesHtml = samples.length
+      ? `<div style="margin:0 0 14px;">${samples.map(sampleCardHtml).join('')}</div>`
+      : ''
+    const isLast = i === sections.length - 1
+
+    const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
+        <h2 style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
+        <p style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
+        ${samplesHtml}
+        <p style="margin:0;">
+          <a href="${escapeAttr(s.listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>
+        </p>
+      </div>`
+
+    const sampleLines = samples
+      .map((sm) => {
+        const price =
+          sm.previousPrice != null && sm.price != null && sm.previousPrice !== sm.price
+            ? `${formatUsd(sm.price)} (was ${formatUsd(sm.previousPrice)})`
+            : sm.price != null
+              ? formatUsd(sm.price)
+              : ''
+        return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}`
+      })
+      .join('\n')
+    const text = `${heading} — ${countLabel}\n${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${s.listingsUrl}`
+
+    return { html, text }
+  })
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 16px;">${escapeHtml(overallLabel)} across your ${sections.length} alerts</h1>
+        ${sectionParts.map((s) => s.html).join('')}
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        &middot;
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe from these</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${overallLabel} across your ${sections.length} alerts on ClubHanger.
+
+${sectionParts.map((s) => s.text).join('\n\n')}
+
+Manage alerts: ${opts.manageUrl}
+Unsubscribe from these: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
 /**
  * Build the "new matches on your listing" email for a partnership/seeker owner.
  * `listingLabel` is the owner's own listing (e.g. "your 2004 Cessna 172S Skyhawk
