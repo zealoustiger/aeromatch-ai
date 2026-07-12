@@ -3,7 +3,12 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildPriceDropEmail, buildAlertDigestEmail, pickBestPriceDropSample } from './email.ts'
+import {
+  buildPriceDropEmail,
+  buildAlertDigestEmail,
+  buildListUnsubscribeHeaders,
+  pickBestPriceDropSample,
+} from './email.ts'
 
 const BASE = {
   title: '2013 Cessna 172S Skyhawk',
@@ -231,4 +236,19 @@ test('pickBestPriceDropSample: ignores samples with no genuine decrease or missi
 test('pickBestPriceDropSample: returns null for an empty or all-disqualified list', () => {
   assert.equal(pickBestPriceDropSample([]), null)
   assert.equal(pickBestPriceDropSample([sample({ previousPrice: 100_000, price: 100_000 })]), null)
+})
+
+// ─── buildListUnsubscribeHeaders (RFC 8058) ────────────────────────────────
+
+test('buildListUnsubscribeHeaders: wraps the URL in angle brackets and sets the one-click marker', () => {
+  const headers = buildListUnsubscribeHeaders('https://clubhanger.com/api/alerts/unsubscribe?token=xyz')
+  assert.deepEqual(headers, {
+    'List-Unsubscribe': '<https://clubhanger.com/api/alerts/unsubscribe?token=xyz>',
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  })
+})
+
+test('buildListUnsubscribeHeaders: returns undefined with no URL (non-alert emails stay header-free)', () => {
+  assert.equal(buildListUnsubscribeHeaders(undefined), undefined)
+  assert.equal(buildListUnsubscribeHeaders(''), undefined)
 })
