@@ -1040,7 +1040,7 @@ export async function subscribeToAlerts(
     manageUrl,
     unsubscribeUrl,
   })
-  await sendEmail({ to: clean, subject, html, text })
+  await sendEmail({ to: clean, subject, html, text, unsubscribeUrl })
 
   return { ok: true }
 }
@@ -1159,7 +1159,7 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
     manageUrl,
     unsubscribeUrl,
   })
-  await sendEmail({ to: alert.email, subject, html, text })
+  await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
 
   await admin.from('alerts').update({ last_confirm_sent_at: new Date().toISOString() }).eq('id', alert.id)
   // Not-yet-migrated DB (`last_confirm_sent_at` column missing) — the email above
@@ -1274,8 +1274,9 @@ export async function requestAlertsManageLink(email: string) {
       Date.now() - new Date(alert.last_confirm_sent_at).getTime() < RESEND_COOLDOWN_MS
     if (!withinCooldown) {
       const manageUrl = `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}`
+      const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}`
       const { subject, html, text } = buildManageLinkEmail({ manageUrl })
-      await sendEmail({ to: clean, subject, html, text })
+      await sendEmail({ to: clean, subject, html, text, unsubscribeUrl })
       await admin
         .from('alerts')
         .update({ last_confirm_sent_at: new Date().toISOString() })

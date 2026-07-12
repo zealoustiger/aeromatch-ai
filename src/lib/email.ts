@@ -21,11 +21,33 @@ export type SendEmailInput = {
   html: string
   /** Plain-text fallback; recommended for deliverability. */
   text?: string
+  /**
+   * The recipient's own token-scoped unsubscribe URL, when this email is part of
+   * the alerts system. When present, `sendEmail` adds RFC 8058 one-click
+   * `List-Unsubscribe` headers so Gmail/Yahoo's native "Unsubscribe" affordance
+   * works and bulk-sender deliverability rules are met.
+   */
+  unsubscribeUrl?: string
 }
 
 export type SendEmailResult =
   | { sent: true; id: string | null }
   | { sent: false; reason: 'no-key' | 'error'; detail?: string }
+
+/**
+ * RFC 8058 one-click unsubscribe headers, keyed off a per-recipient unsubscribe
+ * URL. Returns `undefined` when there is no such URL (e.g. non-alert emails),
+ * so callers can spread the result without an empty `headers: {}`.
+ */
+export function buildListUnsubscribeHeaders(
+  unsubscribeUrl?: string
+): Record<string, string> | undefined {
+  if (!unsubscribeUrl) return undefined
+  return {
+    'List-Unsubscribe': `<${unsubscribeUrl}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  }
+}
 
 /**
  * Send one transactional email. Resolves (never throws) so a caller in a
@@ -42,6 +64,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   try {
+    const listUnsubscribeHeaders = buildListUnsubscribeHeaders(input.unsubscribeUrl)
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -54,6 +77,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         subject: input.subject,
         html: input.html,
         ...(input.text ? { text: input.text } : {}),
+        ...(listUnsubscribeHeaders ? { headers: listUnsubscribeHeaders } : {}),
       }),
     })
     if (!res.ok) {

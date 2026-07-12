@@ -904,7 +904,7 @@ export async function GET(req: NextRequest) {
           unsubscribeUrl,
         })
 
-    const result = await sendEmail({ to: alert.email, subject, html, text })
+    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
 
     if (result.sent || result.reason === 'no-key') {
       // Update last_digest_at so we don't re-send for the same window.
