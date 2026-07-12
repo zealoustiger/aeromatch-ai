@@ -14,7 +14,13 @@ import {
   type PartnershipCompVerdict,
 } from '@/lib/partnershipComps'
 import { getSaveCounts } from '@/lib/saveCounts'
-import { sendEmail, buildAlertConfirmEmail, buildNewMessageEmail, buildSeedInquiryEmail } from '@/lib/email'
+import {
+  sendEmail,
+  buildAlertConfirmEmail,
+  buildManageLinkEmail,
+  buildNewMessageEmail,
+  buildSeedInquiryEmail,
+} from '@/lib/email'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
@@ -1221,6 +1227,66 @@ export async function resendAlertConfirmationByEmail(email: string, sourcePath: 
   }
   if (!alert) return { error: 'No pending alert found for this email.' }
   return sendConfirmationResend(admin, alert)
+}
+
+// Public, no session required: the "Email me my manage link" form on the
+// signed-out `/alerts/manage` page — a self-serve way back in for email-only
+// subscribers whose original digest/confirm email (the only place a manage
+// token has ever appeared) is gone. Reuses the same `last_confirm_sent_at`
+// rate-limit column/window `sendConfirmationResend` already established.
+//
+// Deliberately returns the SAME `{ ok: true }` shape whether or not this email
+// has any alerts, and whether or not the send actually happened (cooldown or
+// no row) — never lets a caller distinguish "no alerts" from "already sent
+// recently" from "just sent" (no email enumeration).
+export async function requestAlertsManageLink(email: string) {
+  const clean = (email || '').toLowerCase().trim()
+  if (!clean || !EMAIL_RE.test(clean)) {
+    return { error: 'Please enter a valid email address.' }
+  }
+
+  const admin = createAdminClient()
+  const lookup = (cols: string) =>
+    admin
+      .from('alerts')
+      .select(cols)
+      .eq('email', clean)
+      .neq('status', 'unsubscribed')
+      .not('unsubscribe_token', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+  let { data: alert, error } = (await lookup(
+    'id, unsubscribe_token, last_confirm_sent_at'
+  ).maybeSingle()) as {
+    data: { id: string; unsubscribe_token: string; last_confirm_sent_at?: string | null } | null
+    error: { message: string } | null
+  }
+  if (error?.message?.includes('last_confirm_sent_at')) {
+    ;({ data: alert, error } = (await lookup('id, unsubscribe_token').maybeSingle()) as {
+      data: { id: string; unsubscribe_token: string; last_confirm_sent_at?: string | null } | null
+      error: { message: string } | null
+    })
+  }
+
+  if (alert) {
+    const withinCooldown =
+      alert.last_confirm_sent_at &&
+      Date.now() - new Date(alert.last_confirm_sent_at).getTime() < RESEND_COOLDOWN_MS
+    if (!withinCooldown) {
+      const manageUrl = `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}`
+      const { subject, html, text } = buildManageLinkEmail({ manageUrl })
+      await sendEmail({ to: clean, subject, html, text })
+      await admin
+        .from('alerts')
+        .update({ last_confirm_sent_at: new Date().toISOString() })
+        .eq('id', alert.id)
+      // Not-yet-migrated DB (`last_confirm_sent_at` missing) — the email above
+      // already sent; a failed bookkeeping update just means this can't be
+      // rate-limited until the migration lands, same graceful-fallback as
+      // every other `alerts.*` column this file already handles this way.
+    }
+  }
+  return { ok: true }
 }
 
 // Rebuilds an editable alert's `source_path`/`context` from submitted criteria

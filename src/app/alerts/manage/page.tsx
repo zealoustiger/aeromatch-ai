@@ -13,6 +13,7 @@ import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
 import NewAlertForm from '@/components/NewAlertForm'
+import ManageLinkRequestForm from '@/components/ManageLinkRequestForm'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -142,6 +143,14 @@ export default async function AlertsManagePage({
                 Sign in or create a free account
               </Link>
             </div>
+            {!tokenInvalid && (
+              <div className="mt-6 border-t border-slate-100 pt-5">
+                <p className="text-sm font-medium text-slate-600">
+                  Set up alerts without an account? Get a link to manage them instead:
+                </p>
+                <ManageLinkRequestForm />
+              </div>
+            )}
           </div>
         </div>
       </div>

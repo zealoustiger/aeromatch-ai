@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Bell, Search, TrendingDown, MailCheck } from 'lucide-react'
 import AlertSignup from '@/components/AlertSignup'
 
@@ -95,6 +96,13 @@ export default function AlertsLanding() {
 
       <p className="mt-6 text-center text-xs text-slate-400">
         One-click unsubscribe in every email. We never share your address.
+      </p>
+      <p className="mt-2 text-center text-xs text-slate-400">
+        Already set up alerts?{' '}
+        <Link href="/alerts/manage" className="text-sky-600 underline-offset-2 hover:underline">
+          Manage them
+        </Link>
+        .
       </p>
     </div>
   )

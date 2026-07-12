@@ -130,6 +130,61 @@ Unsubscribe: ${opts.unsubscribeUrl}`
 }
 
 /**
+ * Build the "here's your alerts manage link" email — sent on request from the
+ * signed-out `/alerts/manage` page for a subscriber who lost their original
+ * digest/confirm email and has no account to sign back in with. Deliberately
+ * carries no context/subject-line personalization (the request is looked up
+ * only by email, so we don't know which alert prompted it) and never implies
+ * whether alerts exist — the caller only sends this when a real alert row was
+ * found, so receiving the email itself is the (neutral, expected) signal.
+ */
+export function buildManageLinkEmail(opts: {
+  manageUrl: string
+}): { subject: string; html: string; text: string } {
+  const subject = 'Your ClubHanger alerts manage link'
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Your alerts, one click away</h1>
+        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
+          You asked for a link to manage your ClubHanger alerts. Use it to view, pause, edit, or
+          delete every alert tied to this email address — no account or password needed.
+        </p>
+        <p style="margin:0 0 4px;">
+          <a href="${escapeAttr(opts.manageUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Manage my alerts
+          </a>
+        </p>
+        <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+          Didn&rsquo;t request this? No action needed — this link only works for viewing alerts, it
+          doesn&rsquo;t change anything on its own.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`
+
+  const text = `ClubHanger
+
+Your alerts, one click away.
+
+You asked for a link to manage your ClubHanger alerts. Use it to view, pause, edit, or
+delete every alert tied to this email address — no account or password needed.
+
+Manage my alerts: ${opts.manageUrl}
+
+Didn't request this? No action needed — this link only works for viewing alerts, it doesn't
+change anything on its own.`
+
+  return { subject, html, text }
+}
+
+/**
  * Build the "you have a new message" notification email for on-site messaging.
  * `threadUrl` is the full absolute URL to the thread (e.g. https://clubhanger.com/messages/{id}).
  * Returns subject + html + text ready for `sendEmail`.
