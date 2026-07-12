@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'Aircraft Title, Escrow & Closing — How Buying a Plane Actually Closes'
@@ -413,6 +414,11 @@ export default function TitleEscrowClosingGuidePage() {
           close, consult a qualified aviation attorney, a reputable aircraft title &amp; escrow company, and
           your own tax advisor about your specific purchase.
         </p>
+
+        {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath) --
+            point it at /partnerships (bare, all-partnerships) rather than this guide's own
+            URL, mirroring the /tools/cost-calculator precedent. */}
+        <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_page" className="mt-10" />
       </article>
 
       <script
