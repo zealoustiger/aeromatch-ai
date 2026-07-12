@@ -1020,10 +1020,12 @@ export async function subscribeToAlerts(
   // in the URL; the confirm/unsubscribe routes look them up with the service
   // role. Awaited but failure is non-fatal (the row is already saved).
   const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${confirmToken}`
+  const manageUrl = `${SITE_URL}/alerts/manage?token=${unsubscribeToken}`
   const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubscribeToken}`
   const { subject, html, text } = buildAlertConfirmEmail({
     context: context || null,
     confirmUrl,
+    manageUrl,
     unsubscribeUrl,
   })
   await sendEmail({ to: clean, subject, html, text })
@@ -1137,10 +1139,12 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
   }
 
   const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${alert.confirm_token}`
+  const manageUrl = `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}`
   const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}`
   const { subject, html, text } = buildAlertConfirmEmail({
     context: alert.context || null,
     confirmUrl,
+    manageUrl,
     unsubscribeUrl,
   })
   await sendEmail({ to: alert.email, subject, html, text })

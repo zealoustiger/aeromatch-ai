@@ -62,16 +62,21 @@ export default async function AlertStatusPage({
   // (admin client — anon has no SELECT on `alerts`, it holds PII) and offer a
   // one-click counterpart suggestion (aircraft ↔ partnerships for the same make).
   // Never shown outside the confirmed state; null when no suggestion applies.
+  // Also grabs unsubscribe_token here — that's the token `/alerts/manage`
+  // authenticates with, distinct from the `confirm_token` this page's own
+  // `token` param carries.
   let crossSell = null as Awaited<ReturnType<typeof getCrossSellSuggestion>>
+  let manageToken: string | null = null
   if (key === 'confirmed' && token) {
     const admin = createAdminClient()
     const { data } = await admin
       .from('alerts')
-      .select('source_path')
+      .select('source_path, unsubscribe_token')
       .eq('confirm_token', token)
       .eq('status', 'confirmed')
       .maybeSingle()
     crossSell = await getCrossSellSuggestion(data?.source_path ?? null)
+    manageToken = data?.unsubscribe_token ?? null
   }
 
   return (
@@ -86,6 +91,13 @@ export default async function AlertStatusPage({
           {key === 'unsubscribed' && token && <UnsubscribeRecover token={token} />}
           {key === 'confirmed' && token && crossSell && (
             <AlertCrossSell originalToken={token} suggestion={crossSell} />
+          )}
+          {key === 'confirmed' && manageToken && (
+            <p className="mt-4 text-sm text-slate-500">
+              <Link href={`/alerts/manage?token=${manageToken}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
           )}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link

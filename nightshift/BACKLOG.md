@@ -361,14 +361,21 @@ un-built by direct code read this pass._
   `/alerts/manage` instead of the capture button (and don't fire a duplicate
   `alert_subscribed` for a no-op). Turns every capture point into a management entry point
   for existing subscribers; no schema change.
-- **[P1][goal] "Manage alerts" link in the confirmation email + on `/alerts/status`'s
-  confirmed panel.** The explicitly-flagged not-done follow-up from `alert-manage-by-token`:
-  `buildAlertConfirmEmail` takes only confirm/unsubscribe URLs (verified by code read), so the
-  first email a subscriber ever receives has no path to management, and the confirmed state on
-  `/alerts/status` doesn't link the token-scoped manage page either. Thread a `manageUrl`
-  (`/alerts/manage?token=<unsubscribe_token>` — the same token-forwarding convention the
-  digest email already uses) into the confirm template and add a "Manage your alerts" link to
-  the confirmed panel. Small slice; completes "one click from any alert email to management."
+~~- **[P1][goal] "Manage alerts" link in the confirmation email + on `/alerts/status`'s
+  confirmed panel.**~~ ✅ SHIPPED via `alert-confirm-manage-link` (2026-07-12) The
+  explicitly-flagged not-done follow-up from `alert-manage-by-token`: `buildAlertConfirmEmail`
+  took only confirm/unsubscribe URLs, so the first email a subscriber ever receives had no
+  path to management, and the confirmed state on `/alerts/status` didn't link the token-scoped
+  manage page either. Added a `manageUrl` option (`${SITE_URL}/alerts/manage?token=
+  <unsubscribe_token>` — the same convention `alert-digest`'s emails already use) to
+  `buildAlertConfirmEmail`, threaded through both call sites (`subscribeToAlerts`,
+  `sendConfirmationResend`) in `actions.ts`. `/alerts/status`'s confirmed-state query now also
+  selects `unsubscribe_token` (distinct from the page's own `confirm_token` param) and renders
+  a "Manage your alerts" link when present. No schema change. Live-verified against the real
+  prod DB with a throwaway `@example.com` confirmed test alert: `/alerts/status?state=confirmed
+  &token=<confirm_token>` rendered "Manage your alerts" linking `/alerts/manage?token=
+  <real unsubscribe_token>`, which correctly loaded that alert (not an invalid-link state); a
+  bogus token showed no link, no crash. Row deleted after (0 remain).
 - **[P2][goal] Partnership buy-in-drop preview cards in the digest email.** The flagged
   not-done parity slice from `partnership-digest-samples`: a partnership alert whose window
   contains only a buy-in drop still gets the CTA-only fallback while aircraft alerts get rich
