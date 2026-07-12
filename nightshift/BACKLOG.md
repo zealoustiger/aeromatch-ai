@@ -475,14 +475,20 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   the pre-existing, already-documented `Nav.tsx` unread-badge `threads` 400 (confirmed by
   URL, unrelated to this change). Test alert + auth user deleted immediately after
   (verified 0 rows remain).
-- **[P1][goal] Popular-alert one-click chips on the `/alerts` landing page.** The landing
-  form starts blank — the visitor must invent criteria. Add 4–6 "Popular alerts" chips
-  (e.g. Cessna 172 · Cirrus SR22 · partnerships in CA) that one-tap prefill
-  `AlertSignup`'s context/sourcePath. Honesty gate: derive chips from real data (live
-  listing counts via the `alertMatchCounts` helpers, or real confirmed-alert counts à la
-  `alertCounts.ts`) and only show a chip whose search has live matches — never a canned
-  list that alerts on nothing. Emits `alert_subscribed` with `source:
-  'alerts_landing_popular'`.
+~~- **[P1][goal] Popular-alert one-click chips on the `/alerts` landing page.**~~ ✅
+  SHIPPED via `alerts-landing-popular-chips` (2026-07-12) The page already had a static
+  chip row (Cessna 172 / Cirrus SR22 / Piper Cherokee / Beechcraft Bonanza), but it was a
+  hardcoded canned list with no honesty gate. `src/app/alerts/page.tsx` (now an async
+  server component, `revalidate = 3600` matching `/airports/[icao]`'s convention) runs
+  each candidate through the existing `getAlertMatchCount` and drops any with 0 live
+  matches before they ever reach the client; added "Partnerships in California" as a
+  5th candidate per the item's own example. `AlertsLanding.tsx` now tags the server-
+  verified chips' `AlertSignup` with `source: 'alerts_landing_popular'`, distinct from
+  the 3 unchanged catch-all chips (still `alerts_landing`). Live-verified end-to-end with
+  a real Playwright browser (not `.click()`): clicked the Cessna 172 chip, submitted a
+  throwaway `@example.com` email, intercepted the `alert_subscribed` payload — confirmed
+  `source: 'alerts_landing_popular'` + correct `context`/`source_path`; test alert row
+  deleted after (0 remain). All 5 candidates had live matches today, so all 5 rendered.
 - **[P1][goal] Post-contact alert cross-sell at the highest-intent moment.** A buyer who
   just messaged a seller (`ContactButtons`/`MessageOwnerButton` success state) proved
   exactly what they want, but that moment offers no alert capture — if the plane sells to
