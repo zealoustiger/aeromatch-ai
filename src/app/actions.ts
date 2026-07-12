@@ -17,10 +17,12 @@ import { getSaveCounts } from '@/lib/saveCounts'
 import {
   sendEmail,
   buildAlertConfirmEmail,
+  buildAlertDigestEmail,
   buildManageLinkEmail,
   buildNewMessageEmail,
   buildSeedInquiryEmail,
 } from '@/lib/email'
+import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
@@ -1197,6 +1199,90 @@ export async function resendAlertConfirmation(id: string, token?: string) {
     return { error: 'Alert not found.' }
   }
   return sendConfirmationResend(admin, alert)
+}
+
+type SampleDigestAlert = {
+  id: string
+  email: string
+  status: string
+  source_path: string | null
+  context: string | null
+  unsubscribe_token: string | null
+  frequency?: string | null
+  last_confirm_sent_at?: string | null
+}
+const SAMPLE_DIGEST_COLS = 'id, email, status, source_path, context, unsubscribe_token'
+
+// Owner-scoped: the "Send me a sample" action on a confirmed row in
+// `/alerts/manage` — lets a subscriber see a real preview of their digest
+// email without waiting for the cron. Reuses `last_confirm_sent_at`'s 10-min
+// cooldown for rate-limiting: that column is only ever read/written for a
+// `pending` alert's confirm-resend (see `sendConfirmationResend` above), and
+// this only ever runs for a `confirmed` one, so the two never collide on the
+// same row despite sharing the column — no new schema needed.
+export async function sendSampleDigest(id: string, token?: string) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  // Both/either of frequency/last_confirm_sent_at may not be migrated live yet
+  // — same accumulating-retry pattern as fetchAlertsForEmail (PostgREST names
+  // one unknown column per error, so this can take up to two passes).
+  let cols = [...SAMPLE_DIGEST_COLS.split(', '), 'frequency', 'last_confirm_sent_at']
+  let { data: alert, error } = (await admin
+    .from('alerts')
+    .select(cols.join(', '))
+    .eq('id', id)
+    .maybeSingle()) as { data: SampleDigestAlert | null; error: { message: string } | null }
+  for (let i = 0; i < 2 && error && (error.message?.includes('frequency') || error.message?.includes('last_confirm_sent_at')); i++) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data: alert, error } = (await admin
+      .from('alerts')
+      .select(cols.join(', '))
+      .eq('id', id)
+      .maybeSingle()) as { data: SampleDigestAlert | null; error: { message: string } | null })
+  }
+  if (!alert || alert.email.toLowerCase() !== ownerEmail) {
+    return { error: 'Alert not found.' }
+  }
+  if (alert.status !== 'confirmed') {
+    return { error: 'Only an active alert can send a sample.' }
+  }
+  if (!alert.unsubscribe_token) {
+    return { error: 'Something went wrong. Please try again.' }
+  }
+  if (alert.last_confirm_sent_at) {
+    const elapsed = Date.now() - new Date(alert.last_confirm_sent_at).getTime()
+    if (elapsed < RESEND_COOLDOWN_MS) {
+      const mins = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 60_000)
+      return { error: `Please wait ${mins} more minute${mins === 1 ? '' : 's'} before sending another sample.` }
+    }
+  }
+
+  const preview = await getAlertDigestPreview(alert.source_path)
+  const frequency = normalizeFrequency(alert.frequency)
+  const listingsUrl = `${SITE_URL}${alert.source_path || '/aircraft'}`
+  const manageUrl = `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}`
+  const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}`
+
+  const { subject, html, text } = buildAlertDigestEmail({
+    context: alert.context,
+    newCount: preview?.count ?? 0,
+    dropCount: 0,
+    listingsUrl,
+    manageUrl,
+    unsubscribeUrl,
+    samples: preview?.samples ?? [],
+    sampleNote: `your real ${frequency} digest arrives automatically when there's a genuine match.`,
+  })
+  await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+
+  await admin.from('alerts').update({ last_confirm_sent_at: new Date().toISOString() }).eq('id', alert.id)
+  // Not-yet-migrated DB (`last_confirm_sent_at` missing) — the email above
+  // already sent; a failed bookkeeping update just means the next sample
+  // can't be rate-limited until the migration lands, same graceful-fallback
+  // pattern as the confirm-resend cooldown above.
+  return { ok: true }
 }
 
 // Public, no session required: the "Didn't get the email? Resend it" link in
