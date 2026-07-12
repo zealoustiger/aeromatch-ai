@@ -489,14 +489,35 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   throwaway `@example.com` email, intercepted the `alert_subscribed` payload — confirmed
   `source: 'alerts_landing_popular'` + correct `context`/`source_path`; test alert row
   deleted after (0 remain). All 5 candidates had live matches today, so all 5 rendered.
-- **[P1][goal] Post-contact alert cross-sell at the highest-intent moment.** A buyer who
-  just messaged a seller (`ContactButtons`/`MessageOwnerButton` success state) proved
-  exactly what they want, but that moment offers no alert capture — if the plane sells to
-  someone else, we lose them. On contact success, offer a one-tap "Alert me when similar
-  {make} {model}s are listed" (family-scoped `sourcePath=/aircraft?make=…&model=…`, same
-  honesty convention as `sold-listing-alert-cta`; signed-in users get the existing
-  one-click path, and suppress it when they already have that alert via
-  `getExistingAlertForSourcePath`). Emits `alert_subscribed` with `source: 'post_contact'`.
+~~- **[P1][goal] Post-contact alert cross-sell at the highest-intent moment.**~~ ✅
+  SHIPPED via `post-contact-alert-crosssell` (2026-07-12) On a user-posted aircraft
+  listing, sending a message to the seller no longer immediately navigates to
+  `/messages/{threadId}` — `AircraftContactButton` now shows a "Message sent!"
+  success panel with the existing `AlertSignup` (`source="post_contact"`,
+  family-scoped `sourcePath=/aircraft?make=…&model=…`) plus a "View conversation →"
+  button that completes the navigation (applies to both the manual Send submit and
+  the `?contact=1` auto-send-after-auth path, only when a message was actually
+  sent). New `PhoneContactLink.tsx` wraps the "Or call / text" number similarly —
+  clicking the `tel:` link (which doesn't navigate the page away) reveals the same
+  alert prompt inline. Both reuse `AlertSignup` as-is, so the existing signed-in
+  one-click path and `getExistingAlertForSourcePath`'s "already subscribed" state
+  both apply with no new logic. **Scope note (found this cycle):** verified via
+  direct query against the real prod DB that this branch has zero current
+  observers — `aircraft_for_sale` has 0 rows with a non-null `poster_id` (no real
+  user has posted their own aircraft yet) and `contact_phone` still isn't migrated
+  live (`schema.sql`'s `aircraft_add_contact_phone`, same pending-DDL status as
+  several `alerts.*` columns), so end-to-end live verification against a real
+  "active" user-posted listing wasn't possible — and deliberately not worked
+  around: the `quarantine_test_listing` trigger (schema.sql:662, added specifically
+  to stop QA cycles leaking test listings) forces any `@example.com`-posted row to
+  `status='test'`, which the public `aircraft_public_read` RLS policy excludes, so
+  there's no way to synthesize a reachable test row without defeating that guard —
+  not attempted. Verified instead via a temporary local-only preview page (never
+  committed, deleted before landing) rendering the exact success-panel/phone-reveal
+  JSX with fixture props — confirmed no layout/overlap issues at both viewports —
+  plus a clean `tsc`/`next build` and `qa-smoke.mjs` regression pass on real (scraped)
+  listing pages. This will be observable the moment a real user posts their own
+  aircraft and/or the `contact_phone` migration is applied.
 - **[P1][goal] Returning-subscriber nav state: "Get alerts" → "My alerts".** After a
   successful subscribe (or a visit to a token/session manage page), set a small
   localStorage flag; `Nav.tsx`'s "Get alerts" CTA then renders "My alerts" →

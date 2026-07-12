@@ -2,20 +2,30 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MessageCircle, Send } from 'lucide-react'
+import { MessageCircle, Send, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateAircraftThread, sendMessage } from '@/app/actions'
 import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
+import AlertSignup from './AlertSignup'
 import type { User } from '@supabase/supabase-js'
 
 export default function AircraftContactButton({
   aircraftId,
   posterId,
   listingPath,
+  alertContext,
+  alertSourcePath,
+  alertCount,
 }: {
   aircraftId: string
   posterId: string
   listingPath: string
+  /** The same make/model context + search path the page's own bottom AlertSignup
+   *  uses — passed through so the post-contact prompt below alerts on the same
+   *  real search, not a fabricated one. */
+  alertContext?: string
+  alertSourcePath: string
+  alertCount?: number
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -25,6 +35,11 @@ export default function AircraftContactButton({
   const [text, setText] = useState('')
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Set only once a message has actually sent — the "just proved buyer intent"
+  // moment GOAL.md calls out. Holding off the router.push here (instead of
+  // navigating immediately) buys one screen to offer the alert cross-sell
+  // before the buyer leaves for the conversation.
+  const [sentThreadId, setSentThreadId] = useState<string | null>(null)
   const didAutoContact = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -67,8 +82,14 @@ export default function AircraftContactButton({
         if (draft) {
           await sendMessage(result.threadId, draft)
           clearMessageDraft(draftKey)
+          // A message actually sent just now — show the cross-sell beat instead
+          // of navigating straight past it.
+          setSentThreadId(result.threadId)
+        } else {
+          // No drafted message to send (just resuming after auth) — nothing was
+          // "just sent," so there's no success moment to pause on.
+          router.push(`/messages/${result.threadId}`)
         }
-        router.push(`/messages/${result.threadId}`)
       } else {
         setErrorMsg(result.error ?? 'Could not open conversation.')
       }
@@ -101,7 +122,7 @@ export default function AircraftContactButton({
       if ('threadId' in result) {
         await sendMessage(result.threadId, trimmed)
         clearMessageDraft(draftKey)
-        router.push(`/messages/${result.threadId}`)
+        setSentThreadId(result.threadId)
       } else {
         setErrorMsg(result.error ?? 'Could not open conversation.')
       }
@@ -113,6 +134,32 @@ export default function AircraftContactButton({
       e.preventDefault()
       handleSend(e as unknown as React.FormEvent)
     }
+  }
+
+  if (sentThreadId) {
+    return (
+      <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+        <p className="flex items-center gap-2 text-sm font-medium text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Message sent!
+        </p>
+        <AlertSignup
+          context={alertContext}
+          source="post_contact"
+          sourcePath={alertSourcePath}
+          noun="aircraft"
+          alertCount={alertCount}
+          className="my-0"
+        />
+        <button
+          type="button"
+          onClick={() => router.push(`/messages/${sentThreadId}`)}
+          className="text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+        >
+          View conversation →
+        </button>
+      </div>
+    )
   }
 
   if (!expanded) {

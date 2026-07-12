@@ -56,6 +56,7 @@ import SavedListingNote from '@/components/SavedListingNote'
 import AircraftTrustBadge from '@/components/AircraftTrustBadge'
 import AircraftListingOwnerNudge from '@/components/AircraftListingOwnerNudge'
 import AircraftContactButton from '@/components/AircraftContactButton'
+import PhoneContactLink from '@/components/PhoneContactLink'
 import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
 import { getAlertCounts } from '@/lib/alertCounts'
@@ -570,6 +571,10 @@ export default async function AircraftListingDetailPage({
   // confirmed-subscriber count once, up front, for the social-proof line.
   const alertContext = p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined
   const alertCounts = alertContext ? await getAlertCounts([alertContext]) : new Map<string, number>()
+  const alertSourcePath = p.make
+    ? `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
+    : '/aircraft'
+  const alertCount = alertContext ? alertCounts.get(alertContext) : undefined
 
   // Fetch the current user's saved row for this listing so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
@@ -1092,11 +1097,17 @@ export default async function AircraftListingDetailPage({
                   aircraftId={p.id}
                   posterId={p.poster_id}
                   listingPath={`/aircraft/listing/${p.id}`}
+                  alertContext={alertContext}
+                  alertSourcePath={alertSourcePath}
+                  alertCount={alertCount}
                 />
                 {p.contact_phone && (
-                  <p className="mt-3 text-sm text-slate-500">
-                    Or call / text: <a href={`tel:${p.contact_phone}`} className="font-medium text-slate-700 hover:text-sky-700">{p.contact_phone}</a>
-                  </p>
+                  <PhoneContactLink
+                    phone={p.contact_phone}
+                    alertContext={alertContext}
+                    alertSourcePath={alertSourcePath}
+                    alertCount={alertCount}
+                  />
                 )}
               </div>
             ) : (
@@ -1127,13 +1138,9 @@ export default async function AircraftListingDetailPage({
             <AlertSignup
               context={alertContext}
               source="listing_detail"
-              sourcePath={
-                p.make
-                  ? `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
-                  : '/aircraft'
-              }
+              sourcePath={alertSourcePath}
               noun="aircraft"
-              alertCount={alertContext ? alertCounts.get(alertContext) : undefined}
+              alertCount={alertCount}
             />
 
             {/* Monetization intent signal — an honest "coming soon" fake-door CTA
