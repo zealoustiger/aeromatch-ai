@@ -553,16 +553,19 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   count) + a new `lookingFor` field on `AlertDigestSample` for an honest "looking for"
   summary (make(s) + model(s), e.g. "Cessna, Cirrus · 172, SR20") — no price/TTAF
   fabrication, no photo slot (skipped, not a placeholder-plane-photo). See CHANGELOG.
-- **[P1][goal] Partnership single-listing buy-in-drop email.** The rich per-listing
-  `buildPriceDropEmail` template (fired when a drop is an alert's ONLY news) is
-  aircraft-only — a partnership alert in that state gets aggregate digest cards, not the
-  best-in-aviation single-listing treatment (flagged as the natural next slice by
-  `partnership-price-drop-cards`). Extend the template with the existing
-  `dropNoun`/`shareType` conventions ("buy-in drop", "1/4 share") and wire the cron's
-  partnership branch to use it when `newCount === 0 && dropCount > 0`, reusing
-  `pickBestPriceDropSample` + `fetchPartnershipPriceDropSamples` as-is. Graceful-degrades
-  to today's behavior until `previous_buy_in_price` lands live (same pending-DDL status
-  already documented). No new capture point.
+~~- **[P1][goal] Partnership single-listing buy-in-drop email.**~~ ✅ SHIPPED via
+  `partnership-price-drop-email` (2026-07-12) The rich per-listing `buildPriceDropEmail`
+  template (fired when a drop is an alert's ONLY news) was aircraft-only — a partnership
+  alert in that state got aggregate digest cards, not the best-in-aviation single-listing
+  treatment. `buildPriceDropEmail` now accepts optional `dropNoun` (default `"price drop"`,
+  byte-for-byte unchanged for aircraft) and `shareType` params; the cron's `bestDrop`
+  branch now covers `target.type === 'partnership'` too (was aircraft-only), passing
+  `dropNoun: 'buy-in drop'` + the sample's `shareType` (e.g. "1/4 Share") — reusing
+  `pickBestPriceDropSample` + the existing `fetchPartnershipPriceDropSamples` as-is, no new
+  query. Dev preview route gained `?type=partnership`. Graceful-degrades to today's
+  behavior until `previous_buy_in_price` lands live (same pending-DDL status already
+  documented). No new capture point. **This closes out the 🔔 alert-experience `[goal]`
+  queue (Planner refill #5) — all named items shipped.**
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_

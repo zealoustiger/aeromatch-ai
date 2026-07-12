@@ -295,11 +295,19 @@ export function buildPriceDropEmail(opts: {
   manageUrl: string
   unsubscribeUrl: string
   periodLabel?: string
+  /** Names what kind of drop this is — default "price drop" (aircraft); pass
+   *  "buy-in drop" for a partnership whose "price" is a buy-in share, not an
+   *  asking price. Same convention as `buildAlertDigestEmail`'s `dropNoun`. */
+  dropNoun?: string
+  /** Formatted share label (e.g. "1/4 Share") — partnership drops only, shown
+   *  under the title same as `AlertDigestSample.shareType` on digest cards. */
+  shareType?: string | null
 }): { subject: string; html: string; text: string } {
   const pct = Math.round(((opts.previousPrice - opts.askingPrice) / opts.previousPrice) * 100)
   const oldPrice = formatUsd(opts.previousPrice)
   const newPrice = formatUsd(opts.askingPrice)
-  const subject = `${pct}% price drop — ${opts.title} now ${newPrice}`
+  const dropNoun = opts.dropNoun ?? 'price drop'
+  const subject = `${pct}% ${dropNoun} — ${opts.title} now ${newPrice}`
 
   const photo = opts.photoUrl
     ? `<img src="${escapeAttr(opts.photoUrl)}" alt="${escapeAttr(opts.title)}" width="472" style="display:block;width:100%;max-width:472px;height:auto;border-radius:12px;margin:0 0 18px;" />`
@@ -313,9 +321,10 @@ export function buildPriceDropEmail(opts: {
       <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
         ${photo}
         <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)}</h1>
+        ${opts.shareType ? `<p style="margin:0 0 8px;font-size:13px;color:#64748b;">${escapeHtml(opts.shareType)}</p>` : ''}
         <p style="margin:0 0 14px;">
           <span style="display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;">
-            ${pct}% price drop
+            ${pct}% ${dropNoun}
           </span>
         </p>
         <p style="margin:0 0 22px;">
@@ -340,7 +349,8 @@ export function buildPriceDropEmail(opts: {
 </html>`
 
   const periodLabel = opts.periodLabel ?? 'this week'
-  const text = `${opts.title} dropped ${pct}% ${periodLabel} — now ${newPrice} (was ${oldPrice})
+  const titleLine = opts.shareType ? `${opts.title} (${opts.shareType})` : opts.title
+  const text = `${titleLine} dropped ${pct}% ${periodLabel} — now ${newPrice} (was ${oldPrice})
 
 View listing: ${opts.listingUrl}
 
