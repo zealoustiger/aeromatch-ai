@@ -12,6 +12,7 @@ import AlertEditForm from '@/components/AlertEditForm'
 import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
+import NewAlertForm from '@/components/NewAlertForm'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -184,6 +185,7 @@ export default async function AlertsManagePage({
         </div>
 
         <section className="ch-panel p-6">
+          <NewAlertForm token={scopeToken} />
           {alerts.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-slate-200 px-5 py-8 text-center">
               <Bell className="mx-auto mb-2 h-7 w-7 text-slate-300" />

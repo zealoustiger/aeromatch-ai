@@ -442,14 +442,29 @@ has no seeker sample fetch; `buildPriceDropEmail` is aircraft-only)._
   `unsubscribe_token`; always show the same neutral "if you have alerts, a link is on its
   way" response (no email enumeration) and rate-limit reusing the `last_confirm_sent_at`
   pattern. Improves the management surface; no new capture point, so no `alert_subscribed`.
-- **[P1][goal] "New alert" builder on `/alerts/manage`.** The manage page can edit/pause/
-  delete but not CREATE — a subscriber wanting one more alert must go hunt for a capture
-  box. Add a "+ New alert" button opening the existing `AlertEditForm` criteria UI
-  (aircraft make/model/state/price · partnership make/state/airport · seeker make/model)
-  blank; insert directly as `status='confirmed'` for the proven owner email via
-  `resolveOwnerEmail` (session or the page's own `?token=` — ownership already proven, same
-  no-second-opt-in precedent as the manage cross-sell), idempotent on the existing
-  `(email, source_path)` constraint. Emits `alert_subscribed` with `source: 'manage_new'`.
+~~- **[P1][goal] "New alert" builder on `/alerts/manage`.**~~ ✅ SHIPPED via
+  `alerts-manage-new-alert` (2026-07-12) The manage page could edit/pause/delete but not
+  CREATE — a subscriber wanting one more alert had to go hunt for a capture box elsewhere.
+  New "+ New alert" button opens an inline form (a listing-type selector — Aircraft for
+  sale / Partnerships / Seeking a partnership — then the matching fields, mirroring
+  `AlertEditForm`'s field set per type) via new `NewAlertForm.tsx`. New `createManageAlert`
+  server action proves ownership via the existing `resolveOwnerEmail` (session or the
+  page's own `?token=`, same as every other manage-page action), builds `source_path`/
+  `context` via the existing `buildAlertCriteriaUpdate(type, null, fields)` helper (the
+  same one `updateAlertCriteria` uses), and inserts directly as `status='confirmed'` — no
+  second opt-in email, same no-second-opt-in precedent as `subscribeManageCrossSell`.
+  Idempotent on the existing `(email, source_path)` constraint (23505 → success, no
+  duplicate `alert_subscribed`). Fires `alert_subscribed` with `source: 'manage_new'` on a
+  genuine new subscribe. No schema change. Live-verified end-to-end (real Playwright
+  clicks, not `.click()`) against the real prod DB with a throwaway `@example.com` test
+  account + a real magic-link-minted session: opened the form, selected Partnerships,
+  filled make=Cessna/airport=KHWD, submitted — new "Cessna near KHWD" row appeared
+  immediately (no page reload) with working View/Pause/Delete/Edit/frequency controls and
+  even triggered the existing cross-sell suggestion; submitting the identical criteria
+  again confirmed exactly 1 row in the DB (idempotent, no duplicate). Console showed only
+  the pre-existing, already-documented `Nav.tsx` unread-badge `threads` 400 (confirmed by
+  URL, unrelated to this change). Test alert + auth user deleted immediately after
+  (verified 0 rows remain).
 - **[P1][goal] Popular-alert one-click chips on the `/alerts` landing page.** The landing
   form starts blank — the visitor must invent criteria. Add 4–6 "Popular alerts" chips
   (e.g. Cessna 172 · Cirrus SR22 · partnerships in CA) that one-tap prefill

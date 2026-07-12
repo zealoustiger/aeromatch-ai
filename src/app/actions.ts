@@ -20,7 +20,12 @@ import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
 import { validateReview } from '@/lib/reviewValidation'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
-import { parseEditableAlertTarget, buildAlertCriteriaUpdate, type AlertCriteriaFields } from '@/lib/alertEditCriteria'
+import {
+  parseEditableAlertTarget,
+  buildAlertCriteriaUpdate,
+  type AlertCriteriaFields,
+  type EditableAlertTarget,
+} from '@/lib/alertEditCriteria'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import { htmlToReadableText } from '@/lib/htmlText'
@@ -1371,6 +1376,59 @@ export async function subscribeManageCrossSell(context: string, sourcePath: stri
   if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
   revalidatePath('/alerts/manage')
   return { ok: true }
+}
+
+// "+ New alert" builder on /alerts/manage (see NewAlertForm.tsx): the manage page
+// could edit/pause/delete but not CREATE, so a subscriber wanting one more alert
+// had to go hunt for a capture box elsewhere on the site. Same ownership proof as
+// every other manage-page action (session or the page's own `?token=`) and the
+// same no-second-opt-in precedent as subscribeManageCrossSell above — reuses
+// buildAlertCriteriaUpdate (the same helper updateAlertCriteria uses) with a null
+// currentSourcePath to build a fresh source_path/context from the chosen fields.
+export async function createManageAlert(
+  type: EditableAlertTarget['type'],
+  fields: AlertCriteriaFields,
+  token?: string
+) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const min = fields.minPrice ? parseInt(fields.minPrice, 10) : undefined
+  const max = fields.maxPrice ? parseInt(fields.maxPrice, 10) : undefined
+  if (min !== undefined && max !== undefined && Number.isFinite(min) && Number.isFinite(max) && min > max) {
+    return { error: 'Minimum price must be less than maximum price.' }
+  }
+
+  const { sourcePath, context } = buildAlertCriteriaUpdate(type, null, fields)
+
+  const basePayload = {
+    email: ownerEmail,
+    context: context || null,
+    source_path: sourcePath,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    confirm_token: crypto.randomUUID(),
+    unsubscribe_token: crypto.randomUUID(),
+  }
+  let payload: Record<string, unknown> = {
+    ...basePayload,
+    price_drop_opt_in: true,
+    frequency: normalizeFrequency('weekly'),
+  }
+  let { error } = await admin.from('alerts').insert(payload)
+
+  for (let i = 0; i < 2 && error && error.code !== '23505'; i++) {
+    if (error.message?.includes('frequency')) delete payload.frequency
+    else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
+    else break
+    ;({ error } = await admin.from('alerts').insert(payload))
+  }
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
+  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true, alreadyExisted: error?.code === '23505' }
 }
 
 // Signed-in one-click alert capture (see AlertSignup.tsx): a visitor with a verified
