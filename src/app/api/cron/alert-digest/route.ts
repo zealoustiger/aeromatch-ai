@@ -5,6 +5,7 @@ import {
   buildAlertDigestEmail,
   buildCombinedAlertDigestEmail,
   buildPriceDropEmail,
+  buildListingUnavailableEmail,
   pickBestPriceDropSample,
   type AlertDigestSample,
   type AlertDigestSection,
@@ -49,6 +50,13 @@ type AlertTarget =
        *  `clubHangerDealVerdict` (see `filterToGoodDeals`). Set via `deal=good`
        *  in the alert's source_path query string; no schema/DB storage. */
       dealOnly?: boolean
+      /** Set when this alert watches ONE specific listing for a price drop
+       *  (`source_path` = `/aircraft/listing/<id>?watch=price`) rather than a
+       *  family search — see the "Watch this listing" capture point on the
+       *  listing detail page. When set, every other field above is ignored;
+       *  the main loop routes it through `resolveListingWatch` instead of the
+       *  generic `countNew`/`countRecentAircraftPriceDrops` path. */
+      listingId?: string
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
@@ -137,6 +145,16 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
 
   // /aircraft/mission/... → complex preset, skip
   if (p.startsWith('/aircraft/mission/')) return null
+
+  // /aircraft/listing/[id]?watch=price → watching ONE specific listing's own
+  // price, not a family search. Must be checked before the make/model regex
+  // below, which would otherwise misparse "listing" as a make slug.
+  const listingWatch = p.match(/^\/aircraft\/listing\/([^/]+)$/)
+  if (listingWatch) {
+    const params = new URLSearchParams(qs ?? '')
+    if (params.get('watch') !== 'price') return null
+    return { type: 'aircraft', listingId: listingWatch[1] }
+  }
 
   // /aircraft/[make]/[model]/[stateCode] → make+model+state
   const makeModelState = p.match(/^\/aircraft\/([^/]+)\/([^/]+)\/([a-z]{2})$/)
@@ -597,6 +615,48 @@ async function fetchAircraftPriceDropSamples(
   return (narrowed as Row[]).slice(0, limit).map((row) => toDigestSample(row, row.previous_price))
 }
 
+type ListingWatchResult =
+  | { kind: 'unavailable'; title: string; browseUrl: string }
+  | { kind: 'active'; dropped: boolean; sample?: AlertDigestSample }
+
+/**
+ * Resolve a `listingId`-scoped "watch this listing" target: either the row
+ * genuinely dropped in price since `since` (routes to the same single-listing
+ * `buildPriceDropEmail` template as a family-scoped price-drop alert), or the
+ * row is gone / no longer `status: 'active'` — the honesty-gate "say so once"
+ * case, so a watch alert never just silently stops firing with no
+ * explanation. A query error is treated as "nothing to report this pass"
+ * rather than "unavailable" — never fabricate a removal on a transient error.
+ */
+async function resolveListingWatch(
+  supabase: ReturnType<typeof createAdminClient>,
+  listingId: string,
+  since: string
+): Promise<ListingWatchResult> {
+  const { data, error } = await supabase
+    .from('aircraft_for_sale')
+    .select('id, make, model, year, asking_price, previous_price, price_changed_at, images, location, ttaf, status')
+    .eq('id', listingId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[alert-digest] listing-watch lookup error:', error.message)
+    return { kind: 'active', dropped: false }
+  }
+
+  if (!data || data.status !== 'active') {
+    const title = data ? [data.year, data.make, data.model].filter(Boolean).join(' ') || 'This aircraft' : 'This aircraft'
+    const browseUrl =
+      data?.make && data?.model
+        ? `${SITE_URL}/aircraft?${new URLSearchParams({ make: data.make, model: data.model }).toString()}`
+        : `${SITE_URL}/aircraft`
+    return { kind: 'unavailable', title, browseUrl }
+  }
+
+  if (!hasRecentPriceDrop(data, since)) return { kind: 'active', dropped: false }
+  return { kind: 'active', dropped: true, sample: toDigestSample(data as AircraftSampleRow, data.previous_price) }
+}
+
 type PartnershipSampleRow = {
   id: string
   make: string | null
@@ -876,6 +936,10 @@ export async function GET(req: NextRequest) {
     samples: AlertDigestSample[]
   }
   const prepared: Prepared[] = []
+  // Listing-watch alerts whose target has left `status: 'active'` — handled
+  // entirely outside the grouped new/drop-count flow above (see the honesty
+  // gate note where these are sent, after the main grouped-send loop below).
+  const unavailableWatches: { alert: DigestAlertRow; title: string; browseUrl: string }[] = []
 
   for (const alert of alerts ?? []) {
     const frequency = normalizeFrequency(alert.frequency)
@@ -892,6 +956,23 @@ export async function GET(req: NextRequest) {
 
     // "Since when?" — use last_digest_at if present; else the signup date.
     const since = alert.last_digest_at ?? alert.created_at ?? minWindowStart
+
+    if (target.type === 'aircraft' && target.listingId) {
+      const watch = await resolveListingWatch(supabase, target.listingId, since)
+      if (watch.kind === 'unavailable') {
+        unavailableWatches.push({ alert, title: watch.title, browseUrl: watch.browseUrl })
+        continue
+      }
+      if (!watch.dropped) {
+        skipped++
+        continue
+      }
+      // A genuine drop on the watched row — same shape (newCount 0, dropCount
+      // 1, one sample) the grouped single-alert send loop below already knows
+      // how to route to buildPriceDropEmail; no further special-casing needed.
+      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
+      continue
+    }
 
     const newCount = await countNew(supabase, target, since)
     // Price-drop matching applies to aircraft-for-sale and partnership alerts
@@ -1060,6 +1141,31 @@ export async function GET(req: NextRequest) {
           group.map((p) => p.alert.id)
         )
       sent += group.length
+      emailsSent++
+    }
+  }
+
+  // Listing-watch alerts whose target left `status: 'active'` this pass —
+  // GOAL.md's honesty gate ("say so once rather than staying silent
+  // forever"). Always its own dedicated email, even on the rare pass where
+  // this same subscriber also has another alert due (bundling it into the
+  // combined-digest template is a follow-up, not this slice) — and the alert
+  // is paused right after sending so it's genuinely a one-time notice, not a
+  // recurring one every future cron pass.
+  for (const { alert, title, browseUrl } of unavailableWatches) {
+    const unsubToken = alert.unsubscribe_token ?? ''
+    const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
+    const { subject, html, text } = buildListingUnavailableEmail({ title, browseUrl, manageUrl, unsubscribeUrl })
+
+    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+
+    if (result.sent || result.reason === 'no-key') {
+      await supabase
+        .from('alerts')
+        .update({ status: 'paused', last_digest_at: new Date().toISOString() })
+        .eq('id', alert.id)
+      sent++
       emailsSent++
     }
   }

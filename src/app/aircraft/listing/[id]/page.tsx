@@ -582,6 +582,13 @@ export default async function AircraftListingDetailPage({
   const matchResult = await getAlertMatchCount(alertSourcePath)
   const matchCount = matchResult?.count
 
+  // "Watch this listing" — a distinct, listing-scoped alert (own source_path
+  // carrying `?watch=price`) for a buyer eyeing THIS specific aircraft, not
+  // the whole make/model family the box above alerts on. The alert-digest
+  // cron's parseSourcePath resolves this shape to a single-row watch.
+  const watchContext = [p.year, p.make, p.model].filter(Boolean).join(' ') || undefined
+  const watchSourcePath = `/aircraft/listing/${p.id}?watch=price`
+
   // Fetch the current user's saved row for this listing so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
   // (b) render the note editor if the user has saved this listing.
@@ -1150,6 +1157,19 @@ export default async function AircraftListingDetailPage({
               noun="aircraft"
               alertCount={alertCount}
               matchCount={matchCount}
+            />
+
+            {/* "Watch this listing" — the highest-intent alert we didn't offer
+                before: a buyer eyeing THIS specific plane, not a family
+                search. Distinct, listing-scoped source_path so the cron can
+                tell it apart from the box above. */}
+            <AlertSignup
+              context={watchContext}
+              source="listing_watch"
+              sourcePath={watchSourcePath}
+              noun="aircraft"
+              watchOnly
+              className="mt-4"
             />
 
             {/* Monetization intent signal — an honest "coming soon" fake-door CTA
