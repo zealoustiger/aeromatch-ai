@@ -380,6 +380,10 @@ export type AlertDigestSample = {
   /** Formatted share label (e.g. "1/4 Share") — partnership samples only.
    *  Rendered in place of `ttaf` (aircraft-only) in the specs line. */
   shareType?: string | null
+  /** "Looking for" summary (e.g. "Cessna, Cirrus · 172, SR22") — seeker
+   *  samples only. Takes priority over `shareType`/`ttaf` in the specs line;
+   *  seekers have neither a share type nor a TTAF. */
+  lookingFor?: string | null
   location: string | null
   price: number | null
   previousPrice?: number | null
@@ -410,7 +414,8 @@ export function pickBestPriceDropSample(samples: AlertDigestSample[]): AlertDige
 function specsLine(s: AlertDigestSample): string {
   const parts: string[] = []
   if (s.year) parts.push(String(s.year))
-  if (s.shareType) parts.push(s.shareType)
+  if (s.lookingFor) parts.push(s.lookingFor)
+  else if (s.shareType) parts.push(s.shareType)
   else if (s.ttaf) parts.push(`${s.ttaf.toLocaleString()} TTAF`)
   if (s.location) parts.push(s.location)
   return parts.join(' &middot; ')
@@ -436,7 +441,7 @@ function sampleCardHtml(s: AlertDigestSample): string {
         <div style="min-width:0;">
           <p style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;">${escapeHtml(s.title)}</p>
           ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
-          <p style="margin:0;">${priceHtml}</p>
+          ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
           ${placeholderNote}
         </div>
       </a>`
@@ -527,7 +532,7 @@ export function buildAlertDigestEmail(opts: {
             : ''
       const specs = [
         s.year,
-        s.shareType ?? (s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null),
+        s.lookingFor ?? s.shareType ?? (s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null),
         s.location,
       ]
         .filter(Boolean)
