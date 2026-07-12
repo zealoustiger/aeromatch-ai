@@ -22,6 +22,7 @@ import { validateReview } from '@/lib/reviewValidation'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
 import { parseEditableAlertTarget, buildAlertCriteriaUpdate, type AlertCriteriaFields } from '@/lib/alertEditCriteria'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
+import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import { htmlToReadableText } from '@/lib/htmlText'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
@@ -1388,6 +1389,18 @@ export async function subscribeSignedInAlert(
   // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
   if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
   return { ok: true, email: user.email }
+}
+
+// Lets AlertSignup (client component) check, on load, whether the signed-in visitor
+// already has a live alert for the exact sourcePath it's about to offer — so the
+// one-click button never renders as a misleading no-op (see subscribeSignedInAlert's
+// idempotent 23505 handling above, which this replaces with an honest UI state).
+export async function getExistingAlertForSourcePath(sourcePath: string): Promise<SavedSearchAlertDetail | null> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) return null
+  const details = await getAlertDetailsBySourcePath(user.email)
+  return details.get(sourcePath) ?? null
 }
 
 // Saved-search ↔ alert unification (slice 1, see /searches): one click turns a
