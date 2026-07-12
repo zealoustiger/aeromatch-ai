@@ -1382,6 +1382,38 @@ export async function pauseAlertByToken(token: string) {
   return { ok: true }
 }
 
+// Public, token-scoped "fewer instead of none" recovery — the literal GOAL.md ask
+// alongside pauseAlertByToken's "pause instead" option. Revives the alert to
+// `confirmed` (unlike pause, this one should actually keep sending, just at the
+// least-frequent cadence) with `frequency: 'weekly'`. Same graceful-degrade
+// precedent as every other `alerts.frequency` write: if the column isn't
+// migrated live yet, retry with just the status flip so the visitor still gets
+// un-unsubscribed instead of a scary error (today's un-migrated default cadence
+// is already weekly-ish, so the outcome matches what "weekly" promises).
+export async function updateAlertFrequencyByToken(token: string) {
+  const trimmed = token?.trim()
+  if (!trimmed) return { error: 'Invalid link.' }
+
+  const admin = createAdminClient()
+  let { data, error } = await admin
+    .from('alerts')
+    .update({ status: 'confirmed', frequency: normalizeFrequency('weekly') })
+    .eq('unsubscribe_token', trimmed)
+    .select('id')
+
+  if (error && error.message?.includes('frequency')) {
+    ;({ data, error } = await admin
+      .from('alerts')
+      .update({ status: 'confirmed' })
+      .eq('unsubscribe_token', trimmed)
+      .select('id'))
+  }
+
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
+  return { ok: true }
+}
+
 // Post-confirmation cross-sell (see AlertCrossSell.tsx / alertCrossSell.ts): a
 // visitor who just confirmed one alert gets offered a one-click counterpart alert
 // (e.g. aircraft ↔ partnerships for the same make) for the SAME already-verified

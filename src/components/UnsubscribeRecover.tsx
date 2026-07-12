@@ -1,23 +1,34 @@
 'use client'
 
 import { useState } from 'react'
-import { BellRing, Check } from 'lucide-react'
-import { pauseAlertByToken } from '@/app/actions'
+import Link from 'next/link'
+import { BellRing, Calendar, Check } from 'lucide-react'
+import { pauseAlertByToken, updateAlertFrequencyByToken } from '@/app/actions'
 import { track } from '@/lib/analytics'
 
-export default function UnsubscribeRecover({ token }: { token: string }) {
+type Action = 'paused' | 'weekly'
+
+export default function UnsubscribeRecover({
+  token,
+  showWeeklyOption = false,
+}: {
+  token: string
+  showWeeklyOption?: boolean
+}) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [doneAction, setDoneAction] = useState<Action | null>(null)
 
-  async function handlePause() {
+  async function handleRecover(action: Action) {
     setStatus('sending')
-    const result = await pauseAlertByToken(token)
+    const result = action === 'paused' ? await pauseAlertByToken(token) : await updateAlertFrequencyByToken(token)
     if (result.error) {
       setStatus('error')
       setErrorMsg(result.error)
       return
     }
-    track('alert_unsubscribe_recovered')
+    track('alert_unsubscribe_recovered', { action })
+    setDoneAction(action)
     setStatus('done')
   }
 
@@ -25,8 +36,9 @@ export default function UnsubscribeRecover({ token }: { token: string }) {
     return (
       <div className="mt-6 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
         <Check className="h-4 w-4 shrink-0" />
-        You&apos;re paused, not gone — we&apos;ll hold off until you resume from any
-        aircraft page.
+        {doneAction === 'weekly'
+          ? "You're on weekly emails now, not gone — you'll still hear about new matches, just less often."
+          : "You're paused, not gone — we'll hold off until you resume from any aircraft page."}
       </div>
     )
   }
@@ -35,18 +47,39 @@ export default function UnsubscribeRecover({ token }: { token: string }) {
     <div className="mt-6 w-full max-w-sm rounded-lg border border-[#ece6dc] bg-[#f4efe7] px-4 py-4 text-left">
       <p className="text-sm font-medium text-slate-900">Changed your mind?</p>
       <p className="mt-1 text-sm text-slate-600">
-        Get fewer emails instead of none — pause this alert instead of unsubscribing
-        completely.
+        Get fewer emails instead of none — {showWeeklyOption ? 'switch to weekly, or pause' : 'pause'} this alert
+        instead of unsubscribing completely.
       </p>
-      <button
-        onClick={handlePause}
-        disabled={status === 'sending'}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-40"
-      >
-        <BellRing className="h-4 w-4" />
-        {status === 'sending' ? 'Pausing…' : 'Pause instead'}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {showWeeklyOption && (
+          <button
+            onClick={() => handleRecover('weekly')}
+            disabled={status === 'sending'}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-40"
+          >
+            <Calendar className="h-4 w-4" />
+            {status === 'sending' ? 'Switching…' : 'Switch to weekly instead'}
+          </button>
+        )}
+        <button
+          onClick={() => handleRecover('paused')}
+          disabled={status === 'sending'}
+          className={
+            showWeeklyOption
+              ? 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40'
+              : 'inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-40'
+          }
+        >
+          <BellRing className="h-4 w-4" />
+          {status === 'sending' ? 'Pausing…' : 'Pause instead'}
+        </button>
+      </div>
       {status === 'error' && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
+      <p className="mt-3 text-xs text-slate-500">
+        <Link href={`/alerts/manage?token=${encodeURIComponent(token)}`} className="font-medium text-sky-600 hover:text-sky-700">
+          Manage all your alerts
+        </Link>
+      </p>
     </div>
   )
 }

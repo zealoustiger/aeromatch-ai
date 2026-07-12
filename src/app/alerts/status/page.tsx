@@ -5,6 +5,7 @@ import UnsubscribeRecover from '@/components/UnsubscribeRecover'
 import AlertCrossSell from '@/components/AlertCrossSell'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -79,6 +80,17 @@ export default async function AlertStatusPage({
     manageToken = data?.unsubscribe_token ?? null
   }
 
+  // The recovery box's "Switch to weekly instead" option only makes sense for an
+  // alert that was firing daily — for a weekly (or not-yet-migrated) alert, the
+  // resulting cadence would be identical to what it already was, so hide it.
+  // `unsubscribe_token` is the same `token` the unsubscribe link forwards here.
+  let unsubFrequency: AlertFrequency = 'weekly'
+  if (key === 'unsubscribed' && token) {
+    const admin = createAdminClient()
+    const { data, error } = await admin.from('alerts').select('frequency').eq('unsubscribe_token', token).maybeSingle()
+    if (!error) unsubFrequency = normalizeFrequency((data as { frequency?: string } | null)?.frequency)
+  }
+
   return (
     <div className="ch-surface min-h-screen">
       <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -88,7 +100,9 @@ export default async function AlertStatusPage({
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           <p className="mt-3 text-base leading-relaxed text-slate-600">{body}</p>
-          {key === 'unsubscribed' && token && <UnsubscribeRecover token={token} />}
+          {key === 'unsubscribed' && token && (
+            <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} />
+          )}
           {key === 'confirmed' && token && crossSell && (
             <AlertCrossSell originalToken={token} suggestion={crossSell} />
           )}
