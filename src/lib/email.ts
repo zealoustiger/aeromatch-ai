@@ -318,6 +318,10 @@ export function buildPriceDropEmail(opts: {
   listingUrl: string
   manageUrl: string
   unsubscribeUrl: string
+  /** Token-scoped "switch to weekly" link — present only for daily-frequency
+   *  alerts (a weekly alert has no "fewer" cadence to offer). Renders as a
+   *  third footer link alongside Manage/Unsubscribe. */
+  frequencyUrl?: string
   periodLabel?: string
   /** Names what kind of drop this is — default "price drop" (aircraft); pass
    *  "buy-in drop" for a partnership whose "price" is a buy-in share, not an
@@ -366,7 +370,7 @@ export function buildPriceDropEmail(opts: {
         You&rsquo;re receiving this because you have an alert set up on ClubHanger.
         <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
       </p>
     </div>
   </body>
@@ -379,7 +383,7 @@ export function buildPriceDropEmail(opts: {
 View listing: ${opts.listingUrl}
 
 Manage alerts: ${opts.manageUrl}
-Unsubscribe: ${opts.unsubscribeUrl}`
+Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
 }
@@ -504,6 +508,10 @@ export function buildAlertDigestEmail(opts: {
   listingsUrl: string
   manageUrl: string
   unsubscribeUrl: string
+  /** Token-scoped "switch to weekly" link — present only for daily-frequency
+   *  alerts (a weekly alert has no "fewer" cadence to offer). Renders as a
+   *  third footer link alongside Manage/Unsubscribe. */
+  frequencyUrl?: string
   samples?: AlertDigestSample[]
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
@@ -550,7 +558,7 @@ export function buildAlertDigestEmail(opts: {
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
       </p>
     </div>
   </body>
@@ -580,7 +588,7 @@ ${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${opts.listingsUrl}
 
 Manage alerts: ${opts.manageUrl}
-Unsubscribe: ${opts.unsubscribeUrl}`
+Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
 }
