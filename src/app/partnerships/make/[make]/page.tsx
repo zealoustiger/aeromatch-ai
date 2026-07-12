@@ -11,7 +11,7 @@ import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import AlertSignup from '@/components/AlertSignup'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
-import { getPartnershipListings } from '@/lib/partnershipsQuery'
+import { getPartnershipListings, countPartnershipsByMake } from '@/lib/partnershipsQuery'
 import { getSeekers } from '@/lib/seekersQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -69,6 +69,11 @@ export default async function MakePartnershipsPage({ params }: Props) {
   // MatchCountNudge already use) — motivates an owner of this make to post.
   // Real count only, no fabrication; self-suppresses at 0.
   const seekerCount = (await getSeekers({ make: entry.filter })).length
+  // Exact live supply count for the alert box's match-expectation line — same
+  // helper `/partnerships/browse` already uses to label this exact make link, so
+  // this page can never disagree with it. `listings` above isn't reused here since
+  // it isn't guaranteed to be the exact unpaginated total.
+  const matchCount = await countPartnershipsByMake(entry.filter)
   const itemListJsonLd = buildPartnershipItemListJsonLd(listings, {
     name: `${entry.name} aircraft partnerships`,
     url: `${SITE_URL}/partnerships/make/${entry.slug}`,
@@ -180,6 +185,7 @@ export default async function MakePartnershipsPage({ params }: Props) {
         sourcePath={`/partnerships/make/${entry.slug}`}
         noun="partnership"
         source="partnership_make_page"
+        matchCount={matchCount}
       />
 
       {/* Co-ownership FAQ (curated makes only) */}

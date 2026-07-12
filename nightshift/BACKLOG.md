@@ -744,14 +744,26 @@ the conversion denominator, and the highest-intent alert type still missing._
   per placement. `QuickStartSearchForm`'s own inline alert-capture form (doesn't render
   `AlertSignup`) got the same instrumentation independently. One shared-component change
   instruments every surface; no schema change, no new UI.
-- **[P1][goal] Live-match expectation line on the remaining capture surfaces.** The flagged
-  follow-up from `alert-match-count-expectation`: `matchCount` is wired on only
-  `/aircraft/[make]/[model]` + `/aircraft/listing/[id]` (+ post-contact boxes). Thread it
-  into the surfaces that already have (or can cheaply derive) a live count — browse/filter
-  results pages (their own result count), empty states (honest zero copy already designed),
-  the homepage band, state/make pages, and partnership/seeker pages via
-  `getAlertMatchCount`. Improves every existing surface's copy honestly; `alert_subscribed`
-  already carries `match_count` when shown.
+~~- **[P1][goal] Live-match expectation line on the remaining capture surfaces.**~~ ✅ SHIPPED
+  via `alert-matchcount-rollout` (2026-07-12) The flagged follow-up from
+  `alert-match-count-expectation`: `matchCount` was wired on only
+  `/aircraft/[make]/[model]` + `/aircraft/listing/[id]` (+ post-contact boxes). Now also
+  wired on `/aircraft/[make]` (reuses `total`), `/aircraft/for-sale/[state]` (reuses `n`),
+  `/partnerships/near/[icao]` (reuses `results.length`), `/partnerships/make/[make]` (new
+  call to the existing `countPartnershipsByMake`, already used by `/partnerships/browse`),
+  `/partnerships/state/[state]` (existing `countPartnershipsByState`), and
+  `/partnerships/seeking` (existing `getAlertMatchCount` on its own filtered
+  `alertSourcePath`) — plus honest `matchCount={0}` on every empty-state `AlertSignup`
+  (`AircraftSaleList`, `PartnershipList`, `SeekerList`). **Bonus `[bug]` fix found + fixed
+  this cycle:** the zero-match copy was hardcoded "None for sale right now" for every
+  `noun`, which would have read wrong on the new partnership/seeker zero-count surfaces —
+  now noun-aware ("None available right now" for non-aircraft nouns), verified live for
+  both a filtered `/partnerships/seeking?make=...` zero case and a `/partnerships?make=...`
+  zero case. **Not done, intentionally (left for a follow-up):** `/aircraft` and
+  `/partnerships` browse/filter results pages (their live count isn't threaded back out of
+  `AircraftSaleList`/`PartnershipList` to the parent page today — needs a small return-value
+  plumbing change) and the homepage band (its `AlertSignup` is site-wide with no
+  matching search-result count to honestly show — not a gap).
 - **[P1][goal] Deal-only toggle on `/alerts/manage`'s edit form.** The flagged not-done from
   `alert-deal-only-filter`: the "only good deals" flag is capture-time only — `AlertEditForm`
   (make/model/state/price fields) has no way to flip `deal=good` on or off, so switching an

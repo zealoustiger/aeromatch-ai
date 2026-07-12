@@ -138,7 +138,7 @@ async function SeekerEmptyState({
         </Link>
         {alertSourcePath && (
           <div className="mx-auto mt-6 max-w-md text-left">
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" className="mt-0" source="empty_state" />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" className="mt-0" source="empty_state" matchCount={0} />
           </div>
         )}
       </div>
