@@ -646,13 +646,17 @@ shifts weight to deliverability, expectation-setting, and the first smart-alert 
   No new component, no schema/metadata change. Verified via `next build` + QA smoke (18/18
   checks pass: 9 pages × 2 viewports, 200/no console errors/no overflow) and visual review
   of the screenshots (desktop + mobile) — box renders cleanly below each page's existing CTA.
-- **[P2][goal] Alert capture on `/saved` — "alerts for listings like your saves."**
-  Verified: `/saved` renders saved aircraft/partnership/seeker cards (both the signed-in
-  and device-saves branches) with no alert capture at all, yet a save is proven purchase
-  intent. Derive the visitor's most-common saved make (or make+model family) and render a
-  family-scoped `AlertSignup` ("Get alerts for new Cessna 172 listings", source
-  `saved_page`, matchable `/aircraft?make=…` sourcePath); fall back to the generic box
-  when saves are empty or too mixed to name honestly. Emits `alert_subscribed`.
+~~- **[P2][goal] Alert capture on `/saved` — "alerts for listings like your saves."**~~
+  ✅ SHIPPED via `saved-page-alert-capture` (2026-07-12). `/saved` (both the signed-in
+  and logged-out device-saves branches) now renders an `AlertSignup` after the listing
+  sections and in the zero-saves empty state. New pure `deriveSavedAlertContext` helper
+  (`src/lib/savedAlertContext.ts`) derives the visitor's most-common saved make across
+  partnerships + aircraft-for-sale (seeker saves excluded — a seeker's `preferred_makes`
+  describes what THAT pilot wants, not the saver's own taste) and routes to
+  `/aircraft?make=…` or `/partnerships?make=…` depending on which type dominates; falls
+  back to the existing generic no-context box on a tie or when there are no makes at all
+  (honesty gate). Make-level only this slice — **next: model-level scoping** when saves
+  cluster on a specific model, not just a make.
 - **[P2][goal] "What happens next" on `/alerts/status`'s confirmed panel.** The confirmed
   state is static copy today (verified — fixed `body` string). Enrich it with the alert's
   real cadence ("your weekly digest") from the row the token lookup already fetches, plus
