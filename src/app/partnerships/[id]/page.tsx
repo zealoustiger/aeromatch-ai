@@ -464,6 +464,22 @@ export default async function PartnershipDetailPage({
                 View all my listings →
               </Link>
             </p>
+            {/* Know-your-market alert — the poster is signed in by definition, so
+                this is the one-click confirmed subscribe path (AlertSignup detects
+                the session itself); same make/model family scope as the page's own
+                alert box below, so a poster can watch their own market from the
+                moment their listing goes live. */}
+            <AlertSignup
+              context={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+              source="post_success"
+              sourcePath={
+                p.make
+                  ? `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
+                  : '/partnerships'
+              }
+              noun="partnership"
+              className="mt-3"
+            />
             {/* Seller-upgrade intent signals — same honest fake-door pattern as the
                 buyer-facing partnership-formation CTAs below, shown once at the
                 poster's own post-listing moment. */}
