@@ -786,3 +786,15 @@ alter table alerts add column if not exists frequency text not null default 'wee
 -- update after sending fails soft and is skipped, same graceful-fallback
 -- pattern as price_drop_opt_in/frequency above).
 alter table alerts add column if not exists last_confirm_sent_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_paused_until
+-- Lets "Pause" have a real end date — "Snooze 30 days" on /alerts/manage and
+-- the unsubscribe-recovery box sets this alongside status='paused'; the
+-- digest cron auto-resumes the alert (status back to 'confirmed', this column
+-- cleared) once the date has passed, rather than requiring the subscriber to
+-- come back and resume manually. Nullable, no default — an indefinite Pause
+-- (the existing behavior) simply never sets it. Apply in the Supabase SQL
+-- editor. Until applied, "Snooze 30 days" falls back to a plain indefinite
+-- Pause (graceful-fallback insert/update retry, same pattern as
+-- price_drop_opt_in/frequency above) — no user-facing error either way.
+alter table alerts add column if not exists paused_until timestamptz;

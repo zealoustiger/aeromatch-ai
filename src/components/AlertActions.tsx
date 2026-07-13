@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Pause, Play, Trash2, Send, Mail } from 'lucide-react'
-import { pauseAlert, resumeAlert, deleteAlert, resendAlertConfirmation, sendSampleDigest } from '@/app/actions'
+import { Pause, Play, Trash2, Send, Mail, Moon } from 'lucide-react'
+import { pauseAlert, resumeAlert, snoozeAlert, deleteAlert, resendAlertConfirmation, sendSampleDigest } from '@/app/actions'
 
 export default function AlertActions({ id, status, token }: { id: string; status: string; token?: string }) {
   const [isPending, startTransition] = useTransition()
@@ -68,15 +68,26 @@ export default function AlertActions({ id, status, token }: { id: string; status
         </button>
       ) : null}
       {status === 'confirmed' ? (
-        <button
-          onClick={() => run(pauseAlert)}
-          disabled={isPending}
-          title="Pause this alert"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
-        >
-          <Pause className="h-3.5 w-3.5" />
-          Pause
-        </button>
+        <>
+          <button
+            onClick={() => run(pauseAlert)}
+            disabled={isPending}
+            title="Pause this alert indefinitely"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
+          >
+            <Pause className="h-3.5 w-3.5" />
+            Pause
+          </button>
+          <button
+            onClick={() => run(snoozeAlert)}
+            disabled={isPending}
+            title="Snooze this alert for 30 days, then resume automatically"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
+          >
+            <Moon className="h-3.5 w-3.5" />
+            Snooze 30 days
+          </button>
+        </>
       ) : status === 'paused' ? (
         <button
           onClick={() => run(resumeAlert)}

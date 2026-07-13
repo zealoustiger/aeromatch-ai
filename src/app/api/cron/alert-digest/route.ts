@@ -866,6 +866,22 @@ export async function GET(req: NextRequest) {
   const nowIso = new Date().toISOString()
   const minWindowStart = new Date(Date.now() - MIN_DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
+  // Auto-resume snoozed alerts whose "Snooze 30 days" date has passed (GOAL.md:
+  // a real resume, not "we'll check back soon") before the due-alert fetch
+  // below, so a just-resumed row can be picked up in this same pass. No-ops
+  // gracefully (logs + continues) if `paused_until` isn't migrated live yet —
+  // every snoozed alert simply stays paused until a human applies it, same as
+  // every other pending `alerts.*` column.
+  const { error: resumeError } = await supabase
+    .from('alerts')
+    .update({ status: 'confirmed', paused_until: null })
+    .eq('status', 'paused')
+    .not('paused_until', 'is', null)
+    .lte('paused_until', nowIso)
+  if (resumeError && !resumeError.message?.includes('paused_until')) {
+    console.error('[alert-digest] snooze auto-resume error:', resumeError.message)
+  }
+
   type DigestAlertRow = {
     id: string
     email: string

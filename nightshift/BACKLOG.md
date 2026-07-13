@@ -778,14 +778,24 @@ the conversion denominator, and the highest-intent alert type still missing._
   re-checking + saving restores both; no console errors; confirmed correct after a full page
   reload (the client-side re-seed-on-reopen-without-reload staleness is a pre-existing
   characteristic shared by every field on this form, not something this slice introduced).
-- **[P1][goal] Snooze — "pause until" with honest auto-resume.** Pause today is indefinite;
-  a buyer who's traveling or just bought fuel-injected analysis paralysis has only
-  all-or-nothing. Add a "Snooze 30 days" option next to Pause on `/alerts/manage` (and the
-  unsubscribe-recovery box) via a new additive `alerts.paused_until` column (same pending-DDL
-  + graceful-degrade pattern as `frequency`/`last_confirm_sent_at`); the digest cron treats a
-  row with a future `paused_until` as paused and auto-resumes after — copy must state the
-  real resume date, never "we'll check back soon." Management + recovery surface; no new
-  capture point.
+~~- **[P1][goal] Snooze — "pause until" with honest auto-resume.**~~ ✅ SHIPPED via
+  `alert-snooze-pause-until` (2026-07-13) Pause was previously indefinite-only. Added a
+  "Snooze 30 days" button next to Pause on `/alerts/manage` (`AlertActions.tsx`) and a third
+  recovery option on the unsubscribe-recovery box (`UnsubscribeRecover.tsx`, alongside
+  "Switch to weekly"/"Pause instead") via new `snoozeAlert`/`snoozeAlertByToken` actions and
+  a new additive `alerts.paused_until timestamptz` column (⚠️ HUMAN ACTION still needed to
+  apply it live, same pending-DDL pattern as `frequency`/`price_drop_opt_in`). New pure
+  `src/lib/alertSnooze.ts` (`resolveSnoozeUntil`/`isSnoozeExpired`/`formatResumeDate`,
+  8 unit tests). The digest cron (`alert-digest/route.ts`) now auto-resumes any
+  `status='paused'` row whose `paused_until` has passed, before its due-alert fetch, so a
+  snooze expiring today is picked back up the same pass. `/alerts/manage`'s status chip
+  reads "Paused until Aug 12, 2026" (a real stored date) instead of the bare "Paused" label
+  when a resume date is set. Manually clicking "Resume" on a snoozed alert now also clears
+  `paused_until`. Everything degrades gracefully with zero user-facing error when the column
+  isn't migrated yet (verified live against the real un-migrated prod DB): the Snooze button
+  falls back to a plain indefinite pause and the recovery box's success copy correctly
+  matches the plain-pause text rather than fabricating a resume date it never actually
+  stored — the honesty gate holding even in the degraded path.
 ~~- **[P1][goal] Model-level scoping for the `/saved` alert capture.**~~ ✅ SHIPPED via
   `saved-alert-model-scoping` (2026-07-13) The flagged next slice from
   `saved-page-alert-capture`: `deriveSavedAlertContext` stops at make, so a visitor

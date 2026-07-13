@@ -7,6 +7,7 @@ import { SITE_NAME } from '@/lib/seo'
 import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { normalizeFrequency } from '@/lib/alertFrequency'
+import { formatResumeDate } from '@/lib/alertSnooze'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import AlertEditForm from '@/components/AlertEditForm'
 import PriceDropToggle from '@/components/PriceDropToggle'
@@ -32,7 +33,10 @@ interface AlertRow {
   confirmed_at: string | null
   price_drop_opt_in?: boolean
   frequency?: string
+  paused_until?: string | null
 }
+
+const OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'paused_until']
 
 // Email-keyed, not user_id-keyed (alerts require no account). Anon/authenticated
 // has no SELECT on this PII-holding table by design (see actions.ts), so this
@@ -42,7 +46,7 @@ interface AlertRow {
 async function fetchAlertsForEmail(email: string): Promise<AlertRow[]> {
   const admin = createAdminClient()
   const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at']
-  let cols = [...baseCols, 'price_drop_opt_in', 'frequency']
+  let cols = [...baseCols, ...OPTIONAL_COLS]
   let { data, error } = (await admin
     .from('alerts')
     .select(cols.join(', '))
@@ -52,13 +56,13 @@ async function fetchAlertsForEmail(email: string): Promise<AlertRow[]> {
     data: AlertRow[] | null
     error: { message: string } | null
   }
-  // Neither, either, or both of price_drop_opt_in/frequency may not be
+  // Any subset of price_drop_opt_in/frequency/paused_until may not be
   // migrated live yet — retry without whichever column(s) the error names
   // (PostgREST reports one unknown column per error, so this can take up to
-  // two passes) rather than losing the whole page (graceful fallback, same
+  // three passes) rather than losing the whole page (graceful fallback, same
   // pattern as profiles.favorite_airports); rows just render with those
-  // toggles defaulted on/weekly.
-  for (let i = 0; i < 2 && error && (error.message?.includes('price_drop_opt_in') || error.message?.includes('frequency')); i++) {
+  // toggles defaulted on/weekly/never-snoozed.
+  for (let i = 0; i < OPTIONAL_COLS.length && error && OPTIONAL_COLS.some((c) => error!.message?.includes(c)); i++) {
     cols = cols.filter((c) => !error!.message.includes(c))
     ;({ data, error } = (await admin
       .from('alerts')
@@ -224,6 +228,7 @@ export default async function AlertsManagePage({
               {alerts.map((a, i) => {
                 const target = parseEditableAlertTarget(a.source_path)
                 const match = matchCounts[i]
+                const resumeDate = a.status === 'paused' ? formatResumeDate(a.paused_until ?? null) : null
                 return (
                   <li
                     key={a.id}
@@ -244,7 +249,9 @@ export default async function AlertsManagePage({
                           }`}
                         >
                           {a.status === 'paused'
-                            ? 'Paused'
+                            ? resumeDate
+                              ? `Paused until ${resumeDate}`
+                              : 'Paused'
                             : a.confirmed_at
                               ? 'Active'
                               : 'Pending confirmation'}

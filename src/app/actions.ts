@@ -35,6 +35,7 @@ import {
   type EditableAlertTarget,
 } from '@/lib/alertEditCriteria'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
+import { resolveSnoozeUntil } from '@/lib/alertSnooze'
 import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import { htmlToReadableText } from '@/lib/htmlText'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
@@ -1100,12 +1101,51 @@ export async function pauseAlert(id: string, token?: string) {
   return { ok: true }
 }
 
+// Snoozes an alert for 30 days (GOAL.md: pause today is all-or-nothing) —
+// same `status: 'paused'` the digest cron already skips, plus a real
+// `paused_until` the cron auto-resumes from once it passes (see
+// alert-digest/route.ts). Missing-column (not-yet-migrated DB) falls back to
+// a plain indefinite pause rather than surfacing an error — same
+// graceful-degrade precedent as price_drop_opt_in/frequency.
+export async function snoozeAlert(id: string, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
+  if ('error' in owned) return { error: owned.error }
+  if (owned.alert.status !== 'confirmed') return { error: 'Only an active alert can be snoozed.' }
+
+  const pausedUntil = resolveSnoozeUntil(new Date().toISOString())
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ status: 'paused', paused_until: pausedUntil })
+    .eq('id', id)
+  if (error?.message?.includes('paused_until')) {
+    const { error: fallbackError } = await owned.admin.from('alerts').update({ status: 'paused' }).eq('id', id)
+    if (fallbackError) return { error: 'Failed to snooze alert.' }
+    revalidatePath('/alerts/manage')
+    return { ok: true }
+  }
+  if (error) return { error: 'Failed to snooze alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
 export async function resumeAlert(id: string, token?: string) {
   const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
   if (owned.alert.status !== 'paused') return { error: 'Only a paused alert can be resumed.' }
 
-  const { error } = await owned.admin.from('alerts').update({ status: 'confirmed' }).eq('id', id)
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ status: 'confirmed', paused_until: null })
+    .eq('id', id)
+  // A resume must never fail just because paused_until isn't migrated yet —
+  // retry the plain status flip (the same update this action always did
+  // before snooze existed).
+  if (error?.message?.includes('paused_until')) {
+    const { error: fallbackError } = await owned.admin.from('alerts').update({ status: 'confirmed' }).eq('id', id)
+    if (fallbackError) return { error: 'Failed to resume alert.' }
+    revalidatePath('/alerts/manage')
+    return { ok: true }
+  }
   if (error) return { error: 'Failed to resume alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }
@@ -1467,6 +1507,40 @@ export async function pauseAlertByToken(token: string) {
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
   return { ok: true }
+}
+
+// Public, token-scoped "snooze 30 days" recovery — same trust boundary as
+// pauseAlertByToken above (an unsubscribe link's own token), offered
+// alongside it on the recovery box so a visitor who wants a real end date
+// (not indefinite) doesn't have to create an account first. Missing-column
+// fallback matches snoozeAlert's: a plain pause, no user-facing error.
+export async function snoozeAlertByToken(token: string) {
+  const trimmed = token?.trim()
+  if (!trimmed) return { error: 'Invalid link.' }
+
+  const admin = createAdminClient()
+  const pausedUntil = resolveSnoozeUntil(new Date().toISOString())
+  let { data, error } = await admin
+    .from('alerts')
+    .update({ status: 'paused', paused_until: pausedUntil })
+    .eq('unsubscribe_token', trimmed)
+    .select('id')
+
+  // Column not migrated yet — fall back to a plain indefinite pause, and
+  // don't claim a resume date that was never actually stored.
+  let persistedResumeDate: string | null = pausedUntil
+  if (error?.message?.includes('paused_until')) {
+    persistedResumeDate = null
+    ;({ data, error } = await admin
+      .from('alerts')
+      .update({ status: 'paused' })
+      .eq('unsubscribe_token', trimmed)
+      .select('id'))
+  }
+
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
+  return { ok: true, resumeDate: persistedResumeDate }
 }
 
 // Public, token-scoped "fewer instead of none" recovery — the literal GOAL.md ask
