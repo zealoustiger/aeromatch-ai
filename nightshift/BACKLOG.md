@@ -938,16 +938,25 @@ sellers), and closing the measurement loop end-to-end._
   or the honest "No longer available — this watch is done" when filled/closed (partnership
   status vocabulary, not "sold"). Management-surface parity; no new capture point, no
   schema change.
-- **[P1][goal] Post-contact alert cross-sell on partnership listings (parity with
-  aircraft).** The aircraft side captures the single highest-intent moment
+~~- **[P1][goal] Post-contact alert cross-sell on partnership listings (parity with
+  aircraft).**~~ ✅ SHIPPED via `partnership-post-contact-alert-crosssell` (2026-07-13) The
+  aircraft side captures the single highest-intent moment
   (`post-contact-alert-crosssell`: "Message sent!" panel + family-scoped `AlertSignup`),
-  but partnership contact (`ContactButtons.tsx` message path, `ContactBar.tsx`) still
-  navigates straight to `/messages/{threadId}` with no alert prompt — a pilot who just
-  messaged about a share is the likeliest person on the whole site to want "tell me when
-  another one like this lists." Mirror the aircraft success-panel pattern with
-  `sourcePath=/partnerships?make=…&model=…` (the shape the cron already matches) +
-  `source="post_contact"`. New capture point → emits `alert_subscribed`; the signed-in
-  one-click path applies automatically (contact requires auth).
+  but partnership contact (`ContactButtons.tsx` message path, `ContactBar.tsx`) navigated
+  straight to `/messages/{threadId}` with no alert prompt. Now both the desktop
+  `ContactButtons` message form and the mobile sticky `ContactBar` hold off the
+  `router.push` on a successful send and render a "Message sent!" success panel with a
+  family-scoped `AlertSignup` (`source="post_contact"`, `noun="partnership"`,
+  `sourcePath=/partnerships?make=…&model=…` — the exact shape the cron already matches) +
+  a "View conversation →" link — a byte-for-byte port of `AircraftContactButton`'s shipped
+  `sentThreadId` branch. `alertContext`/`alertSourcePath` reuse the page's existing family
+  `AlertSignup` shape verbatim (no new query, no schema change, no new capture-point copy).
+  The `ContactBar`'s `?contact=1` auto-send-after-auth path still navigates straight
+  through when there's no drafted message queued (nothing "just sent" → no success moment
+  to pause on). New capture point → emits `alert_subscribed` with `source: 'post_contact'`;
+  the signed-in one-click path applies automatically (contact requires auth). Visually
+  verified prod-safely (forced `sentThreadId` on load → build → screenshot → revert, no DB
+  row ever created — the emerald panel renders correctly on both viewports).
 - **[P1][goal] Seller market-watch alert in the "just posted" success banner.** A brand-new
   audience for alerts: both detail pages already compute `justPosted` (`?posted=1` after
   `createAircraftListing`/`createPartnershipListing` redirect) but the banner offers no
