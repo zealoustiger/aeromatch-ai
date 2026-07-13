@@ -969,8 +969,8 @@ sellers), and closing the measurement loop end-to-end._
   path automatically (no second opt-in email). New capture point → emits `alert_subscribed`
   with `source: 'post_success'`. No schema/query change — pure reuse of the already-shipped
   component and each page's already-computed context/sourcePath.
-- **[P1][goal] `alert_confirmed` (and `alert_unsubscribed`) funnel events on
-  `/alerts/status`.** GOAL.md's "prove it converts" funnel is measurable up to
+- ~~**[P1][goal] `alert_confirmed` (and `alert_unsubscribed`) funnel events on
+  `/alerts/status`.**~~ ✅ SHIPPED via `alert-status-funnel-events` (2026-07-13) GOAL.md's "prove it converts" funnel is measurable up to
   `alert_capture_viewed` → `alert_subscribed`, then goes dark: the moment an alert
   actually goes live (confirm click) emits nothing — `/alerts/status` is a server
   component with zero analytics (verified: no `track(` anywhere in that route; only the
