@@ -786,8 +786,9 @@ the conversion denominator, and the highest-intent alert type still missing._
   row with a future `paused_until` as paused and auto-resumes after — copy must state the
   real resume date, never "we'll check back soon." Management + recovery surface; no new
   capture point.
-- **[P1][goal] Model-level scoping for the `/saved` alert capture.** The flagged next slice
-  from `saved-page-alert-capture`: `deriveSavedAlertContext` stops at make, so a visitor
+~~- **[P1][goal] Model-level scoping for the `/saved` alert capture.**~~ ✅ SHIPPED via
+  `saved-alert-model-scoping` (2026-07-13) The flagged next slice from
+  `saved-page-alert-capture`: `deriveSavedAlertContext` stops at make, so a visitor
   whose saves are all Cessna 172s gets offered a make-wide "new Cessna listings" alert. When
   saves cluster on one model (same plurality + tie-breaking rules, model within the winning
   make), offer "Get alerts for new Cessna 172 listings" routed to
