@@ -59,6 +59,7 @@ import AircraftContactButton from '@/components/AircraftContactButton'
 import PhoneContactLink from '@/components/PhoneContactLink'
 import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
+import RecentlyViewedTracker from '@/components/RecentlyViewedTracker'
 import { getAlertCounts } from '@/lib/alertCounts'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import MonetizationIntent from '@/components/MonetizationIntent'
@@ -784,6 +785,7 @@ export default async function AircraftListingDetailPage({
         />
       )}
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        <RecentlyViewedTracker noun="aircraft" make={p.make} model={p.model} />
         {/* Crawlable breadcrumb trail (also emits BreadcrumbList JSON-LD). */}
         <Breadcrumbs items={crumbs} />
 

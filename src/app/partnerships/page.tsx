@@ -24,6 +24,7 @@ import ModelFaq from '@/components/ModelFaq'
 import Link from 'next/link'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
 import AlertSignup from '@/components/AlertSignup'
+import RecentlyViewedAlertBanner from '@/components/RecentlyViewedAlertBanner'
 import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
@@ -269,6 +270,10 @@ export default async function PartnershipsPage({
             overflow-x-auto rails (cross-sell samples) scroll instead of
             widening the page at desktop. */}
         <div className="min-w-0 flex-1">
+          {/* Device-local "you've been looking at X" nudge — see
+              lib/recentlyViewed.ts. Skips itself when redundant with the active
+              search or when there's nothing honest to show. */}
+          <RecentlyViewedAlertBanner currentContext={alertContext} />
           <PartnershipActiveFilterChips params={params} facets={partnershipFacets} />
           <PartnershipsMapView pins={mapPins} />
           <Suspense fallback={<PartnershipListSkeleton />}>

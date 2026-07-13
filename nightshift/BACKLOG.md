@@ -1111,16 +1111,33 @@ and smarter suggestions._
   existing tracker fires the funnel event. Honesty gate unchanged (only a >0-live-match
   suggestion renders); respects the existing suggestion-not-already-subscribed dedup.
   Emits `alert_subscribed` with `source: 'digest_cross_sell'` on accept.
-- **[P2][goal] Recently-viewed smart alert suggestion — "You've been looking at Cessna
-  182s."** No recently-viewed signal exists anywhere in `src/`. Slice 1: a small
-  localStorage recently-viewed log written on listing detail views (make/model/type
-  only — no PII, boolean-flag precedent: `alertSubscriberFlag.ts`/`localSaves.ts`,
-  SSR-safe) + a dismissible banner on `/aircraft` + `/partnerships` browse pages when ≥3
-  recent views cluster on one make (model when it clusters tighter — reuse
-  `deriveSavedAlertContext`'s plurality/tie-break rules as the template), rendering the
-  existing `AlertSignup` scoped to that make/model. Honesty-gated on a live match count;
-  dismiss persists. New capture point → emits `alert_subscribed` with
-  `source: 'recent_views'`.
+~~- **[P2][goal] Recently-viewed smart alert suggestion — "You've been looking at Cessna
+  182s."**~~ ✅ SHIPPED via `recently-viewed-alert-banner` (2026-07-13) New
+  `src/lib/recentlyViewed.ts` — SSR-safe localStorage log of `{make, model, noun}`
+  (no listing id, no PII) written by a new invisible `RecentlyViewedTracker` mounted on
+  `/aircraft/listing/[id]` and `/partnerships/[id]`. `src/lib/recentlyViewedAlertContext.ts`
+  derives a suggestion using the same plurality/tie-break rule as
+  `deriveSavedAlertContext` (a local copy, not a shared import — this project's
+  node-native unit tests can't resolve extensionless cross-file value imports), requiring
+  the winning make to have **≥3** clustered views (not just ≥3 total entries) before
+  naming it. New `RecentlyViewedAlertBanner` (client) renders a dismissible box on
+  `/aircraft` + `/partnerships` with the existing `AlertSignup` scoped to that make/model
+  — honesty-gated via a new thin server action (`getAlertMatchCountForSourcePath`,
+  wrapping `getAlertMatchCount`) so it only ever renders on a live match count > 0; skips
+  itself entirely when the derived context would just repeat the page's own active-filter
+  alert box (compares against `alertContext`); dismiss persists per-context in
+  localStorage. New capture point emits `alert_subscribed` with `source: 'recent_views'`
+  via `AlertSignup`'s existing tracking — no new event-shape code. 9 unit tests added
+  (`recentlyViewedAlertContext.test.ts`) covering the cluster bar, tie-breaking, and
+  model-sharpening. Live-verified end-to-end with Playwright against the real prod DB
+  (read-only — no test rows created): visited a real Beechcraft Bonanza G36 listing 3x,
+  confirmed the log recorded 3 entries, then confirmed the `/aircraft` banner rendered
+  "You've been looking at Beechcraft Bonanza G36 listings" with a real "8 aircraft match
+  right now" count; dismissed it and reloaded — stayed hidden; visited the matching
+  make/model family page directly — banner correctly suppressed itself as redundant. Same
+  flow re-verified on `/partnerships` at 375px. **Only one `[P2][goal]` item remains open
+  in the alert-experience queue** — the digest-email cross-sell suggestion, directly
+  above this one in BACKLOG.md.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
