@@ -2,6 +2,64 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T104645Z — PASS — alert-instant-first-digest
+- Pages: (no user-facing page — email-copy + wiring change inside
+  `/api/alerts/confirm`, the double-opt-in confirmation endpoint; visible only via the
+  email a subscriber receives and the `/alerts/status` redirect that already existed)
+- What: **Confirming an alert with real matches right now no longer means waiting up to a
+  day (daily) or a week (weekly) for the first real email.** Previously `/api/alerts/confirm`
+  just flipped `pending` → `confirmed` and redirected — the subscriber's actual first digest
+  waited for the next cron pass even when matches existed the moment they clicked. Now, on a
+  genuine `pending`→`confirmed` transition (re-clicking an already-confirmed link never
+  re-fires this — verified live below), the route calls `getAlertDigestPreview` (the same
+  live-match helper already exercised in prod by the "Send sample" action) and, if it finds
+  ≥1 live match, sends a real digest immediately via `buildAlertDigestEmail`, then sets
+  `last_digest_at` so the cron's next pass doesn't double-send for the same window. Honest
+  zero-case: 0 live matches → no extra email (the confirm page's existing "None match right
+  now" copy already covers that). Because "new listings ... this week" framing would be
+  misleading for a t=0 send (nothing has actually happened "this week" — these are just
+  today's live matches), `buildAlertDigestEmail` gained a `firstSend` option that switches to
+  honest "N matches right now" / "here's what's live the moment you confirmed" copy — same
+  idea as the existing sample-preview framing, but without the "Sample:" subject prefix or
+  banner, since this is a real send.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open (prior two cycles both
+  PASSed). Tier 2 (`[want]`): re-confirmed empty — both open `[P1][want]` items ("Save this
+  search" auth-wall reconciliation, the collection-layout mosaic redesign) remain flagged as
+  needing a human product/design call; Trade-A-Plane ingestion and the Bay-Area coverage
+  benchmark remain blocked (DataDome bot-protection; no reliable FAA denominator source),
+  both re-audited this cycle with no new information. Dropped to tier 3 and shipped the next
+  `[P1][goal]` item in BACKLOG.md's alert-experience "Planner refill #10" — the confirm-moment
+  payoff slice, following the two honesty-gap fixes the prior two cycles shipped.
+- Spec: nightshift/specs/20260713T104645Z-alert-instant-first-digest.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). `node --experimental-strip-types --test src/lib/*.test.ts` — 278/278
+  pass, including 2 new `email.test.ts` cases covering the `firstSend` framing (no "Sample:"
+  prefix/banner, "N matches right now" copy, and that `sampleNote` still wins if both are
+  somehow set). Non-visual/data-logic cycle — QA smoke (`next start` production build) exit 0
+  on `/alerts/status` and `/aircraft` (4/4 — HTTP 200, zero app-origin console errors, zero
+  horizontal overflow, desktop 1280 + mobile 375); screenshots saved for the audit trail, not
+  read into context per RUNBOOK. **Live-verified end-to-end against the real DB** on the
+  running production build: inserted 2 throwaway `@example.com` pending alerts (service-role
+  insert, real tokens, no signup flow / no email sent) — one targeting `make=Cessna` (real
+  live matches) and one targeting a made-up make/model with zero matches. Hit
+  `/api/alerts/confirm?token=...` for each against `localhost:3000`: both correctly redirected
+  to `/alerts/status?state=confirmed`; the Cessna alert's `last_digest_at` was set (instant
+  digest fired — no `RESEND_API_KEY` in this env, so `sendEmail` took its documented
+  no-op/`no-key` path, which the codebase treats as "sent" for bookkeeping, same convention
+  as the cron and "Send sample"), the zero-match alert's `last_digest_at` stayed `null`
+  (honest zero-case held). Re-hit the Cessna alert's confirm link a second time to verify
+  idempotency: `confirmed_at` updated again (unchanged pre-existing behavior) but
+  `last_digest_at` did NOT change — confirms a repeat click never re-fires the instant digest.
+  Both test rows deleted immediately after (confirmed 0 remain via a follow-up query). Server
+  started/stopped cleanly; confirmed no orphaned `next-server` process remained after
+  (`ps aux` clean).
+- Screenshots: nightshift/screenshots/alert-instant-first-digest/
+- Next: the sibling `[P1][goal]` item in the same refill — "One-tap 'watch' on aircraft
+  browse cards" (a bell/watch affordance on `AircraftSaleCard`, the last big surface with no
+  alert entry point) — is the natural next slice, followed by two `[P2][goal]` items
+  ("See the N matching listings" CTA on `/alerts/status`, digest cross-sell) before the queue
+  needs another Opus/Fable plan-pass refill.
+
 ## 20260713T103610Z — PASS — alert-query-grade-honesty
 - Pages: (no user-facing page — matching-logic change inside the alert digest cron
   `/api/cron/alert-digest`, the live match-count helper `src/lib/alertMatchCounts.ts`
