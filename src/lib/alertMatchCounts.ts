@@ -27,11 +27,20 @@ type AlertTarget =
       model?: string
       modelPattern?: string
       notModelPattern?: string
+      /** Smart-search family match (e.g. "sr22" → ilike "sr22%"), same param
+       *  `/aircraft`'s `filters.model_like` applies. Distinct from `modelPattern`
+       *  (curated SEO route matches), which already gets the `.ilike` treatment. */
+      modelLike?: string
       state?: string
+      /** ICAO airport code — narrowed to that airport's STATE, same coarse
+       *  resolution `fetchAircraftPage`'s `filters.airport` uses (aircraft has no
+       *  lat/lng radius helper the way partnerships' `resolveIcaoList` provides). */
+      icao?: string
       minPrice?: number
       maxPrice?: number
       minYear?: number
       maxYear?: number
+      minTt?: number
       maxTt?: number
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
@@ -55,11 +64,14 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
         type: 'aircraft',
         make: g('make'),
         model: g('model'),
+        modelLike: g('model_like'),
         state: g('state')?.toUpperCase(),
+        icao: g('airport')?.toUpperCase(),
         minPrice: numOrUndef(g('min_price')),
         maxPrice: numOrUndef(g('max_price')),
         minYear: numOrUndef(g('min_year')),
         maxYear: numOrUndef(g('max_year')),
+        minTt: numOrUndef(g('min_tt')),
         maxTt: numOrUndef(g('max_tt')),
       }
     }
@@ -165,6 +177,19 @@ function resolveAircraftMakeModel(
 // aircraft, not real inventory a buyer alert should count as a "match").
 const PARTS_PRICE_FLOOR = 50_000
 
+/** Resolve an aircraft alert's `icao` airport filter to that airport's STATE —
+ *  same coarse resolution `fetchAircraftPage`'s `filters.airport` uses (no
+ *  lat/lng radius helper exists for aircraft the way `getAirportsWithinRadius`
+ *  provides for partnerships). Returns null when the code isn't in our
+ *  `airports` table (no-op, matching the browse page's own graceful fallback). */
+async function resolveAircraftAirportState(
+  supabase: ReturnType<typeof createAdminClient>,
+  icao: string
+): Promise<string | null> {
+  const { data } = await supabase.from('airports').select('state').eq('icao', icao).maybeSingle()
+  return data?.state ?? null
+}
+
 async function countActiveAircraft(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'aircraft' }>,
@@ -180,11 +205,17 @@ async function countActiveAircraft(
   if (target.model) q = q.eq('model', target.model)
   if (target.modelPattern) q = q.ilike('model', target.modelPattern)
   if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.modelLike) q = q.ilike('model', `${target.modelLike.replace(/[%,]/g, '')}%`)
   if (target.state) q = q.eq('state', target.state)
+  if (target.icao) {
+    const airportState = await resolveAircraftAirportState(supabase, target.icao)
+    if (airportState) q = q.eq('state', airportState)
+  }
   if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
   if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
   if (target.minYear !== undefined) q = q.gte('year', target.minYear)
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
   if (excludeId) q = q.neq('id', excludeId)
 
@@ -367,11 +398,17 @@ async function previewAircraft(
   if (target.model) q = q.eq('model', target.model)
   if (target.modelPattern) q = q.ilike('model', target.modelPattern)
   if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.modelLike) q = q.ilike('model', `${target.modelLike.replace(/[%,]/g, '')}%`)
   if (target.state) q = q.eq('state', target.state)
+  if (target.icao) {
+    const airportState = await resolveAircraftAirportState(supabase, target.icao)
+    if (airportState) q = q.eq('state', airportState)
+  }
   if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
   if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
   if (target.minYear !== undefined) q = q.gte('year', target.minYear)
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
 
   const { data, count, error } = await q.order('first_seen_at', { ascending: false }).limit(limit)

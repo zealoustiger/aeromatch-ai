@@ -1043,18 +1043,19 @@ emails, and measurement are all broad now — this refill leads with two match-w
 honesty gaps, then the confirm-moment payoff, the last big uncaptured surface (browse cards),
 and smarter suggestions._
 
-- **[P1][goal] Honor `min_tt`, `airport`, and `model_like` in aircraft alert matching — the
-  browse capture promises filters the cron ignores.** Honesty gap on a shipped surface,
-  same shape as the fixed `partnership-alert-radius-match`: `/aircraft`'s below-results
-  `AlertSignup` stores every active filter in `source_path` and `describeAircraftFilters`
-  names them in `context` ("over 2,000 hours…"), but the cron's `/aircraft?…` branch and
-  `alertMatchCounts.ts` never parse `min_tt`, `airport` (aircraft search supports it —
-  partnership alerts already resolve airport+radius via `getAirportsWithinRadius`, reuse
-  that per-file helper precedent), or `model_like` — so the digest over-matches what the
-  subscriber was told, and the capture-time "N match now" line can disagree with what
-  later arrives. Add the three fields to both files' aircraft `AlertTarget` + queries.
-  Improves every existing aircraft capture point's honesty; no new capture point, no
-  schema change (`alert_subscribed` unchanged).
+~~- **[P1][goal] Honor `min_tt`, `airport`, and `model_like` in aircraft alert matching — the
+  browse capture promises filters the cron ignores.**~~ ✅ SHIPPED via
+  `alert-aircraft-filter-honesty` (2026-07-13) Added all three fields to both files'
+  aircraft `AlertTarget` + queries: `src/lib/alertMatchCounts.ts` (`countActiveAircraft`/
+  `previewAircraft`) and `src/app/api/cron/alert-digest/route.ts` (`applyAircraftFilters` +
+  the duplicated non-deal-only filter block in `countNewAircraft`). `airport` resolves to
+  that airport's STATE — same coarse resolution `fetchAircraftPage`'s `filters.airport`
+  already uses (aircraft has no lat/lng radius helper the way partnerships' `resolveIcaoList`
+  provides); resolved once per target via a new `resolveAircraftAirportState` helper.
+  `model_like` mirrors the browse page's `ilike(model, "<prefix>%")` smart-search match.
+  `min_tt` is a straightforward `gte('ttaf', ...)`, the mirror of the already-honored
+  `max_tt`. No schema change, no new capture point — `source_path` already carried all
+  three params.
 - **[P1][goal] Honor-or-strip `q` / `grade` / `avionics` in aircraft alerts — never promise
   a filter the digest won't apply.** The remaining params from the same gap, the hard
   ones (free-text `q`, computed grade, extracted `avionics[]`). Either wire them into the
