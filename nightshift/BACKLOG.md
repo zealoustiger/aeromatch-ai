@@ -873,14 +873,22 @@ the double-opt-in funnel cliff, and trust/expectation-setting on the manage page
   this watch is done" when sold/removed — honest either way, never silent. The Edit form
   already correctly hid itself for this shape (`parseEditableAlertTarget` returns `null`),
   no change needed there. Management-surface parity; no new capture point, no schema change.
-- **[P2][goal] One honest confirm reminder for stranded pending alerts.** A subscriber who
-  signs up but never clicks the double-opt-in gets nothing, ever — the digest cron only
-  reads `status='confirmed'`. In the same cron pass, send exactly ONE "still want these
-  alerts?" reminder to `status='pending'` rows aged ~24–72h (reuse `buildAlertConfirmEmail`
-  + the row's existing tokens; new additive `alerts.confirm_reminder_sent_at` guard column,
-  same pending-DDL pattern — and if the column isn't live yet, skip sending entirely rather
-  than risk repeats: never-spam beats coverage). Improves the confirm funnel behind every
-  capture point; no new capture point.
+~~- **[P2][goal] One honest confirm reminder for stranded pending alerts.**~~ ✅ SHIPPED
+  via `alert-confirm-reminder` (2026-07-13) A subscriber who signs up but never clicks the
+  double-opt-in gets nothing, ever — the digest cron only reads `status='confirmed'`. The
+  cron now sends exactly ONE "still want these alerts?" reminder (reusing
+  `buildAlertConfirmEmail` + the row's existing `confirm_token`/`unsubscribe_token`, same
+  template as the manual resend action) to `status='pending'` rows aged 24–72h since
+  signup, guarded by a new additive `alerts.confirm_reminder_sent_at` column (⚠️ HUMAN
+  ACTION still needed to apply it live, same pending-DDL pattern as the other `alerts.*`
+  columns) — until then the reminder pass logs a warning and skips sending entirely rather
+  than risk a duplicate once the column lands (never-spam beats coverage). New pure
+  `reminderWindow()` in `src/lib/alertConfirmReminder.ts` (5 unit tests). Live-verified
+  against the real, un-migrated prod DB: confirmed `confirm_reminder_sent_at` genuinely
+  doesn't exist yet; a real throwaway `@example.com` pending alert backdated 48h was
+  correctly matched by the 24–72h window query, and a 1h-old one was correctly excluded
+  (test rows deleted after). No new capture point, no change to the existing confirmed-
+  alert digest loop.
 ~~- **[P2][goal] "This alert hasn't matched anything in a while — widen it" nudge on
   `/alerts/manage`.**~~ ✅ SHIPPED via `alert-widen-nudge` (2026-07-13) A confirmed,
   editable alert (aircraft/partnership/seeker query-string shape) with 0 live matches now
