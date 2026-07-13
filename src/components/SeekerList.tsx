@@ -6,6 +6,7 @@ import { getSeekers, anySeekerFilter, type SeekerFilters } from '@/lib/seekersQu
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getSeekerBudgetCheckVerdicts, type PartnershipCompVerdict } from '@/lib/partnershipComps'
 import { getSaveCounts } from '@/lib/saveCounts'
+import { getEmptyStateWidenSuggestion } from '@/lib/alertMatchCounts'
 import SeekerCard from './SeekerCard'
 import PartnershipCard from './PartnershipCard'
 import AlertSignup from './AlertSignup'
@@ -112,7 +113,10 @@ async function SeekerEmptyState({
   alertContext?: string
   alertSourcePath?: string
 }) {
-  const partnerships = provided ?? (await getLatestPartnerships(3))
+  const [partnerships, widenSuggestion] = await Promise.all([
+    provided ? Promise.resolve(provided) : getLatestPartnerships(3),
+    getEmptyStateWidenSuggestion(alertSourcePath ?? null),
+  ])
 
   return (
     <div className="space-y-8">
@@ -138,7 +142,7 @@ async function SeekerEmptyState({
         </Link>
         {alertSourcePath && (
           <div className="mx-auto mt-6 max-w-md text-left">
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" className="mt-0" source="empty_state" matchCount={0} />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" className="mt-0" source="empty_state" matchCount={0} widenSuggestion={widenSuggestion ?? undefined} />
           </div>
         )}
       </div>

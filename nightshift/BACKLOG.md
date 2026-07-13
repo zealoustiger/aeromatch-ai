@@ -1010,17 +1010,24 @@ sellers), and closing the measurement loop end-to-end._
   "1 match now"). Honesty gate unchanged: only renders when the live (self-excluded) count is
   > 0. No component/page changes — `AlertCrossSell`/`/alerts/status`/`/alerts/manage` already
   render whatever `getCrossSellSuggestion` returns.
-- **[P2][goal] Capture-time widen alternative on zero-match empty states.** The
-  empty-state capture boxes honestly say "None for sale right now — be first to know,"
-  but offer no fallback for a search that may *never* match (the manage-page widen nudge
-  only helps people who already subscribed and later visit `/alerts/manage`). On the
-  empty-state surfaces (`AircraftSaleList`/`PartnershipList`/`SeekerList` already pass
-  `matchCount={0}`), compute the one least-destructive verified loosening server-side
-  (reuse `computeWidenCandidate` + re-verify with `getAlertMatchCount`, same honesty gate
-  as `alert-widen-nudge`) and render a one-tap "or get alerts for all {Make} — N match
-  now" alternative that swaps the box's `sourcePath`/`context`. No new component tree —
-  an optional prop on `AlertSignup`; existing `alert_subscribed` fires with whichever
-  scope the visitor picked.
+~~- **[P2][goal] Capture-time widen alternative on zero-match empty states.**~~ ✅
+  SHIPPED via `empty-state-widen-alternative` (2026-07-13) The empty-state capture boxes
+  honestly said "None for sale right now — be first to know," with no fallback for a
+  search that may *never* match. New `getEmptyStateWidenSuggestion` (`alertMatchCounts.ts`)
+  reuses the existing `parseEditableAlertTarget`/`computeWidenCandidate`/
+  `buildAlertCriteriaUpdate` (`alertEditCriteria.ts`) to compute the one least-destructive
+  loosening of a zero-match search (drop model → make-wide, else drop state/airport →
+  nationwide) and re-verifies it with `getAlertMatchCount` before ever offering it —
+  same honesty gate as the `/alerts/manage` widen nudge, just applied pre-subscribe.
+  `AlertSignup` gained an optional `widenSuggestion` prop: when the box's match count is
+  0 and a real wider match exists, a "Or: Show all {Make} listings — N match now" link
+  renders under the honest zero-match line; clicking it swaps the box's active context/
+  sourcePath/matchCount in place (no reload, no second box) and a completed subscribe
+  carries `widened: true` in the `alert_subscribed` payload. Wired into all 3 empty
+  states (`AircraftSaleList`, `PartnershipList`, `SeekerList`) — only queried when the
+  genuine zero-match state is about to render (skips the "out-of-range page" branch).
+  **This was the last open item in the alert-experience `[goal]` queue** (refill #2) —
+  due for another Opus/Fable plan-pass refill.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_

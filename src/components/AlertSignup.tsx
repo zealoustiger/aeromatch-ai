@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bell, CheckCircle2 } from 'lucide-react'
+import { Bell, CheckCircle2, Wand2 } from 'lucide-react'
 import {
   subscribeToAlerts,
   subscribeSignedInAlert,
@@ -59,6 +59,20 @@ interface Props {
    *  matching is implicit (the entire point of a watch), and "only good
    *  deals" has no meaning against a single item. */
   watchOnly?: boolean
+  /** A single server-verified "loosen the search" alternative to offer when
+   *  `matchCount` is 0 — e.g. drop the model to go make-wide (see
+   *  `lib/alertMatchCounts.ts`'s `getEmptyStateWidenSuggestion`). Clicking it
+   *  swaps this box's active context/sourcePath/matchCount to the widened
+   *  search in place (no navigation, no second box) rather than creating a
+   *  second alert. Only ever offered pre-subscribe; omit rather than fabricate
+   *  when there's no further step to widen or the wider search is also empty. */
+  widenSuggestion?: {
+    context?: string
+    sourcePath: string
+    description: string
+    count: number
+    noun: 'listing' | 'pilot'
+  }
 }
 
 /** Layers `deal=good` onto a source_path's existing query string when the
@@ -84,12 +98,20 @@ export default function AlertSignup({
   matchCount,
   source,
   watchOnly = false,
+  widenSuggestion,
 }: Props) {
+  // Whether the visitor tapped the widen-suggestion link — swaps this box's
+  // active context/sourcePath/matchCount to the wider search in place, rather
+  // than rendering a second box or navigating away.
+  const [widened, setWidened] = useState(false)
+  const activeContext = widened && widenSuggestion ? widenSuggestion.context : context
+  const activeSourcePath = widened && widenSuggestion ? widenSuggestion.sourcePath : sourcePath
+  const activeMatchCount = widened && widenSuggestion ? widenSuggestion.count : matchCount
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
-  const hasMatchCount = typeof matchCount === 'number'
+  const hasMatchCount = typeof activeMatchCount === 'number'
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
-  const hasCtx = !!(context && context.trim())
+  const hasCtx = !!(activeContext && activeContext.trim())
   const showSocialProof = hasCtx && typeof alertCount === 'number' && alertCount >= MIN_ALERTS_TO_SHOW
   // "Price" only means something for aircraft — a partnership watch is on the
   // buy-in share instead (see PartnershipDealSignals/PartnershipCard's own
@@ -100,17 +122,17 @@ export default function AlertSignup({
   const headline = watchOnly
     ? `Alert me if the ${watchWord} drops`
     : hasCtx
-      ? `Get alerts for new ${context} listings`
+      ? `Get alerts for new ${activeContext} listings`
       : 'Get new-listing alerts'
   const subcopy = watchOnly
     ? `We'll email you the moment the ${watchWord} on this listing drops. One email field, no account needed.`
     : hasCtx
-      ? `We'll email you when a new ${context} ${noun} is listed. One email field, no account needed.`
+      ? `We'll email you when a new ${activeContext} ${noun} is listed. One email field, no account needed.`
       : `We'll email you the moment a new listing appears. One email field, no account needed.`
   const doneCopy = watchOnly
     ? `the ${watchWord} on this listing drops.`
     : hasCtx
-      ? `new ${context} listings appear. No spam — just relevant ${nounPlural}.`
+      ? `new ${activeContext} listings appear. No spam — just relevant ${nounPlural}.`
       : `new listings appear. No spam — just relevant listings.`
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -161,13 +183,13 @@ export default function AlertSignup({
       return
     }
     let cancelled = false
-    getExistingAlertForSourcePath(sourcePath).then((detail) => {
+    getExistingAlertForSourcePath(activeSourcePath).then((detail) => {
       if (!cancelled) setExistingAlert(detail)
     })
     return () => {
       cancelled = true
     }
-  }, [signedInEmail, sourcePath])
+  }, [signedInEmail, activeSourcePath])
 
   // Impression denominator for "prove it converts" — fires once when the box
   // actually scrolls into view (not just mounts, since most placements sit
@@ -187,7 +209,7 @@ export default function AlertSignup({
           context: context || 'all',
           source_path: sourcePath,
           source,
-          match_count: hasMatchCount ? matchCount : undefined,
+          match_count: hasMatchCount ? activeMatchCount : undefined,
         })
         observer.disconnect()
       },
@@ -203,10 +225,10 @@ export default function AlertSignup({
     if (pending) return
     setErrorMsg('')
     setPending(true)
-    const effectiveSourcePath = withDealOnly(sourcePath, showDealOnlyOption && dealOnly)
+    const effectiveSourcePath = withDealOnly(activeSourcePath, showDealOnlyOption && dealOnly)
     const result = await subscribeToAlerts(
       email,
-      context ?? '',
+      activeContext ?? '',
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency
@@ -218,14 +240,15 @@ export default function AlertSignup({
     }
     // Conversion signal for the "alerts vs post" nav experiment.
     track('alert_subscribed', {
-      context: context || 'all',
+      context: activeContext || 'all',
       source_path: effectiveSourcePath,
       source,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
-      match_count: hasMatchCount ? matchCount : undefined,
+      match_count: hasMatchCount ? activeMatchCount : undefined,
       deal_only: showDealOnlyOption && dealOnly ? true : undefined,
+      widened: widened ? true : undefined,
     })
     // This browser now belongs to a subscriber — the nav's "Get alerts" CTA
     // becomes "My alerts" (see lib/alertSubscriberFlag.ts). Boolean only.
@@ -237,9 +260,9 @@ export default function AlertSignup({
     if (pending || !signedInEmail) return
     setErrorMsg('')
     setPending(true)
-    const effectiveSourcePath = withDealOnly(sourcePath, showDealOnlyOption && dealOnly)
+    const effectiveSourcePath = withDealOnly(activeSourcePath, showDealOnlyOption && dealOnly)
     const result = await subscribeSignedInAlert(
-      context ?? '',
+      activeContext ?? '',
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency
@@ -250,15 +273,16 @@ export default function AlertSignup({
       return
     }
     track('alert_subscribed', {
-      context: context || 'all',
+      context: activeContext || 'all',
       source_path: effectiveSourcePath,
       source,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
-      match_count: hasMatchCount ? matchCount : undefined,
+      match_count: hasMatchCount ? activeMatchCount : undefined,
       signed_in: true,
       deal_only: showDealOnlyOption && dealOnly ? true : undefined,
+      widened: widened ? true : undefined,
     })
     markAlertSubscriber()
     setConfirmedImmediately(true)
@@ -269,7 +293,7 @@ export default function AlertSignup({
     if (resendState === 'pending') return
     setResendState('pending')
     setResendError('')
-    const result = await resendAlertConfirmationByEmail(email, sourcePath)
+    const result = await resendAlertConfirmationByEmail(email, activeSourcePath)
     if (result.error) {
       setResendError(result.error)
       setResendState('error')
@@ -353,14 +377,26 @@ export default function AlertSignup({
               </p>
               {hasMatchCount && (
                 <p className="mt-1 text-xs font-medium text-emerald-700">
-                  {matchCount! > 0
-                    ? `${matchCount} ${matchCount === 1 ? noun : nounPlural} match${matchCount === 1 ? 'es' : ''} right now — we'll email you when the next one lists.`
+                  {activeMatchCount! > 0
+                    ? `${activeMatchCount} ${activeMatchCount === 1 ? noun : nounPlural} match${activeMatchCount === 1 ? 'es' : ''} right now — we'll email you when the next one lists.`
                     : `None ${noun === 'aircraft' ? 'for sale' : 'available'} right now — be first to know when one lists.`}
+                </p>
+              )}
+              {!widened && matchCount === 0 && widenSuggestion && (
+                <p className="mt-1 text-xs text-slate-500">
+                  <button
+                    type="button"
+                    onClick={() => setWidened(true)}
+                    className="inline-flex items-center gap-1 font-semibold text-sky-600 underline-offset-2 hover:underline"
+                  >
+                    <Wand2 className="h-3 w-3" />
+                    {`Or: ${widenSuggestion.description} — ${widenSuggestion.count} ${widenSuggestion.count === 1 ? widenSuggestion.noun : `${widenSuggestion.noun}s`} match now`}
+                  </button>
                 </p>
               )}
               {showSocialProof && (
                 <p className="mt-1 text-xs font-medium text-sky-700">
-                  {alertCount} {alertCount === 1 ? 'buyer gets' : 'buyers get'} alerts for {context}
+                  {alertCount} {alertCount === 1 ? 'buyer gets' : 'buyers get'} alerts for {activeContext}
                 </p>
               )}
             </div>

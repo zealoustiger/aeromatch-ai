@@ -3,6 +3,7 @@ import { Partnership } from '@/lib/types'
 import { getPartnershipListings, type PartnershipFilters } from '@/lib/partnershipsQuery'
 import { getPartnershipCompVerdicts, type PartnershipCardVerdict } from '@/lib/partnershipComps'
 import { getSaveCounts } from '@/lib/saveCounts'
+import { getEmptyStateWidenSuggestion, type EmptyStateWidenSuggestion } from '@/lib/alertMatchCounts'
 import PartnershipCard from './PartnershipCard'
 import PartnershipResultCount from './PartnershipResultCount'
 import AlertSignup from './AlertSignup'
@@ -76,7 +77,9 @@ export default async function PartnershipList({
     saveCounts = await getSaveCounts(listings.map((l) => l.id), 'partnership')
   }
 
-  return renderList(listings, filters, airportList, savedIds, verdicts, alertContext, alertSourcePath, saveCounts, mapPinIds)
+  const widenSuggestion = listings.length === 0 ? await getEmptyStateWidenSuggestion(alertSourcePath ?? null) : null
+
+  return renderList(listings, filters, airportList, savedIds, verdicts, alertContext, alertSourcePath, saveCounts, mapPinIds, widenSuggestion)
 }
 
 function renderList(
@@ -88,7 +91,8 @@ function renderList(
   alertContext?: string,
   alertSourcePath?: string,
   saveCounts: Map<string, number> = new Map(),
-  mapPinIds?: Set<string>
+  mapPinIds?: Set<string>,
+  widenSuggestion?: EmptyStateWidenSuggestion | null
 ) {
   if (listings.length === 0) {
     return (
@@ -97,7 +101,7 @@ function renderList(
         <p className="mt-1 text-sm text-slate-400">Be the first — post a listing and get discovered.</p>
         {alertSourcePath && (
           <div className="mt-6 text-left">
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" className="mt-0" source="empty_state" matchCount={0} />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" className="mt-0" source="empty_state" matchCount={0} widenSuggestion={widenSuggestion ?? undefined} />
           </div>
         )}
       </div>

@@ -9,6 +9,7 @@ import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
 import { classifyAvionics } from '@/lib/avionicsClassify'
 import { evaluateAircraftTrust } from '@/lib/aircraftTrust'
 import { getSaveCounts } from '@/lib/saveCounts'
+import { getEmptyStateWidenSuggestion, type EmptyStateWidenSuggestion } from '@/lib/alertMatchCounts'
 import AircraftSaleCard from './AircraftSaleCard'
 import AircraftResultCount from './AircraftResultCount'
 import AlertSignup from './AlertSignup'
@@ -916,7 +917,12 @@ export default async function AircraftSaleList({
     getSaveCounts(listings.map((l) => l.id), 'aircraft'),
   ])
 
-  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath, saveCounts, mapPinIds)
+  // Only worth the extra query when the genuine zero-match empty state (not an
+  // out-of-range page — that renders a different, alert-free "back to page 1" card).
+  const widenSuggestion =
+    listings.length === 0 && page === 1 ? await getEmptyStateWidenSuggestion(alertSourcePath ?? null) : null
+
+  return renderList(listings, filters, totalCount, page, savedIds, familyPriceMap, familyCompMap, alertContext, alertSourcePath, saveCounts, mapPinIds, widenSuggestion)
 }
 
 function renderList(
@@ -930,7 +936,8 @@ function renderList(
   alertContext?: string,
   alertSourcePath?: string,
   saveCounts: Map<string, number> = new Map(),
-  mapPinIds?: Set<string>
+  mapPinIds?: Set<string>,
+  widenSuggestion?: EmptyStateWidenSuggestion | null
 ) {
   if (listings.length === 0) {
     const filtered = Object.values(filters).some((v) => v && v !== '1') || page > 1
@@ -959,7 +966,7 @@ function renderList(
         </p>
         {alertSourcePath && (
           <div className="mt-6 text-left">
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} className="mt-0" source="empty_state" matchCount={0} />
+            <AlertSignup context={alertContext} sourcePath={alertSourcePath} className="mt-0" source="empty_state" matchCount={0} widenSuggestion={widenSuggestion ?? undefined} />
           </div>
         )}
       </div>
