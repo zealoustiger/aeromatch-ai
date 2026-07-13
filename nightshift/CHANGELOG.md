@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-13T12:16:30Z — DRAIN SUMMARY
+- Cycles this run: 11 (PASS 8 / FAIL 0 / ABORT 3)
+- Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $120.6019 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260713T101300Z
+
 ## 20260713T120429Z — PASS — mission-alert-sourcepath-fix
 - Pages: /aircraft/mission/[mission] (all 10 curated missions — glass-cockpit, ifr,
   tailwheel, low-time, experimental, twin-engine, stol, turboprop, floatplane, aerobatic)
