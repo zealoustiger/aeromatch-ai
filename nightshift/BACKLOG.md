@@ -764,13 +764,20 @@ the conversion denominator, and the highest-intent alert type still missing._
   `AircraftSaleList`/`PartnershipList` to the parent page today — needs a small return-value
   plumbing change) and the homepage band (its `AlertSignup` is site-wide with no
   matching search-result count to honestly show — not a gap).
-- **[P1][goal] Deal-only toggle on `/alerts/manage`'s edit form.** The flagged not-done from
-  `alert-deal-only-filter`: the "only good deals" flag is capture-time only — `AlertEditForm`
-  (make/model/state/price fields) has no way to flip `deal=good` on or off, so switching an
-  existing alert requires delete + re-subscribe. Add the checkbox to the aircraft edit form
-  (and the `deal_only` fact to the row's criteria summary), layered through
-  `updateAlertCriteria`'s existing query-string rebuild. Management-surface parity; no new
-  capture point, no schema change.
+~~- **[P1][goal] Deal-only toggle on `/alerts/manage`'s edit form.**~~ ✅ SHIPPED via
+  `alert-deal-only-edit-toggle` (2026-07-13). The flagged not-done from `alert-deal-only-filter`:
+  the "only good deals" flag was capture-time only — `AlertEditForm` (make/model/state/price
+  fields) had no way to flip `deal=good` on or off, so switching an existing alert required
+  delete + re-subscribe. Added the checkbox to the aircraft edit form (`dealOnly` on
+  `EditableAlertTarget`/`AlertCriteriaFields` in `alertEditCriteria.ts`, parses/sets the existing
+  `deal=good` query param) and a "good deals only" clause in `describeAircraftFilters` (`seo.ts`)
+  so the row's `context` criteria summary reflects it after a save. Management-surface parity;
+  no new capture point, no schema change. E2E-verified via a real browser against a temporary
+  `@example.com` test alert (service-role insert, deleted after): pre-checked on open when
+  `deal=good` is present, unchecking + saving strips it from `source_path` and `context`,
+  re-checking + saving restores both; no console errors; confirmed correct after a full page
+  reload (the client-side re-seed-on-reopen-without-reload staleness is a pre-existing
+  characteristic shared by every field on this form, not something this slice introduced).
 - **[P1][goal] Snooze — "pause until" with honest auto-resume.** Pause today is indefinite;
   a buyer who's traveling or just bought fuel-injected analysis paralysis has only
   all-or-nothing. Add a "Snooze 30 days" option next to Pause on `/alerts/manage` (and the
