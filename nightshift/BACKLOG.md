@@ -1146,18 +1146,17 @@ and smarter suggestions._
 ### Plan-pass batch — 2026-07-13 (Fable)
 _All verified against the live codebase before filing (no duplicate of shipped work above)._
 
-- **[P1][goal] Mission-page alerts can NEVER fire — make `/aircraft/mission/*` capture
-  honest.** Verified: `src/app/aircraft/mission/[mission]/page.tsx:144` mounts `AlertSignup`
-  with `sourcePath=/aircraft/mission/...`, but BOTH `parseSourcePath` in the digest cron
-  (`alert-digest/route.ts:188`) and `alertMatchCounts.ts:114` explicitly `return null` on
-  that prefix — so a subscriber confirms an alert that will never match a listing or send
-  an email. This is a live honesty gap in an existing capture point (borderline `[bug]`;
-  do it first). Fix at capture: translate the mission preset's real filters into the
-  parseable `/aircraft?...` query-string shape at signup (so existing parsers work
-  unchanged and the live-match count line appears), and decide what to do about already-
-  stored `/aircraft/mission/...` rows (an honest one-time migration of `source_path`, or
-  at minimum stop new ones being created). Existing `alert_subscribed` event keeps firing —
-  this makes it honest.
+~~- **[P1][goal] Mission-page alerts can NEVER fire — make `/aircraft/mission/*` capture
+  honest.**~~ ✅ SHIPPED via `mission-alert-sourcepath-fix` (2026-07-13) `AlertSignup` on
+  `/aircraft/mission/[mission]` now captures `sourcePath` as a translated `/aircraft?...`
+  query string built from the mission's real `filters` (`q`/`max_tt`/`min_year`/`max_price`),
+  instead of the dead `/aircraft/mission/<slug>` both `parseSourcePath` (digest cron) and
+  `alertMatchCounts.ts` explicitly skip. Checked the live DB first: 0 existing `alerts` rows
+  had the dead prefix, so no migration was needed — this was purely a stop-new-dead-rows fix.
+  Live-verified end-to-end (real browser submit against 2 missions — one `q`-based, one
+  `max_tt`-based — via a real `@example.com` throwaway per case, all 3 deleted after): the
+  resulting `/alerts/manage?token=...` view now shows a real live match count ("48 listings
+  match right now") and a working "View" link, which never rendered before this fix.
 - **[P1][goal] Deal-alert capture on `/aircraft/deals`.** Verified: `aircraft/deals/page.tsx`
   has NO `AlertSignup` today, yet the deal-only alert machinery already exists end-to-end
   (`?deal=good` parses in the cron, deal-only toggle shipped). Add "Alert me when a new

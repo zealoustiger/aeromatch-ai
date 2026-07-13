@@ -2,6 +2,68 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T120429Z — PASS — mission-alert-sourcepath-fix
+- Pages: /aircraft/mission/[mission] (all 10 curated missions — glass-cockpit, ifr,
+  tailwheel, low-time, experimental, twin-engine, stol, turboprop, floatplane, aerobatic)
+- What: **Subscribing to alerts from any "browse by mission" page (glass cockpit, IFR,
+  tailwheel, low-time, etc.) used to create an alert that could never fire — it was a dead
+  end that looked like it worked.** `AlertSignup` on `/aircraft/mission/[mission]` was
+  capturing `sourcePath` as the page's own route (`/aircraft/mission/glass-cockpit`), but
+  both the digest cron's `parseSourcePath` and `/alerts/manage`'s live-match-count parser
+  explicitly treat that whole path prefix as unparseable and bail out — so the alert would
+  never get a match count, never appear correctly on the manage page, and never send a
+  digest email. Found by direct code read (not a user report): every one of the 10 curated
+  missions maps onto plain, already-supported `fetchAircraftPage` filter keys (`q`,
+  `max_tt`, `min_year`, `max_price`), so the fix is a pure capture-site change — build the
+  `AlertSignup`'s `sourcePath` from the mission's real filter object as an `/aircraft?...`
+  query string (e.g. `/aircraft?q=glass`, `/aircraft?max_tt=1500`) instead of the dead
+  route. Both existing parsers already handle that shape fully — zero changes needed to
+  `parseSourcePath`, `alertMatchCounts.ts`, or `AlertSignup` itself. Checked the live DB
+  first: 0 existing `alerts` rows had the dead `/aircraft/mission/` prefix, so there was
+  nothing to backfill — this cycle only had to stop new dead rows from being created going
+  forward. The mission page itself (H1, intro prose, listings grid, FAQ, cross-links) is
+  visually and behaviorally unchanged; only the alert-capture prop value changed. 1 file:
+  `src/app/aircraft/mission/[mission]/page.tsx`.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open — last cycle PASSed, no known
+  bug, re-audited BACKLOG.md's `[bug]` lines (all struck through or narrative). Tier 2
+  (`[want]`): re-confirmed empty for autonomous work — the one open `[P1][want]` ("Save this
+  search" auth-wall reconciliation) and the one open `[P1][want]` (collection-layout mosaic
+  redesign) both remain explicitly flagged as needing a human product/design call; the one
+  open `[P2][want]` (dynamic-location seed personas) has no live effect today per its own
+  audit note. Dropped to tier 3: pulled the first item from the fresh 7-item Opus/Fable
+  plan-pass batch appended to BACKLOG.md by the prior plan pass (commit `500751a`) —
+  explicitly the highest-priority one in that batch, called out in its own text as
+  "borderline `[bug]`; do it first" since it's an honesty gap in an *existing* capture
+  point, not new surface area.
+- Spec: nightshift/specs/20260713T120429Z-mission-alert-sourcepath-fix.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 286/286 pass (no new tests: pure data-plumbing prop-value change
+  around already-unit-covered parser logic, nothing new to unit-test). Non-visual-leaning
+  cycle (sourcePath prop value only, no UI/copy change) but ran the full visual gate anyway
+  since it touches a page users see: production build (`next start`, not dev), `qa-smoke.mjs`
+  exit 0 on `/aircraft/mission/glass-cockpit` and `/aircraft/mission/low-time` — 4/4, zero
+  console errors, zero overflow; screenshot spot-checked clean (listings/alert box/FAQ intact,
+  no layout change, as expected for a non-visual prop fix). **Live end-to-end verified
+  against the real DB** (Playwright, real browser submit — not a mocked action call): visited
+  `/aircraft/mission/glass-cockpit` and `/aircraft/mission/low-time`, submitted 3 throwaway
+  `qa-mission-alert-sourcepath-fix-<ts>@example.com` alerts total — confirmed each resulting
+  `alerts.source_path` was the translated `/aircraft?q=glass` / `/aircraft?max_tt=1500` shape,
+  not the dead mission route. Then loaded each alert's own `/alerts/manage?token=<its real
+  unsubscribe_token>` view and confirmed the live match count now renders correctly ("48
+  listings match right now" for the glass-cockpit case, a real non-null `target` object
+  server-rendered for both) and the "View" link points at the correct `/aircraft?...` URL —
+  proving both parsers resolve the new shape, not just asserting it by code read. All 3 test
+  rows deleted immediately after (confirmed 0 remain via a follow-up query). Server
+  started/stopped cleanly; confirmed no orphaned `next-server` process remained after.
+- Screenshots: nightshift/screenshots/mission-alert-sourcepath-fix/
+- Next: the fresh Opus/Fable plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13")
+  has 6 more open `[P1][goal]` items after this one — deal-alert capture on `/aircraft/deals`,
+  remembering email-only subscribers in the browser, vacation-mode bulk pause, a sample
+  digest preview on `/alerts`, alert capture on the comparison pages, and a market-pulse line
+  in the digest email — plus one more requiring a new webhook route (auto-pause on bounces).
+  Pull the next-highest-value one next cycle (tier 1/2 permitting).
+
 ## 20260713T114451Z — PASS — alert-digest-cross-sell
 - Pages: (no user-facing browse page — email-copy + wiring change inside the
   alert digest cron `/api/cron/alert-digest`, a new `/api/alerts/digest-cross-sell`
