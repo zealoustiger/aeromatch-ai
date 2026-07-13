@@ -827,13 +827,19 @@ the double-opt-in funnel cliff, and trust/expectation-setting on the manage page
   that column pair is pending live DDL, same as every existing reader), with the same
   one-honest-"no longer available"-email-then-pause gate. New capture point → emits
   `alert_subscribed` with `source: 'partnership_watch'`.
-- **[P1][goal] Live matching listings inside the double-opt-in confirm email.** The confirm
-  email is the single biggest funnel cliff (every email-only subscriber must click it), yet
-  it's pure "confirm your alerts" copy — show the subscriber what they're confirming FOR: up
-  to 3 real current matches ("Here's what you'd be watching"), reusing the existing digest
-  sample-card renderer/fetchers, with the honest zero-case ("None match right now — you'll be
-  first to know"). Surface improved: the confirm email itself, raising confirm-through on
-  every existing capture point. No new capture point, no schema change.
+~~- **[P1][goal] Live matching listings inside the double-opt-in confirm email.**~~ ✅
+  SHIPPED via `alert-confirm-email-matches` (2026-07-13) The confirm email is the single
+  biggest funnel cliff (every email-only subscriber must click it), yet it was pure "confirm
+  your alerts" copy — it now shows the subscriber what they're confirming FOR: up to 3 real
+  current matches ("Here's what you'd be watching") reusing the existing `getAlertDigestPreview`
+  fetcher (already exercised in production by the "send a sample digest" action) and the
+  existing digest sample-card renderer, with the honest zero-case ("None match right now —
+  you'll be first to know when one does") when a real, recognized alert genuinely has zero
+  live matches. Unrecognized source_path shapes (e.g. a "watch this listing" alert) render
+  identically to before — no fabricated section. `buildAlertConfirmEmail` (`src/lib/email.ts`)
+  takes a new optional `preview` param; both `subscribeToAlerts` (new signup) and
+  `sendConfirmationResend` (both resend entry points) now compute it via the already-imported
+  `getAlertDigestPreview`. No new capture point, no schema change, no new query.
 - ~~**[P1][goal] Thread the live result count to the browse-footer capture on `/aircraft` +
   `/partnerships`.**~~ ✅ SHIPPED via `alert-browse-matchcount` (2026-07-13) The explicitly
   flagged follow-up from `alert-matchcount-rollout`: the below-results `AlertSignup` on the
