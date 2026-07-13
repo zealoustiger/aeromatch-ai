@@ -1037,11 +1037,13 @@ export async function subscribeToAlerts(
   const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${confirmToken}`
   const manageUrl = `${SITE_URL}/alerts/manage?token=${unsubscribeToken}`
   const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubscribeToken}`
+  const preview = await getAlertDigestPreview(sourcePath)
   const { subject, html, text } = buildAlertConfirmEmail({
     context: context || null,
     confirmUrl,
     manageUrl,
     unsubscribeUrl,
+    preview: preview ? { count: preview.count, samples: preview.samples } : null,
   })
   await sendEmail({ to: clean, subject, html, text, unsubscribeUrl })
 
@@ -1175,6 +1177,7 @@ type ResendableAlert = {
   email: string
   status: string
   context: string | null
+  source_path?: string | null
   confirm_token: string | null
   unsubscribe_token: string | null
   last_confirm_sent_at?: string | null
@@ -1195,11 +1198,13 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
   const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${alert.confirm_token}`
   const manageUrl = `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}`
   const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}`
+  const preview = await getAlertDigestPreview(alert.source_path ?? null)
   const { subject, html, text } = buildAlertConfirmEmail({
     context: alert.context || null,
     confirmUrl,
     manageUrl,
     unsubscribeUrl,
+    preview: preview ? { count: preview.count, samples: preview.samples } : null,
   })
   await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
 

@@ -97,12 +97,22 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
  * Build the double-opt-in confirmation email for a new-listing alert signup.
  * `context` is the human-readable thing being alerted on (e.g. "Cessna 172"),
  * may be empty. Returns subject + html + text ready for `sendEmail`.
+ *
+ * `preview` — up to 3 real, currently-matching listings ("here's what you'd
+ * be watching"), from the same `getAlertDigestPreview` fetcher the "send a
+ * sample digest" action already uses. Pass `null`/omit for a source_path
+ * shape that can't be matched (e.g. a "watch this listing" alert, or a query
+ * error) — the email then renders exactly as before, no preview section.
+ * Pass `{ count: 0, samples: [] }` for a real, confirmed zero-match alert —
+ * this renders the honest "None match right now" line rather than silently
+ * omitting the section, so a genuinely empty search doesn't look untested.
  */
 export function buildAlertConfirmEmail(opts: {
   context: string | null
   confirmUrl: string
   manageUrl: string
   unsubscribeUrl: string
+  preview?: { count: number; samples: AlertDigestSample[] } | null
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` for new ${escapeHtml(thing)} listings` : ''
@@ -110,6 +120,14 @@ export function buildAlertConfirmEmail(opts: {
   const subject = thing
     ? `Confirm your ClubHanger alerts for ${thing}`
     : 'Confirm your ClubHanger listing alerts'
+
+  const samples = opts.preview?.samples ?? []
+  const previewHtml = !opts.preview
+    ? ''
+    : samples.length > 0
+      ? `<p style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 10px;">Here&rsquo;s what you&rsquo;d be watching:</p>
+        <div style="margin:0 0 22px;">${samples.map(sampleCardHtml).join('')}</div>`
+      : `<p style="font-size:13px;line-height:1.6;color:#64748b;background:#f8f7f4;border:1px solid #ece6dc;border-radius:10px;padding:10px 12px;margin:0 0 22px;">None match right now &mdash; you&rsquo;ll be first to know when one does.</p>`
 
   const html = `<!doctype html>
 <html>
@@ -122,6 +140,7 @@ export function buildAlertConfirmEmail(opts: {
           Thanks for signing up${forThing} on ClubHanger. One click and you&rsquo;re set — we&rsquo;ll
           only email you when a genuinely new matching listing shows up, never anything else.
         </p>
+        ${previewHtml}
         <p style="margin:0 0 4px;">
           <a href="${escapeAttr(opts.confirmUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
@@ -140,11 +159,22 @@ export function buildAlertConfirmEmail(opts: {
   </body>
 </html>`
 
+  const previewLines = !opts.preview
+    ? ''
+    : samples.length > 0
+      ? `Here's what you'd be watching:\n${samples
+          .map((s) => {
+            const price = s.price != null ? formatUsd(s.price) : ''
+            return `- ${s.title}${price ? ` — ${price}` : ''}\n  ${s.url}`
+          })
+          .join('\n')}\n\n`
+      : `None match right now — you'll be first to know when one does.\n\n`
+
   const text = `ClubHanger
 
 Almost there — confirm your alerts${forThingText}.
 
-Confirm your email: ${opts.confirmUrl}
+${previewLines}Confirm your email: ${opts.confirmUrl}
 
 Didn't request this? No action needed — you won't hear from us again.
 Manage alerts: ${opts.manageUrl}

@@ -7,6 +7,7 @@ import {
   buildPriceDropEmail,
   buildAlertDigestEmail,
   buildCombinedAlertDigestEmail,
+  buildAlertConfirmEmail,
   buildListingUnavailableEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
@@ -402,6 +403,65 @@ test('pickBestPriceDropSample: ignores samples with no genuine decrease or missi
 test('pickBestPriceDropSample: returns null for an empty or all-disqualified list', () => {
   assert.equal(pickBestPriceDropSample([]), null)
   assert.equal(pickBestPriceDropSample([sample({ previousPrice: 100_000, price: 100_000 })]), null)
+})
+
+// ─── buildAlertConfirmEmail (confirm-email match preview) ──────────────────
+
+const CONFIRM_BASE = {
+  context: 'Cessna 172',
+  confirmUrl: 'https://clubhanger.com/api/alerts/confirm?token=abc',
+  manageUrl: 'https://clubhanger.com/alerts/manage?token=xyz',
+  unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+}
+
+test('confirm: with no preview passed, renders exactly as before — no preview section', () => {
+  const { html, text } = buildAlertConfirmEmail(CONFIRM_BASE)
+  assert.doesNotMatch(html, /Here.{1,2}s what you.{1,2}d be watching/)
+  assert.doesNotMatch(html, /None match right now/)
+  assert.doesNotMatch(text, /Here's what you'd be watching/)
+  assert.doesNotMatch(text, /None match right now/)
+})
+
+test('confirm: a null preview (unrecognized source_path, e.g. a listing watch alert) also renders no section', () => {
+  const { html } = buildAlertConfirmEmail({ ...CONFIRM_BASE, preview: null })
+  assert.doesNotMatch(html, /Here.{1,2}s what you.{1,2}d be watching/)
+  assert.doesNotMatch(html, /None match right now/)
+})
+
+test('confirm: real samples render as cards above the confirm button', () => {
+  const { html, text } = buildAlertConfirmEmail({
+    ...CONFIRM_BASE,
+    preview: {
+      count: 2,
+      samples: [
+        {
+          title: '2015 Cessna 172S Skyhawk',
+          photoUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/ae/Cessna.jpg',
+          isPlaceholder: false,
+          year: 2015,
+          ttaf: 1240,
+          location: 'Austin, TX',
+          price: 219_000,
+          url: 'https://clubhanger.com/aircraft/listing/abc',
+        },
+      ],
+    },
+  })
+  assert.match(html, /Here&rsquo;s what you&rsquo;d be watching/)
+  assert.match(html, /2015 Cessna 172S Skyhawk/)
+  assert.match(html, />\$219,000</)
+  const confirmIdx = html.indexOf('Confirm my alerts')
+  const cardIdx = html.indexOf('2015 Cessna 172S Skyhawk')
+  assert.ok(cardIdx > 0 && cardIdx < confirmIdx, 'sample card renders before the confirm button')
+  assert.match(text, /Here's what you'd be watching:/)
+  assert.match(text, /2015 Cessna 172S Skyhawk — \$219,000/)
+})
+
+test('confirm: a real, confirmed zero-match preview renders the honest "None match right now" line, never a fabricated sample', () => {
+  const { html, text } = buildAlertConfirmEmail({ ...CONFIRM_BASE, preview: { count: 0, samples: [] } })
+  assert.match(html, /None match right now/)
+  assert.doesNotMatch(html, /<img/)
+  assert.match(text, /None match right now — you'll be first to know when one does\./)
 })
 
 // ─── buildListUnsubscribeHeaders (RFC 8058) ────────────────────────────────
