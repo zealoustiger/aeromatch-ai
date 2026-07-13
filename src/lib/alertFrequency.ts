@@ -45,3 +45,24 @@ export function isDigestDue(
   const intervalMs = intervalDaysFor(frequency) * 24 * 60 * 60 * 1000
   return nowMs - lastMs >= intervalMs
 }
+
+/**
+ * "Last email sent / next check" expectation line for a `/alerts/manage` row
+ * (GOAL.md: a subscriber should be able to trust the alert is alive without
+ * sending themselves a sample digest). `last_digest_at` is written by the
+ * digest cron but was never surfaced anywhere before this.
+ */
+export function describeLastDigest(lastDigestAt: string | null, frequency: AlertFrequency): string {
+  const cadence = `checks ${frequency}`
+  if (!lastDigestAt) return `Nothing sent yet — ${cadence}`
+
+  const sentDate = new Date(lastDigestAt)
+  if (Number.isNaN(sentDate.getTime())) return `Nothing sent yet — ${cadence}`
+
+  // Pinned to UTC (not host/server local time) since `last_digest_at` is a UTC
+  // timestamptz and there's no per-subscriber timezone to render it in —
+  // matters here because this must stay deterministic in tests regardless of
+  // the machine's TZ.
+  const formatted = sentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return `Last email ${formatted} · ${cadence}`
+}

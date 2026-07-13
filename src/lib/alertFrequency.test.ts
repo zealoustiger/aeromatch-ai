@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { intervalDaysFor, isDigestDue, normalizeFrequency } from './alertFrequency.ts'
+import { describeLastDigest, intervalDaysFor, isDigestDue, normalizeFrequency } from './alertFrequency.ts'
 
 const DAY_MS = 86_400_000
 const NOW = Date.UTC(2026, 6, 11) // fixed "now" so the math is deterministic
@@ -48,4 +48,18 @@ test('weekly alert sent 8 days ago → due', () => {
 test('exactly at the interval boundary counts as due', () => {
   assert.equal(isDigestDue(daysAgo(7), 'weekly', nowIso), true)
   assert.equal(isDigestDue(daysAgo(1), 'daily', nowIso), true)
+})
+
+test('describeLastDigest: never sent → honest "nothing sent yet" for either cadence', () => {
+  assert.equal(describeLastDigest(null, 'weekly'), 'Nothing sent yet — checks weekly')
+  assert.equal(describeLastDigest(null, 'daily'), 'Nothing sent yet — checks daily')
+})
+
+test('describeLastDigest: sent → short date + cadence', () => {
+  assert.equal(describeLastDigest(daysAgo(2), 'daily'), 'Last email Jul 9 · checks daily')
+  assert.equal(describeLastDigest(daysAgo(8), 'weekly'), 'Last email Jul 3 · checks weekly')
+})
+
+test('describeLastDigest: malformed date string falls back to "nothing sent yet"', () => {
+  assert.equal(describeLastDigest('not-a-date', 'weekly'), 'Nothing sent yet — checks weekly')
 })

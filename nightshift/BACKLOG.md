@@ -889,12 +889,16 @@ the double-opt-in funnel cliff, and trust/expectation-setting on the manage page
   state) that `getAlertMatchCount` confirms yields >0 real matches; if nothing does, say
   "nothing close yet — we'll keep watching" instead of a fake fix (honesty gate). No new
   capture point, no schema change.
-- **[P2][goal] "Last sent / next check" expectation line per alert row on `/alerts/manage`.**
-  Rows show status + frequency but never when anything actually happened. Read
-  `last_digest_at` (already written by the cron, never surfaced) and render "Last email
-  Jul 10 · checks daily" — or "Nothing sent yet — checks weekly" for a fresh alert — so a
-  subscriber can trust the alert is alive without sending themselves a sample digest.
-  Read-only, no schema change, no new capture point.
+~~- **[P2][goal] "Last sent / next check" expectation line per alert row on `/alerts/manage`.**~~
+  ✅ SHIPPED via `alerts-manage-last-sent-line` (2026-07-13) Every confirmed alert row now
+  renders `describeLastDigest()` (new pure helper, `src/lib/alertFrequency.ts`) reading the
+  already-written-but-never-surfaced `last_digest_at` column + `normalizeFrequency(frequency)`:
+  "Last email Jul 10 · checks weekly" once the cron has sent, or "Nothing sent yet — checks
+  weekly" for a fresh one — pinned to UTC (not host-local time) since the column is a UTC
+  timestamptz with no per-subscriber timezone. Only rendered for `status==='confirmed'` rows
+  (pending/paused alerts aren't actually on the cron's digest schedule, so showing a cadence
+  for them would claim a schedule that isn't running). Read-only, no schema change (column
+  already live per the original `alerts_double_opt_in` migration), no new capture point.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
