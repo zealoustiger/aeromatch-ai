@@ -2,6 +2,59 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T111454Z — PASS — alert-status-matching-cta
+- Pages: /alerts/status (the double-opt-in confirmation landing page; visible only via
+  the confirm link a subscriber clicks in their email)
+- What: **Confirming an alert used to tell you "410 listings match right now" with no way
+  to actually go look — the number was a dead end.** `getAlertMatchCount(source_path)` was
+  already called to build that sentence, but the result never escaped the block it was
+  computed in. Now the confirmed panel renders a real link right under the sentence: "See
+  the N matching listings →" for a normal search/SEO-page alert (links straight to
+  `source_path`), or "See this listing →" for a watch alert (`?watch=price`, which has no
+  match count to report by design — `getAlertMatchCount` returns null for that shape, so
+  `isListingWatchPath` from the existing `alertWatchStatus.ts` distinguishes it). An alert
+  with 0 live matches still shows no link (nothing honest to send someone to look at) —
+  unchanged from today. No new capture point, no new PostHog event, no schema change, no
+  new data fetch — pure reuse of the match-count call already made for the sentence copy.
+  1 file: `src/app/alerts/status/page.tsx`.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open, last cycle PASSed. Tier 2
+  (`[want]`): re-confirmed empty — both open `[P1][want]` items ("Save this search" auth-
+  wall reconciliation, the collection-layout mosaic redesign) remain flagged as needing a
+  human product/design call; the two `[P2][want]` items (dynamic seed personas, owner-leads
+  list) are also blocked (no live effect / explicitly flagged for human review before any
+  autonomous build). Dropped to tier 3: the alert-experience `[P1][goal]` queue is fully
+  shipped (every item struck through in BACKLOG.md), so pulled the smallest of the three
+  remaining `[P2][goal]` items — this one was explicitly scoped as "small slice, pure reuse,
+  no schema change" versus the other two (digest cross-sell email copy change; a brand-new
+  recently-viewed localStorage signal + banner).
+- Spec: nightshift/specs/20260713T111454Z-alert-status-matching-cta.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 278/278 pass (no new tests: pure JSX/data-plumbing change around
+  already-unit-covered `getAlertMatchCount`/`isListingWatchPath`, nothing new to unit-test).
+  Visual cycle — QA on the production build (`next start`, not dev). Base `qa-smoke.mjs`
+  exit 0 on `/alerts/status` (invalid-state default, unchanged) desktop 1280 + mobile 375.
+  **Live-verified all three confirmed-panel branches against the real DB**: inserted 3
+  throwaway `@example.com` confirmed alert rows (service-role, real tokens, no email sent)
+  — one `source_path=/aircraft?make=Cessna` (real live matches), one with a made-up make
+  (zero matches), one a watch-alert shape (`/aircraft/listing/<fake-id>?watch=price`) — then
+  ran `qa-smoke.mjs` against each confirmed URL directly: all 200, zero console errors, zero
+  overflow, both viewports. Screenshots read and confirmed clean: "See the 410 matching
+  listings →" renders correctly spaced under the confirmation sentence (desktop), "See this
+  listing →" renders correctly on mobile with no overlap with the cross-sell box or the
+  bottom button row; the zero-match case correctly shows no link at all (verified via
+  `curl`+grep, not screenshotted — the absence of an element isn't a visual regression risk).
+  All 3 test rows deleted immediately after each check (confirmed 0 remain via a follow-up
+  query on both the `-cta-` and `-cta2-` email prefixes used). Server started/stopped
+  cleanly; confirmed no orphaned `next-server` process remained after (`ps aux` clean).
+- Screenshots: nightshift/screenshots/alert-status-matching-cta/,
+  nightshift/screenshots/alert-status-matching-cta-match/,
+  nightshift/screenshots/alert-status-matching-cta-watch/
+- Next: the two remaining `[P2][goal]` alert-experience items are the digest-email
+  cross-sell suggestion and the recently-viewed smart-alert banner. After those, the queue
+  needs another Opus/Fable plan-pass refill (per GOAL.md, ideation on the cheap model is
+  disallowed).
+
 ## 20260713T110631Z — PASS — partnership-card-watch-alert
 - Pages: /partnerships, /saved (and every other surface rendering
   `PartnershipCard`: rails, `/partnerships/make/[make]`, `/partnerships/state/[state]`,

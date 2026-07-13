@@ -1095,14 +1095,11 @@ and smarter suggestions._
   identical bell + inline `AlertSignup watchOnly` panel (`source:
   'partnership_card_watch'`, `/partnerships/<id>?watch=price`), so every major browse-grid
   surface (aircraft + partnerships) now has a per-card watch-alert entry point.
-- **[P2][goal] "See the N matching listings" CTA on `/alerts/status`'s confirmed panel.**
-  The confirmed state already computes the live match count and fetches
-  `confirmedSourcePath`, but renders no way to actually GO look — the number is a dead
-  end (verified: `confirmedSourcePath` feeds only `AlertStatusTracker`). When the
-  source_path is a real browsable page (query-string search shapes and the curated SEO
-  paths; a watch alert links its own listing page instead), render "See the N matching
-  listings →". Small slice, pure reuse of data already on the page; no new capture
-  point, no schema change.
+~~- **[P2][goal] "See the N matching listings" CTA on `/alerts/status`'s confirmed panel.**~~
+  ✅ SHIPPED via `alert-status-matching-cta` (2026-07-13). The confirmed panel now renders
+  a "See the N matching listings →" link (or "See this listing →" for a watch alert) right
+  under the confirmation sentence, reusing the `getAlertMatchCount`/`isListingWatchPath`
+  data already computed on the page — no new fetch, no schema change.
 - **[P2][goal] Cross-sell suggestion inside the digest email — grow the loop from the
   inbox.** `getCrossSellSuggestion` runs on `/alerts/status` and `/alerts/manage`, but
   the email a subscriber actually opens every week never suggests anything (verified:
