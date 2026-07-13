@@ -1143,6 +1143,72 @@ and smarter suggestions._
   in the alert-experience queue** — the digest-email cross-sell suggestion, directly
   above this one in BACKLOG.md.
 
+### Plan-pass batch — 2026-07-13 (Fable)
+_All verified against the live codebase before filing (no duplicate of shipped work above)._
+
+- **[P1][goal] Mission-page alerts can NEVER fire — make `/aircraft/mission/*` capture
+  honest.** Verified: `src/app/aircraft/mission/[mission]/page.tsx:144` mounts `AlertSignup`
+  with `sourcePath=/aircraft/mission/...`, but BOTH `parseSourcePath` in the digest cron
+  (`alert-digest/route.ts:188`) and `alertMatchCounts.ts:114` explicitly `return null` on
+  that prefix — so a subscriber confirms an alert that will never match a listing or send
+  an email. This is a live honesty gap in an existing capture point (borderline `[bug]`;
+  do it first). Fix at capture: translate the mission preset's real filters into the
+  parseable `/aircraft?...` query-string shape at signup (so existing parsers work
+  unchanged and the live-match count line appears), and decide what to do about already-
+  stored `/aircraft/mission/...` rows (an honest one-time migration of `source_path`, or
+  at minimum stop new ones being created). Existing `alert_subscribed` event keeps firing —
+  this makes it honest.
+- **[P1][goal] Deal-alert capture on `/aircraft/deals`.** Verified: `aircraft/deals/page.tsx`
+  has NO `AlertSignup` today, yet the deal-only alert machinery already exists end-to-end
+  (`?deal=good` parses in the cron, deal-only toggle shipped). Add "Alert me when a new
+  good deal lists" (email-only `AlertSignup`, `sourcePath=/aircraft?deal=good` layered onto
+  any active make/model filters, `source: 'deals_page'`) — the highest-intent browse page
+  on the site is the last one without a capture point. Emits `alert_subscribed`.
+- **[P1][goal] Remember email-only subscribers in the browser — "You already get alerts
+  for this" without an account.** The signed-in duplicate-state shipped, but the majority
+  path (email-only, no session) re-sees a blank form on every visit and can double-submit.
+  On successful subscribe, record the alert's `source_path`+context in SSR-safe
+  localStorage (mirror the `recentlyViewed.ts` precedent — no PII beyond the visitor's own
+  browser); `AlertSignup` then renders the already-subscribed state with a "manage your
+  alerts" path (the shipped "Email me my manage link" flow). Cuts duplicate-submit
+  friction on every capture point site-wide with one shared-component change.
+- **[P1][goal] Vacation mode — pause ALL alerts until a date, one click.** `/alerts/manage`
+  has per-alert snooze with honest auto-resume (shipped), but a subscriber with 4 alerts
+  going away for two weeks must snooze 4 rows. Add a bulk "Pause everything until…" (and
+  "Resume all") action reusing the existing snooze columns/auto-resume machinery, working
+  in both the session-scoped and token-scoped (`?token=`) manage views. Management polish
+  that prevents the rage-unsubscribe alternative — "fewer, not none," literally.
+- **[P1][goal] Show a real sample digest on the `/alerts` landing page.** Top-of-funnel
+  show-don't-tell: `/alerts` asks for an email without ever showing what the (now
+  best-in-aviation) digest email looks like. Render a live-data sample — reuse the shipped
+  `send-me-a-sample` / dev email-preview machinery server-side for one popular chip (e.g.
+  Cessna 172, real current listings, honesty-gated to skip if no matches) — inline or
+  behind a "See a sample email" expander next to the existing capture form. The landing
+  page's `AlertSignup` keeps emitting `alert_subscribed`; this raises its conversion.
+- **[P1][goal] Alert capture on the comparison pages.** Verified: `/compare` (the user
+  compare tray page) and the existing `/aircraft/compare/[comparison]` family pages have
+  no `AlertSignup` (only remaining browse-family surface without one; adding capture to
+  an EXISTING page is activation, not new SEO surface). Add a capture block scoped to the
+  compared models — simplest honest slice: one `AlertSignup` with a chip per compared
+  family (172 vs 182 → pick which to watch, or both via the shipped one-click confirmed-
+  alert path when a session/confirmed email exists). `source: 'compare_page'`, emits
+  `alert_subscribed`.
+- **[P1][goal] Market-pulse line in the aircraft digest email.** One honest market-context
+  sentence per aircraft-alert section — "14 Cessna 172s listed right now, median asking
+  $89k" — computed from the existing comps queries (`aircraftComps.ts` family matching)
+  with the established honesty floors (min-comps / dead-band; below the floor → omit the
+  line entirely, never fabricate). No new capture point; makes the email a subscriber
+  opens visibly smarter than Controller's. Improves the digest surface only —
+  `email.ts` + `alert-digest/route.ts`, no schema change.
+- **[P1][goal] Auto-pause alerts on hard email bounces (Resend webhook).** Never-spam /
+  deliverability: today a typo'd or dead address gets digests forever, hurting sender
+  reputation for everyone. Add `/api/webhooks/resend` (svix-style signature verification,
+  secret via env — do NOT touch `.env*` yourself) that on `email.bounced` (hard) pauses
+  that address's alerts with a distinct `bounced` status/reason shown on `/alerts/manage`
+  ("your email bounced — resume when fixed"). Graceful no-op when the secret env is
+  absent. ⚠️ HUMAN ACTION to register the webhook URL + secret in the Resend dashboard —
+  ship the endpoint dark, flag it in the CHANGELOG.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
