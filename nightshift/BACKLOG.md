@@ -834,14 +834,24 @@ the double-opt-in funnel cliff, and trust/expectation-setting on the manage page
   sample-card renderer/fetchers, with the honest zero-case ("None match right now — you'll be
   first to know"). Surface improved: the confirm email itself, raising confirm-through on
   every existing capture point. No new capture point, no schema change.
-- **[P1][goal] Thread the live result count to the browse-footer capture on `/aircraft` +
-  `/partnerships`.** The explicitly flagged follow-up from `alert-matchcount-rollout`: the
-  below-results `AlertSignup` on the two highest-traffic browse/filter pages still shows no
-  "N match right now" expectation line because `AircraftSaleList`/`PartnershipList` don't
-  return their live total to the parent page (only the 0-result empty states are wired). Do
-  the small return-value plumbing (or count in the page alongside its existing query) and
-  pass `matchCount` — the last big capture surface missing the line; `alert_subscribed`
-  already carries `match_count` when present.
+- ~~**[P1][goal] Thread the live result count to the browse-footer capture on `/aircraft` +
+  `/partnerships`.**~~ ✅ SHIPPED via `alert-browse-matchcount` (2026-07-13) The explicitly
+  flagged follow-up from `alert-matchcount-rollout`: the below-results `AlertSignup` on the
+  two highest-traffic browse/filter pages showed no "N match right now" expectation line.
+  `/aircraft/page.tsx` now reuses the `totalCount` its own `fetchAircraftPage(params,
+  visitorCoords)` call already returns (same call already made for the ItemList JSON-LD —
+  the exact honest total `AircraftSaleList` renders as "N aircraft for sale found", accounting
+  for every active filter incl. grade/avionics/q; `null` from the uncountable `drops` filter
+  passes through as `undefined` so the box renders no line rather than a wrong one).
+  `/partnerships/page.tsx` reuses `itemListListings.length` from its existing
+  `getPartnershipListings(params)` call — the same number `PartnershipList`'s own result line
+  already shows. No new query, no schema change, no new capture point (`alert_subscribed`
+  already carries `match_count`). Live-verified via curl against the running production
+  server: unfiltered `/aircraft` showed "1,915 aircraft for sale" and the alert box read
+  "1915 aircraft match right now" (exact match); `/aircraft?make=Cirrus&min_price=500000`
+  showed "178" both places; `/aircraft?drops=1` correctly rendered no count line (uncountable
+  total); unfiltered `/partnerships` showed "23 partnerships match right now" matching the
+  page's own count.
 - ~~**[P1][goal] Watch-alert rows on `/alerts/manage` should show what they're watching.**~~
   ✅ SHIPPED via `alerts-manage-watch-status` (2026-07-13) A `/aircraft/listing/<id>?watch=price`
   alert used to render only via generic degradation: no live-match line, a bare context, an
