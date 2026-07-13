@@ -91,18 +91,24 @@ export default function AlertSignup({
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
   const hasCtx = !!(context && context.trim())
   const showSocialProof = hasCtx && typeof alertCount === 'number' && alertCount >= MIN_ALERTS_TO_SHOW
+  // "Price" only means something for aircraft — a partnership watch is on the
+  // buy-in share instead (see PartnershipDealSignals/PartnershipCard's own
+  // previous_buy_in_price-based copy), so the watch-only wording branches on
+  // noun rather than assuming aircraft like the rest of this component's
+  // watchOnly copy originally did.
+  const watchWord = noun === 'partnership' ? 'buy-in' : 'price'
   const headline = watchOnly
-    ? 'Alert me if the price drops'
+    ? `Alert me if the ${watchWord} drops`
     : hasCtx
       ? `Get alerts for new ${context} listings`
       : 'Get new-listing alerts'
   const subcopy = watchOnly
-    ? "We'll email you the moment the price on this listing drops. One email field, no account needed."
+    ? `We'll email you the moment the ${watchWord} on this listing drops. One email field, no account needed.`
     : hasCtx
       ? `We'll email you when a new ${context} ${noun} is listed. One email field, no account needed.`
       : `We'll email you the moment a new listing appears. One email field, no account needed.`
   const doneCopy = watchOnly
-    ? 'the price on this listing drops.'
+    ? `the ${watchWord} on this listing drops.`
     : hasCtx
       ? `new ${context} listings appear. No spam — just relevant ${nounPlural}.`
       : `new listings appear. No spam — just relevant listings.`
@@ -394,7 +400,7 @@ export default function AlertSignup({
                 disabled={pending}
                 className="shrink-0 rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
               >
-                {pending ? 'Saving…' : watchOnly ? 'Watch price' : 'Get alerts'}
+                {pending ? 'Saving…' : watchOnly ? `Watch ${watchWord}` : 'Get alerts'}
               </button>
             </form>
           )}

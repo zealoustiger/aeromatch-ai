@@ -816,17 +816,23 @@ has no watch-specific rendering, no staleness nudge, and never reads `last_diges
 Entry points and management are broad — this refill covers the last watch-alert parity gaps,
 the double-opt-in funnel cliff, and trust/expectation-setting on the manage page._
 
-- **[P1][goal] "Watch this partnership" — buy-in-drop alert on `/partnerships/[id]`.** Parity
-  with the shipped aircraft `listing-watch-price-alert`: the partnership detail page has only
-  the family-search alert, so a pilot eyeing one specific share can't watch it. Reuse
-  `AlertSignup`'s `watchOnly` variant ("Alert me if the buy-in drops" / "Watch buy-in" button)
-  below the existing family box; the cron's `resolveTarget` learns a
-  `/partnerships/<id>?watch=price` shape routed through a partnership counterpart of
-  `resolveListingWatch`, firing the existing `buildPriceDropEmail` (`dropNoun: 'buy-in drop'`,
-  `shareType`) off `previous_buy_in_price`/`buy_in_price_changed_at` (graceful-degrade while
-  that column pair is pending live DDL, same as every existing reader), with the same
-  one-honest-"no longer available"-email-then-pause gate. New capture point → emits
-  `alert_subscribed` with `source: 'partnership_watch'`.
+~~- **[P1][goal] "Watch this partnership" — buy-in-drop alert on `/partnerships/[id]`.**~~ ✅
+  SHIPPED via `partnership-watch-buyin-alert` (2026-07-13) Parity with the shipped aircraft
+  `listing-watch-price-alert`: the partnership detail page had only the family-search alert,
+  so a pilot eyeing one specific share couldn't watch it. `AlertSignup`'s `watchOnly` copy is
+  now noun-aware ("Alert me if the buy-in drops" / "Watch buy-in" for partnerships, aircraft
+  copy byte-for-byte unchanged); a second, watch-only box now renders below the existing
+  family box on `/partnerships/[id]`. The cron's `resolveTarget` learns a
+  `/partnerships/<id>?watch=price` shape, routed through new `resolvePartnershipWatch` (the
+  partnership counterpart of `resolveListingWatch`) — a genuine buy-in drop fires the existing
+  `buildPriceDropEmail` (`dropNoun: 'buy-in drop'`, `shareType`) unchanged; a sold/closed/
+  removed row gets one honest `buildListingUnavailableEmail` (now noun-aware: "filled or taken
+  down" / "Browse similar partnerships" for partnerships) then pauses, same one-time-notice
+  gate as the aircraft side. Graceful-degrades (retries without `previous_buy_in_price`/
+  `buy_in_price_changed_at`) while that column pair is still pending live DDL — live-verified
+  directly against the real, un-migrated prod schema this cycle. New capture point → emits
+  `alert_subscribed` with `source: 'partnership_watch'` (unmodified `track()` call, existing
+  mechanism).
 ~~- **[P1][goal] Live matching listings inside the double-opt-in confirm email.**~~ ✅
   SHIPPED via `alert-confirm-email-matches` (2026-07-13) The confirm email is the single
   biggest funnel cliff (every email-only subscriber must click it), yet it was pure "confirm
