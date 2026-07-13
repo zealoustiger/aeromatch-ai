@@ -798,3 +798,12 @@ alter table alerts add column if not exists last_confirm_sent_at timestamptz;
 -- Pause (graceful-fallback insert/update retry, same pattern as
 -- price_drop_opt_in/frequency above) — no user-facing error either way.
 alter table alerts add column if not exists paused_until timestamptz;
+
+-- alerts: stranded-pending confirm reminder guard (migration: alerts_confirm_reminder)
+-- Marks when the ONE "still want these alerts?" reminder was sent to a
+-- status='pending' row that never clicked the original double-opt-in confirm
+-- link. Nullable, no default. Apply in the Supabase SQL editor. Until
+-- applied, the reminder cron block skips sending entirely (never risks a
+-- duplicate reminder without a way to mark a row already-reminded) — no
+-- user-facing error either way.
+alter table alerts add column if not exists confirm_reminder_sent_at timestamptz;
