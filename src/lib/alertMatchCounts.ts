@@ -1,6 +1,7 @@
 import { createAdminClient } from './supabase-admin'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SITE_URL } from './seo'
 import { matchesModelFilter } from './seekerModelFilter'
+import { parseGradeFilter, gradeQueryPlan, type Grade } from './listingQuality'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
 import { formatShareType } from './utils'
@@ -42,6 +43,12 @@ type AlertTarget =
       maxYear?: number
       minTt?: number
       maxTt?: number
+      /** Free-text browse search (`q`) — matched the same way `fetchAircraftPage`
+       *  does, `.or(title.ilike,description.ilike)`. */
+      keyword?: string
+      /** Listing-quality multi-select, already resolved from `grade`/`min_grade`
+       *  via `parseGradeFilter` — same semantics as the browse page's filter. */
+      grades?: Grade[]
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
@@ -73,6 +80,8 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
         maxYear: numOrUndef(g('max_year')),
         minTt: numOrUndef(g('min_tt')),
         maxTt: numOrUndef(g('max_tt')),
+        keyword: g('q'),
+        grades: parseGradeFilter(g('grade'), g('min_grade')),
       }
     }
     if (p === '/partnerships/seeking') {
@@ -217,6 +226,14 @@ async function countActiveAircraft(
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
   if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  if (target.keyword) {
+    const term = target.keyword.replace(/[%,()]/g, ' ').trim()
+    if (term) q = q.or(`title.ilike.%${term}%,description.ilike.%${term}%`)
+  }
+  const gradePlan = gradeQueryPlan(target.grades ?? [])
+  if ('or' in gradePlan) q = q.or(gradePlan.or)
+  else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
+  else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
   if (excludeId) q = q.neq('id', excludeId)
 
   const { count, error } = await q
@@ -410,6 +427,14 @@ async function previewAircraft(
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
   if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  if (target.keyword) {
+    const term = target.keyword.replace(/[%,()]/g, ' ').trim()
+    if (term) q = q.or(`title.ilike.%${term}%,description.ilike.%${term}%`)
+  }
+  const gradePlan = gradeQueryPlan(target.grades ?? [])
+  if ('or' in gradePlan) q = q.or(gradePlan.or)
+  else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
+  else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
 
   const { data, count, error } = await q.order('first_seen_at', { ascending: false }).limit(limit)
   if (error) throw new Error(error.message)
