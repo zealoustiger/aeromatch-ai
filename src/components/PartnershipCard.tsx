@@ -16,8 +16,10 @@ import type { PartnershipCompVerdict, PartnershipDealCheck } from '@/lib/partner
 import { MAP_FOCUS_LISTING_EVENT, MAP_BOUNDS_FILTER_EVENT, type MapFocusListingDetail, type MapBoundsFilterDetail, focusPinFromList } from '@/lib/mapListSync'
 import { MIN_SAVES_TO_SHOW } from '@/lib/saveCounts'
 import SaveListingButton from './SaveListingButton'
+import WatchAlertButton from './WatchAlertButton'
 import TrustBadge from './TrustBadge'
 import CompareToggle from './CompareToggle'
+import AlertSignup from './AlertSignup'
 
 // Same recipe as AircraftSaleCard's EngineTimeChip — shows hrs-to-TBO derived from
 // smoh + engine_type, self-suppresses when the engine family isn't in the TBO table.
@@ -231,6 +233,13 @@ export default function PartnershipCard({
   const avionicsCaps = partnershipAvionicsCaps(p.description)
   const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
   const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
+  // Same listing-scoped watch-alert shape as the partnership detail page's
+  // "Watch this partnership" box (`?watch=price` — the generic shape-based
+  // parsers in alertMatchCounts.ts/alertWatchStatus.ts already resolve it,
+  // zero new matching logic here). Mirrors AircraftSaleCard's card-level watch.
+  const watchContext = [p.year, p.make, p.model].filter(Boolean).join(' ') || undefined
+  const watchSourcePath = `/partnerships/${p.id}?watch=price`
+  const [watchOpen, setWatchOpen] = useState(false)
 
   // Map → list sync: a click on this listing's map pin popup ("↓ Show in list")
   // scrolls it into view and briefly highlights it, so a visitor exploring the
@@ -294,9 +303,11 @@ export default function PartnershipCard({
               </span>
             )}
           </Link>
-          {/* Favorite — sibling of the Link (not nested) for valid markup */}
-          <div className="absolute right-2 top-2 z-10">
+          {/* Favorite + watch — siblings of the Link (not nested) for valid
+              markup; mirrors AircraftSaleCard's icon stack. */}
+          <div className="absolute right-2 top-2 z-10 flex flex-col gap-2">
             <SaveListingButton listingId={p.id} initialSaved={saved} variant="icon" />
+            <WatchAlertButton active={watchOpen} onToggle={() => setWatchOpen((v) => !v)} />
           </div>
         </div>
 
@@ -421,6 +432,22 @@ export default function PartnershipCard({
               </div>
             </div>
           </div>
+
+          {/* Watch-this-partnership panel — only mounted once the bell is
+              tapped (no extra render weight / DB fetch on the default grid
+              render). Same `AlertSignup watchOnly` machinery as the detail
+              page's watch box; `source: 'partnership_card_watch'`
+              distinguishes this placement in analytics. */}
+          {watchOpen && (
+            <AlertSignup
+              context={watchContext}
+              source="partnership_card_watch"
+              sourcePath={watchSourcePath}
+              noun="partnership"
+              watchOnly
+              className="mt-3"
+            />
+          )}
 
           {/* Footer */}
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
