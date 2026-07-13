@@ -21,6 +21,7 @@ import { isSeedProfile, personaFromPartnership } from '@/lib/seedProfiles'
 import PosterAttribution from '@/components/PosterAttribution'
 import { getPublicProfile } from '@/lib/publicProfile'
 import ListingViewTracker from '@/components/ListingViewTracker'
+import RecentlyViewedTracker from '@/components/RecentlyViewedTracker'
 import ReportListing from '@/components/ReportListing'
 import MonetizationIntent from '@/components/MonetizationIntent'
 import AlertSignup from '@/components/AlertSignup'
@@ -428,6 +429,7 @@ export default async function PartnershipDetailPage({
           make={p.make}
           shareType={p.share_type}
         />
+        <RecentlyViewedTracker noun="partnership" make={p.make} model={p.model} />
         <div className="mb-6 flex items-center justify-between gap-3">
           <Link
             href="/partnerships"

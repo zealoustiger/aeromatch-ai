@@ -22,7 +22,7 @@ import {
   buildNewMessageEmail,
   buildSeedInquiryEmail,
 } from '@/lib/email'
-import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
+import { getAlertDigestPreview, getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
@@ -1749,6 +1749,16 @@ export async function getExistingAlertForSourcePath(sourcePath: string): Promise
   if (!user || !user.email) return null
   const details = await getAlertDetailsBySourcePath(user.email)
   return details.get(sourcePath) ?? null
+}
+
+/** Thin client-callable wrapper around `getAlertMatchCount` — needed by client
+ *  components (e.g. `RecentlyViewedAlertBanner`, computing its suggestion from a
+ *  device-local log) that have no server-side render pass of their own to fetch a
+ *  live match count from. Returns `null` exactly when `getAlertMatchCount` would
+ *  (unrecognized source_path shape or a query error) — never a fake 0. */
+export async function getAlertMatchCountForSourcePath(sourcePath: string): Promise<number | null> {
+  const result = await getAlertMatchCount(sourcePath)
+  return result?.count ?? null
 }
 
 // Saved-search ↔ alert unification (slice 1, see /searches): one click turns a

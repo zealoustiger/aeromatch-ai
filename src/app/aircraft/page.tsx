@@ -14,6 +14,7 @@ import AircraftSaleList, { fetchAircraftPage } from '@/components/AircraftSaleLi
 import { countActivePartnerships, getPartnershipListings } from '@/lib/partnershipsQuery'
 import { resolveLocationCoords } from '@/lib/airports'
 import AlertSignup from '@/components/AlertSignup'
+import RecentlyViewedAlertBanner from '@/components/RecentlyViewedAlertBanner'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
@@ -294,6 +295,10 @@ export default async function AircraftPage({
             overflow-x-auto rails (cross-sell samples) scroll instead of
             widening the page at desktop. */}
         <div className="min-w-0 flex-1">
+          {/* Device-local "you've been looking at X" nudge — see
+              lib/recentlyViewed.ts. Skips itself when redundant with the active
+              search or when there's nothing honest to show. */}
+          <RecentlyViewedAlertBanner currentContext={alertContext} />
           {/* Active-filter chips — removable, one per active filter. */}
           <ActiveFilterChips params={params} facets={facets} />
           <AircraftMapView pins={aircraftMapPins} />
