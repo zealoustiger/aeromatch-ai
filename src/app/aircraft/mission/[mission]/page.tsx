@@ -63,6 +63,16 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
   // page number. basePath keeps paging on the mission route.
   const filters = { ...m.filters, basePath, page: sp.page }
 
+  // Alerts must be captured against a `/aircraft?...` sourcePath, not this page's
+  // own route — the digest cron's parseSourcePath and alertMatchCounts.ts both
+  // explicitly skip `/aircraft/mission/...` (unparseable), so an alert captured
+  // with basePath would never match a listing or send an email. The mission's
+  // filters are already plain fetchAircraftPage keys, so translate them 1:1.
+  const alertQuery = new URLSearchParams(
+    Object.entries(m.filters).filter(([, v]) => Boolean(v)) as [string, string][]
+  ).toString()
+  const alertSourcePath = alertQuery ? `/aircraft?${alertQuery}` : '/aircraft'
+
   // ItemList JSON-LD for the listings actually shown (same filters as the list
   // below) → structured data matches the visible cards 1:1. Null when nothing
   // priced/valid qualifies (helper handles it), so we render nothing then.
@@ -141,7 +151,7 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
           {/* Filter-aware email-alerts capture. */}
           <AlertSignup
             context={`${m.label} aircraft for sale`}
-            sourcePath={basePath}
+            sourcePath={alertSourcePath}
             source="mission_page"
           />
 
