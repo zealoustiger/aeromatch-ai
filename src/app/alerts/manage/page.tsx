@@ -9,6 +9,8 @@ import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { normalizeFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
+import { getWatchedListingStatus } from '@/lib/alertWatchStatus'
+import { formatPrice } from '@/lib/utils'
 import AlertEditForm from '@/components/AlertEditForm'
 import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
@@ -170,6 +172,11 @@ export default async function AlertsManagePage({
   // gets `null` back and renders no count line — never a fake 0.
   const matchCounts = await Promise.all(alerts.map((a) => getAlertMatchCount(a.source_path)))
 
+  // A "watch this listing" alert (source_path `/aircraft/listing/<id>?watch=price`)
+  // gets no match count above (a family count doesn't apply to it) — resolve what
+  // it's actually watching instead. `null` for every other alert shape.
+  const watchStatuses = await Promise.all(alerts.map((a) => getWatchedListingStatus(a.source_path)))
+
   // Cross-sell (see ManageAlertCrossSell.tsx / GOAL.md's "digest → manage → grow
   // loop"): try each confirmed alert's source_path (most recent first) until one
   // yields a suggestion the visitor doesn't already have — never a duplicate or
@@ -228,6 +235,7 @@ export default async function AlertsManagePage({
               {alerts.map((a, i) => {
                 const target = parseEditableAlertTarget(a.source_path)
                 const match = matchCounts[i]
+                const watch = watchStatuses[i]
                 const resumeDate = a.status === 'paused' ? formatResumeDate(a.paused_until ?? null) : null
                 return (
                   <li
@@ -266,7 +274,24 @@ export default async function AlertsManagePage({
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
                         Subscribed {new Date(a.created_at).toLocaleDateString()}
-                        {match ? (
+                        {watch ? (
+                          <>
+                            {' · '}
+                            {watch.active ? (
+                              <span className="text-slate-500">
+                                Watching: {watch.label} — {formatPrice(watch.price)} today ·{' '}
+                                <Link
+                                  href={`/aircraft/listing/${watch.id}`}
+                                  className="text-sky-600 underline-offset-2 hover:underline"
+                                >
+                                  View listing
+                                </Link>
+                              </span>
+                            ) : (
+                              <span className="text-amber-600">No longer for sale — this watch is done</span>
+                            )}
+                          </>
+                        ) : match ? (
                           <>
                             {' · '}
                             <span className={match.count > 0 ? 'text-slate-500' : 'text-amber-600'}>
