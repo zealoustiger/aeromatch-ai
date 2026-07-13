@@ -2,6 +2,61 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T102408Z — PASS — alert-aircraft-filter-honesty
+- Pages: (no user-facing page — matching-logic change inside the alert digest cron
+  `/api/cron/alert-digest` and the live match-count helper `src/lib/alertMatchCounts.ts`,
+  both of which back `/alerts/manage`'s "N match now" line and the weekly/daily digest send)
+- What: **Aircraft alerts now honor three filters the browse page already promised but the
+  matching logic silently ignored.** `/aircraft`'s below-results alert box stores every
+  active filter (make, model, state, price, year, total-time, airport, model-family search,
+  …) in the alert's `source_path`, and the capture-time copy already named some of them
+  ("over 2,000 hours…") — but the cron and the live match-count helper only ever parsed
+  make/model/state/min_price/max_price/min_year/max_year/max_tt, so an alert set with
+  `min_tt=2000`, `airport=KHWD`, or `model_like=172` quietly matched the WIDER unfiltered
+  set instead. Now all three are honored: `min_tt` mirrors the already-honored `max_tt`;
+  `airport` resolves to that airport's state (the same coarse resolution the browse page's
+  own airport filter uses — aircraft has no lat/lng radius search the way partnerships do);
+  `model_like` mirrors the browse page's `ilike("<prefix>%")` smart-search family match.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open (prior cycle
+  `empty-state-widen-alternative` PASSed; the one lingering strikethrough `[P1][bug]`
+  note in BACKLOG.md — a low-impact "suppress no-price rows from HomeRails' photoOnly
+  path" remainder under an already-shipped item — has been re-confirmed empty by many
+  prior cycles' tier-1 audits, unchanged this cycle). Tier 2 (`[want]`): re-confirmed
+  empty — every open `[want]` item is explicitly flagged as needing a human product call
+  (save-search auth-wall reconciliation, collection-layout mosaic redesign) or blocked
+  (compliance review, DB-casing call, DataDome/WAF-blocked ingestion sources). Dropped to
+  tier 3 and shipped the first `[P1][goal]` item in BACKLOG.md's alert-experience "Planner
+  refill #10" (generated 2026-07-13T03:20:53-07:00 by Fable) — a match-what-we-promised
+  honesty gap, same shape as the earlier `partnership-alert-radius-match` fix.
+- Spec: nightshift/specs/20260713T102408Z-alert-aircraft-filter-honesty.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both clean. Full
+  unit suite `node --experimental-strip-types --test src/lib/*.test.ts` — 276/276 pass (no
+  new tests added: both touched functions are DB-backed admin-client queries, not pure
+  functions — no existing `.test.ts` covers either file, same precedent as the prior
+  `watch-alert-family-crosssell`/`alert-status-funnel-events` cycles). Non-visual cycle
+  (matching-logic/data-query change only, no rendered UI change) — per RUNBOOK.md the smoke
+  gate is sufficient: `qa-smoke.mjs` exit 0 on `/aircraft`, `/alerts/manage`, `/alerts/status`
+  (6/6 — HTTP 200, zero app-origin console errors, zero horizontal overflow, desktop 1280 +
+  mobile 375); screenshots saved for the audit trail, not read into context. **Live-verified
+  against real prod data** on the running production build: inserted 5 throwaway
+  `@example.com` confirmed `alerts` rows (service-role insert, real `unsubscribe_token`, no
+  signup flow / no email sent) covering baseline + all three new filters, then read each
+  one's live "N match now" line off `/alerts/manage?token=…` (the exact code path
+  `getAlertMatchCount` powers): baseline (Cessna, no extra filter) → 410; `min_tt=2000` →
+  262 (correctly narrower); `min_tt=100000` (deliberately absurd) → **0**, the honesty gate
+  holding rather than fabricating a match; `airport=KHWD` → 44; `model_like=172` (Cessna
+  172 family) → 78 — every narrowing internally consistent (172-family count < min_tt=2000
+  count < unfiltered baseline). Before this change, all five would have returned the same
+  unfiltered 410. All 5 test rows deleted immediately after (confirmed 0 remain via a
+  follow-up query). Server started/stopped cleanly; confirmed no orphaned `next-server`/`next
+  start` process remained after (`ps aux` clean).
+- Screenshots: nightshift/screenshots/alert-aircraft-filter-honesty/
+- Next: the sibling `[P1][goal]` item in the same refill — "Honor-or-strip `q`/`grade`/
+  `avionics` in aircraft alerts" (the harder remaining params from the same honesty gap) —
+  is the natural next slice. After that, two more `[P1][goal]` items remain in refill #10
+  ("Instant first digest on confirm", "One-tap watch on aircraft browse cards") plus three
+  `[P2][goal]` items, before the queue needs another Opus/Fable plan-pass refill.
+
 ## 2026-07-13T10:12:56Z — DRAIN SUMMARY
 - Cycles this run: 22 (PASS 17 / FAIL 2 / ABORT 3)
 - Models: cycles on sonnet; 2 escalated to opus; 2 quality-judged on opus
