@@ -881,14 +881,22 @@ the double-opt-in funnel cliff, and trust/expectation-setting on the manage page
   same pending-DDL pattern — and if the column isn't live yet, skip sending entirely rather
   than risk repeats: never-spam beats coverage). Improves the confirm funnel behind every
   capture point; no new capture point.
-- **[P2][goal] "This alert hasn't matched anything in a while — widen it" nudge on
-  `/alerts/manage`.** An alert whose criteria match 0 live listings is silently dead, and
-  the manage page already computes the honest live count. When the count is 0, render one
-  inline suggestion with a one-click widen via the existing `updateAlertCriteria` action —
-  pick the single least-destructive loosening (drop the model → make-wide, or clear the
-  state) that `getAlertMatchCount` confirms yields >0 real matches; if nothing does, say
-  "nothing close yet — we'll keep watching" instead of a fake fix (honesty gate). No new
-  capture point, no schema change.
+~~- **[P2][goal] "This alert hasn't matched anything in a while — widen it" nudge on
+  `/alerts/manage`.**~~ ✅ SHIPPED via `alert-widen-nudge` (2026-07-13) A confirmed,
+  editable alert (aircraft/partnership/seeker query-string shape) with 0 live matches now
+  renders one inline suggestion: `computeWidenCandidate()` (new, `alertEditCriteria.ts`)
+  picks the single least-destructive loosening (drop the model → make-wide, else clear
+  state/airport), and the page re-verifies it with the existing `getAlertMatchCount` before
+  ever showing it — only a candidate that provably yields >0 real matches renders a button;
+  otherwise the honest "Nothing close yet — we'll keep watching" fallback shows (honesty
+  gate, never a fake fix). Clicking the widen button applies it via the existing
+  `updateAlertCriteria` action (same ownership/validation as the Edit form). New
+  `WidenAlertNudge.tsx` (client) is deliberately kept mounted for every confirmed/editable
+  row (not just dead ones) so its local "just widened" confirmation survives the server
+  refresh a successful widen triggers — conditionally unmounting it the instant the count
+  went from 0 to >0 was tried first and silently ate the confirmation (caught via a real
+  Playwright click test against a live `@example.com` test alert, not just the smoke gate).
+  No schema change, no new capture point, no cron change.
 ~~- **[P2][goal] "Last sent / next check" expectation line per alert row on `/alerts/manage`.**~~
   ✅ SHIPPED via `alerts-manage-last-sent-line` (2026-07-13) Every confirmed alert row now
   renders `describeLastDigest()` (new pure helper, `src/lib/alertFrequency.ts`) reading the
