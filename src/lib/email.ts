@@ -431,8 +431,21 @@ export function buildListingUnavailableEmail(opts: {
   browseUrl: string
   manageUrl: string
   unsubscribeUrl: string
+  /** Defaults to 'aircraft' so the original aircraft watch-alert copy (`sold
+   *  or taken off the market` / `Browse similar aircraft`) is byte-for-byte
+   *  unchanged. Partnerships use `'closed'` status, not `'sold'`, and their
+   *  "price" is a buy-in share — `'partnership'` swaps in copy that matches. */
+  noun?: 'aircraft' | 'partnership'
 }): { subject: string; html: string; text: string } {
   const subject = `${opts.title} is no longer available`
+  const isPartnership = opts.noun === 'partnership'
+  const statusLine = isPartnership
+    ? "It&rsquo;s been filled or taken down, so we&rsquo;ve stopped watching it for a buy-in drop &mdash; this is the last email you&rsquo;ll get about this listing."
+    : "It&rsquo;s been sold or taken off the market, so we&rsquo;ve stopped watching it for a price drop &mdash; this is the last email you&rsquo;ll get about this listing."
+  const statusLineText = isPartnership
+    ? "It's been filled or taken down, so we've stopped watching it for a buy-in drop — this is the last email you'll get about this listing."
+    : "It's been sold or taken off the market, so we've stopped watching it for a price drop — this is the last email you'll get about this listing."
+  const browseLabel = isPartnership ? 'Browse similar partnerships' : 'Browse similar aircraft'
 
   const html = `<!doctype html>
 <html>
@@ -442,13 +455,12 @@ export function buildListingUnavailableEmail(opts: {
       <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
         <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)} is no longer available</h1>
         <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
-          It&rsquo;s been sold or taken off the market, so we&rsquo;ve stopped watching it for a
-          price drop &mdash; this is the last email you&rsquo;ll get about this listing.
+          ${statusLine}
         </p>
         <p style="margin:0;">
           <a href="${escapeAttr(opts.browseUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
-            Browse similar aircraft
+            ${browseLabel}
           </a>
         </p>
       </div>
@@ -464,9 +476,9 @@ export function buildListingUnavailableEmail(opts: {
 
   const text = `${opts.title} is no longer available
 
-It's been sold or taken off the market, so we've stopped watching it for a price drop — this is the last email you'll get about this listing.
+${statusLineText}
 
-Browse similar aircraft: ${opts.browseUrl}
+${browseLabel}: ${opts.browseUrl}
 
 Manage alerts: ${opts.manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}`

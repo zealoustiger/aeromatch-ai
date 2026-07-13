@@ -58,7 +58,20 @@ type AlertTarget =
        *  generic `countNew`/`countRecentAircraftPriceDrops` path. */
       listingId?: string
     }
-  | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
+  | {
+      type: 'partnership'
+      make?: string
+      state?: string
+      icao?: string
+      radius?: number
+      /** Set when this alert watches ONE specific partnership for a buy-in
+       *  drop (`source_path` = `/partnerships/<id>?watch=price`) — the
+       *  partnership counterpart of the aircraft `listingId` field above. When
+       *  set, every other field is ignored; routed through
+       *  `resolvePartnershipWatch` instead of the generic
+       *  `countNew`/`countRecentPartnershipPriceDrops` path. */
+      listingId?: string
+    }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
@@ -202,6 +215,17 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
 
   // /partnerships/seeking → pilots seeking a partnership
   if (p === '/partnerships/seeking') return { type: 'seeker' }
+
+  // /partnerships/[id]?watch=price → watching ONE specific partnership's own
+  // buy-in price, not a family search. Checked after the near/make/state/
+  // seeking exact-path matchers above (so a real id can never collide with
+  // those reserved segments) and before the bare "/partnerships" fallback.
+  const partnershipWatch = p.match(/^\/partnerships\/([^/]+)$/)
+  if (partnershipWatch) {
+    const params = new URLSearchParams(qs ?? '')
+    if (params.get('watch') !== 'price') return null
+    return { type: 'partnership', listingId: partnershipWatch[1] }
+  }
 
   // /partnerships → all partnerships
   if (p === '/partnerships') return { type: 'partnership' }
@@ -763,6 +787,71 @@ async function fetchPartnershipPriceDropSamples(
     .map((row) => toPartnershipDigestSample(row, row.previous_buy_in_price))
 }
 
+/**
+ * Resolve a `listingId`-scoped "watch this partnership" target — the
+ * partnership counterpart of `resolveListingWatch` above. Same honesty gate:
+ * a row that's gone or no longer `status: 'active'` reports `unavailable`
+ * (one honest notice, then pause) instead of going silently quiet forever; a
+ * query error is treated as "nothing to report this pass," never a
+ * fabricated removal.
+ *
+ * `previous_buy_in_price`/`buy_in_price_changed_at` are the same
+ * pending-migration column pair `countRecentPartnershipPriceDrops` already
+ * degrades gracefully on — this retries without them on that specific
+ * column error (same precedent as `countNewSeekers`'s `additional_airports`
+ * retry) so availability still resolves correctly even before the migration
+ * lands; it just can't report a drop until then.
+ */
+async function resolvePartnershipWatch(
+  supabase: ReturnType<typeof createAdminClient>,
+  partnershipId: string,
+  since: string
+): Promise<ListingWatchResult> {
+  const fullCols =
+    'id, make, model, year, buy_in_price, previous_buy_in_price, buy_in_price_changed_at, share_type, images, home_airport, city, state, status'
+  const baseCols = 'id, make, model, year, buy_in_price, share_type, images, home_airport, city, state, status'
+
+  type Row = PartnershipSampleRow & {
+    status: string | null
+    previous_buy_in_price?: number | null
+    buy_in_price_changed_at?: string | null
+  }
+
+  let { data, error } = (await supabase
+    .from('partnerships')
+    .select(fullCols)
+    .eq('id', partnershipId)
+    .maybeSingle()) as { data: Row | null; error: { message: string } | null }
+
+  if (error && (error.message?.includes('previous_buy_in_price') || error.message?.includes('buy_in_price_changed_at'))) {
+    ;({ data, error } = (await supabase
+      .from('partnerships')
+      .select(baseCols)
+      .eq('id', partnershipId)
+      .maybeSingle()) as { data: Row | null; error: { message: string } | null })
+  }
+
+  if (error) {
+    console.error('[alert-digest] partnership-watch lookup error:', error.message)
+    return { kind: 'active', dropped: false }
+  }
+
+  if (!data || data.status !== 'active') {
+    const title = data ? [data.year, data.make, data.model].filter(Boolean).join(' ') || 'This partnership' : 'This partnership'
+    const browseUrl = data?.make ? `${SITE_URL}/partnerships?${new URLSearchParams({ make: data.make }).toString()}` : `${SITE_URL}/partnerships`
+    return { kind: 'unavailable', title, browseUrl }
+  }
+
+  if (data.previous_buy_in_price == null || data.buy_in_price_changed_at == null) return { kind: 'active', dropped: false }
+  const dropInput = {
+    previous_price: data.previous_buy_in_price,
+    asking_price: data.buy_in_price,
+    price_changed_at: data.buy_in_price_changed_at,
+  }
+  if (!hasRecentPriceDrop(dropInput, since)) return { kind: 'active', dropped: false }
+  return { kind: 'active', dropped: true, sample: toPartnershipDigestSample(data, data.previous_buy_in_price) }
+}
+
 type SeekerSampleRow = {
   id: string
   title: string | null
@@ -955,7 +1044,7 @@ export async function GET(req: NextRequest) {
   // Listing-watch alerts whose target has left `status: 'active'` — handled
   // entirely outside the grouped new/drop-count flow above (see the honesty
   // gate note where these are sent, after the main grouped-send loop below).
-  const unavailableWatches: { alert: DigestAlertRow; title: string; browseUrl: string }[] = []
+  const unavailableWatches: { alert: DigestAlertRow; title: string; browseUrl: string; noun: 'aircraft' | 'partnership' }[] = []
 
   for (const alert of alerts ?? []) {
     const frequency = normalizeFrequency(alert.frequency)
@@ -976,7 +1065,7 @@ export async function GET(req: NextRequest) {
     if (target.type === 'aircraft' && target.listingId) {
       const watch = await resolveListingWatch(supabase, target.listingId, since)
       if (watch.kind === 'unavailable') {
-        unavailableWatches.push({ alert, title: watch.title, browseUrl: watch.browseUrl })
+        unavailableWatches.push({ alert, title: watch.title, browseUrl: watch.browseUrl, noun: 'aircraft' })
         continue
       }
       if (!watch.dropped) {
@@ -986,6 +1075,20 @@ export async function GET(req: NextRequest) {
       // A genuine drop on the watched row — same shape (newCount 0, dropCount
       // 1, one sample) the grouped single-alert send loop below already knows
       // how to route to buildPriceDropEmail; no further special-casing needed.
+      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
+      continue
+    }
+
+    if (target.type === 'partnership' && target.listingId) {
+      const watch = await resolvePartnershipWatch(supabase, target.listingId, since)
+      if (watch.kind === 'unavailable') {
+        unavailableWatches.push({ alert, title: watch.title, browseUrl: watch.browseUrl, noun: 'partnership' })
+        continue
+      }
+      if (!watch.dropped) {
+        skipped++
+        continue
+      }
       prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
       continue
     }
@@ -1168,11 +1271,11 @@ export async function GET(req: NextRequest) {
   // combined-digest template is a follow-up, not this slice) — and the alert
   // is paused right after sending so it's genuinely a one-time notice, not a
   // recurring one every future cron pass.
-  for (const { alert, title, browseUrl } of unavailableWatches) {
+  for (const { alert, title, browseUrl, noun } of unavailableWatches) {
     const unsubToken = alert.unsubscribe_token ?? ''
     const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
-    const { subject, html, text } = buildListingUnavailableEmail({ title, browseUrl, manageUrl, unsubscribeUrl })
+    const { subject, html, text } = buildListingUnavailableEmail({ title, browseUrl, manageUrl, unsubscribeUrl, noun })
 
     const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
 

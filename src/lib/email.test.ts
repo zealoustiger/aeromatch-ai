@@ -520,3 +520,20 @@ test('buildListingUnavailableEmail: listing title is HTML-escaped', () => {
   assert.doesNotMatch(html, /<script>/)
   assert.match(html, /&lt;script&gt;/)
 })
+
+test('buildListingUnavailableEmail: noun "partnership" reads "filled or taken down" / buy-in drop, not sold/aircraft', () => {
+  const { html, text } = buildListingUnavailableEmail({ ...UNAVAILABLE_BASE, noun: 'partnership' })
+  assert.match(text, /filled or taken down/)
+  assert.match(text, /buy-in drop/)
+  assert.doesNotMatch(text, /sold or taken off the market/)
+  assert.doesNotMatch(text, /Browse similar aircraft/)
+  assert.match(text, /Browse similar partnerships/)
+  assert.match(html, /Browse similar partnerships/)
+})
+
+test('buildListingUnavailableEmail: omitting noun stays byte-for-byte the original aircraft copy', () => {
+  const withNoun = buildListingUnavailableEmail({ ...UNAVAILABLE_BASE, noun: 'aircraft' })
+  const withoutNoun = buildListingUnavailableEmail(UNAVAILABLE_BASE)
+  assert.equal(withNoun.html, withoutNoun.html)
+  assert.equal(withNoun.text, withoutNoun.text)
+})

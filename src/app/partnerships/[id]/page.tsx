@@ -842,6 +842,20 @@ export default async function PartnershipDetailPage({
               noun="partnership"
             />
 
+            {/* "Watch this partnership" — the partnership counterpart of the
+                aircraft listing page's "watch this listing" box: a pilot
+                eyeing THIS specific share, not the whole make/model family
+                search above. Distinct, listing-scoped source_path so the
+                alert-digest cron's parseSourcePath can tell it apart. */}
+            <AlertSignup
+              context={[p.year, p.make, p.model].filter(Boolean).join(' ') || undefined}
+              source="partnership_watch"
+              sourcePath={`/partnerships/${p.id}?watch=price`}
+              noun="partnership"
+              watchOnly
+              className="mt-4"
+            />
+
             {/* Monetization intent signals — same honest fake-door pattern as
                 the aircraft-for-sale listing page's broker/services CTAs,
                 testing demand for partnership-formation and co-ownership
