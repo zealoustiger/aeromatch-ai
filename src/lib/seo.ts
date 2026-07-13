@@ -2301,6 +2301,7 @@ export function describeAircraftFilters(
   if (grades.length >= 1 && grades.length <= 2) {
     clauses.push(`grade ${grades.join(' or ')}`)
   }
+  if (params.deal === 'good') clauses.push('good deals only')
 
   const hasMakeOrModel = Boolean(make || model)
   if (!hasMakeOrModel && clauses.length === 0) return 'general aviation'

@@ -23,7 +23,7 @@ import { STATE_NAMES, describeAircraftFilters } from '@/lib/seo'
  */
 
 export type EditableAlertTarget =
-  | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string }
+  | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; dealOnly: boolean }
   | { type: 'partnership'; make: string; state: string; airport: string }
   | { type: 'seeker'; make: string; model: string }
 
@@ -34,6 +34,7 @@ export interface AlertCriteriaFields {
   minPrice?: string
   maxPrice?: string
   airport?: string
+  dealOnly?: boolean
 }
 
 const EDITABLE_PATHS = new Set(['/aircraft', '/partnerships', '/partnerships/seeking'])
@@ -55,6 +56,7 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
       state: g('state').toUpperCase(),
       minPrice: g('min_price'),
       maxPrice: g('max_price'),
+      dealOnly: g('deal') === 'good',
     }
   }
   if (p === '/partnerships/seeking') {
@@ -96,6 +98,7 @@ export function buildAlertCriteriaUpdate(
     set('state', fields.state?.trim().toUpperCase())
     set('min_price', cleanPrice(fields.minPrice))
     set('max_price', cleanPrice(fields.maxPrice))
+    set('deal', fields.dealOnly ? 'good' : undefined)
   } else if (type === 'partnership') {
     set('make', fields.make?.trim())
     set('state', fields.state?.trim().toUpperCase())
