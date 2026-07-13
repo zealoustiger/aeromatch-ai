@@ -2,6 +2,59 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T094651Z — PASS — watch-alert-family-crosssell
+- Pages: /alerts/status, /alerts/manage
+- What: **Confirming a "watch this listing" price-drop alert now offers a one-click alert
+  for the whole make/model family too** — before, the post-confirm cross-sell box only knew
+  how to read browse-page-shaped alerts (`/aircraft?make=...`), so anyone who watched one
+  specific aircraft or partnership (rather than a search) never saw a cross-sell suggestion
+  at all. Now it resolves the watched listing's own make/model and offers, e.g., "Also want
+  alerts for every Cessna 182 listing? 76 matches now" — one click via the existing
+  `AlertCrossSell` accept flow, same `alert_subscribed` event. Aircraft prefers the curated
+  make/model family page when one exists; partnerships (no model dimension in that count)
+  offer the make-wide search. Honesty-gated as always: renders nothing when the live count
+  is 0.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open (prior cycle PASSed, no
+  unstruck `[bug]` in BACKLOG). Tier 2 (`[want]`): re-confirmed empty — the two open
+  `[P1][want]` items (save-search auth-wall reconciliation, collection-layout mosaic
+  redesign) both remain explicitly flagged as needing a human product call/mock; the open
+  `[P2][want]` items are either already fully shipped in effect, blocked on compliance
+  review (owner-leads list), or blocked on a human DB-casing call (model-filter rollup).
+  Dropped to tier 3 and shipped the first of the two remaining `[P2][goal]` items in the
+  🔔 alert-experience queue (BACKLOG.md).
+- Spec: nightshift/specs/20260713T094651Z-watch-alert-family-crosssell.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both clean. Full
+  unit suite `node --experimental-strip-types --test src/lib/*.test.ts` — 276/276 pass (no
+  new tests added: `alertCrossSell.ts`/`alertMatchCounts.ts`/`alertWatchStatus.ts` are all
+  DB-backed, not pure functions — no existing `.test.ts` covers them either). QA on the
+  production build (`next start`, not dev): smoke gate exit 0 on `/alerts/status` +
+  `/alerts/manage`, desktop 1280 + mobile 375 — HTTP 200, zero app-origin console errors,
+  zero horizontal overflow. **Live-verified against real prod data** (read-only queries,
+  then a handful of `@example.com` confirmed `alerts` rows inserted directly via the
+  service-role key — no signup flow, no email sent): a Cessna 182 aircraft watch correctly
+  cross-sold the family page (76 matches, self-excluded); a Cessna partnership watch
+  correctly cross-sold the make-wide search (5 matches, self-excluded); a Cessna 150G watch
+  correctly matched the broader curated "Cessna 150" family (7 real other listings); a MIG
+  15 watch (no curated family, only listing of its make) correctly rendered **no**
+  cross-sell (honest zero). Playwright-clicked "Yes, alert me" end-to-end on the partnership
+  suggestion — confirmed it wrote a real, correctly-scoped confirmed `alerts` row
+  (`/partnerships?make=Cessna`), zero console errors. Screenshotted desktop + mobile with a
+  real cross-sell rendered (not just the smoke gate's parameter-less base page) — clean
+  layout, no overlap, matches existing `AlertCrossSell` styling. **Bonus correctness fix
+  found + fixed this cycle:** `getAlertMatchCount` had no way to exclude a listing from its
+  own family count, so a watch subscriber's suggestion always included the exact listing
+  they were already watching — inflating "N match now" by one and, for any true singleton
+  make/model, would have honesty-gate-passed with a self-referential "1 match now" instead
+  of correctly showing nothing. Added an `excludeId` option, threaded through from the
+  watched listing's own id; verified the before/after count difference live (77→76, 6→5)
+  and the singleton case (MIG 15) now correctly suppresses. All 5 `@example.com` test alert
+  rows deleted after (0 remain); server stopped cleanly, no orphaned `next-server` process.
+- Screenshots: nightshift/screenshots/watch-alert-family-crosssell/
+- Next: the other remaining `[P2][goal]` item — "Capture-time widen alternative on
+  zero-match empty states" (offer a one-tap loosened alert on the empty-state capture boxes
+  themselves, not just the manage page). After that, the alert-experience `[goal]` queue is
+  fully drained again — likely due for another Opus/Fable plan-pass refill.
+
 ## 20260713T093533Z — PASS — alert-email-utm-attribution
 - Pages: (email-body change — no page route; affects the confirm/digest/price-drop/combined alert email templates sent from `subscribeToAlerts`, `sendConfirmationResend`, and `/api/cron/alert-digest`)
 - What: **Clicking a listing or "Manage alerts" link inside an alert email is now measurable as coming from an alert email** — before, every link in these emails was a bare URL indistinguishable from organic traffic once someone landed on the site, so the "does an alert email actually drive a visit/contact" half of the funnel couldn't be seen. Every listing card, "View all matches"/"See all matches" button, and "Manage alerts" link in the confirm, weekly digest, price-drop, and combined-digest emails now carries `utm_source=alert_email&utm_medium=email&utm_campaign=<confirm|digest|price_drop|combined>` (PostHog already auto-captures UTM params on landing, no receiving-side change needed). The confirm/unsubscribe/"switch to weekly" links are untouched on purpose — those are token-scoped redirect endpoints, not pages, and their tokens must stay byte-exact.
