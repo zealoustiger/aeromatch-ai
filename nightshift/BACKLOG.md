@@ -957,15 +957,16 @@ sellers), and closing the measurement loop end-to-end._
   the signed-in one-click path applies automatically (contact requires auth). Visually
   verified prod-safely (forced `sentThreadId` on load → build → screenshot → revert, no DB
   row ever created — the emerald panel renders correctly on both viewports).
-- **[P1][goal] Seller market-watch alert in the "just posted" success banner.** A brand-new
-  audience for alerts: both detail pages already compute `justPosted` (`?posted=1` after
-  `createAircraftListing`/`createPartnershipListing` redirect) but the banner offers no
-  alert. Add a family-scoped capture there — "Know your market: get alerted when another
-  {Make} {Model} lists or drops its price" — reusing `AlertSignup` with the existing
-  family `sourcePath` shape; the poster is signed in by definition, so this is the
-  one-click confirmed path (no second opt-in). Honesty: family-search scope only (the
-  shape the cron matches), never a fabricated "your listing's competitors" feed. New
-  capture point → emits `alert_subscribed` with `source: 'post_success'`.
+~~- **[P1][goal] Seller market-watch alert in the "just posted" success banner.**~~ ✅
+  SHIPPED via `post-success-alert-crosssell` (2026-07-13) Both `/aircraft/listing/[id]` and
+  `/partnerships/[id]`'s `justPosted` (`?posted=1`) success banners now render a
+  family-scoped `AlertSignup` box (reusing each page's existing make/model
+  `alertContext`/`sourcePath` — the exact shape the cron already matches), placed between
+  the confirmation copy and the existing monetization-intent CTAs. The poster is signed in
+  by definition, so `AlertSignup`'s own auth check renders its one-click confirmed-subscribe
+  path automatically (no second opt-in email). New capture point → emits `alert_subscribed`
+  with `source: 'post_success'`. No schema/query change — pure reuse of the already-shipped
+  component and each page's already-computed context/sourcePath.
 - **[P1][goal] `alert_confirmed` (and `alert_unsubscribed`) funnel events on
   `/alerts/status`.** GOAL.md's "prove it converts" funnel is measurable up to
   `alert_capture_viewed` → `alert_subscribed`, then goes dark: the moment an alert

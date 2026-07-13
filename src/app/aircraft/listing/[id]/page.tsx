@@ -797,6 +797,20 @@ export default async function AircraftListingDetailPage({
                 View all my listings →
               </a>
             </p>
+            {/* Know-your-market alert — the poster is signed in by definition, so
+                this is the one-click confirmed subscribe path (AlertSignup detects
+                the session itself); same make/model family scope as the page's own
+                alert box below, so a seller can watch their own market from the
+                moment their listing goes live. */}
+            <AlertSignup
+              context={alertContext}
+              source="post_success"
+              sourcePath={alertSourcePath}
+              noun="aircraft"
+              alertCount={alertCount}
+              matchCount={matchCount}
+              className="mt-3"
+            />
             {/* Seller-upgrade intent signals — same honest fake-door pattern as the
                 buyer-facing broker/financing CTAs below, shown once at the seller's
                 own post-listing moment. */}
