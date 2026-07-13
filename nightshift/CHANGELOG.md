@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-13T10:12:56Z — DRAIN SUMMARY
+- Cycles this run: 22 (PASS 17 / FAIL 2 / ABORT 3)
+- Models: cycles on sonnet; 2 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $80.2738 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260713T060006Z
+
 ## 20260713T100108Z — PASS — empty-state-widen-alternative
 - Pages: /aircraft, /partnerships, /partnerships/seeking
 - What: **A dead-end search on the browse pages now offers a real, one-tap way out instead of just "be first to know."** Before, a zero-match search (e.g. a make with an obscure model, or a make in a state with nothing listed) showed an honest but flat "None for sale right now" alert box with no next step — a visitor whose exact search may *never* match had no path forward except leaving. Now, when a genuine wider search has real matches, the box shows "Or: Show all Cessna listings — 410 listings match now" (or "Search every state" / seeker-pilot equivalents); tapping it swaps the same box in place to the wider search — new headline, new live match count, no reload, no second box — and subscribing fires the normal `alert_subscribed` event with `widened: true` so this path's conversion is measurable separately.
