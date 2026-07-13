@@ -294,9 +294,20 @@ export default async function PartnershipsPage({
               the context describes the active search so the alert is useful.
               Mirrors /aircraft and every other partnership surface. Skipped when
               the list is empty — PartnershipList's own empty state already leads
-              with this same capture, so this would be a duplicate. */}
+              with this same capture, so this would be a duplicate.
+              matchCount reuses itemListListings.length — the same `.limit(50)`-capped
+              getPartnershipListings call already made above, and the exact number
+              PartnershipList's own result line already shows, so this stays
+              consistent with what the page already claims (never overstates; only
+              undercounts past the existing 50-row cap, same as the visible count). */}
           {itemListListings.length > 0 && (
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="partnership" source="browse_footer" />
+            <AlertSignup
+              context={alertContext}
+              sourcePath={alertSourcePath}
+              noun="partnership"
+              source="browse_footer"
+              matchCount={itemListListings.length}
+            />
           )}
         </div>
       </div>

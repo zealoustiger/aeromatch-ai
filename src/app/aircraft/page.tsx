@@ -141,7 +141,7 @@ export default async function AircraftPage({
   // visible cards 1:1 (mirrors the make/model/state sub-family pages, which already
   // emit ItemList; this closes the gap on the /aircraft hub, priority seed page #2).
   // The helper returns null (renders nothing) when no priced/valid rows qualify.
-  const { listings: itemListListings } = await fetchAircraftPage(params, visitorCoords)
+  const { listings: itemListListings, totalCount: itemListTotalCount } = await fetchAircraftPage(params, visitorCoords)
   const itemListJsonLd = buildAircraftItemListJsonLd(itemListListings, {
     name: aircraftTitle,
     url: `${SITE_URL}/aircraft`,
@@ -313,9 +313,20 @@ export default async function AircraftPage({
           {/* Email-alerts capture — inline, no account required. Filter-aware:
               the context describes the active search so the alert is useful.
               Skipped when the list is empty — AircraftSaleList's own empty state
-              already leads with this same capture, so this would be a duplicate. */}
+              already leads with this same capture, so this would be a duplicate.
+              matchCount reuses fetchAircraftPage's own totalCount (same call already
+              made above for the ItemList JSON-LD) — the exact same honest total
+              AircraftSaleList renders as "N aircraft for sale found", so this can
+              never overstate what's shown; null (e.g. the `drops` filter, which is
+              narrowed in JS and uncountable via SQL) is passed through as undefined
+              so the box renders no count line rather than a wrong one. */}
           {itemListListings.length > 0 && (
-            <AlertSignup context={alertContext} sourcePath={alertSourcePath} source="browse_footer" />
+            <AlertSignup
+              context={alertContext}
+              sourcePath={alertSourcePath}
+              source="browse_footer"
+              matchCount={itemListTotalCount ?? undefined}
+            />
           )}
 
           {/* Monetization intent signal — same honest "coming soon" fake-door CTA already
