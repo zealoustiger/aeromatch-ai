@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-13T10:32:24Z — alert-aircraft-filter-honesty — score 4/5
+- Strengths: Faithful, well-scoped honesty fix — `min_tt`/`airport`/`model_like` matching is byte-for-byte identical to `fetchAircraftPage`'s own logic (same `${...replace(/[%,]/g,'')}%` ilike-injection guard, same coarse airport→state resolution with graceful no-op when the ICAO isn't in `airports`, same `ttaf` gte), all four filter sites updated in lockstep, excellent doc comments explaining the `modelLike` vs `modelPattern` distinction and why aircraft has no radius helper; correctly defers `q`/`grade`/`avionics` to the separate backlog item.
+- Weaknesses / risks: Perpetuates the pre-existing 4-way duplicated aircraft filter block (the non-deal `countNewAircraft` path re-inlines the same conditions rather than reusing `applyAircraftFilters`, so the two must be hand-synced forever), and `alertMatchCounts` re-runs the `airports` lookup per call (count + preview) instead of resolving once like the digest route does — both minor, neither a correctness issue.
+- Follow-up: none
+
 ## 2026-07-13T07:47:35Z — alert-widen-nudge — score 4/5
 - Strengths: Honest, tightly-scoped slice that fully reuses the edit path (`buildAlertCriteriaUpdate` + `updateAlertCriteria` action, same ownership/validation) — the honesty gate is real: it re-verifies the widened `source_path` with `getAlertMatchCount` and only surfaces a button when the server proves >0 matches now, with `noun` types (`'listing' | 'pilot'`) matching the count helper exactly; `computeWidenCandidate` is a clean pure single-step loosener covering all three editable shapes; and the "render for every eligible row, not just dead ones" stable-mount decision (so the `applied` confirmation survives the post-widen server refresh) is genuinely thoughtful and well-commented.
 - Weaknesses / risks: `parseEditableAlertTarget` + status/count gating is computed twice per alert (once in the `widenSuggestions` map, once in the render loop) — mildly redundant, and a minor verb-agreement copy nit ("1 listing match" should read "matches"). None material.
