@@ -1079,17 +1079,18 @@ and smarter suggestions._
   zero-case: no matches → no extra email (the confirm page's existing "None match right
   now" line already covers expectation). No new capture point, no schema change
   (`last_digest_at` is live).~~ ✅ SHIPPED via `alert-instant-first-digest` (2026-07-13)
-- **[P1][goal] One-tap "watch" on aircraft browse cards — the last big surface with no
-  alert affordance.** The listing-watch alert (`?watch=price`) exists only after clicking
-  into a detail page; browse/search results — the highest-traffic grid on the site —
-  offer no per-listing alert affordance at all (verified: no `*Card.tsx` renders any
-  watch/bell). Add a small bell/"Watch" control on `AircraftSaleCard`: signed-in users
-  get the existing one-click confirmed-subscribe path (same `source_path=
-  /aircraft/listing/<id>?watch=price` shape the cron already resolves — zero new matching
-  logic); anonymous visitors get a compact inline email field (reuse `AlertSignup`'s
-  `watchOnly` machinery, don't fork it). Must not disturb card layout/CWV at 375px.
-  Aircraft cards only this slice (partnership cards = natural follow-up). New capture
-  point → emits `alert_subscribed` with `source: 'card_watch'`.
+~~- **[P1][goal] One-tap "watch" on aircraft browse cards — the last big surface with no
+  alert affordance.**~~ ✅ SHIPPED via `aircraft-card-watch-alert` (2026-07-13) new
+  `WatchAlertButton.tsx` renders a small bell icon stacked below the heart in
+  `AircraftSaleCard`'s photo overlay on every browse/deals/rail grid; tapping it toggles an
+  inline `<AlertSignup watchOnly source="card_watch">` panel (same
+  `/aircraft/listing/<id>?watch=price` source_path shape the cron/match-count helper
+  already resolve — zero new matching logic, zero forked capture logic). The panel isn't
+  mounted until tapped, so the default grid render carries no extra weight/DB fetch.
+  Signed-in visitors get the existing one-click confirmed-subscribe path; signed-out get
+  the existing compact email-only capture — both inherited verbatim from `AlertSignup`.
+  New capture point → emits `alert_subscribed` with `source: 'card_watch'`. Partnership
+  cards remain the natural follow-up (not built this slice).
 - **[P2][goal] "See the N matching listings" CTA on `/alerts/status`'s confirmed panel.**
   The confirmed state already computes the live match count and fetches
   `confirmedSourcePath`, but renders no way to actually GO look — the number is a dead

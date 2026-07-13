@@ -2,6 +2,64 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T105800Z — PASS — aircraft-card-watch-alert
+- Pages: /aircraft, /aircraft/deals (and every other surface rendering
+  `AircraftSaleCard`: rails, `/saved`, `/aircraft/[make]`, `/aircraft/[make]/[model]`, etc.)
+- What: **Every aircraft browse-grid card now has a one-tap "alert me if the price drops"
+  affordance — the highest-traffic surface on the site previously had none.** Before, the
+  listing-watch alert (`?watch=price`) only existed after clicking into a detail page; a
+  visitor scanning `/aircraft`'s results grid had no per-listing alert entry point at all.
+  Now a small bell icon sits stacked below the heart in the top-right of every card's photo
+  — tapping it expands an inline panel in place (no navigation, no modal) that is the exact
+  same `AlertSignup` component in `watchOnly` mode the detail page already uses: signed-in
+  visitors get the one-click confirmed-subscribe path, signed-out visitors get the compact
+  email-only capture, both with the identical `/aircraft/listing/<id>?watch=price`
+  `source_path` shape the alert-digest cron and match-count helper already resolve — zero
+  new matching logic, zero forked capture logic. The panel isn't mounted until the bell is
+  tapped, so the default grid render (60 cards on `/aircraft`) carries no extra DB fetch or
+  render weight. New capture point emits the existing `alert_subscribed` event with
+  `source: 'card_watch'`, distinct from the detail page's `listing_watch`, so this
+  placement's conversion is measurable separately. 2 files: `WatchAlertButton.tsx` (new,
+  ~35-line icon toggle mirroring `SaveListingButton`'s `variant="icon"` styling — carries
+  no subscribe logic itself), `AircraftSaleCard.tsx` (bell in the photo-overlay icon stack
+  + conditional `AlertSignup` panel).
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open — re-audited BACKLOG.md,
+  every `[bug]` entry is already struck through/resolved, no FAIL in the last several
+  cycles. Tier 2 (`[want]`): re-confirmed empty — the two open `[P1][want]` items ("Save
+  this search" auth-wall reconciliation, the collection-layout mosaic redesign) both remain
+  explicitly flagged as needing a human product/design call; Trade-A-Plane ingestion and
+  the Bay-Area coverage benchmark remain blocked (DataDome bot-protection; no reliable FAA
+  denominator source). Dropped to tier 3 and shipped the exact `[P1][goal]` item the prior
+  cycle's own close-out note named as the natural next slice — the last big listing surface
+  (the browse grid) with no alert affordance at all.
+- Spec: nightshift/specs/20260713T105800Z-aircraft-card-watch-alert.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 278/278 pass (no new tests added: the new component is presentational
+  wiring around already-unit-covered `AlertSignup`/`subscribeToAlerts`/
+  `subscribeSignedInAlert` logic, nothing new to unit-test). Visual cycle — QA on the
+  production build (`next start`, not dev): `qa-smoke.mjs` exit 0 on `/aircraft` and
+  `/aircraft/deals`, desktop 1280 + mobile 375 (4/4 — HTTP 200, zero app-origin console
+  errors, zero horizontal overflow); screenshots read and confirmed clean (bell stacks
+  cleanly below the heart, no layout shift on the surrounding grid). **Playwright-verified
+  the actual interaction** against the running production build: clicked the bell on the
+  first `/aircraft` card at both viewports — panel expands in place with the correct
+  "Alert me if the price drops" watchOnly copy, zero console errors, no overlap; confirmed
+  clicking the bell/panel never navigates (card's own Link untouched). **Live end-to-end
+  submit against the real DB**: filled a throwaway `qa-aircraft-card-watch-alert-<ts>
+  @example.com` email into the expanded panel and submitted — the pending-confirmation
+  "Almost there — check your inbox" state rendered correctly; verified via the service-role
+  key that the written `alerts` row carried the correct `source_path`
+  (`/aircraft/listing/<id>?watch=price`) and `context` (`"1967 Piper"`), then deleted the
+  row immediately (confirmed 0 remain via a follow-up query). Server started/stopped
+  cleanly; confirmed no orphaned `next-server` process remained after (`ps aux` clean).
+- Screenshots: nightshift/screenshots/aircraft-card-watch-alert/
+- Next: partnership cards are the natural follow-up (same bell/panel pattern on
+  `PartnershipCard`, using the partnership twin of the watch source_path). After that, the
+  two remaining `[P2][goal]` items in the alert-experience queue are "See the N matching
+  listings" CTA on `/alerts/status`'s confirmed panel, and a cross-sell suggestion inside
+  the digest email itself.
+
 ## 20260713T104645Z — PASS — alert-instant-first-digest
 - Pages: (no user-facing page — email-copy + wiring change inside
   `/api/alerts/confirm`, the double-opt-in confirmation endpoint; visible only via the

@@ -27,7 +27,9 @@ import { computeDamageHistory } from '@/lib/damageHistory'
 import { MIN_SAVES_TO_SHOW } from '@/lib/saveCounts'
 import CompareToggle from './CompareToggle'
 import SaveListingButton from './SaveListingButton'
+import WatchAlertButton from './WatchAlertButton'
 import AircraftTrustBadge from './AircraftTrustBadge'
+import AlertSignup from './AlertSignup'
 
 const DAY_MS = 86_400_000
 
@@ -335,6 +337,12 @@ export default function AircraftSaleCard({
   const avionicsCaps = classifyAvionics(p.avionics)?.caps ?? []
   const ifrTier = computeIfrSuitability(avionicsCaps)?.tier ?? null
   const showIfrBadge = ifrTier === 'full' || ifrTier === 'capable'
+  // Same listing-scoped watch alert shape as the detail page's "Watch this
+  // listing" box (`?watch=price` — the cron's parseSourcePath already
+  // resolves it to a single-row watch, zero new matching logic here).
+  const watchContext = [p.year, p.make, p.model].filter(Boolean).join(' ') || undefined
+  const watchSourcePath = `/aircraft/listing/${p.id}?watch=price`
+  const [watchOpen, setWatchOpen] = useState(false)
 
   // "Search this area" sync: when the map filters to its current viewport, hide
   // any card whose listing isn't among the visible pins. `ids === null` clears.
@@ -406,10 +414,11 @@ export default function AircraftSaleCard({
               </span>
             )}
           </Link>
-          {/* Favorite — sibling of the photo link (not nested) for valid markup;
-              mirrors the partnership card's heart. */}
-          <div className="absolute right-2 top-2 z-10">
+          {/* Favorite + watch — siblings of the photo link (not nested) for
+              valid markup; mirrors the partnership card's heart. */}
+          <div className="absolute right-2 top-2 z-10 flex flex-col gap-2">
             <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={saved} variant="icon" />
+            <WatchAlertButton active={watchOpen} onToggle={() => setWatchOpen((v) => !v)} />
           </div>
         </div>
 
@@ -520,6 +529,22 @@ export default function AircraftSaleCard({
               )}
             </div>
           </div>
+
+          {/* Watch-this-listing panel — only mounted once the bell is
+              tapped (no extra render weight / DB fetch on the default grid
+              render). Same `AlertSignup watchOnly` machinery as the detail
+              page's watch box; `source: 'card_watch'` distinguishes this
+              placement in analytics. */}
+          {watchOpen && (
+            <AlertSignup
+              context={watchContext}
+              source="card_watch"
+              sourcePath={watchSourcePath}
+              noun="aircraft"
+              watchOnly
+              className="mt-3"
+            />
+          )}
 
           {/* Footer */}
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
