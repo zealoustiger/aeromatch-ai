@@ -1100,17 +1100,21 @@ and smarter suggestions._
   a "See the N matching listings →" link (or "See this listing →" for a watch alert) right
   under the confirmation sentence, reusing the `getAlertMatchCount`/`isListingWatchPath`
   data already computed on the page — no new fetch, no schema change.
-- **[P2][goal] Cross-sell suggestion inside the digest email — grow the loop from the
-  inbox.** `getCrossSellSuggestion` runs on `/alerts/status` and `/alerts/manage`, but
-  the email a subscriber actually opens every week never suggests anything (verified:
-  `email.ts` never imports it). Add one honest suggestion section to
-  `buildAlertDigestEmail`/`buildCombinedAlertDigestEmail` (combined: one suggestion
-  total, not per-section — never-spam) linking to a page where one click completes it —
-  e.g. the suggestion's own search page, or a token-scoped accept route following
-  `/api/alerts/frequency`'s GET-token precedent that lands on `/alerts/status` so the
-  existing tracker fires the funnel event. Honesty gate unchanged (only a >0-live-match
-  suggestion renders); respects the existing suggestion-not-already-subscribed dedup.
-  Emits `alert_subscribed` with `source: 'digest_cross_sell'` on accept.
+~~- **[P2][goal] Cross-sell suggestion inside the digest email — grow the loop from the
+  inbox.**~~ ✅ SHIPPED via `alert-digest-cross-sell` (2026-07-13) `buildAlertDigestEmail`/
+  `buildCombinedAlertDigestEmail` now take an optional top-level `crossSell` opt (one
+  suggestion total, never per-section) rendered as a small sky-tinted box + one-click
+  GET link above the footer. New `/api/alerts/digest-cross-sell` route (mirrors
+  `/api/alerts/frequency`'s GET-token precedent) resolves the owner via the sending
+  alert's `unsubscribe_token`, inserts the suggested alert (23505 = idempotent
+  already-subscribed), redirects to a new `/alerts/status?state=cross_sell_added`
+  confirmation that fires `alert_subscribed` (`source: 'digest_cross_sell'`) via the
+  existing tracker. The cron's new `getDigestCrossSell` helper re-checks the
+  subscriber's *live* confirmed alerts (not just the ones due this pass) before
+  attaching a suggestion — never a duplicate. **This item is now the last of the
+  alert-experience `[P2][goal]` queue** — the alert-experience section (both `[P1]`
+  and `[P2]`) is now fully drained; the next cycle needs an Opus/Fable plan-pass
+  refill per GOAL.md.
 ~~- **[P2][goal] Recently-viewed smart alert suggestion — "You've been looking at Cessna
   182s."**~~ ✅ SHIPPED via `recently-viewed-alert-banner` (2026-07-13) New
   `src/lib/recentlyViewed.ts` — SSR-safe localStorage log of `{make, model, noun}`

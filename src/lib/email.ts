@@ -650,6 +650,12 @@ export function buildAlertDigestEmail(opts: {
    *  honest "current match" count framing as `sampleNote`, minus the sample
    *  banner/subject-prefix, plus copy noting this was sent at confirm time. */
   firstSend?: boolean
+  /** Optional one-click "also want alerts for X?" suggestion rendered above
+   *  the footer (see `getCrossSellSuggestion` / GOAL.md's digest -> grow
+   *  loop) — no second opt-in needed, `acceptUrl` is a plain GET link (see
+   *  `/api/alerts/digest-cross-sell`) so it works straight from the email
+   *  client. Omitted whenever no honest suggestion applies. */
+  crossSell?: { label: string; acceptUrl: string }
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -690,6 +696,15 @@ export function buildAlertDigestEmail(opts: {
   const sampleBannerHtml = isSample
     ? `<p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;">Sample email &mdash; ${escapeHtml(opts.sampleNote!)}</p>`
     : ''
+  const crossSellHtml = opts.crossSell
+    ? `<div style="margin:16px 0 0;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px 18px;">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#0f172a;">${escapeHtml(opts.crossSell.label)}</p>
+        <a href="${escapeAttr(opts.crossSell.acceptUrl)}"
+           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;">
+          Yes, alert me too &rarr;
+        </a>
+      </div>`
+    : ''
 
   const html = `<!doctype html>
 <html>
@@ -710,6 +725,7 @@ export function buildAlertDigestEmail(opts: {
           </a>
         </p>
       </div>
+      ${crossSellHtml}
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -746,10 +762,12 @@ export function buildAlertDigestEmail(opts: {
       : `${countLabelText} matching your${forThingText} alert on ClubHanger.`
   const sampleBannerText = isSample ? `SAMPLE EMAIL — ${opts.sampleNote}\n\n` : ''
 
+  const crossSellText = opts.crossSell ? `\n${opts.crossSell.label}\n${opts.crossSell.acceptUrl}\n` : ''
+
   const text = `${sampleBannerText}${bodyCopyText}
 ${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
-
+${crossSellText}
 Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
@@ -789,6 +807,10 @@ export function buildCombinedAlertDigestEmail(opts: {
   sections: AlertDigestSection[]
   manageUrl: string
   unsubscribeUrl: string
+  /** Same one-click cross-sell as `buildAlertDigestEmail`'s option — exactly
+   *  one suggestion for the whole combined email, never one per section
+   *  (GOAL.md: "never spam"). */
+  crossSell?: { label: string; acceptUrl: string }
 }): { subject: string; html: string; text: string } {
   const sections = opts.sections
   const totalNew = sections.reduce((n, s) => n + s.newCount, 0)
@@ -853,6 +875,17 @@ export function buildCombinedAlertDigestEmail(opts: {
         <h1 style="font-size:20px;font-weight:700;margin:0 0 16px;">${escapeHtml(overallLabel)} across your ${sections.length} alerts</h1>
         ${sectionParts.map((s) => s.html).join('')}
       </div>
+      ${
+        opts.crossSell
+          ? `<div style="margin:16px 0 0;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px 18px;">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#0f172a;">${escapeHtml(opts.crossSell.label)}</p>
+        <a href="${escapeAttr(opts.crossSell.acceptUrl)}"
+           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;">
+          Yes, alert me too &rarr;
+        </a>
+      </div>`
+          : ''
+      }
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -863,10 +896,12 @@ export function buildCombinedAlertDigestEmail(opts: {
   </body>
 </html>`
 
+  const crossSellText = opts.crossSell ? `\n${opts.crossSell.label}\n${opts.crossSell.acceptUrl}\n` : ''
+
   const text = `${overallLabel} across your ${sections.length} alerts on ClubHanger.
 
 ${sectionParts.map((s) => s.text).join('\n\n')}
-
+${crossSellText}
 Manage alerts: ${manageUrl}
 Unsubscribe from these: ${opts.unsubscribeUrl}`
 
