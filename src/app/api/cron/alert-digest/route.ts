@@ -4,12 +4,15 @@ import {
   sendEmail,
   buildAlertDigestEmail,
   buildCombinedAlertDigestEmail,
+  buildAlertConfirmEmail,
   buildPriceDropEmail,
   buildListingUnavailableEmail,
   pickBestPriceDropSample,
   type AlertDigestSample,
   type AlertDigestSection,
 } from '@/lib/email'
+import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
+import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
@@ -934,6 +937,79 @@ async function fetchNewSeekerSamples(
   return rows.slice(0, limit).map(toSeekerDigestSample)
 }
 
+// ─── Stranded-pending confirm reminder ─────────────────────────────────────────
+
+type PendingReminderRow = {
+  id: string
+  email: string
+  context: string | null
+  source_path: string | null
+  confirm_token: string | null
+  unsubscribe_token: string | null
+}
+
+/**
+ * A subscriber who signs up but never clicks the double-opt-in confirm link
+ * gets nothing, ever — the digest loop above only reads status='confirmed'.
+ * Sends exactly ONE "still want these alerts?" reminder to a status='pending'
+ * row aged 24–72h since signup, reusing the existing buildAlertConfirmEmail
+ * template + the row's own confirm/unsubscribe tokens (same send shape as the
+ * manual "Resend confirmation" action in actions.ts, just cron-triggered).
+ * Honesty/never-spam gate: if `confirm_reminder_sent_at` isn't migrated live
+ * yet, this skips sending entirely — there'd be no way to mark a row
+ * already-reminded, and risking a duplicate later beats not reminding at all.
+ */
+async function sendStrandedPendingReminders(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowIso: string
+): Promise<number> {
+  const { start, end } = reminderWindow(nowIso)
+
+  const { data, error } = (await supabase
+    .from('alerts')
+    .select('id, email, context, source_path, confirm_token, unsubscribe_token')
+    .eq('status', 'pending')
+    .is('confirm_reminder_sent_at', null)
+    .gte('created_at', start)
+    .lte('created_at', end)) as { data: PendingReminderRow[] | null; error: { message: string } | null }
+
+  if (error) {
+    if (error.message?.includes('confirm_reminder_sent_at')) {
+      console.warn('[alert-digest] confirm_reminder_sent_at not migrated live yet — skipping pending reminders')
+    } else {
+      console.error('[alert-digest] pending-reminder fetch error:', error.message)
+    }
+    return 0
+  }
+
+  let remindersSent = 0
+  for (const row of data ?? []) {
+    if (!row.confirm_token || !row.unsubscribe_token) continue
+
+    const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${row.confirm_token}`
+    const manageUrl = `${SITE_URL}/alerts/manage?token=${row.unsubscribe_token}`
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${row.unsubscribe_token}`
+    const preview = await getAlertDigestPreview(row.source_path ?? null)
+    const { subject, html, text } = buildAlertConfirmEmail({
+      context: row.context ?? null,
+      confirmUrl,
+      manageUrl,
+      unsubscribeUrl,
+      preview: preview ? { count: preview.count, samples: preview.samples } : null,
+    })
+
+    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl })
+    if (result.sent || result.reason === 'no-key') {
+      await supabase
+        .from('alerts')
+        .update({ confirm_reminder_sent_at: new Date().toISOString() })
+        .eq('id', row.id)
+      remindersSent++
+    }
+  }
+  return remindersSent
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -970,6 +1046,8 @@ export async function GET(req: NextRequest) {
   if (resumeError && !resumeError.message?.includes('paused_until')) {
     console.error('[alert-digest] snooze auto-resume error:', resumeError.message)
   }
+
+  const remindersSent = await sendStrandedPendingReminders(supabase, nowIso)
 
   type DigestAlertRow = {
     id: string
@@ -1291,7 +1369,7 @@ export async function GET(req: NextRequest) {
 
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent}`
   )
-  return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue })
+  return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue, remindersSent })
 }
