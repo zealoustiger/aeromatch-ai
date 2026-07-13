@@ -822,6 +822,12 @@ export default async function PartnershipDetailPage({
                     contactPhone={p.contact_phone}
                     contactMethod={p.contact_method}
                     posterId={p.poster_id}
+                    alertContext={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+                    alertSourcePath={
+                      p.make
+                        ? `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
+                        : '/partnerships'
+                    }
                   />
                 </>
               )}
@@ -923,6 +929,12 @@ export default async function PartnershipDetailPage({
         contactMethod={p.contact_method}
         contactName={p.contact_name}
         isSeed={seed}
+        alertContext={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+        alertSourcePath={
+          p.make
+            ? `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
+            : '/partnerships'
+        }
       />
     </>
   )
