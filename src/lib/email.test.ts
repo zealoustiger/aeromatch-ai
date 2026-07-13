@@ -198,8 +198,8 @@ test('digest: a price-drop sample shows the struck-through previous price next t
 test('digest: footer includes both Manage alerts and Unsubscribe links', () => {
   const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
   assert.match(html, /Manage alerts<\/a>/)
-  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage"/)
-  assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=digest"/)
+  assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage\?utm_source=alert_email&utm_medium=email&utm_campaign=digest/)
   assert.match(text, /Unsubscribe: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=xyz/)
   assert.doesNotMatch(html, /Get fewer emails/)
   assert.doesNotMatch(text, /Get fewer emails/)
@@ -305,8 +305,8 @@ test('combined: each section keeps its own context, count line, and CTA — neve
   assert.match(html, />2 new listings</)
   assert.match(html, />Cirrus SR22</)
   assert.match(html, />1 price drop</)
-  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172"/)
-  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cirrus&amp;model=SR22"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cirrus&amp;model=SR22&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
   assert.match(text, /Cessna 172 — 2 new listings/)
   assert.match(text, /Cirrus SR22 — 1 price drop/)
 })
@@ -374,9 +374,9 @@ test('combined: footer carries the shared Manage/Unsubscribe links (already mult
       { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
     ],
   })
-  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?token=a"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?token=a&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
   assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b"/)
-  assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage\?token=a/)
+  assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage\?token=a&utm_source=alert_email&utm_medium=email&utm_campaign=combined/)
   assert.match(text, /Unsubscribe from these: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b/)
 })
 
@@ -536,4 +536,109 @@ test('buildListingUnavailableEmail: omitting noun stays byte-for-byte the origin
   const withoutNoun = buildListingUnavailableEmail(UNAVAILABLE_BASE)
   assert.equal(withNoun.html, withoutNoun.html)
   assert.equal(withNoun.text, withoutNoun.text)
+})
+
+// ─── UTM attribution on alert-email site-page links ────────────────────────
+// Site-page links (listing cards, "View all matches", manage link) carry
+// utm_source=alert_email&utm_medium=email&utm_campaign=<confirm|digest|price_drop|combined>
+// so a visit from an alert email is attributable. Token-scoped /api/alerts/*
+// redirect links (confirm/unsubscribe/frequency) must never be touched — their
+// tokens have to stay byte-exact for the route to resolve them.
+
+test('price drop: listingUrl and manageUrl carry utm_campaign=price_drop; unsubscribeUrl/frequencyUrl stay byte-exact', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\/listing\/abc\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=price_drop"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=price_drop"/)
+  assert.match(text, /View listing: https:\/\/clubhanger\.com\/aircraft\/listing\/abc\?utm_source=alert_email&utm_medium=email&utm_campaign=price_drop/)
+  assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage\?utm_source=alert_email&utm_medium=email&utm_campaign=price_drop/)
+  // token links untouched
+  assert.ok(html.includes(BASE.unsubscribeUrl))
+  assert.ok(text.includes('https://clubhanger.com/api/alerts/frequency?token=xyz'))
+  assert.doesNotMatch(text, /frequency\?token=xyz&utm_/)
+  assert.doesNotMatch(text, /unsubscribe\?token=xyz&utm_/)
+})
+
+test('digest: listingsUrl, manageUrl, and sample urls carry utm_campaign=digest, preserving existing query params; unsubscribeUrl/frequencyUrl stay byte-exact', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz',
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+      },
+    ],
+  })
+  // existing ?make=Cessna&model=172 is preserved alongside the new utm_ params
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=digest"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=digest"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\/listing\/abc\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=digest"/)
+  assert.doesNotMatch(text, /unsubscribe\?token=xyz&utm_/)
+  assert.doesNotMatch(text, /frequency\?token=xyz&utm_/)
+})
+
+test('confirm: manageUrl and preview sample urls carry utm_campaign=confirm; confirmUrl/unsubscribeUrl stay byte-exact', () => {
+  const { html, text } = buildAlertConfirmEmail({
+    ...CONFIRM_BASE,
+    preview: {
+      count: 1,
+      samples: [
+        {
+          title: '2015 Cessna 172S Skyhawk',
+          photoUrl: null,
+          isPlaceholder: false,
+          year: 2015,
+          ttaf: 1240,
+          location: 'Austin, TX',
+          price: 219_000,
+          url: 'https://clubhanger.com/aircraft/listing/abc',
+        },
+      ],
+    },
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/manage\?token=xyz&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=confirm"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\/listing\/abc\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=confirm"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/confirm\?token=abc"/)
+  assert.match(text, /Confirm your email: https:\/\/clubhanger\.com\/api\/alerts\/confirm\?token=abc/)
+  assert.match(text, /Unsubscribe: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=xyz$/)
+})
+
+test('combined: sample card urls carry utm_campaign=combined', () => {
+  const { html } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
+        samples: [
+          {
+            title: '2015 Cessna 172S Skyhawk',
+            photoUrl: null,
+            isPlaceholder: false,
+            year: 2015,
+            ttaf: 1240,
+            location: 'Austin, TX',
+            price: 219_000,
+            url: 'https://clubhanger.com/aircraft/listing/abc',
+          },
+        ],
+      },
+    ],
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\/listing\/abc\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
 })

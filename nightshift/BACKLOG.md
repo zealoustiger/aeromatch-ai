@@ -978,17 +978,24 @@ sellers), and closing the measurement loop end-to-end._
   once per state (`confirmed` / `unsubscribed`), keyed on the token in `sessionStorage` so
   a refresh doesn't double-count. No new UI, no schema change — completes viewed →
   subscribed → confirmed per-placement conversion measurement.
-- **[P1][goal] UTM attribution on alert-email links — measure what the emails actually
-  drive.** No link in any alert email carries tracking (verified: zero `utm_` in
-  `email.ts`/the cron), so a visit from a digest is indistinguishable from organic and the
-  send → visit → `contact_initiated` loop can't be closed (PostHog already auto-captures
-  UTM params client-side — no receiving-side work needed). Append
-  `utm_source=alert_email&utm_medium=email&utm_campaign={digest|price_drop|confirm|combined}`
-  to the **site-page** links in the email builders (listing cards, "View all matches",
-  manage link). Scope gate: do NOT touch the `/api/alerts/*` token links
-  (confirm/unsubscribe/frequency) — those are redirect endpoints and the tokens must stay
-  byte-exact. Pure URL change in `src/lib/email.ts`, unit-testable, no schema change, no
-  new capture point.
+~~- **[P1][goal] UTM attribution on alert-email links — measure what the emails actually
+  drive.**~~ ✅ SHIPPED via `alert-email-utm-attribution` (2026-07-13) New private
+  `withUtm(url, campaign)` in `src/lib/email.ts` appends
+  `utm_source=alert_email&utm_medium=email&utm_campaign={confirm|digest|price_drop|combined}`
+  to every **site-page** link in the four named builders — `buildAlertConfirmEmail`
+  (manageUrl + preview sample cards, campaign `confirm`), `buildAlertDigestEmail`
+  (listingsUrl + manageUrl + sample cards, campaign `digest`), `buildPriceDropEmail`
+  (listingUrl + manageUrl, campaign `price_drop`), `buildCombinedAlertDigestEmail`
+  (each section's listingsUrl + sample cards + the shared manageUrl, campaign
+  `combined`) — preserving any existing query params (e.g. `?make=Cessna&model=172`).
+  `confirmUrl`/`unsubscribeUrl`/`frequencyUrl` (the `/api/alerts/*` token redirects)
+  are untouched everywhere, verified by unit test. `buildManageLinkEmail`,
+  `buildListingUnavailableEmail`, `buildNewMessageEmail`, `buildSeedInquiryEmail`,
+  `buildMatchAlertEmail` deliberately left alone (not among the four named campaigns).
+  No call-site change needed — tagging happens inside `email.ts`. Live-verified via
+  the three dev email-preview routes (`/api/dev/email-preview/{price-drop,alert-digest,
+  alert-digest-combined}`) against real fixture data — confirmed each link carries the
+  right `utm_campaign` and unsubscribe tokens render byte-exact.
 - **[P2][goal] Cross-sell the family alert after confirming a watch alert.** A watch
   subscriber (`/aircraft/listing/<id>?watch=price` or the partnership twin) is one click
   from wanting the whole market, but `getAlertMatchCount`-gated cross-sell on

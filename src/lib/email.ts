@@ -121,7 +121,8 @@ export function buildAlertConfirmEmail(opts: {
     ? `Confirm your ClubHanger alerts for ${thing}`
     : 'Confirm your ClubHanger listing alerts'
 
-  const samples = opts.preview?.samples ?? []
+  const manageUrl = withUtm(opts.manageUrl, 'confirm')
+  const samples = (opts.preview?.samples ?? []).map((s) => ({ ...s, url: withUtm(s.url, 'confirm') }))
   const previewHtml = !opts.preview
     ? ''
     : samples.length > 0
@@ -152,7 +153,7 @@ export function buildAlertConfirmEmail(opts: {
         </p>
       </div>
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
-        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a> &middot;
+        <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a> &middot;
         <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
       </p>
     </div>
@@ -177,7 +178,7 @@ Almost there — confirm your alerts${forThingText}.
 ${previewLines}Confirm your email: ${opts.confirmUrl}
 
 Didn't request this? No action needed — you won't hear from us again.
-Manage alerts: ${opts.manageUrl}
+Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}`
 
   return { subject, html, text }
@@ -366,6 +367,8 @@ export function buildPriceDropEmail(opts: {
   const newPrice = formatUsd(opts.askingPrice)
   const dropNoun = opts.dropNoun ?? 'price drop'
   const subject = `${pct}% ${dropNoun} — ${opts.title} now ${newPrice}`
+  const listingUrl = withUtm(opts.listingUrl, 'price_drop')
+  const manageUrl = withUtm(opts.manageUrl, 'price_drop')
 
   const photo = opts.photoUrl
     ? `<img src="${escapeAttr(opts.photoUrl)}" alt="${escapeAttr(opts.title)}" width="472" style="display:block;width:100%;max-width:472px;height:auto;border-radius:12px;margin:0 0 18px;" />`
@@ -390,7 +393,7 @@ export function buildPriceDropEmail(opts: {
           <span style="color:#0f172a;font-weight:700;font-size:22px;">${newPrice}</span>
         </p>
         <p style="margin:0;">
-          <a href="${escapeAttr(opts.listingUrl)}"
+          <a href="${escapeAttr(listingUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
             View listing
           </a>
@@ -398,7 +401,7 @@ export function buildPriceDropEmail(opts: {
       </div>
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you have an alert set up on ClubHanger.
-        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
         <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
       </p>
@@ -410,9 +413,9 @@ export function buildPriceDropEmail(opts: {
   const titleLine = opts.shareType ? `${opts.title} (${opts.shareType})` : opts.title
   const text = `${titleLine} dropped ${pct}% ${periodLabel} — now ${newPrice} (was ${oldPrice})
 
-View listing: ${opts.listingUrl}
+View listing: ${listingUrl}
 
-Manage alerts: ${opts.manageUrl}
+Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
@@ -499,6 +502,26 @@ function escapeHtml(s: string): string {
 
 function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/"/g, '&quot;')
+}
+
+/**
+ * Tag a site-page link with UTM params so a visit driven by an alert email is
+ * attributable in analytics (PostHog auto-captures UTM params client-side, no
+ * receiving-side change needed). Preserves any existing query params. Never
+ * apply this to the `/api/alerts/*` confirm/unsubscribe/frequency redirect
+ * links — those tokens must stay byte-exact for the route to resolve them.
+ * Falls back to the raw URL if it isn't parseable as an absolute URL.
+ */
+function withUtm(url: string, campaign: 'confirm' | 'digest' | 'price_drop' | 'combined'): string {
+  try {
+    const u = new URL(url)
+    u.searchParams.set('utm_source', 'alert_email')
+    u.searchParams.set('utm_medium', 'email')
+    u.searchParams.set('utm_campaign', campaign)
+    return u.toString()
+  } catch {
+    return url
+  }
 }
 
 /** One real matching listing shown as a preview card in the digest email.
@@ -624,7 +647,9 @@ export function buildAlertDigestEmail(opts: {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
   const forThingText = thing ? ` ${thing}` : ''
-  const samples = opts.samples ?? []
+  const samples = (opts.samples ?? []).map((s) => ({ ...s, url: withUtm(s.url, 'digest') }))
+  const listingsUrl = withUtm(opts.listingsUrl, 'digest')
+  const manageUrl = withUtm(opts.manageUrl, 'digest')
   const dropNoun = opts.dropNoun ?? 'price drop'
   const isSample = !!opts.sampleNote
   const total = opts.newCount + opts.dropCount
@@ -667,7 +692,7 @@ export function buildAlertDigestEmail(opts: {
         </p>
         ${samplesHtml}
         <p style="margin:0;">
-          <a href="${escapeAttr(opts.listingsUrl)}"
+          <a href="${escapeAttr(listingsUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">
             ${ctaLabel}
           </a>
@@ -675,7 +700,7 @@ export function buildAlertDigestEmail(opts: {
       </div>
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
-        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
         <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
       </p>
@@ -709,9 +734,9 @@ export function buildAlertDigestEmail(opts: {
 
   const text = `${sampleBannerText}${bodyCopyText}
 ${sampleLines ? `\n${sampleLines}\n` : ''}
-${ctaLabel}: ${opts.listingsUrl}
+${ctaLabel}: ${listingsUrl}
 
-Manage alerts: ${opts.manageUrl}
+Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
@@ -754,6 +779,7 @@ export function buildCombinedAlertDigestEmail(opts: {
   const sections = opts.sections
   const totalNew = sections.reduce((n, s) => n + s.newCount, 0)
   const totalDrop = sections.reduce((n, s) => n + s.dropCount, 0)
+  const manageUrl = withUtm(opts.manageUrl, 'combined')
 
   const overallParts: string[] = []
   if (totalNew > 0) overallParts.push(totalNew === 1 ? '1 new listing' : `${totalNew} new listings`)
@@ -770,7 +796,8 @@ export function buildCombinedAlertDigestEmail(opts: {
     if (s.newCount > 0) countParts.push(s.newCount === 1 ? '1 new listing' : `${s.newCount} new listings`)
     if (s.dropCount > 0) countParts.push(s.dropCount === 1 ? `1 ${dropNoun}` : `${s.dropCount} ${dropNoun}s`)
     const countLabel = countParts.join(' + ')
-    const samples = s.samples ?? []
+    const listingsUrl = withUtm(s.listingsUrl, 'combined')
+    const samples = (s.samples ?? []).map((sm) => ({ ...sm, url: withUtm(sm.url, 'combined') }))
     const remaining = s.newCount + s.dropCount - samples.length
     const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
     const samplesHtml = samples.length
@@ -783,7 +810,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         <p style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
         ${samplesHtml}
         <p style="margin:0;">
-          <a href="${escapeAttr(s.listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>
+          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>
         </p>
       </div>`
 
@@ -798,7 +825,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}`
       })
       .join('\n')
-    const text = `${heading} — ${countLabel}\n${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${s.listingsUrl}`
+    const text = `${heading} — ${countLabel}\n${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}`
 
     return { html, text }
   })
@@ -814,7 +841,7 @@ export function buildCombinedAlertDigestEmail(opts: {
       </div>
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
-        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
         <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe from these</a>.
       </p>
@@ -826,7 +853,7 @@ export function buildCombinedAlertDigestEmail(opts: {
 
 ${sectionParts.map((s) => s.text).join('\n\n')}
 
-Manage alerts: ${opts.manageUrl}
+Manage alerts: ${manageUrl}
 Unsubscribe from these: ${opts.unsubscribeUrl}`
 
   return { subject, html, text }
