@@ -842,13 +842,15 @@ the double-opt-in funnel cliff, and trust/expectation-setting on the manage page
   the small return-value plumbing (or count in the page alongside its existing query) and
   pass `matchCount` — the last big capture surface missing the line; `alert_subscribed`
   already carries `match_count` when present.
-- **[P1][goal] Watch-alert rows on `/alerts/manage` should show what they're watching.** A
-  `/aircraft/listing/<id>?watch=price` alert renders today only via generic degradation: no
-  live-match line, a bare context, an Edit form that doesn't apply. Resolve the watched
-  listing and render "Watching: 1978 Cessna 182 — $89,500 today" with a View link to the
-  listing; when it's sold/removed, say so honestly ("No longer for sale — this watch is
-  done") instead of silence, and hide the criteria-edit affordance for this shape (nothing
-  to edit). Management-surface parity; no new capture point, no schema change.
+- ~~**[P1][goal] Watch-alert rows on `/alerts/manage` should show what they're watching.**~~
+  ✅ SHIPPED via `alerts-manage-watch-status` (2026-07-13) A `/aircraft/listing/<id>?watch=price`
+  alert used to render only via generic degradation: no live-match line, a bare context, an
+  Edit form that doesn't apply. Now `getWatchedListingStatus` (`src/lib/alertWatchStatus.ts`)
+  resolves the watched listing and `/alerts/manage` renders "Watching: 2024 Beechcraft Bonanza
+  G36 — $1,199,000 today" with a "View listing" link when active, or "No longer for sale —
+  this watch is done" when sold/removed — honest either way, never silent. The Edit form
+  already correctly hid itself for this shape (`parseEditableAlertTarget` returns `null`),
+  no change needed there. Management-surface parity; no new capture point, no schema change.
 - **[P2][goal] One honest confirm reminder for stranded pending alerts.** A subscriber who
   signs up but never clicks the double-opt-in gets nothing, ever — the digest cron only
   reads `status='confirmed'`. In the same cron pass, send exactly ONE "still want these
