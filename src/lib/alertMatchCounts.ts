@@ -4,6 +4,7 @@ import { matchesModelFilter } from './seekerModelFilter'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
 import { formatShareType } from './utils'
+import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from './alertEditCriteria'
 import type { AlertDigestSample } from './email'
 
 /**
@@ -292,6 +293,45 @@ export async function getAlertMatchCount(
   } catch (err) {
     console.error('[alertMatchCounts] count error:', err instanceof Error ? err.message : err)
     return null
+  }
+}
+
+export interface EmptyStateWidenSuggestion {
+  /** The widened search's context/source_path — same shape `AlertSignup` already
+   *  takes, so a click just swaps the box's active values, no second component. */
+  context?: string
+  sourcePath: string
+  /** e.g. "Show all Cessna listings" / "Search every state" — from `computeWidenCandidate`. */
+  description: string
+  count: number
+  noun: 'listing' | 'pilot'
+}
+
+/**
+ * For a search that's showing a zero-match empty state RIGHT NOW, compute the
+ * single least-destructive widened alternative (drop model → make-wide, else
+ * drop location → nationwide — same one-step rule `/alerts/manage`'s post-
+ * subscribe widen nudge uses) and re-verify it against a real live count
+ * before ever offering it. Returns `null` — never a guess — when the source
+ * path isn't an editable modern query-string shape, there's no further step to
+ * widen, or the widened search is *also* genuinely empty.
+ */
+export async function getEmptyStateWidenSuggestion(
+  sourcePath: string | null
+): Promise<EmptyStateWidenSuggestion | null> {
+  const target = parseEditableAlertTarget(sourcePath)
+  if (!target) return null
+  const candidate = computeWidenCandidate(target)
+  if (!candidate) return null
+  const { sourcePath: widenedPath, context } = buildAlertCriteriaUpdate(target.type, sourcePath, candidate.fields)
+  const match = await getAlertMatchCount(widenedPath)
+  if (!match || match.count <= 0) return null
+  return {
+    context: context ?? undefined,
+    sourcePath: widenedPath,
+    description: candidate.description,
+    count: match.count,
+    noun: match.noun,
   }
 }
 
