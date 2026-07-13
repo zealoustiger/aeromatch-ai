@@ -1069,7 +1069,7 @@ and smarter suggestions._
   silently ignored, so a subscribed alert never claims a check it won't run. **Not done,
   intentionally:** honoring `avionics` in the matching logic itself (a natural next slice
   if it's ever worth the extra full-table scan in two more files).
-- **[P1][goal] Instant first digest on confirm — deliver the value moment in minutes, not
+~~- **[P1][goal] Instant first digest on confirm — deliver the value moment in minutes, not
   next cron pass.** `/api/alerts/confirm` flips the row and redirects; the subscriber
   then waits up to a day (daily) or week (weekly) for their first real email even when
   matches exist right now. On a successful confirm of an alert with ≥1 live match, send
@@ -1078,7 +1078,7 @@ and smarter suggestions._
   digest, not a sample) and set `last_digest_at` so the cron doesn't double-send. Honest
   zero-case: no matches → no extra email (the confirm page's existing "None match right
   now" line already covers expectation). No new capture point, no schema change
-  (`last_digest_at` is live).
+  (`last_digest_at` is live).~~ ✅ SHIPPED via `alert-instant-first-digest` (2026-07-13)
 - **[P1][goal] One-tap "watch" on aircraft browse cards — the last big surface with no
   alert affordance.** The listing-watch alert (`?watch=price`) exists only after clicking
   into a detail page; browse/search results — the highest-traffic grid on the site —

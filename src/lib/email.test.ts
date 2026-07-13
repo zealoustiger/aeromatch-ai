@@ -249,6 +249,32 @@ test('digest: sampleNote honestly renders a genuine zero match count, not a fabr
   assert.match(html, /0 current matches for your Cessna 172 alert right now/)
 })
 
+test('digest: firstSend renders "right now" framing, no Sample prefix or banner', () => {
+  const { subject, html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 3,
+    dropCount: 0,
+    firstSend: true,
+  })
+  assert.equal(subject, '3 matches right now — Cessna 172 on ClubHanger')
+  assert.doesNotMatch(subject, /Sample/)
+  assert.doesNotMatch(html, /Sample email/)
+  assert.doesNotMatch(text, /SAMPLE EMAIL/)
+  assert.match(html, /3 matches right now for your Cessna 172 alert — here's what's live the moment you confirmed/)
+  assert.match(text, /the moment you confirmed/)
+})
+
+test('digest: firstSend is ignored when sampleNote is also set (sample framing wins)', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    firstSend: true,
+    sampleNote: "your real weekly digest arrives automatically when there's a genuine match.",
+  })
+  assert.equal(subject, 'Sample: 1 current match — Cessna 172 on ClubHanger')
+})
+
 test('price drop: without frequencyUrl (weekly alert), no "Get fewer emails" link renders', () => {
   const { html, text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
   assert.doesNotMatch(html, /Get fewer emails/)

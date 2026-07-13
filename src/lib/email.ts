@@ -643,6 +643,13 @@ export function buildAlertDigestEmail(opts: {
    *  necessarily new. Used by the owner-scoped "Send me a sample digest"
    *  action so a preview can never be mistaken for a real alert firing. */
   sampleNote?: string
+  /** Set for the one-time "instant first digest" sent right when a subscriber
+   *  confirms an alert that already has live matches (see the alert confirm
+   *  route) — a real send, not a sample, but at t=0 there's no "since last
+   *  digest" window to call these "new this week." Switches to the same
+   *  honest "current match" count framing as `sampleNote`, minus the sample
+   *  banner/subject-prefix, plus copy noting this was sent at confirm time. */
+  firstSend?: boolean
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -652,11 +659,14 @@ export function buildAlertDigestEmail(opts: {
   const manageUrl = withUtm(opts.manageUrl, 'digest')
   const dropNoun = opts.dropNoun ?? 'price drop'
   const isSample = !!opts.sampleNote
+  const isFirstSend = !isSample && !!opts.firstSend
   const total = opts.newCount + opts.dropCount
 
   let countLabel: string
   if (isSample) {
     countLabel = total === 1 ? '1 current match' : `${total} current matches`
+  } else if (isFirstSend) {
+    countLabel = total === 1 ? '1 match right now' : `${total} matches right now`
   } else {
     const parts: string[] = []
     if (opts.newCount > 0) parts.push(opts.newCount === 1 ? '1 new listing' : `${opts.newCount} new listings`)
@@ -674,7 +684,9 @@ export function buildAlertDigestEmail(opts: {
   const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
   const bodyCopy = isSample
     ? `${countLabel} for your${forThing} alert right now.`
-    : `There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.`
+    : isFirstSend
+      ? `${countLabel} for your${forThing} alert — here's what's live the moment you confirmed. We'll email again automatically when something new matches.`
+      : `There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.`
   const sampleBannerHtml = isSample
     ? `<p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;">Sample email &mdash; ${escapeHtml(opts.sampleNote!)}</p>`
     : ''
@@ -729,7 +741,9 @@ export function buildAlertDigestEmail(opts: {
 
   const bodyCopyText = isSample
     ? `${countLabelText} for your${forThingText} alert right now.`
-    : `${countLabelText} matching your${forThingText} alert on ClubHanger.`
+    : isFirstSend
+      ? `${countLabelText} for your${forThingText} alert — here's what's live the moment you confirmed. We'll email again automatically when something new matches.`
+      : `${countLabelText} matching your${forThingText} alert on ClubHanger.`
   const sampleBannerText = isSample ? `SAMPLE EMAIL — ${opts.sampleNote}\n\n` : ''
 
   const text = `${sampleBannerText}${bodyCopyText}
