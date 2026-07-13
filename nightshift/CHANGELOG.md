@@ -2,6 +2,82 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T114451Z — PASS — alert-digest-cross-sell
+- Pages: (no user-facing browse page — email-copy + wiring change inside the
+  alert digest cron `/api/cron/alert-digest`, a new `/api/alerts/digest-cross-sell`
+  accept route, and `/alerts/status` (new `cross_sell_added` confirmation state))
+- What: **The weekly/daily alert email you actually open now offers one more alert
+  worth having — the cross-sell suggestion that already lived on `/alerts/status` and
+  `/alerts/manage` never reached the inbox itself.** `email.ts`'s `getCrossSellSuggestion`
+  was computed on two pages but never imported by `email.ts` — verified by direct grep
+  before starting. Both `buildAlertDigestEmail` and `buildCombinedAlertDigestEmail` now
+  take an optional top-level `crossSell: { label, acceptUrl }` opt (one suggestion for
+  the whole email, never per-section in the combined template — never-spam), rendered as
+  a small sky-tinted box with a one-click "Yes, alert me too →" link above the footer;
+  omitted entirely when no honest suggestion applies (existing emails without a
+  suggestion render byte-identical to before). New `/api/alerts/digest-cross-sell` GET
+  route mirrors `/api/alerts/frequency`'s token-in-link precedent: resolves the owner
+  email from the *sending* alert's `unsubscribe_token` (no second opt-in needed — the
+  address is already verified), inserts the suggested alert as confirmed (23505 =
+  already-subscribed = idempotent no-op, verified live below), redirects to a new
+  `/alerts/status?state=cross_sell_added` confirmation ("You're now also getting alerts
+  for X — no extra sign-up needed" + a working "Manage your alerts" link). The cron's new
+  `getDigestCrossSell` helper re-queries the subscriber's *live* confirmed alerts (not
+  just the alerts due in this pass) before attaching a suggestion, so it can never offer
+  a duplicate — same honesty gate `/alerts/manage`'s cross-sell already applies, just
+  re-verified against a fuller data set since the digest only sees a coarse due-alert
+  slice. Deliberately does NOT touch the rich single-listing price-drop template
+  (`buildPriceDropEmail`) — the backlog item named only the two digest builders.
+  `AlertStatusTracker.tsx`'s event union grew to include `alert_subscribed` with
+  `context`/`source` props (reused by this new state, no new tracker component). 5 files
+  changed (`email.ts`, new `digest-cross-sell/route.ts`, `alert-digest/route.ts`,
+  `alerts/status/page.tsx`, `AlertStatusTracker.tsx`); no schema change, no new
+  dependency, no FREEZE file touched.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open — last cycle PASSed, no
+  known bug. Tier 2 (`[want]`): re-confirmed empty — the two open `[P1][want]` items
+  ("Save this search" auth-wall reconciliation, the collection-layout mosaic redesign)
+  remain flagged for a human product/design call; the `[P2][want]` items remain
+  no-live-effect/flagged-for-review, re-audited this cycle. Dropped to tier 3: shipped the
+  last remaining `[P2][goal]` item in the alert-experience queue (the digest-email
+  cross-sell, named as "the only one left" by the prior two cycles' close-out notes).
+  **The alert-experience `[goal]` queue (both P1 and P2) is now fully drained** — every
+  item in the `🔔 GOAL — BEST ALERT EXPERIENCE` section of BACKLOG.md is struck through.
+  The next cycle needs an Opus/Fable plan-pass refill per GOAL.md (ideation on this cheap
+  model is disallowed).
+- Spec: nightshift/specs/20260713T114451Z-alert-digest-cross-sell.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes, new `/api/alerts/digest-cross-sell` route present). Full unit suite
+  `node --experimental-strip-types --test src/lib/*.test.ts` — 286/286 pass (no new tests:
+  the new logic is thin plumbing around the already-unit-covered
+  `getCrossSellSuggestion`/dedup-by-source_path pattern the manage page already uses, and
+  a real DB round-trip isn't unit-testable without a live client; verified end-to-end
+  against the real DB instead — see below). Rendered `buildAlertDigestEmail` directly via
+  a node script with a `crossSell` opt to confirm the HTML/text both contain the
+  suggestion box/link before wiring it into the cron. Non-visual-leaning cycle (email
+  copy + cron/route wiring) but `/alerts/status` gained one new rendered state, so QA ran
+  the full visual gate anyway: production build (`next start`, not dev), `qa-smoke.mjs`
+  exit 0 on `/alerts/status` (both the default state and, separately, the new
+  `?state=cross_sell_added` URL) at desktop 1280 + mobile 375 — 4/4, zero console errors,
+  zero overflow; screenshots read and confirmed clean (new confirmation panel + working
+  "Manage your alerts" link, no overlap, on-brand). **Live end-to-end verified against the
+  real DB**: inserted one throwaway `qa-alert-digest-cross-sell-<ts>@example.com` confirmed
+  alert (service-role, real `unsubscribe_token`), hit the new accept route with a
+  synthetic Cessna 182 suggestion — redirected correctly, a second confirmed `alerts` row
+  was written with the right `context`/`source_path`; re-hit the identical link a second
+  time to confirm idempotency — redirect identical, row count stayed at 2 (no duplicate);
+  hit the route with an invalid token and with a missing `path` param — both correctly
+  redirected to `state=invalid` with no row written. Both test rows deleted immediately
+  after (confirmed 0 remain via a follow-up query). Server started/stopped cleanly;
+  confirmed no orphaned `next-server` process remained after (`ps aux` clean, one stray
+  process found and killed explicitly).
+- Screenshots: nightshift/screenshots/alert-digest-cross-sell/,
+  nightshift/screenshots/alert-digest-cross-sell-state/
+- Next: the alert-experience `[goal]` queue is now empty — the next cycle should trigger
+  the Opus/Fable plan-pass refill (per GOAL.md's "Generating new goal tasks" section) to
+  generate the next batch of `[P1][goal]` alert-experience tasks, or drop to the
+  secondary ACTIVATION pillars (posting/signup/buyer-analysis) if a `[want]`/`[bug]`
+  doesn't take priority first.
+
 ## 20260713T112431Z — PASS — recently-viewed-alert-banner
 - Pages: /aircraft, /partnerships (new dismissible banner above results),
   /aircraft/listing/[id], /partnerships/[id] (now silently log the view)
