@@ -929,15 +929,17 @@ and email polish are broad — this refill covers the last watch-parity gap, the
 highest-intent moments still uncaptured (post-contact on partnerships, just-posted
 sellers), and closing the measurement loop end-to-end._
 
-- **[P1][goal] Partnership watch-alert rows on `/alerts/manage` should show what they're
-  watching.** The explicitly flagged follow-up from `partnership-watch-buyin-alert`: a
-  `/partnerships/<id>?watch=price` alert still renders only generic degradation (no live
-  line, bare context) because `getWatchedListingStatus` (`src/lib/alertWatchStatus.ts`)
-  only matches the aircraft shape. Teach it the partnership shape and render "Watching:
-  1/4 share · Cessna 182 — $45,000 buy-in today" with a "View listing" link when active,
-  or the honest "No longer available — this watch is done" when filled/closed (partnership
-  status vocabulary, not "sold"). Management-surface parity; no new capture point, no
-  schema change.
+~~- **[P1][goal] Partnership watch-alert rows on `/alerts/manage` should show what they're
+  watching.**~~ ✅ SHIPPED via `alerts-manage-partnership-watch-status` (2026-07-13)
+  `getWatchedListingStatus` (`src/lib/alertWatchStatus.ts`) now recognizes both the
+  aircraft (`/aircraft/listing/<id>?watch=price`) and partnership
+  (`/partnerships/<id>?watch=price`) watch shapes, returning a `type` field the manage
+  page uses to pick the right link + copy. A partnership watch row now renders "Watching:
+  1/4 Share · Cessna 182 — $45,000 buy-in today · View listing" (linking to
+  `/partnerships/<id>`) when active, or "No longer available — this watch is done" when
+  the row is missing/not `status='active'`. The aircraft watch display is unchanged
+  (still "No longer for sale…", links to `/aircraft/listing/<id>`). No new capture point,
+  no schema change.
 ~~- **[P1][goal] Post-contact alert cross-sell on partnership listings (parity with
   aircraft).**~~ ✅ SHIPPED via `partnership-post-contact-alert-crosssell` (2026-07-13) The
   aircraft side captures the single highest-intent moment

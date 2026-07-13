@@ -311,16 +311,25 @@ export default async function AlertsManagePage({
                             {' · '}
                             {watch.active ? (
                               <span className="text-slate-500">
-                                Watching: {watch.label} — {formatPrice(watch.price)} today ·{' '}
+                                Watching: {watch.label} — {formatPrice(watch.price)}{' '}
+                                {watch.type === 'partnership' ? 'buy-in ' : ''}today ·{' '}
                                 <Link
-                                  href={`/aircraft/listing/${watch.id}`}
+                                  href={
+                                    watch.type === 'partnership'
+                                      ? `/partnerships/${watch.id}`
+                                      : `/aircraft/listing/${watch.id}`
+                                  }
                                   className="text-sky-600 underline-offset-2 hover:underline"
                                 >
                                   View listing
                                 </Link>
                               </span>
                             ) : (
-                              <span className="text-amber-600">No longer for sale — this watch is done</span>
+                              <span className="text-amber-600">
+                                {watch.type === 'partnership'
+                                  ? 'No longer available — this watch is done'
+                                  : 'No longer for sale — this watch is done'}
+                              </span>
                             )}
                           </>
                         ) : match ? (
