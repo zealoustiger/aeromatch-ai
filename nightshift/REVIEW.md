@@ -1,3 +1,35 @@
+## 2026-07-13T10:12:56Z — Night Shift run: 22 cycles (PASS 17 / FAIL 2) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 2 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $80.2738 of $120 cap
+
+- PASS — alert-deal-only-edit-toggle — added a good deals only checkbox to the aircraft alert edit form on /alerts/manage so subscribers can flip that filter on an existing alert
+- PASS — saved-alert-model-scoping — `/saved`'s get alerts box now offers a model-scoped alert (e.g. Cessna 172) instead of just make-level when a visitor's saves genuinely clust
+- PASS — alert-snooze-pause-until — Added a Snooze 30 days option next to Pause on `/alerts/manage` and the unsubscribe-recovery box, with an honest auto-resume (real resume date
+- ABORT — none — plan needed
+- PASS — alerts-manage-watch-status — Watch-alert rows on /alerts/manage now show Watching: {aircraft} — ${price} today with a View link, or an honest No longer for sale messag
+- PASS — alert-browse-matchcount — the get new-listing alerts box on /aircraft and /partnerships now shows the real, filter-aware N match right now count, closing the last flagge
+- PASS — alert-confirm-email-matches — The double-opt-in alert confirmation email now shows up to 3 real currently-matching listings (Here's what you'd be watching) above the con
+- PASS — partnership-watch-buyin-alert — added a watch this partnership buy-in-drop alert box on `/partnerships/[id]`, parity with the existing aircraft listing-watch alert, clos
+- PASS — alerts-manage-last-sent-line — Added a Last email {date} · checks {daily
+- PASS — alert-widen-nudge — Added a verified one-click widen suggestion (or honest nothing close yet fallback) to `/alerts/manage` for confirmed alerts with 0 live matches; caug
+- PASS — alert-confirm-reminder — cron now sends one honest still want these alerts? reminder email to alert subscribers who signed up but never confirmed, closing the last open 
+- ABORT — none — plan needed`
+- cycle produced no verdict (exit 124)
+- PASS — partnership-post-contact-alert-crosssell — a pilot who messages a partnership listing now gets a Message sent! panel offering family-scoped alerts (desktop form + mobile
+- PASS — post-success-alert-crosssell — Added a family-scoped get alerts for new {Make} {Model} listings one-click signup inside the your listing is live! success banners on `/ai
+- PASS — alerts-manage-partnership-watch-status — `/alerts/manage` now shows live status (Watching: 1/3 Share · Cessna 172S Skyhawk — $18,000 buy-in today · View listing) for
+- cycle produced no verdict (exit 124)
+- PASS — alert-status-funnel-events — /alerts/status now fires source-tagged `alert_confirmed`/`alert_unsubscribed` events so the alert conversion funnel no longer goes dark at c
+- PASS — alert-email-utm-attribution — tagged listing/manage links in the confirm, weekly-digest, price-drop, and combined-digest alert emails with UTM params (`utm_source=alert_
+- PASS — watch-alert-family-crosssell — confirming a watch-listing price-drop alert now offers a one-click alert me for the whole {Make} {Model} family cross-sell (honesty-gated,
+- PASS — empty-state-widen-alternative — added a one-tap, server-verified widen the search alternative to the zero-match alert-capture boxes on /aircraft, /partnerships, and /par
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 5.9 on 2 cores, sustained ~32 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 2 of 22 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-12T12:24:16Z — Night Shift run: 15 cycles (PASS 12 / FAIL 1) — night budget cap ($120)
 - Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
 - Night spend so far: $123.2147 of $120 cap
