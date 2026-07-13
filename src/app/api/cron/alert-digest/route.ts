@@ -23,6 +23,7 @@ import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { filterToGoodDeals } from '@/lib/aircraftComps'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
+import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -1072,6 +1073,28 @@ async function sendStrandedPendingReminders(
   return remindersSent
 }
 
+// Digest email cross-sell (GOAL.md's "digest → manage → grow loop" — the same
+// one-click suggestion `/alerts/manage` already offers, reaching subscribers
+// who never click back into the site). Tries each due alert's source_path (in
+// send order) until one yields a suggestion the subscriber isn't already
+// subscribed to — re-checked against their *live* confirmed alerts (not just
+// the alerts due in this pass), same honesty gate as `/alerts/manage`'s
+// cross-sell. At most one suggestion per email either way, matching the
+// digest's own "never spam" rule.
+async function getDigestCrossSell(
+  supabase: ReturnType<typeof createAdminClient>,
+  email: string,
+  candidateSourcePaths: (string | null)[]
+) {
+  const { data } = await supabase.from('alerts').select('source_path').eq('email', email).eq('status', 'confirmed')
+  const existingPaths = new Set((data ?? []).map((r) => r.source_path).filter(Boolean))
+  for (const path of candidateSourcePaths) {
+    const suggestion = await getCrossSellSuggestion(path)
+    if (suggestion && !existingPaths.has(suggestion.sourcePath)) return suggestion
+  }
+  return null
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -1324,6 +1347,18 @@ export async function GET(req: NextRequest) {
           ? pickBestPriceDropSample(samples)
           : null
 
+      // Only the aggregate digest template offers the cross-sell (see
+      // buildAlertDigestEmail's `crossSell` opt) — the rich single-listing
+      // price-drop template stays focused on the one drop it's already
+      // featuring.
+      const crossSell = !bestDrop && unsubToken ? await getDigestCrossSell(supabase, alert.email, [alert.source_path]) : null
+      const crossSellOpt = crossSell
+        ? {
+            label: crossSell.label,
+            acceptUrl: `${SITE_URL}/api/alerts/digest-cross-sell?token=${unsubToken}&context=${encodeURIComponent(crossSell.context)}&path=${encodeURIComponent(crossSell.sourcePath)}`,
+          }
+        : undefined
+
       const { subject, html, text } = bestDrop
         ? buildPriceDropEmail({
             title: bestDrop.title,
@@ -1350,6 +1385,7 @@ export async function GET(req: NextRequest) {
             manageUrl,
             unsubscribeUrl,
             frequencyUrl,
+            crossSell: crossSellOpt,
           })
 
       const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
@@ -1387,9 +1423,22 @@ export async function GET(req: NextRequest) {
     const manageUrl = firstToken ? `${SITE_URL}/alerts/manage?token=${firstToken}` : `${SITE_URL}/alerts/manage`
     const allTokens = group.map((p) => p.alert.unsubscribe_token).filter(Boolean).join(',')
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${allTokens}`
-
-    const { subject, html, text } = buildCombinedAlertDigestEmail({ sections, manageUrl, unsubscribeUrl })
     const email = group[0].alert.email
+
+    // One suggestion for the whole combined email, tried across every
+    // included alert's source_path (send order) — never spam with one per
+    // section.
+    const crossSell = firstToken
+      ? await getDigestCrossSell(supabase, email, group.map((p) => p.alert.source_path))
+      : null
+    const crossSellOpt = crossSell
+      ? {
+          label: crossSell.label,
+          acceptUrl: `${SITE_URL}/api/alerts/digest-cross-sell?token=${firstToken}&context=${encodeURIComponent(crossSell.context)}&path=${encodeURIComponent(crossSell.sourcePath)}`,
+        }
+      : undefined
+
+    const { subject, html, text } = buildCombinedAlertDigestEmail({ sections, manageUrl, unsubscribeUrl, crossSell: crossSellOpt })
 
     const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl })
 

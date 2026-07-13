@@ -49,13 +49,20 @@ const STATES = {
     title: 'This link is no longer valid',
     body: "That confirmation or unsubscribe link has expired or was already used. If you meant to manage alerts, you can sign up again from any aircraft page.",
   },
+  cross_sell_added: {
+    icon: CheckCircle2,
+    tint: 'text-emerald-600',
+    ring: 'bg-emerald-50',
+    title: "You're all set",
+    body: "You're now also getting alerts for that too — no extra sign-up needed.",
+  },
 } as const
 
 type StateKey = keyof typeof STATES
 
 function resolveState(raw: string | string[] | undefined): StateKey {
   const v = Array.isArray(raw) ? raw[0] : raw
-  return v === 'confirmed' || v === 'unsubscribed' || v === 'weekly' ? v : 'invalid'
+  return v === 'confirmed' || v === 'unsubscribed' || v === 'weekly' || v === 'cross_sell_added' ? v : 'invalid'
 }
 
 export default async function AlertStatusPage({
@@ -68,6 +75,8 @@ export default async function AlertStatusPage({
   const { icon: Icon, tint, ring, title, body } = STATES[key]
   const rawToken = params.token
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken
+  const rawContext = params.context
+  const crossSellContext = Array.isArray(rawContext) ? rawContext[0] : rawContext
 
   // Post-confirmation cross-sell: look up the just-confirmed alert's source_path
   // (admin client — anon has no SELECT on `alerts`, it holds PII) and offer a
@@ -166,7 +175,11 @@ export default async function AlertStatusPage({
             <Icon className={`h-8 w-8 ${tint}`} />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-          <p className="mt-3 text-base leading-relaxed text-slate-600">{confirmedBody ?? body}</p>
+          <p className="mt-3 text-base leading-relaxed text-slate-600">
+            {key === 'cross_sell_added' && crossSellContext
+              ? `You're now also getting alerts for ${crossSellContext} — no extra sign-up needed.`
+              : confirmedBody ?? body}
+          </p>
           {key === 'confirmed' && confirmedSourcePath && confirmedMatchCount && confirmedMatchCount.count > 0 && (
             <p className="mt-2">
               <Link href={confirmedSourcePath} className="font-medium text-sky-600 hover:text-sky-700">
@@ -191,6 +204,14 @@ export default async function AlertStatusPage({
           {key === 'unsubscribed' && token && (
             <AlertStatusTracker event="alert_unsubscribed" token={token} sourcePath={unsubSourcePath} />
           )}
+          {key === 'cross_sell_added' && token && (
+            <AlertStatusTracker
+              event="alert_subscribed"
+              token={token}
+              context={crossSellContext}
+              source="digest_cross_sell"
+            />
+          )}
           {key === 'unsubscribed' && token && (
             <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} />
           )}
@@ -205,6 +226,13 @@ export default async function AlertStatusPage({
             </p>
           )}
           {key === 'weekly' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'cross_sell_added' && token && (
             <p className="mt-4 text-sm text-slate-500">
               <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
                 Manage your alerts
