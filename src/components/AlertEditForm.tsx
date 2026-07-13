@@ -48,6 +48,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [airport, setAirport] = useState('')
+  const [dealOnly, setDealOnly] = useState(false)
 
   function openEdit() {
     if (!target) return
@@ -60,6 +61,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
     setMinPrice('minPrice' in target ? target.minPrice : '')
     setMaxPrice('maxPrice' in target ? target.maxPrice : '')
     setAirport('airport' in target ? target.airport : '')
+    setDealOnly('dealOnly' in target ? target.dealOnly : false)
     setError(null)
     setOpen(true)
   }
@@ -71,7 +73,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
     startTransition(async () => {
       const fields =
         target.type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice }
+          ? { make, model, state, minPrice, maxPrice, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airport }
             : { make, model }
@@ -195,6 +197,18 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
               </>
             ) : null}
           </div>
+
+          {target.type === 'aircraft' ? (
+            <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={dealOnly}
+                onChange={(e) => setDealOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+              />
+              Only show good deals
+            </label>
+          ) : null}
 
           {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
 
