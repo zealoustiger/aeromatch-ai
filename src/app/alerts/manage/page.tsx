@@ -4,7 +4,7 @@ import { Bell, LogIn } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_NAME } from '@/lib/seo'
-import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
+import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from '@/lib/alertEditCriteria'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { describeLastDigest, normalizeFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
@@ -12,6 +12,7 @@ import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { getWatchedListingStatus } from '@/lib/alertWatchStatus'
 import { formatPrice } from '@/lib/utils'
 import AlertEditForm from '@/components/AlertEditForm'
+import WidenAlertNudge, { type WidenSuggestion } from '@/components/WidenAlertNudge'
 import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
@@ -178,6 +179,28 @@ export default async function AlertsManagePage({
   // it's actually watching instead. `null` for every other alert shape.
   const watchStatuses = await Promise.all(alerts.map((a) => getWatchedListingStatus(a.source_path)))
 
+  // A confirmed, editable alert matching 0 live listings right now is silently
+  // dead (GOAL.md: "widen it" nudge). Pick the single least-destructive
+  // loosening (drop model → make-wide, else clear state/airport) and
+  // RE-VERIFY it against a real count before ever suggesting it — never a
+  // fabricated "this will help" (honesty gate). `null` renders the honest
+  // "nothing close yet" fallback instead of a fake fix.
+  const widenSuggestions: (WidenSuggestion | null)[] = await Promise.all(
+    alerts.map(async (a, i): Promise<WidenSuggestion | null> => {
+      if (a.status !== 'confirmed') return null
+      const match = matchCounts[i]
+      if (!match || match.count > 0) return null
+      const target = parseEditableAlertTarget(a.source_path)
+      if (!target) return null
+      const candidate = computeWidenCandidate(target)
+      if (!candidate) return null
+      const { sourcePath: widenedPath } = buildAlertCriteriaUpdate(target.type, a.source_path, candidate.fields)
+      const widenedMatch = await getAlertMatchCount(widenedPath)
+      if (!widenedMatch || widenedMatch.count <= 0) return null
+      return { fields: candidate.fields, description: candidate.description, count: widenedMatch.count, noun: widenedMatch.noun }
+    })
+  )
+
   // Cross-sell (see ManageAlertCrossSell.tsx / GOAL.md's "digest → manage → grow
   // loop"): try each confirmed alert's source_path (most recent first) until one
   // yields a suggestion the visitor doesn't already have — never a duplicate or
@@ -238,6 +261,14 @@ export default async function AlertsManagePage({
                 const match = matchCounts[i]
                 const watch = watchStatuses[i]
                 const resumeDate = a.status === 'paused' ? formatResumeDate(a.paused_until ?? null) : null
+                // Structural eligibility (not count-dependent) — keeps
+                // WidenAlertNudge mounted at a stable tree position across the
+                // count going from 0 to >0 after a successful widen, so its
+                // local "just widened" confirmation survives the server
+                // refresh instead of vanishing the instant the row is no
+                // longer dead (see WidenAlertNudge.tsx).
+                const widenEligible = a.status === 'confirmed' && !watch && !!target
+                const isDead = !!match && match.count === 0
                 return (
                   <li
                     key={a.id}
@@ -303,6 +334,9 @@ export default async function AlertsManagePage({
                           </>
                         ) : null}
                       </p>
+                      {widenEligible ? (
+                        <WidenAlertNudge id={a.id} token={scopeToken} dead={isDead} suggestion={widenSuggestions[i]} />
+                      ) : null}
                       {/* Cron only digests status='confirmed' alerts (see
                           alert-digest/route.ts) — showing a "checks daily/
                           weekly" cadence for a pending or paused row would

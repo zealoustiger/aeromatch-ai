@@ -114,6 +114,61 @@ export function buildAlertCriteriaUpdate(
   return { sourcePath, context }
 }
 
+export interface WidenCandidate {
+  fields: AlertCriteriaFields
+  description: string
+}
+
+/**
+ * Pick the single least-destructive loosening for a dead (0-match) editable
+ * alert — drop the model to go make-wide, else clear the state/airport to go
+ * nationwide. Never touches `make` itself or price range (see GOAL.md's
+ * honesty gate — this is a candidate to be re-verified against a real count
+ * by the caller, not a guaranteed fix). Returns `null` when there's no next
+ * step left to widen (already make-only / nationwide).
+ */
+export function computeWidenCandidate(target: EditableAlertTarget): WidenCandidate | null {
+  if (target.type === 'aircraft') {
+    if (target.model) {
+      return {
+        fields: { make: target.make, model: '', state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly },
+        description: target.make ? `Show all ${target.make} listings` : 'Show all makes and models',
+      }
+    }
+    if (target.state) {
+      return {
+        fields: { make: target.make, model: target.model, state: '', minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly },
+        description: 'Search every state',
+      }
+    }
+    return null
+  }
+  if (target.type === 'partnership') {
+    if (target.airport) {
+      const stateName = target.state ? STATE_NAMES[target.state] : undefined
+      return {
+        fields: { make: target.make, state: target.state, airport: '' },
+        description: stateName ? `Search all of ${stateName}` : 'Search every location',
+      }
+    }
+    if (target.state) {
+      return {
+        fields: { make: target.make, state: '', airport: target.airport },
+        description: 'Search every state',
+      }
+    }
+    return null
+  }
+  // seeker
+  if (target.model) {
+    return {
+      fields: { make: target.make, model: '' },
+      description: target.make ? `Show all ${target.make} pilots` : 'Show all pilots seeking a share',
+    }
+  }
+  return null
+}
+
 function describeContext(type: EditableAlertTarget['type'], params: URLSearchParams): string | null {
   if (type === 'aircraft') {
     return describeAircraftFilters(Object.fromEntries(params.entries()))
