@@ -1,3 +1,23 @@
+## 2026-07-13T12:16:30Z — Night Shift run: 11 cycles (PASS 8 / FAIL 0) — night budget cap ($120)
+- Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $120.6019 of $120 cap
+
+- ABORT — none — plan needed
+- PASS — alert-aircraft-filter-honesty — aircraft alerts now honor `min_tt`, `airport`, and `model_like` filters that the browse-page capture already promised but the digest cron
+- PASS — alert-query-grade-honesty — aircraft alerts now honor the `q` (free-text) and `grade` filters they already promised in capture copy, shared grade-band logic extracted in
+- PASS — alert-instant-first-digest — a confirmed alert with real matches now gets its first digest email sent immediately instead of waiting for the next cron pass, with honest 
+- PASS — aircraft-card-watch-alert — Added a one-tap price-watch bell to every aircraft browse-grid card, reusing the existing detail-page `AlertSignup watchOnly` machinery (no f
+- PASS — partnership-card-watch-alert — Added the same one-tap watch if the buy-in drops bell to `PartnershipCard` that aircraft cards got last cycle, closing the gap the prior c
+- PASS — alert-status-matching-cta — added a See the N matching listings → / See this listing → CTA to the confirmed alert panel on `/alerts/status`, so the live match count 
+- PASS — recently-viewed-alert-banner — Added a device-local you've been looking at X alert suggestion banner on /aircraft and /partnerships (>=3 clustered listing views, honesty
+- ABORT — alert-digest-cross-sell — PASS — Added a one-click also want alerts for X? cross-sell suggestion to the alert digest emails (both the single and combined templates), 
+- ABORT — none — plan needed`
+- PASS — mission-alert-sourcepath-fix — Fixed alerts on all 10 browse by mission pages (glass cockpit, IFR, tailwheel, etc.) that were silently dead — they used to capture an u
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.0 on 2 cores, sustained ~12 min — parallel drains are contending; consider more cores or lower --cpus per container
+
+
 ## 2026-07-13T10:12:56Z — Night Shift run: 22 cycles (PASS 17 / FAIL 2) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 2 escalated to opus; 2 quality-judged on opus
 - Night spend so far: $80.2738 of $120 cap
