@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-13T07:47:35Z — alert-widen-nudge — score 4/5
+- Strengths: Honest, tightly-scoped slice that fully reuses the edit path (`buildAlertCriteriaUpdate` + `updateAlertCriteria` action, same ownership/validation) — the honesty gate is real: it re-verifies the widened `source_path` with `getAlertMatchCount` and only surfaces a button when the server proves >0 matches now, with `noun` types (`'listing' | 'pilot'`) matching the count helper exactly; `computeWidenCandidate` is a clean pure single-step loosener covering all three editable shapes; and the "render for every eligible row, not just dead ones" stable-mount decision (so the `applied` confirmation survives the post-widen server refresh) is genuinely thoughtful and well-commented.
+- Weaknesses / risks: `parseEditableAlertTarget` + status/count gating is computed twice per alert (once in the `widenSuggestions` map, once in the render loop) — mildly redundant, and a minor verb-agreement copy nit ("1 listing match" should read "matches"). None material.
+- Follow-up: none
+
 ## 2026-07-13T06:46:50Z — alerts-manage-watch-status — score 4/5
 - Strengths: Honest, well-scoped watch-status slice — reuses the digest's `resolveListingWatch` conventions exactly (same table, same `status !== 'active'` semantics, identical `[year, make, model].filter(Boolean).join(' ') || 'This aircraft'` label), null-safe `.maybeSingle()` so a deleted/sold row resolves to `active: false` instead of throwing or blanking, correct `formatPrice` (dollars, no /100), non-watch rows and Edit affordance byte-for-byte untouched, and thoughtful "why this is separate from alertMatchCounts" comments.
 - Weaknesses / risks: `isListingWatchPath` is exported but consumed nowhere — a dead public helper (spec-mandated, so borderline); the `\?watch=price$` regex is stricter than the digest's `URLSearchParams`-based parser, so it silently stops matching if the fixed source_path shape ever gains a param; minor copy nit — a null asking_price renders "Watching: {label} — Contact for price today".
