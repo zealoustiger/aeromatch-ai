@@ -2,6 +2,66 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T110631Z — PASS — partnership-card-watch-alert
+- Pages: /partnerships, /saved (and every other surface rendering
+  `PartnershipCard`: rails, `/partnerships/make/[make]`, `/partnerships/state/[state]`,
+  `/partnerships/near/[icao]`, `/airports/[icao]`, member pages, etc.)
+- What: **The one-tap watch-alert bell shipped on aircraft browse cards last cycle now
+  exists on partnership cards too — the prior cycle explicitly named this the natural
+  follow-up and left it undone.** `PartnershipCard` gets the identical treatment: a small
+  bell icon stacked below the heart in the top-right of every card's photo; tapping it
+  expands an inline panel in place (no navigation, no modal) — the same `AlertSignup`
+  component in `watchOnly` mode the partnership detail page's "Watch this partnership" box
+  already uses, with `noun="partnership"` so the copy correctly reads "Alert me if the
+  buy-in drops" / "Watch buy-in" (not "price," which is the aircraft-specific wording).
+  Same `/partnerships/<id>?watch=price` source_path shape the alert-digest cron and
+  match-count/cross-sell helpers already resolve generically by URL shape (verified by
+  direct code read — `alertMatchCounts.ts`/`alertWatchStatus.ts`/`alertCrossSell.ts` all
+  regex-match the path, not the `source` tag), so zero new matching logic, zero forked
+  capture logic, zero cron/email changes needed. New capture point emits the existing
+  `alert_subscribed` event with `source: 'partnership_card_watch'`, distinct from the
+  detail page's `partnership_watch` and the aircraft card's `card_watch`, so this
+  placement's conversion is measurable separately. 1 file changed:
+  `PartnershipCard.tsx` (imports + reuses `WatchAlertButton`/`AlertSignup` verbatim, no new
+  components).
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open — re-audited BACKLOG.md,
+  every `[bug]` entry already struck through, no FAIL in recent cycles. Tier 2 (`[want]`):
+  re-confirmed empty — the two open `[P1][want]` items ("Save this search" auth-wall
+  reconciliation, the collection-layout mosaic redesign) both remain explicitly flagged in
+  BACKLOG.md as needing a human product/design call; Trade-A-Plane ingestion and the
+  Bay-Area coverage benchmark remain blocked (bot-protection / no reliable FAA
+  denominator). Dropped to tier 3 and shipped the exact item the prior cycle's own
+  close-out note named as the natural next slice: "Partnership cards remain the natural
+  follow-up (not built this slice)."
+- Spec: nightshift/specs/20260713T110631Z-partnership-card-watch-alert.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 278/278 pass (no new tests: presentational wiring around already
+  unit-covered `AlertSignup`/alert-matching logic, nothing new to unit-test). Visual cycle
+  — QA on the production build (`next start`, not dev): `qa-smoke.mjs` exit 0 on
+  `/partnerships` and `/saved`, desktop 1280 + mobile 375 (4/4 — HTTP 200, zero app-origin
+  console errors, zero horizontal overflow); screenshots read and confirmed clean (bell
+  stacks cleanly below the heart at both viewports, no overlap/shift on badges or the
+  buy-in price block). **Playwright-verified the actual interaction**: clicked the bell on
+  the first `/partnerships` card — panel expands in place with the correct "Alert me if
+  the buy-in drops" / "Watch buy-in" copy (confirmed distinct from the aircraft card's
+  "price" wording), zero console errors, the card's own `Link` never navigated. **Live
+  end-to-end submit against the real DB**: filled a throwaway
+  `qa-partnership-card-watch-alert-<ts>@example.com` email into the expanded panel and
+  submitted — the pending-confirmation "Almost there — check your inbox" state rendered
+  correctly; verified via the service-role key that the written `alerts` row carried the
+  correct `source_path` (`/partnerships/<id>?watch=price`) and `context` (the real
+  make/model/year), then deleted the row immediately (confirmed 0 remain via a follow-up
+  query). Server started/stopped cleanly; confirmed no orphaned `next-server` process
+  remained after (`ps aux` clean).
+- Screenshots: nightshift/screenshots/partnership-card-watch-alert/
+- Next: the two remaining `[P2][goal]` items in the alert-experience queue are "See the N
+  matching listings" CTA on `/alerts/status`'s confirmed panel, and a cross-sell suggestion
+  inside the digest email itself. `SeekerCard` (the third listing type) has no card-level
+  watch affordance either — a possible smaller follow-up, though seeker listings don't
+  carry a price/buy-in field to watch for drops, so it'd need its own honest framing (e.g.
+  "alert me if a similar pilot posts nearby") rather than a literal port of this pattern.
+
 ## 20260713T105800Z — PASS — aircraft-card-watch-alert
 - Pages: /aircraft, /aircraft/deals (and every other surface rendering
   `AircraftSaleCard`: rails, `/saved`, `/aircraft/[make]`, `/aircraft/[make]/[model]`, etc.)

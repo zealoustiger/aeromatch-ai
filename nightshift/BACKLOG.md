@@ -1090,7 +1090,11 @@ and smarter suggestions._
   Signed-in visitors get the existing one-click confirmed-subscribe path; signed-out get
   the existing compact email-only capture — both inherited verbatim from `AlertSignup`.
   New capture point → emits `alert_subscribed` with `source: 'card_watch'`. Partnership
-  cards remain the natural follow-up (not built this slice).
+  cards remain the natural follow-up (not built this slice). ~~**Follow-up ✅ SHIPPED via
+  `partnership-card-watch-alert` (2026-07-13)**~~ — `PartnershipCard` now carries the
+  identical bell + inline `AlertSignup watchOnly` panel (`source:
+  'partnership_card_watch'`, `/partnerships/<id>?watch=price`), so every major browse-grid
+  surface (aircraft + partnerships) now has a per-card watch-alert entry point.
 - **[P2][goal] "See the N matching listings" CTA on `/alerts/status`'s confirmed panel.**
   The confirmed state already computes the live match count and fetches
   `confirmedSourcePath`, but renders no way to actually GO look — the number is a dead
