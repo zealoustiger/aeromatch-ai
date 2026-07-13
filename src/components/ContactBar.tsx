@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Mail, Phone, MessageCircle, Send } from 'lucide-react'
+import { Mail, Phone, MessageCircle, Send, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateThread, sendMessage } from '@/app/actions'
 import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
+import AlertSignup from './AlertSignup'
 import type { User } from '@supabase/supabase-js'
 
 interface Props {
@@ -19,6 +20,13 @@ interface Props {
   /** Seed/concierge persona: messaging only (the email/phone are dead demo
    *  contacts), and the button is labelled with the persona's first name. */
   isSeed?: boolean
+  /** The same make/model context + search path the page's own family
+   *  AlertSignup box uses — passed through so the post-contact cross-sell
+   *  below alerts on the same real search, not a fabricated one. */
+  alertContext?: string
+  alertSourcePath?: string
+  alertCount?: number
+  matchCount?: number
 }
 
 export default function ContactBar({
@@ -30,6 +38,10 @@ export default function ContactBar({
   contactMethod,
   contactName,
   isSeed = false,
+  alertContext,
+  alertSourcePath,
+  alertCount,
+  matchCount,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -39,6 +51,11 @@ export default function ContactBar({
   const [text, setText] = useState('')
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Set only once a message has actually sent — mirrors ContactButtons'
+  // (desktop) post-contact cross-sell moment, so the mobile sticky bar
+  // offers the same one-screen pause before the visitor leaves for the
+  // conversation, instead of navigating away immediately.
+  const [sentThreadId, setSentThreadId] = useState<string | null>(null)
   const didAutoContact = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -83,8 +100,14 @@ export default function ContactBar({
         if (draft) {
           await sendMessage(result.threadId, draft)
           clearMessageDraft(draftKey)
+          // A message actually sent just now — show the cross-sell beat
+          // instead of navigating straight past it.
+          setSentThreadId(result.threadId)
+        } else {
+          // No drafted message to send (just resuming after auth) —
+          // nothing was "just sent," so there's no success moment to pause on.
+          router.push(`/messages/${result.threadId}`)
         }
-        router.push(`/messages/${result.threadId}`)
       } else {
         setErrorMsg(result.error ?? 'Could not open conversation.')
       }
@@ -120,7 +143,7 @@ export default function ContactBar({
       if ('threadId' in result) {
         await sendMessage(result.threadId, trimmed)
         clearMessageDraft(draftKey)
-        router.push(`/messages/${result.threadId}`)
+        setSentThreadId(result.threadId)
       } else {
         setErrorMsg(result.error ?? 'Could not open conversation.')
       }
@@ -132,6 +155,35 @@ export default function ContactBar({
       e.preventDefault()
       handleSend(e as unknown as React.FormEvent)
     }
+  }
+
+  if (sentThreadId) {
+    return (
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-safe shadow-lg backdrop-blur-sm lg:hidden">
+        <div className="mx-auto max-w-lg space-y-3 py-1">
+          <p className="flex items-center gap-2 text-sm font-medium text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            Message sent!
+          </p>
+          <AlertSignup
+            context={alertContext}
+            source="post_contact"
+            sourcePath={alertSourcePath ?? '/partnerships'}
+            noun="partnership"
+            alertCount={alertCount}
+            matchCount={matchCount}
+            className="my-0"
+          />
+          <button
+            type="button"
+            onClick={() => router.push(`/messages/${sentThreadId}`)}
+            className="text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+          >
+            View conversation →
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Seed personas: messaging only (dead demo email/phone are suppressed).

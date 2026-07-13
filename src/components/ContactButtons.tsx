@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Phone, MessageCircle, Send } from 'lucide-react'
+import { Mail, Phone, MessageCircle, Send, CheckCircle2 } from 'lucide-react'
 import { track } from '@/lib/analytics'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateThread, sendMessage } from '@/app/actions'
 import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
+import AlertSignup from './AlertSignup'
 import type { User } from '@supabase/supabase-js'
 
 export default function ContactButtons({
@@ -16,6 +17,10 @@ export default function ContactButtons({
   contactPhone,
   contactMethod,
   posterId,
+  alertContext,
+  alertSourcePath,
+  alertCount,
+  matchCount,
 }: {
   listingId: string
   title: string
@@ -23,6 +28,13 @@ export default function ContactButtons({
   contactPhone: string | null
   contactMethod: string
   posterId?: string | null
+  /** The same make/model context + search path the page's own family
+   *  AlertSignup box uses — passed through so the post-contact cross-sell
+   *  below alerts on the same real search, not a fabricated one. */
+  alertContext?: string
+  alertSourcePath?: string
+  alertCount?: number
+  matchCount?: number
 }) {
   const router = useRouter()
   const draftKey = `partnership:${listingId}`
@@ -31,6 +43,12 @@ export default function ContactButtons({
   const [text, setText] = useState('')
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Set only once a message has actually sent — the "just proved buyer
+  // intent" moment GOAL.md calls out. Holding off the router.push here
+  // (instead of navigating immediately) buys one screen to offer the alert
+  // cross-sell before the pilot leaves for the conversation, mirroring the
+  // aircraft listing page's AircraftContactButton.
+  const [sentThreadId, setSentThreadId] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -84,7 +102,7 @@ export default function ContactButtons({
       if ('threadId' in result) {
         await sendMessage(result.threadId, trimmed)
         clearMessageDraft(draftKey)
-        router.push(`/messages/${result.threadId}`)
+        setSentThreadId(result.threadId)
       } else {
         setErrorMsg(result.error ?? 'Could not open conversation.')
       }
@@ -96,6 +114,33 @@ export default function ContactButtons({
       e.preventDefault()
       handleSend(e as unknown as React.FormEvent)
     }
+  }
+
+  if (sentThreadId) {
+    return (
+      <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+        <p className="flex items-center gap-2 text-sm font-medium text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Message sent!
+        </p>
+        <AlertSignup
+          context={alertContext}
+          source="post_contact"
+          sourcePath={alertSourcePath ?? '/partnerships'}
+          noun="partnership"
+          alertCount={alertCount}
+          matchCount={matchCount}
+          className="my-0"
+        />
+        <button
+          type="button"
+          onClick={() => router.push(`/messages/${sentThreadId}`)}
+          className="text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+        >
+          View conversation →
+        </button>
+      </div>
+    )
   }
 
   const showMessage = !!posterId && user?.id !== posterId
