@@ -1056,17 +1056,19 @@ and smarter suggestions._
   `min_tt` is a straightforward `gte('ttaf', ...)`, the mirror of the already-honored
   `max_tt`. No schema change, no new capture point — `source_path` already carried all
   three params.
-- **[P1][goal] Honor-or-strip `q` / `grade` / `avionics` in aircraft alerts — never promise
-  a filter the digest won't apply.** The remaining params from the same gap, the hard
-  ones (free-text `q`, computed grade, extracted `avionics[]`). Either wire them into the
-  cron + match counts (JS post-filtering is fine — same precedent as the price-drop
-  column-compare and `filterToGoodDeals`), or, where genuinely un-matchable, strip them
-  from the alert's `source_path` AND from the `context`/promise copy at capture so the
-  subscriber is told exactly what they'll actually get (e.g. subscribing on
-  `/aircraft?make=Cessna&q=turbo` honestly offers "new Cessna listings", not "matching
-  \"turbo\""). Slice honoring vs. stripping per-param as needed — either resolution
-  closes the gap; silently keeping the mismatch is the only wrong answer. No new capture
-  point.
+~~- **[P1][goal] Honor-or-strip `q` / `grade` / `avionics` in aircraft alerts — never promise
+  a filter the digest won't apply.**~~ ✅ SHIPPED via `alert-query-grade-honesty`
+  (2026-07-13) `q` (free-text) and `grade`/`min_grade` are now honored in both
+  `src/lib/alertMatchCounts.ts` (`countActiveAircraft`/`previewAircraft`) and the cron's
+  `applyAircraftFilters` + the duplicated non-deal-only block in `countNewAircraft` — same
+  `.or(title.ilike,description.ilike)` and quality-score band narrowing the browse page
+  uses, extracted from `AircraftSaleList.tsx` into shared `src/lib/listingQuality.ts`
+  (`parseGradeFilter`/`gradeQueryPlan`/`floorScore`) so all three call sites share one
+  definition. `avionics` — the one param needing a full-table classify pass, not a cheap
+  column filter — is stripped from `/aircraft`'s `alertSourcePath` at capture instead of
+  silently ignored, so a subscribed alert never claims a check it won't run. **Not done,
+  intentionally:** honoring `avionics` in the matching logic itself (a natural next slice
+  if it's ever worth the extra full-table scan in two more files).
 - **[P1][goal] Instant first digest on confirm — deliver the value moment in minutes, not
   next cron pass.** `/api/alerts/confirm` flips the row and redirects; the subscriber
   then waits up to a day (daily) or week (weekly) for their first real email even when

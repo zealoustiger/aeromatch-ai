@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T103610Z — PASS — alert-query-grade-honesty
+- Pages: (no user-facing page — matching-logic change inside the alert digest cron
+  `/api/cron/alert-digest`, the live match-count helper `src/lib/alertMatchCounts.ts`
+  (both back `/alerts/manage`'s "N match now" line, the digest send, and "Send sample"),
+  and `/aircraft`'s alert-capture query-string builder)
+- What: **Closes the rest of last cycle's aircraft-alert honesty gap.** `/aircraft`'s
+  free-text search (`q`) and listing-quality filter (`grade`/`min_grade`) were promised
+  in the alert capture copy (`describeAircraftFilters` already says e.g. `matching
+  "turbo"` / `grade A or B`) but silently ignored by the cron and live match-count
+  helper — an alert set with `q=turbo` or `grade=A` matched the wider unfiltered set.
+  Both are now honored, using the exact same query semantics the browse page applies
+  (`.or(title.ilike,description.ilike)` for `q`; the same quality-score band narrowing
+  for `grade`), pulled out of `AircraftSaleList.tsx` into a shared
+  `src/lib/listingQuality.ts` (`parseGradeFilter`/`gradeQueryPlan`/`floorScore`) so
+  browse, the cron, and the match-count helper all share one definition instead of a
+  third hand-rolled copy. The one remaining param from the gap, `avionics`, needs a
+  full-table classify pass to honor (not a cheap column filter) — too much for this
+  slice — so instead it's now stripped from what `/aircraft`'s alert capture persists
+  into `source_path`, so a subscribed alert never silently claims a check it won't run
+  (no copy change needed; the promise copy never mentioned avionics to begin with).
+  Verified live against the real DB: an `.or()`-chained keyword+grade query narrows
+  correctly (e.g. "bonanza" title match ∩ grade-A band = 87 rows, a real subset of each
+  filter alone).
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open (this cycle's own prior
+  PASS). Tier 2 (`[want]`): re-confirmed empty — the two open `[P1][want]` items ("Save
+  this search" auth-wall reconciliation, the collection-layout mosaic redesign) are both
+  explicitly flagged as needing a human product/design call, and the Bay-Area coverage
+  benchmark's remaining slice was already aborted once on the honesty gate (no reliable
+  FAA denominator source found) with a note that the next attempt needs either a bulk
+  NBAIP/5010 dataset or a human call — not a same-cycle retry. Dropped to tier 3 and
+  shipped the next `[P1][goal]` item in BACKLOG.md's alert-experience "Planner refill
+  #10" — the second half of `alert-aircraft-filter-honesty`'s honesty gap.
+- Spec: nightshift/specs/20260713T103610Z-alert-query-grade-honesty.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all 386 routes). Query logic hand-verified against live Supabase data
+  via the service-role key (read-only, no rows written): chaining `.or()` for keyword
+  then `.or()` again for grade correctly ANDs the two OR-groups (131 bonanza-title
+  matches, 1264 grade-A matches, 87 in both — a sane subset of each). QA smoke (`next
+  start` production build) exit 0 on `/aircraft` and `/aircraft?make=Cessna&grade=A` at
+  desktop 1280 + mobile 375 (4/4 — HTTP 200, zero app-origin console errors, zero
+  horizontal overflow). Non-visual/data-logic cycle — screenshots saved for the audit
+  trail but not read, per RUNBOOK. Killed the `next start` server afterward; confirmed
+  no orphaned `next-server` process remained. No prod DB rows created or needing cleanup
+  (read-only verification queries only).
+- Screenshots: nightshift/screenshots/alert-query-grade-honesty/
+- Next: honoring `avionics` in the alert matching logic itself (needs a paginated
+  full-table fetch + `classifyAvionics` pass duplicated into the cron + match-counts
+  helper) — a real next slice, not urgent since it's now honestly stripped rather than
+  silently wrong.
+
 ## 20260713T102408Z — PASS — alert-aircraft-filter-honesty
 - Pages: (no user-facing page — matching-logic change inside the alert digest cron
   `/api/cron/alert-digest` and the live match-count helper `src/lib/alertMatchCounts.ts`,
