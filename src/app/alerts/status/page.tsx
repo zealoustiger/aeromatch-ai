@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CheckCircle2, BellOff, AlertCircle, MailOpen } from 'lucide-react'
 import UnsubscribeRecover from '@/components/UnsubscribeRecover'
 import AlertCrossSell from '@/components/AlertCrossSell'
+import AlertStatusTracker from '@/components/AlertStatusTracker'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
@@ -77,6 +78,7 @@ export default async function AlertStatusPage({
   let crossSell = null as Awaited<ReturnType<typeof getCrossSellSuggestion>>
   let manageToken: string | null = null
   let confirmedBody: string | null = null
+  let confirmedSourcePath: string | null = null
   if (key === 'confirmed' && token) {
     const admin = createAdminClient()
     let cols = ['source_path', 'unsubscribe_token', 'frequency']
@@ -105,6 +107,7 @@ export default async function AlertStatusPage({
     }
     crossSell = await getCrossSellSuggestion(data?.source_path ?? null)
     manageToken = data?.unsubscribe_token ?? null
+    confirmedSourcePath = data?.source_path ?? null
 
     // "What happens next": name the alert's real cadence + live match count
     // instead of the generic static copy, when the data's genuinely available.
@@ -128,10 +131,28 @@ export default async function AlertStatusPage({
   // resulting cadence would be identical to what it already was, so hide it.
   // `unsubscribe_token` is the same `token` the unsubscribe link forwards here.
   let unsubFrequency: AlertFrequency = 'weekly'
+  let unsubSourcePath: string | null = null
   if (key === 'unsubscribed' && token) {
     const admin = createAdminClient()
-    const { data, error } = await admin.from('alerts').select('frequency').eq('unsubscribe_token', token).maybeSingle()
-    if (!error) unsubFrequency = normalizeFrequency((data as { frequency?: string } | null)?.frequency)
+    let { data, error } = await admin
+      .from('alerts')
+      .select('frequency, source_path')
+      .eq('unsubscribe_token', token)
+      .maybeSingle()
+    // `frequency` may not be migrated live yet — same graceful-degrade retry
+    // precedent as the `confirmed` branch above / `/alerts/manage`'s fetchAlertsForEmail.
+    if (error?.message?.includes('frequency')) {
+      ;({ data, error } = await admin
+        .from('alerts')
+        .select('source_path')
+        .eq('unsubscribe_token', token)
+        .maybeSingle())
+    }
+    if (!error) {
+      const row = data as { frequency?: string; source_path?: string | null } | null
+      unsubFrequency = normalizeFrequency(row?.frequency)
+      unsubSourcePath = row?.source_path ?? null
+    }
   }
 
   return (
@@ -143,6 +164,12 @@ export default async function AlertStatusPage({
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           <p className="mt-3 text-base leading-relaxed text-slate-600">{confirmedBody ?? body}</p>
+          {key === 'confirmed' && token && (
+            <AlertStatusTracker event="alert_confirmed" token={token} sourcePath={confirmedSourcePath} />
+          )}
+          {key === 'unsubscribed' && token && (
+            <AlertStatusTracker event="alert_unsubscribed" token={token} sourcePath={unsubSourcePath} />
+          )}
           {key === 'unsubscribed' && token && (
             <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} />
           )}
