@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260713T112431Z — PASS — recently-viewed-alert-banner
+- Pages: /aircraft, /partnerships (new dismissible banner above results),
+  /aircraft/listing/[id], /partnerships/[id] (now silently log the view)
+- What: **A visitor who's browsed several listings of the same make/model without
+  ever saving a search or filtering for it now gets a one-tap alert suggestion for
+  it.** New device-local "recently viewed" log (`src/lib/recentlyViewed.ts`,
+  localStorage — make/model/type only, no listing id, no PII, no account) is written
+  on every aircraft/partnership listing-detail view. When the last 20 views cluster
+  on one make (≥3 clustered views, unambiguous — a tie stays silent) — sharpening to
+  model when that clusters too — `/aircraft` and `/partnerships` render a dismissible
+  "You've been looking at {make} {model}" box with the existing `AlertSignup`
+  scoped to it. Honesty-gated: a new thin server action re-checks a real live match
+  count before ever showing it, and the banner skips itself entirely when the
+  suggestion would just repeat the page's own active-filter alert box below the
+  results (no redundant double-CTA). Dismissing it persists per make/model in
+  localStorage. New capture point emits `alert_subscribed` with
+  `source: 'recent_views'` (via `AlertSignup`'s existing tracking — no new
+  event-shape code).
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open, last cycle PASSed.
+  Tier 2 (`[want]`): re-confirmed empty — the two open `[P1][want]` items remain
+  flagged for a human product/design call, the two `[P2][want]` items remain
+  no-live-effect/flagged-for-review. Dropped to tier 3: pulled the "recently-viewed"
+  slice, the second-to-last open item in the `[P2][goal]` alert-experience queue
+  (refill #9/#10) — the digest-email cross-sell suggestion is now the only one left.
+- Spec: nightshift/specs/20260713T112431Z-recently-viewed-alert-banner.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 286/286 pass (9 new: `recentlyViewedAlertContext.test.ts`
+  covering the ≥3-cluster bar, make/model tie-breaking, and model-sharpening scoped
+  to the winning make). Visual cycle — QA on the production build (`next start`, not
+  dev). Base `qa-smoke.mjs` exit 0 on `/aircraft`, `/partnerships`, and real
+  `/aircraft/listing/[id]` + `/partnerships/[id]` URLs (read-only DB lookup for real
+  ids, no rows written) — desktop 1280 + mobile 375, zero console errors, zero
+  overflow. **Live end-to-end verified with Playwright against the real prod DB (read-
+  only, zero rows written)**: visited a real Beechcraft Bonanza G36 listing 3x in one
+  browser context, confirmed the localStorage log recorded exactly 3 entries; loaded
+  `/aircraft` and confirmed the banner rendered "You've been looking at Beechcraft
+  Bonanza G36 listings" with a real "8 aircraft match right now" line and a working
+  alert form (screenshot confirmed on-brand, no overlap with the filter panel/map);
+  clicked dismiss, reloaded — banner correctly stayed hidden; navigated directly to
+  the matching make/model family page — banner correctly suppressed itself as
+  redundant with the page's own active-filter alert box. Same flow re-verified on
+  `/partnerships` at 375px (screenshot confirmed clean, no overflow). Server
+  started/stopped cleanly; confirmed no orphaned `next-server` process remained after.
+- Screenshots: nightshift/screenshots/recently-viewed-alert-banner/
+- Next: the last open `[P2][goal]` alert-experience item is the digest-email
+  cross-sell suggestion (add a suggestion section to `buildAlertDigestEmail`/
+  `buildCombinedAlertDigestEmail`). After that ships, the queue needs another
+  Opus/Fable plan-pass refill.
+
 ## 20260713T111454Z — PASS — alert-status-matching-cta
 - Pages: /alerts/status (the double-opt-in confirmation landing page; visible only via
   the confirm link a subscriber clicks in their email)
