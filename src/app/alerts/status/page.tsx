@@ -8,6 +8,7 @@ import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { isListingWatchPath } from '@/lib/alertWatchStatus'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -79,6 +80,7 @@ export default async function AlertStatusPage({
   let manageToken: string | null = null
   let confirmedBody: string | null = null
   let confirmedSourcePath: string | null = null
+  let confirmedMatchCount: Awaited<ReturnType<typeof getAlertMatchCount>> = null
   if (key === 'confirmed' && token) {
     const admin = createAdminClient()
     let cols = ['source_path', 'unsubscribe_token', 'frequency']
@@ -114,6 +116,7 @@ export default async function AlertStatusPage({
     if (data?.source_path) {
       const cadence = normalizeFrequency((data as { frequency?: string }).frequency)
       const match = await getAlertMatchCount(data.source_path)
+      confirmedMatchCount = match
       const cadenceLabel = cadence === 'daily' ? 'a daily digest' : 'a weekly digest'
       let sentence = `You're confirmed — we'll send ${cadenceLabel} whenever there's a new match, and nothing else.`
       if (match) {
@@ -164,6 +167,24 @@ export default async function AlertStatusPage({
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           <p className="mt-3 text-base leading-relaxed text-slate-600">{confirmedBody ?? body}</p>
+          {key === 'confirmed' && confirmedSourcePath && confirmedMatchCount && confirmedMatchCount.count > 0 && (
+            <p className="mt-2">
+              <Link href={confirmedSourcePath} className="font-medium text-sky-600 hover:text-sky-700">
+                See the {confirmedMatchCount.count}{' '}
+                {confirmedMatchCount.noun === 'pilot'
+                  ? confirmedMatchCount.count === 1 ? 'matching pilot' : 'matching pilots'
+                  : confirmedMatchCount.count === 1 ? 'matching listing' : 'matching listings'}{' '}
+                →
+              </Link>
+            </p>
+          )}
+          {key === 'confirmed' && confirmedSourcePath && !confirmedMatchCount && isListingWatchPath(confirmedSourcePath) && (
+            <p className="mt-2">
+              <Link href={confirmedSourcePath} className="font-medium text-sky-600 hover:text-sky-700">
+                See this listing →
+              </Link>
+            </p>
+          )}
           {key === 'confirmed' && token && (
             <AlertStatusTracker event="alert_confirmed" token={token} sourcePath={confirmedSourcePath} />
           )}
