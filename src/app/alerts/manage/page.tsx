@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_NAME } from '@/lib/seo'
 import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
-import { normalizeFrequency } from '@/lib/alertFrequency'
+import { describeLastDigest, normalizeFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { getWatchedListingStatus } from '@/lib/alertWatchStatus'
@@ -33,6 +33,7 @@ interface AlertRow {
   status: string
   created_at: string
   confirmed_at: string | null
+  last_digest_at: string | null
   price_drop_opt_in?: boolean
   frequency?: string
   paused_until?: string | null
@@ -47,7 +48,7 @@ const OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'paused_until']
 // A query failure still looks like "no rows" here, never a 500.
 async function fetchAlertsForEmail(email: string): Promise<AlertRow[]> {
   const admin = createAdminClient()
-  const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at']
+  const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at', 'last_digest_at']
   let cols = [...baseCols, ...OPTIONAL_COLS]
   let { data, error } = (await admin
     .from('alerts')
@@ -302,6 +303,15 @@ export default async function AlertsManagePage({
                           </>
                         ) : null}
                       </p>
+                      {/* Cron only digests status='confirmed' alerts (see
+                          alert-digest/route.ts) — showing a "checks daily/
+                          weekly" cadence for a pending or paused row would
+                          claim a schedule that isn't actually running. */}
+                      {a.status === 'confirmed' ? (
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {describeLastDigest(a.last_digest_at, normalizeFrequency(a.frequency))}
+                        </p>
+                      ) : null}
                     </div>
                     <AlertEditForm
                       id={a.id}
