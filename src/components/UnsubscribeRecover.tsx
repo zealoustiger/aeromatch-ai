@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { BellRing, Calendar, Check } from 'lucide-react'
-import { pauseAlertByToken, updateAlertFrequencyByToken } from '@/app/actions'
+import { BellRing, Calendar, Moon, Check } from 'lucide-react'
+import { pauseAlertByToken, snoozeAlertByToken, updateAlertFrequencyByToken } from '@/app/actions'
+import { formatResumeDate } from '@/lib/alertSnooze'
 import { track } from '@/lib/analytics'
 
-type Action = 'paused' | 'weekly'
+type Action = 'paused' | 'weekly' | 'snoozed'
 
 export default function UnsubscribeRecover({
   token,
@@ -18,10 +19,16 @@ export default function UnsubscribeRecover({
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [doneAction, setDoneAction] = useState<Action | null>(null)
+  const [resumeDate, setResumeDate] = useState<string | null>(null)
 
   async function handleRecover(action: Action) {
     setStatus('sending')
-    const result = action === 'paused' ? await pauseAlertByToken(token) : await updateAlertFrequencyByToken(token)
+    const result =
+      action === 'paused'
+        ? await pauseAlertByToken(token)
+        : action === 'snoozed'
+          ? await snoozeAlertByToken(token)
+          : await updateAlertFrequencyByToken(token)
     if (result.error) {
       setStatus('error')
       setErrorMsg(result.error)
@@ -29,6 +36,8 @@ export default function UnsubscribeRecover({
     }
     track('alert_unsubscribe_recovered', { action })
     setDoneAction(action)
+    const rd = (result as { resumeDate?: string | null }).resumeDate ?? null
+    setResumeDate(formatResumeDate(rd))
     setStatus('done')
   }
 
@@ -38,7 +47,11 @@ export default function UnsubscribeRecover({
         <Check className="h-4 w-4 shrink-0" />
         {doneAction === 'weekly'
           ? "You're on weekly emails now, not gone — you'll still hear about new matches, just less often."
-          : "You're paused, not gone — we'll hold off until you resume from any aircraft page."}
+          : doneAction === 'snoozed'
+            ? resumeDate
+              ? `You're snoozed until ${resumeDate}, not gone — we'll pick back up automatically then.`
+              : "You're paused, not gone — we'll hold off until you resume from any aircraft page."
+            : "You're paused, not gone — we'll hold off until you resume from any aircraft page."}
       </div>
     )
   }
@@ -47,8 +60,8 @@ export default function UnsubscribeRecover({
     <div className="mt-6 w-full max-w-sm rounded-lg border border-[#ece6dc] bg-[#f4efe7] px-4 py-4 text-left">
       <p className="text-sm font-medium text-slate-900">Changed your mind?</p>
       <p className="mt-1 text-sm text-slate-600">
-        Get fewer emails instead of none — {showWeeklyOption ? 'switch to weekly, or pause' : 'pause'} this alert
-        instead of unsubscribing completely.
+        Get fewer emails instead of none — {showWeeklyOption ? 'switch to weekly, snooze, or pause' : 'snooze or pause'}{' '}
+        this alert instead of unsubscribing completely.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {showWeeklyOption && (
@@ -61,6 +74,14 @@ export default function UnsubscribeRecover({
             {status === 'sending' ? 'Switching…' : 'Switch to weekly instead'}
           </button>
         )}
+        <button
+          onClick={() => handleRecover('snoozed')}
+          disabled={status === 'sending'}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40"
+        >
+          <Moon className="h-4 w-4" />
+          {status === 'sending' ? 'Snoozing…' : 'Snooze 30 days'}
+        </button>
         <button
           onClick={() => handleRecover('paused')}
           disabled={status === 'sending'}
