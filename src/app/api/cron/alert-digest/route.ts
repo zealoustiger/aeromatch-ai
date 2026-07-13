@@ -22,6 +22,7 @@ import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { filterToGoodDeals } from '@/lib/aircraftComps'
+import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -61,6 +62,12 @@ type AlertTarget =
       maxYear?: number
       minTt?: number
       maxTt?: number
+      /** Free-text browse search (`q`) — matched the same way `fetchAircraftPage`
+       *  does, `.or(title.ilike,description.ilike)`. */
+      keyword?: string
+      /** Listing-quality multi-select, already resolved from `grade`/`min_grade`
+       *  via `parseGradeFilter` — same semantics as the browse page's filter. */
+      grades?: Grade[]
       /** "Only email me good deals" — narrows matches to a 'good'
        *  `clubHangerDealVerdict` (see `filterToGoodDeals`). Set via `deal=good`
        *  in the alert's source_path query string; no schema/DB storage. */
@@ -144,6 +151,8 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
         maxYear: numOrUndef(g('max_year')),
         minTt: numOrUndef(g('min_tt')),
         maxTt: numOrUndef(g('max_tt')),
+        keyword: g('q'),
+        grades: parseGradeFilter(g('grade'), g('min_grade')),
         dealOnly: g('deal') === 'good',
       }
     }
@@ -327,6 +336,14 @@ function applyAircraftFilters(q: any, target: Extract<AlertTarget, { type: 'airc
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
   if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  if (target.keyword) {
+    const term = target.keyword.replace(/[%,()]/g, ' ').trim()
+    if (term) q = q.or(`title.ilike.%${term}%,description.ilike.%${term}%`)
+  }
+  const gradePlan = gradeQueryPlan(target.grades ?? [])
+  if ('or' in gradePlan) q = q.or(gradePlan.or)
+  else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
+  else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
   return q
 }
 
@@ -377,6 +394,14 @@ async function countNewAircraft(
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
   if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  if (target.keyword) {
+    const term = target.keyword.replace(/[%,()]/g, ' ').trim()
+    if (term) q = q.or(`title.ilike.%${term}%,description.ilike.%${term}%`)
+  }
+  const gradePlan = gradeQueryPlan(target.grades ?? [])
+  if ('or' in gradePlan) q = q.or(gradePlan.or)
+  else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
+  else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
 
   const { count, error } = await q
   if (error) {
