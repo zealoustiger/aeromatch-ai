@@ -43,11 +43,23 @@ type AlertTarget =
       model?: string
       modelPattern?: string
       notModelPattern?: string
+      /** Smart-search family match (e.g. "sr22" → ilike "sr22%"), same param
+       *  `/aircraft`'s `filters.model_like` applies. Distinct from `modelPattern`
+       *  (curated SEO route matches), which already gets the `.ilike` treatment. */
+      modelLike?: string
       state?: string
+      /** ICAO airport code — narrowed to that airport's STATE, same coarse
+       *  resolution `fetchAircraftPage`'s `filters.airport` uses (aircraft has no
+       *  lat/lng radius helper the way partnerships' `resolveIcaoList` provides
+       *  below). Resolved once via `resolveAircraftAirportState` right after
+       *  `parseSourcePath`, into `airportState` below. */
+      icao?: string
+      airportState?: string
       minPrice?: number
       maxPrice?: number
       minYear?: number
       maxYear?: number
+      minTt?: number
       maxTt?: number
       /** "Only email me good deals" — narrows matches to a 'good'
        *  `clubHangerDealVerdict` (see `filterToGoodDeals`). Set via `deal=good`
@@ -123,11 +135,14 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
         type: 'aircraft',
         make: g('make'),
         model: g('model'),
+        modelLike: g('model_like'),
         state: g('state')?.toUpperCase(),
+        icao: g('airport')?.toUpperCase(),
         minPrice: numOrUndef(g('min_price')),
         maxPrice: numOrUndef(g('max_price')),
         minYear: numOrUndef(g('min_year')),
         maxYear: numOrUndef(g('max_year')),
+        minTt: numOrUndef(g('min_tt')),
         maxTt: numOrUndef(g('max_tt')),
         dealOnly: g('deal') === 'good',
       }
@@ -277,6 +292,22 @@ async function resolveIcaoList(
   return [target.icao]
 }
 
+/** Resolve an aircraft alert's `icao` airport filter to that airport's STATE,
+ *  same coarse resolution `fetchAircraftPage`'s `filters.airport` uses (no
+ *  lat/lng radius helper exists for aircraft the way `resolveIcaoList` above
+ *  provides for partnerships). Called once right after `parseSourcePath`
+ *  produces the target, so every aircraft filter site below sees the resolved
+ *  `airportState` already set. No-ops when the code isn't in our `airports`
+ *  table, matching the browse page's own graceful fallback. */
+async function resolveAircraftAirportState(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: Extract<AlertTarget, { type: 'aircraft' }>
+): Promise<void> {
+  if (!target.icao) return
+  const { data } = await supabase.from('airports').select('state').eq('icao', target.icao).maybeSingle()
+  if (data?.state) target.airportState = data.state
+}
+
 /** Applies the aircraft AlertTarget's filter fields to an already-`any`-typed
  *  query builder — shared by the deal-only branches below (which need a real,
  *  non-head select and so can't reuse the typed `q` chains the non-deal-only
@@ -287,11 +318,14 @@ function applyAircraftFilters(q: any, target: Extract<AlertTarget, { type: 'airc
   if (target.model) q = q.eq('model', target.model)
   if (target.modelPattern) q = q.ilike('model', target.modelPattern)
   if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.modelLike) q = q.ilike('model', `${target.modelLike.replace(/[%,]/g, '')}%`)
   if (target.state) q = q.eq('state', target.state)
+  if (target.airportState) q = q.eq('state', target.airportState)
   if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
   if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
   if (target.minYear !== undefined) q = q.gte('year', target.minYear)
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
   return q
 }
@@ -334,11 +368,14 @@ async function countNewAircraft(
   if (target.model) q = q.eq('model', target.model)
   if (target.modelPattern) q = q.ilike('model', target.modelPattern)
   if (target.notModelPattern) q = q.not('model', 'ilike', target.notModelPattern)
+  if (target.modelLike) q = q.ilike('model', `${target.modelLike.replace(/[%,]/g, '')}%`)
   if (target.state) q = q.eq('state', target.state)
+  if (target.airportState) q = q.eq('state', target.airportState)
   if (target.minPrice !== undefined) q = q.gte('asking_price', target.minPrice)
   if (target.maxPrice !== undefined) q = q.lte('asking_price', target.maxPrice)
   if (target.minYear !== undefined) q = q.gte('year', target.minYear)
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
+  if (target.minTt !== undefined) q = q.gte('ttaf', target.minTt)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
 
   const { count, error } = await q
@@ -1135,6 +1172,9 @@ export async function GET(req: NextRequest) {
     if (!target) {
       unparseable++
       continue
+    }
+    if (target.type === 'aircraft' && target.icao) {
+      await resolveAircraftAirportState(supabase, target)
     }
 
     // "Since when?" — use last_digest_at if present; else the signup date.
