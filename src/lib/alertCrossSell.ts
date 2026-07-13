@@ -1,17 +1,20 @@
 import { resolveMakeModelFamily, SEO_MAKE_MODELS, STATE_NAMES } from './seo'
 import { getAlertMatchCount } from './alertMatchCounts'
+import { isListingWatchPath, getWatchedListingStatus } from './alertWatchStatus'
 
 /**
  * Post-confirmation cross-sell: given the `source_path` of an alert a visitor just
- * confirmed, suggest one more alert worth having. Three suggestion types, tried in
- * order: (1) a curated **sibling model** (e.g. a Cessna 172 alert → suggest the
- * 182) when the confirmed alert names a model that maps to one; (2) an **adjacent
- * state** with real, non-zero live inventory when the confirmed alert names a
- * state; (3) the **counterpart listing type** for the same make (aircraft ↔
- * partnerships) otherwise. Only handles the modern query-string source-path shape
- * (`/aircraft?make=...`, `/partnerships?make=...`) that the browse-page inline
- * `AlertSignup` and `/alerts` chips produce — legacy path-segment alerts, no-make
- * alerts, and seeker alerts return null (no suggestion) rather than a weak one.
+ * confirmed, suggest one more alert worth having. A **watch-this-listing** alert
+ * (`/aircraft/listing/<id>?watch=price` or the partnership twin) resolves the
+ * watched listing's own make/model and offers the whole family. Otherwise, three
+ * suggestion types are tried in order against the query-string source-path shape
+ * (`/aircraft?make=...`, `/partnerships?make=...`): (1) a curated **sibling model**
+ * (e.g. a Cessna 172 alert → suggest the 182) when the confirmed alert names a
+ * model that maps to one; (2) an **adjacent state** with real, non-zero live
+ * inventory when the confirmed alert names a state; (3) the **counterpart listing
+ * type** for the same make (aircraft ↔ partnerships) otherwise. Legacy
+ * path-segment alerts, no-make alerts, and seeker alerts return null (no
+ * suggestion) rather than a weak one.
  */
 
 export interface AlertCrossSellSuggestion {
@@ -115,9 +118,54 @@ async function getNearbyStateSuggestion(
   return null
 }
 
+// A "watch this listing" alert (`/aircraft/listing/<id>?watch=price` or the
+// partnership twin) has no make/model/state in its own source_path — resolve
+// the watched listing itself (reusing `getWatchedListingStatus`'s fetch) and
+// offer the whole family instead. Aircraft prefers the curated family page
+// (real listing content, matches the sibling-model suggestion's convention);
+// falls back to the query-string shape when the model has no curated page.
+// Partnership match-counting has no model dimension, so that suggestion is
+// make-wide only — same precedent as the counterpart-type suggestion below.
+async function getWatchCrossSell(sourcePath: string): Promise<AlertCrossSellSuggestion | null> {
+  const watched = await getWatchedListingStatus(sourcePath)
+  if (!watched?.make) return null
+  const { id, type, make, model } = watched
+
+  if (type === 'aircraft') {
+    const family = model ? resolveMakeModelFamily(make, model) : null
+    const target = family
+      ? `/aircraft/${family.makeSlug}/${family.modelSlug}`
+      : `/aircraft?make=${encodeURIComponent(make)}${model ? `&model=${encodeURIComponent(model)}` : ''}`
+    // Exclude the watched listing itself — it's always a member of its own
+    // family, so an unexcluded count would claim a match that's just the
+    // listing the visitor is already watching (honesty gate).
+    const match = await getAlertMatchCount(target, { excludeId: id })
+    if (!match || match.count <= 0) return null
+    const subject = model ? `${make} ${model}` : make
+    return {
+      context: subject,
+      sourcePath: target,
+      noun: 'aircraft',
+      label: `Also want alerts for every ${subject} listing? ${match.count} match${match.count === 1 ? '' : 'es'} now.`,
+    }
+  }
+
+  const target = `/partnerships?make=${encodeURIComponent(make)}`
+  const match = await getAlertMatchCount(target, { excludeId: id })
+  if (!match || match.count <= 0) return null
+  return {
+    context: `${make} co-ownership partnerships`,
+    sourcePath: target,
+    noun: 'partnership',
+    label: `Also want alerts for every ${make} co-ownership partnership? ${match.count} match${match.count === 1 ? '' : 'es'} now.`,
+  }
+}
+
 export async function getCrossSellSuggestion(
   sourcePath: string | null
 ): Promise<AlertCrossSellSuggestion | null> {
+  if (isListingWatchPath(sourcePath)) return getWatchCrossSell(sourcePath ?? '')
+
   const parsed = parseNounAndMake(sourcePath ?? '')
   if (!parsed?.make) return null
   const { noun, make, model, state } = parsed

@@ -28,6 +28,10 @@ export interface WatchedListingStatus {
   label: string
   price: number | null
   type: 'aircraft' | 'partnership'
+  /** Raw DB make/model (not the formatted `label`) — for callers that need to
+   *  build a family-wide search/alert link (e.g. `alertCrossSell.ts`). */
+  make: string | null
+  model: string | null
 }
 
 /**
@@ -56,7 +60,7 @@ async function getAircraftWatchStatus(id: string): Promise<WatchedListingStatus>
     .eq('id', id)
     .maybeSingle()
 
-  if (!data) return { active: false, id, label: 'This aircraft', price: null, type: 'aircraft' }
+  if (!data) return { active: false, id, label: 'This aircraft', price: null, type: 'aircraft', make: null, model: null }
 
   const label = aircraftLabel(data.make, data.model, data.year) || 'This aircraft'
   return {
@@ -65,6 +69,8 @@ async function getAircraftWatchStatus(id: string): Promise<WatchedListingStatus>
     label,
     price: data.asking_price ?? null,
     type: 'aircraft',
+    make: data.make ?? null,
+    model: data.model ?? null,
   }
 }
 
@@ -76,7 +82,7 @@ async function getPartnershipWatchStatus(id: string): Promise<WatchedListingStat
     .eq('id', id)
     .maybeSingle()
 
-  if (!data) return { active: false, id, label: 'This partnership', price: null, type: 'partnership' }
+  if (!data) return { active: false, id, label: 'This partnership', price: null, type: 'partnership', make: null, model: null }
 
   const aircraft = [data.make, data.model].filter(Boolean).join(' ')
   const label = [formatShareType(data.share_type), aircraft].filter(Boolean).join(' · ') || 'This partnership'
@@ -86,5 +92,7 @@ async function getPartnershipWatchStatus(id: string): Promise<WatchedListingStat
     label,
     price: data.buy_in_price ?? null,
     type: 'partnership',
+    make: data.make ?? null,
+    model: data.model ?? null,
   }
 }

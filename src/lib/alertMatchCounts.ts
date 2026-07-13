@@ -166,7 +166,8 @@ const PARTS_PRICE_FLOOR = 50_000
 
 async function countActiveAircraft(
   supabase: ReturnType<typeof createAdminClient>,
-  target: Extract<AlertTarget, { type: 'aircraft' }>
+  target: Extract<AlertTarget, { type: 'aircraft' }>,
+  excludeId?: string
 ): Promise<number> {
   let q = supabase
     .from('aircraft_for_sale')
@@ -184,6 +185,7 @@ async function countActiveAircraft(
   if (target.minYear !== undefined) q = q.gte('year', target.minYear)
   if (target.maxYear !== undefined) q = q.lte('year', target.maxYear)
   if (target.maxTt !== undefined) q = q.lte('ttaf', target.maxTt)
+  if (excludeId) q = q.neq('id', excludeId)
 
   const { count, error } = await q
   if (error) throw new Error(error.message)
@@ -206,7 +208,8 @@ async function resolveIcaoList(
 
 async function countActivePartnerships(
   supabase: ReturnType<typeof createAdminClient>,
-  target: Extract<AlertTarget, { type: 'partnership' }>
+  target: Extract<AlertTarget, { type: 'partnership' }>,
+  excludeId?: string
 ): Promise<number> {
   let q = supabase.from('partnerships').select('id', { count: 'exact', head: true }).eq('status', 'active')
 
@@ -214,6 +217,7 @@ async function countActivePartnerships(
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
+  if (excludeId) q = q.neq('id', excludeId)
 
   const { count, error } = await q
   if (error) throw new Error(error.message)
@@ -264,19 +268,27 @@ export interface AlertMatchCount {
  * Count active matches for one alert's `source_path` right now. Returns `null`
  * (never a fake `0`) when the path isn't a recognized shape, or on any query
  * error — callers should render no count line in that case.
+ *
+ * `excludeId` drops one listing id from an aircraft/partnership count — for a
+ * family-wide count derived from a single watched listing (see
+ * `alertCrossSell.ts`'s watch cross-sell), the watched listing would otherwise
+ * always match its own family and inflate the count by one.
  */
-export async function getAlertMatchCount(sourcePath: string | null): Promise<AlertMatchCount | null> {
+export async function getAlertMatchCount(
+  sourcePath: string | null,
+  opts?: { excludeId?: string }
+): Promise<AlertMatchCount | null> {
   const target = parseSourcePath(sourcePath)
   if (!target) return null
   try {
     const admin = createAdminClient()
     if (target.type === 'aircraft') {
-      return { count: await countActiveAircraft(admin, target), noun: 'listing' }
+      return { count: await countActiveAircraft(admin, target, opts?.excludeId), noun: 'listing' }
     }
     if (target.type === 'seeker') {
       return { count: await countActiveSeekers(admin, target), noun: 'pilot' }
     }
-    return { count: await countActivePartnerships(admin, target), noun: 'listing' }
+    return { count: await countActivePartnerships(admin, target, opts?.excludeId), noun: 'listing' }
   } catch (err) {
     console.error('[alertMatchCounts] count error:', err instanceof Error ? err.message : err)
     return null

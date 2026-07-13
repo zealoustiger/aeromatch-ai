@@ -996,15 +996,20 @@ sellers), and closing the measurement loop end-to-end._
   the three dev email-preview routes (`/api/dev/email-preview/{price-drop,alert-digest,
   alert-digest-combined}`) against real fixture data — confirmed each link carries the
   right `utm_campaign` and unsubscribe tokens render byte-exact.
-- **[P2][goal] Cross-sell the family alert after confirming a watch alert.** A watch
-  subscriber (`/aircraft/listing/<id>?watch=price` or the partnership twin) is one click
-  from wanting the whole market, but `getAlertMatchCount`-gated cross-sell on
-  `/alerts/status` renders nothing for watch shapes (`alertCrossSell.ts` has no watch
-  handling — verified). Teach `getCrossSellSuggestion` to resolve the watched listing's
-  make/model (reuse `getWatchedListingStatus`'s fetch) and offer "Also want alerts for
-  every {Make} {Model} listing? N match now" via the existing `AlertCrossSell` one-click
-  accept (`source: 'cross_sell'`, existing event). Honesty gate as always: only render
-  with a real >0 match count; no suggestion beats a wrong one.
+~~- **[P2][goal] Cross-sell the family alert after confirming a watch alert.**~~ ✅ SHIPPED
+  via `watch-alert-family-crosssell` (2026-07-13) `getCrossSellSuggestion`
+  (`src/lib/alertCrossSell.ts`) now recognizes `isListingWatchPath` source_paths and resolves
+  the watched listing's make/model via `getWatchedListingStatus` (extended with raw `make`/
+  `model` fields, reusing its existing fetch — no extra round-trip). Aircraft prefers the
+  curated family page (`resolveMakeModelFamily` → `/aircraft/{makeSlug}/{modelSlug}`),
+  falling back to `/aircraft?make=…&model=…` when no curated page exists; partnerships offer
+  the make-wide `/partnerships?make=…` (match-counting has no model dimension). `getAlertMatchCount`
+  (`alertMatchCounts.ts`) gained an `excludeId` option so the watched listing itself — always a
+  member of its own family — doesn't inflate the count by one (bonus correctness fix caught
+  during QA: without it, a singleton listing would honesty-gate-pass with a self-referential
+  "1 match now"). Honesty gate unchanged: only renders when the live (self-excluded) count is
+  > 0. No component/page changes — `AlertCrossSell`/`/alerts/status`/`/alerts/manage` already
+  render whatever `getCrossSellSuggestion` returns.
 - **[P2][goal] Capture-time widen alternative on zero-match empty states.** The
   empty-state capture boxes honestly say "None for sale right now — be first to know,"
   but offer no fallback for a search that may *never* match (the manage-page widen nudge
