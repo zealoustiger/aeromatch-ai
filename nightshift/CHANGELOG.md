@@ -2,6 +2,62 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T083248Z — PASS — aircraft-make-pulse-line
+- Pages: (email-only — the aircraft alert digest sent by `/api/cron/alert-digest`;
+  no user-facing page route)
+- What: **Make-only aircraft alerts ("any new Cessna," not a specific model) now get
+  the same honest market-context line curated make+model alerts already have** — "142
+  Cessnas listed right now, median asking $X" — instead of no market-pulse line at all.
+  Before this cycle, the digest cron only computed a market-pulse sentence when an
+  aircraft alert resolved to ONE clean model (a curated make/model SEO page, or a
+  single non-comma `model` query param); a plain `/aircraft/cessna` or
+  `/aircraft?make=Cessna` alert — arguably the MOST common shape, since most buyers
+  browse by make before narrowing to a model — silently got nothing.
+- Goal: `[goal]` alert experience — part (a) of the "Market-pulse follow-ups" item in
+  the Opus/Fable "Plan-pass batch — 2026-07-14" queue (this cycle's "Next" note named
+  it as the one remaining piece). Tier 1 (`[bug]`): none — last cycle
+  (`price-drop-market-pulse`) PASSed; re-audited every `[bug]`-tagged BACKLOG entry —
+  all struck/resolved, including the one apparent open note ("real aircraft photos
+  missing" referenced in the PARKED SEO section) which turned out to be a stale
+  leftover pointer to an already-shipped fix (`listing-completeness-panel`,
+  2026-06-25). Tier 2 (`[want]`): re-confirmed empty — every open `[P1]`/`[P2][want]`
+  item remains explicitly flagged needing a human product/design/legal call, is
+  bot-protection-blocked, or already has its buildable slices shipped with the
+  remainder deferred (verified against current BACKLOG.md text, not just prior
+  changelog claims). Dropped to tier 3: pulled the exact item the prior cycle's "Next"
+  note named first — new `getAircraftMakePulseLine` mirroring
+  `getPartnershipMarketPulseLine`'s make-level pattern, but against
+  `aircraft_for_sale.asking_price` instead of `partnerships.buy_in_price`.
+- Spec: nightshift/specs/20260714T083248Z-aircraft-make-pulse-line.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 300/300 pass (no regression; no existing test covers
+  `getMarketPulseLine`/`getPartnershipMarketPulseLine` either — same
+  DB-query-function precedent, not a coverage gap introduced this cycle). Live-verified
+  read-only against real prod data (no test rows needed — pure read query): ran the new
+  query standalone for Cessna/Piper/Cirrus/Beechcraft/Mooney — all comfortably above the
+  honesty floor today (400/275/342/249/85 active listings respectively, real medians
+  computed), and a nonexistent make correctly returned zero/no line — confirms the
+  function neither fabricates nor spuriously fires below the floor. Non-visual cycle
+  (cron/email-computation only, no page markup changed) — per RUNBOOK, screenshots not
+  read into context, the smoke gate is the bar. Production build served via `next
+  start` (not dev) on port 3000; `qa-smoke.mjs --slug aircraft-make-pulse-line
+  /alerts/manage /aircraft` exit 0 — 4/4 checks (2 paths × 2 viewports), zero console
+  errors, zero horizontal overflow. No schema change, no new query dependency beyond
+  the existing `priceStats`/`aircraftComps.ts` aggregator, no prod DB rows written
+  (pure read + in-memory plumbing change). Killed one stray leftover `next-server`
+  process found running before starting the QA server, to make sure QA ran against a
+  freshly built, correctly matched server. Server stopped cleanly after.
+- Screenshots: nightshift/screenshots/aircraft-make-pulse-line/
+- Next: the Opus/Fable "Plan-pass batch — 2026-07-14" queue's alert-experience items
+  are now down to two: one-click digest feedback thumbs (👍/👎, with a "get fewer"
+  landing page per GOAL.md's "offer fewer instead of none") and the `/admin/alerts`
+  scoreboard (confirmed/pending/paused/bounced totals + top-converting placements,
+  read-only). "Real instant alerts" remains blocked pending a re-scoping pass (the
+  real draft→live `aircraft_for_sale` publish trigger still needs to be located before
+  a send-pass hook is buildable in one cycle) — next cycle should pull one of the two
+  buildable items.
+
 ## 20260714T082508Z — PASS — price-drop-market-pulse
 - Pages: (email-only — the single-listing price-drop alert email sent by
   `/api/cron/alert-digest`; no user-facing page route. Also touched the dev-only
