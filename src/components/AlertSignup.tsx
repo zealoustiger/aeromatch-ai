@@ -11,6 +11,7 @@ import {
 } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
+import { isLocallySubscribed, addLocalSubscription } from '@/lib/alertLocalSubscriptions'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
@@ -170,6 +171,15 @@ export default function AlertSignup({
   // per subscribeSignedInAlert's 23505 handling) is replaced with an honest
   // "already getting alerts" state instead.
   const [existingAlert, setExistingAlert] = useState<SavedSearchAlertDetail | null>(null)
+  // Email-only equivalent of `existingAlert` above — no session to query, so this
+  // reads the device-local record `alertLocalSubscriptions.ts` writes on a
+  // successful signed-out subscribe. Starts false (matches the server-rendered
+  // markup) and only flips after mount, so it never causes a hydration mismatch.
+  const [locallySubscribed, setLocallySubscribed] = useState(false)
+
+  useEffect(() => {
+    setLocallySubscribed(isLocallySubscribed(activeSourcePath))
+  }, [activeSourcePath])
 
   useEffect(() => {
     const supabase = createClient()
@@ -256,6 +266,12 @@ export default function AlertSignup({
     // This browser now belongs to a subscriber — the nav's "Get alerts" CTA
     // becomes "My alerts" (see lib/alertSubscriberFlag.ts). Boolean only.
     markAlertSubscriber()
+    // Remember THIS capture point specifically, so a return visit to the same
+    // page shows "you're already getting alerts for this" instead of a blank
+    // form (see lib/alertLocalSubscriptions.ts). Keyed on activeSourcePath, not
+    // effectiveSourcePath, to match how the signed-in existingAlert lookup above
+    // is keyed — the deal-only checkbox doesn't change which capture point this is.
+    addLocalSubscription(activeSourcePath)
     setSubmitted(true)
   }
 
@@ -356,6 +372,24 @@ export default function AlertSignup({
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               We email {signedInEmail} a {existingAlert.frequency === 'daily' ? 'daily' : 'weekly'} digest when {doneCopy}
+            </p>
+            <Link
+              href="/alerts/manage"
+              className="mt-2 inline-block text-sm font-medium text-sky-700 underline-offset-2 hover:underline"
+            >
+              Manage alerts
+            </Link>
+          </div>
+        </div>
+      ) : !signedInEmail && locallySubscribed ? (
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              You&rsquo;re already getting alerts for this.
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              You subscribed from this browser before — we&rsquo;ll email you when {doneCopy}
             </p>
             <Link
               href="/alerts/manage"
