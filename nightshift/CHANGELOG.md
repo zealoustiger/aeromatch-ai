@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T084306Z — PASS — admin-alerts-scoreboard
+- Pages: /admin/alerts (new admin-only page, behind the existing FREEZE'd admin gate)
+- What: **New read-only "Alert Scoreboard" tab in the admin area** that answers "is the
+  alert experience converting?" over coffee, without PostHog spelunking. Three honest,
+  DB-backed sections: (1) full **status breakdown** of the `alerts` table
+  (active / confirmed / pending / paused / bounced / unsubscribed, with counts + share +
+  bars); (2) **new live subscribers this week vs last week** (active + confirmed, by opt-in
+  date), with an honest "not enough data" state; (3) **which pages convert** — live
+  subscribers grouped into human-readable page families (homepage, aircraft browse,
+  make/model/state, listing, mission/compare, partnerships browse/make/state/near/seeking,
+  guides, tools, saved, airports…) ranked by count.
+- Goal: `[goal]` alert experience — GOAL.md's "prove it converts" pillar. Pulled the
+  `/admin/alerts` scoreboard item from the Opus/Fable plan-pass queue. Tier 1 (`[bug]`):
+  none — last cycle (`aircraft-make-pulse-line`) PASSed, no open bug. Tier 2 (`[want]`):
+  re-confirmed empty (every open `[want]` needs a human product/design call or is
+  bot-protection-blocked — see spec). Dropped to tier 3.
+- Spec: nightshift/specs/20260714T084306Z-admin-alerts-scoreboard.md
+- Verdict: PASS. **Honest re-scope during the cycle:** the backlog item assumed "every
+  alert row carries a per-placement `source` tag." Verified against the live `alerts`
+  table — there is **no `source` column** (the `source` prop in `AlertSignup` is
+  PostHog-only, never persisted by any insert path), so exact per-widget ranking is not
+  DB-buildable today. Shipped the honest slice the DB *can* answer: page-family buckets via
+  a pure `classifySourcePath()` over `source_path` (unit-tested, 7/7), not a fabricated
+  per-widget number. **Correctness fix on the in-progress code:** the initial draft counted
+  only `status='confirmed'` as success, but the live table's real live-subscriber rows are
+  `active` (3) — a legacy/direct vocabulary the digest cron fires on — so the page would
+  have shown "0 confirmed" and empty conversions despite 3 real subscribers (misleading,
+  not fabricated → fails GOAL.md's honesty rule). Fixed to treat `active` + `confirmed` as
+  the live set and to fall back to `created_at` when `confirmed_at` is null. `npx tsc
+  --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean, `/admin/alerts`
+  registered as ƒ dynamic). Live-verified read-only against prod with the service-role key
+  (no test rows written — pure read): total 9 rows, liveTotal 3, top families
+  {Aircraft browse/filter: 2, Partnership browse/filter: 1}, week-over-week 0/0 (legacy
+  rows >2wk old → honest "not enough data" state, correct). Production build served via
+  `next start` (not dev); `qa-smoke.mjs --slug admin-alerts-scoreboard /admin/alerts` exit
+  0 — 2/2 (desktop 1280 + mobile 375), HTTP 200, zero console errors, zero horizontal
+  overflow. Signed-out QA correctly sees the FREEZE'd "Admin only" gate (layout enforces
+  it; children hidden), screenshot confirms a clean gate render. No schema change, no auth
+  change, no new capture point, no `alert_subscribed` emission change.
+- Screenshots: nightshift/screenshots/admin-alerts-scoreboard/
+- Next: (a) the true per-placement precision follow-up — add & thread an `alerts.source`
+  column through every insert path (`subscribeToAlerts`/`subscribeSignedInAlert`/the
+  cross-sell inserts) so the scoreboard can rank exact widgets, not just page families
+  (bigger than one cycle). (b) **Possible pre-existing bug worth a human look:** the
+  `alerts` status vocabulary is split — the confirm route + pause/resume paths write
+  `confirmed`, but the digest cron queries `status='active'`; a double-opt-in alert that
+  becomes `confirmed` may therefore never receive digests. Not touched this cycle (out of
+  scope, needs its own verification), flagged here. (c) Remaining plan-pass alert item:
+  one-click digest feedback thumbs (👍/👎 + a "get fewer" landing).
+
 ## 20260714T083248Z — PASS — aircraft-make-pulse-line
 - Pages: (email-only — the aircraft alert digest sent by `/api/cron/alert-digest`;
   no user-facing page route)
