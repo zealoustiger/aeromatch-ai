@@ -1,3 +1,5 @@
+import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from './avionicsClassify'
+
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
@@ -2300,6 +2302,11 @@ export function describeAircraftFilters(
   // Only meaningful as a narrowing when it's a real subset (1 or 2 grades).
   if (grades.length >= 1 && grades.length <= 2) {
     clauses.push(`grade ${grades.join(' or ')}`)
+  }
+  const avionicsCats = parseAvionicsFilter(params.avionics)
+  if (avionicsCats.length > 0) {
+    const labels = AVIONICS_FILTER_OPTIONS.filter((o) => avionicsCats.includes(o.key)).map((o) => o.label.toLowerCase())
+    if (labels.length > 0) clauses.push(`with ${labels.join(' or ')}`)
   }
   if (params.deal === 'good') clauses.push('good deals only')
 

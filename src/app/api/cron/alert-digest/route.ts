@@ -28,6 +28,7 @@ import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { filterToGoodDeals } from '@/lib/aircraftComps'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
+import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassify'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 
 const MAX_DIGEST_SAMPLES = 3
@@ -93,6 +94,11 @@ type AlertTarget =
        *  modelSlug-as-prefix fallback, and multi-model selections — those
        *  get no market-pulse line at all (honesty gate: never guess a label). */
       marketPulseModel?: string
+      /** Avionics capability categories (glass/adsb/autopilot/waas/gps) — parsed
+       *  from the same comma-joined `avionics` param the browse page's filter
+       *  uses, matched via the shared `fetchAvionicsMatchIds` id-narrowing scan
+       *  (see `avionicsClassify.ts`; `text[]` column, no cheap column filter). */
+      avionics?: string[]
     }
   | {
       type: 'partnership'
@@ -172,6 +178,10 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
         // Single, non-comma model only — a multi-select can't collapse to one
         // clean "N {Make} {Model}s" sentence (see `marketPulseModel`'s doc).
         marketPulseModel: model && !model.includes(',') ? model : undefined,
+        avionics: (() => {
+          const cats = parseAvionicsFilter(g('avionics'))
+          return cats.length > 0 ? cats : undefined
+        })(),
       }
     }
     if (p === '/partnerships/seeking') {
@@ -384,6 +394,11 @@ async function countNewAircraft(
       .gte('asking_price', PARTS_PRICE_FLOOR)
       .gte('first_seen_at', since)
     dq = applyAircraftFilters(dq, target)
+    if (target.avionics && target.avionics.length > 0) {
+      const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+      if (ids.length === 0) return 0
+      dq = dq.in('id', ids)
+    }
     const { data, error } = await dq
     if (error) {
       console.error('[alert-digest] aircraft deal-only count error:', error.message)
@@ -421,6 +436,11 @@ async function countNewAircraft(
   if ('or' in gradePlan) q = q.or(gradePlan.or)
   else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
   else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
+  if (target.avionics && target.avionics.length > 0) {
+    const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+    if (ids.length === 0) return 0
+    q = q.in('id', ids)
+  }
 
   const { count, error } = await q
   if (error) {
@@ -463,6 +483,11 @@ async function countRecentAircraftPriceDrops(
     .not('previous_price', 'is', null)
 
   q = applyAircraftFilters(q, target)
+  if (target.avionics && target.avionics.length > 0) {
+    const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+    if (ids.length === 0) return 0
+    q = q.in('id', ids)
+  }
 
   type Row = {
     id?: string
@@ -677,6 +702,11 @@ async function fetchNewAircraftSamples(
     .limit(target.dealOnly ? 200 : limit)
 
   q = applyAircraftFilters(q, target)
+  if (target.avionics && target.avionics.length > 0) {
+    const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+    if (ids.length === 0) return []
+    q = q.in('id', ids)
+  }
 
   const { data, error } = await q
   if (error) {
@@ -708,6 +738,11 @@ async function fetchAircraftPriceDropSamples(
     .order('price_changed_at', { ascending: false })
 
   q = applyAircraftFilters(q, target)
+  if (target.avionics && target.avionics.length > 0) {
+    const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+    if (ids.length === 0) return []
+    q = q.in('id', ids)
+  }
 
   type Row = Omit<AircraftSampleRow, 'previous_price'> & {
     previous_price: number | null

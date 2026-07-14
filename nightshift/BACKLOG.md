@@ -1506,14 +1506,22 @@ closing the measurement loop, deliverability, and email/management polish. (The
   ClubHanger this week." Pure `email.ts` change — text part of every builder stays
   byte-identical (preheader is an HTML-inbox-preview concept only). 12 new unit tests
   (present/absent, escaping incl. a double-escape guard, count phrasing, all 4 builders).
-- **[P2][goal] Honor `avionics` in aircraft alert matching.** The explicitly flagged
-  not-done from `alert-query-grade-honesty`: the `avionics` param is stripped from
-  `alertSourcePath` at capture so alerts never over-promise — but that means a
-  glass-panel-filtered browse visitor's alert silently drops their most meaningful
-  criterion. Honor it in `alertMatchCounts.ts` + the digest cron's aircraft filters
-  (reuse the browse page's existing classify pass; accept the wider scan — it runs
-  per-alert on a small table), then stop stripping the param at capture. Makes an
-  existing promise-to-match gap honest end-to-end; no new capture point.
+~~- **[P2][goal] Honor `avionics` in aircraft alert matching.**~~ ✅ SHIPPED via
+  `alert-avionics-match` (2026-07-14) The `avionics` param (glass panel/ADS-B/autopilot/
+  WAAS/GPS) is no longer stripped from `alertSourcePath` at capture — it now rides through
+  end-to-end. Extracted the browse page's id-narrowing classify scan (`parseAvionicsFilter`/
+  `avionicsMatch`/`fetchAvionicsMatchIds`) out of `AircraftSaleList.tsx` into shared exports
+  on `avionicsClassify.ts` (browse page's own filtering behavior unchanged — same function,
+  now shared); wired the same narrowing into `alertMatchCounts.ts`'s `countActiveAircraft` +
+  `previewAircraft` AND the digest cron's `countNewAircraft`, `countRecentAircraftPriceDrops`,
+  `fetchNewAircraftSamples`, `fetchAircraftPriceDropSamples` (`src/app/api/cron/alert-digest/
+  route.ts`) — the live production send path, touched deliberately this cycle since the
+  backlog item named it explicitly. `describeAircraftFilters` (`seo.ts`) now names the
+  selected avionics categories in the alert context sentence (e.g. "Cessna with glass panel").
+  Live-verified against the real DB (read-only queries, no rows created): the shared
+  `fetchAvionicsMatchIds(['glass'], 50000)` scan found 29 sitewide glass-panel matches;
+  replaying `countActiveAircraft`'s exact query shape for make=Cirrus narrowed to 5, matching
+  an independent from-scratch count. 4 new unit tests for the extracted pure functions.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_

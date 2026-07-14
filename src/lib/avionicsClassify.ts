@@ -155,6 +155,55 @@ export interface IfrSuitability {
   sub: string
 }
 
+// ─── Alert / filter matching ─────────────────────────────────────────────────
+// Shared by the /aircraft browse-page filter (`AircraftSaleList.tsx`) and the
+// alert pipeline (`alertMatchCounts.ts`, the digest cron) so a capability
+// filter and an alert built from it never disagree.
+
+/** Parse the comma-joined `avionics` filter/alert param into its category keys. */
+export function parseAvionicsFilter(raw: string | undefined): string[] {
+  return (raw ?? '').split(',').map((c) => c.trim()).filter(Boolean)
+}
+
+/** Does this listing's raw avionics list satisfy the selected category filter? */
+export function avionicsMatch(avionics: string[] | null, categories: string[]): boolean {
+  const info = classifyAvionics(avionics)
+  if (!info) return false
+  const capKeys = new Set<string>(info.caps.map((c) => c.key))
+  return categories.some((cat) => capKeys.has(cat))
+}
+
+/**
+ * `avionics` is a `text[]` column — PostgREST has no `ilike`-style operator for
+ * arrays, so the category match runs in JS instead: fetch id+avionics for
+ * every active priced row (paginated past PostgREST's 1000-row page cap),
+ * classify each, and return the ids that satisfy the filter so a caller can
+ * narrow its real query with `.in('id', …)`. `supabase` is loosely typed since
+ * callers pass either the anon server client or the admin client.
+ */
+export async function fetchAvionicsMatchIds(
+  supabase: { from: (table: string) => any },
+  categories: string[],
+  priceFloor: number,
+  batchSize = 1000
+): Promise<string[]> {
+  const all: { id: string; avionics: string[] | null }[] = []
+  let offset = 0
+  for (;;) {
+    const { data, error } = await supabase
+      .from('aircraft_for_sale')
+      .select('id, avionics')
+      .eq('status', 'active')
+      .gte('asking_price', priceFloor)
+      .range(offset, offset + batchSize - 1)
+    if (error || !data) break
+    all.push(...data)
+    if (data.length < batchSize) break
+    offset += batchSize
+  }
+  return all.filter((r) => avionicsMatch(r.avionics, categories)).map((r) => r.id)
+}
+
 export function computeIfrSuitability(caps: AvionicsCap[]): IfrSuitability | null {
   if (caps.length === 0) return null
   const keys = new Set(caps.map((c) => c.key))
