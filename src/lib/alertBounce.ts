@@ -17,3 +17,22 @@ export async function pauseAlertsForBouncedEmail(email: string): Promise<{ count
   if (error) return { count: 0 }
   return { count: data?.length ?? 0 }
 }
+
+// A spam complaint is a terminal "never email me" signal — unlike a bounce
+// (which can be a transient mailbox issue), it's never auto-resumable, so
+// this reuses the same `unsubscribed` status the one-click unsubscribe link
+// sets rather than `bounced`. `/alerts/manage`'s existing
+// `.neq('status', 'unsubscribed')` filter and the digest cron's
+// `status = 'confirmed'` query already treat that status correctly with no
+// further code change. Mirrors `pauseAlertsForBouncedEmail`'s shape.
+export async function unsubscribeAlertsForComplainedEmail(email: string): Promise<{ count: number }> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ status: 'unsubscribed' })
+    .eq('email', email.toLowerCase())
+    .in('status', ['pending', 'confirmed', 'paused', 'bounced'])
+    .select('id')
+  if (error) return { count: 0 }
+  return { count: data?.length ?? 0 }
+}

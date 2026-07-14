@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyResendWebhookSignature, extractHardBouncedEmails } from '@/lib/resendWebhook'
-import { pauseAlertsForBouncedEmail } from '@/lib/alertBounce'
+import {
+  verifyResendWebhookSignature,
+  extractHardBouncedEmails,
+  extractComplainedEmails,
+} from '@/lib/resendWebhook'
+import { pauseAlertsForBouncedEmail, unsubscribeAlertsForComplainedEmail } from '@/lib/alertBounce'
 
 export const dynamic = 'force-dynamic'
 
 // ⚠️ HUMAN ACTION: register this endpoint's URL + a signing secret in the
-// Resend dashboard (Webhooks → Add endpoint, subscribe to `email.bounced`),
-// then set RESEND_WEBHOOK_SECRET in the environment. Ships dark until then —
-// see nightshift/BACKLOG.md's "Auto-pause alerts on hard email bounces".
+// Resend dashboard (Webhooks → Add endpoint, subscribe to `email.bounced`
+// AND `email.complained`), then set RESEND_WEBHOOK_SECRET in the
+// environment. Ships dark until then — see nightshift/BACKLOG.md's
+// "Auto-pause alerts on hard email bounces" / "Auto-unsubscribe on spam
+// complaints".
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET
 
 export async function POST(request: NextRequest) {
@@ -45,9 +51,13 @@ export async function POST(request: NextRequest) {
   }
 
   const bouncedEmails = extractHardBouncedEmails(body)
+  const complainedEmails = extractComplainedEmails(body)
   try {
     for (const email of bouncedEmails) {
       await pauseAlertsForBouncedEmail(email)
+    }
+    for (const email of complainedEmails) {
+      await unsubscribeAlertsForComplainedEmail(email)
     }
   } catch {
     // Signature is already verified — a DB hiccup here shouldn't make Resend
@@ -55,5 +65,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 200 })
   }
 
-  return NextResponse.json({ ok: true, paused: bouncedEmails.length })
+  return NextResponse.json({
+    ok: true,
+    paused: bouncedEmails.length,
+    unsubscribed: complainedEmails.length,
+  })
 }
