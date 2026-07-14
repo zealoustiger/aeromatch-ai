@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Plane, ArrowRight, Gauge, Lightbulb, Check, GitCompare } from 'lucide-react'
+import { Plane, ArrowRight, Gauge, Lightbulb, Check, GitCompare, Bell } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
 import ModelFaq from '@/components/ModelFaq'
 import { countMakeModel } from '@/components/AircraftSaleList'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -207,6 +208,33 @@ export default async function ComparisonPage({ params }: Props) {
             )}
           </div>
         ) : null}
+
+        {/* Alert capture — one box per compared family, scoped exactly like that
+            family's own make/model page (same sourcePath shape the digest cron's
+            parseSourcePath already recognizes; matchCount reuses the live counts
+            already fetched above for the CTAs, no extra query). */}
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Bell className="h-4 w-4 text-sky-500" />
+            Get alerts for new listings
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AlertSignup
+              context={aLabel}
+              sourcePath={aPath}
+              matchCount={aCount}
+              source="compare_page"
+              className=""
+            />
+            <AlertSignup
+              context={bLabel}
+              sourcePath={bPath}
+              matchCount={bCount}
+              source="compare_page"
+              className=""
+            />
+          </div>
+        </section>
 
         {/* Head-to-head FAQ — genuine Q&As, mirrored 1:1 by the FAQPage JSON-LD above. */}
         {c.faqs.length > 0 && (
