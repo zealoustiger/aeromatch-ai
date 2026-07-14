@@ -1260,6 +1260,75 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   dashboard (Webhooks → Add endpoint, subscribe to `email.bounced`), then set
   `RESEND_WEBHOOK_SECRET` — the loop did not touch `.env*`.
 
+### Plan-pass batch — 2026-07-14 (Fable)
+_All verified against the live codebase before filing (checked `AlertSignup` render sites,
+`actions.ts` exports, `alertFrequency.ts`, the ingest route, and `/app/src/app/admin` —
+no duplicate of shipped work above)._
+
+- **[P1][goal] Alert capture on the user compare tray (`/compare`).** The one slice
+  `compare-page-alert-capture` explicitly left open: the ids-based, noindex tray page has
+  ZERO capture today (verified). Dedup the up-to-3 compared items into make/model families
+  (handling both aircraft and partnership types), and render one `AlertSignup` per deduped
+  family with the same `/aircraft/<make>/<model>`-shaped `sourcePath` the curated compare
+  pages already use (zero digest-cron changes). New capture point → emit `alert_subscribed`
+  with `source="compare_tray"`. Why: a visitor comparing 2–3 aircraft is at peak
+  purchase-intent — the exact moment to offer "tell me when another one lists."
+- **[P1][goal] Real "instant" alerts — ingest-triggered new-listing sends.**
+  `alertFrequency.ts` documents that "instant" isn't a real option today (single daily
+  cron; only `daily`/`weekly`), yet GOAL.md names "digest vs instant" a core pillar.
+  After the ingest handler finishes inserting new aircraft listings (do NOT touch the
+  frozen auth block in `api/ingest/route.ts` — add after it), run a send pass for
+  `frequency='instant'` confirmed alerts whose criteria match a just-inserted row, reusing
+  the digest email builder, and stamp `last_digest_at` so the daily cron never
+  double-sends the same listings (never-spam guardrail). Only expose "Instant" in the
+  frequency picker once the send path is live — never offer a cadence that isn't real.
+  Slice: aircraft new-listing alerts only; price-drop/watch sends stay on the cron.
+- **[P1][goal] Change the email address on your alerts (`/alerts/manage`).** No such
+  action exists (verified against every alert export in `actions.ts`) — today a
+  subscriber who switches addresses must delete everything and re-subscribe blind.
+  Add "Update email": moves ALL the owner's alerts to the new address only after a
+  double-opt-in confirmation sent to the NEW address (reuse the existing token/confirm
+  machinery and the `resolveOwnerEmail` trust boundary); the old address keeps receiving
+  until the new one confirms; clear pending/success states on the manage page. Why:
+  management-completeness — the biggest remaining CRUD gap on the manage surface.
+- **[P1][goal] One-tap "Alert me for this search" chip in the active-filter toolbar on
+  `/aircraft`** (drop into `/partnerships` too if the same component fits in-cycle).
+  GOAL.md explicitly asks for one-tap alerts "from any active filter set", but the browse
+  capture sits below the full results list (verified: `AlertSignup` renders at the page
+  footer). Show a compact 🔔 chip in the results/filter toolbar whenever ≥1 filter is
+  active: signed-in users subscribe in ONE click via the existing `subscribeSignedInAlert`;
+  signed-out users get smooth-scrolled to the existing capture with focus in the email
+  field and the filter context prefilled. New capture point → emit `alert_subscribed`
+  with `source="filter_toolbar"`.
+- **[P1][goal] Market-pulse line for PARTNERSHIP digest sections.** `getMarketPulseLine`
+  is aircraft-only (verified). Add the partnership equivalent — "6 Cessna 172
+  partnerships listed right now, median buy-in $28k" — reusing the same `priceStats`
+  aggregator + `MIN_SNAPSHOT_LISTINGS` honesty floor pattern on partnership buy-in data;
+  below the floor → no line at all, never a guess. Why: partnership digests currently
+  read thinner than aircraft ones for no data reason.
+- **[P1][goal] Market-pulse follow-ups scoped out of `alert-digest-market-pulse`:**
+  (a) make-only pulse ("142 Cessnas listed right now, median asking $X") for make-level
+  alerts that today get no line, and (b) the same pulse line in `buildPriceDropEmail` /
+  listing-watch sends — market context is most persuasive exactly when a price drops.
+  Same one-clean-family resolution rules and honesty floor; multi-model/uncurated alerts
+  still get nothing rather than a fabricated aggregate.
+- **[P1][goal] One-click digest feedback — "Was this digest useful? 👍/👎".** Token-authed
+  footer links in the digest email hit a tiny GET route that records the vote (reuse the
+  existing feedback table/`submitFeedback` plumbing; no new PII — the alert row already
+  holds the email). The 👎 landing page must offer "get fewer emails" (switch to weekly /
+  snooze / edit criteria) instead of a dead end — GOAL.md's "offer fewer instead of
+  none" — and votes surface in the existing `/admin/feedback` list. Why: the only honest
+  way to judge "best alert email in aviation" is subscribers telling us, per send.
+- **[P1][goal] `/admin/alerts` scoreboard — prove which placements convert.** Every
+  alert row already carries a per-placement `source` tag (`alert-source-placement-tag`)
+  and a status, but there is no admin visibility (verified: no alert page under
+  `src/app/admin`). New read-only page inside the existing admin layout gate (do NOT
+  touch the frozen auth checks): confirmed/pending/paused/bounced totals, new confirmed
+  subscribers this week vs last, and top `source` placements ranked by confirmed count.
+  Why: GOAL.md's "prove it converts" — the human should see which of the ~30 shipped
+  capture points actually convert over coffee, without PostHog spelunking. Read-only,
+  no `alert_subscribed` emission (adds no capture point).
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
