@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-14T09:05:43Z — admin-alerts-scoreboard — score 4/5
+- Strengths: Excellent judgment — audited the backlog's `source`-column assumption against the live DB, found it false, and re-scoped honestly (page-family buckets, not fabricated per-widget numbers); page mirrors `/admin/monetization`'s bar-list/computed-at/empty-state conventions exactly; pure `classifySourcePath` split into its own DB-free unit-tested module (precedent: alertFrequency/alertEditCriteria) with clear comments on the active+confirmed dual-vocabulary and confirmed_at→created_at fallback.
+- Weaknesses / risks: `getAlertScoreboard` selects all `alerts` rows unbounded — Supabase's implicit 1000-row PostgREST cap would silently undercount a page whose whole purpose is honest totals (immaterial at current volume, latent at scale).
+- Follow-up: none
+
 ## 2026-07-14T07:47:04Z — compare-tray-alert-capture — score 4/5
 - Strengths: Faithfully meets every acceptance criterion; deduped-by-sourcePath helpers mirror the curated `/aircraft/compare` page's shape/section markup and reuse `AlertSignup` + `resolveMakeModelFamily` cleanly (URLSearchParams even encodes safer than the sibling's raw interpolation).
 - Weaknesses / risks: None material — only a cosmetic redundant `className=""` (matches the sibling's own pattern); partnership/aircraft query sourcePaths are an established convention the cron already parses.
