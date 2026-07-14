@@ -1421,18 +1421,27 @@ impression event. Entry points are saturated (~30 shipped) — this refill's wei
 closing the measurement loop, deliverability, and email/management polish. (The
 `instant alerts` item above stays open pending its flagged re-scope — not duplicated here.)_
 
-- **[P1][goal] Persist the placement `source` on the alerts row.** The
-  `admin-alerts-scoreboard` cycle confirmed the per-placement `source` tag is PostHog-only —
-  the `alerts` table never stores it, so per-widget conversion can't be answered from the DB.
-  Add an additive nullable `alerts.source` column (⚠️ human-apply, same pending-DDL fail-soft
-  pattern as every prior `alerts.*` column — retry the insert without it until migrated) and
-  thread the already-known placement through every insert path: `subscribeToAlerts` +
-  `subscribeSignedInAlert` (take it from `AlertSignup`'s existing `source` prop),
-  `subscribeToConfirmedAlert` (`cross_sell`), `subscribeSavedSearchAlert` (`saved_search`),
-  `subscribeManageCrossSell` (`manage_cross_sell`), `createManageAlert` (`manage_new`), and
-  the `digest-cross-sell` route (`digest_cross_sell`). Improves measurement on every existing
-  capture surface; adds no new capture point (`alert_subscribed` payload unchanged — it
-  already carries `source`).
+~~- **[P1][goal] Persist the placement `source` on the alerts row.**~~ ✅ SHIPPED via
+  `alert-source-column` (2026-07-14) Added an additive nullable `alerts.source text`
+  column (⚠️ HUMAN ACTION — not yet applied to the live DB) and threaded the
+  already-known placement through every insert path: `subscribeToAlerts` +
+  `subscribeSignedInAlert` now take it from `AlertSignup`'s existing `source` prop
+  (previously PostHog-only, never reached the DB write); `subscribeToConfirmedAlert` →
+  `'cross_sell'`, `subscribeSavedSearchAlert` → `'saved_search'`,
+  `subscribeManageCrossSell` → `'manage_cross_sell'`, `createManageAlert` →
+  `'manage_new'`, `/api/alerts/digest-cross-sell` → `'digest_cross_sell'`. Also wired the
+  two direct `subscribeSignedInAlert`/`subscribeToAlerts` callers that don't go through
+  `AlertSignup` (`AlertMeChip` → `'filter_toolbar'`, `QuickStartSearchForm` →
+  `'saved_search'`, `PartnershipLaunchBanner` → `'partnership_launch_banner'`) so no
+  existing capture surface is left untagged. Every insert path retries without `source`
+  on a `column does not exist` error, same fail-soft pattern as every prior `alerts.*`
+  column (`price_drop_opt_in`/`frequency`/`paused_until`/etc.) — confirmed live: the
+  real prod DB does NOT have this column yet, and a real end-to-end submit (Playwright,
+  throwaway `@example.com`, deleted after) succeeded and inserted the row without
+  `source`, no user-facing error. No new capture point, no analytics-shape change —
+  `alert_subscribed`/`alert_capture_*` payloads already carried `source` to PostHog only.
+  **Next:** once the DDL is applied, the sibling `[P1][goal]` "Per-placement conversion
+  ranking on `/admin/alerts`" item becomes buildable.
 ~~- **[P1][goal] Auto-unsubscribe on spam complaints — `email.complained` in the Resend
   webhook.**~~ ✅ SHIPPED via `alert-spam-complaint-unsubscribe` (2026-07-14) The webhook now
   handles `email.complained` alongside the existing `email.bounced` handling: new
@@ -2505,7 +2514,12 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   — **slice 2 (inline rename on `/searches`) ✅ SHIPPED 2026-06-24T12:31Z** (`saved-search-inline-rename`):
   a pencil affordance on each saved-search name opens an inline editor (Enter saves / Esc cancels),
   backed by a new owner-scoped `renameSavedSearch` action (23505-aware); no schema. **This item is now complete.**
-- **[P2][want] Model filter: roll up variants into a parent model.** The Model filter lists
+- ~~**[P2][want] Model filter: roll up variants into a parent model.**~~ **AUDIT-CONFIRMED
+  effectively complete 2026-07-14** (`alert-source-column` cycle's tier-2 scoping pass) — all
+  slices below are shipped across `/aircraft`, `/partnerships`, and `/partnerships/seeking`
+  (`groupModelVariants` in `src/lib/modelGroups.ts`, reused by all three filter components).
+  Only remaining sub-item is the explicitly human-gated DB casing normalization noted inline
+  below — not re-scoped this cycle. Original text: The Model filter lists
   every variant separately (SR20, Sr20 G2, Sr20 G3, Sr20 G6, SR20-G2, SR20-G3, SF50 G2 Plus,
   …), so picking "an SR20" means checking many near-duplicate boxes. Add a parent **"SR20
   (all)" / "SR22 (all)"** option that ORs all variants; keep individual variants behind

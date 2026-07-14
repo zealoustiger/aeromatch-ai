@@ -244,7 +244,8 @@ export default function AlertSignup({
       activeContext ?? '',
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
-      frequency
+      frequency,
+      source
     )
     setPending(false)
     if (result.error) {
@@ -284,7 +285,8 @@ export default function AlertSignup({
       activeContext ?? '',
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
-      frequency
+      frequency,
+      source
     )
     setPending(false)
     if (result.error) {

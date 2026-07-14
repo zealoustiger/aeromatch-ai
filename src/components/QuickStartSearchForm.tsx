@@ -78,7 +78,7 @@ export default function QuickStartSearchForm({ userEmail }: { userEmail: string 
       setErrorMsg(searchResult.error)
       return
     }
-    const alertResult = await subscribeToAlerts(userEmail, context, sourcePath)
+    const alertResult = await subscribeToAlerts(userEmail, context, sourcePath, true, 'weekly', 'saved_search')
     setPending(false)
     if (alertResult.error) {
       setErrorMsg(alertResult.error)

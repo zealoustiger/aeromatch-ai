@@ -27,7 +27,7 @@ export default function PartnershipLaunchBanner({ visitorState, seekerCount, sou
     if (pending) return
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeToAlerts(email, context, sourcePath)
+    const result = await subscribeToAlerts(email, context, sourcePath, true, 'weekly', 'partnership_launch_banner')
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)

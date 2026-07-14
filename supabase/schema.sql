@@ -820,3 +820,15 @@ alter table alerts add column if not exists confirm_reminder_sent_at timestamptz
 -- (never a silent no-op, never a 500) — no other alert behavior changes.
 alter table alerts add column if not exists pending_email text;
 alter table alerts add column if not exists email_change_token text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_source
+-- Persists the per-placement capture-point tag (e.g. `card_watch`,
+-- `filter_toolbar`, `compare_page`, `digest_cross_sell`, …) that today only
+-- reaches PostHog's `alert_subscribed` event, never the DB — so per-widget
+-- conversion can't be computed from the `alerts` table itself (see
+-- `admin-alerts-scoreboard`'s "Follow-up for true per-placement precision").
+-- Nullable, no default — rows created before this migration simply have
+-- `source is null`. Apply in the Supabase SQL editor. Until applied, every
+-- insert path fails soft and retries without `source` (same graceful-fallback
+-- pattern as price_drop_opt_in/frequency above) — no user-facing error either way.
+alter table alerts add column if not exists source text;
