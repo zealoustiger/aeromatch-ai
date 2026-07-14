@@ -1198,13 +1198,18 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   when one was actually persisted (`dateApplied` flag) rather than always naming the
   requested date, closing a small honesty-gate gap found during QA. All 4 test rows
   deleted after.
-- **[P1][goal] Show a real sample digest on the `/alerts` landing page.** Top-of-funnel
-  show-don't-tell: `/alerts` asks for an email without ever showing what the (now
-  best-in-aviation) digest email looks like. Render a live-data sample — reuse the shipped
-  `send-me-a-sample` / dev email-preview machinery server-side for one popular chip (e.g.
-  Cessna 172, real current listings, honesty-gated to skip if no matches) — inline or
-  behind a "See a sample email" expander next to the existing capture form. The landing
-  page's `AlertSignup` keeps emitting `alert_subscribed`; this raises its conversion.
+~~- **[P1][goal] Show a real sample digest on the `/alerts` landing page.**~~ ✅ SHIPPED via
+  `alerts-sample-preview` (2026-07-14) `/alerts` asked for an email without ever showing what
+  the digest actually contains. Reused `getAlertDigestPreview` (the same real-sample machinery
+  the instant-first-digest/"send me a sample" paths already use) for every chip — not just the
+  server-verified "popular" ones, the 3 base catch-all interests too — and render up to 3 real
+  matching listings (photo/title/price/location) inline beneath the chip row, swapping live when
+  a visitor picks a different chip. Honesty-gated: a chip with 0 live matches renders no preview
+  section at all. New `src/lib/alertsLandingInterests.ts` (plain, non-`'use client'` module)
+  holds the shared base-interest list so the server component (`page.tsx`) can fetch previews
+  for those paths too without duplicating the list or hitting the "can't import plain data from
+  a client-component module" build error. No schema change, no new action, no capture-flow
+  change — `AlertSignup` untouched.
 ~~- **[P1][goal] Alert capture on the comparison pages.**~~ ✅ SHIPPED via
   `compare-page-alert-capture` (2026-07-14) — the curated
   `/aircraft/compare/[comparison]` family pages (e.g. "Cessna 172 vs Cirrus SR22")
