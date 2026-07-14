@@ -1486,14 +1486,16 @@ closing the measurement loop, deliverability, and email/management polish. (The
   tiny at cold-start — show raw counts (never a misleading percentage on n<10, mirror
   `MIN_ALERTS_TO_SHOW`-style flooring). Read-only, no capture point.~~ ✅ SHIPPED via
   `admin-alerts-digest-vote-rollup` (2026-07-14)
-- **[P2][goal] Recently-viewed alert banner on the homepage.** `RecentlyViewedAlertBanner`
-  (clustered-views suggestion, dismiss + redundancy suppression + live-match honesty gate
-  all already built) mounts only on `/aircraft` and `/partnerships` — the homepage still
-  shows only the generic band, wasting the highest-traffic return-visit surface. Mount the
-  banner on `/` above the generic band (suppress the generic band when the banner renders,
-  so two capture boxes never stack — same one-box precedent as `search-empty-state-alert`).
-  Improves an existing entry point; emits the existing `alert_subscribed`
-  (`source: 'recent_views'`) via `AlertSignup` — no new event shape.
+~~- **[P2][goal] Recently-viewed alert banner on the homepage.**~~ ✅ SHIPPED via
+  `home-recently-viewed-alert-banner` (2026-07-14) `RecentlyViewedAlertBanner` now takes an
+  optional `fallback` prop — renders it instead of `null` whenever there's nothing honest to
+  show (no cluster match, dismissed, or 0 live matches). `/` mounts the banner in place of the
+  static "Not ready to browse yet?" band, passing the old band's markup as `fallback`, so the
+  personalized banner and the generic capture never stack — exactly one alert box on the page
+  either way. Live-verified both states in a real browser: a fresh visitor (no
+  `ch_recently_viewed` localStorage) sees the unchanged generic band; seeding 3 Cessna 172
+  recent-views renders "You've been looking at Cessna 172 listings" with a real live match
+  count (28), confirming the end-to-end swap works, not just the fallback path.
 - **[P2][goal] Preheader text on alert emails.** Inbox list views show the first body text
   as the preview line; our digests waste it on header boilerplate. Add a hidden standard
   preheader (visually-hidden span before the body) to `buildAlertConfirmEmail`,
