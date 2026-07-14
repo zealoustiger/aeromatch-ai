@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-14T10:51:18Z — DRAIN SUMMARY
+- Cycles this run: 25 (PASS 20 / FAIL 2 / ABORT 3)
+- Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $91.6780 of $120 cap
+- Stopped because: safety cap (25)
+- Run: 20260714T060006Z
+
 ## 20260714T104357Z — PASS — admin-alerts-digest-vote-rollup
 - Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
 - What: **The admin alert scoreboard now shows a live rollup of the digest email's
