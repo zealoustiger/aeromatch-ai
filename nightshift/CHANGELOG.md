@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-14T12:23:32Z — DRAIN SUMMARY
+- Cycles this run: 7 (PASS 6 / FAIL 0 / ABORT 1)
+- Models: cycles on sonnet; 0 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $124.0246 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260714T105123Z
+
 ## 20260714T121159Z — PASS — alert-edit-hidden-criteria
 - Pages: /alerts/manage
 - What: **The "Edit" panel on your alerts page now shows every criterion your alert
