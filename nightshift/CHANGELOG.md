@@ -2,6 +2,70 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T062320Z — PASS — alert-vacation-mode
+- Pages: /alerts/manage
+- What: **A subscriber with several alerts who was going away had to snooze each one
+  individually — no "pause everything" option.** `/alerts/manage` already had a per-alert
+  snooze (30 days, auto-resume) and indefinite pause, but nothing bulk. Added a
+  "Going away for a while?" control above the alert list (renders whenever a visitor has
+  2+ alerts and at least one is active or paused): a date picker + **"Pause all (N)"**
+  button pauses every active alert until that date in one click, and a **"Resume all (N)"**
+  button appears whenever any alert is paused to bring them all back. Works identically
+  for signed-in visitors and email-only subscribers using their `/alerts/manage?token=`
+  link (same email-based ownership check every other alert action here already uses).
+  2 new server actions, `pauseAllAlerts`/`resumeAllAlerts` (`src/app/actions.ts`), reuse
+  the existing `paused_until` column and its graceful "column not migrated yet" fallback
+  exactly like the existing single-alert `snoozeAlert` — no new schema. New component
+  `src/components/VacationModeControl.tsx`; `src/app/alerts/manage/page.tsx` wires it in.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none — last cycle
+  (`alert-local-subscriber-memory`) PASSed. Tier 2 (`[want]`): re-audited BACKLOG.md's
+  open `[P1][want]` items — "Save this search" auth-wall reconciliation, the collection-
+  layout mosaic redesign, and the owner-leads list are each explicitly flagged as needing
+  a human product/design/compliance call; Trade-A-Plane ingestion is DataDome-blocked
+  (documented do-not-evade guardrail); the Bay-Area coverage benchmark's remaining slices
+  need an authoritative FAA dataset a prior cycle already tried and honestly aborted on
+  (no reliable per-airport figures via web search) — none autonomously actionable this
+  cycle. Dropped to tier 3: pulled "Vacation mode — pause ALL alerts" from the Opus/Fable
+  plan-pass batch (BACKLOG.md "Plan-pass batch — 2026-07-13"), the first still-open item
+  in that batch's list.
+- Spec: nightshift/specs/20260714T062320Z-alert-vacation-mode.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). Full unit suite `node --experimental-strip-types --test src/lib/*.test.ts`
+  — 286/286 pass (no dedicated test added for the two new bulk actions — they're thin
+  wrappers around the same `resolveOwnerEmail`/update-with-fallback shape as the existing,
+  untested `pauseAlert`/`snoozeAlert`/`resumeAlert` in the same file). Visual cycle (new UI
+  control) — read all 4 screenshots (desktop 1280 + mobile 375 on `/alerts/manage`,
+  `/alerts`): default (signed-out, 0-alert) state unchanged, no layout shift. Production
+  build served via `next start` (not dev); `qa-smoke.mjs` exit 0 on both pages — 4/4
+  checks, zero console errors, zero horizontal overflow at both viewports. **Live
+  end-to-end verified against the real DB** (Playwright, real clicks, not mocked actions,
+  run twice): seeded 2 real `confirmed` throwaway alerts under one
+  `qa-alert-vacation-mode-<ts>@example.com`, loaded `/alerts/manage?token=<token>`,
+  clicked "Pause all" — both rows flipped to "Paused," confirmed via a direct DB query
+  (this also surfaced that the live DB's `paused_until` column genuinely isn't migrated
+  yet, exercising the real fallback path, not just the happy path) — then clicked "Resume
+  all" — both rows flipped back to "Active." Caught and fixed a real bug in the same pass:
+  the success toast was unconditionally claiming "until <date>" even when the fallback
+  silently dropped the date, which is exactly the kind of unearned claim GOAL.md's honesty
+  rule forbids; added a `dateApplied` flag so the toast only names a date when one was
+  actually persisted. Also re-verified mobile 375px with real seeded data (not just the
+  empty default state) — zero overflow, zero console errors. All 4 test alert rows across
+  both seeded runs deleted immediately after (confirmed 0 remain via a follow-up query).
+  Server started/stopped cleanly each round; confirmed no orphaned `next-server` process
+  remained after. (Also found and cleaned up two unrelated orphaned `next-server`
+  processes left running from earlier cycles, blocking port 3000 for this cycle's own QA
+  server — killed them before starting mine.)
+- Screenshots: nightshift/screenshots/alert-vacation-mode/
+- Next: the plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13") has 3 more open
+  `[P1][goal]` items — a real sample digest preview on `/alerts`, alert capture on the
+  comparison pages (`/compare`, `/aircraft/compare/[comparison]`), and a market-pulse line
+  in the digest email — plus one more requiring a new webhook route (auto-pause on hard
+  bounces, needs a human to register the Resend webhook secret). Pull the next-highest-value
+  one next cycle (tier 1/2 permitting). Separately: the live DB is missing several columns
+  documented as "HUMAN ACTION REQUIRED" migrations in `supabase/schema.sql` (at least
+  `paused_until`, confirmed live this cycle) — every alert feature built on them degrades
+  gracefully today, but applying the pending migrations would let them work as designed.
+
 ## 20260714T061240Z — PASS — alert-local-subscriber-memory
 - Pages: every page with an `AlertSignup` capture box (site-wide: `/aircraft`,
   `/aircraft/deals`, `/aircraft/listing/[id]`, make/model/mission pages, `/alerts`,

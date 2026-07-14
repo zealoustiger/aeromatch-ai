@@ -1182,12 +1182,22 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   link) the signed-in `existingAlert` path already had, instead of re-showing a blank
   form. Live-verified end-to-end (real browser submit + reload, real throwaway
   `@example.com`, row deleted after): the state correctly flips after a real subscribe.
-- **[P1][goal] Vacation mode — pause ALL alerts until a date, one click.** `/alerts/manage`
-  has per-alert snooze with honest auto-resume (shipped), but a subscriber with 4 alerts
-  going away for two weeks must snooze 4 rows. Add a bulk "Pause everything until…" (and
-  "Resume all") action reusing the existing snooze columns/auto-resume machinery, working
-  in both the session-scoped and token-scoped (`?token=`) manage views. Management polish
-  that prevents the rage-unsubscribe alternative — "fewer, not none," literally.
+~~- **[P1][goal] Vacation mode — pause ALL alerts until a date, one click.**~~ ✅ SHIPPED
+  via `alert-vacation-mode` (2026-07-14) `/alerts/manage` had per-alert snooze with honest
+  auto-resume, but a subscriber with several alerts going away had to snooze each row.
+  New `VacationModeControl` (date picker + "Pause all (N)" / "Resume all (N)") renders
+  above the list when there are ≥2 alerts and at least one is confirmed/paused; new bulk
+  server actions `pauseAllAlerts`/`resumeAllAlerts` (`actions.ts`) reuse the existing
+  `resolveOwnerEmail` trust boundary and `paused_until` column/graceful-fallback pattern
+  from `snoozeAlert`. Live-verified end-to-end against the real DB (2 real throwaway
+  `@example.com` confirmed alerts, both rows toggled via real Playwright clicks): "Pause
+  all" flips both to paused, "Resume all" flips both back to confirmed/active, zero
+  console errors, no 375px overflow. Confirmed the live DB's `paused_until` column isn't
+  migrated yet (same as the pre-existing snooze feature) — the fallback correctly
+  degrades to a status-only pause, and the success toast now only claims a resume date
+  when one was actually persisted (`dateApplied` flag) rather than always naming the
+  requested date, closing a small honesty-gate gap found during QA. All 4 test rows
+  deleted after.
 - **[P1][goal] Show a real sample digest on the `/alerts` landing page.** Top-of-funnel
   show-don't-tell: `/alerts` asks for an email without ever showing what the (now
   best-in-aviation) digest email looks like. Render a live-data sample — reuse the shipped
