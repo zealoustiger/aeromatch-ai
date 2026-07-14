@@ -17,6 +17,15 @@ const STATUS_LABELS: Record<string, string> = {
 
 const LIVE_STATUSES = new Set(['active', 'confirmed'])
 
+// The date `alert-source-column` shipped — rows from before this never got a
+// `source` tag at all (not a graceful-degrade gap, the column didn't exist).
+const UNTAGGED_BUCKET = '(untagged, pre-2026-07-14)'
+
+// Below this many live+pending rows, a confirm-rate percentage is more noise
+// than signal (a single pending row reads as "0% confirm rate"). Mirrors the
+// `MIN_ALERTS_TO_SHOW`/`MIN_SAVES_TO_SHOW` honesty-floor precedent elsewhere.
+const MIN_PLACEMENT_VOLUME_FOR_RATE = 5
+
 export interface AlertStatusCount {
   status: string
   label: string
@@ -28,6 +37,13 @@ export interface AlertPageFamilyCount {
   count: number
 }
 
+export interface AlertSourceCount {
+  source: string
+  liveCount: number
+  pendingCount: number
+  confirmRate: number | null
+}
+
 export interface AlertScoreboardSnapshot {
   statusCounts: AlertStatusCount[]
   total: number
@@ -35,12 +51,21 @@ export interface AlertScoreboardSnapshot {
   newThisWeek: number
   newLastWeek: number
   topPageFamilies: AlertPageFamilyCount[]
+  topSources: AlertSourceCount[]
+  sourceColumnMigrated: boolean
   computedAt: string
 }
 
 export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
   const admin = createAdminClient()
-  const { data } = await admin.from('alerts').select('status, source_path, confirmed_at, created_at')
+  let sourceColumnMigrated = true
+  let { data, error } = await admin
+    .from('alerts')
+    .select('status, source_path, confirmed_at, created_at, source')
+  if (error?.message?.includes('source')) {
+    sourceColumnMigrated = false
+    ;({ data } = await admin.from('alerts').select('status, source_path, confirmed_at, created_at'))
+  }
   const rows = data ?? []
 
   const statusOrder = ['active', 'confirmed', 'pending', 'paused', 'bounced', 'unsubscribed']
@@ -73,10 +98,19 @@ export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
   let newThisWeek = 0
   let newLastWeek = 0
   const familyCounts = new Map<string, number>()
+  const sourceLiveCounts = new Map<string, number>()
+  const sourcePendingCounts = new Map<string, number>()
 
   for (const row of rows) {
+    const source = (sourceColumnMigrated ? (row as { source?: string | null }).source : null) || UNTAGGED_BUCKET
+
+    if (row.status === 'pending') {
+      sourcePendingCounts.set(source, (sourcePendingCounts.get(source) ?? 0) + 1)
+    }
+
     if (!LIVE_STATUSES.has(row.status)) continue
     liveTotal++
+    sourceLiveCounts.set(source, (sourceLiveCounts.get(source) ?? 0) + 1)
     const family = classifySourcePath(row.source_path)
     familyCounts.set(family, (familyCounts.get(family) ?? 0) + 1)
 
@@ -93,6 +127,22 @@ export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8)
 
+  const allSources = new Set([...sourceLiveCounts.keys(), ...sourcePendingCounts.keys()])
+  const topSources: AlertSourceCount[] = [...allSources]
+    .map((source) => {
+      const liveCount = sourceLiveCounts.get(source) ?? 0
+      const pendingCount = sourcePendingCounts.get(source) ?? 0
+      const volume = liveCount + pendingCount
+      return {
+        source,
+        liveCount,
+        pendingCount,
+        confirmRate: volume >= MIN_PLACEMENT_VOLUME_FOR_RATE ? liveCount / volume : null,
+      }
+    })
+    .sort((a, b) => b.liveCount - a.liveCount)
+    .slice(0, 12)
+
   return {
     statusCounts,
     total,
@@ -100,6 +150,8 @@ export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
     newThisWeek,
     newLastWeek,
     topPageFamilies,
+    topSources,
+    sourceColumnMigrated,
     computedAt: new Date().toISOString(),
   }
 }
