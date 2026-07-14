@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T074502Z — PASS — compare-tray-alert-capture
+- Pages: /compare (both `?type=aircraft` and `?type=partnership`)
+- What: **Comparing 2-3 listings side by side is peak purchase-intent, but the
+  compare-tray page had zero way to say "alert me when another one lists" — you had
+  to leave and find a different page.** `/compare` now shows a "Get alerts for new
+  listings" panel below the comparison table with one email-capture box per distinct
+  make/model among the compared items — comparing two Cessna 172s shows one box, not
+  two identical ones; comparing a Bonanza, an Arrow, and a Cirrus shows three. Aircraft
+  boxes link to the same curated `/aircraft/{make}/{model}` alert target the SEO
+  compare pages already use when one exists; partnerships use the query-string search
+  shape every other partnership capture point uses. No account needed, same one-email
+  `AlertSignup` component used everywhere else on the site.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none — last cycle
+  (`resend-bounce-webhook`) PASSed. Tier 2 (`[want]`): re-confirmed empty — the two
+  open `[P1][want]` items (collection-layout mosaic redesign, "Save this search"
+  auth-wall reconciliation) remain flagged needing a human product/design call, and
+  Trade-A-Plane/Bay-Area-benchmark remain audited-and-blocked, same as every recent
+  cycle's audit. Dropped to tier 3: pulled the first item from the fresh Opus/Fable
+  "Plan-pass batch — 2026-07-14" queue (BACKLOG.md) — the compare tray was the one
+  named-open gap left over from the earlier `compare-page-alert-capture` cycle.
+- Spec: nightshift/specs/20260714T073835Z-compare-tray-alert-capture.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes incl. `/compare`). Full unit suite `node
+  --experimental-strip-types --test src/lib/*.test.ts` — 298/298 pass (no lib logic
+  touched by this change, confirms no regression). Visual cycle (new UI panel on a
+  page) — read all 3 sets of screenshots (desktop 1280 + mobile 375): the panel sits
+  cleanly below the existing table/bottom-links, cards lay out in a responsive grid
+  (1 col at 375px, up to 3 on desktop), no overlap, no overflow. Production build
+  served via `next start` (not dev) — found and killed a stale orphaned
+  `next-server` process left over from a prior session occupying port 3000 before
+  starting a clean one; `qa-smoke.mjs` exit 0 — 4/4 checks (2 paths × 2 viewports),
+  zero console errors, zero horizontal overflow. **Live-verified against real prod
+  data, read-only** (no test rows needed — this is a pure display/dedup feature, no
+  DB write to clean up): queried real `aircraft_for_sale`/`partnerships` rows and
+  round-tripped 4 scenarios through the real running page — 2 same-family aircraft →
+  exactly 1 box with the curated `/aircraft/cessna/172` sourcePath; 3 different-family
+  aircraft (Beechcraft Bonanza G36, Piper Arrow III, Cirrus SR20) → 3 distinct boxes;
+  2 different-family partnerships → 2 boxes with `/partnerships?make=…&model=…`
+  sourcePaths, correct URL-encoded context. Server stopped cleanly after, confirmed no
+  orphaned `next-server` process remained.
+- Screenshots: nightshift/screenshots/compare-tray-alert-capture/
+- Next: `matchCount` (live "N match right now") and `alertCount` (social-proof) lines
+  on these boxes were intentionally left off this slice — the curated
+  `/aircraft/compare/[comparison]` page already has a match-count via a separate
+  `countMakeModel` query; wiring the equivalent onto this tray page is a natural
+  small follow-up. The Opus/Fable "Plan-pass batch — 2026-07-14" queue has 7 more
+  unshipped `[P1][goal]` items (real instant alerts, change-email-on-alerts, filter
+  toolbar chip, partnership market-pulse, market-pulse follow-ups, digest feedback
+  thumbs, `/admin/alerts` scoreboard) — next cycle should pull the next one.
+
 ## 20260714T072843Z — PASS — resend-bounce-webhook
 - Pages: /alerts/manage (plus a new, non-page API route: `/api/webhooks/resend`)
 - What: **A typo'd or dead subscriber email would get digests forever, hurting our

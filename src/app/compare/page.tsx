@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronLeft, GitCompare } from 'lucide-react'
+import { ChevronLeft, GitCompare, Bell } from 'lucide-react'
 import { Partnership, AircraftForSale } from '@/lib/types'
 import { getPartnershipsByIds } from '@/lib/partnerships'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { resolveMakeModelFamily } from '@/lib/seo'
+import AlertSignup from '@/components/AlertSignup'
 
 // Cap at 3 listings. Defined locally (not imported from the 'use client'
 // CompareProvider) so the value is reliably present in this server component.
@@ -103,6 +104,76 @@ function aircraftLink(p: AircraftForSale): { href: string; external: boolean; te
 
 function aircraftHeading(p: AircraftForSale): string {
   return aircraftLabel(p.make ?? '', p.model ?? '', p.year) || 'Aircraft'
+}
+
+/* ─────────────────────── Alert-capture (deduped by family) ─────────────────────── */
+
+interface AlertBox {
+  context?: string
+  sourcePath: string
+}
+
+/** Aircraft: prefer the curated `/aircraft/{makeSlug}/{modelSlug}` family page's
+ *  sourcePath shape (same one `/aircraft/compare/[comparison]` already uses) when
+ *  the listing resolves to one; fall back to a query-string search scoped to its
+ *  raw make/model, or the fully generic box when there's no make at all. Dedup key
+ *  is the resulting sourcePath itself, so comparing two listings in the same family
+ *  (curated or not) renders exactly one alert box, not one per listing. */
+function aircraftAlertBoxes(listings: AircraftForSale[]): AlertBox[] {
+  const seen = new Map<string, AlertBox>()
+  for (const p of listings) {
+    const family = resolveMakeModelFamily(p.make, p.model)
+    const box: AlertBox = family
+      ? { context: `${family.make} ${family.model}`, sourcePath: `/aircraft/${family.makeSlug}/${family.modelSlug}` }
+      : p.make
+        ? {
+            context: [p.make, p.model].filter(Boolean).join(' '),
+            sourcePath: `/aircraft?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`,
+          }
+        : { context: undefined, sourcePath: '/aircraft' }
+    if (!seen.has(box.sourcePath)) seen.set(box.sourcePath, box)
+  }
+  return [...seen.values()]
+}
+
+/** Partnerships have no curated make/model family page, so every box uses the
+ *  query-string search shape (same convention as `partnership-detail-alert-cta`). */
+function partnershipAlertBoxes(listings: Partnership[]): AlertBox[] {
+  const seen = new Map<string, AlertBox>()
+  for (const p of listings) {
+    const box: AlertBox = p.make
+      ? {
+          context: [p.make, p.model].filter(Boolean).join(' '),
+          sourcePath: `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`,
+        }
+      : { context: undefined, sourcePath: '/partnerships' }
+    if (!seen.has(box.sourcePath)) seen.set(box.sourcePath, box)
+  }
+  return [...seen.values()]
+}
+
+function CompareAlertSection({ boxes, noun }: { boxes: AlertBox[]; noun: 'aircraft' | 'partnership' }) {
+  if (boxes.length === 0) return null
+  return (
+    <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
+        <Bell className="h-4 w-4 text-sky-500" />
+        Get alerts for new listings
+      </h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {boxes.map((box) => (
+          <AlertSignup
+            key={box.sourcePath}
+            context={box.context}
+            sourcePath={box.sourcePath}
+            noun={noun}
+            source="compare_tray"
+            className=""
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 const AIRCRAFT_ROWS: { label: string; render: (p: AircraftForSale) => React.ReactNode }[] = [
@@ -203,6 +274,7 @@ export default async function ComparePage({
           label: row.label,
           cells: listings.map((p) => ({ key: p.id, node: row.render(p) })),
         }))}
+        alertSection={<CompareAlertSection boxes={aircraftAlertBoxes(listings)} noun="aircraft" />}
       />
     )
   }
@@ -236,6 +308,7 @@ export default async function ComparePage({
         label: row.label,
         cells: listings.map((p) => ({ key: p.id, node: row.render(p) })),
       }))}
+      alertSection={<CompareAlertSection boxes={partnershipAlertBoxes(listings)} noun="partnership" />}
     />
   )
 }
@@ -307,6 +380,7 @@ function CompareLayout({
   count,
   columns,
   rows,
+  alertSection,
 }: {
   backHref: string
   backLabel: string
@@ -314,6 +388,7 @@ function CompareLayout({
   count: number
   columns: Column[]
   rows: Row[]
+  alertSection: React.ReactNode
 }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -396,6 +471,8 @@ function CompareLayout({
           ) : null
         )}
       </div>
+
+      {alertSection}
     </div>
   )
 }
