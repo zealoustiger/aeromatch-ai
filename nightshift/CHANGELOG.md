@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T093751Z — PASS — alert-digest-legacy-active-status
+- Pages: (backend/cron — no user-facing page; affects the daily digest send for every
+  subscriber, plus `/alerts/manage`'s read of the same table)
+- What: **Fixed a real bug where some genuine alert subscribers were silently never
+  getting their digest email.** The `alerts` table has always had two "this is a live,
+  opted-in subscriber" statuses — `confirmed` (the current double-opt-in flow) and an
+  older/legacy `active` (rows that predate double opt-in). The daily digest cron only
+  ever selected `status='confirmed'`, so anyone on a legacy `active` row got nothing,
+  forever, with no error anywhere to flag it.
+- Goal: `[bug]` — tier 1, uncapped (fix bugs first). Flagged as a "possible pre-existing
+  bug worth a human look" in the previous `admin-alerts-scoreboard` cycle's Next note but
+  not yet verified/fixed. Verified it's real this cycle (not speculative): read the live
+  prod `alerts` table with the service-role key and confirmed 3 real rows currently sit
+  at `status='active'` and are excluded by the old query. `src/lib/alertScoreboard.ts`
+  already independently discovered and documented this exact vocabulary split
+  (`LIVE_STATUSES = new Set(['active', 'confirmed'])`) when building the admin
+  scoreboard — the send path (`src/app/api/cron/alert-digest/route.ts`) just never got
+  the matching fix. Changed both fetch call sites (primary + the optional-column retry
+  fallback) from `.eq('status', 'confirmed')` to `.in('status', ['confirmed', 'active'])`,
+  same precedent, plus a comment pointing at it so the split doesn't get silently
+  re-forked. No schema change, no change to any status-transition/write path.
+- Spec: nightshift/specs/20260714T093751Z-alert-digest-legacy-active-status.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  **Live-verified read-only** against the real prod Supabase (shared across
+  local/staging/prod, no rows written): ran the old query (`status='confirmed'`, 1 row)
+  and the new query (`status IN ('confirmed','active')`, 4 rows) side by side against the
+  live `alerts` table — confirmed the new query surfaces exactly the 3 previously-excluded
+  `active` rows and nothing else changes. **Deliberately did not invoke the actual
+  `/api/cron/alert-digest` route** even against the local production server — doing so
+  would fire a real email to real subscribers (shared prod `RESEND_API_KEY`), same
+  precedent every prior digest-email cycle has followed (verify the query/logic directly,
+  never trigger a live send). Production build served via `next start` (not dev);
+  `qa-smoke.mjs --slug alert-digest-legacy-active-status /alerts/manage /aircraft` exit 0
+  — 4/4 (desktop 1280 + mobile 375, HTTP 200, zero console errors, zero horizontal
+  overflow). Non-visual/backend cycle — smoke gate only, screenshots saved for the audit
+  trail but not read into context per RUNBOOK. Server started/stopped cleanly (verified
+  via `pgrep`, no orphaned `next-server` process left running).
+- Screenshots: nightshift/screenshots/alert-digest-legacy-active-status/
+- Next: two smaller, related gaps intentionally left out of this scoped fix — (1)
+  `src/app/actions.ts`'s pause/snooze/resume guards and `/alerts/manage/page.tsx`'s UI
+  (activeAlertCount, the "last digest" cadence line, widen-nudge eligibility) all still
+  gate on `status === 'confirmed'` specifically, so a legacy `active` subscriber can now
+  actually receive digests but still can't pause/snooze their own alert from the manage
+  page, and the page won't show them a cadence line even though the cron is now checking
+  them — worth a follow-up pass threading the same `active`+`confirmed` treatment through
+  those call sites; (2) alternatively, a one-time data migration normalizing the 3 legacy
+  rows' `status` to `confirmed` (with `confirmed_at` backfilled from `created_at`) would
+  close both gaps at once without touching more code — a human call on which approach they
+  prefer, noted here rather than decided unilaterally on a data-shape question.
+
 ## 20260714T092605Z — PASS — alert-spam-complaint-unsubscribe
 - Pages: (backend/webhook — no user-facing page; affects `/alerts/manage` and every future
   alert digest send)
