@@ -248,6 +248,37 @@ test('digest: with frequencyUrl (daily alert), the footer adds a "Get fewer emai
   assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
 })
 
+test('digest: without digest-feedback urls, no "Was this digest useful?" row renders', () => {
+  const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
+  assert.doesNotMatch(html, /Was this digest useful/)
+  assert.doesNotMatch(text, /Was this digest useful/)
+})
+
+test('digest: with both digest-feedback urls, the footer adds a "Was this digest useful?" 👍/👎 row', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    digestFeedbackUpUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=xyz&vote=up',
+    digestFeedbackDownUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=xyz&vote=down',
+  })
+  assert.match(html, /Was this digest useful\?/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=xyz&amp;vote=up"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=xyz&amp;vote=down"/)
+  assert.match(text, /Was this digest useful\? Yes: https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=xyz&vote=up  No: https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=xyz&vote=down/)
+})
+
+test('digest: with only one digest-feedback url, no row renders (they are always built as a pair)', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    digestFeedbackUpUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=xyz&vote=up',
+  })
+  assert.doesNotMatch(html, /Was this digest useful/)
+  assert.doesNotMatch(text, /Was this digest useful/)
+})
+
 test('digest: sampleNote prefixes the subject with "Sample:" and renders a sample banner', () => {
   const { subject, html, text } = buildAlertDigestEmail({
     ...DIGEST_BASE,
@@ -457,6 +488,35 @@ test('combined: footer carries the shared Manage/Unsubscribe links (already mult
   assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b"/)
   assert.match(text, /Manage alerts: https:\/\/clubhanger\.com\/alerts\/manage\?token=a&utm_source=alert_email&utm_medium=email&utm_campaign=combined/)
   assert.match(text, /Unsubscribe from these: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b/)
+})
+
+test('combined: with both digest-feedback urls, one shared "Was this digest useful?" row renders (not per-section)', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+    digestFeedbackUpUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=a&vote=up',
+    digestFeedbackDownUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=a&vote=down',
+  })
+  assert.equal((html.match(/Was this digest useful\?/g) ?? []).length, 1)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=a&amp;vote=up"/)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=a&amp;vote=down"/)
+  assert.match(text, /Was this digest useful\? Yes: https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=a&vote=up  No: https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=a&vote=down/)
+})
+
+test('combined: without digest-feedback urls, no row renders', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+    ],
+  })
+  assert.doesNotMatch(html, /Was this digest useful/)
+  assert.doesNotMatch(text, /Was this digest useful/)
 })
 
 test('pickBestPriceDropSample: picks the largest % decrease, not the first/most-recent', () => {
