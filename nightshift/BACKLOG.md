@@ -1157,12 +1157,22 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   `max_tt`-based — via a real `@example.com` throwaway per case, all 3 deleted after): the
   resulting `/alerts/manage?token=...` view now shows a real live match count ("48 listings
   match right now") and a working "View" link, which never rendered before this fix.
-- **[P1][goal] Deal-alert capture on `/aircraft/deals`.** Verified: `aircraft/deals/page.tsx`
-  has NO `AlertSignup` today, yet the deal-only alert machinery already exists end-to-end
-  (`?deal=good` parses in the cron, deal-only toggle shipped). Add "Alert me when a new
-  good deal lists" (email-only `AlertSignup`, `sourcePath=/aircraft?deal=good` layered onto
-  any active make/model filters, `source: 'deals_page'`) — the highest-intent browse page
-  on the site is the last one without a capture point. Emits `alert_subscribed`.
+~~- **[P1][goal] Deal-alert capture on `/aircraft/deals`.**~~ ✅ SHIPPED via
+  `deals-page-alert-capture` (2026-07-14) Verified: `aircraft/deals/page.tsx` had NO
+  `AlertSignup` — the highest-intent browse page on the site was the last one without a
+  capture point. Added the standard email-only `AlertSignup` (`context="good deal"`,
+  `sourcePath="/aircraft?deal=good"`, `source="deals_page"`, `matchCount={deals.length}` —
+  the exact honest count already rendered as cards above it) below the listings/disclosure.
+  `deal=good` already parses end-to-end via the bare-`/aircraft` branch of the digest cron's
+  `parseSourcePath` — zero changes needed there. Also hid `AlertSignup`'s "Only email me good
+  deals" checkbox when the caller's own `sourcePath` already carries `deal=good` (new
+  `!sourcePath.includes('deal=good')` clause on `showDealOnlyOption`) — this page IS
+  deals-only already, so the checkbox would read as redundant/confusing on top of that; every
+  other aircraft page's checkbox is unaffected. Live-verified end-to-end against the real DB
+  (Playwright, real submit, not mocked): confirmed the checkbox does NOT render on this page,
+  submitted one throwaway `qa-deals-page-alert-capture-<ts>@example.com` alert, confirmed the
+  resulting row's `source_path` is exactly `/aircraft?deal=good` and `context` is `"good
+  deal"`, then deleted it (0 rows remain).
 - **[P1][goal] Remember email-only subscribers in the browser — "You already get alerts
   for this" without an account.** The signed-in duplicate-state shipped, but the majority
   path (email-only, no session) re-sees a blank form on every visit and can double-submit.
