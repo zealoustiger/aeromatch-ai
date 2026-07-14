@@ -2,6 +2,48 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T104357Z — PASS — admin-alerts-digest-vote-rollup
+- Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
+- What: **The admin alert scoreboard now shows a live rollup of the digest email's
+  👍/👎 "was this useful?" votes**, not just the raw per-row list buried in
+  `/admin/feedback`. A prior cycle (`digest-feedback-vote`) added the one-click vote
+  links to every digest email and wrote each vote into the `feedback` table, but there
+  was nowhere to see the aggregate signal at a glance. New "Digest feedback" section on
+  `/admin/alerts` shows all-time 👍/👎 totals, a this-week vs last-week vote-count delta,
+  a 👍 rate (only once volume clears a 10-vote honesty floor — raw counts only below
+  that), and a short list of the most recent votes with their alert page-context (no raw
+  email, matching this page's existing aggregate-only convention).
+- Goal: `[goal]` tier 3 — alert experience / "prove it converts" (GOAL.md). This was the
+  explicit flagged next slice from the `digest-feedback-vote` cycle's "Next" note, and
+  the top `[P2][goal]` item left in the alert-experience queue after last cycle's
+  placement-ranking work closed out the `[P1]`s.
+- Spec: nightshift/specs/20260714T104357Z-admin-alerts-digest-vote-rollup.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  (`/admin/alerts` compiles as ƒ dynamic). New `getDigestVoteRollup()` in
+  `src/lib/alertScoreboard.ts` queries `feedback` filtered to `type='digest_vote'`,
+  classifies each row's vote direction from the existing message-emoji prefix
+  (`digest-feedback-vote` already writes "👍 Digest was useful"/"👎 Digest was not
+  useful", no new column needed), and tallies totals/week-over-week/recent list — no
+  schema change, no new capture point. **Live-verified end-to-end** against the real
+  prod DB (shared across local/staging/prod): confirmed 0 real `digest_vote` rows exist
+  yet (feature shipped same day, cold start — the page correctly renders its honest
+  "not enough data" empty state), then seeded 2 throwaway rows (no PII, harmless
+  `page_path` markers, no real alert tied), ran the exact query+classification logic the
+  new function uses, confirmed it correctly tallied 1 up / 1 down, and deleted both rows
+  immediately after (verified 0 remain). Non-visual-in-practice cycle (admin-gated UI,
+  same precedent as every prior `/admin/alerts` cycle) — smoke gate:
+  `qa-smoke.mjs --slug admin-alerts-digest-vote-rollup /admin/alerts /aircraft` 4/4
+  (desktop 1280 + mobile 375, HTTP 200, zero console errors, zero horizontal overflow);
+  screenshots read and confirm the unchanged, correct "Admin only" gate render — no
+  regression on the admin layout or footer. Server served via `next start` (not dev),
+  stopped cleanly at the end (verified via `pgrep`).
+- Screenshots: nightshift/screenshots/admin-alerts-digest-vote-rollup/
+- Next: remaining `[P2][goal]` items in the queue: recently-viewed alert banner on the
+  homepage, preheader text on alert emails, honoring `avionics` in aircraft alert
+  matching. The `[P1][goal]` "Real 'instant' alerts" item stays open pending its flagged
+  re-scope (needs a human call on the real publish-trigger point + timeout-risk design,
+  not buildable in one cycle as written).
+
 ## 20260714T103441Z — PASS — admin-alerts-source-ranking
 - Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
 - What: **The admin alert scoreboard now ranks which exact placement (card bell, filter
