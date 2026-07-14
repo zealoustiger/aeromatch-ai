@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T110342Z — PASS — alert-email-preheader
+- Pages: none (email templates only — `src/lib/email.ts`)
+- What: **Every alert email (confirm, weekly digest, combined digest, price-drop) now
+  shows a useful, honest preview line in the inbox list view (Gmail, Apple Mail, etc.)
+  instead of the generic "ClubHanger" header boilerplate.** e.g. a digest inbox row now
+  previews "There are 2 new listings + 1 price drop matching your Cessna 172 alert on
+  ClubHanger this week." instead of just "ClubHanger". This was the explicit "Next"
+  pointer flagged by the last two shipped cycles.
+- Goal: `[goal]` tier 3 — alert experience / "best listing alert email in aviation"
+  (GOAL.md). Tier 1 (`[bug]`): none open (prior cycle `home-recently-viewed-alert-banner`
+  PASSed, no unstruck `[bug]` entries in BACKLOG.md). Tier 2 (`[want]`): re-confirmed
+  empty of buildable work — the two open `[P1][want]` items (save-search auth-wall
+  reconciliation part 1, collection-layout mosaic redesign) both remain flagged as needing
+  a human product call/mock; the ingestion `[P1][want]`s (Trade-A-Plane, Bay-Area coverage
+  benchmark, Controller/AirMart/AeroTrader) remain audited-and-blocked on bot protection /
+  no honest data source, matching many prior cycles' independent audits. Dropped to tier 3
+  and picked the top `[P2][goal]` item in BACKLOG.md's alert-experience queue.
+- Spec: nightshift/specs/20260714T110342Z-alert-email-preheader.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  Added a `preheaderHtml()` helper in `email.ts` — a hidden (`display:none`, zero-height,
+  `mso-hide:all`), zero-width-joiner-padded div rendered right after `<body>` — wired into
+  all 4 named builders (`buildAlertConfirmEmail`, `buildAlertDigestEmail`,
+  `buildCombinedAlertDigestEmail`, `buildPriceDropEmail`). Every preheader string is
+  derived from data already passed into that builder (new/drop counts, context, price,
+  section totals) — no new fabricated number, per GOAL.md's honesty bar. Took care to
+  avoid double-HTML-escaping: `buildAlertDigestEmail`'s preheader is built from the same
+  unescaped `countLabelText`/`forThingText` values the existing plain-text body already
+  uses, not the pre-escaped `countLabel`/`forThing` HTML variables, since `preheaderHtml()`
+  escapes internally (a real bug caught and fixed during implementation via a dedicated
+  "special characters aren't double-escaped" unit test). The plain-text part of every
+  builder is untouched — preheader is an HTML-inbox-preview concept only, no text-part
+  equivalent. Non-visual cycle (email-copy change, no page/component touched) — added 12
+  new unit tests to `email.test.ts` covering presence/absence, exact phrasing per builder,
+  the escaping guard, and byte-identical text-part assertions:
+  `node --experimental-strip-types --test src/lib/email.test.ts` → 70/70 pass (58 pre-
+  existing + 12 new). QA gate: served the real production build (`next build` → `next
+  start`, killed a stale leftover `next-server` process from an earlier cycle that was
+  squatting on port 3000 first), live-curled all 3 dev-only `/api/dev/email-preview/*`
+  routes (price-drop, alert-digest, alert-digest-combined) and confirmed the real hidden
+  preheader div renders with the correct phrasing in each; `qa-smoke.mjs --slug
+  alert-email-preheader / /alerts/manage /aircraft` 6/6 (desktop 1280 + mobile 375, HTTP
+  200, zero console errors, zero horizontal overflow) — picked as representative pages
+  since no page itself changed. Screenshots not read (non-visual convention). Server
+  stopped cleanly at the end (verified via `ps`).
+- Screenshots: nightshift/screenshots/alert-email-preheader/
+- Next: remaining `[P2][goal]` alert-experience item: honoring `avionics` in aircraft
+  alert matching. The `[P1][goal]` "Real 'instant' alerts" item stays open pending its
+  flagged re-scope (needs a human call on the real draft→live publish-trigger point).
+
 ## 20260714T105349Z — PASS — home-recently-viewed-alert-banner
 - Pages: /
 - What: **The homepage now shows a personalized "you've been looking at X" alert prompt
