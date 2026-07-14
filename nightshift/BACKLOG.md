@@ -1325,15 +1325,20 @@ no duplicate of shipped work above)._
   cancel clears pending state without sending anything. Pre-migration graceful-degrade path
   also verified live (honest "isn't available yet" error, zero console errors, zero overflow
   desktop + 375px).
-- **[P1][goal] One-tap "Alert me for this search" chip in the active-filter toolbar on
-  `/aircraft`** (drop into `/partnerships` too if the same component fits in-cycle).
-  GOAL.md explicitly asks for one-tap alerts "from any active filter set", but the browse
-  capture sits below the full results list (verified: `AlertSignup` renders at the page
-  footer). Show a compact 🔔 chip in the results/filter toolbar whenever ≥1 filter is
-  active: signed-in users subscribe in ONE click via the existing `subscribeSignedInAlert`;
-  signed-out users get smooth-scrolled to the existing capture with focus in the email
-  field and the filter context prefilled. New capture point → emit `alert_subscribed`
-  with `source="filter_toolbar"`.
+~~- **[P1][goal] One-tap "Alert me for this search" chip in the active-filter toolbar on
+  `/aircraft`** (drop into `/partnerships` too if the same component fits in-cycle).~~ ✅
+  SHIPPED via `filter-toolbar-alert-chip` (2026-07-14) New shared `AlertMeChip.tsx`
+  renders a 🔔 "Alert me for this search" chip after the removable filter chips on both
+  `/aircraft` and `/partnerships` (one component, dropped into both `ActiveFilterChips`
+  and `PartnershipActiveFilterChips`, gated on the same `chips.length > 0` check as the
+  filter chips themselves) whenever ≥1 filter is active. Signed-in visitors subscribe in
+  one click via the existing `subscribeSignedInAlert`; signed-out visitors are
+  smooth-scrolled to the page's existing footer `AlertSignup` email field (`#alert-email`)
+  and it's focused — no new subscribe path, the context/sourcePath were already threaded
+  there. Once subscribed (or already subscribed — checked via `getExistingAlertForSourcePath`
+  for signed-in, `isLocallySubscribed` for signed-out/email-only) the chip swaps to a
+  non-interactive "Alerts on" pill so it never re-submits. Emits `alert_subscribed` with
+  `source: 'filter_toolbar'`. No schema change, no new dependency.
 - **[P1][goal] Market-pulse line for PARTNERSHIP digest sections.** `getMarketPulseLine`
   is aircraft-only (verified). Add the partnership equivalent — "6 Cessna 172
   partnerships listed right now, median buy-in $28k" — reusing the same `priceStats`
