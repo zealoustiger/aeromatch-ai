@@ -2,6 +2,61 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T111708Z — PASS — alert-avionics-match
+- Pages: /aircraft, /alerts/manage, /aircraft/listing/[id]
+- What: **Aircraft alerts now honor the "glass panel / ADS-B / autopilot / WAAS / GPS"
+  avionics filter instead of silently dropping it.** Previously, a visitor who filtered
+  `/aircraft` to glass-panel-only planes and set an alert would get emailed about EVERY
+  new Cessna, glass or not — the avionics param was deliberately stripped at capture so
+  the alert wouldn't over-promise. Now it rides through: the alert's saved search + the
+  digest email both only match listings with the selected avionics.
+- Goal: `[goal]` tier 3 — alert experience / matching honesty (GOAL.md). Tier 1 (`[bug]`):
+  none open, no unstruck `[bug]` entries in BACKLOG.md, prior cycle (`alert-email-preheader`)
+  PASSed. Tier 2 (`[want]`): re-confirmed empty of buildable work — the two open `[P1][want]`
+  items (save-search auth-wall reconciliation, collection-layout mosaic redesign) both remain
+  flagged as needing a human product call/mock; the "Owner-leads list" `[P2][want]` is
+  explicitly flagged for human review before any autonomous build; the ingestion `[P1][want]`s
+  remain audited-and-blocked on bot protection, matching many prior cycles' independent
+  audits. Dropped to tier 3 and picked this `[P2][goal]` item — the last one explicitly named
+  in BACKLOG.md's alert-experience queue, and the "Next" pointer flagged by the last two
+  shipped cycles.
+- Spec: nightshift/specs/20260714T111708Z-alert-avionics-match.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0. Extracted
+  the browse page's avionics id-narrowing scan (`parseAvionicsFilter`/`avionicsMatch`/
+  `fetchAvionicsMatchIds` — the `text[]` column has no cheap SQL filter, so it's a paginated
+  classify-and-narrow-by-id pass) out of `AircraftSaleList.tsx` into shared exports on
+  `avionicsClassify.ts` (browse page's own filtering behavior is unchanged — same function,
+  now shared instead of duplicated). Wired the same narrowing into `alertMatchCounts.ts`'s
+  `countActiveAircraft` + `previewAircraft` (drives `/alerts/manage`'s live match count and
+  the "send me a sample digest" preview) AND the digest cron's `countNewAircraft`,
+  `countRecentAircraftPriceDrops`, `fetchNewAircraftSamples`, `fetchAircraftPriceDropSamples`
+  (`src/app/api/cron/alert-digest/route.ts`) — a live production send path, touched
+  deliberately this cycle since the backlog item named it explicitly (unlike most
+  alert-pipeline cycles, which leave the cron alone). `aircraft/page.tsx` no longer excludes
+  `avionics` from `alertSourcePath`; `describeAircraftFilters` (`seo.ts`) now names the
+  selected categories in the alert context sentence (e.g. "Cessna with glass panel" —
+  confirmed live in served HTML). No schema change, no new capture point. 4 new unit tests
+  for the extracted pure functions — verified full suite still green: `for f in
+  src/lib/*.test.ts; do node --experimental-strip-types --test "$f"; done` — 0 failures
+  across all 29 test files.
+  **Live-verified against the real prod DB (read-only queries only, no rows created):** the
+  shared `fetchAvionicsMatchIds(['glass'], 50000)` scan found 29 sitewide glass-panel matches;
+  replaying `countActiveAircraft`'s exact query shape for make=Cirrus narrowed to 5, matching
+  an independent from-scratch recount: real production data, not a mock. Also confirmed via
+  live curl that `/aircraft?make=Cessna&avionics=glass`'s served HTML now carries
+  `avionics=glass` on the alert's `sourcePath` and renders "Cessna with glass panel" as the
+  alert context. Non-visual-leaning cycle (matching/query logic + a context-sentence copy
+  addition, no layout change) — QA gate: `qa-smoke.mjs --slug alert-avionics-match /aircraft
+  "/aircraft?make=Cessna&avionics=glass" /alerts/manage` 6/6 (desktop 1280 + mobile 375, HTTP
+  200, zero console errors, zero horizontal overflow). Server served via `next start` (not
+  dev), stopped cleanly at the end (verified via `pgrep`).
+- Screenshots: nightshift/screenshots/alert-avionics-match/
+- Next: the alert-experience `[P1][want]`/`[goal]` queue in BACKLOG.md is now genuinely thin —
+  both remaining open items need a human product call (save-search auth-wall reconciliation,
+  collection-layout mosaic redesign) or are explicitly human-review-gated (owner-leads list).
+  Next cycle should likely emit `ABORT — none — plan needed` so the smart-model plan pass
+  generates the next alert-experience `[goal]` batch, unless a new `[bug]`/`[want]` lands first.
+
 ## 20260714T110342Z — PASS — alert-email-preheader
 - Pages: none (email templates only — `src/lib/email.ts`)
 - What: **Every alert email (confirm, weekly digest, combined digest, price-drop) now
