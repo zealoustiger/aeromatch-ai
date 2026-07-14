@@ -1470,15 +1470,15 @@ closing the measurement loop, deliverability, and email/management polish. (The
   `card_watch` open and mounted the panel; re-clicking the *same* bell to collapse fired
   nothing, re-expand fired again. No schema change, no rendered-UI change, no new capture
   point, zero console errors.
-- **[P1][goal] Per-placement conversion ranking on `/admin/alerts`.** The follow-up the
-  scoreboard cycle explicitly flagged, unblocked once `alerts.source` lands (item above):
-  add a "Top placements" section ranking `source` values by live (active+confirmed) count,
-  with each placement's pending→confirmed share so weak double-opt-in funnels stand out.
-  Honesty: rows predating the column have `source=null` — bucket them visibly as "(untagged,
-  pre-YYYY-MM-DD)" rather than dropping them; render the section with a "column not migrated
-  yet" note until the DDL is applied (same graceful-degrade precedent as the manage page).
-  Read-only, inside the existing admin gate (do NOT touch the frozen auth checks); no
-  capture point.
+~~- **[P1][goal] Per-placement conversion ranking on `/admin/alerts`.**~~ ✅ SHIPPED via
+  `admin-alerts-source-ranking` (2026-07-14) New "Top placements" section on `/admin/alerts`
+  ranks `alerts.source` values by live (active+confirmed) count, with each placement's
+  live/pending counts and a confirm-rate percentage (only above a 5-row volume floor, so a
+  single pending row doesn't read as a misleading "0% confirmed"). Rows predating the
+  column (or when the column isn't queryable at all — confirmed true on the live DB today)
+  bucket visibly as `(untagged, pre-2026-07-14)`, with a "not migrated yet" note in that
+  case, same graceful-degrade precedent as every other pending `alerts.*` column. No auth
+  change, no new capture point.
 - **[P2][goal] Digest 👍/👎 vote-rate rollup on `/admin/alerts`.** The flagged next slice
   from `digest-feedback-vote`: votes land in `feedback` (`type='digest_vote'`) but nothing
   aggregates them. Add a small section to the scoreboard: 👍 vs 👎 totals, this-week vs

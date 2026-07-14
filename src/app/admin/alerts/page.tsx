@@ -10,6 +10,7 @@ export default async function AlertScoreboardPage() {
   const updated = new Date(snap.computedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
   const maxStatus = Math.max(1, ...snap.statusCounts.map((s) => s.count))
   const maxFamily = Math.max(1, ...snap.topPageFamilies.map((f) => f.count))
+  const maxSource = Math.max(1, ...snap.topSources.map((s) => s.liveCount))
   const weekDelta = snap.newThisWeek - snap.newLastWeek
 
   return (
@@ -89,9 +90,7 @@ export default async function AlertScoreboardPage() {
         <h2 className="mb-1 text-lg font-semibold text-slate-900">Which pages convert</h2>
         <p className="mb-6 text-sm text-slate-500">
           Live subscribers (active + confirmed) grouped by the page family they were captured on.
-          The <code>alerts</code> table has no per-widget placement tag today (only PostHog&apos;s{' '}
-          <code>alert_subscribed</code> event carries that) — this groups by page instead of exact
-          widget, which is coarser but real.
+          For the exact widget (bell, chip, footer form, …), see &quot;Top placements&quot; below.
         </p>
 
         {snap.topPageFamilies.length === 0 ? (
@@ -110,6 +109,47 @@ export default async function AlertScoreboardPage() {
                   <div
                     className="h-full rounded-full bg-sky-500"
                     style={{ width: `${(row.count / maxFamily) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">Top placements</h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Live subscribers (active + confirmed) by the exact widget that captured them, plus
+          how many of each placement&apos;s subscribers are still stuck at pending confirmation
+          — a high pending share flags a weak double-opt-in funnel for that spot.
+          {!snap.sourceColumnMigrated && (
+            <>
+              {' '}The <code>alerts.source</code> column isn&apos;t migrated on the live database
+              yet, so every row below buckets as untagged until a human applies it.
+            </>
+          )}
+        </p>
+
+        {snap.topSources.length === 0 ? (
+          <p className="text-sm text-slate-400">No live subscribers yet — not enough data.</p>
+        ) : (
+          <div className="space-y-3">
+            {snap.topSources.map((row) => (
+              <div key={row.source}>
+                <div className="mb-1 flex items-baseline justify-between text-sm">
+                  <span className="font-medium text-slate-800">{row.source}</span>
+                  <span className="text-slate-500">
+                    {row.liveCount} live · {row.pendingCount} pending
+                    {row.confirmRate !== null && (
+                      <span className="text-slate-400"> · {Math.round(row.confirmRate * 100)}% confirmed</span>
+                    )}
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-sky-500"
+                    style={{ width: `${(row.liveCount / maxSource) * 100}%` }}
                   />
                 </div>
               </div>

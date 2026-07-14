@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T103441Z — PASS — admin-alerts-source-ranking
+- Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
+- What: **The admin alert scoreboard now ranks which exact placement (card bell, filter
+  chip, saved search, cross-sell, etc.) is winning subscribers, not just which page.**
+  A prior cycle (`alert-source-column`) started recording that per-placement tag on every
+  new alert row, but nothing displayed it yet. New "Top placements" section on
+  `/admin/alerts` lists each `source` value ranked by live (active+confirmed) subscriber
+  count, alongside its pending count and — once there's enough volume to not be
+  misleading — a confirm-rate percentage, so a placement stuck at a low confirm rate
+  (weak double-opt-in follow-through) stands out from one that's genuinely converting.
+- Goal: `[goal]` tier 3 — alert experience / "prove it converts" (GOAL.md). This was the
+  explicit "Next" follow-up flagged by both the `admin-alerts-scoreboard` and
+  `alert-source-column` cycles, and the top `[P1][goal]` item left in the alert-experience
+  queue in BACKLOG.md.
+- Spec: nightshift/specs/20260714T103441Z-admin-alerts-source-ranking.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  (`/admin/alerts` compiles as ƒ dynamic). `getAlertScoreboard()` (`src/lib/alertScoreboard.ts`)
+  now selects `source` alongside the existing columns, with the same graceful-degrade retry
+  pattern used by every insert path (`actions.ts`) — live-verified against the real prod DB
+  the column is NOT yet applied there (`column alerts.source does not exist`), and the
+  fallback select + `sourceColumnMigrated: false` flag kicked in correctly, so every row
+  bucketed as `(untagged, pre-2026-07-14)`. Read-only verification against the real,
+  not-yet-migrated prod DB (via curl against a locally-served production build, no rows
+  written/changed) showed the new section rendering real aggregate numbers (4 live / 5
+  pending / 44% confirmed under the untagged bucket, matching the existing page-family
+  section's totals) — confirming the query + tally logic works end-to-end today and will
+  self-upgrade to real per-placement rows once a human applies the migration, no code
+  change needed then. Non-visual-in-practice cycle (the new UI only renders for
+  authenticated admins; anonymous QA — and this codebase's established precedent from
+  `admin-alerts-scoreboard` — correctly sees only the untouched, FREEZE'd "Admin only"
+  gate) — smoke gate: `qa-smoke.mjs --slug admin-alerts-source-ranking /admin/alerts
+  /aircraft` 4/4 (desktop 1280 + mobile 375, HTTP 200, zero console errors, zero
+  horizontal overflow); screenshots read and confirm a clean, unchanged gate render (no
+  regression on the admin layout or footer). Server served via `next start` (not dev),
+  stopped cleanly at the end (verified via `ps`). No schema/migration added (reuses the
+  already-shipped `alerts.source` column), no auth-file touched, no new capture point, no
+  `alert_subscribed` emission change. Softened the neighboring "Which pages convert"
+  section's copy, which previously claimed "no per-widget placement tag today" — no longer
+  accurate now that a per-placement ranking exists on the same page, even though the
+  column isn't live yet.
+- Screenshots: nightshift/screenshots/admin-alerts-source-ranking/
+- Next: once a human applies the `alerts.source` migration in the Supabase SQL editor,
+  every row currently bucketed as untagged will start splitting into real placement names
+  automatically (no code change needed) — this closes out the last item in that migration
+  chain's "next" notes. Remaining `[P2][goal]` items in the queue: digest 👍/👎 vote-rate
+  rollup on `/admin/alerts`, recently-viewed alert banner on the homepage, preheader text
+  on alert emails, honoring `avionics` in aircraft alert matching.
+
 ## 20260714T102259Z — PASS — alert-source-column
 - Pages: (backend/plumbing — no user-facing page; touches every alert-subscribe path
   site-wide: `/aircraft`, `/partnerships`, the filter-toolbar chip, browse-card watch
