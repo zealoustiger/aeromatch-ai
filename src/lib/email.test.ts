@@ -93,6 +93,22 @@ test('listing title is HTML-escaped', () => {
   assert.match(html, /&lt;script&gt;/)
 })
 
+test('price-drop: marketPulse renders as an honest one-liner in both HTML and text', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
+  })
+  assert.match(html, /14 Cessna 172s listed right now, median asking \$89k\./)
+  assert.match(text, /14 Cessna 172s listed right now, median asking \$89k\./)
+})
+
+test('price-drop: without marketPulse, no market-context line renders (honesty gate — never a guess)', () => {
+  const { html, text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  assert.doesNotMatch(html, /listed right now, median asking/)
+  assert.doesNotMatch(text, /listed right now, median asking/)
+})
+
 // ─── buildAlertDigestEmail ──────────────────────────────────────────────────
 
 const DIGEST_BASE = {
