@@ -2,6 +2,80 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T120500Z — PASS — partnership-filled-landing
+- Pages: /partnerships/[id]
+- What: **A closed/filled partnership listing now shows a real "this partnership has
+  been filled or taken down" page instead of a dead 404.** Previously, a partnership
+  that closed (sold its shares, or was taken down) left its old URL — which may have
+  been indexed by Google, linked from a digest email, or clicked from a "browse
+  similar" nudge — landing on nothing. Now it shows an honest explanation, a link to
+  browse other partnerships of the same make/model (or all partnerships), a "get
+  alerts for new Cessna 172 listings" (etc.) box, and a rail of similar active
+  partnerships — mirroring the aircraft-for-sale page's existing "this plane has
+  sold" treatment.
+- Goal: `[goal]` tier 3 — alert experience (GOAL.md). Tier 1 (`[bug]`): none open, no
+  unstruck `[bug]` entries in BACKLOG.md, prior cycle (`partnership-alert-model-match`)
+  PASSed. Tier 2 (`[want]`): re-confirmed empty of buildable work — the two open
+  `[P1][want]` items (save-search auth-wall reconciliation, collection-layout mosaic
+  redesign) both remain explicitly flagged as needing a human product call/mock,
+  matching every recent cycle's independent audit; `FEEDBACK.md` has no unprocessed
+  entries. Dropped to tier 3 and picked the top remaining open `[P1][goal]` item from
+  plan-pass batch #3 (2026-07-14) — the last one in that batch not yet shipped by the
+  two prior cycles.
+- Spec: nightshift/specs/20260714T115850Z-partnership-filled-landing.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  New `getClosedPartnershipById(id)` in `src/lib/partnerships.ts` (service-role client
+  via `createAdminClient()`, bypassing the `partnerships_public_read` RLS policy which
+  gates on `status='active'`) — mirrors `getSoldAircraftForSaleById` in
+  `aircraftForSale.ts`. **Found and fixed a real bug risk during implementation, not in
+  the original backlog wording:** the naive mirror of the aircraft pattern would use
+  `.neq('status', 'active')`, but a live-DB read showed `partnerships.status` actually
+  has 4 real values in prod — `active` (23 rows), `admin` (29 rows, ingested-but-
+  intentionally-hidden Controller classifieds per `types.ts`'s own comment), plus the
+  schema's documented `pending`/`closed` (0 rows of either at ship time). A blanket
+  `neq` would have surfaced admin-only/never-published rows on a public "this was
+  filled" URL — a real content-gating leak. Scoped the new helper to
+  `.eq('status', 'closed')` only. `/partnerships/[id]/page.tsx`: both `generateMetadata`
+  and the default page component now fall back to the new helper when the normal fetch
+  returns null, rendering a new `FilledPartnershipPage` (200 + `robots: {index: false,
+  follow: true}` + self-canonical) instead of `notFound()`; a genuinely-missing id still
+  404s (verified). New page component follows the aircraft `SoldListingPage` structure
+  exactly: `Breadcrumbs` ending "(filled)", amber warning card, CTA to the resolved
+  make/model family search (falls back to bare `/partnerships` when no family
+  resolves — honesty gate, never a listing-id-scoped alert that can't match anything),
+  an `AlertSignup` (`source="filled_partnership"`, `noun="partnership"` — fires
+  `alert_subscribed`/`alert_capture_viewed` internally via the existing component, no
+  separate analytics wiring needed), and the existing `SimilarListings` rail.
+  **Live-verified against the real prod DB (temporary, fully reverted):** picked a
+  hand-seeded demo partnership (`david@example.com` contact, `isSeedProfile`-detected,
+  not a real user's listing) to minimize any risk to a genuine owner, flipped its
+  `status` to `'closed'`, curled the live production build and confirmed the 200 status,
+  `noindex, follow` robots meta, self-canonical link, the exact "filled or taken down"
+  copy, and the `filled_partnership` source marker in the rendered HTML; ran
+  `qa-smoke.mjs --slug partnership-filled-landing /partnerships/<id>` against the
+  flipped row (6/6 across the id URL + /partnerships, desktop 1280 + mobile 375, zero
+  console errors, zero horizontal overflow) and read both screenshots — layout, copy,
+  alert box, and similar-partnerships rail all render correctly at both viewports, no
+  overflow. Reverted the row to `status='active'` immediately after capturing the
+  screenshots and confirmed via a final read that it matches its original state exactly
+  (only the `status` column was ever touched). Also confirmed the same listing's
+  now-reverted active page renders unchanged, and that a genuinely nonexistent id still
+  404s. Full unit suite green: `for f in src/lib/*.test.ts; do node
+  --experimental-strip-types --test "$f"; done` — 0 failures across every test file
+  (no new unit tests added — the new code is a thin service-role query + a page
+  component, the existing pattern's own `SoldListingPage`/`getSoldAircraftForSaleById`
+  precedent has no dedicated unit tests either, exercised instead via the live-DB
+  round-trip + qa-smoke above). Visual cycle (new page component) — screenshots read
+  and confirmed correct. Server served via `next start` (not dev), stopped cleanly at
+  the end (verified via `ss`/`pgrep`). No schema change, no new capture point beyond the
+  one named in the backlog item (`alert_subscribed` already covered by `AlertSignup`).
+- Screenshots: nightshift/screenshots/partnership-filled-landing/
+- Next: the plan-pass batch #3 queue is now down to the remaining `[P1][goal]`
+  "Near-instant new-listing alerts" (re-scoped, needs an additive
+  `alerts.frequency` CHECK migration — flag human-apply) and three `[P2][goal]` items
+  (hidden advanced criteria on the edit form, one-time "widen your alert?" email, digest
+  subject naming the standout listing when there's exactly one new match).
+
 ## 20260714T114516Z — PASS — partnership-alert-model-match
 - Pages: /partnerships, /alerts/manage
 - What: **Partnership alerts now honor the model filter instead of silently matching
