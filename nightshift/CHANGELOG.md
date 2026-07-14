@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T090858Z — PASS — digest-feedback-vote
+- Pages: /alerts/status, /alerts/manage (linked from the new status states)
+- What: **Every alert digest email now ends with "Was this digest useful? 👍 👎"** — a
+  genuine one-click vote, no sign-in, no extra typing. Clicking 👍 lands on a quick "Thanks!"
+  page; clicking 👎 lands on "Sorry that digest missed the mark" with a direct link to
+  manage/pause/switch-cadence — never a dead end. Applies to both the single-alert digest
+  and the combined (2+ alerts in one email) digest.
+- Goal: alert-experience — "prove it converts" / honest alert content. Closes a real gap:
+  GOAL.md calls for "the best listing alert email in aviation," and the only honest way to
+  know is subscribers telling us, per send, instead of guessing from open/click proxies.
+  New `GET /api/alerts/digest-feedback` route (mirrors `/api/alerts/unsubscribe`) resolves
+  the alert by its existing `unsubscribe_token` and records the vote into the existing
+  `feedback` table (`type: 'digest_vote'`) — **no schema change**, no new PII (reuses the
+  email already on the alert row). `buildAlertDigestEmail`/`buildCombinedAlertDigestEmail`
+  gained optional `digestFeedbackUpUrl`/`digestFeedbackDownUrl` params (byte-identical
+  output when omitted, same precedent as the existing `frequencyUrl`); the cron route
+  threads them through from the already-in-scope tokens. **Not done, intentionally:** a
+  bespoke 👍/👎 icon on the `/admin/feedback` inbox — that file is root-owned/read-only in
+  this sandbox; votes still show up in the list via the message text under the generic
+  feedback icon. Backlog item marked ✅ shipped.
+- Spec: nightshift/specs/20260714T090858Z-digest-feedback-vote.md
+- Verdict: PASS. `npx tsc --noEmit` and `npx next build` both clean. Full unit suite
+  `node --experimental-strip-types --test src/lib/email.test.ts` — 60/60 pass (6 new tests:
+  footer row present/absent on both builders, combined email renders exactly one shared
+  row not per-section, a lone up-URL with no down-URL renders nothing since they're always
+  built as a pair). **Live-verified the actual route + DB write** against the real prod
+  Supabase (shared across local/staging/prod): seeded one throwaway `@example.com` confirmed
+  alert via the service role, hit `/api/alerts/digest-feedback?token=<real>&vote=up` and
+  `...vote=down` against the running production build — both correctly redirected to
+  `/alerts/status?state=digest_feedback_up|down&token=...` and inserted exactly the expected
+  `feedback` rows (`type: 'digest_vote'`, correct message/email/page_path); a bad token and
+  a bad `vote` value both correctly redirected to `invalid` with no DB write. Deleted the
+  2 feedback rows + 1 alert row immediately after (verified 0 remain). Visual cycle (new
+  `/alerts/status` states) — screenshots read at desktop 1280 + mobile 375 for both new
+  states: on-brand ThumbsUp/ThumbsDown icon, correct copy, the down-state's "Get fewer
+  emails, pause, or fine-tune your alerts →" link renders, no overlap/overflow.
+  `qa-smoke.mjs` 10/10 pass across `/alerts/status` (default + both new query states),
+  `/alerts/manage`, `/aircraft` (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow, both viewports). No live Resend send triggered (RESEND_API_KEY configured in
+  this sandbox, shared prod key) — verified via the pure-function unit tests + the direct
+  route/DB check above instead, same precedent as every prior digest-email cycle. Server
+  started/stopped cleanly, no stray `next-server` process left running (verified via
+  `pgrep`).
+- Screenshots: nightshift/screenshots/digest-feedback-vote/
+- Next: the deferred admin/feedback bespoke icon (needs the file's write-permission fixed
+  first, human call); a lightweight vote-rate rollup surfaced on `/admin/alerts` alongside
+  the existing status-breakdown scoreboard, once there's enough vote volume to be worth
+  showing.
+
 ## 20260714T084306Z — PASS — admin-alerts-scoreboard
 - Pages: /admin/alerts (new admin-only page, behind the existing FREEZE'd admin gate)
 - What: **New read-only "Alert Scoreboard" tab in the admin area** that answers "is the
