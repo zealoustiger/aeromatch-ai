@@ -56,13 +56,22 @@ const STATES = {
     title: "You're all set",
     body: "You're now also getting alerts for that too — no extra sign-up needed.",
   },
+  email_changed: {
+    icon: CheckCircle2,
+    tint: 'text-emerald-600',
+    ring: 'bg-emerald-50',
+    title: 'Your alerts email is updated',
+    body: 'All of your ClubHanger alerts now go to the new address.',
+  },
 } as const
 
 type StateKey = keyof typeof STATES
 
 function resolveState(raw: string | string[] | undefined): StateKey {
   const v = Array.isArray(raw) ? raw[0] : raw
-  return v === 'confirmed' || v === 'unsubscribed' || v === 'weekly' || v === 'cross_sell_added' ? v : 'invalid'
+  return v === 'confirmed' || v === 'unsubscribed' || v === 'weekly' || v === 'cross_sell_added' || v === 'email_changed'
+    ? v
+    : 'invalid'
 }
 
 export default async function AlertStatusPage({
@@ -77,6 +86,8 @@ export default async function AlertStatusPage({
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken
   const rawContext = params.context
   const crossSellContext = Array.isArray(rawContext) ? rawContext[0] : rawContext
+  const rawNewEmail = params.newEmail
+  const emailChangedTo = Array.isArray(rawNewEmail) ? rawNewEmail[0] : rawNewEmail
 
   // Post-confirmation cross-sell: look up the just-confirmed alert's source_path
   // (admin client — anon has no SELECT on `alerts`, it holds PII) and offer a
@@ -178,7 +189,9 @@ export default async function AlertStatusPage({
           <p className="mt-3 text-base leading-relaxed text-slate-600">
             {key === 'cross_sell_added' && crossSellContext
               ? `You're now also getting alerts for ${crossSellContext} — no extra sign-up needed.`
-              : confirmedBody ?? body}
+              : key === 'email_changed' && emailChangedTo
+                ? `All of your ClubHanger alerts now go to ${emailChangedTo}.`
+                : confirmedBody ?? body}
           </p>
           {key === 'confirmed' && confirmedSourcePath && confirmedMatchCount && confirmedMatchCount.count > 0 && (
             <p className="mt-2">
@@ -233,6 +246,13 @@ export default async function AlertStatusPage({
             </p>
           )}
           {key === 'cross_sell_added' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'email_changed' && token && (
             <p className="mt-4 text-sm text-slate-500">
               <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
                 Manage your alerts

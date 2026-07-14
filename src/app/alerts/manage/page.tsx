@@ -20,6 +20,7 @@ import NewAlertForm from '@/components/NewAlertForm'
 import ManageLinkRequestForm from '@/components/ManageLinkRequestForm'
 import AlertSubscriberMarker from '@/components/AlertSubscriberMarker'
 import VacationModeControl from '@/components/VacationModeControl'
+import UpdateAlertEmailForm from '@/components/UpdateAlertEmailForm'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -39,9 +40,10 @@ interface AlertRow {
   price_drop_opt_in?: boolean
   frequency?: string
   paused_until?: string | null
+  pending_email?: string | null
 }
 
-const OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'paused_until']
+const OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'paused_until', 'pending_email']
 
 // Email-keyed, not user_id-keyed (alerts require no account). Anon/authenticated
 // has no SELECT on this PII-holding table by design (see actions.ts), so this
@@ -170,6 +172,9 @@ export default async function AlertsManagePage({
   const alerts = await fetchAlertsForEmail(email)
   const activeAlertCount = alerts.filter((a) => a.status === 'confirmed').length
   const pausedAlertCount = alerts.filter((a) => a.status === 'paused').length
+  // Every row an owner requests a change for is stamped with the same
+  // pending_email — any one of them is enough to show the banner.
+  const pendingEmailChange = alerts.find((a) => a.pending_email)?.pending_email ?? null
 
   // Real, server-computed "how many listings match this alert right now" per
   // row (GOAL.md: helps a subscriber tell if their alert is well-scoped or
@@ -233,6 +238,7 @@ export default async function AlertsManagePage({
           <p className="mt-1 text-slate-600">
             Every new-listing alert subscribed with <strong>{email}</strong>.
           </p>
+          <UpdateAlertEmailForm token={scopeToken} pendingEmail={pendingEmailChange} />
         </div>
 
         <section className="ch-panel p-6">

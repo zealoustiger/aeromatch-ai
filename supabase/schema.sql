@@ -807,3 +807,16 @@ alter table alerts add column if not exists paused_until timestamptz;
 -- duplicate reminder without a way to mark a row already-reminded) — no
 -- user-facing error either way.
 alter table alerts add column if not exists confirm_reminder_sent_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_email_change
+-- Lets a subscriber move every alert they own to a new email address, via a
+-- double-opt-in confirmation sent to the NEW address (the "Update email" flow
+-- on /alerts/manage) — previously the only option was delete-and-resubscribe.
+-- `pending_email` holds the requested new address until confirmed;
+-- `email_change_token` is the one-time confirm token, shared across every row
+-- for the same owner so one click moves all of them at once. Both nullable,
+-- no default. Apply in the Supabase SQL editor. Until applied,
+-- requestAlertEmailChange fails soft with a clear "not available yet" message
+-- (never a silent no-op, never a 500) — no other alert behavior changes.
+alter table alerts add column if not exists pending_email text;
+alter table alerts add column if not exists email_change_token text;

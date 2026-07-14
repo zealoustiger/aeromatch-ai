@@ -19,6 +19,7 @@ import {
   buildAlertConfirmEmail,
   buildAlertDigestEmail,
   buildManageLinkEmail,
+  buildAlertEmailChangeConfirmEmail,
   buildNewMessageEmail,
   buildSeedInquiryEmail,
 } from '@/lib/email'
@@ -1484,6 +1485,73 @@ export async function requestAlertsManageLink(email: string) {
       // every other `alerts.*` column this file already handles this way.
     }
   }
+  return { ok: true }
+}
+
+// "Update email" on `/alerts/manage` — moves every alert an owner has to a new
+// address, gated by a double-opt-in confirmation sent to the NEW address (same
+// principle as the original signup confirm: nothing changes until the new
+// address proves it's real and wanted). The old address is untouched and keeps
+// receiving digests until confirmed. `email_change_token` is stamped on every
+// row the owner has (not just one), so a single confirm click moves them all —
+// same "one query updates every eligible row" trust boundary as
+// pauseAllAlerts/resumeAllAlerts above.
+export async function requestAlertEmailChange(newEmail: string, token?: string) {
+  const clean = (newEmail || '').toLowerCase().trim()
+  if (!clean || !EMAIL_RE.test(clean)) {
+    return { error: 'Please enter a valid email address.' }
+  }
+
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+  if (clean === ownerEmail) return { error: 'That is already your alert email.' }
+
+  const emailChangeToken = crypto.randomUUID()
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ pending_email: clean, email_change_token: emailChangeToken })
+    .eq('email', ownerEmail)
+    .neq('status', 'unsubscribed')
+    .select('id, unsubscribe_token')
+
+  // Not-yet-migrated DB — this feature genuinely can't work without the
+  // columns, so fail soft with an honest message rather than claim success
+  // and silently do nothing (unlike price_drop_opt_in/frequency, there's no
+  // partial-functionality fallback for a change-of-address).
+  if (error?.message?.includes('pending_email') || error?.message?.includes('email_change_token')) {
+    return { error: "Changing your alert email isn't available yet — please check back soon." }
+  }
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'No alerts found for this email.' }
+
+  const manageToken = (data as { unsubscribe_token?: string | null }[]).find((r) => r.unsubscribe_token)
+    ?.unsubscribe_token
+  const confirmUrl = `${SITE_URL}/api/alerts/confirm-email-change?token=${emailChangeToken}`
+  const manageUrl = manageToken ? `${SITE_URL}/alerts/manage?token=${manageToken}` : undefined
+  const { subject, html, text } = buildAlertEmailChangeConfirmEmail({ oldEmail: ownerEmail, confirmUrl, manageUrl })
+  await sendEmail({ to: clean, subject, html, text })
+
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Clears a pending "Update email" request without sending anything — the
+// Cancel action next to the pending-change banner on `/alerts/manage`.
+export async function cancelAlertEmailChange(token?: string) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const { error } = await admin
+    .from('alerts')
+    .update({ pending_email: null, email_change_token: null })
+    .eq('email', ownerEmail)
+  if (error?.message?.includes('pending_email') || error?.message?.includes('email_change_token')) {
+    return { error: "Changing your alert email isn't available yet — please check back soon." }
+  }
+  if (error) return { error: 'Failed to cancel.' }
+  revalidatePath('/alerts/manage')
   return { ok: true }
 }
 
