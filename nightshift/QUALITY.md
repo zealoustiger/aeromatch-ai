@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-14T11:13:05Z — alert-email-preheader — score 5/5
+- Strengths: Correct, honest, and well-scoped — a single shared `preheaderHtml()` helper (zero-height `display:none` div + `mso-hide:all` + `&nbsp;&zwnj;` padding, all standard inbox-preview technique) called right after `<body>` in exactly the 4 named builders, out-of-scope builders untouched (0 diff hits); every preheader is derived from counts/prices already passed in (no fabricated figures), leads with the key number so it survives inbox truncation, and cleanly sidesteps the double-escape trap by feeding raw (`forThingText`/unescaped title) mirrors into the helper's own `escapeHtml`, with a comment explaining exactly why; 84 lines of tests cover all 4 builders, custom `dropNoun`, zero-match honesty, HTML escaping (asserts no `&amp;amp;`), and the text-part-byte-identical invariant.
+- Weaknesses / risks: none material — the digest first-send/sample preheader strings duplicate the near-identical `bodyCopyText` wording, a tiny bit of copy repetition that could drift, but immaterial.
+- Follow-up: none
+
 ## 2026-07-14T11:01:37Z — home-recently-viewed-alert-banner — score 4/5
 - Strengths: Correct and disciplined — initial `hidden` state means SSR/first render emits the fallback, so fresh visitors keep the original band with no hydration mismatch, and the personalized/generic paths never stack; thoughtfully moved `text-center` from the outer container onto the fallback's inner `<div>` so the left-aligned banner isn't force-centered; `fallback` prop added with a clear doc comment and no touch to the out-of-scope derive/match-count/dismiss internals.
 - Weaknesses / risks: Async `getAlertMatchCountForSourcePath` means a returning visitor briefly sees the generic band, then it swaps to the personalized banner (a small flash the spec's "byte-for-byte" wording glosses over); the personalized state also drops the section's `<h2>` (uses a `<p>`), a minor a11y/heading-outline nit — both immaterial.
