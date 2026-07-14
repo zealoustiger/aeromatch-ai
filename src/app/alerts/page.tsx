@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { SITE_URL, SITE_NAME } from '@/lib/seo'
 import AlertsLanding, { type PopularChip } from '@/components/AlertsLanding'
-import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
+import type { AlertDigestSample } from '@/lib/email'
+import { BASE_INTEREST_PATHS } from '@/lib/alertsLandingInterests'
 
 export const metadata: Metadata = {
   title: 'Get aircraft & partnership alerts — ClubHanger',
@@ -33,21 +35,46 @@ const POPULAR_CANDIDATES: Omit<PopularChip, 'count'>[] = [
   { label: 'Partnerships in California', context: 'California partnerships', sourcePath: '/partnerships?state=CA', noun: 'partnership' },
 ]
 
-async function getPopularChips(): Promise<PopularChip[]> {
-  const results = await Promise.all(
-    POPULAR_CANDIDATES.map(async (candidate) => {
-      const match = await getAlertMatchCount(candidate.sourcePath)
-      return match && match.count > 0 ? { ...candidate, count: match.count } : null
-    })
-  )
-  return results.filter((c): c is PopularChip => c !== null)
+// A chip's live preview: the same real, up-to-3-sample preview the "send me a
+// sample digest" / instant-first-digest paths already use — so what a visitor
+// sees here is exactly what the real digest email would show, not a mockup.
+async function getChipPreview(sourcePath: string): Promise<{ count: number; samples: AlertDigestSample[] } | null> {
+  const preview = await getAlertDigestPreview(sourcePath, 3)
+  return preview && preview.count > 0 ? { count: preview.count, samples: preview.samples } : null
+}
+
+async function getPopularChips(): Promise<{ chips: PopularChip[]; samplesByPath: Record<string, AlertDigestSample[]> }> {
+  const samplesByPath: Record<string, AlertDigestSample[]> = {}
+
+  const [popularResults] = await Promise.all([
+    Promise.all(
+      POPULAR_CANDIDATES.map(async (candidate) => {
+        const preview = await getChipPreview(candidate.sourcePath)
+        return preview ? { chip: { ...candidate, count: preview.count }, samples: preview.samples } : null
+      })
+    ),
+    Promise.all(
+      BASE_INTEREST_PATHS.map(async (sourcePath) => {
+        const preview = await getChipPreview(sourcePath)
+        if (preview) samplesByPath[sourcePath] = preview.samples
+      })
+    ),
+  ])
+
+  const chips: PopularChip[] = []
+  for (const result of popularResults) {
+    if (!result) continue
+    chips.push(result.chip)
+    samplesByPath[result.chip.sourcePath] = result.samples
+  }
+  return { chips, samplesByPath }
 }
 
 export default async function AlertsPage() {
-  const popularChips = await getPopularChips()
+  const { chips: popularChips, samplesByPath } = await getPopularChips()
   return (
     <div className="ch-surface min-h-screen">
-      <AlertsLanding popularChips={popularChips} />
+      <AlertsLanding popularChips={popularChips} samplesByPath={samplesByPath} />
     </div>
   )
 }
