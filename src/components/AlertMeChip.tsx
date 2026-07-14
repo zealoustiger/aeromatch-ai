@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, CheckCircle2, Loader2 } from 'lucide-react'
 import { subscribeSignedInAlert, getExistingAlertForSourcePath } from '@/app/actions'
 import { track } from '@/lib/analytics'
@@ -61,8 +61,43 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
 
   const alreadyOn = hasExistingAlert || locallySubscribed || justSubscribed
 
+  // Impression denominator for this placement — the chip's tap mounts no persistent
+  // box, so it needs its own `alert_capture_viewed` (same payload shape as
+  // AlertSignup's) to get a real per-surface view count. Only fired while the chip
+  // is still an actionable capture (not once it's flipped to the "Alerts on" pill).
+  const chipRef = useRef<HTMLButtonElement>(null)
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    if (alreadyOn || viewedRef.current) return
+    const el = chipRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (viewedRef.current || !entry.isIntersecting) return
+        viewedRef.current = true
+        track('alert_capture_viewed', {
+          context: context || 'all',
+          source_path: sourcePath,
+          source: 'filter_toolbar',
+        })
+        observer.disconnect()
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [alreadyOn, context, sourcePath])
+
   async function handleClick() {
     if (pending || alreadyOn) return
+    // Middle-funnel step so view → open → subscribe is measurable for this
+    // placement, whether the tap subscribes directly (signed-in) or scrolls to
+    // the email field (signed-out).
+    track('alert_capture_opened', {
+      context: context || 'all',
+      source_path: sourcePath,
+      source: 'filter_toolbar',
+    })
     if (!signedInEmail) {
       const el = document.getElementById('alert-email')
       if (el) {
@@ -100,6 +135,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
 
   return (
     <button
+      ref={chipRef}
       type="button"
       onClick={handleClick}
       disabled={pending}

@@ -307,7 +307,13 @@ export default function PartnershipCard({
               markup; mirrors AircraftSaleCard's icon stack. */}
           <div className="absolute right-2 top-2 z-10 flex flex-col gap-2">
             <SaveListingButton listingId={p.id} initialSaved={saved} variant="icon" />
-            <WatchAlertButton active={watchOpen} onToggle={() => setWatchOpen((v) => !v)} />
+            <WatchAlertButton
+              active={watchOpen}
+              onToggle={() => setWatchOpen((v) => !v)}
+              source="partnership_card_watch"
+              sourcePath={watchSourcePath}
+              context={watchContext}
+            />
           </div>
         </div>
 
