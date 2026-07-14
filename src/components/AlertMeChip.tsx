@@ -108,7 +108,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
     }
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeSignedInAlert(context ?? '', sourcePath)
+    const result = await subscribeSignedInAlert(context ?? '', sourcePath, true, 'weekly', 'filter_toolbar')
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)

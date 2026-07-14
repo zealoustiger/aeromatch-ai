@@ -979,7 +979,8 @@ export async function subscribeToAlerts(
   context: string,
   sourcePath: string,
   priceDropOptIn: boolean = true,
-  frequency: AlertFrequency = 'weekly'
+  frequency: AlertFrequency = 'weekly',
+  source?: string
 ) {
   const clean = (email || '').toLowerCase().trim()
   if (!clean || !EMAIL_RE.test(clean)) {
@@ -1007,19 +1008,22 @@ export async function subscribeToAlerts(
     ...basePayload,
     price_drop_opt_in: priceDropOptIn,
     frequency: normalizeFrequency(frequency),
+    ...(source ? { source } : {}),
   }
   let { error } = await supabase.from('alerts').insert(payload)
 
-  // Neither, either, or both of price_drop_opt_in/frequency may not be
+  // Neither, any, or all of price_drop_opt_in/frequency/source may not be
   // migrated live yet — retry without whichever column(s) the error names
   // (PostgREST reports one unknown column per error, so this can take up to
-  // two passes). The core subscription still saves either way (graceful
+  // three passes). The core subscription still saves either way (graceful
   // fallback, same pattern as profiles.favorite_airports); the untaken
-  // preference just doesn't take effect until its migration lands (the digest
-  // cron then treats the alert as opted-in / weekly, both column defaults).
-  for (let i = 0; i < 2 && error && error.code !== '23505'; i++) {
+  // preference/tag just doesn't take effect until its migration lands (the
+  // digest cron then treats the alert as opted-in / weekly, both column
+  // defaults; `source` simply stays unset).
+  for (let i = 0; i < 3 && error && error.code !== '23505'; i++) {
     if (error.message?.includes('frequency')) delete payload.frequency
     else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
+    else if (error.message?.includes('source')) delete payload.source
     else break
     ;({ error } = await supabase.from('alerts').insert(payload))
   }
@@ -1735,7 +1739,7 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
     return { error: 'This link is no longer valid.' }
   }
 
-  const { error } = await admin.from('alerts').insert({
+  let payload: Record<string, unknown> = {
     email: original.email,
     context: context || null,
     source_path: sourcePath || null,
@@ -1743,7 +1747,13 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
     confirmed_at: new Date().toISOString(),
     confirm_token: crypto.randomUUID(),
     unsubscribe_token: crypto.randomUUID(),
-  })
+    source: 'cross_sell',
+  }
+  let { error } = await admin.from('alerts').insert(payload)
+  if (error && error.code !== '23505' && error.message?.includes('source')) {
+    delete payload.source
+    ;({ error } = await admin.from('alerts').insert(payload))
+  }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
   if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
@@ -1760,7 +1770,7 @@ export async function subscribeManageCrossSell(context: string, sourcePath: stri
   const ownerEmail = await resolveOwnerEmail(admin, token)
   if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
 
-  const { error } = await admin.from('alerts').insert({
+  let payload: Record<string, unknown> = {
     email: ownerEmail,
     context: context || null,
     source_path: sourcePath || null,
@@ -1768,7 +1778,13 @@ export async function subscribeManageCrossSell(context: string, sourcePath: stri
     confirmed_at: new Date().toISOString(),
     confirm_token: crypto.randomUUID(),
     unsubscribe_token: crypto.randomUUID(),
-  })
+    source: 'manage_cross_sell',
+  }
+  let { error } = await admin.from('alerts').insert(payload)
+  if (error && error.code !== '23505' && error.message?.includes('source')) {
+    delete payload.source
+    ;({ error } = await admin.from('alerts').insert(payload))
+  }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
   if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
@@ -1813,12 +1829,14 @@ export async function createManageAlert(
     ...basePayload,
     price_drop_opt_in: true,
     frequency: normalizeFrequency('weekly'),
+    source: 'manage_new',
   }
   let { error } = await admin.from('alerts').insert(payload)
 
-  for (let i = 0; i < 2 && error && error.code !== '23505'; i++) {
+  for (let i = 0; i < 3 && error && error.code !== '23505'; i++) {
     if (error.message?.includes('frequency')) delete payload.frequency
     else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
+    else if (error.message?.includes('source')) delete payload.source
     else break
     ;({ error } = await admin.from('alerts').insert(payload))
   }
@@ -1839,7 +1857,8 @@ export async function subscribeSignedInAlert(
   context: string,
   sourcePath: string,
   priceDropOptIn: boolean = true,
-  frequency: AlertFrequency = 'weekly'
+  frequency: AlertFrequency = 'weekly',
+  source?: string
 ) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1858,12 +1877,14 @@ export async function subscribeSignedInAlert(
     ...basePayload,
     price_drop_opt_in: priceDropOptIn,
     frequency: normalizeFrequency(frequency),
+    ...(source ? { source } : {}),
   }
   let { error } = await supabase.from('alerts').insert(payload)
 
-  for (let i = 0; i < 2 && error && error.code !== '23505'; i++) {
+  for (let i = 0; i < 3 && error && error.code !== '23505'; i++) {
     if (error.message?.includes('frequency')) delete payload.frequency
     else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
+    else if (error.message?.includes('source')) delete payload.source
     else break
     ;({ error } = await supabase.from('alerts').insert(payload))
   }
@@ -1916,7 +1937,7 @@ export async function subscribeSavedSearchAlert(searchId: string) {
 
   const sourcePath = `${search.path || '/partnerships'}?${search.search_params}`
 
-  const { error } = await supabase.from('alerts').insert({
+  let payload: Record<string, unknown> = {
     email: user.email,
     context: search.name || null,
     source_path: sourcePath,
@@ -1924,7 +1945,13 @@ export async function subscribeSavedSearchAlert(searchId: string) {
     confirmed_at: new Date().toISOString(),
     confirm_token: crypto.randomUUID(),
     unsubscribe_token: crypto.randomUUID(),
-  })
+    source: 'saved_search',
+  }
+  let { error } = await supabase.from('alerts').insert(payload)
+  if (error && error.code !== '23505' && error.message?.includes('source')) {
+    delete payload.source
+    ;({ error } = await supabase.from('alerts').insert(payload))
+  }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
   if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }

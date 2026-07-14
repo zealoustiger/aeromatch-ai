@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const { data: owner } = await admin.from('alerts').select('email').eq('unsubscribe_token', token).maybeSingle()
     if (!owner?.email) return invalid()
 
-    const { error } = await admin.from('alerts').insert({
+    const payload: Record<string, unknown> = {
       email: owner.email,
       context: context || null,
       source_path: path,
@@ -34,7 +34,13 @@ export async function GET(req: NextRequest) {
       confirmed_at: new Date().toISOString(),
       confirm_token: crypto.randomUUID(),
       unsubscribe_token: crypto.randomUUID(),
-    })
+      source: 'digest_cross_sell',
+    }
+    let { error } = await admin.from('alerts').insert(payload)
+    if (error && error.code !== '23505' && error.message?.includes('source')) {
+      delete payload.source
+      ;({ error } = await admin.from('alerts').insert(payload))
+    }
     // 23505 = unique_violation on (email, source_path) — already subscribed,
     // idempotent success (a re-click of the same email link).
     if (error && error.code !== '23505') {
