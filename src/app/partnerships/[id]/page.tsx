@@ -6,8 +6,9 @@ import { MapPin, Clock, Calendar, ChevronLeft, Radio, Wrench, AlertTriangle, Pla
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import { formatPrice, formatShareType, aircraftLabel, formatPriceK } from '@/lib/utils'
-import { getPartnershipById } from '@/lib/partnerships'
+import { getPartnershipById, getClosedPartnershipById } from '@/lib/partnerships'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, resolveMakeModelFamily } from '@/lib/seo'
+import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs'
 import { getFamilyAskingPrices, getForSaleCrossSell } from '@/lib/aircraftForSale'
 import { computeImpliedValueCheck, type ImpliedValueResult } from '@/lib/partnershipImpliedValue'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
@@ -80,7 +81,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params
   const p = await getPartnership(id)
-  if (!p) return { title: 'Listing not found' }
+  if (!p) {
+    // Filled/closed partnership → a real "filled" landing page, marked noindex so
+    // Google de-indexes the URL over time (it was indexed while the share was open).
+    const closed = await getClosedPartnershipById(id)
+    if (closed) {
+      const aircraft = aircraftLabel(closed.make, closed.model, closed.year)
+      return {
+        title: { absolute: `${aircraft} partnership — filled | ${SITE_NAME}` },
+        description: `This ${aircraft} partnership has been filled or taken down. Browse other active partnerships on ClubHanger.`,
+        robots: { index: false, follow: true },
+        alternates: { canonical: `${SITE_URL}/partnerships/${closed.id}` },
+      }
+    }
+    return { title: 'Listing not found' }
+  }
 
   const aircraft = aircraftLabel(p.make, p.model, p.year)
   const location = [p.home_airport, p.city, p.state].filter(Boolean).join(', ')
@@ -146,6 +161,90 @@ function listingJsonLd(p: Partnership) {
   }
 }
 
+// ─── Filled-listing landing page ─────────────────────────────────────────────
+// Rendered (HTTP 200, but noindex via generateMetadata) when a partnership's row
+// exists but is no longer active — filled or taken down. The URL was indexed by
+// Google while it was open, so a bare 404 wastes the inbound click. Instead we
+// acknowledge the closure and pivot the visitor to live partnerships: the same
+// `SimilarListings` rail the active page uses, plus a link to the make+model
+// family search. Mirrors the aircraft-for-sale detail page's `SoldListingPage`.
+async function FilledPartnershipPage({ p }: { p: Partnership }) {
+  const aircraft = aircraftLabel(p.make, p.model, p.year)
+  const family = p.make ? resolveMakeModelFamily(p.make, p.model) : null
+
+  const crumbs: Crumb[] = [
+    { label: 'Home', href: '/' },
+    { label: 'Partnerships', href: '/partnerships' },
+    { label: `${p.title || aircraft} (filled)` },
+  ]
+
+  const familySourcePath = family
+    ? `/partnerships?${new URLSearchParams({ make: family.make, model: family.model }).toString()}`
+    : p.make
+      ? `/partnerships?${new URLSearchParams({ make: p.make }).toString()}`
+      : '/partnerships'
+
+  return (
+    <div className="ch-surface min-h-screen">
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        <Breadcrumbs items={crumbs} />
+
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-6 sm:p-8">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+                This partnership has been filled or taken down
+              </h1>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                This {aircraft} share is no longer available.
+                {family
+                  ? ` Browse other ${family.make} ${family.model} partnerships below, or see the full selection.`
+                  : ' Browse other active partnerships below.'}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {family && (
+                  <Link
+                    href={familySourcePath}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+                  >
+                    See {family.make} {family.model} partnerships <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+                <Link
+                  href="/partnerships"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+                >
+                  Browse all partnerships
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Alert capture — the single highest-intent alert moment on this page:
+              a buyer wanted this exact share and it's gone. Family-scoped when the
+              make/model resolves to a curated page; falls back to a generic/bare-
+              /partnerships alert otherwise (honesty gate — never a listing-id-scoped
+              alert that can't match anything). */}
+          <AlertSignup
+            context={family ? `${family.make} ${family.model}` : p.make ?? undefined}
+            source="filled_partnership"
+            sourcePath={familySourcePath}
+            noun="partnership"
+            className="mt-6"
+          />
+        </div>
+
+        {/* Same "more like this" rail the active page uses — real, live listings
+            only (self-excludes this filled one). Fails soft to nothing. */}
+        <div className="mt-10">
+          <SimilarListings current={p} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default async function PartnershipDetailPage({
   params,
   searchParams,
@@ -158,7 +257,14 @@ export default async function PartnershipDetailPage({
   const justPosted = sp.posted === '1'
   const justUpdated = sp.updated === '1'
   const p = await getPartnership(id)
-  if (!p) notFound()
+  if (!p) {
+    // Not active. If the row exists but was filled/closed, render a filled landing
+    // page (200 + noindex via generateMetadata) that keeps the visitor on-site with
+    // similar active partnerships — instead of a dead 404 on a Google-indexed URL.
+    const closed = await getClosedPartnershipById(id)
+    if (closed) return <FilledPartnershipPage p={closed} />
+    notFound()
+  }
 
   const hdrs = await headers()
   const visitorRegion = hdrs.get('x-vercel-ip-country-region')
