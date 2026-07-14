@@ -2,6 +2,68 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T061240Z — PASS — alert-local-subscriber-memory
+- Pages: every page with an `AlertSignup` capture box (site-wide: `/aircraft`,
+  `/aircraft/deals`, `/aircraft/listing/[id]`, make/model/mission pages, `/alerts`,
+  `/partnerships`, etc.) — shared-component change, one file.
+- What: **An email-only subscriber (no account — the majority path) who already set
+  an alert at a given page used to see a blank "get alerts" form every time they came
+  back, with nothing stopping a pointless re-submit.** The signed-in path already had
+  this solved server-side (`existingAlert` renders "you're already getting alerts for
+  this"); email-only visitors have no session to check against, so they got re-shown
+  the same form forever. `AlertSignup` now records the page's `source_path` in a new
+  device-local `alertLocalSubscriptions.ts` store (SSR-safe localStorage, same
+  fail-soft pattern as `recentlyViewed.ts`/`alertSubscriberFlag.ts` — no email, no
+  token, no PII beyond a route string) the moment a signed-out subscribe succeeds. On
+  return visits, if this browser's local record matches the page's `source_path`, the
+  box renders the same honest "You're already getting alerts for this" state with a
+  "Manage alerts" link to `/alerts/manage` (which self-serves an "email me my manage
+  link" round trip for signed-out visitors) instead of the blank form. The DB write
+  path (`subscribeToAlerts`) is untouched — it already treated a repeat (email,
+  source_path) insert as an idempotent no-op; this is pure client-side UI memory that
+  stops the form from re-appearing, not a new server guarantee. 2 files:
+  `src/lib/alertLocalSubscriptions.ts` (new), `src/components/AlertSignup.tsx`.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open — last cycle
+  (`deals-page-alert-capture`) PASSed, re-audited BACKLOG.md's `[bug]` lines (all
+  struck through or narrative-only). Tier 2 (`[want]`): re-confirmed empty for
+  autonomous work — the one open `[P1][want]` ("Save this search" auth-wall
+  reconciliation) is explicitly flagged as needing a human product call on its
+  remaining sub-item; the other open `[P1][want]`s (collection-layout mosaic redesign,
+  owner-leads list) are both explicitly flagged as needing a human design/compliance
+  call before an autonomous build. Dropped to tier 3: pulled the first item from the
+  Opus/Fable plan-pass batch (BACKLOG.md "Plan-pass batch — 2026-07-13") — "Remember
+  email-only subscribers in the browser," the highest-priority item left in that batch
+  after the prior two cycles shipped the mission-page fix and the deals-page capture.
+- Spec: nightshift/specs/20260714T061240Z-alert-local-subscriber-memory.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 286/286 pass (no test added for the new localStorage helper —
+  matches the established precedent that `recentlyViewed.ts`/`alertSubscriberFlag.ts`,
+  the same kind of pure client-storage utility, also have no dedicated test file).
+  Visual cycle (new conditional UI state) — read all 8 screenshots (desktop 1280 +
+  mobile 375 on `/aircraft/deals`, `/aircraft`, `/alerts`, `/aircraft/listing/[id]`):
+  default (never-subscribed) state renders identically to before on every page, no
+  layout shift, no overlap. Production build served via `next start` (not dev);
+  `qa-smoke.mjs` exit 0 on all 4 pages — 8/8 checks, zero console errors, zero
+  horizontal overflow at both viewports. **Live end-to-end verified against the real
+  DB** (Playwright, real browser fill/click/reload, not a mocked action call): on
+  `/aircraft/deals`, submitted one throwaway
+  `qa-alert-local-subscriber-memory-<ts>@example.com` alert, confirmed the normal
+  "Almost there — check your inbox" pending state, then reloaded the SAME browser
+  context and confirmed the box now renders "You're already getting alerts for this"
+  with a working `/alerts/manage` link and the email input gone (no double-submit
+  surface) — zero console errors throughout. Test row deleted immediately after
+  (confirmed 0 remain via a follow-up query). Server started/stopped cleanly; confirmed
+  no orphaned `next-server` process remained after.
+- Screenshots: nightshift/screenshots/alert-local-subscriber-memory/
+- Next: the plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13") has 4 more
+  open `[P1][goal]` items — vacation-mode bulk pause on `/alerts/manage`, a real sample
+  digest preview on `/alerts`, alert capture on the comparison pages (`/compare`,
+  `/aircraft/compare/[comparison]`), and a market-pulse line in the digest email — plus
+  one more requiring a new webhook route (auto-pause on hard bounces, needs a human to
+  register the Resend webhook secret). Pull the next-highest-value one next cycle
+  (tier 1/2 permitting).
+
 ## 20260714T060159Z — PASS — deals-page-alert-capture
 - Pages: /aircraft/deals
 - What: **The "priced below market" deals page — arguably the highest-intent browse

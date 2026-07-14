@@ -1173,14 +1173,15 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   submitted one throwaway `qa-deals-page-alert-capture-<ts>@example.com` alert, confirmed the
   resulting row's `source_path` is exactly `/aircraft?deal=good` and `context` is `"good
   deal"`, then deleted it (0 rows remain).
-- **[P1][goal] Remember email-only subscribers in the browser — "You already get alerts
-  for this" without an account.** The signed-in duplicate-state shipped, but the majority
-  path (email-only, no session) re-sees a blank form on every visit and can double-submit.
-  On successful subscribe, record the alert's `source_path`+context in SSR-safe
-  localStorage (mirror the `recentlyViewed.ts` precedent — no PII beyond the visitor's own
-  browser); `AlertSignup` then renders the already-subscribed state with a "manage your
-  alerts" path (the shipped "Email me my manage link" flow). Cuts duplicate-submit
-  friction on every capture point site-wide with one shared-component change.
+~~- **[P1][goal] Remember email-only subscribers in the browser — "You already get alerts
+  for this" without an account.**~~ ✅ SHIPPED via `alert-local-subscriber-memory`
+  (2026-07-14) New `src/lib/alertLocalSubscriptions.ts` (SSR-safe localStorage, mirrors
+  `recentlyViewed.ts`'s pattern, stores only `source_path` — no PII) records a signed-out
+  subscribe's `source_path` on success; `AlertSignup` checks it on mount and renders the
+  same honest "You're already getting alerts for this" state (with a `/alerts/manage`
+  link) the signed-in `existingAlert` path already had, instead of re-showing a blank
+  form. Live-verified end-to-end (real browser submit + reload, real throwaway
+  `@example.com`, row deleted after): the state correctly flips after a real subscribe.
 - **[P1][goal] Vacation mode — pause ALL alerts until a date, one click.** `/alerts/manage`
   has per-alert snooze with honest auto-resume (shipped), but a subscriber with 4 alerts
   going away for two weeks must snooze 4 rows. Add a bulk "Pause everything until…" (and
