@@ -130,9 +130,18 @@ export function buildAlertConfirmEmail(opts: {
         <div style="margin:0 0 22px;">${samples.map(sampleCardHtml).join('')}</div>`
       : `<p style="font-size:13px;line-height:1.6;color:#64748b;background:#f8f7f4;border:1px solid #ece6dc;border-radius:10px;padding:10px 12px;margin:0 0 22px;">None match right now &mdash; you&rsquo;ll be first to know when one does.</p>`
 
+  const previewCount = opts.preview?.count ?? null
+  const preheaderText =
+    previewCount != null
+      ? previewCount > 0
+        ? `${previewCount === 1 ? '1 listing matches' : `${previewCount} listings match`} right now — confirm to start getting alerts${forThingText}.`
+        : `Confirm to start getting alerts${forThingText} — you'll be first to know when one matches.`
+      : `One click to start getting alerts${forThingText}.`
+
   const html = `<!doctype html>
 <html>
   <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
       <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
@@ -444,10 +453,12 @@ export function buildPriceDropEmail(opts: {
   const marketPulseHtml = opts.marketPulse
     ? `<p style="margin:0 0 16px;font-size:12px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;">${escapeHtml(opts.marketPulse)}</p>`
     : ''
+  const preheaderText = `${pct}% ${dropNoun} — ${opts.title} now ${newPrice} (was ${oldPrice}).`
 
   const html = `<!doctype html>
 <html>
   <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
       <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
@@ -575,6 +586,21 @@ function escapeHtml(s: string): string {
 
 function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/"/g, '&quot;')
+}
+
+/**
+ * Hidden inbox-preview ("preheader") line — Gmail/Apple Mail/etc. show the
+ * first visible-ish text after `<body>` as the list-view preview snippet;
+ * without one they fall back to our boilerplate "ClubHanger" header. Renders
+ * as a zero-height, `display:none` div right after `<body>` so it never shows
+ * in the rendered email itself, padded with `&nbsp;&zwnj;` so inbox clients
+ * (which often show 90-100+ chars) don't pull in the visible header text
+ * after it. HTML-only — plain-text emails have no "preview line" concept, so
+ * callers must NOT include this in their `text` return value.
+ */
+function preheaderHtml(text: string): string {
+  const padding = '&nbsp;&zwnj;'.repeat(40)
+  return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${escapeHtml(text)}${padding}</div>`
 }
 
 /**
@@ -802,10 +828,20 @@ export function buildAlertDigestEmail(opts: {
     opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
       ? `\nWas this digest useful? Yes: ${opts.digestFeedbackUpUrl}  No: ${opts.digestFeedbackDownUrl}\n`
       : ''
+  // Unescaped mirror of `bodyCopy` (same wording, but built from the raw —
+  // not HTML-entity-escaped — `countLabelText`/`forThingText`) so
+  // `preheaderHtml`'s own `escapeHtml()` call doesn't double-escape entities
+  // already escaped into `bodyCopy`/`forThing`.
+  const preheaderText = isSample
+    ? `${countLabelText} for your${forThingText} alert right now.`
+    : isFirstSend
+      ? `${countLabelText} for your${forThingText} alert — here's what's live the moment you confirmed. We'll email again automatically when something new matches.`
+      : `There ${total === 1 ? 'is' : 'are'} ${countLabelText} matching your${forThingText} alert on ClubHanger this week.`
 
   const html = `<!doctype html>
 <html>
   <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
       <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       ${sampleBannerHtml}
@@ -985,9 +1021,12 @@ export function buildCombinedAlertDigestEmail(opts: {
     return { html, text }
   })
 
+  const preheaderText = `${overallLabel} across your ${sections.length} alerts on ClubHanger.`
+
   const html = `<!doctype html>
 <html>
   <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
       <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">

@@ -781,3 +781,87 @@ test('combined: sample card urls carry utm_campaign=combined', () => {
   })
   assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\/listing\/abc\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
 })
+
+// ─── preheader (hidden inbox-preview text) ─────────────────────────────────
+
+test('price-drop: preheader is a hidden div right after <body>, phrased from the real pct/prices', () => {
+  const { html } = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  const bodyIdx = html.indexOf('<body')
+  const preheaderIdx = html.indexOf('display:none')
+  assert.ok(preheaderIdx > bodyIdx && preheaderIdx - bodyIdx < 200, 'preheader div sits immediately after <body>')
+  assert.match(html, /display:none[^>]*>10% price drop — 2013 Cessna 172S Skyhawk now \$180,000 \(was \$200,000\)\./)
+})
+
+test('price-drop: preheader honors a custom dropNoun (partnership buy-in drops)', () => {
+  const { html } = buildPriceDropEmail({ ...BASE, photoUrl: null, dropNoun: 'buy-in drop' })
+  assert.match(html, /display:none[^>]*>10% buy-in drop — 2013 Cessna 172S Skyhawk now \$180,000 \(was \$200,000\)\./)
+})
+
+test('digest: preheader names the real new/drop counts, matching the visible body copy', () => {
+  const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 1 })
+  assert.match(html, /display:none[^>]*>There are 2 new listings \+ 1 price drop matching your Cessna 172 alert on ClubHanger this week\./)
+})
+
+test('digest: sample-send preheader uses "current match(es)" framing, not "this week"', () => {
+  const { html } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    sampleNote: 'your real weekly digest arrives automatically when there is a genuine match.',
+  })
+  assert.match(html, /display:none[^>]*>1 current match for your Cessna 172 alert right now\./)
+})
+
+test('combined: preheader states the real overall total across all sections', () => {
+  const { html } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 2, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Piper Cherokee', newCount: 0, dropCount: 1, listingsUrl: 'https://clubhanger.com/aircraft?make=Piper' },
+    ],
+  })
+  assert.match(html, /display:none[^>]*>2 new listings \+ 1 price drop across your 2 alerts on ClubHanger\./)
+})
+
+test('confirm: preheader names the real live match count when a preview was passed', () => {
+  const { html } = buildAlertConfirmEmail({
+    ...CONFIRM_BASE,
+    preview: { count: 3, samples: [] },
+  })
+  assert.match(html, /display:none[^>]*>3 listings match right now — confirm to start getting alerts for new Cessna 172 listings\./)
+})
+
+test('confirm: preheader is honest ("you\'ll be first to know") for a real zero-match preview, never a fabricated count', () => {
+  const { html } = buildAlertConfirmEmail({ ...CONFIRM_BASE, preview: { count: 0, samples: [] } })
+  assert.match(html, /display:none[^>]*>Confirm to start getting alerts for new Cessna 172 listings — you'll be first to know when one matches\./)
+})
+
+test('confirm: preheader falls back to generic copy with no preview passed at all', () => {
+  const { html } = buildAlertConfirmEmail(CONFIRM_BASE)
+  assert.match(html, /display:none[^>]*>One click to start getting alerts for new Cessna 172 listings\./)
+})
+
+test('preheader special characters are HTML-escaped, not double-escaped', () => {
+  const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, context: 'Cessna & Piper', newCount: 1, dropCount: 0 })
+  assert.match(html, /display:none[^>]*>There is 1 new listing matching your Cessna &amp; Piper alert on ClubHanger this week\./)
+  assert.doesNotMatch(html, /&amp;amp;/)
+})
+
+test('the text part of every builder stays byte-identical — preheader is an HTML-only concept', () => {
+  const price = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  assert.doesNotMatch(price.text, /display:none/)
+
+  const digest = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 1 })
+  assert.doesNotMatch(digest.text, /display:none/)
+
+  const combined = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+    sections: [{ context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' }],
+  })
+  assert.doesNotMatch(combined.text, /display:none/)
+
+  const confirm = buildAlertConfirmEmail(CONFIRM_BASE)
+  assert.doesNotMatch(confirm.text, /display:none/)
+})
