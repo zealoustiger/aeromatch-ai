@@ -735,6 +735,13 @@ export function buildAlertDigestEmail(opts: {
    *  trustworthy one (make-only/uncurated/multi-model alerts, or a family
    *  too sparse to trust a median) — never a fabricated number. */
   marketPulse?: string
+  /** Token-scoped one-click "was this useful" links (see the digest-feedback
+   *  route) — rendered as a small 👍/👎 footer row above Manage/Unsubscribe,
+   *  only when BOTH are present (they're always built as a pair). Omitted
+   *  whenever the alert has no `unsubscribe_token` yet (pre-migration row),
+   *  same precedent as `frequencyUrl`. */
+  digestFeedbackUpUrl?: string
+  digestFeedbackDownUrl?: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -787,6 +794,14 @@ export function buildAlertDigestEmail(opts: {
   const marketPulseHtml = opts.marketPulse
     ? `<p style="margin:0 0 16px;font-size:12px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;">${escapeHtml(opts.marketPulse)}</p>`
     : ''
+  const digestFeedbackHtml =
+    opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
+      ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Was this digest useful? <a href="${escapeAttr(opts.digestFeedbackUpUrl)}" style="color:#a89f8e;">&#128077; Yes</a> &middot; <a href="${escapeAttr(opts.digestFeedbackDownUrl)}" style="color:#a89f8e;">&#128078; No</a></p>`
+      : ''
+  const digestFeedbackText =
+    opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
+      ? `\nWas this digest useful? Yes: ${opts.digestFeedbackUpUrl}  No: ${opts.digestFeedbackDownUrl}\n`
+      : ''
 
   const html = `<!doctype html>
 <html>
@@ -809,6 +824,7 @@ export function buildAlertDigestEmail(opts: {
         </p>
       </div>
       ${crossSellHtml}
+      ${digestFeedbackHtml}
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -851,7 +867,7 @@ export function buildAlertDigestEmail(opts: {
   const text = `${sampleBannerText}${bodyCopyText}
 ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
-${crossSellText}
+${crossSellText}${digestFeedbackText}
 Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
@@ -897,11 +913,24 @@ export function buildCombinedAlertDigestEmail(opts: {
    *  one suggestion for the whole combined email, never one per section
    *  (GOAL.md: "never spam"). */
   crossSell?: { label: string; acceptUrl: string }
+  /** Same one-click 👍/👎 "was this useful" links as `buildAlertDigestEmail`
+   *  — see its doc. One vote covers the whole combined send, not per-section
+   *  (same "never spam" precedent as `crossSell`). */
+  digestFeedbackUpUrl?: string
+  digestFeedbackDownUrl?: string
 }): { subject: string; html: string; text: string } {
   const sections = opts.sections
   const totalNew = sections.reduce((n, s) => n + s.newCount, 0)
   const totalDrop = sections.reduce((n, s) => n + s.dropCount, 0)
   const manageUrl = withUtm(opts.manageUrl, 'combined')
+  const digestFeedbackHtml =
+    opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
+      ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Was this digest useful? <a href="${escapeAttr(opts.digestFeedbackUpUrl)}" style="color:#a89f8e;">&#128077; Yes</a> &middot; <a href="${escapeAttr(opts.digestFeedbackDownUrl)}" style="color:#a89f8e;">&#128078; No</a></p>`
+      : ''
+  const digestFeedbackText =
+    opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
+      ? `\nWas this digest useful? Yes: ${opts.digestFeedbackUpUrl}  No: ${opts.digestFeedbackDownUrl}\n`
+      : ''
 
   const overallParts: string[] = []
   if (totalNew > 0) overallParts.push(totalNew === 1 ? '1 new listing' : `${totalNew} new listings`)
@@ -976,6 +1005,7 @@ export function buildCombinedAlertDigestEmail(opts: {
       </div>`
           : ''
       }
+      ${digestFeedbackHtml}
       <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -991,7 +1021,7 @@ export function buildCombinedAlertDigestEmail(opts: {
   const text = `${overallLabel} across your ${sections.length} alerts on ClubHanger.
 
 ${sectionParts.map((s) => s.text).join('\n\n')}
-${crossSellText}
+${crossSellText}${digestFeedbackText}
 Manage alerts: ${manageUrl}
 Unsubscribe from these: ${opts.unsubscribeUrl}`
 

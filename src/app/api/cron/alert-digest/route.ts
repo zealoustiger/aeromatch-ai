@@ -1382,6 +1382,11 @@ export async function GET(req: NextRequest) {
       // no lighter cadence left to switch to.
       const frequencyUrl =
         frequency === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
+      // One-click "was this digest useful?" footer links — see the
+      // digest-feedback route. Only the aggregate digest template offers
+      // these (matches the crossSell precedent just below).
+      const digestFeedbackUpUrl = unsubToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${unsubToken}&vote=up` : undefined
+      const digestFeedbackDownUrl = unsubToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${unsubToken}&vote=down` : undefined
 
       // When this send is purely about a price drop (no new listings to also
       // report) on an aircraft OR partnership alert, feature the single best
@@ -1436,6 +1441,8 @@ export async function GET(req: NextRequest) {
             frequencyUrl,
             crossSell: crossSellOpt,
             marketPulse: marketPulse ?? undefined,
+            digestFeedbackUpUrl,
+            digestFeedbackDownUrl,
           })
 
       const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
@@ -1488,8 +1495,19 @@ export async function GET(req: NextRequest) {
           acceptUrl: `${SITE_URL}/api/alerts/digest-cross-sell?token=${firstToken}&context=${encodeURIComponent(crossSell.context)}&path=${encodeURIComponent(crossSell.sourcePath)}`,
         }
       : undefined
+    // Same one-click vote as the single-alert path — the first alert's token
+    // is enough to resolve the responder's email (mirrors manageUrl above).
+    const digestFeedbackUpUrl = firstToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${firstToken}&vote=up` : undefined
+    const digestFeedbackDownUrl = firstToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${firstToken}&vote=down` : undefined
 
-    const { subject, html, text } = buildCombinedAlertDigestEmail({ sections, manageUrl, unsubscribeUrl, crossSell: crossSellOpt })
+    const { subject, html, text } = buildCombinedAlertDigestEmail({
+      sections,
+      manageUrl,
+      unsubscribeUrl,
+      crossSell: crossSellOpt,
+      digestFeedbackUpUrl,
+      digestFeedbackDownUrl,
+    })
 
     const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl })
 

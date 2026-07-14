@@ -1373,13 +1373,26 @@ no duplicate of shipped work above)._
   `alert-digest`'s `marketPulse` computation as the fallback for aircraft targets that have
   a `make` but no `marketPulseModel` (make-only browse alerts, multi-model selections) —
   those previously got no market-pulse line at all.
-- **[P1][goal] One-click digest feedback — "Was this digest useful? 👍/👎".** Token-authed
+~~- **[P1][goal] One-click digest feedback — "Was this digest useful? 👍/👎".** Token-authed
   footer links in the digest email hit a tiny GET route that records the vote (reuse the
   existing feedback table/`submitFeedback` plumbing; no new PII — the alert row already
   holds the email). The 👎 landing page must offer "get fewer emails" (switch to weekly /
   snooze / edit criteria) instead of a dead end — GOAL.md's "offer fewer instead of
   none" — and votes surface in the existing `/admin/feedback` list. Why: the only honest
-  way to judge "best alert email in aviation" is subscribers telling us, per send.
+  way to judge "best alert email in aviation" is subscribers telling us, per send.~~ ✅
+  SHIPPED via `digest-feedback-vote` (2026-07-14) New `GET /api/alerts/digest-feedback`
+  route (mirrors `/api/alerts/unsubscribe`'s structure) resolves the alert by
+  `unsubscribe_token` and inserts one row into the existing `feedback` table
+  (`type: 'digest_vote'`) — no schema change, no new PII. `buildAlertDigestEmail` and
+  `buildCombinedAlertDigestEmail` both gained optional `digestFeedbackUpUrl`/
+  `digestFeedbackDownUrl` params rendering a "Was this digest useful? 👍 👎" footer row
+  (byte-identical output when omitted); wired into the cron's single-alert and combined
+  send paths from the already-in-scope `unsubToken`/`firstToken`. `/alerts/status` gained
+  `digest_feedback_up`/`digest_feedback_down` states — the down state links to
+  `/alerts/manage` ("Get fewer emails, pause, or fine-tune your alerts →") instead of a
+  dead end. **Not done, intentionally:** a bespoke 👍/👎 icon on `/admin/feedback` —
+  that file is root-owned/not writable in this sandbox; votes still surface in the list
+  via the message text ("👍/👎 Digest was...") under the generic feedback icon.
 - ~~**[P1][goal] `/admin/alerts` scoreboard — prove which placements convert.** Every
   alert row already carries a per-placement `source` tag (`alert-source-placement-tag`)
   and a status, but there is no admin visibility (verified: no alert page under
