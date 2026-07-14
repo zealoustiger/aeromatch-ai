@@ -1380,7 +1380,7 @@ no duplicate of shipped work above)._
   snooze / edit criteria) instead of a dead end — GOAL.md's "offer fewer instead of
   none" — and votes surface in the existing `/admin/feedback` list. Why: the only honest
   way to judge "best alert email in aviation" is subscribers telling us, per send.
-- **[P1][goal] `/admin/alerts` scoreboard — prove which placements convert.** Every
+- ~~**[P1][goal] `/admin/alerts` scoreboard — prove which placements convert.** Every
   alert row already carries a per-placement `source` tag (`alert-source-placement-tag`)
   and a status, but there is no admin visibility (verified: no alert page under
   `src/app/admin`). New read-only page inside the existing admin layout gate (do NOT
@@ -1388,7 +1388,15 @@ no duplicate of shipped work above)._
   subscribers this week vs last, and top `source` placements ranked by confirmed count.
   Why: GOAL.md's "prove it converts" — the human should see which of the ~30 shipped
   capture points actually convert over coffee, without PostHog spelunking. Read-only,
-  no `alert_subscribed` emission (adds no capture point).
+  no `alert_subscribed` emission (adds no capture point).~~ ✅ SHIPPED via
+  `admin-alerts-scoreboard` (2026-07-14). Audit correction: the `alerts` table has **no
+  `source` column** (the per-placement `source` prop is PostHog-only, never persisted),
+  so exact per-widget ranking isn't DB-buildable today. Shipped the honest slice the DB
+  *can* answer: full status breakdown (active/confirmed/pending/paused/bounced/unsubscribed),
+  new **live** subscribers (active+confirmed) this week vs last, and top **page families**
+  (via a pure `classifySourcePath` over `source_path`) ranked by live count. Follow-up for
+  true per-placement precision: add & thread an `alerts.source` column through every insert
+  path (bigger than one cycle).
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
