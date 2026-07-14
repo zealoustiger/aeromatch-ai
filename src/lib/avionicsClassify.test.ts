@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { computeIfrSuitability, type AvionicsCap } from './avionicsClassify.ts'
+import { computeIfrSuitability, parseAvionicsFilter, avionicsMatch, type AvionicsCap } from './avionicsClassify.ts'
 
 // Minimal cap factory — only `key` matters to the IFR logic.
 const cap = (key: AvionicsCap['key']): AvionicsCap => ({ key, label: key, hint: '' })
@@ -79,4 +79,25 @@ test('every tier produces a non-empty headline + sub', () => {
     const r = computeIfrSuitability(keys.map(cap))
     assert.ok(r && r.headline.length > 0 && r.sub.length > 0, `expected a read for ${keys.join('+')}`)
   }
+})
+
+// --- parseAvionicsFilter / avionicsMatch (shared by the browse-page filter and alerts) ---
+
+test('parseAvionicsFilter splits + trims a comma-joined param', () => {
+  assert.deepEqual(parseAvionicsFilter('glass, adsb ,waas'), ['glass', 'adsb', 'waas'])
+})
+
+test('parseAvionicsFilter returns [] for undefined/empty', () => {
+  assert.deepEqual(parseAvionicsFilter(undefined), [])
+  assert.deepEqual(parseAvionicsFilter(''), [])
+})
+
+test('avionicsMatch: OR semantics — any selected category satisfies the filter', () => {
+  assert.equal(avionicsMatch(['Garmin G1000'], ['glass', 'adsb']), true)
+  assert.equal(avionicsMatch(['Garmin G1000'], ['adsb']), false)
+})
+
+test('avionicsMatch: null/empty avionics never matches (honesty — no fabricated match)', () => {
+  assert.equal(avionicsMatch(null, ['glass']), false)
+  assert.equal(avionicsMatch([], ['glass']), false)
 })

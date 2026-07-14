@@ -6,7 +6,7 @@ import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
 import { buildFamilyPriceMap, compVsMarket, familyKey, priceStats, type CompResult, type PriceStats } from '@/lib/aircraftComps'
 import { clubHangerDealVerdict, type ClubHangerDealVerdict, type DealComp } from '@/lib/aircraftEstimate'
 import { PARTS_TITLE_PATTERNS } from '@/lib/partsFilter'
-import { classifyAvionics } from '@/lib/avionicsClassify'
+import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassify'
 import { evaluateAircraftTrust } from '@/lib/aircraftTrust'
 import { getSaveCounts } from '@/lib/saveCounts'
 import { getEmptyStateWidenSuggestion, type EmptyStateWidenSuggestion } from '@/lib/alertMatchCounts'
@@ -80,43 +80,6 @@ function sortByTrust(listings: AircraftForSale[]): AircraftForSale[] {
 // family pages — the sitemap already uses the identical floor in aircraftForSale.ts.
 const BUYER_PRICE_FLOOR = 50_000
 
-// Parse the comma-joined `avionics` filter param into its category keys.
-function parseAvionicsFilter(raw: string | undefined): string[] {
-  return (raw ?? '').split(',').map((c) => c.trim()).filter(Boolean)
-}
-
-// Does this listing's raw avionics list satisfy the selected category filter?
-// Reuses the exact same classification the listing detail page's avionics
-// panel uses, so the filter and the panel a buyer sees never disagree.
-function avionicsMatch(avionics: string[] | null, categories: string[]): boolean {
-  const info = classifyAvionics(avionics)
-  if (!info) return false
-  const capKeys = new Set<string>(info.caps.map((c) => c.key))
-  return categories.some((cat) => capKeys.has(cat))
-}
-
-// `avionics` is a `text[]` column — PostgREST has no `ilike`-style operator for
-// arrays, and casting the column in the filter (`avionics::text=ilike...`)
-// still fails the same way (confirmed live against the DB: "operator does not
-// exist: text[] ~~* unknown"). So the category match runs in JS instead: fetch
-// id+avionics for every active row (paginated via `fetchAllRows`, same
-// technique already used below for the family price/comp maps), classify each,
-// and narrow the real query with `.in('id', …)`. Population is a few thousand
-// rows — a lightweight two-column scan, only run when the filter is active.
-async function fetchAvionicsMatchIds(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
-  categories: string[]
-): Promise<string[]> {
-  const rows = await fetchAllRows<{ id: string; avionics: string[] | null }>((from, to) =>
-    supabase
-      .from('aircraft_for_sale')
-      .select('id, avionics')
-      .eq('status', 'active')
-      .gte('asking_price', BUYER_PRICE_FLOOR)
-      .range(from, to)
-  )
-  return rows.filter((r) => avionicsMatch(r.avionics, categories)).map((r) => r.id)
-}
 
 // Parse ?page into a 1-based page number, clamped to >= 1. Anything missing or
 // junk falls back to page 1.
@@ -531,7 +494,7 @@ export async function fetchAircraftPage(
 
     let avionicsIdFilter: string[] | null = null
     if (avionicsCategories.length > 0) {
-      avionicsIdFilter = await fetchAvionicsMatchIds(supabase, avionicsCategories)
+      avionicsIdFilter = await fetchAvionicsMatchIds(supabase, avionicsCategories, BUYER_PRICE_FLOOR)
       if (avionicsIdFilter.length === 0) {
         return { listings: [], totalCount: 0, page, error: false }
       }

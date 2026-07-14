@@ -2,6 +2,7 @@ import { createAdminClient } from './supabase-admin'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SITE_URL } from './seo'
 import { matchesModelFilter } from './seekerModelFilter'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from './listingQuality'
+import { parseAvionicsFilter, fetchAvionicsMatchIds } from './avionicsClassify'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
 import { formatShareType, formatPriceK } from './utils'
@@ -50,6 +51,12 @@ type AlertTarget =
       /** Listing-quality multi-select, already resolved from `grade`/`min_grade`
        *  via `parseGradeFilter` — same semantics as the browse page's filter. */
       grades?: Grade[]
+      /** Avionics capability categories (glass/adsb/autopilot/waas/gps), parsed
+       *  from the same comma-joined `avionics` param the browse page's filter
+       *  uses. Matched via the shared `fetchAvionicsMatchIds` id-narrowing scan
+       *  (see `avionicsClassify.ts`) since it's a `text[]` column with no cheap
+       *  column filter. */
+      avionics?: string[]
     }
   | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
@@ -83,6 +90,10 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
         maxTt: numOrUndef(g('max_tt')),
         keyword: g('q'),
         grades: parseGradeFilter(g('grade'), g('min_grade')),
+        avionics: (() => {
+          const cats = parseAvionicsFilter(g('avionics'))
+          return cats.length > 0 ? cats : undefined
+        })(),
       }
     }
     if (p === '/partnerships/seeking') {
@@ -236,6 +247,11 @@ async function countActiveAircraft(
   else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
   else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
   if (excludeId) q = q.neq('id', excludeId)
+  if (target.avionics && target.avionics.length > 0) {
+    const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+    if (ids.length === 0) return 0
+    q = q.in('id', ids)
+  }
 
   const { count, error } = await q
   if (error) throw new Error(error.message)
@@ -436,6 +452,11 @@ async function previewAircraft(
   if ('or' in gradePlan) q = q.or(gradePlan.or)
   else if ('impossible' in gradePlan) q = q.gt('quality_score', 100)
   else if (gradePlan.floor > 0) q = q.gte('quality_score', gradePlan.floor)
+  if (target.avionics && target.avionics.length > 0) {
+    const ids = await fetchAvionicsMatchIds(supabase, target.avionics, PARTS_PRICE_FLOOR)
+    if (ids.length === 0) return { count: 0, noun: 'listing', samples: [] }
+    q = q.in('id', ids)
+  }
 
   const { data, count, error } = await q.order('first_seen_at', { ascending: false }).limit(limit)
   if (error) throw new Error(error.message)

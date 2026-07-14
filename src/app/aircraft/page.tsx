@@ -131,13 +131,11 @@ export default async function AircraftPage({
   // for-sale pages carry their scope in the URL path; `/aircraft` carries it in
   // the query string, so we preserve the active query on the source path and
   // describe the filters in the alert context (e.g. "Cessna 172 in California").
-  // `avionics` is deliberately excluded: the alert digest cron doesn't honor it
-  // (it needs a full-table classify pass, not a cheap column filter — see
-  // BACKLOG.md's "honor-or-strip" item), so keeping it here would silently
-  // promise a check the alert never actually runs.
+  // `avionics` now rides along too — the alert digest cron honors it via the
+  // same id-narrowing scan the browse page's filter uses (see `avionicsClassify.ts`).
   const alertContext = describeAircraftFilters(params)
   const alertQuery = new URLSearchParams(
-    Object.entries(params).filter(([k, v]) => Boolean(v) && k !== 'avionics') as [string, string][]
+    Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]
   ).toString()
   const alertSourcePath = alertQuery ? `/aircraft?${alertQuery}` : '/aircraft'
 
