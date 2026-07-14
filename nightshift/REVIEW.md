@@ -1,3 +1,19 @@
+## 2026-07-14T12:23:32Z — Night Shift run: 7 cycles (PASS 6 / FAIL 0) — night budget cap ($120)
+- Models: cycles on sonnet; 0 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $124.0246 of $120 cap
+
+- PASS — home-recently-viewed-alert-banner — Mounted the personalized you've been looking at X alert banner on the homepage, replacing the generic alert band when a returning vis
+- PASS — alert-email-preheader — added hidden inbox-preview text (derived from real counts/prices, never fabricated) to all 4 alert email templates (confirm, digest, combined dig
+- PASS — alert-avionics-match — Aircraft alerts now honor the avionics filter (glass panel/ADS-B/autopilot/WAAS/GPS) end-to-end instead of silently stripping it, so a glass-panel
+- ABORT — none — plan needed`
+- PASS — partnership-alert-model-match — partnership alerts now honor the `model` filter (previously silently matched every partnership of that make) end-to-end, including a seco
+- PASS — partnership-filled-landing — closed/filled partnership URLs now show an honest filled or taken down page (200+noindex, similar-partnerships rail, alert signup) instead o
+- PASS — alert-edit-hidden-criteria — /alerts/manage's Edit form now shows any advanced-search criteria (min_year/max_tt/avionics/grade/q, or a partnership's model) hiding on an 
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 5.0 on 2 cores, sustained ~9 min — parallel drains are contending; consider more cores or lower --cpus per container
+
+
 ## 2026-07-14T10:51:18Z — Night Shift run: 25 cycles (PASS 20 / FAIL 2) — safety cap (25)
 - Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
 - Night spend so far: $91.6780 of $120 cap
