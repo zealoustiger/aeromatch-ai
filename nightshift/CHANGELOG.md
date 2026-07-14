@@ -2,6 +2,70 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T063731Z — PASS — compare-page-alert-capture
+- Pages: /aircraft/compare/[comparison] (e.g. /aircraft/compare/cessna-172-vs-cirrus-sr22)
+- What: **The curated "X vs Y" aircraft comparison pages — a visitor actively
+  weighing two families against each other, arguably peak alert-intent — had no
+  way to get alerted about either one.** They were the last browse-family
+  surface site-wide without an `AlertSignup`. Added a "Get alerts for new
+  listings" section with **one alert box per compared family** (e.g. a Cessna
+  172 box and a separate Cirrus SR22 box), so a visitor can subscribe to
+  whichever (or both) they're actually deciding between, right on the page.
+  Each box reuses the exact `sourcePath` shape (`/aircraft/{makeSlug}/{modelSlug}`)
+  the family's own make/model page already uses — zero changes needed to the
+  digest cron's `parseSourcePath`, which already recognizes it — and the live
+  `matchCount` the page already fetched for its own "N for sale" CTA buttons
+  (no new query). `source="compare_page"`. 1 file:
+  `src/app/aircraft/compare/[comparison]/page.tsx`.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none — last cycle
+  (`alert-vacation-mode`) PASSed. Tier 2 (`[want]`): re-audited BACKLOG.md's
+  open `[P1][want]` items — same set as the last several cycles (the "Save this
+  search" auth-wall reconciliation, the collection-layout mosaic redesign, the
+  owner-leads list) are each explicitly flagged as needing a human product/
+  design/compliance call before an autonomous build; none newly actionable.
+  Dropped to tier 3: pulled "Alert capture on the comparison pages" from the
+  Opus/Fable plan-pass batch (BACKLOG.md "Plan-pass batch — 2026-07-13") — the
+  next open item after `alert-vacation-mode` shipped the prior one. Sliced the
+  item down to just the curated `/aircraft/compare/[comparison]` family pages
+  (the evergreen, higher-traffic half); the user compare tray (`/compare`,
+  ids-based, needs a different per-listing dedup sourcePath shape) is left as
+  the next slice — keeps this cycle's change small and one-pattern, per
+  RUNBOOK's "if it feels big, cut it smaller."
+- Spec: nightshift/specs/20260714T063731Z-compare-page-alert-capture.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build`
+  exit 0 (clean build, all routes). Full unit suite `node
+  --experimental-strip-types --test src/lib/*.test.ts` — 286/286 pass (no new
+  test — the change is a page-level composition of the already-tested
+  `AlertSignup` component, same as every other call site). Visual cycle (new UI
+  section) — read all 2 screenshots (desktop 1280 + mobile 375 on
+  `/aircraft/compare/cessna-172-vs-cirrus-sr22`): two clean side-by-side alert
+  boxes on desktop, cleanly stacked at 375px, no overlap, no layout shift to
+  the rest of the page, on-brand sky/cream styling matching every other
+  `AlertSignup` placement. Production build served via `next start` (not dev);
+  `qa-smoke.mjs` exit 0 — 2/2 checks, zero console errors, zero horizontal
+  overflow at both viewports. **Live end-to-end verified against the real DB**
+  (Playwright, real fill/click, not mocked actions): on the same page, filled
+  and submitted the Cessna 172 box with one throwaway
+  `qa-compare-alert-cessna-<ts>@example.com` and the Cirrus SR22 box with a
+  separate throwaway `qa-compare-alert-cirrus-<ts>@example.com` — both showed
+  the correct honest "check your inbox" confirmation copy naming their own
+  family, zero console errors. Queried the live `alerts` table directly:
+  both rows persisted with the correct `context`/`source_path` pair (`Cessna
+  172` → `/aircraft/cessna/172`, `Cirrus SR22` → `/aircraft/cirrus/sr22`) —
+  confirms the two boxes are genuinely independent, not accidentally sharing
+  state. Both test rows deleted immediately after (confirmed 0 remain via a
+  follow-up query). Server started/stopped cleanly; confirmed no orphaned
+  `next-server` process remained after (one was found still running after the
+  first `pkill` attempt failed to match it — killed by PID directly and
+  re-verified port 3000 down).
+- Screenshots: nightshift/screenshots/compare-page-alert-capture/
+- Next: the plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13") has 2
+  more open `[P1][goal]` items — a real sample digest preview on `/alerts` and
+  a market-pulse line in the digest email — plus the bounce-webhook item
+  (needs a human to register the Resend secret). The user compare tray
+  (`/compare`) alert capture is now the one remaining named follow-up from
+  this cycle's own item, not yet in the plan-pass list as its own line.
+
 ## 20260714T062320Z — PASS — alert-vacation-mode
 - Pages: /alerts/manage
 - What: **A subscriber with several alerts who was going away had to snooze each one
