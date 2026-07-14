@@ -1205,14 +1205,23 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   Cessna 172, real current listings, honesty-gated to skip if no matches) — inline or
   behind a "See a sample email" expander next to the existing capture form. The landing
   page's `AlertSignup` keeps emitting `alert_subscribed`; this raises its conversion.
-- **[P1][goal] Alert capture on the comparison pages.** Verified: `/compare` (the user
-  compare tray page) and the existing `/aircraft/compare/[comparison]` family pages have
-  no `AlertSignup` (only remaining browse-family surface without one; adding capture to
-  an EXISTING page is activation, not new SEO surface). Add a capture block scoped to the
-  compared models — simplest honest slice: one `AlertSignup` with a chip per compared
-  family (172 vs 182 → pick which to watch, or both via the shipped one-click confirmed-
-  alert path when a session/confirmed email exists). `source: 'compare_page'`, emits
-  `alert_subscribed`.
+~~- **[P1][goal] Alert capture on the comparison pages.**~~ ✅ SHIPPED via
+  `compare-page-alert-capture` (2026-07-14) — the curated
+  `/aircraft/compare/[comparison]` family pages (e.g. "Cessna 172 vs Cirrus SR22")
+  now render one `AlertSignup` box per compared family (`source="compare_page"`),
+  reusing the page's own already-computed `aPath`/`bPath` (identical sourcePath
+  shape the make/model pages already use, recognized by the digest cron's
+  `parseSourcePath` with zero cron changes needed) and `aCount`/`bCount` (the
+  live inventory counts already fetched for the CTAs above — no new query).
+  Live-verified end to end against the real DB (Playwright, real fill/click, not
+  mocked): submitted one throwaway `@example.com` per family box on
+  `/aircraft/compare/cessna-172-vs-cirrus-sr22`, confirmed both resulting `alerts`
+  rows carry the correct `context`/`source_path` (`Cessna 172` →
+  `/aircraft/cessna/172`, `Cirrus SR22` → `/aircraft/cirrus/sr22`), zero console
+  errors, then deleted both rows. **Still open (next slice):** the user compare
+  tray page (`/compare`, ids-based, noindex utility page) — needs a different
+  sourcePath shape (per-listing make/model dedup across up to 3 arbitrary
+  compared items, plus both aircraft/partnership types), left for a future cycle.
 - **[P1][goal] Market-pulse line in the aircraft digest email.** One honest market-context
   sentence per aircraft-alert section — "14 Cessna 172s listed right now, median asking
   $89k" — computed from the existing comps queries (`aircraftComps.ts` family matching)
