@@ -1,3 +1,38 @@
+## 2026-07-14T10:51:18Z — Night Shift run: 25 cycles (PASS 20 / FAIL 2) — safety cap (25)
+- Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $91.6780 of $120 cap
+
+- PASS — deals-page-alert-capture — Added an email-only get alerts for good deals capture box to /aircraft/deals (the highest-intent browse page, previously with no alert entry p
+- PASS — alert-local-subscriber-memory — Email-only alert subscribers now get a you're already getting alerts for this state on return visits (device-local memory, no account nee
+- PASS — alert-vacation-mode — Added bulk Pause all / Resume all (vacation mode) to `/alerts/manage` so a subscriber with multiple alerts can pause or resume them all in one clic
+- PASS — compare-page-alert-capture — Added alert-subscription boxes (one per compared model) to the curated `/aircraft/compare/[comparison]` pages, closing the last browse-famil
+- PASS — alerts-sample-preview — Added a live what you'll get sample-listing preview (real photo/title/price/location, up to 3 per chip) to the /alerts landing page, honesty-gate
+- PASS — alert-digest-market-pulse — Added an honest N Cessna 172s listed right now, median asking $89k market-context line to the aircraft alert digest email (single + combined 
+- PASS — resend-bounce-webhook — Added `/api/webhooks/resend`, which auto-pauses a subscriber's alerts on a verified hard email bounce (distinct Bounced status + resume flow on `
+- ABORT — none — plan needed`
+- PASS — compare-tray-alert-capture — added deduped alert-signup boxes to the `/compare` tray page (previously zero alert capture), one box per distinct make/model family among t
+- ABORT — alert-email-change — added Change the email these alerts go to on `/alerts/manage`, moving every alert an owner has to a new address via double-opt-in confirmation, and
+- PASS — filter-toolbar-alert-chip — Added a one-tap 🔔 Alert me for this search chip to the active-filter toolbar on `/aircraft` and `/partnerships`, so filtered visitors can 
+- PASS — partnership-digest-market-pulse — Partnership alert digest emails now show an honest N {Make} partnerships listed right now, median buy-in $X market-context line (make-l
+- PASS — price-drop-market-pulse — the single-listing price-drop alert email now shows the same honest N Cessna 172s listed right now, median asking $X market-pulse line the aggr
+- PASS — aircraft-make-pulse-line — Make-only aircraft alerts (e.g. any new Cessna) now get an honest market-pulse line (142 Cessnas listed right now, median asking $X) in digest
+- cycle produced no verdict (exit 0)
+- PASS — admin-alerts-scoreboard — new read-only /admin/alerts tab: alert status breakdown, weekly live-subscriber trend, and top converting page families (honest DB-backed, no f
+- PASS — digest-feedback-vote — Added a one-click 👍/👎 Was this digest useful? footer link to alert digest emails, backed by a new token-authed vote route that logs into the
+- ABORT — none — plan needed`
+- PASS — alert-spam-complaint-unsubscribe — Resend webhook now auto-unsubscribes an address the instant it reports a spam complaint (terminal status, no auto-resume), mirroring t
+- PASS — alert-digest-legacy-active-status — fixed a P0 bug where the alert digest cron only queried `status='confirmed'`, silently excluding real subscribers stuck on the legacy
+- cycle produced no verdict (exit 124)
+- PASS — alert-capture-impression-events — card price-drop bells and the Alert me for this search filter chip now fire view + open analytics events, giving those two tap-to-open 
+- PASS — alert-source-column — Added an additive `alerts.source` DB column and threaded the already-known placement tag through all 9 alert-subscribe insert paths (with the stand
+- PASS — admin-alerts-source-ranking — Added a Top placements ranking section to `/admin/alerts` showing live/pending counts and confirm-rate per alert-capture placement (card be
+- PASS — admin-alerts-digest-vote-rollup — added a 👍/👎 digest-feedback rollup (totals, week-over-week, recent votes) to /admin/alerts, closing the flagged follow-up from di
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.6 on 2 cores, sustained ~18 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 25 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-13T12:16:30Z — Night Shift run: 11 cycles (PASS 8 / FAIL 0) — night budget cap ($120)
 - Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
 - Night spend so far: $120.6019 of $120 cap
