@@ -1,17 +1,25 @@
-import { Bell } from 'lucide-react'
-import { getAlertScoreboard } from '@/lib/alertScoreboard'
+import { Bell, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { getAlertScoreboard, getDigestVoteRollup } from '@/lib/alertScoreboard'
 
 export const metadata = { title: 'Alert Scoreboard', robots: { index: false } }
 export const dynamic = 'force-dynamic'
 
+// Below this many total votes, an up-rate percentage is more noise than
+// signal — mirrors the MIN_PLACEMENT_VOLUME_FOR_RATE honesty floor.
+const MIN_VOTES_FOR_RATE = 10
+
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const snap = await getAlertScoreboard()
+  const [snap, votes] = await Promise.all([getAlertScoreboard(), getDigestVoteRollup()])
   const updated = new Date(snap.computedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
   const maxStatus = Math.max(1, ...snap.statusCounts.map((s) => s.count))
   const maxFamily = Math.max(1, ...snap.topPageFamilies.map((f) => f.count))
   const maxSource = Math.max(1, ...snap.topSources.map((s) => s.liveCount))
   const weekDelta = snap.newThisWeek - snap.newLastWeek
+
+  const voteTotal = votes.upTotal + votes.downTotal
+  const voteWeekDelta = votes.upThisWeek + votes.downThisWeek - (votes.upLastWeek + votes.downLastWeek)
+  const upRate = voteTotal >= MIN_VOTES_FOR_RATE ? Math.round((votes.upTotal / voteTotal) * 100) : null
 
   return (
     <div className="space-y-6">
@@ -155,6 +163,68 @@ export default async function AlertScoreboardPage() {
               </div>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">Digest feedback</h2>
+        <p className="mb-6 text-sm text-slate-500">
+          One-click 👍/👎 votes from the digest email footer — the most honest signal we
+          have for &quot;is this the best listing alert email in aviation.&quot;
+        </p>
+
+        {voteTotal === 0 ? (
+          <p className="text-sm text-slate-400">No digest votes yet — not enough data.</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-end gap-6">
+              <div>
+                <div className="flex items-center gap-1.5 text-2xl font-bold text-emerald-600">
+                  <ThumbsUp className="h-5 w-5" /> {votes.upTotal}
+                </div>
+                <div className="text-xs text-slate-500">👍 all time</div>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 text-2xl font-bold text-rose-600">
+                  <ThumbsDown className="h-5 w-5" /> {votes.downTotal}
+                </div>
+                <div className="text-xs text-slate-500">👎 all time</div>
+              </div>
+              {upRate !== null && (
+                <div>
+                  <div className="text-2xl font-bold text-slate-900">{upRate}%</div>
+                  <div className="text-xs text-slate-500">👍 rate</div>
+                </div>
+              )}
+              <div
+                className={`pb-1 text-sm font-semibold ${
+                  voteWeekDelta > 0 ? 'text-emerald-600' : voteWeekDelta < 0 ? 'text-rose-600' : 'text-slate-400'
+                }`}
+              >
+                {votes.upThisWeek + votes.downThisWeek} vote{votes.upThisWeek + votes.downThisWeek === 1 ? '' : 's'}{' '}
+                this week ({voteWeekDelta > 0 ? '+' : ''}
+                {voteWeekDelta} vs. last week)
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-2 border-t border-slate-100 pt-4">
+              {votes.recentVotes.map((v, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    {v.vote === 'up' ? (
+                      <ThumbsUp className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <ThumbsDown className="h-3.5 w-3.5 text-rose-600" />
+                    )}
+                    <span className="font-mono text-xs text-slate-500">{v.pagePath ?? '/alerts/digest'}</span>
+                  </span>
+                  <time className="text-xs text-slate-400">
+                    {new Date(v.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </time>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>
