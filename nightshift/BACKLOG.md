@@ -1496,14 +1496,16 @@ closing the measurement loop, deliverability, and email/management polish. (The
   `ch_recently_viewed` localStorage) sees the unchanged generic band; seeding 3 Cessna 172
   recent-views renders "You've been looking at Cessna 172 listings" with a real live match
   count (28), confirming the end-to-end swap works, not just the fallback path.
-- **[P2][goal] Preheader text on alert emails.** Inbox list views show the first body text
-  as the preview line; our digests waste it on header boilerplate. Add a hidden standard
-  preheader (visually-hidden span before the body) to `buildAlertConfirmEmail`,
-  `buildAlertDigestEmail`, `buildCombinedAlertDigestEmail`, and `buildPriceDropEmail`
-  summarizing the honest payload ("3 new Cessna 172 listings + 1 price drop this week") —
-  derived from the counts already passed in, never fabricated. Pure `email.ts` change,
-  unit-testable (present/absent, escaping, count phrasing); byte-identical text part.
-  Email polish on every existing send; no capture point.
+~~- **[P2][goal] Preheader text on alert emails.**~~ ✅ SHIPPED via `alert-email-preheader`
+  (2026-07-14) Inbox list views show the first body text as the preview line; our digests
+  wasted it on header boilerplate. Added a hidden, zero-height `preheaderHtml()` div right
+  after `<body>` to `buildAlertConfirmEmail`, `buildAlertDigestEmail`,
+  `buildCombinedAlertDigestEmail`, and `buildPriceDropEmail`, phrased from data already
+  passed into each builder (counts, context, price — never a new fabricated figure); e.g.
+  digest: "There are 2 new listings + 1 price drop matching your Cessna 172 alert on
+  ClubHanger this week." Pure `email.ts` change — text part of every builder stays
+  byte-identical (preheader is an HTML-inbox-preview concept only). 12 new unit tests
+  (present/absent, escaping incl. a double-escape guard, count phrasing, all 4 builders).
 - **[P2][goal] Honor `avionics` in aircraft alert matching.** The explicitly flagged
   not-done from `alert-query-grade-honesty`: the `avionics` param is stripped from
   `alertSourcePath` at capture so alerts never over-promise — but that means a
