@@ -1227,13 +1227,21 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   tray page (`/compare`, ids-based, noindex utility page) — needs a different
   sourcePath shape (per-listing make/model dedup across up to 3 arbitrary
   compared items, plus both aircraft/partnership types), left for a future cycle.
-- **[P1][goal] Market-pulse line in the aircraft digest email.** One honest market-context
-  sentence per aircraft-alert section — "14 Cessna 172s listed right now, median asking
-  $89k" — computed from the existing comps queries (`aircraftComps.ts` family matching)
-  with the established honesty floors (min-comps / dead-band; below the floor → omit the
-  line entirely, never fabricate). No new capture point; makes the email a subscriber
-  opens visibly smarter than Controller's. Improves the digest surface only —
-  `email.ts` + `alert-digest/route.ts`, no schema change.
+~~- **[P1][goal] Market-pulse line in the aircraft digest email.**~~ ✅ SHIPPED via
+  `alert-digest-market-pulse` (2026-07-14) One honest market-context sentence per
+  aircraft-alert section — "14 Cessna 172s listed right now, median asking $89k" — new
+  `getMarketPulseLine` (`alertMatchCounts.ts`) reuses the exact `priceStats` aggregator +
+  `MIN_SNAPSHOT_LISTINGS` honesty floor already shipped for the make/model page's "Market
+  snapshot" block (`aircraftComps.ts`); below the floor → `null`, never fabricated. Wired
+  into both `buildAlertDigestEmail` and `buildCombinedAlertDigestEmail` (per-section) in
+  `email.ts`, computed in `alert-digest/route.ts`'s per-alert prepare loop for aircraft
+  alerts that resolve to ONE clean make+model (a curated `SEO_MAKE_MODELS` family, or a
+  single non-comma `model` query param) — make-only, uncurated-slug, and multi-model
+  alerts get no line at all rather than a guess. Live-DB-verified read-only (no writes):
+  Cessna 172 → 75 listed, median $125k; Cirrus SR22 → 193 listed, median $550k; Robinson
+  R44 → 16 listed, median $397k. **Not done, intentionally:** make-only market pulse (e.g.
+  "142 Cessnas listed right now") and applying it to `buildPriceDropEmail`/listing-watch
+  sends — scoped out per the item's own "digest surface only."
 - **[P1][goal] Auto-pause alerts on hard email bounces (Resend webhook).** Never-spam /
   deliverability: today a typo'd or dead address gets digests forever, hurting sender
   reputation for everyone. Add `/api/webhooks/resend` (svix-style signature verification,

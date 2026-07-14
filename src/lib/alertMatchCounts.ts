@@ -4,8 +4,9 @@ import { matchesModelFilter } from './seekerModelFilter'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from './listingQuality'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
-import { formatShareType } from './utils'
+import { formatShareType, formatPriceK } from './utils'
 import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from './alertEditCriteria'
+import { priceStats } from './aircraftComps'
 import type { AlertDigestSample } from './email'
 
 /**
@@ -591,4 +592,42 @@ export async function getAlertDigestPreview(sourcePath: string | null, limit = 3
     console.error('[alertMatchCounts] preview error:', err instanceof Error ? err.message : err)
     return null
   }
+}
+
+/**
+ * Honest one-line market-context sentence for an aircraft alert's family —
+ * "14 Cessna 172s listed right now, median asking $89k" — for the alert-digest
+ * cron (see GOAL.md: "makes the email a subscriber opens visibly smarter than
+ * Controller's"). Reuses `priceStats` (`aircraftComps.ts`), the SAME pure
+ * aggregator + `MIN_SNAPSHOT_LISTINGS` honesty floor the make/model page's
+ * "Market snapshot" block already established — below that floor this returns
+ * `null` (never a guess) rather than publish a noisy median off a handful of
+ * listings. `modelPattern` is an `ilike` pattern (may be a bare model string
+ * with no `%` — behaves as a case-insensitive exact match then); callers
+ * should only pass this for a single, clean model, not a multi-select.
+ */
+export async function getMarketPulseLine(
+  supabase: ReturnType<typeof createAdminClient>,
+  make: string,
+  modelLabel: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<string | null> {
+  let q = supabase
+    .from('aircraft_for_sale')
+    .select('asking_price')
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+    .ilike('make', `%${make}%`)
+    .ilike('model', modelPattern)
+    .limit(5000)
+  if (notModelPattern) q = q.not('model', 'ilike', notModelPattern)
+  const { data, error } = await q
+  if (error || !data) return null
+  const prices = data.map((r) => r.asking_price as number | null).filter((p): p is number => p != null)
+  const stats = priceStats(prices)
+  if (!stats) return null
+  const family = `${make} ${modelLabel}`
+  const noun = stats.count === 1 ? family : `${family}s`
+  return `${stats.count} ${noun} listed right now, median asking ${formatPriceK(stats.median)}.`
 }

@@ -125,6 +125,22 @@ test('digest: with no samples, the email still renders cleanly (CTA-only)', () =
   assert.match(html, />\s*View Cessna 172 listings\s*</)
 })
 
+test('digest: marketPulse renders as an honest one-liner in both HTML and text', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 2,
+    dropCount: 0,
+    marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
+  })
+  assert.match(html, /14 Cessna 172s listed right now, median asking \$89k\./)
+  assert.match(text, /14 Cessna 172s listed right now, median asking \$89k\./)
+})
+
+test('digest: without marketPulse, no market-context line renders (honesty gate — never a guess)', () => {
+  const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 0 })
+  assert.doesNotMatch(html, /listed right now, median asking/)
+})
+
 test('digest: sample cards render photo, specs, and price; "See all" CTA when more remain', () => {
   const { html } = buildAlertDigestEmail({
     ...DIGEST_BASE,
@@ -389,6 +405,27 @@ test('combined: sample cards render within their own section', () => {
   })
   assert.match(html, /2015 Cessna 172S Skyhawk/)
   assert.match(html, /\$219,000/)
+})
+
+test('combined: marketPulse renders per-section, independently — a section without one gets no line', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
+        marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
+      },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.match(html, /14 Cessna 172s listed right now, median asking \$89k\./)
+  assert.match(text, /14 Cessna 172s listed right now, median asking \$89k\./)
+  // Only one occurrence — the second (Cirrus) section has no marketPulse.
+  assert.equal((html.match(/listed right now, median asking/g) ?? []).length, 1)
 })
 
 test('combined: footer carries the shared Manage/Unsubscribe links (already multi-token-scoped by the caller)', () => {

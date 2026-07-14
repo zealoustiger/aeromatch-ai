@@ -11,7 +11,7 @@ import {
   type AlertDigestSample,
   type AlertDigestSection,
 } from '@/lib/email'
-import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
+import { getAlertDigestPreview, getMarketPulseLine } from '@/lib/alertMatchCounts'
 import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
@@ -80,6 +80,14 @@ type AlertTarget =
        *  the main loop routes it through `resolveListingWatch` instead of the
        *  generic `countNew`/`countRecentAircraftPriceDrops` path. */
       listingId?: string
+      /** Display model name for the digest's market-pulse line (e.g. "SR22") —
+       *  set only when this target resolves to ONE clean model (a curated
+       *  `SEO_MAKE_MODELS` entry, or a single non-comma `model` query param),
+       *  so `getMarketPulseLine` can build a real "N {Make} {Model}s"
+       *  sentence. Left unset for make-only alerts, the uncurated
+       *  modelSlug-as-prefix fallback, and multi-model selections — those
+       *  get no market-pulse line at all (honesty gate: never guess a label). */
+      marketPulseModel?: string
     }
   | {
       type: 'partnership'
@@ -139,10 +147,11 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
     const params = new URLSearchParams(qs)
     const g = (k: string) => params.get(k)?.trim() || undefined
     if (p === '/aircraft') {
+      const model = g('model')
       return {
         type: 'aircraft',
         make: g('make'),
-        model: g('model'),
+        model,
         modelLike: g('model_like'),
         state: g('state')?.toUpperCase(),
         icao: g('airport')?.toUpperCase(),
@@ -155,6 +164,9 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
         keyword: g('q'),
         grades: parseGradeFilter(g('grade'), g('min_grade')),
         dealOnly: g('deal') === 'good',
+        // Single, non-comma model only — a multi-select can't collapse to one
+        // clean "N {Make} {Model}s" sentence (see `marketPulseModel`'s doc).
+        marketPulseModel: model && !model.includes(',') ? model : undefined,
       }
     }
     if (p === '/partnerships/seeking') {
@@ -277,6 +289,7 @@ function resolveAircraftMakeModel(
       make: seoEntry.make,
       modelPattern: seoEntry.modelPattern,
       notModelPattern: seoEntry.notModelPattern,
+      marketPulseModel: seoEntry.model,
     }
   }
 
@@ -1202,6 +1215,12 @@ export async function GET(req: NextRequest) {
     newCount: number
     dropCount: number
     samples: AlertDigestSample[]
+    /** Honest "N {Make} {Model}s listed right now, median asking $X" line —
+     *  aircraft alerts with a clean make+model target only; `null` otherwise
+     *  or when the family is too sparse to trust a median (see
+     *  `getMarketPulseLine`). Never set for the listing-watch push()es below
+     *  (rich single-listing templates, not the aggregate digest). */
+    marketPulse: string | null
   }
   const prepared: Prepared[] = []
   // Listing-watch alerts whose target has left `status: 'active'` — handled
@@ -1241,7 +1260,7 @@ export async function GET(req: NextRequest) {
       // A genuine drop on the watched row — same shape (newCount 0, dropCount
       // 1, one sample) the grouped single-alert send loop below already knows
       // how to route to buildPriceDropEmail; no further special-casing needed.
-      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
+      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!], marketPulse: null })
       continue
     }
 
@@ -1255,7 +1274,7 @@ export async function GET(req: NextRequest) {
         skipped++
         continue
       }
-      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
+      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!], marketPulse: null })
       continue
     }
 
@@ -1299,7 +1318,22 @@ export async function GET(req: NextRequest) {
             ? await fetchNewSeekerSamples(supabase, target, since)
             : []
 
-    prepared.push({ alert, frequency, target, newCount, dropCount, samples })
+    // Market-pulse line — aircraft alerts with a clean, curated make+model
+    // target only (see `marketPulseModel`'s doc); computed only for alerts
+    // that will actually send (past the newCount===0 && dropCount===0 skip
+    // above), so a skipped alert never pays for the extra query.
+    const marketPulse =
+      target.type === 'aircraft' && target.make && target.marketPulseModel
+        ? await getMarketPulseLine(
+            supabase,
+            target.make,
+            target.marketPulseModel,
+            target.modelPattern ?? target.model ?? target.marketPulseModel,
+            target.notModelPattern
+          )
+        : null
+
+    prepared.push({ alert, frequency, target, newCount, dropCount, samples, marketPulse })
   }
 
   // Group by email (lowercased — the same normalization every other alert
@@ -1320,7 +1354,7 @@ export async function GET(req: NextRequest) {
     if (group.length === 1) {
       // Exactly one due, matching alert for this email — same single-alert
       // build/send path as before this cycle, byte-for-byte.
-      const { alert, frequency, target, newCount, dropCount, samples } = group[0]
+      const { alert, frequency, target, newCount, dropCount, samples, marketPulse } = group[0]
 
       const unsubToken = alert.unsubscribe_token ?? ''
       const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
@@ -1386,6 +1420,7 @@ export async function GET(req: NextRequest) {
             unsubscribeUrl,
             frequencyUrl,
             crossSell: crossSellOpt,
+            marketPulse: marketPulse ?? undefined,
           })
 
       const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
@@ -1404,13 +1439,14 @@ export async function GET(req: NextRequest) {
 
     // 2+ due, matching alerts for this email in the same pass — one combined
     // email, one section per alert, rather than one email per alert.
-    const sections: AlertDigestSection[] = group.map(({ alert, target, newCount, dropCount, samples }) => ({
+    const sections: AlertDigestSection[] = group.map(({ alert, target, newCount, dropCount, samples, marketPulse }) => ({
       context: alert.context ?? null,
       newCount,
       dropCount,
       dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
       listingsUrl: `${SITE_URL}${alert.source_path ?? '/aircraft'}`,
       samples,
+      marketPulse: marketPulse ?? undefined,
     }))
 
     // Any alert's token resolves the same email on /alerts/manage (it looks
