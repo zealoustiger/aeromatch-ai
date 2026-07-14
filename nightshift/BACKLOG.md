@@ -1479,12 +1479,13 @@ closing the measurement loop, deliverability, and email/management polish. (The
   bucket visibly as `(untagged, pre-2026-07-14)`, with a "not migrated yet" note in that
   case, same graceful-degrade precedent as every other pending `alerts.*` column. No auth
   change, no new capture point.
-- **[P2][goal] Digest 👍/👎 vote-rate rollup on `/admin/alerts`.** The flagged next slice
+~~- **[P2][goal] Digest 👍/👎 vote-rate rollup on `/admin/alerts`.** The flagged next slice
   from `digest-feedback-vote`: votes land in `feedback` (`type='digest_vote'`) but nothing
   aggregates them. Add a small section to the scoreboard: 👍 vs 👎 totals, this-week vs
   last-week, and the most recent few votes with their alert context. Honesty: volume is
   tiny at cold-start — show raw counts (never a misleading percentage on n<10, mirror
-  `MIN_ALERTS_TO_SHOW`-style flooring). Read-only, no capture point.
+  `MIN_ALERTS_TO_SHOW`-style flooring). Read-only, no capture point.~~ ✅ SHIPPED via
+  `admin-alerts-digest-vote-rollup` (2026-07-14)
 - **[P2][goal] Recently-viewed alert banner on the homepage.** `RecentlyViewedAlertBanner`
   (clustered-views suggestion, dismiss + redundancy suppression + live-match honesty gate
   all already built) mounts only on `/aircraft` and `/partnerships` — the homepage still

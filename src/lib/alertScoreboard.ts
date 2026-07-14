@@ -56,6 +56,22 @@ export interface AlertScoreboardSnapshot {
   computedAt: string
 }
 
+export interface RecentDigestVote {
+  vote: 'up' | 'down'
+  pagePath: string | null
+  createdAt: string
+}
+
+export interface DigestVoteRollup {
+  upTotal: number
+  downTotal: number
+  upThisWeek: number
+  downThisWeek: number
+  upLastWeek: number
+  downLastWeek: number
+  recentVotes: RecentDigestVote[]
+}
+
 export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
   const admin = createAdminClient()
   let sourceColumnMigrated = true
@@ -154,4 +170,65 @@ export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
     sourceColumnMigrated,
     computedAt: new Date().toISOString(),
   }
+}
+
+const RECENT_VOTES_LIMIT = 6
+
+// `digest-feedback-vote` writes the direction into `message` (no separate
+// column) — classify by the emoji prefix rather than adding a new column for
+// a value we can already derive.
+function classifyVote(message: string | null): 'up' | 'down' | null {
+  if (!message) return null
+  if (message.startsWith('👍')) return 'up'
+  if (message.startsWith('👎')) return 'down'
+  return null
+}
+
+export async function getDigestVoteRollup(): Promise<DigestVoteRollup> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('feedback')
+    .select('message, page_path, created_at')
+    .eq('type', 'digest_vote')
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  const rows = data ?? []
+
+  const now = Date.now()
+  const DAY_MS = 86_400_000
+  const oneWeekAgo = now - 7 * DAY_MS
+  const twoWeeksAgo = now - 14 * DAY_MS
+
+  let upTotal = 0
+  let downTotal = 0
+  let upThisWeek = 0
+  let downThisWeek = 0
+  let upLastWeek = 0
+  let downLastWeek = 0
+  const recentVotes: RecentDigestVote[] = []
+
+  for (const row of rows) {
+    const vote = classifyVote(row.message)
+    if (!vote) continue
+
+    if (vote === 'up') upTotal++
+    else downTotal++
+
+    if (recentVotes.length < RECENT_VOTES_LIMIT) {
+      recentVotes.push({ vote, pagePath: row.page_path ?? null, createdAt: row.created_at })
+    }
+
+    const votedAt = new Date(row.created_at).getTime()
+    if (Number.isNaN(votedAt)) continue
+    if (votedAt >= oneWeekAgo) {
+      if (vote === 'up') upThisWeek++
+      else downThisWeek++
+    } else if (votedAt >= twoWeeksAgo) {
+      if (vote === 'up') upLastWeek++
+      else downLastWeek++
+    }
+  }
+
+  return { upTotal, downTotal, upThisWeek, downThisWeek, upLastWeek, downLastWeek, recentVotes }
 }
