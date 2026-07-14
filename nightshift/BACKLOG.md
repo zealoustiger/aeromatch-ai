@@ -1292,14 +1292,39 @@ no duplicate of shipped work above)._
   double-sends the same listings (never-spam guardrail). Only expose "Instant" in the
   frequency picker once the send path is live — never offer a cadence that isn't real.
   Slice: aircraft new-listing alerts only; price-drop/watch sends stay on the cron.
-- **[P1][goal] Change the email address on your alerts (`/alerts/manage`).** No such
-  action exists (verified against every alert export in `actions.ts`) — today a
-  subscriber who switches addresses must delete everything and re-subscribe blind.
-  Add "Update email": moves ALL the owner's alerts to the new address only after a
-  double-opt-in confirmation sent to the NEW address (reuse the existing token/confirm
-  machinery and the `resolveOwnerEmail` trust boundary); the old address keeps receiving
-  until the new one confirms; clear pending/success states on the manage page. Why:
-  management-completeness — the biggest remaining CRUD gap on the manage surface.
+  **Audit note (2026-07-14, `alert-email-change` cycle's scoping pass):** this item's own
+  premise doesn't hold — `api/ingest/route.ts` inserts into the `listing_drafts` STAGING
+  table, not `aircraft_for_sale` (the table every alert-matching query in the digest cron
+  actually reads), so a post-insert hook there would fire on unapproved drafts, not real
+  listings. Someone still has to find the actual draft→live `aircraft_for_sale` publish
+  step (likely an admin action) and hook there instead. Also: `api/ingest/route.ts` has no
+  `maxDuration` override and already does synchronous inline image-fetch work — adding a
+  synchronous alert-match + send pass in the same request risks a timeout, and this
+  codebase has no queue/background-job mechanism today, only cron + synchronous request
+  handlers. Re-scope needed before this is buildable in one cycle: (1) confirm the real
+  publish trigger point, (2) decide inline-synchronous vs. a new deferred-send mechanism
+  for the timeout risk, (3) the `alerts.frequency` CHECK constraint needs an `'instant'`
+  migration on top of the still-unapplied `alerts.*` queue.
+~~- **[P1][goal] Change the email address on your alerts (`/alerts/manage`).**~~ ✅ SHIPPED
+  via `alert-email-change` (2026-07-14) New "Change the email these alerts go to" link on
+  `/alerts/manage` (collapsed by default) opens a one-field form; submitting moves EVERY
+  alert the owner has to the new address, gated by a double-opt-in confirmation sent to the
+  NEW address (new `/api/alerts/confirm-email-change` route + `buildAlertEmailChangeConfirmEmail`)
+  — the old address is untouched and keeps receiving digests until confirmed. A pending
+  change shows a banner naming the new address with a one-click Cancel. ⚠️ SCHEMA: additive
+  `alerts.pending_email`/`alerts.email_change_token` columns (nullable, human-apply, same
+  fail-soft pattern as every prior `alerts.*` column — confirmed via a live query that none
+  of the 5 previously-flagged `alerts.*` migrations are applied yet either, so this is the
+  established norm for this table, not a regression). The confirm route falls back to a
+  per-row retry on a unique-constraint conflict (target email already has an alert for the
+  same `source_path`) so one conflicting row can't block the rest of the move or get silently
+  dropped. Live-verified end-to-end against throwaway `@example.com` rows (seeded + deleted
+  via service role, playwright driving the real running server): request → DB stamps
+  `pending_email`/shared `email_change_token` on every owner row → confirm link moves all
+  rows and clears the pending fields → old manage-link token still resolves post-change →
+  cancel clears pending state without sending anything. Pre-migration graceful-degrade path
+  also verified live (honest "isn't available yet" error, zero console errors, zero overflow
+  desktop + 375px).
 - **[P1][goal] One-tap "Alert me for this search" chip in the active-filter toolbar on
   `/aircraft`** (drop into `/partnerships` too if the same component fits in-cycle).
   GOAL.md explicitly asks for one-tap alerts "from any active filter set", but the browse

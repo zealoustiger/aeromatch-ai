@@ -240,6 +240,68 @@ change anything on its own.`
 }
 
 /**
+ * Build the "confirm your new alerts email" email — sent to the NEW address when a
+ * subscriber asks to move their alerts (double-opt-in, mirrors the original signup
+ * confirm: nothing changes until this link is clicked, so a mistyped/malicious target
+ * address can't silently steal someone's alerts). `manageUrl` is optional — omitted
+ * when the request couldn't resolve any row's `unsubscribe_token` to link to.
+ */
+export function buildAlertEmailChangeConfirmEmail(opts: {
+  oldEmail: string
+  confirmUrl: string
+  manageUrl?: string
+}): { subject: string; html: string; text: string } {
+  const subject = 'Confirm your new ClubHanger alerts email'
+
+  const manageHtml = opts.manageUrl
+    ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+      </p>`
+    : ''
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Confirm your new alerts email</h1>
+        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
+          Someone asked to move ClubHanger alerts from <strong>${escapeHtml(opts.oldEmail)}</strong> to this
+          address. Click below to confirm — until you do, alerts keep going to the old address, and
+          nothing changes here.
+        </p>
+        <p style="margin:0 0 4px;">
+          <a href="${escapeAttr(opts.confirmUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Confirm this email
+          </a>
+        </p>
+        <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+          Didn&rsquo;t request this? No action needed — ignore this email and nothing will change.
+        </p>
+      </div>
+      ${manageHtml}
+    </div>
+  </body>
+</html>`
+
+  const text = `ClubHanger
+
+Confirm your new alerts email.
+
+Someone asked to move ClubHanger alerts from ${opts.oldEmail} to this address. Click below to
+confirm — until you do, alerts keep going to the old address, and nothing changes here.
+
+Confirm this email: ${opts.confirmUrl}
+
+Didn't request this? No action needed — ignore this email and nothing will change.
+${opts.manageUrl ? `\nManage alerts: ${opts.manageUrl}` : ''}`
+
+  return { subject, html, text }
+}
+
+/**
  * Build the "you have a new message" notification email for on-site messaging.
  * `threadUrl` is the full absolute URL to the thread (e.g. https://clubhanger.com/messages/{id}).
  * Returns subject + html + text ready for `sendEmail`.

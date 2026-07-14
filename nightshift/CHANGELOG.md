@@ -2,6 +2,65 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T075154Z — PASS — alert-email-change
+- Pages: /alerts/manage, /alerts/status (plus a new, non-page API route:
+  `/api/alerts/confirm-email-change`)
+- What: **A subscriber who switches email addresses used to have no way to move their
+  alerts — the only option was deleting everything and re-subscribing blind.**
+  `/alerts/manage` now has a "Change the email these alerts go to" link (collapsed by
+  default so it doesn't clutter the common case). Submitting a new address sends a
+  confirmation email to that NEW address — nothing moves until it's clicked, and the OLD
+  address keeps receiving alerts in the meantime. Clicking the link moves every one of
+  that owner's alerts to the new address in one shot and lands on a friendly "Your alerts
+  email is updated" page. A pending change shows a banner naming the new address with a
+  one-click "Cancel this change."
+- Goal: `[goal]` alert experience — management-completeness (GOAL.md: "a place to see,
+  edit, pause, and delete your alerts"; this was the last CRUD gap). Tier 1 (`[bug]`):
+  none — last cycle (`compare-tray-alert-capture`) PASSed. Tier 2 (`[want]`): re-confirmed
+  empty — the two open `[P1][want]` items (collection-layout mosaic redesign, "Save this
+  search" auth-wall reconciliation) still need a human product/design call. Dropped to
+  tier 3: this was next in the Opus/Fable "Plan-pass batch — 2026-07-14" queue after
+  `compare-tray-alert-capture`. The queue's *first* item, "real instant alerts," was
+  investigated this cycle and found to rest on a false premise — the ingest route inserts
+  into a `listing_drafts` staging table, not the live `aircraft_for_sale` table alerts
+  match against, and there's no queue/background-job mechanism in this codebase for a safe
+  post-insert send pass — so it needs a scoping pass before it's buildable in one cycle;
+  left open on the backlog rather than forced into a rushed slice.
+- Spec: nightshift/specs/20260714T075154Z-alert-email-change.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes incl. the new `/api/alerts/confirm-email-change`). Full unit suite
+  `node --experimental-strip-types --test src/lib/*.test.ts` — 298/298 pass (no lib logic
+  touched by this change, confirms no regression). Visual cycle (new UI on
+  `/alerts/manage` + a new status state) — read all 4 qa-smoke screenshots (desktop 1280 +
+  mobile 375 for both pages): clean logged-out layout, no overlap/overflow. Production
+  build served via `next start` (not dev); `qa-smoke.mjs` exit 0 — 4/4 checks, zero
+  console errors, zero horizontal overflow. **Live end-to-end verification against
+  throwaway `@example.com` rows** (seeded + deleted via the service-role key, playwright
+  driving the real running server — no real user data touched): request → both of an
+  owner's rows correctly stamped with the same `pending_email`/`email_change_token`;
+  confirming moved both rows to the new email and cleared the pending fields; the OLD
+  manage-link token still resolved post-change (token identity is independent of the
+  `email` column value, by design); Cancel cleared the pending state without sending
+  anything; invalid/missing confirm tokens redirect to the honest "no longer valid" state.
+  ⚠️ **SCHEMA (human-apply, additive only):** `alerts.pending_email text`,
+  `alerts.email_change_token text`, both nullable — see `supabase/schema.sql`. Confirmed
+  live (direct query) that the DB does not have this migration yet — and neither do any of
+  the 5 previously-flagged `alerts.*` migrations (`price_drop_opt_in`, `frequency`,
+  `last_confirm_sent_at`, `paused_until`, `confirm_reminder_sent_at`), so this is the
+  established, already-accepted state for this table, not a new regression. Verified the
+  pre-migration graceful-degrade path live too: the request action fails soft with an
+  honest "isn't available yet" message (never a silent no-op, never a 500), confirmed via
+  a real submit against the live (un-migrated) DB — zero console errors, zero overflow at
+  both viewports.
+- Screenshots: nightshift/screenshots/alert-email-change/
+- Next: once a human batches-applies the pending `alerts.*` migrations, this flow lights
+  up with zero further code change. Remaining Opus/Fable "Plan-pass batch — 2026-07-14"
+  queue items (6 left): filter-toolbar 🔔 chip, partnership market-pulse, market-pulse
+  follow-ups (make-only + price-drop pulse), digest feedback thumbs, `/admin/alerts`
+  scoreboard. "Real instant alerts" needs a re-scoping pass first (see Goal note above) —
+  specifically locating the actual draft→live-listing publish trigger point before any
+  send-pass hook can be written.
+
 ## 20260714T074502Z — PASS — compare-tray-alert-capture
 - Pages: /compare (both `?type=aircraft` and `?type=partnership`)
 - What: **Comparing 2-3 listings side by side is peak purchase-intent, but the
