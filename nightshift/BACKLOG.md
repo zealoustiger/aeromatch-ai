@@ -1538,17 +1538,33 @@ multi-token combined unsubscribe, `alert_confirmed` tracker) — not re-filed. E
 remain saturated; this batch is matching honesty, one dead-end rescue surface, the
 instant pillar re-scoped to a buildable shape, and management/email polish._
 
-- **[P1][goal] Honor `model` in partnership alert matching.** Same capture-vs-match
-  dishonesty class as the shipped `alert-avionics-match`: `/partnerships?make=Cessna&model=172`
+~~- **[P1][goal] Honor `model` in partnership alert matching.**~~ ✅ SHIPPED via
+  `partnership-alert-model-match` (2026-07-14) Same capture-vs-match dishonesty class
+  as the shipped `alert-avionics-match`: `/partnerships?make=Cessna&model=172`
   browse-filters by `model` (comma-joined multi-select in `partnershipsQuery.ts`) and
-  detail-page sourcePaths carry it, but the partnership `AlertTarget` drops it — a
-  "Cessna 172 partnership" subscriber gets emailed about EVERY Cessna partnership. Add
-  `model` to the partnership target in `parseSourcePath` (both `alertMatchCounts.ts` and
-  the digest cron), thread it through `countNewPartnerships`/samples/price-drop counters
-  (in-memory match against `partnerships.model` is fine at current volume — mirror the
-  browse page's own comma-list semantics), and name it in the alert-context sentence.
-  Improves: partnership digest + `/alerts/manage` match-count honesty. No new capture
-  point (no new `alert_subscribed` emission).
+  detail-page sourcePaths carried it, but the partnership `AlertTarget` dropped it, AND
+  (found during implementation, not in the original item) the `/partnerships` hub page
+  itself never even put `model` into `alertSourcePath` in the first place — its
+  `alertQuery` builder had a hardcoded `['make','state','airport']` whitelist, so a
+  model-filtered alert captured from the flagship browse page silently lost the model
+  before the parser ever saw it. Fixed both: added `model` to `alertQuery`/`alertContext`
+  in `src/app/partnerships/page.tsx`; added `model?: string` to the partnership
+  `AlertTarget` variant in both `alertMatchCounts.ts` and the digest cron's independent
+  parser, parsed in each `parseSourcePath`/`resolveTarget`. Turned out to be a plain SQL
+  `.eq`/`.in` filter (not an in-memory scan as the original item guessed) —
+  `partnerships.model` is a controlled scalar column exactly like `aircraft.model`, not
+  free text like seekers' `preferred_models` — so no async classify pass needed. New
+  shared pure module `src/lib/partnershipModelFilter.ts` (`parsePartnershipModelList`,
+  `applyPartnershipModelFilter`) used by `countActivePartnerships`/`previewPartnerships`
+  (`alertMatchCounts.ts`) and `countNewPartnerships`/`countRecentPartnershipPriceDrops`/
+  `fetchNewPartnershipSamples`/`fetchPartnershipPriceDropSamples` (digest cron) — 7 new
+  unit tests. Live-verified against real prod data (read-only): Cessna make-wide count
+  was 6; scoping to one model narrowed it to 1; a 2-model OR narrowed it to 2 — matching
+  a real browser session (`/partnerships?make=Cessna&model=172S+Skyhawk` correctly showed
+  "1 partnership matches right now"). `alertEditCriteria.ts` (the `/alerts/manage` edit
+  form) intentionally NOT touched — that's the separate, already-queued `[P2][goal]`
+  "hidden advanced criteria" item; a model set at capture time is preserved through an
+  edit (existing form-unexposed-param behavior) but not yet editable/shown.
 - **[P1][goal] "Filled" landing page for closed partnership listings + alert capture.**
   `getPartnershipById` returns only `status='active'`, so a filled/closed partnership URL
   dead-404s — old digest links, watch-email "browse similar" clicks, and indexed URLs all

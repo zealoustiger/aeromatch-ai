@@ -114,11 +114,18 @@ export default async function PartnershipsPage({
 
   // Filter-aware email-alert context + source path — mirrors /aircraft's
   // alertSourcePath pattern (`describeAircraftFilters` + preserved query string).
-  // alert-digest's `parseSourcePath` already parses make/state/airport off this
-  // exact `/partnerships?...` shape, so this is purely the missing UI wire-up —
-  // every other partnership surface (seeking, near/[icao], make/[make],
+  // alert-digest's `parseSourcePath` already parses make/state/airport/model off
+  // this exact `/partnerships?...` shape, so this is purely the missing UI
+  // wire-up — every other partnership surface (seeking, near/[icao], make/[make],
   // state/[state]) already has this, only the flagship hub was missing it.
   const alertMake = params.make?.trim()
+  // `model` may be a comma-joined multi-select — render cleanly as "172 / 182"
+  // rather than leaking the raw comma, same style `describeAircraftFilters` uses.
+  const alertModel = (params.model ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+    .join(' / ')
   const alertAirport = params.airport?.trim().toUpperCase()
   const alertStateName = params.state ? STATE_NAMES[params.state.toUpperCase()] : undefined
   const alertLocationClause = alertAirport
@@ -126,9 +133,10 @@ export default async function PartnershipsPage({
     : alertStateName
       ? `in ${alertStateName}`
       : undefined
-  const alertContext = [alertMake, alertLocationClause].filter(Boolean).join(' ') || undefined
+  const alertContext =
+    [[alertMake, alertModel].filter(Boolean).join(' '), alertLocationClause].filter(Boolean).join(' ') || undefined
   const alertQuery = new URLSearchParams(
-    (['make', 'state', 'airport'] as const)
+    (['make', 'model', 'state', 'airport'] as const)
       .filter((k) => params[k])
       .map((k) => [k, params[k] as string])
   ).toString()

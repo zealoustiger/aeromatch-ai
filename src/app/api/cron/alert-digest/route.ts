@@ -29,6 +29,7 @@ import { getAirportsWithinRadius } from '@/lib/airports'
 import { filterToGoodDeals } from '@/lib/aircraftComps'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
 import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassify'
+import { applyPartnershipModelFilter } from '@/lib/partnershipModelFilter'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 
 const MAX_DIGEST_SAMPLES = 3
@@ -103,6 +104,10 @@ type AlertTarget =
   | {
       type: 'partnership'
       make?: string
+      /** Comma-joined multi-select, same exact-match OR semantics
+       *  `/partnerships`'s own `model` filter uses (`partnershipsQuery.ts`) —
+       *  `partnerships.model` is a plain column, no classify pass needed. */
+      model?: string
       state?: string
       icao?: string
       radius?: number
@@ -196,6 +201,7 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
     return {
       type: 'partnership',
       make: g('make'),
+      model: g('model'),
       state: g('state')?.toUpperCase(),
       icao: g('airport')?.toUpperCase(),
       radius: numOrUndef(g('radius')),
@@ -537,6 +543,7 @@ async function countRecentPartnershipPriceDrops(
     .not('previous_buy_in_price', 'is', null)
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
@@ -578,6 +585,7 @@ async function countNewPartnerships(
     .gte('created_at', since)
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
@@ -847,6 +855,7 @@ async function fetchNewPartnershipSamples(
     .limit(limit)
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
@@ -879,6 +888,7 @@ async function fetchPartnershipPriceDropSamples(
     .order('buy_in_price_changed_at', { ascending: false })
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
