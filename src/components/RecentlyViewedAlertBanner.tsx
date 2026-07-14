@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { X, Sparkles } from 'lucide-react'
 import AlertSignup from './AlertSignup'
 import { getRecentlyViewed } from '@/lib/recentlyViewed'
@@ -50,8 +50,18 @@ type BannerState =
  * count for the suggested search comes back > 0. Skips rendering entirely when the
  * suggestion would just repeat the page's own active-filter context (`currentContext`),
  * so a visitor never sees two near-identical alert boxes on one page.
+ *
+ * `fallback` renders in place of this banner whenever there's nothing honest to show
+ * (no recent-views match, dismissed, or a live match count of 0) — lets a caller mount
+ * a generic alert capture behind this one without ever stacking both.
  */
-export default function RecentlyViewedAlertBanner({ currentContext }: { currentContext?: string }) {
+export default function RecentlyViewedAlertBanner({
+  currentContext,
+  fallback = null,
+}: {
+  currentContext?: string
+  fallback?: ReactNode
+}) {
   const [state, setState] = useState<BannerState>({ status: 'hidden' })
 
   useEffect(() => {
@@ -77,7 +87,7 @@ export default function RecentlyViewedAlertBanner({ currentContext }: { currentC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentContext])
 
-  if (state.status !== 'ready') return null
+  if (state.status !== 'ready') return <>{fallback}</>
 
   return (
     <div className="relative mb-6 rounded-xl border border-sky-100 bg-sky-50/70 p-4">
