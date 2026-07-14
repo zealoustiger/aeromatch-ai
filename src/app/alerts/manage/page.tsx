@@ -19,6 +19,7 @@ import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
 import NewAlertForm from '@/components/NewAlertForm'
 import ManageLinkRequestForm from '@/components/ManageLinkRequestForm'
 import AlertSubscriberMarker from '@/components/AlertSubscriberMarker'
+import VacationModeControl from '@/components/VacationModeControl'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -167,6 +168,8 @@ export default async function AlertsManagePage({
   }
 
   const alerts = await fetchAlertsForEmail(email)
+  const activeAlertCount = alerts.filter((a) => a.status === 'confirmed').length
+  const pausedAlertCount = alerts.filter((a) => a.status === 'paused').length
 
   // Real, server-computed "how many listings match this alert right now" per
   // row (GOAL.md: helps a subscriber tell if their alert is well-scoped or
@@ -234,6 +237,13 @@ export default async function AlertsManagePage({
 
         <section className="ch-panel p-6">
           <NewAlertForm token={scopeToken} />
+          {alerts.length >= 2 ? (
+            <VacationModeControl
+              token={scopeToken}
+              activeCount={activeAlertCount}
+              pausedCount={pausedAlertCount}
+            />
+          ) : null}
           {alerts.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-slate-200 px-5 py-8 text-center">
               <Bell className="mx-auto mb-2 h-7 w-7 text-slate-300" />

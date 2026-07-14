@@ -1153,6 +1153,68 @@ export async function resumeAlert(id: string, token?: string) {
   return { ok: true }
 }
 
+// Bulk versions of pauseAlert/resumeAlert — "vacation mode" for a subscriber
+// with several alerts (GOAL.md: management should offer "fewer, not none"
+// instead of a rage-unsubscribe of every alert one at a time). Same trust
+// boundary as every other action here: the owner's email via
+// resolveOwnerEmail, not a per-row id — one query updates every eligible row.
+export async function pauseAllAlerts(untilIso: string, token?: string) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ status: 'paused', paused_until: untilIso })
+    .eq('email', ownerEmail)
+    .eq('status', 'confirmed')
+    .select('id')
+  if (error?.message?.includes('paused_until')) {
+    const { data: fallbackData, error: fallbackError } = await admin
+      .from('alerts')
+      .update({ status: 'paused' })
+      .eq('email', ownerEmail)
+      .eq('status', 'confirmed')
+      .select('id')
+    if (fallbackError) return { error: 'Failed to pause alerts.' }
+    revalidatePath('/alerts/manage')
+    // dateApplied: false — the not-yet-migrated column means these paused
+    // indefinitely, not until `untilIso`; the caller must not claim a resume
+    // date that wasn't actually stored (GOAL.md's honesty gate).
+    return { ok: true, count: fallbackData?.length ?? 0, dateApplied: false }
+  }
+  if (error) return { error: 'Failed to pause alerts.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true, count: data?.length ?? 0, dateApplied: true }
+}
+
+export async function resumeAllAlerts(token?: string) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ status: 'confirmed', paused_until: null })
+    .eq('email', ownerEmail)
+    .eq('status', 'paused')
+    .select('id')
+  if (error?.message?.includes('paused_until')) {
+    const { data: fallbackData, error: fallbackError } = await admin
+      .from('alerts')
+      .update({ status: 'confirmed' })
+      .eq('email', ownerEmail)
+      .eq('status', 'paused')
+      .select('id')
+    if (fallbackError) return { error: 'Failed to resume alerts.' }
+    revalidatePath('/alerts/manage')
+    return { ok: true, count: fallbackData?.length ?? 0 }
+  }
+  if (error) return { error: 'Failed to resume alerts.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true, count: data?.length ?? 0 }
+}
+
 // Deletes the alert row outright (the management page's own delete affordance,
 // distinct from the one-click email `unsubscribe` link, which just flips status).
 export async function deleteAlert(id: string, token?: string) {
