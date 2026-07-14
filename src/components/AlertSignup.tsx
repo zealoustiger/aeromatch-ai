@@ -152,7 +152,10 @@ export default function AlertSignup({
   // directly in source_path's query string (deal=good), not a DB column, so the
   // cron's existing parseSourcePath can read it the same way it reads
   // make/model/min_price/etc.
-  const showDealOnlyOption = noun === 'aircraft' && !watchOnly
+  // Hidden when the caller's own sourcePath already carries `deal=good` (e.g.
+  // /aircraft/deals) — the page itself is already deals-only, so offering a
+  // "only good deals" checkbox on top of that would read as redundant/confusing.
+  const showDealOnlyOption = noun === 'aircraft' && !watchOnly && !sourcePath.includes('deal=good')
   const [dealOnly, setDealOnly] = useState(false)
   const [frequency, setFrequency] = useState<AlertFrequency>('weekly')
   // A signed-in visitor's email is already verified — skip retyping it and

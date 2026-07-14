@@ -4,6 +4,7 @@ import { TrendingDown, Plane, Info } from 'lucide-react'
 
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AircraftSaleCard from '@/components/AircraftSaleCard'
+import AlertSignup from '@/components/AlertSignup'
 import { fetchUnderMarketDeals, DEAL_MIN_PCT } from '@/components/AircraftSaleList'
 import { SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
@@ -98,6 +99,19 @@ export default async function AircraftDealsPage() {
           ClubHanger is not the seller. &ldquo;Below market&rdquo; reflects asking prices on
           ClubHanger only and may be out of date — confirm details on the source listing.
         </p>
+
+        {/* Email-alerts capture — the highest-intent browse page on the site had no
+            capture point until now. sourcePath already carries deal=good so the
+            resulting alert only ever fires on genuine below-market listings; the
+            "only good deals" checkbox is hidden (see AlertSignup) since this whole
+            page is already deals-only. matchCount is the exact same honest count
+            already rendered as cards above (0 handled by AlertSignup's own copy). */}
+        <AlertSignup
+          context="good deal"
+          sourcePath="/aircraft?deal=good"
+          source="deals_page"
+          matchCount={deals.length}
+        />
       </div>
     </div>
   )
