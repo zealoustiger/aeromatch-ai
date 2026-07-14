@@ -662,3 +662,34 @@ export async function getPartnershipMarketPulseLine(
   const noun = stats.count === 1 ? `${make} partnership` : `${make} partnerships`
   return `${stats.count} ${noun} listed right now, median buy-in ${formatPriceK(stats.median)}.`
 }
+
+/**
+ * Honest one-line market-context sentence for a make-only AIRCRAFT alert —
+ * "142 Cessnas listed right now, median asking $89k" — the make-level
+ * counterpart of `getMarketPulseLine` above, for aircraft alert targets that
+ * carry a `make` but no `marketPulseModel` (make-only browse alerts like
+ * `/aircraft/cessna` or `/aircraft?make=Cessna`, and multi-model selections)
+ * — those got NO market-pulse line at all before this. Same
+ * `priceStats`/`MIN_SNAPSHOT_LISTINGS` honesty floor and `PARTS_PRICE_FLOOR`
+ * filter `getMarketPulseLine` uses against `aircraft_for_sale.asking_price` —
+ * below the floor this returns `null` rather than publish a noisy median off
+ * a handful of listings.
+ */
+export async function getAircraftMakePulseLine(
+  supabase: ReturnType<typeof createAdminClient>,
+  make: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('aircraft_for_sale')
+    .select('asking_price')
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+    .ilike('make', `%${make}%`)
+    .limit(5000)
+  if (error || !data) return null
+  const prices = data.map((r) => r.asking_price as number | null).filter((p): p is number => p != null)
+  const stats = priceStats(prices)
+  if (!stats) return null
+  const noun = stats.count === 1 ? make : `${make}s`
+  return `${stats.count} ${noun} listed right now, median asking ${formatPriceK(stats.median)}.`
+}
