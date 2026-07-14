@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
-import { verifyResendWebhookSignature, extractHardBouncedEmails } from './resendWebhook.ts'
+import { verifyResendWebhookSignature, extractHardBouncedEmails, extractComplainedEmails } from './resendWebhook.ts'
 
 const SECRET = 'whsec_' + Buffer.from('test-secret-bytes-0000').toString('base64')
 
@@ -110,6 +110,29 @@ test('extractHardBouncedEmails is defensive against malformed/partial payloads',
   assert.deepEqual(extractHardBouncedEmails({ type: 'email.bounced', data: {} }), [])
   assert.deepEqual(
     extractHardBouncedEmails({ type: 'email.bounced', data: { bounce: { type: 'Permanent' }, to: 'not-an-array' } }),
+    []
+  )
+})
+
+test('extractComplainedEmails returns lowercased recipients for a spam complaint', () => {
+  const body = { type: 'email.complained', data: { to: ['Buyer@Example.com'] } }
+  assert.deepEqual(extractComplainedEmails(body), ['buyer@example.com'])
+})
+
+test('extractComplainedEmails ignores unrelated event types', () => {
+  const body = { type: 'email.bounced', data: { to: ['buyer@example.com'] } }
+  assert.deepEqual(extractComplainedEmails(body), [])
+})
+
+test('extractComplainedEmails is defensive against malformed/partial payloads', () => {
+  assert.deepEqual(extractComplainedEmails(null), [])
+  assert.deepEqual(extractComplainedEmails(undefined), [])
+  assert.deepEqual(extractComplainedEmails('nope'), [])
+  assert.deepEqual(extractComplainedEmails({}), [])
+  assert.deepEqual(extractComplainedEmails({ type: 'email.complained' }), [])
+  assert.deepEqual(extractComplainedEmails({ type: 'email.complained', data: {} }), [])
+  assert.deepEqual(
+    extractComplainedEmails({ type: 'email.complained', data: { to: 'not-an-array' } }),
     []
   )
 })

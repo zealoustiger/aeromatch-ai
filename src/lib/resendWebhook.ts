@@ -57,3 +57,23 @@ export function extractHardBouncedEmails(body: unknown): string[] {
     .filter((email): email is string => typeof email === 'string' && email.length > 0)
     .map((email) => email.toLowerCase())
 }
+
+interface ResendComplainedEvent {
+  type?: string
+  data?: { to?: unknown }
+}
+
+// A spam complaint is the recipient explicitly telling their mail provider
+// "I did not want this" — stronger than a bounce, and continuing to send
+// after one damages domain reputation for every other subscriber. Extract
+// exactly like a hard bounce, just for `email.complained`.
+export function extractComplainedEmails(body: unknown): string[] {
+  if (!body || typeof body !== 'object') return []
+  const event = body as ResendComplainedEvent
+  if (event.type !== 'email.complained') return []
+  const to = event.data?.to
+  if (!Array.isArray(to)) return []
+  return to
+    .filter((email): email is string => typeof email === 'string' && email.length > 0)
+    .map((email) => email.toLowerCase())
+}
