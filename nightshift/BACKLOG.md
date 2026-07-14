@@ -1523,6 +1523,82 @@ closing the measurement loop, deliverability, and email/management polish. (The
   replaying `countActiveAircraft`'s exact query shape for make=Cirrus narrowed to 5, matching
   an independent from-scratch count. 4 new unit tests for the extracted pure functions.
 
+### Plan-pass batch #3 — 2026-07-14 (Fable)
+_All verified un-built by direct code read this pass: the partnership alert target in
+`alertMatchCounts.ts` is `{make, state, icao, radius}` — no `model` — while
+`partnershipsQuery.ts` browse-filters by a comma-joined `model`; `getPartnershipById`
+returns only `status='active'` rows so a filled partnership detail URL dead-404s (aircraft
+already solved this with `SoldListingPage` + `AlertSignup source="sold_listing"` — the
+in-repo template); the cron has a confirm reminder but NO zero-match/widen email;
+`AlertEditForm` exposes only make/model/state/price/deal while `buildAlertCriteriaUpdate`
+silently preserves the hidden advanced params; the digest subject is always count-based.
+Several candidates were checked and found already shipped this pass (manage-link recovery
+form, sold-page capture, `List-Unsubscribe`, watched-listing "no longer available" email,
+multi-token combined unsubscribe, `alert_confirmed` tracker) — not re-filed. Entry points
+remain saturated; this batch is matching honesty, one dead-end rescue surface, the
+instant pillar re-scoped to a buildable shape, and management/email polish._
+
+- **[P1][goal] Honor `model` in partnership alert matching.** Same capture-vs-match
+  dishonesty class as the shipped `alert-avionics-match`: `/partnerships?make=Cessna&model=172`
+  browse-filters by `model` (comma-joined multi-select in `partnershipsQuery.ts`) and
+  detail-page sourcePaths carry it, but the partnership `AlertTarget` drops it — a
+  "Cessna 172 partnership" subscriber gets emailed about EVERY Cessna partnership. Add
+  `model` to the partnership target in `parseSourcePath` (both `alertMatchCounts.ts` and
+  the digest cron), thread it through `countNewPartnerships`/samples/price-drop counters
+  (in-memory match against `partnerships.model` is fine at current volume — mirror the
+  browse page's own comma-list semantics), and name it in the alert-context sentence.
+  Improves: partnership digest + `/alerts/manage` match-count honesty. No new capture
+  point (no new `alert_subscribed` emission).
+- **[P1][goal] "Filled" landing page for closed partnership listings + alert capture.**
+  `getPartnershipById` returns only `status='active'`, so a filled/closed partnership URL
+  dead-404s — old digest links, watch-email "browse similar" clicks, and indexed URLs all
+  land on nothing. Mirror aircraft's `SoldListingPage` (in `aircraft/listing/[id]/page.tsx`)
+  for `/partnerships/[id]`: 200 + noindex, honest "this partnership has been filled or
+  taken down" copy (partnerships close, they don't "sell"), similar active partnerships,
+  and an `AlertSignup` (context from the listing's make/model, `source="filled_partnership"`)
+  — a NEW capture point, must emit `alert_subscribed`.
+- **[P1][goal] Near-instant new-listing alerts — the buildable re-scope of the open
+  "instant" item above.** The flagged re-scope questions are now answered by code read:
+  there is NO in-app publish hook for aircraft (`aircraft_for_sale` rows are written
+  directly by the external scraper; `publishDraft` in `admin/review/actions.ts` inserts
+  partnerships only), so ingest-hooking is a dead end. Build "instant" as a new
+  lightweight `/api/cron/alert-instant` route instead (add to `vercel.json` on a
+  15–30-min schedule; near-free when 0 instant alerts exist): for `frequency='instant'`
+  confirmed alerts, send new-listing matches since `last_digest_at` reusing the existing
+  digest counters/builders, and stamp `last_digest_at` so the daily cron never
+  double-sends the same listings (never-spam guardrail). Expose "Instant" in
+  `FrequencyToggle` in the SAME cycle the send path lands, with honest copy ("checked
+  about every 15 minutes") — never offer a cadence that isn't real. `alerts.frequency`'s
+  CHECK needs an additive `'instant'` migration — ⚠️ flag human-apply, fail-soft like
+  every prior `alerts.*` DDL. Improves: GOAL.md's digest-vs-instant pillar. No new
+  capture point. (Supersedes the blocked item's ingest-hook approach; strike both
+  together when shipped.)
+- **[P2][goal] Show (and allow removing) an alert's hidden advanced criteria on the edit
+  form.** `buildAlertCriteriaUpdate` deliberately preserves params the form doesn't
+  expose (`min_year`/`max_tt`/`avionics`/`grade`/`q`…), but `AlertEditForm` never shows
+  them — a subscriber editing their "glass panel, under 2,000 hours Cessna" alert can't
+  see those criteria still apply, or remove one. Render the extra params as labeled chips
+  on the edit form (reuse `describeAircraftFilters`' naming) with a per-chip ✕ remove; no
+  schema change. Improves: `/alerts/manage` edit transparency (GOAL.md's
+  view/EDIT/pause/delete). No new capture point.
+- **[P2][goal] One-time "widen your alert?" email for never-matched alerts.** A confirmed
+  alert matching 0 listings never sends anything (the digest only fires on matches) —
+  silent churn with no feedback loop, even though `/alerts/manage` already computes
+  `computeWidenCandidate` for exactly this case. In the daily cron: alerts confirmed ≥3
+  weeks ago with no send ever (`last_digest_at` null), 0 current matches, and a widen
+  candidate → send ONE suggestion email ("Your Cessna 152 in Montana alert hasn't matched
+  anything yet — search every state instead?", manage-link CTA with the widen prefilled),
+  stamped once-ever via an additive nullable `alerts.widen_suggested_at` (⚠️ human-apply,
+  fail-soft, same never-spam pattern as `confirm_reminder_sent_at`). Improves: alert
+  email lifecycle / "offer fewer instead of none" spirit. No new capture point.
+- **[P2][goal] Digest subject names the standout listing when there's exactly one new
+  match.** Today: "1 new listing — Cessna 182 on ClubHanger". The sample data already in
+  scope can make it "New: 1977 Cessna 182Q at $89,500 — your Cessna 182 alert" (fall back
+  to the current form when title/price are missing or matches > 1 — never fabricate).
+  Pure `email.ts` change + unit tests, mirroring the shipped preheader pattern. Improves:
+  digest open-worthiness ("the best listing alert email in aviation"). No new capture
+  point.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
