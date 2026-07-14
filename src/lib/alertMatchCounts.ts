@@ -3,6 +3,7 @@ import { getStateBySlug, getMakeBySlug, getMakeModel, SITE_URL } from './seo'
 import { matchesModelFilter } from './seekerModelFilter'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from './listingQuality'
 import { parseAvionicsFilter, fetchAvionicsMatchIds } from './avionicsClassify'
+import { applyPartnershipModelFilter } from './partnershipModelFilter'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
 import { formatShareType, formatPriceK } from './utils'
@@ -58,7 +59,17 @@ type AlertTarget =
        *  column filter. */
       avionics?: string[]
     }
-  | { type: 'partnership'; make?: string; state?: string; icao?: string; radius?: number }
+  | {
+      type: 'partnership'
+      make?: string
+      /** Comma-joined multi-select, same exact-match OR semantics
+       *  `/partnerships`'s own `model` filter uses (`partnershipsQuery.ts`) —
+       *  `partnerships.model` is a plain column, no classify pass needed. */
+      model?: string
+      state?: string
+      icao?: string
+      radius?: number
+    }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
@@ -108,6 +119,7 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
     return {
       type: 'partnership',
       make: g('make'),
+      model: g('model'),
       state: g('state')?.toUpperCase(),
       icao: g('airport')?.toUpperCase(),
       radius: numOrUndef(g('radius')),
@@ -280,6 +292,7 @@ async function countActivePartnerships(
   let q = supabase.from('partnerships').select('id', { count: 'exact', head: true }).eq('status', 'active')
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
@@ -502,6 +515,7 @@ async function previewPartnerships(
     .eq('status', 'active')
 
   if (target.make) q = q.ilike('make', `%${target.make}%`)
+  q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
   const icaoList = await resolveIcaoList(target)
   if (icaoList) q = q.in('home_airport', icaoList)
@@ -656,11 +670,11 @@ export async function getMarketPulseLine(
 /**
  * Honest one-line market-context sentence for a PARTNERSHIP alert's make —
  * "6 Cessna partnerships listed right now, median buy-in $28k" — the
- * partnership counterpart of `getMarketPulseLine` above. Make-level only
- * (not make+model): partnership alert targets carry only `make` for matching
- * today (`alert-digest`'s `AlertTarget` union has no partnership `model`
- * field), so this mirrors the granularity partnership alerts actually match
- * against rather than implying a precision that doesn't exist. Reuses the
+ * partnership counterpart of `getMarketPulseLine` above. Deliberately
+ * make-level only (not make+model), independent of whether the alert itself
+ * is model-scoped — a model-level median tends to run below the honesty
+ * floor at current partnership volume, so this stays at the coarser
+ * granularity that reliably clears it. Reuses the
  * same `priceStats`/`MIN_SNAPSHOT_LISTINGS` honesty floor against
  * `partnerships.buy_in_price` — below the floor this returns `null` rather
  * than publish a noisy median off a handful of listings.
