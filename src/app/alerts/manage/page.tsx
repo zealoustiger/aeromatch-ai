@@ -291,20 +291,24 @@ export default async function AlertsManagePage({
                         </p>
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            a.status === 'paused'
-                              ? 'bg-slate-100 text-slate-600'
-                              : a.confirmed_at
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-amber-50 text-amber-700'
+                            a.status === 'bounced'
+                              ? 'bg-red-50 text-red-700'
+                              : a.status === 'paused'
+                                ? 'bg-slate-100 text-slate-600'
+                                : a.confirmed_at
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-amber-50 text-amber-700'
                           }`}
                         >
-                          {a.status === 'paused'
-                            ? resumeDate
-                              ? `Paused until ${resumeDate}`
-                              : 'Paused'
-                            : a.confirmed_at
-                              ? 'Active'
-                              : 'Pending confirmation'}
+                          {a.status === 'bounced'
+                            ? 'Bounced'
+                            : a.status === 'paused'
+                              ? resumeDate
+                                ? `Paused until ${resumeDate}`
+                                : 'Paused'
+                              : a.confirmed_at
+                                ? 'Active'
+                                : 'Pending confirmation'}
                         </span>
                         {/* Price-drop matching only exists for aircraft-for-sale
                             alerts (see alert-digest's countRecentAircraftPriceDrops) —
@@ -353,6 +357,11 @@ export default async function AlertsManagePage({
                           </>
                         ) : null}
                       </p>
+                      {a.status === 'bounced' ? (
+                        <p className="mt-0.5 text-xs text-red-600">
+                          Your email bounced — resume once it&apos;s fixed.
+                        </p>
+                      ) : null}
                       {widenEligible ? (
                         <WidenAlertNudge id={a.id} token={scopeToken} dead={isDead} suggestion={widenSuggestions[i]} />
                       ) : null}

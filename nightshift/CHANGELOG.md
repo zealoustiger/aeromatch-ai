@@ -2,6 +2,72 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T072843Z — PASS — resend-bounce-webhook
+- Pages: /alerts/manage (plus a new, non-page API route: `/api/webhooks/resend`)
+- What: **A typo'd or dead subscriber email would get digests forever, hurting our
+  sender reputation for every other subscriber.** Added a Resend webhook endpoint
+  that, once a human wires it up, auto-pauses an address's alerts the moment its
+  mail server permanently rejects a delivery — instead of never noticing. On
+  `/alerts/manage`, a bounced alert now shows a distinct red "Bounced" badge and
+  "Your email bounced — resume once it's fixed." (rather than being lumped in with
+  "Pending confirmation"), with a working one-click "Resume" action once the address
+  is fixed.
+- Goal: `[goal]` alert experience (deliverability/never-spam, GOAL.md's "never fire
+  on genuine matches... never spam" guardrail). Tier 1 (`[bug]`): none — last cycle
+  (`alert-digest-market-pulse`) PASSed, no unstruck `[bug]` entries in BACKLOG.md.
+  Tier 2 (`[want]`): re-confirmed empty — the two open `[P1][want]` design items
+  ("Save this search" auth-wall reconciliation, collection-layout mosaic redesign)
+  remain explicitly flagged needing a human product/design call; Trade-A-Plane
+  ingestion and the Bay-Area coverage benchmark remain audited-and-blocked
+  (DataDome bot-protection / no honest FAA data source, re-confirmed by many prior
+  cycles). Dropped to tier 3: this was the **last** open item in the Opus/Fable
+  "Plan-pass batch — 2026-07-13" 🔔 queue — every other item in that batch had
+  already shipped (`mission-alert-sourcepath-fix`, `deals-page-alert-capture`,
+  `alert-local-subscriber-memory`, `alert-vacation-mode`, `alerts-sample-preview`,
+  `compare-page-alert-capture`, `alert-digest-market-pulse`), and the prior cycle's
+  own CHANGELOG entry named this one out as buildable dark even though the Resend
+  dashboard registration itself needs a human.
+- Spec: nightshift/specs/20260714T071816Z-resend-bounce-webhook.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes, including the new `/api/webhooks/resend`). Full unit
+  suite `node --experimental-strip-types --test src/lib/*.test.ts` — 298/298 pass
+  (289 pre-existing + 9 new in `resendWebhook.test.ts`: valid/tampered/wrong-secret/
+  multi-candidate signature verification, and hard-vs-soft-bounce payload parsing
+  including malformed-input defensiveness). No `svix` dependency added — hand-rolled
+  the HMAC-SHA256 verification with Node's built-in `crypto`, matching this
+  codebase's existing raw-fetch-no-SDK convention for Resend (`email.ts` sends via a
+  plain `fetch`, no SDK either). Visual cycle (new badge/copy on `/alerts/manage`) —
+  read both screenshots (desktop 1280 + mobile 375, via a real `?token=` manage-link
+  view): clean red "Bounced" pill + explanatory line + working "Resume" button, no
+  overlap, no overflow, on-brand with the existing "Paused"/"Active" pill styling.
+  Production build served via `next start` (not dev); `qa-smoke.mjs` exit 0 — 2/2
+  checks, zero console errors, zero horizontal overflow at both viewports.
+  **Live-verified end-to-end against the real DB** (not mocked): started a second
+  `next start` with `RESEND_WEBHOOK_SECRET` set only as a runtime env var (never
+  written to `.env.local`, so the deployed/dark state is unaffected) and POSTed
+  real Svix-signed payloads at `/api/webhooks/resend` — an invalid signature
+  correctly 401'd with no DB write; a verified `Permanent`-bounce payload for a
+  throwaway `qa-resend-bounce-webhook-hard-<ts>@example.com` alert flipped it to
+  `status='bounced'`; a verified `Transient`-bounce payload for a second throwaway
+  address correctly left it `status='confirmed'` (never pauses a soft bounce that
+  may still deliver). Separately, real-browser-clicked (Playwright, not `.click()`)
+  the new "Resume" button on a bounced alert via its manage-link token — flipped
+  back to `status='confirmed'` live, zero console errors. Also confirmed the dark
+  state: with no `RESEND_WEBHOOK_SECRET` set (true in every environment right now),
+  `POST /api/webhooks/resend` returns a bare 204 and writes nothing. All 3 throwaway
+  `@example.com` rows created during testing were deleted after (confirmed 0
+  remaining via a follow-up query); the two ad hoc `next start` server processes
+  were both stopped cleanly.
+- Screenshots: nightshift/screenshots/resend-bounce-webhook/
+- Next: ⚠️ **HUMAN ACTION required to activate** — this endpoint is dark until a
+  human registers its URL + a signing secret in the Resend dashboard (Webhooks →
+  Add endpoint → subscribe to `email.bounced`) and sets `RESEND_WEBHOOK_SECRET` in
+  the environment; the loop will not (and should not) touch `.env*` itself. This was
+  also the last open item in the "Plan-pass batch — 2026-07-13" 🔔 queue — the next
+  cycle should either find a fresh, small `[want]`/`[bug]` or run the Opus/Fable plan
+  pass (`PLAN_TASK.md`) to generate the next batch of alert-experience `[P1][goal]`
+  tasks, per GOAL.md's "Generating new goal tasks" section.
+
 ## 20260714T071129Z — PASS — alert-digest-market-pulse
 - Pages: (email-only — the weekly/daily aircraft alert digest sent by `/api/cron/alert-digest`;
   no user-facing page route)

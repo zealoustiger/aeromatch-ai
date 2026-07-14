@@ -1133,7 +1133,11 @@ export async function snoozeAlert(id: string, token?: string) {
 export async function resumeAlert(id: string, token?: string) {
   const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
-  if (owned.alert.status !== 'paused') return { error: 'Only a paused alert can be resumed.' }
+  // 'bounced' is resumable too (Resend webhook auto-pause) — the subscriber
+  // is asserting the address is fixed now.
+  if (owned.alert.status !== 'paused' && owned.alert.status !== 'bounced') {
+    return { error: 'Only a paused alert can be resumed.' }
+  }
 
   const { error } = await owned.admin
     .from('alerts')

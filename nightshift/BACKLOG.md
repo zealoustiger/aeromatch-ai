@@ -1242,14 +1242,23 @@ _All verified against the live codebase before filing (no duplicate of shipped w
   R44 → 16 listed, median $397k. **Not done, intentionally:** make-only market pulse (e.g.
   "142 Cessnas listed right now") and applying it to `buildPriceDropEmail`/listing-watch
   sends — scoped out per the item's own "digest surface only."
-- **[P1][goal] Auto-pause alerts on hard email bounces (Resend webhook).** Never-spam /
-  deliverability: today a typo'd or dead address gets digests forever, hurting sender
-  reputation for everyone. Add `/api/webhooks/resend` (svix-style signature verification,
-  secret via env — do NOT touch `.env*` yourself) that on `email.bounced` (hard) pauses
-  that address's alerts with a distinct `bounced` status/reason shown on `/alerts/manage`
-  ("your email bounced — resume when fixed"). Graceful no-op when the secret env is
-  absent. ⚠️ HUMAN ACTION to register the webhook URL + secret in the Resend dashboard —
-  ship the endpoint dark, flag it in the CHANGELOG.
+~~- **[P1][goal] Auto-pause alerts on hard email bounces (Resend webhook).**~~ ✅ SHIPPED
+  via `resend-bounce-webhook` (2026-07-14) New `/api/webhooks/resend` (hand-rolled
+  Svix-style HMAC-SHA256 signature verification, no new dependency — matches this
+  codebase's raw-fetch-not-SDK style already used for sending via Resend in
+  `email.ts`) 204-no-ops when `RESEND_WEBHOOK_SECRET` isn't set (true in every
+  environment right now — ships dark), 401s on a missing/invalid signature, and on a
+  verified `email.bounced` event with `bounce.type === 'Permanent'` (hard bounce, not
+  a Transient/soft one that may still deliver) sets every non-unsubscribed `alerts`
+  row for that address to a new, distinct `status = 'bounced'` — excluded from the
+  digest cron automatically (it only ever queries `status = 'confirmed'`, no cron
+  change needed). `/alerts/manage` renders a red "Bounced" badge + "Your email
+  bounced — resume once it's fixed." line instead of falling into the existing
+  "Pending confirmation" bucket, and `resumeAlert`/`AlertActions` now treat
+  `'bounced'` as resumable (same "Resume" button as `'paused'`). ⚠️ HUMAN ACTION
+  still needed: register this endpoint's URL + a signing secret in the Resend
+  dashboard (Webhooks → Add endpoint, subscribe to `email.bounced`), then set
+  `RESEND_WEBHOOK_SECRET` — the loop did not touch `.env*`.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
