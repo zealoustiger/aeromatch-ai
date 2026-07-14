@@ -2,6 +2,50 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T105349Z — PASS — home-recently-viewed-alert-banner
+- Pages: /
+- What: **The homepage now shows a personalized "you've been looking at X" alert prompt
+  for returning visitors, instead of always showing the generic alert box.**
+  `RecentlyViewedAlertBanner` (device-local recently-viewed clustering, dismiss, live-match
+  honesty gate) already existed and was live on `/aircraft` and `/partnerships`, but the
+  homepage — the highest-traffic return-visit surface — still only showed the generic
+  "Not ready to browse yet?" band. The banner now mounts on `/` in the same spot, and falls
+  back to the original generic band whenever there's nothing honest to show (no cluster
+  match, dismissed, or a live match count of 0) — the two never stack.
+- Goal: `[goal]` tier 3 — alert experience (GOAL.md). Tier 1 (`[bug]`): none open, no unstruck
+  `[bug]` entries in BACKLOG.md, prior cycle (`admin-alerts-digest-vote-rollup`) PASSed. Tier 2
+  (`[want]`): re-confirmed empty — the two open `[P1][want]` items ("Save this search" auth-wall
+  reconciliation, collection-layout mosaic redesign) both remain explicitly flagged as needing a
+  human product call/mock; the ingestion `[P1][want]`s (Trade-A-Plane, Bay-Area coverage
+  denominator, Controller/AirMart/AeroTrader) remain audited-and-blocked on bot protection / no
+  honest data source (re-verified by direct read this cycle, matching many prior cycles'
+  independent audits). Dropped to tier 3 and picked this `[P2][goal]` item — the top remaining
+  open item in BACKLOG.md's 🔔 alert-experience queue (the `[P1]` "Real instant alerts" item is
+  blocked pending a human/design rescope of the actual draft→live publish hook point, per its own
+  audit note) — and the explicit "Next" pointer named in the last two shipped cycles' notes.
+- Spec: nightshift/specs/20260714T105349Z-home-recently-viewed-alert-banner.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0. Added an
+  optional `fallback` prop to `RecentlyViewedAlertBanner` (renders `fallback` instead of `null`
+  when there's nothing honest to show) and used it in `src/app/page.tsx` to wrap the existing
+  "Not ready to browse yet?" markup as the fallback, keeping the same outer section/container so
+  there's zero layout change in the common (no recent-views) case. Visual cycle — QA gate:
+  `qa-smoke.mjs --slug home-recently-viewed-alert-banner /` 2/2 (desktop 1280 + mobile 375, HTTP
+  200, zero console errors, zero horizontal overflow); screenshots read and confirm the
+  unchanged generic band renders correctly on a fresh visitor. **Additionally live-verified the
+  personalized path in a real browser** (not just the fallback): seeded 3 Cessna 172
+  recently-viewed entries via `localStorage`, reloaded, and confirmed the banner correctly swaps
+  in — "You've been looking at Cessna 172 listings" with a real live match count (28 aircraft),
+  zero console errors — proving the end-to-end swap works, not just that the fallback path is a
+  no-op. Server served via `next start` (not dev), stopped cleanly at the end (verified via
+  `pgrep`). No schema change, no new capture point, no new `alert_subscribed` event shape
+  (reuses `source: 'recent_views'` / `source: 'homepage_band'` on the same two existing
+  `AlertSignup` call sites).
+- Screenshots: nightshift/screenshots/home-recently-viewed-alert-banner/
+- Next: remaining `[P2][goal]` items in the alert-experience queue: preheader text on alert
+  emails, honoring `avionics` in aircraft alert matching. The `[P1][goal]` "Real 'instant' alerts"
+  item stays open pending its flagged re-scope (needs a human call on the real publish-trigger
+  point + timeout-risk design).
+
 ## 2026-07-14T10:51:18Z — DRAIN SUMMARY
 - Cycles this run: 25 (PASS 20 / FAIL 2 / ABORT 3)
 - Models: cycles on sonnet; 2 escalated to opus; 4 quality-judged on opus
