@@ -1445,15 +1445,22 @@ closing the measurement loop, deliverability, and email/management polish. (The
   untouched. Ships dark until `RESEND_WEBHOOK_SECRET` is set, same as the bounce handler —
   live-verified the 204 dark-mode response plus the exact DB update query end-to-end against
   a throwaway `@example.com` alert row (seeded + deleted via service role).
-- **[P1][goal] Impression events for the deferred capture affordances (card bells + filter
-  chip).** `alert_capture_viewed` gives per-placement denominators only for always-mounted
-  `AlertSignup` boxes — `WatchAlertButton`'s bell (sources `card_watch` /
-  `partnership_card_watch`) and `AlertMeChip` (`filter_toolbar`) mount their `AlertSignup`
-  only on tap, so those placements have subscribes with no view denominator. Fire the same
-  `alert_capture_viewed` (IntersectionObserver, once per mount, same payload shape incl.
-  `source`) from the bell/chip affordance itself, plus an `alert_capture_opened` on tap so
-  view → open → subscribe is measurable. Improves measurement on 3 existing surfaces; no
-  new capture point.
+- ~~**[P1][goal] Impression events for the deferred capture affordances (card bells + filter
+  chip).**~~ ✅ SHIPPED via `alert-capture-impression-events` (2026-07-14) `WatchAlertButton`
+  gained optional `source`/`sourcePath`/`context` props and now fires `alert_capture_viewed`
+  (IntersectionObserver, once per bell, same payload shape as `AlertSignup`'s) when the bell
+  scrolls into view, plus `alert_capture_opened` on the tap that *expands* the panel (not the
+  collapse — guarded on `!active`); wired from `AircraftSaleCard` (`card_watch`) and
+  `PartnershipCard` (`partnership_card_watch`) with the already-in-scope `watchContext`/
+  `watchSourcePath`. `AlertMeChip` (`filter_toolbar`) fires the same `alert_capture_viewed`
+  while still actionable (not once flipped to the "Alerts on" pill) + `alert_capture_opened`
+  on tap. All 3 placements now have a real view denominator → open → subscribe funnel. Live-
+  verified in a real browser against the production build (intercepted the `track()` →
+  `/api/visitor-webhook` posts): scrolling `/aircraft` fired 18 `card_watch` + 1
+  `filter_toolbar` view events; chip tap fired 1 `filter_toolbar` open; bell tap fired 1
+  `card_watch` open and mounted the panel; re-clicking the *same* bell to collapse fired
+  nothing, re-expand fired again. No schema change, no rendered-UI change, no new capture
+  point, zero console errors.
 - **[P1][goal] Per-placement conversion ranking on `/admin/alerts`.** The follow-up the
   scoreboard cycle explicitly flagged, unblocked once `alerts.source` lands (item above):
   add a "Top placements" section ranking `source` values by live (active+confirmed) count,

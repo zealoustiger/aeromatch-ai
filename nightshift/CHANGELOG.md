@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T100754Z — PASS — alert-capture-impression-events
+- Pages: /aircraft, /partnerships (the listing-card price-drop bell on every browse
+  card + the "Alert me for this search" chip in the active-filter toolbar)
+- What: **The two "tap to open" alert affordances now record when they're *seen* and
+  *opened*, not just when someone subscribes** — so we can finally measure how well the
+  card price-drop bell and the "Alert me for this search" filter chip actually convert,
+  the same way the always-visible email boxes already are. No visible change on the page;
+  purely measurement plumbing.
+- Goal: `[goal]` tier 3 — alert experience / "prove it converts" (GOAL.md). Closes the
+  `[P1][goal]` "Impression events for the deferred capture affordances (card bells + filter
+  chip)" item from plan-pass batch #2. Both bell placements (`card_watch`,
+  `partnership_card_watch`) and the filter chip (`filter_toolbar`) previously recorded
+  `alert_subscribed` with **no view denominator** — their `AlertSignup` panel mounts only on
+  tap, so they couldn't fire the `alert_capture_viewed` the always-mounted boxes do. Added
+  optional `source`/`sourcePath`/`context` props to `WatchAlertButton` so it fires
+  `alert_capture_viewed` (IntersectionObserver, once per bell, same payload shape as
+  `AlertSignup`'s) when the bell scrolls into view + `alert_capture_opened` on the tap that
+  *expands* the panel (guarded on `!active`, so collapsing fires nothing); wired from
+  `AircraftSaleCard`/`PartnershipCard` with the already-in-scope watch context/sourcePath.
+  `AlertMeChip` fires the same view event while still actionable (not once flipped to "Alerts
+  on") + an open event on tap. Improves measurement on 3 existing surfaces; **no schema
+  change, no new capture point, no rendered-UI change.** Sibling follow-up — per-placement
+  conversion ranking on `/admin/alerts` — stays blocked on the separate `alerts.source`
+  column item (needs human DDL), not this event work.
+- Spec: nightshift/specs/20260714T100754Z-alert-capture-impression-events.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  Visual cycle (touches card/chip components) — `qa-smoke.mjs --slug
+  alert-capture-impression-events "/aircraft?make=Cessna&model=172" "/partnerships?make=Cirrus"`
+  4/4 (desktop 1280 + mobile 375, HTTP 200, **zero** app-origin console errors, **zero**
+  horizontal overflow); screenshots read and confirm the bell + chip render intact and
+  on-brand, no layout regression. **Beyond the smoke gate, live-verified the actual events
+  fire** by driving the real production build in a headless browser and intercepting the
+  `track()` → `/api/visitor-webhook` POSTs: scrolling `/aircraft` fired 18 `card_watch`
+  view events (one per bell) + 1 `filter_toolbar` view; tapping the chip fired 1
+  `filter_toolbar` `alert_capture_opened`; tapping a card bell fired 1 `card_watch`
+  `alert_capture_opened` and mounted the watch panel; clicking the **same** bell node to
+  collapse fired **nothing**, re-expanding fired again — confirming the `!active` open guard.
+  No prod rows created (only viewed/opened analytics pings — never submitted a subscribe;
+  `/api/visitor-webhook` is a telemetry ping, not an `alerts` write). Server served via
+  `next start` (not dev), stopped cleanly at end (verified no `next-server` process remains).
+- Screenshots: nightshift/screenshots/alert-capture-impression-events/
+- Next: the two sibling batch-#2 items — (1) persist an additive nullable `alerts.source`
+  column threaded through every insert path (⚠️ needs human DDL; unblocks true per-widget
+  ranking), then (2) per-placement conversion ranking on `/admin/alerts` once that column
+  lands. Also open in the same batch: preheader text on alert emails, honor `avionics` in
+  aircraft alert matching, recently-viewed banner on the homepage.
+
 ## 20260714T093751Z — PASS — alert-digest-legacy-active-status
 - Pages: (backend/cron — no user-facing page; affects the daily digest send for every
   subscriber, plus `/alerts/manage`'s read of the same table)
