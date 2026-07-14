@@ -2,6 +2,72 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T080526Z — PASS — filter-toolbar-alert-chip
+- Pages: /aircraft, /partnerships
+- What: **Filtering to "Cessna" (or any other search) now shows a one-tap 🔔 "Alert me
+  for this search" chip right next to the removable filter chips** — before, the only
+  alert capture on these pages sat below the full results list, so a visitor who
+  narrowed a search had to scroll past everything to sign up. A new shared
+  `AlertMeChip.tsx` renders in the same toolbar row as the existing removable filter
+  chips (`ActiveFilterChips` on `/aircraft`, `PartnershipActiveFilterChips` on
+  `/partnerships`), appearing whenever ≥1 filter is active and hidden otherwise
+  (mirrors the existing chip-row suppression). Signed-in visitors subscribe in one
+  click via the existing `subscribeSignedInAlert` action, and the chip swaps to a
+  non-interactive "Alerts on" pill. Signed-out visitors are smooth-scrolled to the
+  page's existing footer `AlertSignup` email field and it's focused — no separate
+  subscribe path, just a shortcut to the form that already exists (which already
+  carries the same context/sourcePath, so the search is already "prefilled" there).
+  A visitor who already subscribed from this browser (device-local record) also sees
+  "Alerts on" instead of a live chip. New capture point emits `alert_subscribed` with
+  `source: 'filter_toolbar'`.
+- Goal: `[goal]` alert experience — GOAL.md explicitly asks for one-tap alerts "from
+  any active filter set." Tier 1 (`[bug]`): none — last cycle (`alert-email-change`)
+  PASSed, no unstruck `[bug]` entries found in BACKLOG.md. Tier 2 (`[want]`):
+  re-confirmed empty — the two open `[P1][want]` items (collection-layout mosaic
+  redesign, "Save this search" auth-wall reconciliation) remain explicitly flagged
+  as needing a human product/design call. Dropped to tier 3: pulled the next item
+  named in the last cycle's "Next" note from the Opus/Fable "Plan-pass batch —
+  2026-07-14" queue (the filter-toolbar 🔔 chip was first in that list; "real
+  instant alerts" is still blocked pending a re-scoping pass per that cycle's audit).
+- Spec: nightshift/specs/20260714T080526Z-filter-toolbar-alert-chip.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 298/298 pass (no lib logic touched, confirms no regression).
+  Visual cycle (new UI chip in a toolbar) — read all 4 qa-smoke screenshots plus
+  additional targeted viewport-cropped screenshots of the toolbar area itself (the
+  full-page smoke screenshots are too tall to see the chip clearly): renders cleanly
+  next to the "Cessna" filter chip on both `/aircraft` and `/partnerships`, desktop
+  1280 + mobile 375, no overlap/overflow. Production build served via `next start`
+  (not dev) on port 3800; `qa-smoke.mjs` exit 0 — 4/4 checks (2 paths × 2 viewports),
+  zero console errors, zero horizontal overflow. **Functional verification via real
+  Playwright clicks (not JS `.click()`):** signed-out click on the chip correctly
+  scrolled to and focused `#alert-email` (`document.activeElement.id === 'alert-email'`
+  confirmed), zero console errors; seeding the device-local subscription record and
+  reloading correctly renders the non-interactive emerald "Alerts on" pill instead of
+  a live chip; base `/aircraft` and `/partnerships` (zero filters active) correctly
+  render zero chips, confirming the toolbar-suppression gate isn't bypassed. The
+  signed-in one-click subscribe path itself reuses `subscribeSignedInAlert` /
+  `getExistingAlertForSourcePath` byte-for-byte (same call shape as `AlertSignup.tsx`'s
+  `handleSignedInSubmit` and `SavedSearchAlertButton.tsx`) — not independently
+  re-verified against a live authenticated session this cycle (no test auth session
+  available in this environment, consistent with prior cycles' precedent, e.g.
+  `partnership-ai-faa-backfill`); functional confidence comes from reusing
+  already-proven, unmodified server actions rather than writing new mutation logic.
+  Killed one orphaned `next-server` process left on port 3800 after testing; confirmed
+  clean before landing. `npx eslint` flagged 2 pre-existing `react-hooks/set-state-in-effect`
+  warnings in the new file — verified these are the exact same pattern already present
+  in `AlertSignup.tsx` (not a regression, not part of the `next build` gate).
+- Screenshots: nightshift/screenshots/filter-toolbar-alert-chip/
+- Next: the Opus/Fable "Plan-pass batch — 2026-07-14" queue has 4 more unshipped
+  `[P1][goal]` items (partnership market-pulse line, market-pulse follow-ups
+  (make-only + price-drop pulse), digest feedback thumbs, `/admin/alerts` scoreboard)
+  — next cycle should pull the next one. "Real instant alerts" still needs the
+  re-scoping pass flagged in `alert-email-change`'s CHANGELOG entry (locate the real
+  draft→live `aircraft_for_sale` publish trigger before it's buildable in one cycle).
+  A natural small follow-up to this cycle: the same chip on `SeekerActiveFilterChips`
+  (`/partnerships/seeking`) — not in the original backlog item's scope, but the same
+  shared `AlertMeChip` component would drop in with no new code.
+
 ## 20260714T075154Z — PASS — alert-email-change
 - Pages: /alerts/manage, /alerts/status (plus a new, non-page API route:
   `/api/alerts/confirm-email-change`)

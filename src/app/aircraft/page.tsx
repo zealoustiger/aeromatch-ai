@@ -300,7 +300,12 @@ export default async function AircraftPage({
               search or when there's nothing honest to show. */}
           <RecentlyViewedAlertBanner currentContext={alertContext} />
           {/* Active-filter chips — removable, one per active filter. */}
-          <ActiveFilterChips params={params} facets={facets} />
+          <ActiveFilterChips
+            params={params}
+            facets={facets}
+            alertContext={alertContext}
+            alertSourcePath={alertSourcePath}
+          />
           <AircraftMapView pins={aircraftMapPins} />
           <Suspense key={JSON.stringify(params)} fallback={<AircraftListSkeleton />}>
             <AircraftSaleList

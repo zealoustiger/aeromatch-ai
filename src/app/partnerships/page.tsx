@@ -274,7 +274,12 @@ export default async function PartnershipsPage({
               lib/recentlyViewed.ts. Skips itself when redundant with the active
               search or when there's nothing honest to show. */}
           <RecentlyViewedAlertBanner currentContext={alertContext} />
-          <PartnershipActiveFilterChips params={params} facets={partnershipFacets} />
+          <PartnershipActiveFilterChips
+            params={params}
+            facets={partnershipFacets}
+            alertContext={alertContext}
+            alertSourcePath={alertSourcePath}
+          />
           <PartnershipsMapView pins={mapPins} />
           <Suspense fallback={<PartnershipListSkeleton />}>
             <PartnershipList filters={params} alertContext={alertContext} alertSourcePath={alertSourcePath} mapPinIds={mapPinIds} />

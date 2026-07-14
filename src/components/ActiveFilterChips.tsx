@@ -4,6 +4,7 @@ import { STATE_NAMES } from '@/lib/seo'
 import { groupModelVariants } from '@/lib/modelGroups'
 import { AVIONICS_FILTER_OPTIONS } from '@/lib/avionicsClassify'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
+import AlertMeChip from '@/components/AlertMeChip'
 
 type Params = Record<string, string | undefined>
 
@@ -56,12 +57,19 @@ interface Chip {
 export default function ActiveFilterChips({
   params,
   facets,
+  alertContext,
+  alertSourcePath,
 }: {
   params: Params
   /** Make/model facets — when present, fully-selected variant groups collapse to a
    *  single "{base} (all)" chip (mirrors the sidebar rollup); omit and chips stay
    *  per-model. */
   facets?: AircraftFacets
+  /** Same `describeAircraftFilters`-derived context/source-path the page's footer
+   *  `AlertSignup` already receives — threaded through so the one-tap 🔔 chip below
+   *  subscribes to the exact same search. */
+  alertContext?: string
+  alertSourcePath?: string
 }) {
   const chips: Chip[] = []
 
@@ -313,6 +321,7 @@ export default function ActiveFilterChips({
           Clear all
         </Link>
       )}
+      {alertSourcePath && <AlertMeChip context={alertContext} sourcePath={alertSourcePath} />}
     </div>
   )
 }
