@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-14T06:35:15Z — alert-vacation-mode — score 4/5
+- Strengths: faithfully reuses resolveOwnerEmail trust boundary + the snoozeAlert paused_until missing-column fallback; email-scoped bulk update; smart dateApplied honesty flag and hydration-safe client date computation.
+- Weaknesses / risks: minor — resumeAll gives no user feedback on a 0-row no-op (unlike pauseAll's "Nothing to pause"), and the ≥2-alerts render gate is looser than the spec's "≥1 confirmed/paused" (guarded only inside the component's null-return).
+- Follow-up: none
+
 ## 2026-07-14T06:09:33Z — deals-page-alert-capture — score 4/5
 - Strengths: Faithful, minimal, correctly-scoped — verified `deal=good` is already first-class in alertEditCriteria/seo/aircraftComps so the "zero cron changes" claim holds; the checkbox-hide guard `!sourcePath.includes('deal=good')` is threaded through every `showDealOnlyOption && dealOnly` use of `withDealOnly`, so the already-`deal=good` path never double-appends `&deal=good`; empty-state (matchCount 0) handled by AlertSignup's own copy; captured desktop+mobile screenshots; comments match this codebase's heavily-documented convention.
 - Weaknesses / risks: `matchCount={deals.length}` is capped at `fetchUnderMarketDeals(48)`, so on inventories with >48 below-market listings the box's "N match right now" copy understates the true count the alert will actually fire on — a small honesty nuance (inherited from the spec's own "exact count rendered as cards" direction, not a judgment miss); `context="good deal"` also yields slightly awkward "a new good deal aircraft" body copy.
