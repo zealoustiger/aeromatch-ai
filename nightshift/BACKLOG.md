@@ -1339,12 +1339,21 @@ no duplicate of shipped work above)._
   for signed-in, `isLocallySubscribed` for signed-out/email-only) the chip swaps to a
   non-interactive "Alerts on" pill so it never re-submits. Emits `alert_subscribed` with
   `source: 'filter_toolbar'`. No schema change, no new dependency.
-- **[P1][goal] Market-pulse line for PARTNERSHIP digest sections.** `getMarketPulseLine`
-  is aircraft-only (verified). Add the partnership equivalent — "6 Cessna 172
-  partnerships listed right now, median buy-in $28k" — reusing the same `priceStats`
-  aggregator + `MIN_SNAPSHOT_LISTINGS` honesty floor pattern on partnership buy-in data;
-  below the floor → no line at all, never a guess. Why: partnership digests currently
-  read thinner than aircraft ones for no data reason.
+~~- **[P1][goal] Market-pulse line for PARTNERSHIP digest sections.**~~ ✅ SHIPPED via
+  `partnership-digest-market-pulse` (2026-07-14) New `getPartnershipMarketPulseLine` in
+  `alertMatchCounts.ts` — "N {Make} partnerships listed right now, median buy-in $X" —
+  wired into `alert-digest`'s existing generic `marketPulse` computation for
+  `target.type === 'partnership'` alerts with a `make`. **Scoped to make-level, not
+  make+model** (unlike the aircraft line): partnership alert targets carry only `make`
+  for matching today (confirmed by direct code read — `resolveTarget`/
+  `countNewPartnerships` never read a `model` param for partnerships, even though some
+  detail-page sourcePaths carry one), so this matches the actual granularity partnership
+  alerts match against rather than implying false precision. Reuses the same
+  `priceStats`/`MIN_SNAPSHOT_LISTINGS` honesty floor. Live-verified read-only against real
+  prod data: current partnership inventory (23 active listings, max 5 per make) is below
+  the 8-listing floor for every make today, so the line correctly stays dormant rather
+  than firing — same honesty-gated-dormant-until-data-grows pattern as several prior
+  `alerts.*` shipped features.
 - **[P1][goal] Market-pulse follow-ups scoped out of `alert-digest-market-pulse`:**
   (a) make-only pulse ("142 Cessnas listed right now, median asking $X") for make-level
   alerts that today get no line, and (b) the same pulse line in `buildPriceDropEmail` /

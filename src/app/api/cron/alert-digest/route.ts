@@ -11,7 +11,7 @@ import {
   type AlertDigestSample,
   type AlertDigestSection,
 } from '@/lib/email'
-import { getAlertDigestPreview, getMarketPulseLine } from '@/lib/alertMatchCounts'
+import { getAlertDigestPreview, getMarketPulseLine, getPartnershipMarketPulseLine } from '@/lib/alertMatchCounts'
 import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
@@ -1319,9 +1319,11 @@ export async function GET(req: NextRequest) {
             : []
 
     // Market-pulse line — aircraft alerts with a clean, curated make+model
-    // target only (see `marketPulseModel`'s doc); computed only for alerts
-    // that will actually send (past the newCount===0 && dropCount===0 skip
-    // above), so a skipped alert never pays for the extra query.
+    // target, or partnership alerts with a make (see `marketPulseModel`'s doc
+    // and `getPartnershipMarketPulseLine`'s doc for why partnerships are
+    // make-level only); computed only for alerts that will actually send
+    // (past the newCount===0 && dropCount===0 skip above), so a skipped
+    // alert never pays for the extra query.
     const marketPulse =
       target.type === 'aircraft' && target.make && target.marketPulseModel
         ? await getMarketPulseLine(
@@ -1331,7 +1333,9 @@ export async function GET(req: NextRequest) {
             target.modelPattern ?? target.model ?? target.marketPulseModel,
             target.notModelPattern
           )
-        : null
+        : target.type === 'partnership' && target.make
+          ? await getPartnershipMarketPulseLine(supabase, target.make)
+          : null
 
     prepared.push({ alert, frequency, target, newCount, dropCount, samples, marketPulse })
   }

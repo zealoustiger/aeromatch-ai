@@ -631,3 +631,34 @@ export async function getMarketPulseLine(
   const noun = stats.count === 1 ? family : `${family}s`
   return `${stats.count} ${noun} listed right now, median asking ${formatPriceK(stats.median)}.`
 }
+
+/**
+ * Honest one-line market-context sentence for a PARTNERSHIP alert's make —
+ * "6 Cessna partnerships listed right now, median buy-in $28k" — the
+ * partnership counterpart of `getMarketPulseLine` above. Make-level only
+ * (not make+model): partnership alert targets carry only `make` for matching
+ * today (`alert-digest`'s `AlertTarget` union has no partnership `model`
+ * field), so this mirrors the granularity partnership alerts actually match
+ * against rather than implying a precision that doesn't exist. Reuses the
+ * same `priceStats`/`MIN_SNAPSHOT_LISTINGS` honesty floor against
+ * `partnerships.buy_in_price` — below the floor this returns `null` rather
+ * than publish a noisy median off a handful of listings.
+ */
+export async function getPartnershipMarketPulseLine(
+  supabase: ReturnType<typeof createAdminClient>,
+  make: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('partnerships')
+    .select('buy_in_price')
+    .eq('status', 'active')
+    .ilike('make', `%${make}%`)
+    .gt('buy_in_price', 0)
+    .limit(5000)
+  if (error || !data) return null
+  const prices = data.map((r) => r.buy_in_price as number | null).filter((p): p is number => p != null)
+  const stats = priceStats(prices)
+  if (!stats) return null
+  const noun = stats.count === 1 ? `${make} partnership` : `${make} partnerships`
+  return `${stats.count} ${noun} listed right now, median buy-in ${formatPriceK(stats.median)}.`
+}
