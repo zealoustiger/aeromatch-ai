@@ -1265,14 +1265,23 @@ _All verified against the live codebase before filing (checked `AlertSignup` ren
 `actions.ts` exports, `alertFrequency.ts`, the ingest route, and `/app/src/app/admin` —
 no duplicate of shipped work above)._
 
-- **[P1][goal] Alert capture on the user compare tray (`/compare`).** The one slice
-  `compare-page-alert-capture` explicitly left open: the ids-based, noindex tray page has
-  ZERO capture today (verified). Dedup the up-to-3 compared items into make/model families
-  (handling both aircraft and partnership types), and render one `AlertSignup` per deduped
-  family with the same `/aircraft/<make>/<model>`-shaped `sourcePath` the curated compare
-  pages already use (zero digest-cron changes). New capture point → emit `alert_subscribed`
-  with `source="compare_tray"`. Why: a visitor comparing 2–3 aircraft is at peak
-  purchase-intent — the exact moment to offer "tell me when another one lists."
+~~- **[P1][goal] Alert capture on the user compare tray (`/compare`).**~~ ✅ SHIPPED via
+  `compare-tray-alert-capture` (2026-07-14) The one slice `compare-page-alert-capture`
+  explicitly left open: the ids-based, noindex tray page had ZERO capture. Now dedupes the
+  2-3 compared items into make/model families (aircraft AND partnership types) and renders
+  one `AlertSignup` per deduped family below the table — aircraft use the curated
+  `/aircraft/{makeSlug}/{modelSlug}` sourcePath when `resolveMakeModelFamily` resolves one
+  (matches the `/aircraft/compare/[comparison]` convention), else fall back to
+  `/aircraft?make=…&model=…`; partnerships always use `/partnerships?make=…&model=…` (no
+  curated family page exists for them). Dedup key is the resulting sourcePath itself, so
+  comparing two same-family listings renders exactly one box, not two identical ones.
+  `source="compare_tray"` on every box. Zero digest-cron/schema change. Live-verified
+  against real prod data (read-only, no test rows needed): two real same-family Cessna
+  172M listings → exactly 1 box, curated `/aircraft/cessna/172` sourcePath; three
+  different-family listings (Beechcraft Bonanza G36 / Piper Arrow III / Cirrus SR20) → 3
+  distinct boxes; two different-family partnerships → 2 boxes with the query-string shape.
+  **Not done, intentionally:** `matchCount`/live-match-count line and `alertCount`
+  social-proof line on these boxes (optional props, skipped to keep this slice small).
 - **[P1][goal] Real "instant" alerts — ingest-triggered new-listing sends.**
   `alertFrequency.ts` documents that "instant" isn't a real option today (single daily
   cron; only `daily`/`weekly`), yet GOAL.md names "digest vs instant" a core pillar.
