@@ -2,6 +2,60 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T102259Z — PASS — alert-source-column
+- Pages: (backend/plumbing — no user-facing page; touches every alert-subscribe path
+  site-wide: `/aircraft`, `/partnerships`, the filter-toolbar chip, browse-card watch
+  bells, `/alerts/manage`, digest-email cross-sell links, `/searches`)
+- What: **Every alert signup now records WHERE on the site it came from, not just in
+  analytics.** The `alert_subscribed` PostHog event has always carried a `source` tag
+  (card bell, filter chip, digest cross-sell, etc.), but the `alerts` database table
+  itself never stored it — so there was no way to answer "which placement converts
+  best?" from our own data, only from PostHog. Now every subscribe path writes that
+  placement tag onto the row.
+- Goal: `[goal]` tier 3 — alert experience / "prove it converts" (GOAL.md). Ships the
+  top item from plan-pass batch #2 (flagged as the next step by both of the last two
+  cycles' CHANGELOG "Next" notes). Added an additive nullable `alerts.source text`
+  column (⚠️ HUMAN ACTION — not yet applied to the live DB) and threaded the
+  already-known placement through every insert path: `subscribeToAlerts` +
+  `subscribeSignedInAlert` (from `AlertSignup`'s existing `source` prop, previously
+  PostHog-only), `subscribeToConfirmedAlert` → `cross_sell`, `subscribeSavedSearchAlert`
+  → `saved_search`, `subscribeManageCrossSell` → `manage_cross_sell`,
+  `createManageAlert` → `manage_new`, `/api/alerts/digest-cross-sell` →
+  `digest_cross_sell`. Also found and fixed 3 more direct callers that bypass
+  `AlertSignup` and were still untagged: `AlertMeChip` (filter-toolbar chip) →
+  `filter_toolbar`, `QuickStartSearchForm` (`/searches` quick-start) → `saved_search`,
+  `PartnershipLaunchBanner` → `partnership_launch_banner`. Every insert path retries
+  without `source` on a "column does not exist" error — the exact same fail-soft
+  pattern already used for `price_drop_opt_in`/`frequency`/`paused_until`/etc. No new
+  capture point, no analytics-shape change.
+- Spec: nightshift/specs/20260714T102259Z-alert-source-column.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  Non-visual/backend cycle (DB-persistence plumbing, no rendered-UI change) — smoke gate
+  only: `qa-smoke.mjs --slug alert-source-column /aircraft /partnerships` 4/4 (desktop
+  1280 + mobile 375, HTTP 200, zero console errors, zero horizontal overflow);
+  screenshots saved for the audit trail, not read into context per RUNBOOK.
+  **Live-verified end-to-end**: confirmed the real prod `alerts` table does NOT have
+  the `source` column yet (`select source from alerts` → `column alerts.source does
+  not exist`), then drove a real submit through the production build with Playwright
+  (real browser, `/aircraft?make=Cessna&model=172`'s footer `AlertSignup`, throwaway
+  `qa-alert-source-column-<ts>@example.com`) — the subscribe succeeded with the normal
+  confirmation UI, and the resulting DB row confirmed the graceful degrade in action
+  (row created, no `source` value, no error). Row deleted after (0 remain). Server
+  served via `next start` (not dev), stopped cleanly at the end (verified via `ps`).
+  **Bonus backlog hygiene:** during tier-2 `[want]` scoping this cycle, found the
+  "[P2][want] Model filter: roll up variants" item was fully shipped across all three
+  marketplace types in prior cycles but its title bullet was never struck — corrected
+  in BACKLOG.md (no code change, audit-confirmed only).
+- Screenshots: nightshift/screenshots/alert-source-column/
+- Next: (1) once a human applies the `alerts_source` migration in the Supabase SQL
+  editor, the sibling `[P1][goal]` "Per-placement conversion ranking on `/admin/alerts`"
+  item becomes buildable — it's explicitly blocked on this column existing with real
+  data. (2) The `[P1][goal]` "Real 'instant' alerts" item stays open pending its
+  flagged re-scope (wrong insert hook + timeout risk, needs a human call on the
+  publish-trigger point). (3) Remaining `[P2][goal]` items in the batch: digest
+  👍/👎 vote-rate rollup, recently-viewed banner on the homepage, preheader text on
+  alert emails, honoring `avionics` in aircraft alert matching.
+
 ## 20260714T100754Z — PASS — alert-capture-impression-events
 - Pages: /aircraft, /partnerships (the listing-card price-drop bell on every browse
   card + the "Alert me for this search" chip in the active-filter toolbar)
