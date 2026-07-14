@@ -17,6 +17,7 @@ export async function GET() {
     listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172',
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=preview',
+    marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
     samples: [
       {
         title: '2015 Cessna 172S Skyhawk',

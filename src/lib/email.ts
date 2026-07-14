@@ -656,6 +656,12 @@ export function buildAlertDigestEmail(opts: {
    *  `/api/alerts/digest-cross-sell`) so it works straight from the email
    *  client. Omitted whenever no honest suggestion applies. */
   crossSell?: { label: string; acceptUrl: string }
+  /** Honest one-line market-context sentence for the alert's family — "14
+   *  Cessna 172s listed right now, median asking $89k" (see
+   *  `getMarketPulseLine`). Omitted whenever the caller couldn't compute a
+   *  trustworthy one (make-only/uncurated/multi-model alerts, or a family
+   *  too sparse to trust a median) — never a fabricated number. */
+  marketPulse?: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -705,6 +711,9 @@ export function buildAlertDigestEmail(opts: {
         </a>
       </div>`
     : ''
+  const marketPulseHtml = opts.marketPulse
+    ? `<p style="margin:0 0 16px;font-size:12px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;">${escapeHtml(opts.marketPulse)}</p>`
+    : ''
 
   const html = `<!doctype html>
 <html>
@@ -717,6 +726,7 @@ export function buildAlertDigestEmail(opts: {
         <p style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
           ${bodyCopy}
         </p>
+        ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
           <a href="${escapeAttr(listingsUrl)}"
@@ -763,9 +773,10 @@ export function buildAlertDigestEmail(opts: {
   const sampleBannerText = isSample ? `SAMPLE EMAIL — ${opts.sampleNote}\n\n` : ''
 
   const crossSellText = opts.crossSell ? `\n${opts.crossSell.label}\n${opts.crossSell.acceptUrl}\n` : ''
+  const marketPulseText = opts.marketPulse ? `\n${opts.marketPulse}\n` : ''
 
   const text = `${sampleBannerText}${bodyCopyText}
-${sampleLines ? `\n${sampleLines}\n` : ''}
+${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
 ${crossSellText}
 Manage alerts: ${manageUrl}
@@ -785,6 +796,8 @@ export type AlertDigestSection = {
   dropNoun?: string
   listingsUrl: string
   samples?: AlertDigestSample[]
+  /** Same honest market-context line `buildAlertDigestEmail` takes — see its doc. */
+  marketPulse?: string
 }
 
 /**
@@ -839,11 +852,15 @@ export function buildCombinedAlertDigestEmail(opts: {
     const samplesHtml = samples.length
       ? `<div style="margin:0 0 14px;">${samples.map(sampleCardHtml).join('')}</div>`
       : ''
+    const marketPulseHtml = s.marketPulse
+      ? `<p style="margin:0 0 12px;font-size:11px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:6px 10px;">${escapeHtml(s.marketPulse)}</p>`
+      : ''
     const isLast = i === sections.length - 1
 
     const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
         <h2 style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
         <p style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
+        ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
           <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>
@@ -861,7 +878,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}`
       })
       .join('\n')
-    const text = `${heading} — ${countLabel}\n${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}`
+    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}`
 
     return { html, text }
   })

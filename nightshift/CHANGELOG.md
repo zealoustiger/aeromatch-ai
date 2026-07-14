@@ -2,6 +2,62 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T071129Z — PASS — alert-digest-market-pulse
+- Pages: (email-only — the weekly/daily aircraft alert digest sent by `/api/cron/alert-digest`;
+  no user-facing page route)
+- What: **Every aircraft alert digest email showed a bare "N new listings" count, with no
+  sense of whether that's a hot or cold market.** Added one honest market-context sentence
+  above the listing preview cards — "14 Cessna 172s listed right now, median asking $89k"
+  — for aircraft alerts that resolve to a clean, single make+model family (a curated
+  make/model page alert, or a `/aircraft?make=&model=` search with exactly one model
+  selected). Make-only alerts, uncurated model-slug guesses, and multi-model selections
+  get no line at all, rather than a guessed one. Renders in both the single-alert digest
+  and the combined (2+ due alerts in one email) digest, per-section.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none — last cycle
+  (`alerts-sample-preview`) PASSed. Tier 2 (`[want]`): re-audited BACKLOG.md's open
+  `[P1]`/`[P2]` `[want]` items — the "Save this search" auth-wall reconciliation and the
+  collection-layout mosaic redesign are both still flagged (by many prior cycles) as
+  needing a human product/design call; the owner-leads list needs a human compliance
+  sign-off before any autonomous build; every other `[want]` line found was already
+  struck-through/shipped. None newly actionable. Dropped to tier 3: pulled "Market-pulse
+  line in the aircraft digest email" from the Opus/Fable plan-pass batch (BACKLOG.md
+  "Plan-pass batch — 2026-07-13") — the next open item after the compare-page and
+  sample-preview cycles shipped the two before it. The remaining item in that batch (the
+  Resend bounce webhook) needs a human to register a secret, so this was the cleaner pull.
+- Spec: nightshift/specs/20260714T070143Z-alert-digest-market-pulse.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 289/289 pass (286 pre-existing + 3 new: `email.test.ts` gained
+  cases for marketPulse present/absent in the single digest and per-section independence
+  in the combined digest — reused the existing `buildAlertDigestEmail`/
+  `buildCombinedAlertDigestEmail` test suite's own conventions). Visual cycle (new email
+  content) — read all 4 screenshots (desktop 1280 + mobile 375 on the dev-only
+  `/api/dev/email-preview/alert-digest` and `/api/dev/email-preview/alert-digest-combined`
+  routes, updated with a `marketPulse` fixture): the new line renders as a clean on-brand
+  light-blue strip above the sample cards on both digest templates, wraps correctly at
+  375px with no overlap/overflow, and the combined-digest preview's second section
+  (Cirrus SR22, deliberately left without a `marketPulse` fixture) correctly shows no
+  line — confirms the honesty gate isn't just theoretical, it's visibly absent when unset.
+  Production build served via `next start` (not dev); `qa-smoke.mjs` exit 0 — 4/4 checks,
+  zero console errors, zero horizontal overflow at both viewports. **Live-verified against
+  the real prod DB, read-only** (no writes — this is a pure aggregate read, no signup/post
+  needed): ran the exact `getMarketPulseLine` query logic (family filter + `priceStats`
+  honesty floor) directly against Supabase for three real families — Cessna 172 → 75
+  listed, median $125k; Cirrus SR22 (with the `notModelPattern` SR22T exclusion) → 193
+  listed, median $550k; Robinson R44 → 16 listed, median $397k — all three cleared
+  `MIN_SNAPSHOT_LISTINGS` (8) and produced sane, real numbers. Server started/stopped
+  cleanly; confirmed no orphaned `next-server` process remained after (had to fall back to
+  `ps`+`kill` since `pkill`/`lsof`/`fuser` weren't available in this environment).
+- Screenshots: nightshift/screenshots/alert-digest-market-pulse/
+- Next: the plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13") now has exactly
+  one item left — the Resend hard-bounce auto-pause webhook — which needs a human to
+  register the webhook secret in the Resend dashboard before it can be verified live (the
+  endpoint itself can still be built dark). Once that's pulled or deferred, the next cycle
+  should run the Opus/Fable plan pass to generate a fresh batch (or emit `ABORT — none —
+  plan needed`). Separately, un-shipped from this item's own scope: a make-only market-
+  pulse variant ("142 Cessnas listed right now") and extending the line to
+  `buildPriceDropEmail`/listing-watch sends — both deliberately out of scope this slice.
+
 ## 20260714T064920Z — PASS — alerts-sample-preview
 - Pages: /alerts
 - What: **The `/alerts` landing page asked visitors for their email without ever
