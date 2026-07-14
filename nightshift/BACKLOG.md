@@ -1356,10 +1356,19 @@ no duplicate of shipped work above)._
   `alerts.*` shipped features.
 - **[P1][goal] Market-pulse follow-ups scoped out of `alert-digest-market-pulse`:**
   (a) make-only pulse ("142 Cessnas listed right now, median asking $X") for make-level
-  alerts that today get no line, and (b) the same pulse line in `buildPriceDropEmail` /
-  listing-watch sends — market context is most persuasive exactly when a price drops.
-  Same one-clean-family resolution rules and honesty floor; multi-model/uncurated alerts
-  still get nothing rather than a fabricated aggregate.
+  alerts that today get no line, and ~~(b) the same pulse line in `buildPriceDropEmail` /
+  listing-watch sends~~ ✅ SHIPPED via `price-drop-market-pulse` (2026-07-14) — the
+  single-alert cron send path already computed `marketPulse` for both aircraft
+  (curated make+model) and partnership (make) targets before this cycle, but silently
+  dropped it whenever the send resolved to the rich single-listing `buildPriceDropEmail`
+  template instead of the aggregate digest template. `buildPriceDropEmail` now accepts
+  the same optional `marketPulse` string and renders it with the identical style/honesty
+  convention (HTML + text, omitted entirely when absent) `buildAlertDigestEmail` already
+  established — no new query, no schema change, purely threading an already-computed
+  value through. **Remaining: (a) make-only pulse for un-curated/make-level aircraft
+  alerts** — a separate slice (needs a new `getAircraftMakePulseLine`-style query,
+  mirroring `getPartnershipMarketPulseLine`'s make-level pattern against
+  `aircraft_for_sale` instead of `partnerships`).
 - **[P1][goal] One-click digest feedback — "Was this digest useful? 👍/👎".** Token-authed
   footer links in the digest email hit a tiny GET route that records the vote (reuse the
   existing feedback table/`submitFeedback` plumbing; no new PII — the alert row already

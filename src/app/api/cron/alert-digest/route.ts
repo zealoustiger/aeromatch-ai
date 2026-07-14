@@ -1412,6 +1412,7 @@ export async function GET(req: NextRequest) {
             periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
             dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
             shareType: target.type === 'partnership' ? bestDrop.shareType : undefined,
+            marketPulse: marketPulse ?? undefined,
           })
         : buildAlertDigestEmail({
             context: alert.context ?? null,

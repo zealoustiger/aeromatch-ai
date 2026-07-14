@@ -34,6 +34,7 @@ export async function GET(request: Request) {
           listingUrl: 'https://clubhanger.com/aircraft/listing/preview',
           manageUrl: 'https://clubhanger.com/alerts/manage',
           unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=preview',
+          marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
         }
   )
 

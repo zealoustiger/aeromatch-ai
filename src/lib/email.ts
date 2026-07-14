@@ -423,6 +423,12 @@ export function buildPriceDropEmail(opts: {
   /** Formatted share label (e.g. "1/4 Share") — partnership drops only, shown
    *  under the title same as `AlertDigestSample.shareType` on digest cards. */
   shareType?: string | null
+  /** Honest one-line market-context sentence for the alert's family — "14
+   *  Cessna 172s listed right now, median asking $89k" (see
+   *  `getMarketPulseLine`/`getPartnershipMarketPulseLine`). Same convention as
+   *  `buildAlertDigestEmail`'s `marketPulse`: omitted whenever the caller
+   *  couldn't compute a trustworthy one — never a fabricated number. */
+  marketPulse?: string
 }): { subject: string; html: string; text: string } {
   const pct = Math.round(((opts.previousPrice - opts.askingPrice) / opts.previousPrice) * 100)
   const oldPrice = formatUsd(opts.previousPrice)
@@ -434,6 +440,9 @@ export function buildPriceDropEmail(opts: {
 
   const photo = opts.photoUrl
     ? `<img src="${escapeAttr(opts.photoUrl)}" alt="${escapeAttr(opts.title)}" width="472" style="display:block;width:100%;max-width:472px;height:auto;border-radius:12px;margin:0 0 18px;" />`
+    : ''
+  const marketPulseHtml = opts.marketPulse
+    ? `<p style="margin:0 0 16px;font-size:12px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;">${escapeHtml(opts.marketPulse)}</p>`
     : ''
 
   const html = `<!doctype html>
@@ -454,6 +463,7 @@ export function buildPriceDropEmail(opts: {
           <span style="color:#94a3b8;text-decoration:line-through;font-size:15px;margin-right:8px;">${oldPrice}</span>
           <span style="color:#0f172a;font-weight:700;font-size:22px;">${newPrice}</span>
         </p>
+        ${marketPulseHtml}
         <p style="margin:0;">
           <a href="${escapeAttr(listingUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
@@ -473,8 +483,9 @@ export function buildPriceDropEmail(opts: {
 
   const periodLabel = opts.periodLabel ?? 'this week'
   const titleLine = opts.shareType ? `${opts.title} (${opts.shareType})` : opts.title
+  const marketPulseText = opts.marketPulse ? `\n${opts.marketPulse}\n` : ''
   const text = `${titleLine} dropped ${pct}% ${periodLabel} — now ${newPrice} (was ${oldPrice})
-
+${marketPulseText}
 View listing: ${listingUrl}
 
 Manage alerts: ${manageUrl}

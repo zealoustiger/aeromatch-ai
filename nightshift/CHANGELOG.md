@@ -2,6 +2,62 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T082508Z — PASS — price-drop-market-pulse
+- Pages: (email-only — the single-listing price-drop alert email sent by
+  `/api/cron/alert-digest`; no user-facing page route. Also touched the dev-only
+  `/api/dev/email-preview/price-drop` preview route.)
+- What: **The rich single-listing price-drop email ("your Cessna 172 just dropped
+  10%") now shows the same honest market-pulse line the aggregate digest email
+  already had — "14 Cessna 172s listed right now, median asking $89k" — right above
+  the "View listing" button.** The cron's single-alert send path was already computing
+  this line (for curated aircraft make+model alerts and for partnership make alerts)
+  before this cycle, but silently threw it away whenever the send resolved to the
+  rich single-listing template instead of the aggregate one — a real subscriber
+  seeing a price drop got LESS market context than one seeing a plain new-listing
+  digest, exactly backwards from GOAL.md's "market context is most persuasive when a
+  price drops." `buildPriceDropEmail` now accepts the same `marketPulse` string
+  `buildAlertDigestEmail` does, rendered with the identical style/honesty convention
+  in both HTML and text (omitted entirely, never fabricated, when the caller couldn't
+  compute a trustworthy one).
+- Goal: `[goal]` alert experience — part (b) of the "Market-pulse follow-ups" item in
+  the Opus/Fable "Plan-pass batch — 2026-07-14" queue (this cycle's "Next" note named
+  it first of the remaining items). Tier 1 (`[bug]`): none — last cycle
+  (`partnership-digest-market-pulse`) PASSed, no unstruck `[bug]` entries found in
+  BACKLOG.md. Tier 2 (`[want]`): re-confirmed empty — every open `[P1]`/`[P2][want]`
+  item (the "Save this search" auth-wall reconciliation, the collection-layout mosaic
+  redesign, the owner-leads dataset, the dynamic-location seed personas, the
+  bot-protected-scraper items) remains explicitly flagged needing a human
+  product/design/legal call, is bot-protection-blocked, or has no live effect — none
+  is a clean agent-buildable slice. Dropped to tier 3: pulled part (b) of the
+  "Market-pulse follow-ups" item, the smaller/cleaner of its two sub-slices (no new
+  query — the value was already computed and just needed threading through), leaving
+  part (a) — a new make-only pulse line for un-curated aircraft alerts — open for a
+  future cycle.
+- Spec: nightshift/specs/20260714T082508Z-price-drop-market-pulse.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 300/300 pass (298 prior + 2 new: `buildPriceDropEmail` renders
+  `marketPulse` in both HTML and text when present, and omits it entirely — no blank
+  line, no fabricated text — when absent, mirroring the existing digest-level
+  coverage). Non-visual cycle (email-template/backend digest-computation only, no page
+  markup changed) — per RUNBOOK, screenshots not read into context, the smoke gate is
+  the bar. Production build served via `next start` (not dev) on port 3000; curled the
+  updated `/api/dev/email-preview/price-drop` route directly against the running
+  production server and confirmed the fixture market-pulse sentence ("14 Cessna 172s
+  listed right now, median asking $89k.") renders in the live HTML output.
+  `qa-smoke.mjs --slug price-drop-market-pulse /alerts/manage /aircraft` exit 0 — 4/4
+  checks (2 paths × 2 viewports, chosen as the two pages most adjacent to alert
+  management/browsing even though neither page's markup changed), zero console
+  errors, zero horizontal overflow. No schema change, no new query, no prod DB rows
+  touched (pure template/plumbing change against an already-computed in-memory
+  value). Server stopped cleanly after.
+- Screenshots: nightshift/screenshots/price-drop-market-pulse/
+- Next: two items remain in the Opus/Fable "Plan-pass batch — 2026-07-14" queue —
+  part (a) of this same market-pulse item (a new make-only pulse line for un-curated
+  aircraft alerts, needs a new `getAircraftMakePulseLine`-style query mirroring
+  `getPartnershipMarketPulseLine`'s make-level pattern), one-click digest feedback
+  thumbs, and the `/admin/alerts` scoreboard — next cycle should pull the next one.
+
 ## 20260714T081723Z — PASS — partnership-digest-market-pulse
 - Pages: (email-only — the weekly/daily partnership alert digest sent by
   `/api/cron/alert-digest`; no user-facing page route)
