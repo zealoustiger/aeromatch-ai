@@ -2,6 +2,51 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T092605Z — PASS — alert-spam-complaint-unsubscribe
+- Pages: (backend/webhook — no user-facing page; affects `/alerts/manage` and every future
+  alert digest send)
+- What: **The Resend webhook now auto-unsubscribes an address the moment it reports the
+  address hit "spam"** — not just hard email bounces (already handled). A spam complaint
+  means the recipient told their mail provider they didn't want the email; continuing to
+  send after one hurts deliverability for every other subscriber, so this respects it
+  immediately and permanently (no auto-resume, unlike a bounce which may be a temporary
+  mailbox issue).
+- Goal: alert-experience — deliverability/never-spam (GOAL.md's "never spam" guardrail on
+  honest alert content). Closes the `[P1][goal]` "Auto-unsubscribe on spam complaints" item
+  from the plan-pass #2 batch: new `extractComplainedEmails()` in `resendWebhook.ts` (mirrors
+  the existing `extractHardBouncedEmails`) and `unsubscribeAlertsForComplainedEmail()` in
+  `alertBounce.ts` (mirrors `pauseAlertsForBouncedEmail`, but sets the terminal
+  `status='unsubscribed'` instead of `'bounced'`) are wired into `/api/webhooks/resend`
+  alongside the existing bounce handling, in the same request. No schema change —
+  `alerts.status` is already free-text and `/alerts/manage` + the digest cron already treat
+  `'unsubscribed'` correctly (the one-click unsubscribe link already uses this exact status).
+  Signature-verification block untouched. Ships dark (204, no-op) until a human sets
+  `RESEND_WEBHOOK_SECRET` and registers the endpoint for `email.complained` in the Resend
+  dashboard — same precedent as the pre-existing bounce handler.
+- Spec: nightshift/specs/20260714T092605Z-alert-spam-complaint-unsubscribe.md
+- Verdict: PASS. `npx tsc --noEmit` and `npx next build` both clean. Unit tests
+  (`node --experimental-strip-types --test src/lib/resendWebhook.test.ts`) — 12/12 pass (6
+  new: complained-email extraction happy path, ignores unrelated event types, defensive
+  against malformed/partial payloads). **Live-verified** the dark-mode 204 response (POSTed
+  a real `email.complained` payload to the running production build's
+  `/api/webhooks/resend` with no `RESEND_WEBHOOK_SECRET` configured, confirmed 204) and the
+  exact DB update the helper runs, end-to-end against the real prod Supabase (shared across
+  local/staging/prod): seeded one throwaway `@example.com` alert (`status='confirmed'`) via
+  the service role, ran the identical `.update({status:'unsubscribed'}).eq('email',
+  ...).in('status', [...])` query, confirmed the row flipped to `unsubscribed`, then deleted
+  it (verified 0 rows remain). Non-visual/backend cycle — smoke gate only, screenshots not
+  read into context per RUNBOOK. `qa-smoke.mjs` 4/4 pass across `/alerts/manage`, `/aircraft`
+  (HTTP 200, zero app-origin console errors, zero horizontal overflow, both viewports).
+  **Found + cleaned up a leftover `next-server` process from an earlier cycle** still bound
+  to port 3000 (stale, blocking this cycle's own `next start` and masking the smoke run
+  behind an old build with unrelated 500s) — killed it before starting this cycle's server;
+  my own server was stopped cleanly at the end (verified via `ps`).
+- Screenshots: nightshift/screenshots/alert-spam-complaint-unsubscribe/
+- Next: the sibling `[P1][goal]` items from the same plan-pass batch — persisting
+  `alerts.source` on every insert path, impression events for the deferred capture
+  affordances (card bells + filter chip), and per-placement conversion ranking on
+  `/admin/alerts` (blocked on the `alerts.source` column landing first).
+
 ## 20260714T090858Z — PASS — digest-feedback-vote
 - Pages: /alerts/status, /alerts/manage (linked from the new status states)
 - What: **Every alert digest email now ends with "Was this digest useful? 👍 👎"** — a

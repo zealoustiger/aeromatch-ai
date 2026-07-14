@@ -1433,15 +1433,18 @@ closing the measurement loop, deliverability, and email/management polish. (The
   the `digest-cross-sell` route (`digest_cross_sell`). Improves measurement on every existing
   capture surface; adds no new capture point (`alert_subscribed` payload unchanged — it
   already carries `source`).
-- **[P1][goal] Auto-unsubscribe on spam complaints — `email.complained` in the Resend
-  webhook.** A spam complaint is a stronger "never email me" signal than a hard bounce, and
-  continuing to send after one actively damages domain reputation for every other subscriber.
-  Extend `/api/webhooks/resend` (do NOT touch its signature-verification block) to handle
-  verified `email.complained` events by setting every non-unsubscribed `alerts` row for that
-  address to `status='unsubscribed'` (terminal — unlike `bounced`, never auto-resumable;
-  respect their complaint literally). `/alerts/manage` should render that state with the
-  existing unsubscribed treatment. Ships dark until `RESEND_WEBHOOK_SECRET` is set, same as
-  the bounce handler. Improves deliverability/never-spam; no new capture point.
+~~- **[P1][goal] Auto-unsubscribe on spam complaints — `email.complained` in the Resend
+  webhook.**~~ ✅ SHIPPED via `alert-spam-complaint-unsubscribe` (2026-07-14) The webhook now
+  handles `email.complained` alongside the existing `email.bounced` handling: new
+  `extractComplainedEmails()` (mirrors `extractHardBouncedEmails`) + new
+  `unsubscribeAlertsForComplainedEmail()` in `alertBounce.ts` set every non-unsubscribed
+  `alerts` row for that address to `status='unsubscribed'` (terminal, reusing the exact
+  status the one-click unsubscribe link already sets — `/alerts/manage`'s existing
+  `.neq('status', 'unsubscribed')` filter and the digest cron's `status='confirmed'` query
+  already treat it correctly, no further code change needed). Signature-verification block
+  untouched. Ships dark until `RESEND_WEBHOOK_SECRET` is set, same as the bounce handler —
+  live-verified the 204 dark-mode response plus the exact DB update query end-to-end against
+  a throwaway `@example.com` alert row (seeded + deleted via service role).
 - **[P1][goal] Impression events for the deferred capture affordances (card bells + filter
   chip).** `alert_capture_viewed` gives per-placement denominators only for always-mounted
   `AlertSignup` boxes — `WatchAlertButton`'s bell (sources `card_watch` /
