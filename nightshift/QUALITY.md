@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-14T11:01:37Z — home-recently-viewed-alert-banner — score 4/5
+- Strengths: Correct and disciplined — initial `hidden` state means SSR/first render emits the fallback, so fresh visitors keep the original band with no hydration mismatch, and the personalized/generic paths never stack; thoughtfully moved `text-center` from the outer container onto the fallback's inner `<div>` so the left-aligned banner isn't force-centered; `fallback` prop added with a clear doc comment and no touch to the out-of-scope derive/match-count/dismiss internals.
+- Weaknesses / risks: Async `getAlertMatchCountForSourcePath` means a returning visitor briefly sees the generic band, then it swaps to the personalized banner (a small flash the spec's "byte-for-byte" wording glosses over); the personalized state also drops the section's `<h2>` (uses a `<p>`), a minor a11y/heading-outline nit — both immaterial.
+- Follow-up: none
+
 ## 2026-07-14T09:05:43Z — admin-alerts-scoreboard — score 4/5
 - Strengths: Excellent judgment — audited the backlog's `source`-column assumption against the live DB, found it false, and re-scoped honestly (page-family buckets, not fabricated per-widget numbers); page mirrors `/admin/monetization`'s bar-list/computed-at/empty-state conventions exactly; pure `classifySourcePath` split into its own DB-free unit-tested module (precedent: alertFrequency/alertEditCriteria) with clear comments on the active+confirmed dual-vocabulary and confirmed_at→created_at fallback.
 - Weaknesses / risks: `getAlertScoreboard` selects all `alerts` rows unbounded — Supabase's implicit 1000-row PostgREST cap would silently undercount a page whose whole purpose is honest totals (immaterial at current volume, latent at scale).
