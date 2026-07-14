@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T064920Z — PASS — alerts-sample-preview
+- Pages: /alerts
+- What: **The `/alerts` landing page asked visitors for their email without ever
+  showing what they'd actually get.** Added a "What you'll get" preview strip
+  right under the interest chips — up to 3 real, currently-live matching
+  listings (photo, title, price, location) for whichever chip is selected, so
+  a visitor sees genuine proof before handing over an email. Picking a
+  different chip (Cessna 172, Partnerships in California, etc.) swaps the
+  preview to that chip's own real matches. Honesty-gated: a chip with 0 live
+  matches right now shows no preview section at all — never a fake sample.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none — last cycle
+  (`compare-page-alert-capture`) PASSed. Tier 2 (`[want]`): re-checked
+  BACKLOG.md's open `[P1][want]` items — the "Save this search" auth-wall
+  reconciliation and the collection-layout mosaic redesign are both still
+  flagged (by several recent cycles) as needing a human product/design call;
+  none newly actionable. Dropped to tier 3: pulled "Show a real sample digest
+  on the `/alerts` landing page" from the Opus/Fable plan-pass batch
+  (BACKLOG.md "Plan-pass batch — 2026-07-13") — the next open item in that
+  list. Reused the exact machinery already built for the confirm-email
+  instant-first-digest path (`getAlertDigestPreview`) rather than inventing a
+  new preview computation, per the plan item's own suggestion.
+- Spec: nightshift/specs/20260714T064920Z-alerts-sample-preview.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build`
+  exit 0 (clean build, all routes, including a fix along the way: exporting a
+  plain array from a `'use client'` file broke the server-side build with
+  `TypeError: ... .map is not a function` — moved the shared base-interest
+  list into a new plain module, `src/lib/alertsLandingInterests.ts`, importable
+  from both the server page and the client component). Full unit suite `node
+  --experimental-strip-types --test src/lib/*.test.ts` — 286/286 pass (no new
+  test — the change composes two already-shipped, already-tested primitives:
+  `getAlertDigestPreview` and the existing `AlertsLanding` chip-selection
+  state). Visual cycle (new UI section) — read both screenshots (desktop 1280
+  + mobile 375): 3 clean listing cards render under the chips on desktop, in a
+  single column at 375px, no overlap, no layout shift, on-brand `.ch-card`
+  styling matching every other card site-wide. Production build served via
+  `next start` (not dev); `qa-smoke.mjs` exit 0 — 2/2 checks, zero console
+  errors, zero horizontal overflow at both viewports. **Verified chip-switching
+  live** (Playwright, real click, not a page reload): default chip ("All
+  aircraft for sale") showed Cessna 170/2011 Cessna/Cessna 180; clicking the
+  "Cessna 172" chip swapped the preview to 3 different, genuinely Cessna-172
+  samples (1958/2016/2004 Cessna 172) with zero console errors — confirms the
+  preview is live per-chip data, not a static/stale render. No prod DB writes
+  this cycle (pure read-only preview feature, no new capture point or schema).
+- Screenshots: nightshift/screenshots/alerts-sample-preview/
+- Next: the plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13") has 2
+  more open `[P1][goal]` items — a market-pulse line in the digest email, and
+  the Resend bounce-webhook (needs a human to register the secret). The user
+  compare tray (`/compare`) alert capture noted as a follow-up by the prior
+  cycle is also still open.
+
 ## 20260714T063731Z — PASS — compare-page-alert-capture
 - Pages: /aircraft/compare/[comparison] (e.g. /aircraft/compare/cessna-172-vs-cirrus-sr22)
 - What: **The curated "X vs Y" aircraft comparison pages — a visitor actively

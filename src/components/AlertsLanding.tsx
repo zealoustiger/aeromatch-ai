@@ -1,9 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Bell, Search, TrendingDown, MailCheck } from 'lucide-react'
 import AlertSignup from '@/components/AlertSignup'
+import { formatPrice } from '@/lib/utils'
+import type { AlertDigestSample } from '@/lib/email'
+import { BASE_INTERESTS, type BaseInterest } from '@/lib/alertsLandingInterests'
 
 /**
  * /alerts landing — the demand-capture surface the nav "Get alerts" CTA points at.
@@ -16,17 +20,7 @@ import AlertSignup from '@/components/AlertSignup'
  * the human label used in the confirmation copy. Selecting a chip remounts the
  * AlertSignup (keyed on sourcePath) so its state resets cleanly.
  */
-interface Interest {
-  label: string
-  /** Human label for the email copy; '' → general new-listing copy. */
-  context: string
-  /** Matchable search path (must start with /aircraft or /partnerships). */
-  sourcePath: string
-  noun: 'aircraft' | 'partnership' | 'seeker'
-  /** `alert_subscribed` placement tag — distinguishes the honesty-gated "popular"
-   *  chips (server-verified to have live matches) from the generic catch-all ones. */
-  source: string
-}
+type Interest = BaseInterest
 
 /** A curated popular-alert candidate the server has confirmed has ≥1 live match
  *  right now (see `src/app/alerts/page.tsx`'s `getPopularChips`). Never rendered
@@ -40,19 +34,18 @@ export interface PopularChip {
   count: number
 }
 
-const BASE_INTERESTS: Interest[] = [
-  { label: 'All aircraft for sale', context: '', sourcePath: '/aircraft', noun: 'aircraft', source: 'alerts_landing' },
-  { label: 'Partnership shares', context: '', sourcePath: '/partnerships', noun: 'partnership', source: 'alerts_landing' },
-  { label: 'Pilots seeking a partnership', context: '', sourcePath: '/partnerships/seeking', noun: 'seeker', source: 'alerts_landing' },
-]
-
 interface Props {
   /** Server-verified popular alert chips (see `page.tsx`) — honesty-gated, may be
    *  empty (e.g. on a DB error) in which case only the catch-all chips render. */
   popularChips?: PopularChip[]
+  /** Real, live-data sample listings per chip source path (see `page.tsx`'s
+   *  `getAlertDigestPreview` calls) — "what you'll get" proof shown for the
+   *  active chip. A path with no entry (0 live matches, or an unrecognized
+   *  path) renders no preview at all — never a fake/placeholder sample. */
+  samplesByPath?: Record<string, AlertDigestSample[]>
 }
 
-export default function AlertsLanding({ popularChips = [] }: Props) {
+export default function AlertsLanding({ popularChips = [], samplesByPath = {} }: Props) {
   const interests: Interest[] = [
     BASE_INTERESTS[0],
     ...popularChips.map((c) => ({
@@ -66,6 +59,7 @@ export default function AlertsLanding({ popularChips = [] }: Props) {
   ]
   const [sel, setSel] = useState(0)
   const active = interests[sel]
+  const activeSamples = samplesByPath[active.sourcePath] ?? []
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:py-16">
@@ -104,6 +98,35 @@ export default function AlertsLanding({ popularChips = [] }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Live sample preview — proof of what the alert email actually contains,
+          shown before asking for an email. Honesty-gated: a chip with 0 live
+          matches (not in samplesByPath) renders nothing here at all. */}
+      {activeSamples.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2 text-sm font-medium text-slate-500">
+            What you&apos;ll get — real {active.label.toLowerCase()} listings right now:
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {activeSamples.map((s) => (
+              <div key={s.url} className="ch-card flex items-center gap-3 bg-white p-2 sm:flex-col sm:items-stretch sm:p-3">
+                <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-24 sm:w-full">
+                  {s.photoUrl && (
+                    <Image src={s.photoUrl} alt={s.title} fill sizes="200px" className="object-cover" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-900">{s.title}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {[s.lookingFor ?? s.shareType, s.location].filter(Boolean).join(' · ')}
+                  </p>
+                  {s.price != null && <p className="text-sm font-semibold text-sky-700">{formatPrice(s.price)}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Email capture — remounts per selection so its submit state resets */}
       <AlertSignup key={active.sourcePath} context={active.context} sourcePath={active.sourcePath} noun={active.noun} source={active.source} />
