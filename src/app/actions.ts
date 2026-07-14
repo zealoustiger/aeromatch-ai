@@ -32,6 +32,7 @@ import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
 import {
   parseEditableAlertTarget,
   buildAlertCriteriaUpdate,
+  targetToFields,
   type AlertCriteriaFields,
   type EditableAlertTarget,
 } from '@/lib/alertEditCriteria'
@@ -1583,6 +1584,28 @@ export async function updateAlertCriteria(id: string, fields: AlertCriteriaField
   }
 
   const { sourcePath, context } = buildAlertCriteriaUpdate(target.type, owned.alert.source_path, fields)
+
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ source_path: sourcePath, context })
+    .eq('id', id)
+  if (error) return { error: 'Failed to update alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Removes ONE hidden (form-unexposed) criteria param from an alert — e.g. a
+// `min_year`/`avionics`/`grade` set from a more advanced search originally, shown as a
+// removable chip on the edit form. Same ownership proof as `updateAlertCriteria`; the
+// exposed fields round-trip unchanged (via `targetToFields`) so only `key` is dropped.
+export async function removeAlertCriteriaParam(id: string, key: string, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
+  if ('error' in owned) return { error: owned.error }
+
+  const target = parseEditableAlertTarget(owned.alert.source_path)
+  if (!target) return { error: "This alert's criteria can't be edited here." }
+
+  const { sourcePath, context } = buildAlertCriteriaUpdate(target.type, owned.alert.source_path, targetToFields(target), [key])
 
   const { error } = await owned.admin
     .from('alerts')

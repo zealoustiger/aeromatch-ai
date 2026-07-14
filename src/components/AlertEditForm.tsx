@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Pencil, CheckCircle2, X } from 'lucide-react'
-import { updateAlertCriteria } from '@/app/actions'
-import type { EditableAlertTarget } from '@/lib/alertEditCriteria'
+import { updateAlertCriteria, removeAlertCriteriaParam } from '@/app/actions'
+import { getHiddenCriteria, type EditableAlertTarget, type HiddenCriterion } from '@/lib/alertEditCriteria'
 import AlertActions from '@/components/AlertActions'
 
 const US_STATES = [
@@ -49,6 +49,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
   const [maxPrice, setMaxPrice] = useState('')
   const [airport, setAirport] = useState('')
   const [dealOnly, setDealOnly] = useState(false)
+  const [hiddenCriteria, setHiddenCriteria] = useState<HiddenCriterion[]>([])
 
   function openEdit() {
     if (!target) return
@@ -62,8 +63,22 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
     setMaxPrice('maxPrice' in target ? target.maxPrice : '')
     setAirport('airport' in target ? target.airport : '')
     setDealOnly('dealOnly' in target ? target.dealOnly : false)
+    setHiddenCriteria(getHiddenCriteria(target.type, sourcePath))
     setError(null)
     setOpen(true)
+  }
+
+  function handleRemoveHidden(key: string) {
+    if (!target) return
+    startTransition(async () => {
+      const result = await removeAlertCriteriaParam(id, key, token)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setHiddenCriteria((prev) => prev.filter((c) => c.key !== key))
+      setSaved(true)
+    })
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -208,6 +223,32 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
               />
               Only show good deals
             </label>
+          ) : null}
+
+          {hiddenCriteria.length > 0 ? (
+            <div className="mt-3">
+              <p className={labelClass}>Also applies (from advanced search)</p>
+              <div className="flex flex-wrap gap-1.5">
+                {hiddenCriteria.map((c) => (
+                  <span
+                    key={c.key}
+                    className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2.5 pr-1.5 text-xs font-medium text-slate-600"
+                  >
+                    {c.label}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveHidden(c.key)}
+                      disabled={isPending}
+                      title={`Remove "${c.label}"`}
+                      aria-label={`Remove "${c.label}"`}
+                      className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-50"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
           ) : null}
 
           {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
