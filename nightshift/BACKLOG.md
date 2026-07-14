@@ -1602,14 +1602,47 @@ instant pillar re-scoped to a buildable shape, and management/email polish._
   every prior `alerts.*` DDL. Improves: GOAL.md's digest-vs-instant pillar. No new
   capture point. (Supersedes the blocked item's ingest-hook approach; strike both
   together when shipped.)
-- **[P2][goal] Show (and allow removing) an alert's hidden advanced criteria on the edit
-  form.** `buildAlertCriteriaUpdate` deliberately preserves params the form doesn't
-  expose (`min_year`/`max_tt`/`avionics`/`grade`/`q`…), but `AlertEditForm` never shows
-  them — a subscriber editing their "glass panel, under 2,000 hours Cessna" alert can't
-  see those criteria still apply, or remove one. Render the extra params as labeled chips
-  on the edit form (reuse `describeAircraftFilters`' naming) with a per-chip ✕ remove; no
-  schema change. Improves: `/alerts/manage` edit transparency (GOAL.md's
-  view/EDIT/pause/delete). No new capture point.
+  **⚠️ Re-audited 2026-07-14 (`alert-edit-hidden-criteria` cycle's scoping pass) —
+  deployment risk, not re-attempted this cycle:** `vercel.json` carries exactly 2 cron
+  entries, both `0 8 * * *` (once daily), added in two separate prior cycles — the
+  pattern strongly matches a Vercel **Hobby-tier** project, which restricts cron
+  schedules to once-per-day (sub-hourly/15-30-min schedules need a Pro plan). This
+  sandbox has no Vercel API token to confirm the actual plan tier, and a failed/rejected
+  cron deploy would break the shared `staging` auto-deploy for every feature, not just
+  this one — too high a blast radius to attempt blind. Separately, `alertFrequency.ts`'s
+  own header comment and the `alerts_frequency` migration's SQL comment both already
+  document a **deliberate prior rejection** of "instant" for exactly this
+  architecture-can't-do-it reason (GOAL.md's honesty gate). **Needs a human call**
+  (confirm/upgrade the Vercel plan, or accept "instant" stays unbuilt) before a future
+  cycle attempts the `/api/cron/alert-instant` route + `vercel.json` change described
+  above. Not blocking tier-3 goal work — dropped to the next open `[P1]`/`[P2]` instead.
+- ~~**[P2][goal] Show (and allow removing) an alert's hidden advanced criteria on the edit
+  form.**~~ ✅ SHIPPED via `alert-edit-hidden-criteria` (2026-07-14) `buildAlertCriteriaUpdate`
+  deliberately preserves params the form doesn't expose (`min_year`/`max_tt`/`avionics`/
+  `grade`/`q`…), but `AlertEditForm` never showed them — a subscriber editing their "glass
+  panel, under 2,000 hours Cessna" alert couldn't see those criteria still applied, or
+  remove one. New `getHiddenCriteria(type, sourcePath)` in `alertEditCriteria.ts` computes
+  every query param NOT in that alert type's form-exposed set, with readable per-key labels
+  (reusing `describeAircraftFilters`' naming conventions) and an honest `"key: value"`
+  fallback for anything unrecognized (never silently hides a real criterion). Renders as
+  removable chips ("ALSO APPLIES (FROM ADVANCED SEARCH)") below the visible fields; each ✕
+  calls a new `removeAlertCriteriaParam` server action. **Also covers partnership alerts'
+  `model` param** — the exact currently-live gap left by this cycle's own predecessor
+  (`partnership-alert-model-match`, which added model matching but not model editability).
+  Live-verified end-to-end against two throwaway `@example.com` rows (seeded + deleted via
+  service role): an aircraft alert's 5 hidden params (min_year/max_tt/avionics/grade/q) all
+  rendered correctly and removing one (`max_tt`) left every other param — visible-field
+  values included — byte-for-byte unchanged in the DB; a partnership alert's hidden `model`
+  chip rendered correctly too. **No permanent unit test added** — `alertEditCriteria.ts`
+  already (pre-existing, not from this change) imports `describeAircraftFilters`/
+  `STATE_NAMES` from `seo.ts` via the `@/lib/...` alias, which this codebase's plain
+  `node --experimental-strip-types --test` runner can't resolve (Node's ESM loader needs
+  explicit extensions Next's bundler doesn't require; explicit `.ts` extensions in turn
+  fail `tsc` without `allowImportingTsExtensions`) — the whole file was already untestable
+  this way before this cycle, same class of limitation as `parseSourcePath` in a prior
+  cycle; verified instead via `npx tsx` against 9 real query-string shapes (all exposed/
+  hidden/fallback/removeKeys/no-op-on-exposed-key cases), matching that same prior
+  precedent. No schema change.
 - **[P2][goal] One-time "widen your alert?" email for never-matched alerts.** A confirmed
   alert matching 0 listings never sends anything (the digest only fires on matches) —
   silent churn with no feedback loop, even though `/alerts/manage` already computes

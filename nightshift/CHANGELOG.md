@@ -2,6 +2,99 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T121159Z — PASS — alert-edit-hidden-criteria
+- Pages: /alerts/manage
+- What: **The "Edit" panel on your alerts page now shows every criterion your alert
+  actually matches on — not just the make/model/state/price fields it has boxes for.**
+  If an alert was set from a more advanced search (glass panel, under 2,000 hours,
+  grade A or B, a keyword, a specific partnership model), that extra criteria was
+  silently still being applied every time the alert fired, but the edit form had no way
+  to show it or remove it — you'd see "Cessna 172" and have no idea the alert also
+  required glass panel avionics. Now those extra criteria render as labeled, removable
+  chips ("Also applies (from advanced search)") right in the edit panel.
+- Goal: `[goal]` tier 3 — alert experience / `/alerts/manage` edit transparency
+  (GOAL.md's view/EDIT/pause/delete pillar). Tier 1 (`[bug]`): none open, no unstruck
+  `[bug]` entries in BACKLOG.md, prior cycle (`partnership-filled-landing`) PASSed.
+  Tier 2 (`[want]`): re-confirmed empty — the two open `[P1][want]` items ("Save this
+  search" auth-wall reconciliation, collection-layout mosaic redesign) both remain
+  explicitly flagged "needs a human product call/mock"; the ingestion `[P1][want]`s
+  (Trade-A-Plane, Bay-Area coverage denominator) remain audited-and-blocked. Dropped to
+  tier 3. The top open `[P1][goal]` was "Near-instant new-listing alerts" — **investigated
+  and deliberately deferred this cycle, not built:** `vercel.json` carries exactly 2 cron
+  entries, both once-daily, added across two separate prior cycles — a pattern strongly
+  consistent with a Vercel **Hobby-tier** project, which restricts crons to once-per-day
+  (a 15-30-min "near-instant" schedule needs Pro). This sandbox has no Vercel API token to
+  confirm the actual plan, and a rejected/failed cron deploy would break the shared
+  `staging` auto-deploy for every feature, not just this one — too high a blast radius to
+  attempt blind. `alertFrequency.ts`'s own header comment and the `alerts_frequency`
+  migration's SQL comment already document a *deliberate prior rejection* of "instant" for
+  exactly this reason (GOAL.md's honesty gate: never promise a cadence the architecture
+  can't deliver). Documented the risk in BACKLOG.md and flagged it for a human call
+  (confirm/upgrade the plan) rather than risking the deploy pipeline. Picked the next open
+  item instead — the `[P2][goal]` hidden-criteria item — which had no such risk.
+- Spec: nightshift/specs/20260714T121159Z-alert-edit-hidden-criteria.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  New `getHiddenCriteria(type, sourcePath)` in `src/lib/alertEditCriteria.ts` computes
+  every query param on `source_path` that isn't in that alert type's form-exposed set
+  (aircraft: make/model/state/min_price/max_price/deal; partnership: make/state/airport;
+  seeker: make/model), with readable per-key labels reusing `describeAircraftFilters`'
+  naming conventions (`min_year` → "2010 or newer", `max_tt` → "under 2,000 hours",
+  `avionics`/`grade` decoded via the same option lists `describeAircraftFilters` uses,
+  `q` → `matching "..."`) and an honest `"key: value"` fallback for anything unrecognized
+  — never silently hides a real criterion (GOAL.md honesty gate). **Also covers
+  partnership alerts' `model` param** — the exact currently-live gap left by this cycle's
+  own predecessor (`partnership-alert-model-match`, which added model *matching* but not
+  model *editability*), confirmed live (see below). `buildAlertCriteriaUpdate` gained an
+  optional `removeKeys?: string[]` param (strips those keys from the existing querystring
+  before the exposed-field `set()` calls; a caller passing an exposed key is a safe no-op
+  since the field-set calls round-trip it back unchanged — verified via `npx tsx`). New
+  `removeAlertCriteriaParam(id, key, token?)` server action in `actions.ts` (same
+  ownership proof as `updateAlertCriteria`) round-trips the target's own unchanged exposed
+  fields via new `targetToFields()` while removing just the one hidden key.
+  `AlertEditForm.tsx` renders the hidden criteria as a chip row below the existing fields;
+  each ✕ calls the new action and optimistically removes itself from local state, no page
+  reload. **No permanent unit test added:** `alertEditCriteria.ts` already (pre-existing,
+  not from this change) imports `describeAircraftFilters`/`STATE_NAMES` from `seo.ts` via
+  the `@/lib/...` alias, which this codebase's plain `node --experimental-strip-types
+  --test` runner can't resolve (Node's ESM loader needs explicit file extensions Next's
+  bundler doesn't require; adding explicit `.ts` extensions in the production file in turn
+  fails `tsc --noEmit` without `allowImportingTsExtensions`, which isn't set) — the whole
+  file was already untestable this way before this cycle (no `alertEditCriteria.test.ts`
+  ever existed), same class of limitation a prior cycle hit with `parseSourcePath`.
+  Verified instead via `npx tsx` against 9 real query-string shapes (no-hidden-params →
+  empty array; all 5 known aircraft params decode correctly; exposed params never leak
+  into the hidden list; partnership `model` surfaces; seeker has nothing hidden; an
+  unrecognized param falls back honestly; `removeKeys` strips exactly the target key and
+  preserves everything else; removing an exposed key is a no-op; `targetToFields`
+  round-trips both target shapes) — same tsx-verification precedent an earlier cycle
+  established for this same file's `parseSourcePath`-adjacent code. Full existing unit
+  suite still green: `for f in src/lib/*.test.ts; do node --experimental-strip-types
+  --test "$f"; done` — 0 failures across all 31 test files (unchanged by this cycle).
+  **Live-verified end-to-end against two throwaway `@example.com` rows** (seeded + deleted
+  via service-role key, real running server, Playwright driving real clicks): (1) an
+  aircraft alert with `min_year`/`max_tt`/`avionics`/`grade`/`q` all set — opening Edit
+  showed all 5 labeled chips exactly as designed; clicking the "under 2,000 hours" chip's
+  ✕ removed only `max_tt` from the DB row's `source_path`, left `make`/`model`/`state`/
+  `min_year`/`avionics`/`grade`/`q` byte-for-byte unchanged, and re-derived `context`
+  correctly — confirmed via a direct post-click DB read, not just the UI. (2) A
+  partnership alert with a `model` param (not exposed by the partnership edit form)
+  correctly showed a "model 172S Skyhawk" chip. Both rows deleted immediately after (0
+  remain). Visual cycle (new chip UI) — screenshots read and confirm correct rendering at
+  both viewports: desktop shows the 5 chips cleanly wrapped under "ALSO APPLIES (FROM
+  ADVANCED SEARCH)" with no overlap; mobile 375px wraps the chips correctly with no
+  horizontal overflow. `qa-smoke.mjs --slug alert-edit-hidden-criteria /alerts/manage
+  /alerts`: 4/4 pass (HTTP 200, 0 app-origin console errors, 0 horizontal overflow, both
+  viewports). Also killed a stale `next-server` process left running from an earlier
+  session before starting the clean production server for QA (same known issue prior
+  cycles have documented); server stopped cleanly at the end (verified via `pgrep`). No
+  schema change, no new capture point.
+- Screenshots: nightshift/screenshots/alert-edit-hidden-criteria/
+- Next: the "Near-instant new-listing alerts" `[P1][goal]` needs a human call on the
+  Vercel plan tier before a future cycle attempts it (see BACKLOG.md's audit note). Two
+  `[P2][goal]` items remain open in the alert-experience queue: the one-time "widen your
+  alert?" email for never-matched alerts, and the digest subject naming the standout
+  listing when there's exactly one new match.
+
 ## 20260714T120500Z — PASS — partnership-filled-landing
 - Pages: /partnerships/[id]
 - What: **A closed/filled partnership listing now shows a real "this partnership has
