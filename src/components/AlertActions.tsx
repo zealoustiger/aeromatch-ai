@@ -88,11 +88,11 @@ export default function AlertActions({ id, status, token }: { id: string; status
             Snooze 30 days
           </button>
         </>
-      ) : status === 'paused' ? (
+      ) : status === 'paused' || status === 'bounced' ? (
         <button
           onClick={() => run(resumeAlert)}
           disabled={isPending}
-          title="Resume this alert"
+          title={status === 'bounced' ? 'Resume now that your email is fixed' : 'Resume this alert'}
           className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 disabled:opacity-50"
         >
           <Play className="h-3.5 w-3.5" />
