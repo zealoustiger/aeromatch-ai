@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-14T07:47:04Z — compare-tray-alert-capture — score 4/5
+- Strengths: Faithfully meets every acceptance criterion; deduped-by-sourcePath helpers mirror the curated `/aircraft/compare` page's shape/section markup and reuse `AlertSignup` + `resolveMakeModelFamily` cleanly (URLSearchParams even encodes safer than the sibling's raw interpolation).
+- Weaknesses / risks: None material — only a cosmetic redundant `className=""` (matches the sibling's own pattern); partnership/aircraft query sourcePaths are an established convention the cron already parses.
+- Follow-up: none
+
 ## 2026-07-14T06:35:15Z — alert-vacation-mode — score 4/5
 - Strengths: faithfully reuses resolveOwnerEmail trust boundary + the snoozeAlert paused_until missing-column fallback; email-scoped bulk update; smart dateApplied honesty flag and hydration-safe client date computation.
 - Weaknesses / risks: minor — resumeAll gives no user feedback on a 0-row no-op (unlike pauseAll's "Nothing to pause"), and the ≥2-alerts render gate is looser than the spec's "≥1 confirmed/paused" (guarded only inside the component's null-return).
