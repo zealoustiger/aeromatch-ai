@@ -1565,14 +1565,27 @@ instant pillar re-scoped to a buildable shape, and management/email polish._
   form) intentionally NOT touched — that's the separate, already-queued `[P2][goal]`
   "hidden advanced criteria" item; a model set at capture time is preserved through an
   edit (existing form-unexposed-param behavior) but not yet editable/shown.
-- **[P1][goal] "Filled" landing page for closed partnership listings + alert capture.**
-  `getPartnershipById` returns only `status='active'`, so a filled/closed partnership URL
-  dead-404s — old digest links, watch-email "browse similar" clicks, and indexed URLs all
-  land on nothing. Mirror aircraft's `SoldListingPage` (in `aircraft/listing/[id]/page.tsx`)
-  for `/partnerships/[id]`: 200 + noindex, honest "this partnership has been filled or
-  taken down" copy (partnerships close, they don't "sell"), similar active partnerships,
-  and an `AlertSignup` (context from the listing's make/model, `source="filled_partnership"`)
-  — a NEW capture point, must emit `alert_subscribed`.
+~~- **[P1][goal] "Filled" landing page for closed partnership listings + alert capture.**~~ ✅
+  SHIPPED via `partnership-filled-landing` (2026-07-14) New `getClosedPartnershipById` in
+  `src/lib/partnerships.ts` (service-role client, mirrors `getSoldAircraftForSaleById`) —
+  deliberately scoped to `status='closed'` ONLY, not a blanket `neq('active')`: live-DB
+  investigation during implementation found real `partnerships.status` values also include
+  `'admin'` (ingested but intentionally admin-only/hidden from the public marketplace,
+  per `types.ts`) and `'pending'` (awaiting moderation, never public) — a blanket filter
+  would have leaked unvetted/gated rows onto a public "this was filled" URL, which the
+  original item's wording didn't anticipate. `/partnerships/[id]/page.tsx` falls back to
+  the new `FilledPartnershipPage` (200 + `robots: noindex, follow` + self-canonical) when
+  the normal RLS-scoped fetch returns null but a closed row exists; genuinely-missing ids
+  still 404. New page: breadcrumb "(filled)", honest "filled or taken down" copy, CTA to
+  the make/model family search + `/partnerships`, family-scoped `AlertSignup`
+  (`source="filled_partnership"`, `noun="partnership"` — fires `alert_subscribed`
+  internally, no new analytics wiring needed), and the existing `SimilarListings` rail.
+  Live-verified against real prod data: temporarily flipped one hand-seeded demo listing
+  (`@example.com` contact, not a real user's) to `status='closed'`, confirmed the 200 +
+  noindex + canonical + filled copy + alert box render correctly via curl and a full
+  qa-smoke + screenshot pass at both viewports, then reverted it to `active` immediately
+  (verified via a final read). An active listing's page and a genuinely-nonexistent id
+  were both confirmed unchanged. No schema change.
 - **[P1][goal] Near-instant new-listing alerts — the buildable re-scope of the open
   "instant" item above.** The flagged re-scope questions are now answered by code read:
   there is NO in-app publish hook for aircraft (`aircraft_for_sale` rows are written
