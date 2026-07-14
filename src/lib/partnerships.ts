@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
 
@@ -52,6 +53,41 @@ export async function getPartnershipById(id: string): Promise<Partnership | null
   try {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase.from('partnerships').select('*').eq('id', id).single()
+    return data
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch a CLOSED (i.e. filled/taken-down) partnership by id via the service-role
+ * client, bypassing the `status='active'` RLS read policy (`partnerships_public_read`).
+ * Mirrors `getSoldAircraftForSaleById` in `src/lib/aircraftForSale.ts`: used only by
+ * the detail route's closed-state fallback, so a filled partnership renders a proper
+ * "this partnership has been filled" page (200 + noindex) instead of a bare 404 on a
+ * URL Google may have already indexed.
+ *
+ * Deliberately scoped to `status='closed'` ONLY — not a blanket `neq('active')` —
+ * because `partnerships.status` also has `'pending'` (awaiting moderation, never
+ * public yet) and `'admin'` (ingested but intentionally admin-only/hidden from the
+ * public marketplace, see `src/lib/types.ts`'s `Partnership.status` comment). Neither
+ * of those was ever a real public listing, so surfacing them here would leak
+ * unvetted/gated content onto a public URL under dishonest "this was filled" copy.
+ * Returns null for a genuinely missing id, or a pending/admin one (→ real 404).
+ * Server-only.
+ */
+export async function getClosedPartnershipById(id: string): Promise<Partnership | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+  if (!hasSupabase) return null
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('partnerships')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'closed')
+      .single()
     return data
   } catch {
     return null
