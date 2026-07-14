@@ -1,4 +1,5 @@
 import { STATE_NAMES, describeAircraftFilters } from '@/lib/seo'
+import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClassify'
 
 /**
  * Editable-criteria support for `/alerts/manage`'s inline Edit form.
@@ -81,11 +82,13 @@ function cleanPrice(v: string | undefined): string | undefined {
 export function buildAlertCriteriaUpdate(
   type: EditableAlertTarget['type'],
   currentSourcePath: string | null,
-  fields: AlertCriteriaFields
+  fields: AlertCriteriaFields,
+  removeKeys?: string[]
 ): { sourcePath: string; context: string | null } {
   const base = type === 'aircraft' ? '/aircraft' : type === 'seeker' ? '/partnerships/seeking' : '/partnerships'
   const [, qs] = (currentSourcePath ?? '').split('?')
   const params = new URLSearchParams(qs ?? '')
+  removeKeys?.forEach((key) => params.delete(key))
 
   const set = (key: string, value: string | undefined) => {
     if (value) params.set(key, value)
@@ -185,4 +188,104 @@ function describeContext(type: EditableAlertTarget['type'], params: URLSearchPar
   const make = params.get('make')?.trim() || undefined
   const model = params.get('model')?.trim() || undefined
   return [make, model].filter(Boolean).join(' ') || null
+}
+
+/** The form-exposed query-param keys per type — everything else on `source_path` is "hidden." */
+const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
+  aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'deal']),
+  partnership: new Set(['make', 'state', 'airport']),
+  seeker: new Set(['make', 'model']),
+}
+
+/** Rebuilds the `AlertCriteriaFields` the edit form would submit for an UNCHANGED target — used to round-trip its own exposed fields when only a hidden param is being removed. */
+export function targetToFields(target: EditableAlertTarget): AlertCriteriaFields {
+  if (target.type === 'aircraft') {
+    return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly }
+  }
+  if (target.type === 'partnership') {
+    return { make: target.make, state: target.state, airport: target.airport }
+  }
+  return { make: target.make, model: target.model }
+}
+
+export interface HiddenCriterion {
+  key: string
+  label: string
+}
+
+/** A positive integer, or null for anything blank/zero/negative/non-numeric. */
+function positiveInt(raw: string): number | null {
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/**
+ * Human-readable label for one hidden query param, reusing `describeAircraftFilters`'
+ * naming conventions for the params it already knows how to phrase. Falls back to an
+ * honest `"key: value"` for anything unrecognized rather than silently dropping a real
+ * criterion (GOAL.md's honesty gate — an alert's edit view must never hide what it
+ * actually matches on).
+ */
+function labelForHiddenParam(key: string, value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  switch (key) {
+    case 'min_year': {
+      const n = positiveInt(trimmed)
+      return n ? `${n} or newer` : null
+    }
+    case 'max_year': {
+      const n = positiveInt(trimmed)
+      return n ? `up to ${n}` : null
+    }
+    case 'min_tt': {
+      const n = positiveInt(trimmed)
+      return n ? `over ${n.toLocaleString('en-US')} hours` : null
+    }
+    case 'max_tt': {
+      const n = positiveInt(trimmed)
+      return n ? `under ${n.toLocaleString('en-US')} hours` : null
+    }
+    case 'q':
+      return `matching "${trimmed}"`
+    case 'grade': {
+      const grades = trimmed
+        .split(',')
+        .map((g) => g.trim().toUpperCase())
+        .filter((g) => ['A', 'B', 'C'].includes(g))
+      return grades.length ? `grade ${grades.join(' or ')}` : null
+    }
+    case 'avionics': {
+      const cats = parseAvionicsFilter(trimmed)
+      if (!cats.length) return null
+      const labels = AVIONICS_FILTER_OPTIONS.filter((o) => cats.includes(o.key)).map((o) => o.label.toLowerCase())
+      return labels.length ? `with ${labels.join(' or ')}` : null
+    }
+    // Partnership alerts can carry a model filter (see partnershipModelFilter.ts) that
+    // this edit form doesn't expose (only aircraft/seeker targets show a Model field).
+    case 'model':
+      return `model ${trimmed}`
+    default:
+      return `${key}: ${trimmed}`
+  }
+}
+
+/**
+ * Every query param on `source_path` that isn't one of this alert type's form-exposed
+ * fields — the "advanced criteria still applies but you can't see it" gap this item
+ * closes. Returns `[]` when there's nothing hidden (common case; no empty UI to render).
+ */
+export function getHiddenCriteria(type: EditableAlertTarget['type'], sourcePath: string | null): HiddenCriterion[] {
+  const [, qs] = (sourcePath ?? '').split('?')
+  const params = new URLSearchParams(qs ?? '')
+  const exposed = EXPOSED_KEYS[type]
+  const seen = new Set<string>()
+  const hidden: HiddenCriterion[] = []
+  for (const [key, value] of params.entries()) {
+    if (exposed.has(key) || seen.has(key)) continue
+    seen.add(key)
+    const label = labelForHiddenParam(key, value)
+    if (label) hidden.push({ key, label })
+  }
+  return hidden
 }
