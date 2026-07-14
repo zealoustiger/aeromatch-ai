@@ -2,6 +2,67 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T081723Z — PASS — partnership-digest-market-pulse
+- Pages: (email-only — the weekly/daily partnership alert digest sent by
+  `/api/cron/alert-digest`; no user-facing page route)
+- What: **Partnership alert digest emails now show the same honest market-context
+  sentence aircraft alerts already got** — "6 Cessna partnerships listed right now,
+  median buy-in $28k" — above the listing preview cards, for any partnership alert
+  with a make. Below 8 real listings for that make, no line renders at all (never a
+  guessed number). New `getPartnershipMarketPulseLine` in `alertMatchCounts.ts`
+  reuses the exact `priceStats`/`MIN_SNAPSHOT_LISTINGS` honesty-floor pattern the
+  aircraft `getMarketPulseLine` already established, wired into `alert-digest`'s
+  existing generic `marketPulse` field (already accepted by both
+  `buildAlertDigestEmail` and `buildCombinedAlertDigestEmail` since that aircraft
+  cycle — no email-template change needed).
+- Goal: `[goal]` alert experience — "Market-pulse line for PARTNERSHIP digest
+  sections," the first item in the Opus/Fable "Plan-pass batch — 2026-07-14" queue.
+  Tier 1 (`[bug]`): none — last cycle (`filter-toolbar-alert-chip`) PASSed, no
+  unstruck `[bug]` entries found in BACKLOG.md. Tier 2 (`[want]`): re-confirmed
+  empty — every open `[P1]`/`[P2]`[want] item (the "Save this search" auth-wall
+  reconciliation, the collection-layout mosaic redesign, the owner-leads dataset,
+  the dynamic-location seed personas) is explicitly flagged needing a human
+  product/design/compliance call or has no live effect, none is a clean
+  agent-buildable slice. Dropped to tier 3: pulled the next unshipped item from the
+  Plan-pass batch (the prior cycle's "Next" note named it first of four remaining).
+- Spec: nightshift/specs/20260714T081723Z-partnership-digest-market-pulse.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0
+  (clean build, all routes). Full unit suite `node --experimental-strip-types --test
+  src/lib/*.test.ts` — 298/298 pass (no existing test covers `getMarketPulseLine`
+  either — same DB-query-function precedent, not a coverage gap introduced this
+  cycle). **Scoped to make-level, not make+model** (deviates from the item's own
+  example wording): direct code read of `resolveTarget`/`countNewPartnerships`
+  confirmed partnership alert *matching* only ever uses `make` — no `model` field
+  exists on the partnership `AlertTarget`, even though some detail-page sourcePaths
+  carry a `model` query param that's silently dropped before matching (a pre-existing
+  gap, not touched this cycle — flagged below). Building a make+model pulse line
+  would have implied false precision the matching itself doesn't have, so this
+  mirrors aircraft's honesty-gate philosophy at the granularity partnerships actually
+  support. **Live-verified read-only against real prod data** (no test rows written —
+  pure read query, nothing to clean up): ran the exact same query standalone against
+  the live DB for Cessna/Piper/Cirrus/Beechcraft — current inventory is 23 total
+  active partnerships, max 5 for any single make, so every make is honestly below the
+  8-listing floor today and the line correctly stays dormant (verified via manual
+  count, not just trusting the code path) — same "ships correctly, dormant until
+  data grows" pattern as several earlier `alerts.*` cycles. Non-visual cycle (backend
+  digest-computation only, no page markup changed) — smoke gate is the bar per
+  RUNBOOK, screenshots not read into context. Production build served via `next
+  start` (not dev) on port 3800; `qa-smoke.mjs --slug partnership-digest-market-pulse
+  /partnerships /alerts/manage` exit 0 — 4/4 checks (2 paths × 2 viewports), zero
+  console errors, zero horizontal overflow (chosen as the two pages most adjacent to
+  partnership alert creation/management, to catch any accidental regression even
+  though neither page's markup changed). Server stopped cleanly after.
+- Screenshots: nightshift/screenshots/partnership-digest-market-pulse/
+- Next: three items remain in the Opus/Fable "Plan-pass batch — 2026-07-14" queue —
+  market-pulse follow-ups (make-only pulse for AIRCRAFT alerts + the same pulse line
+  in `buildPriceDropEmail`), one-click digest feedback thumbs, and the `/admin/alerts`
+  scoreboard — next cycle should pull the next one. Separately flagged (not this
+  cycle's scope): partnership alert *matching* silently ignores a `model` query param
+  when one is present in the source_path (e.g. from partnership detail pages) — a
+  real precision gap, worth a future `[bug]`-or-`[want]` slice to add `model` to the
+  partnership `AlertTarget` and its match queries, which would also unlock a genuine
+  make+model partnership market-pulse line.
+
 ## 20260714T080526Z — PASS — filter-toolbar-alert-chip
 - Pages: /aircraft, /partnerships
 - What: **Filtering to "Cessna" (or any other search) now shows a one-tap 🔔 "Alert me
