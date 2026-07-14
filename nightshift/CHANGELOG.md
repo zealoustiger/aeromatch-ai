@@ -2,6 +2,60 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260714T060159Z — PASS — deals-page-alert-capture
+- Pages: /aircraft/deals
+- What: **The "priced below market" deals page — arguably the highest-intent browse
+  page on the site (every listing shown is already a verified discount) — had no way
+  to get alerted about new ones.** Added the standard email-only `AlertSignup` capture
+  below the listings/disclosure: `context="good deal"`, `sourcePath="/aircraft?deal=good"`,
+  `source="deals_page"`, `matchCount={deals.length}` (the exact same honest count already
+  rendered as cards above it — 0 handled by the component's own honest "be first to know"
+  copy). `deal=good` already parses end-to-end via the digest cron's bare-`/aircraft`
+  `parseSourcePath` branch — zero changes needed there, `alertMatchCounts.ts`, or
+  `alertEditCriteria.ts`. Also fixed a small UX redundancy while wiring this: `AlertSignup`'s
+  "Only email me good deals" checkbox now hides itself whenever the caller's own `sourcePath`
+  already carries `deal=good` (new clause on `showDealOnlyOption`) — this page IS deals-only
+  already, so offering that checkbox on top would read as confusing ("why would I need to
+  opt into deals-only on the deals-only page?"). Every other aircraft alert capture point
+  (browse page, listing detail, make/model page) is unaffected — the checkbox still renders
+  normally there. 2 files: `src/app/aircraft/deals/page.tsx`, `src/components/AlertSignup.tsx`.
+- Goal: `[goal]` alert experience. Tier 1 (`[bug]`): none open — last cycle
+  (`mission-alert-sourcepath-fix`) PASSed, re-audited BACKLOG.md's `[bug]` lines (all struck
+  through or narrative-only). Tier 2 (`[want]`): re-confirmed empty for autonomous work — the
+  one open `[P1][want]` ("Save this search" auth-wall reconciliation) is explicitly flagged
+  as needing a human product call on sub-item 1; the two other open `[P1][want]`s
+  (Trade-A-Plane ingestion, Bay-Area coverage benchmark) are large multi-slice research/data
+  items, not a single-cycle scoped slice, and neither is a `[bug]`/blocker. Dropped to tier 3:
+  pulled the first item from the Opus/Fable plan-pass batch (BACKLOG.md "Plan-pass batch —
+  2026-07-13"), the highest-priority one left after last cycle shipped the mission-page fix
+  from the same batch.
+- Spec: nightshift/specs/20260714T060159Z-deals-page-alert-capture.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0 (clean
+  build, all routes including `/aircraft/deals`). Full unit suite `node
+  --experimental-strip-types --test src/lib/*.test.ts` — 286/286 pass (no new tests: pure
+  UI-wiring change around already-covered `parseSourcePath`/`deal=good` logic, nothing new
+  to unit-test). Visual cycle (new rendered UI block) — read both screenshots: the sky-blue
+  alert box renders cleanly below the listings/disclosure on both desktop 1280 and mobile
+  375, matching the established `AlertSignup` styling used on every other page, no overlap
+  or breakage. Production build served via `next start` (not dev); `qa-smoke.mjs` exit 0 on
+  `/aircraft/deals` — 2/2, zero console errors, zero horizontal overflow at both viewports.
+  **Live end-to-end verified against the real DB** (Playwright, real browser click/submit,
+  not a mocked action call): visited `/aircraft/deals`, confirmed the "Only email me good
+  deals" checkbox count is 0 (correctly hidden), submitted one throwaway
+  `qa-deals-page-alert-capture-<ts>@example.com` alert, confirmed the resulting row's
+  `source_path` is exactly `/aircraft?deal=good` and `context` is `"good deal"` — proving the
+  cron's parser resolves the new capture point correctly, not just asserting it by code read.
+  Test row deleted immediately after (confirmed 0 remain via a follow-up query). Server
+  started/stopped cleanly; confirmed no orphaned `next-server` process remained after.
+- Screenshots: nightshift/screenshots/deals-page-alert-capture/
+- Next: the plan-pass batch (BACKLOG.md, "Plan-pass batch — 2026-07-13") has 5 more open
+  `[P1][goal]` items — remembering email-only subscribers in the browser (localStorage,
+  cuts duplicate-submit friction site-wide), vacation-mode bulk pause on `/alerts/manage`, a
+  real sample digest preview on `/alerts`, alert capture on the comparison pages
+  (`/compare`, `/aircraft/compare/[comparison]`), and a market-pulse line in the digest
+  email — plus one more requiring a new webhook route (auto-pause on hard bounces). Pull the
+  next-highest-value one next cycle (tier 1/2 permitting).
+
 ## 2026-07-13T12:16:30Z — DRAIN SUMMARY
 - Cycles this run: 11 (PASS 8 / FAIL 0 / ABORT 3)
 - Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
