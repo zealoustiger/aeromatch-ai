@@ -1411,6 +1411,86 @@ no duplicate of shipped work above)._
   true per-placement precision: add & thread an `alerts.source` column through every insert
   path (bigger than one cycle).
 
+### Plan-pass batch #2 — 2026-07-14 (Fable)
+_All verified un-built by direct code read this pass: the Resend webhook handles only
+`email.bounced`; no alert insert path persists a `source` (PostHog-only today, per the
+`admin-alerts-scoreboard` audit); `email.ts` has no preheader; `/admin/alerts` reads no
+`digest_vote` rows; `avionics` is still stripped at capture; `RecentlyViewedAlertBanner`
+mounts only on `/aircraft`+`/partnerships`; `AlertMeChip`/`WatchAlertButton` fire no
+impression event. Entry points are saturated (~30 shipped) — this refill's weight is
+closing the measurement loop, deliverability, and email/management polish. (The
+`instant alerts` item above stays open pending its flagged re-scope — not duplicated here.)_
+
+- **[P1][goal] Persist the placement `source` on the alerts row.** The
+  `admin-alerts-scoreboard` cycle confirmed the per-placement `source` tag is PostHog-only —
+  the `alerts` table never stores it, so per-widget conversion can't be answered from the DB.
+  Add an additive nullable `alerts.source` column (⚠️ human-apply, same pending-DDL fail-soft
+  pattern as every prior `alerts.*` column — retry the insert without it until migrated) and
+  thread the already-known placement through every insert path: `subscribeToAlerts` +
+  `subscribeSignedInAlert` (take it from `AlertSignup`'s existing `source` prop),
+  `subscribeToConfirmedAlert` (`cross_sell`), `subscribeSavedSearchAlert` (`saved_search`),
+  `subscribeManageCrossSell` (`manage_cross_sell`), `createManageAlert` (`manage_new`), and
+  the `digest-cross-sell` route (`digest_cross_sell`). Improves measurement on every existing
+  capture surface; adds no new capture point (`alert_subscribed` payload unchanged — it
+  already carries `source`).
+- **[P1][goal] Auto-unsubscribe on spam complaints — `email.complained` in the Resend
+  webhook.** A spam complaint is a stronger "never email me" signal than a hard bounce, and
+  continuing to send after one actively damages domain reputation for every other subscriber.
+  Extend `/api/webhooks/resend` (do NOT touch its signature-verification block) to handle
+  verified `email.complained` events by setting every non-unsubscribed `alerts` row for that
+  address to `status='unsubscribed'` (terminal — unlike `bounced`, never auto-resumable;
+  respect their complaint literally). `/alerts/manage` should render that state with the
+  existing unsubscribed treatment. Ships dark until `RESEND_WEBHOOK_SECRET` is set, same as
+  the bounce handler. Improves deliverability/never-spam; no new capture point.
+- **[P1][goal] Impression events for the deferred capture affordances (card bells + filter
+  chip).** `alert_capture_viewed` gives per-placement denominators only for always-mounted
+  `AlertSignup` boxes — `WatchAlertButton`'s bell (sources `card_watch` /
+  `partnership_card_watch`) and `AlertMeChip` (`filter_toolbar`) mount their `AlertSignup`
+  only on tap, so those placements have subscribes with no view denominator. Fire the same
+  `alert_capture_viewed` (IntersectionObserver, once per mount, same payload shape incl.
+  `source`) from the bell/chip affordance itself, plus an `alert_capture_opened` on tap so
+  view → open → subscribe is measurable. Improves measurement on 3 existing surfaces; no
+  new capture point.
+- **[P1][goal] Per-placement conversion ranking on `/admin/alerts`.** The follow-up the
+  scoreboard cycle explicitly flagged, unblocked once `alerts.source` lands (item above):
+  add a "Top placements" section ranking `source` values by live (active+confirmed) count,
+  with each placement's pending→confirmed share so weak double-opt-in funnels stand out.
+  Honesty: rows predating the column have `source=null` — bucket them visibly as "(untagged,
+  pre-YYYY-MM-DD)" rather than dropping them; render the section with a "column not migrated
+  yet" note until the DDL is applied (same graceful-degrade precedent as the manage page).
+  Read-only, inside the existing admin gate (do NOT touch the frozen auth checks); no
+  capture point.
+- **[P2][goal] Digest 👍/👎 vote-rate rollup on `/admin/alerts`.** The flagged next slice
+  from `digest-feedback-vote`: votes land in `feedback` (`type='digest_vote'`) but nothing
+  aggregates them. Add a small section to the scoreboard: 👍 vs 👎 totals, this-week vs
+  last-week, and the most recent few votes with their alert context. Honesty: volume is
+  tiny at cold-start — show raw counts (never a misleading percentage on n<10, mirror
+  `MIN_ALERTS_TO_SHOW`-style flooring). Read-only, no capture point.
+- **[P2][goal] Recently-viewed alert banner on the homepage.** `RecentlyViewedAlertBanner`
+  (clustered-views suggestion, dismiss + redundancy suppression + live-match honesty gate
+  all already built) mounts only on `/aircraft` and `/partnerships` — the homepage still
+  shows only the generic band, wasting the highest-traffic return-visit surface. Mount the
+  banner on `/` above the generic band (suppress the generic band when the banner renders,
+  so two capture boxes never stack — same one-box precedent as `search-empty-state-alert`).
+  Improves an existing entry point; emits the existing `alert_subscribed`
+  (`source: 'recent_views'`) via `AlertSignup` — no new event shape.
+- **[P2][goal] Preheader text on alert emails.** Inbox list views show the first body text
+  as the preview line; our digests waste it on header boilerplate. Add a hidden standard
+  preheader (visually-hidden span before the body) to `buildAlertConfirmEmail`,
+  `buildAlertDigestEmail`, `buildCombinedAlertDigestEmail`, and `buildPriceDropEmail`
+  summarizing the honest payload ("3 new Cessna 172 listings + 1 price drop this week") —
+  derived from the counts already passed in, never fabricated. Pure `email.ts` change,
+  unit-testable (present/absent, escaping, count phrasing); byte-identical text part.
+  Email polish on every existing send; no capture point.
+- **[P2][goal] Honor `avionics` in aircraft alert matching.** The explicitly flagged
+  not-done from `alert-query-grade-honesty`: the `avionics` param is stripped from
+  `alertSourcePath` at capture so alerts never over-promise — but that means a
+  glass-panel-filtered browse visitor's alert silently drops their most meaningful
+  criterion. Honor it in `alertMatchCounts.ts` + the digest cron's aircraft filters
+  (reuse the browse page's existing classify pass; accept the wider scan — it runs
+  per-alert on a small table), then stop stripping the param at capture. Makes an
+  existing promise-to-match gap honest end-to-end; no new capture point.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
