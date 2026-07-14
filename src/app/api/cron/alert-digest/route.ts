@@ -1031,8 +1031,9 @@ type PendingReminderRow = {
 
 /**
  * A subscriber who signs up but never clicks the double-opt-in confirm link
- * gets nothing, ever — the digest loop above only reads status='confirmed'.
- * Sends exactly ONE "still want these alerts?" reminder to a status='pending'
+ * gets nothing, ever — the digest loop above only reads the live statuses
+ * ('confirmed'/'active'), never 'pending'. Sends exactly ONE "still want
+ * these alerts?" reminder to a status='pending'
  * row aged 24–72h since signup, reusing the existing buildAlertConfirmEmail
  * template + the row's own confirm/unsubscribe tokens (same send shape as the
  * manual "Resend confirmation" action in actions.ts, just cron-triggered).
@@ -1168,12 +1169,19 @@ export async function GET(req: NextRequest) {
   // frequency, must have gone undigested for at least the shortest interval
   // (daily). The precise per-alert due-check (respecting each alert's own
   // weekly/daily choice) happens in the loop below via isDigestDue.
+  //
+  // `status` selects BOTH live-subscriber vocabularies the `alerts` table
+  // carries — `confirmed` (the double-opt-in path) and the older/direct
+  // `active` rows that predate it — same precedent as `alertScoreboard.ts`'s
+  // `LIVE_STATUSES`. Filtering to `confirmed` alone silently drops real
+  // subscribers on legacy rows from every digest, forever.
+  const LIVE_ALERT_STATUSES = ['confirmed', 'active']
   const baseCols = 'id, email, context, source_path, created_at, last_digest_at, unsubscribe_token'
   let cols = `${baseCols}, price_drop_opt_in, frequency`
   let { data: alerts, error: fetchError } = (await supabase
     .from('alerts')
     .select(cols)
-    .eq('status', 'confirmed')
+    .in('status', LIVE_ALERT_STATUSES)
     .or(`last_digest_at.is.null,last_digest_at.lt.${minWindowStart}`)) as unknown as {
     data: DigestAlertRow[] | null
     error: { message: string } | null
@@ -1193,7 +1201,7 @@ export async function GET(req: NextRequest) {
     ;({ data: alerts, error: fetchError } = (await supabase
       .from('alerts')
       .select(cols)
-      .eq('status', 'confirmed')
+      .in('status', LIVE_ALERT_STATUSES)
       .or(`last_digest_at.is.null,last_digest_at.lt.${minWindowStart}`)) as unknown as {
       data: DigestAlertRow[] | null
       error: { message: string } | null
