@@ -11,7 +11,12 @@ import {
   type AlertDigestSample,
   type AlertDigestSection,
 } from '@/lib/email'
-import { getAlertDigestPreview, getMarketPulseLine, getPartnershipMarketPulseLine } from '@/lib/alertMatchCounts'
+import {
+  getAlertDigestPreview,
+  getMarketPulseLine,
+  getAircraftMakePulseLine,
+  getPartnershipMarketPulseLine,
+} from '@/lib/alertMatchCounts'
 import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
@@ -1319,11 +1324,14 @@ export async function GET(req: NextRequest) {
             : []
 
     // Market-pulse line — aircraft alerts with a clean, curated make+model
-    // target, or partnership alerts with a make (see `marketPulseModel`'s doc
-    // and `getPartnershipMarketPulseLine`'s doc for why partnerships are
-    // make-level only); computed only for alerts that will actually send
-    // (past the newCount===0 && dropCount===0 skip above), so a skipped
-    // alert never pays for the extra query.
+    // target get the make+model line; aircraft alerts with a make but no
+    // clean single model (make-only browse alerts, multi-model selections —
+    // see `marketPulseModel`'s doc) fall back to the make-level line instead
+    // of getting none at all; partnership alerts with a make get their own
+    // make-level line (see `getPartnershipMarketPulseLine`'s doc for why
+    // partnerships are make-level only). Computed only for alerts that will
+    // actually send (past the newCount===0 && dropCount===0 skip above), so a
+    // skipped alert never pays for the extra query.
     const marketPulse =
       target.type === 'aircraft' && target.make && target.marketPulseModel
         ? await getMarketPulseLine(
@@ -1333,9 +1341,11 @@ export async function GET(req: NextRequest) {
             target.modelPattern ?? target.model ?? target.marketPulseModel,
             target.notModelPattern
           )
-        : target.type === 'partnership' && target.make
-          ? await getPartnershipMarketPulseLine(supabase, target.make)
-          : null
+        : target.type === 'aircraft' && target.make
+          ? await getAircraftMakePulseLine(supabase, target.make)
+          : target.type === 'partnership' && target.make
+            ? await getPartnershipMarketPulseLine(supabase, target.make)
+            : null
 
     prepared.push({ alert, frequency, target, newCount, dropCount, samples, marketPulse })
   }
