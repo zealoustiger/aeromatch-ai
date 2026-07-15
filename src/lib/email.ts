@@ -573,6 +573,64 @@ Unsubscribe: ${opts.unsubscribeUrl}`
   return { subject, html, text }
 }
 
+/**
+ * One-time "hasn't matched anything yet, widen it?" email for a confirmed
+ * alert that's never matched a single listing since it was created. Caller
+ * (the alert-digest cron) has already re-verified BOTH the current 0-match
+ * state and the widened candidate's real >0 match count — this builder never
+ * re-derives or guesses either number, it only renders what it's given.
+ */
+export function buildWidenSuggestionEmail(opts: {
+  context: string | null
+  /** e.g. "Show all Cessna listings" / "Search every state" — from `computeWidenCandidate`. */
+  widenDescription: string
+  widenCount: number
+  widenNoun: 'listing' | 'pilot'
+  manageUrl: string
+  unsubscribeUrl: string
+}): { subject: string; html: string; text: string } {
+  const label = opts.context?.trim() || 'Your alert'
+  const subject = `${label} hasn't matched anything yet — widen it?`
+  const manageUrl = withUtm(opts.manageUrl, 'widen')
+  const countLabel = `${opts.widenCount} ${opts.widenNoun}${opts.widenCount === 1 ? '' : 's'}`
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(`${label} hasn't matched anything yet. ${opts.widenDescription} — ${countLabel} match right now.`)}
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(label)} hasn&rsquo;t matched anything yet</h1>
+        <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+          It&rsquo;s been a few weeks with nothing to show &mdash; want to widen it? <strong>${escapeHtml(opts.widenDescription)}</strong> would match <strong>${countLabel}</strong> right now.
+        </p>
+        <p style="margin:0;">
+          <a href="${escapeAttr(manageUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Widen this alert
+          </a>
+        </p>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you have an alert on ClubHanger that hasn&rsquo;t sent anything yet.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${label} hasn't matched anything yet
+
+It's been a few weeks with nothing to show — want to widen it? ${opts.widenDescription} would match ${countLabel} right now.
+
+Widen this alert: ${manageUrl}
+
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
 function formatUsd(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
@@ -611,7 +669,7 @@ function preheaderHtml(text: string): string {
  * links — those tokens must stay byte-exact for the route to resolve them.
  * Falls back to the raw URL if it isn't parseable as an absolute URL.
  */
-function withUtm(url: string, campaign: 'confirm' | 'digest' | 'price_drop' | 'combined'): string {
+function withUtm(url: string, campaign: 'confirm' | 'digest' | 'price_drop' | 'combined' | 'widen'): string {
   try {
     const u = new URL(url)
     u.searchParams.set('utm_source', 'alert_email')
