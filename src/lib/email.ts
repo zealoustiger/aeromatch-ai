@@ -793,7 +793,20 @@ export function buildAlertDigestEmail(opts: {
   }
   const countLabelText = countLabel
   const subjectBase = thing ? `${countLabel} — ${thing} on ClubHanger` : `${countLabel} on ClubHanger`
-  const subject = isSample ? `Sample: ${subjectBase}` : subjectBase
+  // Name the standout listing in the subject when there's exactly one genuine
+  // new match (no price drops, no sample/first-send framing) and a usable
+  // sample — never fabricate a title/price that isn't in the data, so every
+  // other case falls back to the generic count-only subject above.
+  const standout =
+    !isSample && !isFirstSend && opts.newCount === 1 && opts.dropCount === 0 && samples.length === 1
+      ? samples[0]
+      : null
+  const subject =
+    standout && standout.title && standout.price != null
+      ? `New: ${standout.title} at ${formatUsd(standout.price)}${thing ? ` — your ${thing} alert` : ' — new match on ClubHanger'}`
+      : isSample
+        ? `Sample: ${subjectBase}`
+        : subjectBase
 
   const samplesHtml = samples.length
     ? `<div style="margin:0 0 20px;">${samples.map(sampleCardHtml).join('')}</div>`
