@@ -2,6 +2,35 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260715T065342Z — PASS — alert-email-dark-mode
+- Pages: (email-only — no site page changed; verified via `/api/dev/email-preview/*`
+  and `/alerts`)
+- What: **Every ClubHanger alert/transactional email now renders correctly in
+  dark-mode inboxes** (Gmail, Apple Mail, Outlook.com) instead of letting the client
+  auto-invert colors, which could turn the cream brand panels and slate text into an
+  unreadable mess. Light-mode inboxes (the default, most subscribers) look identical
+  to before.
+- Goal: `[goal]` tier 3 — alert experience / "the email a subscriber receives should
+  be the best listing alert email in aviation" (GOAL.md). Tier 1 (`[bug]`): none open.
+  Tier 2 (`[want]`): still empty of buildable work — the two open `[P1][want]` items
+  ("Save this search" auth-wall reconciliation, collection-layout mosaic redesign)
+  remain flagged for a human product call/mock; scraping/coverage/owner-leads items
+  remain flagged for human sign-off (compliance/ToS). Picked the next `[P1][goal]`
+  alert-experience item off the backlog.
+- Spec: nightshift/specs/20260715T065342Z-alert-email-dark-mode.md
+- Verdict: PASS — `npx next build` + typecheck green; 86/86 unit tests pass in
+  `src/lib/email.test.ts` (12 new, asserting the color-scheme meta + dark media query
+  render in all 11 HTML builders and that plain-text bodies are untouched); qa-smoke
+  exit 0 on the 3 email-preview routes + `/alerts` (desktop 1280 + mobile 375, zero
+  app console errors, zero overflow); screenshots confirm light-mode rendering is
+  visually unchanged (dark-mode itself isn't renderable via a standard browser
+  screenshot — verified instead by asserting the served HTML carries the meta tags +
+  media query, and by code review of the new dark palette against each template).
+- Screenshots: nightshift/screenshots/alert-email-dark-mode/
+- Next: a dark-mode-aware Playwright/visual check (Playwright supports
+  `colorScheme: 'dark'` emulation) would let a future cycle actually screenshot the
+  dark rendering instead of relying on markup assertions + code review.
+
 ## 20260715T063523Z — PASS — mobile-sticky-alert-bar
 - Pages: /aircraft, /partnerships
 - What: **A sticky "🔔 Get alerts for this search" bar now appears at the bottom of
