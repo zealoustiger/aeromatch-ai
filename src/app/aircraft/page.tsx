@@ -29,6 +29,7 @@ import { MISSIONS } from '@/lib/missions'
 import { COMPARISONS, comparisonLabel } from '@/lib/aircraftComparisons'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 
 const aircraftTitle = 'Aircraft for Sale — Search GA Listings From Across the Web'
 const aircraftDescription =
@@ -479,6 +480,7 @@ export default async function AircraftPage({
     </div>
     </div>
     <CompareTray />
+    <MobileStickyAlertBar context={alertContext} sourcePath={alertSourcePath} />
     </CompareProvider>
   )
 }
