@@ -2,6 +2,65 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260715T060157Z — PASS — digest-standout-subject
+- Pages: none (email templates only — `src/lib/email.ts`)
+- What: **When a weekly alert digest has exactly one genuine new match, the email
+  subject now names that listing instead of a generic count.** e.g. "New: 1977
+  Cessna 182Q at $89,500 — your Cessna 172 alert" instead of "1 new listing —
+  Cessna 172 on ClubHanger" — a much more open-worthy subject line in the inbox
+  list view. This was the explicit `[P2][goal]` item flagged as the last open
+  alert-experience task in BACKLOG.md's "Next" pointer.
+- Goal: `[goal]` tier 3 — alert experience / "best listing alert email in aviation"
+  (GOAL.md). Tier 1 (`[bug]`): none open — no unstruck `[bug]` entries anywhere in
+  BACKLOG.md, prior cycle (`alert-edit-hidden-criteria`) PASSed. Tier 2 (`[want]`):
+  re-confirmed empty of buildable work — the open `[P1][want]` "Save this search"
+  auth-wall item's remaining sub-part is still explicitly flagged as needing a human
+  product call (its other sub-part already shipped); the collection-layout mosaic
+  redesign `[want]` and the owner-leads-list `[P2][want]` remain flagged for human
+  review/mock, matching every recent cycle's independent audit; the ingestion
+  `[P1][want]`s remain audited-and-blocked. Dropped to tier 3 and picked the last
+  remaining open `[P2][goal]` item in the alert-experience queue — the other one
+  ("widen your alert?" email) needs a new `alerts.widen_suggested_at` migration, so
+  this pure-`email.ts`, no-schema-change item was the lower-risk, well-scoped pick.
+- Spec: nightshift/specs/20260715T060157Z-digest-standout-subject.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  `buildAlertDigestEmail`'s subject computation now checks: not a sample send, not a
+  `firstSend`, `newCount===1 && dropCount===0` (a genuine single new listing, not a
+  price drop), and exactly one sample present with a non-empty `title` and non-null
+  `price` — only then does it build `New: <title> at <formatted price> — your
+  <context> alert` (or "— new match on ClubHanger" when the alert has no context).
+  Every other shape (2+ matches, a price drop instead of a new listing, 0 or 2+
+  samples, or a sample with no price — e.g. a seeker listing, which never has a
+  price) falls straight back to the pre-existing generic count-only subject —
+  honesty gate, never fabricates a name/price not in the data. Reused the exact
+  `title`/`price` fields the sample cards already render (`AlertDigestSample`,
+  populated by the real cron/preview fetchers from `aircraft_for_sale`/
+  `partnerships` rows), no new data source. 8 new unit tests in `email.test.ts`:
+  the happy path (matches the backlog's own example string exactly), no-context
+  fallback, 2-matches fallback, price-drop-not-new fallback, missing-price fallback
+  (seeker case), zero-samples fallback, and both `sampleNote`/`firstSend` staying on
+  their existing subject framing even with `newCount===1` — full file:
+  `node --experimental-strip-types --test src/lib/email.test.ts` → 78/78 pass (70
+  pre-existing + 8 new). Full suite green: `for f in src/lib/*.test.ts; do node
+  --experimental-strip-types --test "$f"; done` — 0 failures across all 31 test
+  files. Non-visual cycle (email-subject-string change only, no page/component
+  touched) — screenshots not read (established convention from the preheader
+  cycle). QA gate: served the real production build (`next build` → `next start`),
+  confirmed cleanly stopped afterward (`pgrep`); `qa-smoke.mjs --slug
+  digest-standout-subject / /alerts/manage /aircraft` 6/6 (desktop 1280 + mobile
+  375, HTTP 200, zero app-origin console errors, zero horizontal overflow) — picked
+  as representative pages since no page itself changed, same precedent as the
+  preheader cycle. No schema change, no new capture point.
+- Screenshots: nightshift/screenshots/digest-standout-subject/
+- Next: the alert-experience `[goal]` queue is now down to one open item: "One-time
+  'widen your alert?' email for never-matched alerts" (`[P2][goal]`), which needs an
+  additive `alerts.widen_suggested_at` migration (⚠️ flag human-apply, fail-soft).
+  The `[P1][goal]` "Near-instant alerts" item stays open pending a human call on the
+  Vercel plan tier. Both remaining `[P1][want]` items (save-search auth-wall
+  reconciliation, collection-layout mosaic redesign) still need a human product
+  call. Next cycle should likely emit `ABORT — none — plan needed` once these are
+  exhausted, unless a new `[bug]`/`[want]` lands first.
+
 ## 2026-07-14T12:23:32Z — DRAIN SUMMARY
 - Cycles this run: 7 (PASS 6 / FAIL 0 / ABORT 1)
 - Models: cycles on sonnet; 0 escalated to opus; 2 quality-judged on opus

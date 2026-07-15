@@ -1653,13 +1653,14 @@ instant pillar re-scoped to a buildable shape, and management/email polish._
   stamped once-ever via an additive nullable `alerts.widen_suggested_at` (⚠️ human-apply,
   fail-soft, same never-spam pattern as `confirm_reminder_sent_at`). Improves: alert
   email lifecycle / "offer fewer instead of none" spirit. No new capture point.
-- **[P2][goal] Digest subject names the standout listing when there's exactly one new
-  match.** Today: "1 new listing — Cessna 182 on ClubHanger". The sample data already in
-  scope can make it "New: 1977 Cessna 182Q at $89,500 — your Cessna 182 alert" (fall back
-  to the current form when title/price are missing or matches > 1 — never fabricate).
-  Pure `email.ts` change + unit tests, mirroring the shipped preheader pattern. Improves:
-  digest open-worthiness ("the best listing alert email in aviation"). No new capture
-  point.
+~~- **[P2][goal] Digest subject names the standout listing when there's exactly one new
+  match.**~~ ✅ SHIPPED via `digest-standout-subject` (2026-07-15) `buildAlertDigestEmail`'s
+  subject now reads "New: 1977 Cessna 182Q at $89,500 — your Cessna 172 alert" whenever
+  `newCount===1 && dropCount===0` (not a sample/first-send) and exactly one sample is
+  present with a real title + price; falls back to the existing generic count-only subject
+  for every other case (2+ matches, a price drop instead of a new listing, 0 or 2+ samples,
+  or a sample missing a price — e.g. seeker listings) — never fabricates. 8 new unit tests
+  in `email.test.ts` (70/70 → 78/78 pass). No schema change, no new capture point.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
