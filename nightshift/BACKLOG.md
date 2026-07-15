@@ -1671,6 +1671,100 @@ instant pillar re-scoped to a buildable shape, and management/email polish._
   or a sample missing a price — e.g. seeker listings) — never fabricates. 8 new unit tests
   in `email.test.ts` (70/70 → 78/78 pass). No schema change, no new capture point.
 
+### Plan-pass batch #4 — 2026-07-14 (Fable)
+_All verified un-built by direct code read this pass: `AlertEditForm.tsx` renders no live
+match count anywhere; no `alert_cron_runs`/send-log table or ref exists in `src/` or
+`supabase/schema.sql`; `/admin/alerts` has no per-email lookup (aggregate-only); `/account`'s
+alerts section is copy + links only (no actual alert rows rendered); the only `sticky` on
+`/aircraft` is the desktop sidebar panel (`sticky top-24`), no mobile capture bar exists;
+`email.ts` contains zero `color-scheme`/dark-mode handling; `/alerts/manage` has the widen
+nudge but no overlapping-alert detection. Entry points remain saturated (~30 shipped) and
+both blocked items (instant alerts → Vercel plan tier; save-search auth wall → product
+call) stay flagged for a human, not duplicated here. This batch's weight: management-surface
+polish, operational reliability (a silent cron failure = worst possible alert experience),
+and support tooling._
+
+- **[P1][goal] Live match-count preview while editing an alert (`/alerts/manage`).**
+  `AlertEditForm` lets a subscriber change make/model/state/price/deal (+ remove hidden
+  advanced chips) completely blind — they can save themselves into a 0-match alert and
+  never know. Add a debounced server action that reuses the exact `countActiveAircraft`/
+  `countActivePartnerships` machinery (`alertMatchCounts.ts` — the same counts `/alerts/
+  manage` already shows per row) to render "N listings match right now" live inside the
+  edit form as criteria change, with an honest 0-match warning ("this alert won't match
+  anything today — consider widening") before save. Why: GOAL.md's management pillar; the
+  capture flow already earned this honesty (`alert-live-match-count`), the edit flow never
+  did. Improves `/alerts/manage`. Read-only preview, no schema change, no new capture
+  point (no `alert_subscribed`).
+- **[P1][goal] Daily-cron run log + "Last run" health panel on `/admin/alerts`.** Today
+  the alert-digest cron's outcome is invisible: if sends silently break (e.g. a bad
+  deploy, Resend outage, or one of the 6+ still-unapplied `alerts.*` migrations biting in
+  a new way), nobody notices until a subscriber complains — a silently dead digest is the
+  worst possible "best alert email in aviation." At the end of each
+  `/api/cron/alert-digest` run, insert ONE summary row into a new additive
+  `alert_cron_runs` table (`supabase/schema.sql`; ⚠️ human-apply, fail-soft on `42P01`
+  relation-not-exists like every prior `alerts.*` DDL): digests sent, price-drop sends,
+  reminders/widen emails, skipped/error counts, duration. Render a small read-only "Last
+  run" panel on `/admin/alerts` (inside the existing layout gate — do NOT touch frozen
+  auth): timestamp, counts, and an honest red "no successful run in >36h" flag. Improves:
+  reliability of every alert surface at once. No capture point, no `alert_subscribed`.
+- **[P1][goal] Subscriber lookup on `/admin/alerts` — support tooling.** The scoreboard
+  is aggregate-only; when a subscriber replies "I can't find my manage link / why did I
+  get this?", the human has zero support view. Add a lookup form (email in → that
+  address's alerts: context, status, frequency, source, last-sent) plus one button:
+  "Email them their manage link," reusing the exact existing manage-link-recovery email
+  (`alerts-manage-link-email`) — never display raw tokens in the admin UI, send them to
+  the owner instead. Read-only + one reused send path, inside the existing admin gate (do
+  NOT touch frozen auth checks). Improves the management/support surface. No capture
+  point, no `alert_subscribed`.
+- **[P1][goal] "Your alerts" inline on `/account` — saved-search ↔ alert unification v1
+  (read-only).** GOAL.md names "signed-in users see saved-search ↔ alert unified," but
+  `/account`'s alerts card is copy + links only — a signed-in user can't see their actual
+  alerts without bouncing to `/alerts/manage`. Render the session user's alerts inline
+  (context, status badge, frequency, last-sent line — reuse the row-summary conventions
+  `/alerts/manage` already established, via the same `resolveOwnerEmail`-style trust
+  boundary: session email only, service-role read), each row linking to `/alerts/manage`
+  for actions. Read-only v1 — edit/pause/delete stay on manage (next slices if pull
+  exists). Improves `/account` as an alert surface. No new capture point (the page's
+  existing CTA copy already routes to capture), no `alert_subscribed`.
+- **[P1][goal] Mobile sticky "Get alerts for this search" bar on `/aircraft` +
+  `/partnerships`.** On mobile (where most traffic is), the browse pages' capture points
+  are per-card bells and a footer form several screens down; the filter chip only renders
+  when ≥1 filter is active. Add a mobile-only (<768px) sticky bottom bar that appears
+  only after meaningful scroll depth (e.g. ~8 cards) and is dismissible with persistence
+  (`localStorage`, mirror `alertLocalSubscriptions.ts`' SSR-safe pattern) — cleaner-than-
+  Controller taste: one line, one 🔔 button, never stacks with an open keyboard, never
+  shows to already-subscribed visitors (reuse `isLocallySubscribed`/
+  `getExistingAlertForSourcePath` exactly like `AlertMeChip`). Behavior mirrors
+  `AlertMeChip` 1:1: signed-in = one-click subscribe via `subscribeSignedInAlert`
+  emitting `alert_subscribed` with `source: 'sticky_bar'` (+ persist `alerts.source`);
+  signed-out = smooth-scroll + focus the existing footer `AlertSignup` (`#alert-email`).
+  Fire `alert_capture_viewed`/`alert_capture_opened` (`source: 'sticky_bar'`) so the
+  placement has a real funnel denominator from day one. NEW capture affordance — must
+  emit `alert_subscribed`.
+- **[P1][goal] Dark-mode-safe alert emails.** Every builder in `email.ts` is cream-on-
+  light with zero `color-scheme` handling — dark-mode inboxes (Gmail/Apple Mail auto-
+  invert) can mangle the cream brand panels and low-contrast slate text unpredictably.
+  Add `<meta name="color-scheme" content="light dark">` + `supported-color-schemes` and
+  a `@media (prefers-color-scheme: dark)` block with deliberately-chosen dark-safe
+  colors to the shared email chrome used by ALL builders (confirm, digest, combined,
+  price-drop, widen, unavailable, email-change…) — one shared change, not per-builder
+  forks; text parts stay byte-identical. Unit tests in `email.test.ts` assert the meta +
+  media block render in every builder (follow the preheader item's test pattern). Why:
+  "the best listing alert email in aviation" can't render broken for the large dark-mode-
+  inbox cohort. Email polish only — no schema change, no capture point.
+- **[P1][goal] Overlapping-alert cleanup nudge on `/alerts/manage`.** Subscribers
+  accumulate near-duplicate alerts across our ~30 capture points (e.g. `/aircraft?make=
+  Cessna` AND `/aircraft?make=Cessna&model=172`) — the combined digest then repeats the
+  same listings across sections, which reads as spam (GOAL.md: never spam). Pure function
+  over the owner's parsed targets (reuse `parseSourcePath`/`AlertTarget` from
+  `alertMatchCounts.ts`): detect strict subsumption ONLY (every criterion of A is
+  satisfied wherever B fires — be conservative, no fuzzy matching; when unsure, no
+  nudge). Render one honest dismissible nudge on `/alerts/manage` ("Your 'Cessna 172'
+  alert is already covered by your 'Cessna' alert — remove the narrower one?") with a
+  one-click delete that reuses the existing delete action + undo pattern. Unit-test the
+  subsumption function hard (state/price/avionics/model-list edge cases). Improves
+  `/alerts/manage`. No schema change, no capture point.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
