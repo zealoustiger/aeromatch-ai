@@ -12,6 +12,11 @@ import {
   buildWidenSuggestionEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
+  buildManageLinkEmail,
+  buildAlertEmailChangeConfirmEmail,
+  buildNewMessageEmail,
+  buildSeedInquiryEmail,
+  buildMatchAlertEmail,
 } from './email.ts'
 
 const BASE = {
@@ -1079,4 +1084,57 @@ test('the text part of every builder stays byte-identical — preheader is an HT
 
   const confirm = buildAlertConfirmEmail(CONFIRM_BASE)
   assert.doesNotMatch(confirm.text, /display:none/)
+})
+
+// ─── dark-mode-safe emails ──────────────────────────────────────────────────
+
+const DARK_MODE_META = /<meta name="color-scheme" content="light dark">/
+const DARK_MODE_QUERY = /@media \(prefers-color-scheme: dark\)/
+
+test('every HTML email builder opts into light+dark color-scheme support', () => {
+  const htmls: string[] = [
+    buildPriceDropEmail({ ...BASE, photoUrl: null }).html,
+    buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 1 }).html,
+    buildCombinedAlertDigestEmail({
+      manageUrl: 'https://clubhanger.com/alerts/manage',
+      unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+      sections: [{ context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' }],
+    }).html,
+    buildAlertConfirmEmail(CONFIRM_BASE).html,
+    buildListingUnavailableEmail(UNAVAILABLE_BASE).html,
+    buildWidenSuggestionEmail(WIDEN_BASE).html,
+    buildManageLinkEmail({ manageUrl: 'https://clubhanger.com/alerts/manage?token=xyz' }).html,
+    buildAlertEmailChangeConfirmEmail({
+      oldEmail: 'old@example.com',
+      confirmUrl: 'https://clubhanger.com/api/alerts/confirm-email-change?token=abc',
+    }).html,
+    buildNewMessageEmail({ threadUrl: 'https://clubhanger.com/messages/thread-1' }).html,
+    buildSeedInquiryEmail({
+      personaName: 'Wei C.',
+      listingTitle: '2004 Cessna 172S Skyhawk',
+      listingUrl: 'https://clubhanger.com/partnerships/seeking/seek-2',
+      threadUrl: 'https://clubhanger.com/messages/thread-2',
+      inquirerEmail: 'buyer@example.com',
+      body: 'Interested in your listing.',
+    }).html,
+    buildMatchAlertEmail({
+      listingLabel: 'your 2004 Cessna 172S Skyhawk partnership',
+      otherSideLabel: 'pilots seeking a partnership',
+      count: 2,
+      matchesUrl: 'https://clubhanger.com/partnerships/p-1',
+    }).html,
+  ]
+
+  for (const html of htmls) {
+    assert.match(html, DARK_MODE_META, 'missing color-scheme meta tag')
+    assert.match(html, /<meta name="supported-color-schemes" content="light dark">/, 'missing supported-color-schemes meta tag')
+    assert.match(html, DARK_MODE_QUERY, 'missing prefers-color-scheme: dark media query')
+    assert.match(html, /class="ch-body"/, 'body missing ch-body class')
+  }
+})
+
+test('the text part of every builder is unaffected by the dark-mode head (HTML-only concept)', () => {
+  const { text } = buildAlertConfirmEmail(CONFIRM_BASE)
+  assert.doesNotMatch(text, /color-scheme/)
+  assert.doesNotMatch(text, /ch-body/)
 })

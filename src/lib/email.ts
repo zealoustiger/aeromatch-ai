@@ -140,13 +140,14 @@ export function buildAlertConfirmEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Almost there — confirm your alerts</h1>
-        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">Almost there — confirm your alerts</h1>
+        <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
           Thanks for signing up${forThing} on ClubHanger. One click and you&rsquo;re set — we&rsquo;ll
           only email you when a genuinely new matching listing shows up, never anything else.
         </p>
@@ -157,11 +158,11 @@ export function buildAlertConfirmEmail(opts: {
             Confirm my alerts
           </a>
         </p>
-        <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+        <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
           Didn&rsquo;t request this? No action needed — you won&rsquo;t hear from us again.
         </p>
       </div>
-      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a> &middot;
         <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
       </p>
@@ -209,12 +210,13 @@ export function buildManageLinkEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Your alerts, one click away</h1>
-        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">Your alerts, one click away</h1>
+        <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
           You asked for a link to manage your ClubHanger alerts. Use it to view, pause, edit, or
           delete every alert tied to this email address — no account or password needed.
         </p>
@@ -224,7 +226,7 @@ export function buildManageLinkEmail(opts: {
             Manage my alerts
           </a>
         </p>
-        <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+        <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
           Didn&rsquo;t request this? No action needed — this link only works for viewing alerts, it
           doesn&rsquo;t change anything on its own.
         </p>
@@ -270,12 +272,13 @@ export function buildAlertEmailChangeConfirmEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Confirm your new alerts email</h1>
-        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">Confirm your new alerts email</h1>
+        <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">
           Someone asked to move ClubHanger alerts from <strong>${escapeHtml(opts.oldEmail)}</strong> to this
           address. Click below to confirm — until you do, alerts keep going to the old address, and
           nothing changes here.
@@ -286,7 +289,7 @@ export function buildAlertEmailChangeConfirmEmail(opts: {
             Confirm this email
           </a>
         </p>
-        <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+        <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
           Didn&rsquo;t request this? No action needed — ignore this email and nothing will change.
         </p>
       </div>
@@ -321,10 +324,11 @@ export function buildNewMessageEmail(opts: {
   const subject = 'New message on ClubHanger'
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">You have a new message</h1>
-      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
+      <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">You have a new message</h1>
+      <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
         Someone sent you a message on ClubHanger. Click below to read it and reply.
       </p>
       <p style="margin:0 0 24px;">
@@ -333,7 +337,7 @@ export function buildNewMessageEmail(opts: {
           Read message
         </a>
       </p>
-      <p style="font-size:13px;line-height:1.6;color:#64748b;margin:0;">
+      <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#64748b;margin:0;">
         You&rsquo;re receiving this because you have an active conversation on ClubHanger.
       </p>
     </div>
@@ -367,22 +371,23 @@ export function buildSeedInquiryEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
-      <h1 style="font-size:20px;font-weight:700;margin:0 0 4px;">New listing inquiry</h1>
-      <p style="font-size:14px;color:#64748b;margin:0 0 20px;">Sent to the <strong>${escapeHtml(persona)}</strong> persona &middot; routed to you as concierge.</p>
+      <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 4px;">New listing inquiry</h1>
+      <p class="ch-muted" style="font-size:14px;color:#64748b;margin:0 0 20px;">Sent to the <strong>${escapeHtml(persona)}</strong> persona &middot; routed to you as concierge.</p>
       <table style="width:100%;font-size:14px;color:#334155;border-collapse:collapse;margin:0 0 20px;">
         <tr><td style="padding:6px 0;color:#94a3b8;width:96px;">Listing</td><td style="padding:6px 0;"><a href="${escapeAttr(opts.listingUrl)}" style="color:#0284c7;">${escapeHtml(opts.listingTitle)}</a></td></tr>
-        <tr><td style="padding:6px 0;color:#94a3b8;">From</td><td style="padding:6px 0;">${escapeHtml(from)}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;">From</td><td class="ch-text" style="padding:6px 0;">${escapeHtml(from)}</td></tr>
       </table>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;font-size:15px;line-height:1.6;color:#0f172a;white-space:pre-wrap;margin:0 0 22px;">${escapeHtml(opts.body)}</div>
+      <div class="ch-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;font-size:15px;line-height:1.6;color:#0f172a;white-space:pre-wrap;margin:0 0 22px;">${escapeHtml(opts.body)}</div>
       <p style="margin:0 0 8px;">
         <a href="${escapeAttr(opts.threadUrl)}"
            style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:11px 20px;border-radius:10px;">
           Reply in-thread
         </a>
       </p>
-      <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:14px 0 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#94a3b8;margin:14px 0 0;">
         Log in as the concierge account to reply here, or just email ${escapeHtml(from)} directly.
       </p>
     </div>
@@ -457,14 +462,15 @@ export function buildPriceDropEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
         ${photo}
-        <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)}</h1>
-        ${opts.shareType ? `<p style="margin:0 0 8px;font-size:13px;color:#64748b;">${escapeHtml(opts.shareType)}</p>` : ''}
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)}</h1>
+        ${opts.shareType ? `<p class="ch-muted" style="margin:0 0 8px;font-size:13px;color:#64748b;">${escapeHtml(opts.shareType)}</p>` : ''}
         <p style="margin:0 0 14px;">
           <span style="display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;">
             ${pct}% ${dropNoun}
@@ -482,7 +488,7 @@ export function buildPriceDropEmail(opts: {
           </a>
         </p>
       </div>
-      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you have an alert set up on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
@@ -536,12 +542,13 @@ export function buildListingUnavailableEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)} is no longer available</h1>
-        <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)} is no longer available</h1>
+        <p class="ch-text" style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
           ${statusLine}
         </p>
         <p style="margin:0;">
@@ -551,7 +558,7 @@ export function buildListingUnavailableEmail(opts: {
           </a>
         </p>
       </div>
-      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you had a watch alert set up on ClubHanger.
         <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
@@ -596,13 +603,14 @@ export function buildWidenSuggestionEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     ${preheaderHtml(`${label} hasn't matched anything yet. ${opts.widenDescription} — ${countLabel} match right now.`)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(label)} hasn&rsquo;t matched anything yet</h1>
-        <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(label)} hasn&rsquo;t matched anything yet</h1>
+        <p class="ch-text" style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
           It&rsquo;s been a few weeks with nothing to show &mdash; want to widen it? <strong>${escapeHtml(opts.widenDescription)}</strong> would match <strong>${countLabel}</strong> right now.
         </p>
         <p style="margin:0;">
@@ -612,7 +620,7 @@ export function buildWidenSuggestionEmail(opts: {
           </a>
         </p>
       </div>
-      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you have an alert on ClubHanger that hasn&rsquo;t sent anything yet.
         <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
       </p>
@@ -659,6 +667,33 @@ function escapeAttr(s: string): string {
 function preheaderHtml(text: string): string {
   const padding = '&nbsp;&zwnj;'.repeat(40)
   return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${escapeHtml(text)}${padding}</div>`
+}
+
+/**
+ * Shared dark-mode-safe email `<head>` — opts every builder into explicit
+ * light+dark `color-scheme` support so Gmail/Apple Mail/Outlook.com dark-mode
+ * inboxes render deliberately-chosen dark colors instead of auto-inverting
+ * (and mangling) the light cream/white inline styles. Insert once inside
+ * `<head>`; pair with the `ch-body`/`ch-card`/`ch-heading`/`ch-text`/
+ * `ch-muted`/`ch-brand` classes on whichever elements a builder wants
+ * remapped — anything left unclassed (CTA buttons, status badges) keeps its
+ * explicit light-mode colors in both schemes because those already carry
+ * their own fixed-contrast background + text pair that reads fine regardless
+ * of the surrounding page (deliberate, not an oversight).
+ */
+function emailColorSchemeHead(): string {
+  return `<meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .ch-body { background:#17140f !important; }
+        .ch-card { background:#221d15 !important; border-color:#3a3327 !important; box-shadow:none !important; }
+        .ch-heading { color:#f3ecdd !important; }
+        .ch-text { color:#cbc3b3 !important; }
+        .ch-muted, .ch-muted a { color:#8f8879 !important; }
+        .ch-brand { color:#38bdf8 !important; }
+      }
+    </style>`
 }
 
 /**
@@ -911,14 +946,15 @@ export function buildAlertDigestEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       ${sampleBannerHtml}
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:20px;font-weight:700;margin:0 0 10px;">${escapeHtml(countLabel)}</h1>
-        <p style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 10px;">${escapeHtml(countLabel)}</h1>
+        <p class="ch-muted" style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
           ${bodyCopy}
         </p>
         ${marketPulseHtml}
@@ -932,7 +968,7 @@ export function buildAlertDigestEmail(opts: {
       </div>
       ${crossSellHtml}
       ${digestFeedbackHtml}
-      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
@@ -1067,8 +1103,8 @@ export function buildCombinedAlertDigestEmail(opts: {
     const isLast = i === sections.length - 1
 
     const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
-        <h2 style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
-        <p style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
+        <h2 class="ch-heading" style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
+        <p class="ch-muted" style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
         ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
@@ -1096,12 +1132,13 @@ export function buildCombinedAlertDigestEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <p style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
-      <div style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
-        <h1 style="font-size:20px;font-weight:700;margin:0 0 16px;">${escapeHtml(overallLabel)} across your ${sections.length} alerts</h1>
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 16px;">${escapeHtml(overallLabel)} across your ${sections.length} alerts</h1>
         ${sectionParts.map((s) => s.html).join('')}
       </div>
       ${
@@ -1116,7 +1153,7 @@ export function buildCombinedAlertDigestEmail(opts: {
           : ''
       }
       ${digestFeedbackHtml}
-      <p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
@@ -1157,10 +1194,11 @@ export function buildMatchAlertEmail(opts: {
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
-      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">${escapeHtml(countLabel)}</h1>
-      <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
+      <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">${escapeHtml(countLabel)}</h1>
+      <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 20px;">
         ${opts.count === 1 ? 'A new listing' : 'New listings'} for ${escapeHtml(opts.otherSideLabel)}
         now match ${escapeHtml(opts.listingLabel)} on ClubHanger.
       </p>
@@ -1170,7 +1208,7 @@ export function buildMatchAlertEmail(opts: {
           View your matches
         </a>
       </p>
-      <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
         You&rsquo;re receiving this because you have an active listing on ClubHanger.
       </p>
     </div>
