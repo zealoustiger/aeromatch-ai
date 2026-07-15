@@ -312,6 +312,162 @@ test('digest: sampleNote honestly renders a genuine zero match count, not a fabr
   assert.match(html, /0 current matches for your Cessna 172 alert right now/)
 })
 
+test('digest: subject names the standout listing when there is exactly one new match', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, 'New: 1977 Cessna 182Q at $89,500 — your Cessna 172 alert')
+})
+
+test('digest: standout subject falls back to "new match on ClubHanger" when the alert has no context', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    context: null,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, 'New: 1977 Cessna 182Q at $89,500 — new match on ClubHanger')
+})
+
+test('digest: standout naming falls back to the generic subject when there is more than one match', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 2,
+    dropCount: 0,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, '2 new listings — Cessna 172 on ClubHanger')
+})
+
+test('digest: standout naming falls back to the generic subject when the one match is a price drop, not new', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 0,
+    dropCount: 1,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        previousPrice: 95_000,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, '1 price drop — Cessna 172 on ClubHanger')
+})
+
+test('digest: standout naming falls back to the generic subject when the sample has no usable price (never fabricate)', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: 'Pilot seeking a partnership',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: null,
+        ttaf: null,
+        location: null,
+        price: null,
+        url: 'https://clubhanger.com/partnerships/seeking/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, '1 new listing — Cessna 172 on ClubHanger')
+})
+
+test('digest: standout naming falls back to the generic subject with zero samples', () => {
+  const { subject } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0, samples: [] })
+  assert.equal(subject, '1 new listing — Cessna 172 on ClubHanger')
+})
+
+test('digest: standout naming does not apply to sampleNote previews even with one match', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    sampleNote: "your real weekly digest arrives automatically when there's a genuine match.",
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, 'Sample: 1 current match — Cessna 172 on ClubHanger')
+})
+
+test('digest: standout naming does not apply to firstSend even with one match', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    firstSend: true,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+    ],
+  })
+  assert.equal(subject, '1 match right now — Cessna 172 on ClubHanger')
+})
+
 test('digest: firstSend renders "right now" framing, no Sample prefix or banner', () => {
   const { subject, html, text } = buildAlertDigestEmail({
     ...DIGEST_BASE,
