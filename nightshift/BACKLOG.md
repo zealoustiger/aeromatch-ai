@@ -1739,7 +1739,7 @@ and support tooling._
   `alert_capture_viewed`/`alert_capture_opened`/`alert_subscribed`. Live-verified with a
   scripted Playwright pass (scroll-to-reveal, dismiss, reload-persists, desktop-hidden,
   zero console errors) on both pages, plus the standard qa-smoke gate.
-- **[P1][goal] Dark-mode-safe alert emails.** Every builder in `email.ts` is cream-on-
+~~- **[P1][goal] Dark-mode-safe alert emails.** Every builder in `email.ts` is cream-on-
   light with zero `color-scheme` handling — dark-mode inboxes (Gmail/Apple Mail auto-
   invert) can mangle the cream brand panels and low-contrast slate text unpredictably.
   Add `<meta name="color-scheme" content="light dark">` + `supported-color-schemes` and
@@ -1749,7 +1749,16 @@ and support tooling._
   forks; text parts stay byte-identical. Unit tests in `email.test.ts` assert the meta +
   media block render in every builder (follow the preheader item's test pattern). Why:
   "the best listing alert email in aviation" can't render broken for the large dark-mode-
-  inbox cohort. Email polish only — no schema change, no capture point.
+  inbox cohort. Email polish only — no schema change, no capture point.~~ ✅ SHIPPED via
+  `alert-email-dark-mode` (2026-07-15) Added a shared `emailColorSchemeHead()` helper
+  (the meta tags + one `@media (prefers-color-scheme: dark)` block, keyed off new
+  `ch-body`/`ch-card`/`ch-heading`/`ch-text`/`ch-muted`/`ch-brand` classes) and wired it
+  into all 11 HTML builders (confirm, manage-link, email-change confirm, new-message,
+  seed-inquiry, price-drop, listing-unavailable, widen-suggestion, digest, combined
+  digest, match-alert). CTA buttons and status badges left unclassed — their explicit
+  background+text pairs already read fine in both schemes. 12 new unit tests assert the
+  meta/media-query render in every builder and that `text` parts stay untouched (86/86
+  pass). No schema/capture-point change.
 - **[P1][goal] Overlapping-alert cleanup nudge on `/alerts/manage`.** Subscribers
   accumulate near-duplicate alerts across our ~30 capture points (e.g. `/aircraft?make=
   Cessna` AND `/aircraft?make=Cessna&model=172`) — the combined digest then repeats the
