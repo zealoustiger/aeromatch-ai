@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-15T06:22:15Z — alert-widen-suggestion-email — score 4/5
+- Strengths: Faithfully reuses the live widen logic with honest double live re-verification (0-match then >0 widen) before any send, mirrors sendStrandedPendingReminders' shape/fail-soft precisely, and ships strong tests (XSS-escape, singular/plural, byte-exact tokens, empty-context fallback).
+- Weaknesses / risks: sendWidenSuggestionEmails has no .limit() / upper age bound and never stamps the permanently-ineligible (21d+, never-matched, no >0 widen) alerts, so that set only grows and gets re-run through 2 live getAlertMatchCount calls on every daily cron pass.
+- Follow-up: Bound the widen scan (add .limit() and/or an upper confirmed_at window, or stamp a "checked, no widen" marker) so ineligible never-matched alerts aren't re-scanned with 2 live match-count queries each every day.
+
 ## 2026-07-14T11:13:05Z — alert-email-preheader — score 5/5
 - Strengths: Correct, honest, and well-scoped — a single shared `preheaderHtml()` helper (zero-height `display:none` div + `mso-hide:all` + `&nbsp;&zwnj;` padding, all standard inbox-preview technique) called right after `<body>` in exactly the 4 named builders, out-of-scope builders untouched (0 diff hits); every preheader is derived from counts/prices already passed in (no fabricated figures), leads with the key number so it survives inbox truncation, and cleanly sidesteps the double-escape trap by feeding raw (`forThingText`/unescaped title) mirrors into the helper's own `escapeHtml`, with a comment explaining exactly why; 84 lines of tests cover all 4 builders, custom `dropNoun`, zero-match honesty, HTML escaping (asserts no `&amp;amp;`), and the text-part-byte-identical invariant.
 - Weaknesses / risks: none material — the digest first-send/sample preheader strings duplicate the near-identical `bodyCopyText` wording, a tiny bit of copy repetition that could drift, but immaterial.
