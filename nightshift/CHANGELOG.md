@@ -2,6 +2,73 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260715T063523Z — PASS — mobile-sticky-alert-bar
+- Pages: /aircraft, /partnerships
+- What: **A sticky "🔔 Get alerts for this search" bar now appears at the bottom of
+  the screen on mobile** (where most of our traffic is) once a visitor scrolls past
+  about 8 listing cards on `/aircraft` or `/partnerships` — closing the gap between
+  the per-card bell icons and the footer email form several screens down. One tap
+  subscribes (signed-in) or jumps to the existing email field (signed-out); an X
+  dismisses it for that exact search, remembered on the next visit.
+- Goal: `[goal]` tier 3 — alert experience / new capture entry point (GOAL.md: "a
+  visitor should never be more than one click from 'alert me about this'", mobile
+  called out explicitly). Tier 1 (`[bug]`): none open — no unstruck `[bug]` entries
+  anywhere in BACKLOG.md, prior cycle (`alert-widen-suggestion-email`) PASSed. Tier 2
+  (`[want]`): re-confirmed empty of buildable work — "Save this search" auth-wall
+  reconciliation and the collection-layout mosaic redesign both remain explicitly
+  flagged for a human product call/mock; the Trade-A-Plane/Bay-Area-coverage
+  ingestion items and the owner-leads-list item remain flagged for human sign-off
+  before an autonomous build. Picked the highest-value open `[P1][goal]` item in
+  BACKLOG's "Plan-pass batch #4" — a genuinely new capture surface (not
+  management/ops polish like its siblings: live match-count preview, cron health
+  panel, admin subscriber lookup, `/account` alerts inline, dark-mode emails,
+  overlapping-alert nudge — all still open, left for future cycles).
+- Spec: nightshift/specs/20260715T063523Z-mobile-sticky-alert-bar.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  New `MobileStickyAlertBar.tsx` mirrors `AlertMeChip.tsx`'s signed-in/signed-out
+  subscribe logic 1:1 — same `subscribeSignedInAlert`/`getExistingAlertForSourcePath`
+  server actions, same `isLocallySubscribed` local-subscription check — but renders
+  as a mobile-only (`md:hidden`) `fixed bottom-0` bar instead of a filter-toolbar
+  chip. Scroll-depth gate: an IntersectionObserver watches for the 8th `<article>`
+  card, with a MutationObserver fallback in case the results list streams in after
+  this component mounts (it's a Suspense-wrapped server component). Dismiss state
+  persists per-`sourcePath` in localStorage (mirrors `alertLocalSubscriptions.ts`'s
+  SSR-safe `hasWindow()`/try-catch pattern). Hides while the on-screen keyboard is
+  open (`visualViewport` height-shrink heuristic, >150px), and while `CompareTray`
+  is showing (`useCompareOptional().count > 0`) so the two never stack. **Bug found
+  + fixed during QA:** the bar's first version used `z-40`, which ties with the
+  sitewide `FeedbackWidget` FAB (`fixed bottom-5 right-5 z-40`) — a scripted
+  Playwright pass caught the FAB intercepting clicks on the bar's dismiss button at
+  same z-index/later DOM order. Bumped to `z-50` to match `CompareTray`'s existing
+  precedent for the same conflict (verified: `CompareTray` already sits above the
+  FAB when active). Wired into `src/app/aircraft/page.tsx` and
+  `src/app/partnerships/page.tsx` (inside `<CompareProvider>`, alongside
+  `<CompareTray />`), reusing the exact `alertContext`/`alertSourcePath` already
+  threaded to the footer `AlertSignup` — no new computation. Every new capture
+  point fires `alert_capture_viewed`/`alert_capture_opened`/`alert_subscribed` with
+  `source: 'sticky_bar'`, matching `AlertMeChip`'s payload shape (also persists to
+  `alerts.source` once that already-flagged pending migration lands, same as every
+  other `source`-tagged placement). QA gate: served the real production build
+  (`next build` → `next start`); `qa-smoke.mjs --slug mobile-sticky-alert-bar
+  /aircraft /partnerships` 4/4 (desktop 1280 + mobile 375, HTTP 200, zero
+  app-origin console errors, zero horizontal overflow). Visual cycle (new
+  component/layout) — read the 4 saved screenshots, page chrome renders correctly
+  at both viewports (bar itself isn't visible in a full-page initial-load
+  screenshot by design — it's gated on scroll depth). Additionally scripted a
+  one-off Playwright verification (scroll 8+ cards → bar appears; tap Dismiss →
+  bar hides; reload + re-scroll → stays hidden via localStorage; 1280px viewport →
+  never appears; zero console errors) against both pages — confirmed every
+  acceptance criterion end-to-end, not just the smoke gate. No schema change, no
+  test-data rows created (read-only browser verification only). Server confirmed
+  cleanly stopped afterward.
+- Screenshots: nightshift/screenshots/mobile-sticky-alert-bar/
+- Next: the alert-experience `[goal]` queue still has several open `[P1]` items —
+  live match-count preview on `/alerts/manage`'s edit form, a daily-cron run log +
+  health panel on `/admin/alerts`, subscriber lookup support tooling, "Your alerts"
+  inline on `/account`, dark-mode-safe alert emails, and an overlapping-alert
+  cleanup nudge — none blocked, any is a reasonable next pick. "Near-instant
+  alerts" stays open pending a human call on the Vercel cron-plan tier.
+
 ## 20260715T060916Z — PASS — alert-widen-suggestion-email
 - Pages: none (cron + email template only — `src/app/api/cron/alert-digest/route.ts`,
   `src/lib/email.ts`)
