@@ -1643,16 +1643,25 @@ instant pillar re-scoped to a buildable shape, and management/email polish._
   cycle; verified instead via `npx tsx` against 9 real query-string shapes (all exposed/
   hidden/fallback/removeKeys/no-op-on-exposed-key cases), matching that same prior
   precedent. No schema change.
-- **[P2][goal] One-time "widen your alert?" email for never-matched alerts.** A confirmed
-  alert matching 0 listings never sends anything (the digest only fires on matches) —
-  silent churn with no feedback loop, even though `/alerts/manage` already computes
-  `computeWidenCandidate` for exactly this case. In the daily cron: alerts confirmed ≥3
-  weeks ago with no send ever (`last_digest_at` null), 0 current matches, and a widen
-  candidate → send ONE suggestion email ("Your Cessna 152 in Montana alert hasn't matched
-  anything yet — search every state instead?", manage-link CTA with the widen prefilled),
-  stamped once-ever via an additive nullable `alerts.widen_suggested_at` (⚠️ human-apply,
-  fail-soft, same never-spam pattern as `confirm_reminder_sent_at`). Improves: alert
-  email lifecycle / "offer fewer instead of none" spirit. No new capture point.
+~~- **[P2][goal] One-time "widen your alert?" email for never-matched alerts.**~~ ✅
+  SHIPPED via `alert-widen-suggestion-email` (2026-07-15) New `sendWidenSuggestionEmails`
+  in the daily `alert-digest` cron (mirrors `sendStrandedPendingReminders`'s structure):
+  targets confirmed/active alerts with `last_digest_at is null` (never matched anything,
+  ever) and `confirmed_at` ≥21 days ago, re-verifies BOTH a real live 0-match count on
+  the current search AND a real live >0-match count on the one-step-widened search
+  (reusing the exact `computeWidenCandidate`/`buildAlertCriteriaUpdate` logic
+  `/alerts/manage`'s nudge already uses) before ever sending — never a guess. New
+  `buildWidenSuggestionEmail` in `email.ts` (cream-branded, mirrors
+  `buildListingUnavailableEmail`'s structure) names the real widen description + real
+  match count, links to `/alerts/manage?token=...` where the same live widen nudge
+  already renders (no new one-click apply route needed for this slice). Additive nullable
+  `alerts.widen_suggested_at` column (⚠️ human-apply, fail-soft — confirmed live: the
+  real prod DB does NOT have this column yet, and the eligible-rows query fails soft with
+  a clear `42703` caught-and-skipped warning, same never-spam pattern as
+  `confirm_reminder_sent_at`). Live-verified read-only against real prod data (no test
+  rows/sends): a synthetic 0-match aircraft search widened correctly to a real 405-match
+  Cessna nationwide count, rendering the exact honest subject/body. 6 new unit tests in
+  `email.test.ts` (84/84 pass). No new capture point.
 ~~- **[P2][goal] Digest subject names the standout listing when there's exactly one new
   match.**~~ ✅ SHIPPED via `digest-standout-subject` (2026-07-15) `buildAlertDigestEmail`'s
   subject now reads "New: 1977 Cessna 182Q at $89,500 — your Cessna 172 alert" whenever

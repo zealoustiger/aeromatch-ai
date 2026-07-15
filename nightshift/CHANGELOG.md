@@ -2,6 +2,60 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260715T060916Z — PASS — alert-widen-suggestion-email
+- Pages: none (cron + email template only — `src/app/api/cron/alert-digest/route.ts`,
+  `src/lib/email.ts`)
+- What: **A confirmed alert that has never matched a single listing now gets one honest
+  "hasn't matched anything yet — widen it?" email**, instead of going silent forever.
+  Sent at most once per alert, only once it's been live ≥3 weeks with zero matches ever,
+  and only when a real, re-verified broader search (e.g. "Show all Cessna listings")
+  actually has matches right now — never a guess. Links to the alert's manage page,
+  where the same one-click widen button already lives.
+- Goal: `[goal]` tier 3 — alert experience / email lifecycle, "offer fewer instead of
+  none" spirit (GOAL.md). Tier 1 (`[bug]`): none open. Tier 2 (`[want]`): still empty of
+  buildable work — the "Save this search" auth-wall item's open sub-part remains flagged
+  for a human product call (re-confirmed this cycle), matching every recent audit. Tier 3:
+  this was the last genuinely open, unblocked `[P2][goal]` item in the alert-experience
+  queue — the sibling "near-instant alerts" item stays parked pending a human call on the
+  Vercel cron-plan tier.
+- Spec: nightshift/specs/20260715T060916Z-alert-widen-suggestion-email.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  New `sendWidenSuggestionEmails` (mirrors the existing `sendStrandedPendingReminders`
+  cron function 1:1 in structure): selects confirmed/active alerts with
+  `last_digest_at is null` (never sent anything, ever) and `confirmed_at` ≥21 days old,
+  then per-row re-verifies a real live 0-match count on the current search AND a real
+  live >0-match count on `computeWidenCandidate`'s one-step-widened search (the exact
+  logic `/alerts/manage`'s existing widen nudge already uses) via `getAlertMatchCount` —
+  skips silently (no send) if either check fails, so it can never fabricate a "this will
+  help." New `buildWidenSuggestionEmail` in `email.ts` (cream-branded, mirrors
+  `buildListingUnavailableEmail`'s structure/tone) renders the real description + real
+  count, a "Widen this alert" CTA to `/alerts/manage?token=...`, and unsubscribe. Additive
+  nullable `alerts.widen_suggested_at timestamptz` column added to `schema.sql` — ⚠️
+  HUMAN ACTION: apply against live Supabase before this can ever send; until then it
+  fails soft (caught `42703 column ... does not exist`, logged warning, zero sends, zero
+  crash) — confirmed live via a direct read-only query against the real prod DB today (no
+  test rows created). 6 new unit tests in `email.test.ts` (subject naming/fallback, real
+  description+count rendering — never fabricated, singular-noun grammar, manage/
+  unsubscribe links + UTM tagging, HTML-escaping) — full file 84/84 pass (78 pre-existing
+  + 6 new); full suite green across all 31 `src/lib/*.test.ts` files, 0 failures.
+  Live-verified the core pipeline read-only against real prod data (no writes, no
+  sends — `RESEND_API_KEY` is live in this env, so the cron's actual `GET` route was
+  deliberately NOT invoked, to avoid emailing real subscribers): a synthetic 0-match
+  Cessna+fake-model search correctly widened to the real live 405-match nationwide Cessna
+  count, producing the exact honest subject/body end-to-end. Non-visual cycle (cron logic
+  + email-template change only, no page/component touched) — screenshots not read, per
+  convention. QA gate: killed a stale leftover `next-server` process holding port 3000
+  from a prior session, served a fresh production build (`next build` → `next start`),
+  confirmed cleanly stopped afterward; `qa-smoke.mjs --slug alert-widen-suggestion-email
+  / /alerts /alerts/manage /aircraft` 8/8 (desktop 1280 + mobile 375, HTTP 200, zero
+  app-origin console errors, zero horizontal overflow) — picked as representative pages
+  since no page itself changed. No new capture point.
+- Screenshots: nightshift/screenshots/alert-widen-suggestion-email/
+- Next: the sibling `[P1][goal]` "near-instant alerts" item stays open, flagged for a
+  human decision on the Vercel cron-plan tier before attempting a sub-daily cron. Once a
+  human applies today's `widen_suggested_at` migration (and the 4 other still-pending
+  `alerts.*` columns), this feature goes live with zero further code change.
+
 ## 20260715T060157Z — PASS — digest-standout-subject
 - Pages: none (email templates only — `src/lib/email.ts`)
 - What: **When a weekly alert digest has exactly one genuine new match, the email

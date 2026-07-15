@@ -7,6 +7,7 @@ import {
   buildAlertConfirmEmail,
   buildPriceDropEmail,
   buildListingUnavailableEmail,
+  buildWidenSuggestionEmail,
   pickBestPriceDropSample,
   type AlertDigestSample,
   type AlertDigestSection,
@@ -16,7 +17,9 @@ import {
   getMarketPulseLine,
   getAircraftMakePulseLine,
   getPartnershipMarketPulseLine,
+  getAlertMatchCount,
 } from '@/lib/alertMatchCounts'
+import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from '@/lib/alertEditCriteria'
 import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
@@ -1137,6 +1140,95 @@ async function sendStrandedPendingReminders(
   return remindersSent
 }
 
+// ─── One-time "widen your alert?" email for never-matched alerts ──────────────
+
+const WIDEN_SUGGESTION_MIN_AGE_MS = 21 * 24 * 60 * 60 * 1000
+
+type WidenCandidateRow = {
+  id: string
+  email: string
+  context: string | null
+  source_path: string | null
+  confirmed_at: string | null
+  created_at: string
+  unsubscribe_token: string | null
+}
+
+/**
+ * A confirmed alert that has NEVER matched anything (last_digest_at stays
+ * null forever — the digest loop above only stamps it on a real send) is
+ * silent churn: the subscriber gets nothing, ever, with no feedback loop.
+ * Sends exactly ONE "hasn't matched yet, widen it?" suggestion, reusing the
+ * same `computeWidenCandidate` one-step loosening `/alerts/manage`'s nudge
+ * uses — re-verified against BOTH a real live 0-match count on the current
+ * search AND a real live >0-match count on the widened search before ever
+ * sending (never a guess). Guarded by the additive
+ * `alerts.widen_suggested_at` column so it can never repeat; if that column
+ * isn't migrated live yet, this skips sending entirely (same fail-soft
+ * precedent as `sendStrandedPendingReminders`).
+ */
+async function sendWidenSuggestionEmails(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowIso: string
+): Promise<number> {
+  const cutoff = new Date(new Date(nowIso).getTime() - WIDEN_SUGGESTION_MIN_AGE_MS).toISOString()
+
+  const { data, error } = (await supabase
+    .from('alerts')
+    .select('id, email, context, source_path, confirmed_at, created_at, unsubscribe_token')
+    .in('status', ['confirmed', 'active'])
+    .is('last_digest_at', null)
+    .is('widen_suggested_at', null)
+    .lte('confirmed_at', cutoff)) as { data: WidenCandidateRow[] | null; error: { message: string } | null }
+
+  if (error) {
+    if (error.message?.includes('widen_suggested_at')) {
+      console.warn('[alert-digest] widen_suggested_at not migrated live yet — skipping widen suggestions')
+    } else {
+      console.error('[alert-digest] widen-suggestion fetch error:', error.message)
+    }
+    return 0
+  }
+
+  let widenSuggestionsSent = 0
+  for (const row of data ?? []) {
+    if (!row.unsubscribe_token) continue
+
+    const target = parseEditableAlertTarget(row.source_path)
+    if (!target) continue
+    const candidate = computeWidenCandidate(target)
+    if (!candidate) continue
+
+    const currentMatch = await getAlertMatchCount(row.source_path)
+    if (!currentMatch || currentMatch.count > 0) continue // no longer dead — don't suggest
+
+    const { sourcePath: widenedPath } = buildAlertCriteriaUpdate(target.type, row.source_path, candidate.fields)
+    const widenedMatch = await getAlertMatchCount(widenedPath)
+    if (!widenedMatch || widenedMatch.count <= 0) continue // no real fix available — stay silent, never guess
+
+    const manageUrl = `${SITE_URL}/alerts/manage?token=${row.unsubscribe_token}`
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${row.unsubscribe_token}`
+    const { subject, html, text } = buildWidenSuggestionEmail({
+      context: row.context,
+      widenDescription: candidate.description,
+      widenCount: widenedMatch.count,
+      widenNoun: widenedMatch.noun,
+      manageUrl,
+      unsubscribeUrl,
+    })
+
+    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl })
+    if (result.sent || result.reason === 'no-key') {
+      await supabase
+        .from('alerts')
+        .update({ widen_suggested_at: new Date().toISOString() })
+        .eq('id', row.id)
+      widenSuggestionsSent++
+    }
+  }
+  return widenSuggestionsSent
+}
+
 // Digest email cross-sell (GOAL.md's "digest → manage → grow loop" — the same
 // one-click suggestion `/alerts/manage` already offers, reaching subscribers
 // who never click back into the site). Tries each due alert's source_path (in
@@ -1197,6 +1289,7 @@ export async function GET(req: NextRequest) {
   }
 
   const remindersSent = await sendStrandedPendingReminders(supabase, nowIso)
+  const widenSuggestionsSent = await sendWidenSuggestionEmails(supabase, nowIso)
 
   type DigestAlertRow = {
     id: string
@@ -1605,7 +1698,7 @@ export async function GET(req: NextRequest) {
 
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent}`
   )
-  return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue, remindersSent })
+  return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue, remindersSent, widenSuggestionsSent })
 }

@@ -832,3 +832,12 @@ alter table alerts add column if not exists email_change_token text;
 -- insert path fails soft and retries without `source` (same graceful-fallback
 -- pattern as price_drop_opt_in/frequency above) — no user-facing error either way.
 alter table alerts add column if not exists source text;
+
+-- alerts: one-time "widen your alert?" email guard (migration: alerts_widen_suggested)
+-- Marks when the ONE "hasn't matched anything yet, widen it?" email was sent to a
+-- confirmed alert that's never matched a single listing (last_digest_at is null).
+-- Nullable, no default. Apply in the Supabase SQL editor. Until applied, the
+-- widen-suggestion cron block skips sending entirely (never risks a duplicate
+-- suggestion without a way to mark a row already-suggested) — no user-facing
+-- error either way.
+alter table alerts add column if not exists widen_suggested_at timestamptz;

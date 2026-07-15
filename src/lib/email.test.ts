@@ -9,6 +9,7 @@ import {
   buildCombinedAlertDigestEmail,
   buildAlertConfirmEmail,
   buildListingUnavailableEmail,
+  buildWidenSuggestionEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
 } from './email.ts'
@@ -831,6 +832,64 @@ test('buildListingUnavailableEmail: omitting noun stays byte-for-byte the origin
   const withoutNoun = buildListingUnavailableEmail(UNAVAILABLE_BASE)
   assert.equal(withNoun.html, withoutNoun.html)
   assert.equal(withNoun.text, withoutNoun.text)
+})
+
+// ─── buildWidenSuggestionEmail (one-time never-matched-alert nudge) ────────
+
+const WIDEN_BASE = {
+  context: 'Cessna 152 in Montana',
+  widenDescription: 'Search every state',
+  widenCount: 42,
+  widenNoun: 'listing' as const,
+  manageUrl: 'https://clubhanger.com/alerts/manage?token=xyz',
+  unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+}
+
+test('buildWidenSuggestionEmail: subject names the alert context and asks to widen', () => {
+  const { subject } = buildWidenSuggestionEmail(WIDEN_BASE)
+  assert.equal(subject, "Cessna 152 in Montana hasn't matched anything yet — widen it?")
+})
+
+test('buildWidenSuggestionEmail: falls back to generic "Your alert" subject when context is null/empty', () => {
+  assert.equal(
+    buildWidenSuggestionEmail({ ...WIDEN_BASE, context: null }).subject,
+    "Your alert hasn't matched anything yet — widen it?"
+  )
+  assert.equal(
+    buildWidenSuggestionEmail({ ...WIDEN_BASE, context: '  ' }).subject,
+    "Your alert hasn't matched anything yet — widen it?"
+  )
+})
+
+test('buildWidenSuggestionEmail: renders the real widen description and count, never a fabricated fix', () => {
+  const { html, text } = buildWidenSuggestionEmail(WIDEN_BASE)
+  assert.match(html, /Search every state/)
+  assert.match(html, /42 listings/)
+  assert.match(text, /Search every state/)
+  assert.match(text, /42 listings/)
+})
+
+test('buildWidenSuggestionEmail: singular noun has no trailing "s"', () => {
+  const { text } = buildWidenSuggestionEmail({ ...WIDEN_BASE, widenCount: 1, widenNoun: 'pilot' })
+  assert.match(text, /1 pilot right now/)
+  assert.doesNotMatch(text, /1 pilots/)
+})
+
+test('buildWidenSuggestionEmail: manage and unsubscribe links appear in both html and text; unsubscribeUrl stays byte-exact', () => {
+  const { html, text } = buildWidenSuggestionEmail(WIDEN_BASE)
+  assert.ok(text.includes(WIDEN_BASE.unsubscribeUrl))
+  assert.ok(html.includes(WIDEN_BASE.unsubscribeUrl))
+  assert.match(html, /alerts\/manage\?token=xyz&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=widen/)
+  assert.match(text, /alerts\/manage\?token=xyz&utm_source=alert_email&utm_medium=email&utm_campaign=widen/)
+})
+
+test('buildWidenSuggestionEmail: context and widen description are HTML-escaped', () => {
+  const { html } = buildWidenSuggestionEmail({
+    ...WIDEN_BASE,
+    context: 'Cessna <script>alert(1)</script>',
+  })
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&lt;script&gt;/)
 })
 
 // ─── UTM attribution on alert-email site-page links ────────────────────────
