@@ -20,6 +20,7 @@ import PartnershipTabs from '@/components/PartnershipTabs'
 import MarketplaceCrossSell from '@/components/MarketplaceCrossSell'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import ModelFaq from '@/components/ModelFaq'
 import Link from 'next/link'
 import PartnershipLaunchBanner from '@/components/PartnershipLaunchBanner'
@@ -348,6 +349,7 @@ export default async function PartnershipsPage({
     </div>
     </div>
     <CompareTray />
+    <MobileStickyAlertBar context={alertContext} sourcePath={alertSourcePath} />
     </CompareProvider>
   )
 }

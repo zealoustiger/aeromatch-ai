@@ -1726,21 +1726,19 @@ and support tooling._
   for actions. Read-only v1 — edit/pause/delete stay on manage (next slices if pull
   exists). Improves `/account` as an alert surface. No new capture point (the page's
   existing CTA copy already routes to capture), no `alert_subscribed`.
-- **[P1][goal] Mobile sticky "Get alerts for this search" bar on `/aircraft` +
-  `/partnerships`.** On mobile (where most traffic is), the browse pages' capture points
-  are per-card bells and a footer form several screens down; the filter chip only renders
-  when ≥1 filter is active. Add a mobile-only (<768px) sticky bottom bar that appears
-  only after meaningful scroll depth (e.g. ~8 cards) and is dismissible with persistence
-  (`localStorage`, mirror `alertLocalSubscriptions.ts`' SSR-safe pattern) — cleaner-than-
-  Controller taste: one line, one 🔔 button, never stacks with an open keyboard, never
-  shows to already-subscribed visitors (reuse `isLocallySubscribed`/
-  `getExistingAlertForSourcePath` exactly like `AlertMeChip`). Behavior mirrors
-  `AlertMeChip` 1:1: signed-in = one-click subscribe via `subscribeSignedInAlert`
-  emitting `alert_subscribed` with `source: 'sticky_bar'` (+ persist `alerts.source`);
-  signed-out = smooth-scroll + focus the existing footer `AlertSignup` (`#alert-email`).
-  Fire `alert_capture_viewed`/`alert_capture_opened` (`source: 'sticky_bar'`) so the
-  placement has a real funnel denominator from day one. NEW capture affordance — must
-  emit `alert_subscribed`.
+~~- **[P1][goal] Mobile sticky "Get alerts for this search" bar on `/aircraft` +
+  `/partnerships`.**~~ ✅ SHIPPED via `mobile-sticky-alert-bar` (2026-07-15) New
+  `MobileStickyAlertBar.tsx` — mobile-only (`md:hidden`), mirrors `AlertMeChip`'s
+  signed-in/signed-out subscribe logic 1:1 (same server actions, same existing-alert/
+  local-subscription checks, `source: 'sticky_bar'` on every event). Appears only after
+  scrolling past the 8th result card (IntersectionObserver + MutationObserver fallback
+  for streamed-in lists); dismissible with per-`sourcePath` localStorage persistence;
+  hides for already-subscribed visitors, while the on-screen keyboard is open
+  (`visualViewport` heuristic), and while `CompareTray` is showing (bumped to `z-50` to
+  match `CompareTray`'s convention over the global feedback FAB). Fires
+  `alert_capture_viewed`/`alert_capture_opened`/`alert_subscribed`. Live-verified with a
+  scripted Playwright pass (scroll-to-reveal, dismiss, reload-persists, desktop-hidden,
+  zero console errors) on both pages, plus the standard qa-smoke gate.
 - **[P1][goal] Dark-mode-safe alert emails.** Every builder in `email.ts` is cream-on-
   light with zero `color-scheme` handling — dark-mode inboxes (Gmail/Apple Mail auto-
   invert) can mangle the cream brand panels and low-contrast slate text unpredictably.
