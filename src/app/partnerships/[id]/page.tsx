@@ -546,7 +546,13 @@ export default async function PartnershipDetailPage({
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-2">
               <ShareListingButton url={`${SITE_URL}/partnerships/${p.id}`} />
-              <SaveListingButton listingId={p.id} initialSaved={!!savedRowId} variant="full" />
+              <SaveListingButton
+                listingId={p.id}
+                initialSaved={!!savedRowId}
+                variant="full"
+                watchContext={[p.year, p.make, p.model].filter(Boolean).join(' ') || undefined}
+                watchSourcePath={`/partnerships/${p.id}?watch=price`}
+              />
             </div>
             {notesEnabled && savedRowId && (
               <SavedListingNote savedRowId={savedRowId} note={savedNote} />
