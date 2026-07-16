@@ -1925,11 +1925,23 @@ auth wall → product call)._
   `alerts.target_price` is still a pending human-DDL column, same as
   `price_drop_opt_in`/`frequency` were before their migrations landed) rather than
   erroring. Test row deleted after.
-- **[P1][goal] Save→watch bridge: one-tap "email me if the price drops" after hearting a
-  listing.** Hearting (aircraft + partnership, signed-in) is the highest-intent moment on
-  the site with zero alert offer today — after a save, show an inline one-tap watch
-  cross-sell reusing the existing signed-in watch path. New capture point on the save
-  interaction; emits `alert_subscribed` with `source: 'save_cross_sell'`.
+~~- **[P1][goal] Save→watch bridge: one-tap "email me if the price drops" after hearting a
+  listing.**~~ ✅ SHIPPED via `save-watch-crosssell` (2026-07-16) Hearting (aircraft +
+  partnership, signed-in) is the highest-intent moment on the site — it had zero alert
+  offer before this. `SaveListingButton.tsx` now accepts `watchContext`/`watchSourcePath`
+  (wired from the same values each detail page's own "Watch this listing" `AlertSignup`
+  box already computes); after a signed-in visitor's FIRST heart on
+  `/aircraft/listing/[id]` or `/partnerships/[id]` (never on unsave), a small dismissible
+  banner offers "Alert me if the price drops," a one-tap click into the existing
+  `subscribeSignedInAlert` action (`source: 'save_cross_sell'`, no new server action, no
+  schema change). `getExistingAlertForSourcePath` is checked first so a visitor already
+  watching the listing never sees a redundant offer (verified live: re-saving after
+  subscribing does not re-show the banner). Live-verified end-to-end against the real
+  prod DB with a throwaway `@example.com` account + a real magic-link-minted session
+  (service-role `generateLink` + `verifyOtp`, `@supabase/ssr`'s own cookie format via
+  Playwright `addCookies`): both listing types created a real `status: 'confirmed'` alert
+  row scoped to the listing's own `?watch=price` source_path. Seeker listings
+  intentionally excluded (no price to watch).
 ~~- **[P1][goal] Alert capture on `/tools/earnings-calculator` + the `/tools` index.**~~
   ✅ SHIPPED via `tools-hub-alert-capture` (2026-07-16) Neither page had any alert capture
   (cost-calculator did; these didn't). `/tools/earnings-calculator` now offers a

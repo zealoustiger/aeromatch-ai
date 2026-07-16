@@ -2,6 +2,61 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T091456Z — PASS — save-watch-crosssell
+- Pages: /aircraft/listing/[id], /partnerships/[id]
+- What: **Hearting a listing now offers a one-tap "alert me if the price drops" —
+  previously the highest-intent moment on the site (a signed-in visitor saving a
+  specific plane or partnership) had no alert offer at all.** The first time a
+  signed-in visitor hearts an aircraft-for-sale or partnership detail page, a small
+  banner appears next to the Save button: "Saved! Alert me if the price drops?" with
+  a one-tap "Yes, alert me" button. One click creates a real, already-confirmed watch
+  alert for that exact listing (no email retyping — reuses the signed-in session) and
+  the banner flips to "You're set." If the visitor is already watching that listing,
+  the banner doesn't show (no redundant ask). Dismissible with an X. Seeker listings
+  are unaffected (no price to watch there).
+- Goal: alert-experience `[goal]` tier — GOAL.md's "alert entry points everywhere they
+  make sense," specifically the save/heart interaction, which was the last major
+  intent-signal on the site with zero alert offer. Tier 1 (`[bug]`): none open — prior
+  cycle (`alert-watch-target-price-edit`) PASSed, no unstruck `[bug]` in BACKLOG.md.
+  Tier 2 (`[want]`): re-swept — the two open `[P1]/[P2][want]` items remain exactly as
+  flagged in every prior cycle (human product call / zero live effect). Dropped to
+  tier 3 — pulled from "Plan-pass batch #2," the last new-capture-point item in that
+  batch (the other two remaining items, cross-section digest dedupe and admin trend
+  sparklines, touch measurement/existing surfaces rather than adding a new alert
+  entry point; "invite your co-buyer" was passed over this cycle as broader in scope
+  — it needs generic share-banner handling across every alert source_path shape).
+- Spec: nightshift/specs/20260716T091456Z-save-watch-crosssell.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  (clean build, both routes compiled). QA against the PRODUCTION build (`npx next
+  start`, not dev) via `qa-smoke.mjs` on `/aircraft/listing/[id]` and
+  `/partnerships/[id]` at desktop 1280 + mobile 375: 4/4 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow). Visual + functional cycle —
+  went beyond the anonymous smoke crawl since the whole feature only triggers
+  signed-in: minted a real session for a throwaway `@example.com` test account via
+  service-role `generateLink` + `verifyOtp` (not a mock), injected `@supabase/ssr`'s
+  own cookie format into Playwright via `addCookies`, then drove real clicks against
+  both listing types. Confirmed: (1) hearting a fresh listing shows the banner; (2)
+  clicking "Yes, alert me" creates a real `alerts` row (`status: 'confirmed'`,
+  `source_path` = the listing's own `?watch=price` path) — verified directly via the
+  service-role client, not just the UI; (3) the banner flips to the done state
+  (screenshots confirm correct rendering at both viewports, no overlap, zero
+  horizontal overflow with the banner open); (4) unsaving then re-saving the same
+  listing does NOT re-show the offer (the `getExistingAlertForSourcePath` honesty
+  gate works); (5) the nav's "Get alerts" pill flips to "My alerts" as expected
+  (existing `markAlertSubscriber` behavior, unchanged). Only console errors seen
+  during the signed-in pass were the pre-existing, already-documented `Nav.tsx`
+  unread-message-badge `threads` 400s (confirmed by request URL — unrelated to this
+  change, seen in many prior cycles). Test alert rows (2, one per listing type) +
+  the test auth user deleted immediately after; verified 0 rows remain. `next start`
+  server confirmed killed at the end (`pgrep` clean).
+- Screenshots: nightshift/screenshots/save-watch-crosssell/
+- Next: (1) the remaining Plan-pass batch #2 items — cross-section digest dedupe,
+  "invite your co-buyer" share action (needs generic per-source_path share-link
+  handling, larger scope), 8-week admin trend sparklines. (2) Extend this same
+  save→watch bridge to the icon-variant (card-grid) heart buttons if card-level
+  cross-sell proves worthwhile — deliberately out of scope this cycle to keep the
+  banner's layout simple on detail pages first.
+
 ## 20260716T090127Z — PASS — alert-watch-target-price-edit
 - Pages: /alerts/manage
 - What: **A "watch this listing until it drops to $X" alert could never have

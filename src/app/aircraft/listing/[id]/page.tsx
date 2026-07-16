@@ -852,7 +852,14 @@ export default async function AircraftListingDetailPage({
         <div className="mb-6">
           <div className="flex items-center justify-end gap-2">
             <ShareListingButton url={detailUrl} />
-            <SaveListingButton listingId={p.id} listingType="aircraft" initialSaved={!!savedRowId} variant="full" />
+            <SaveListingButton
+              listingId={p.id}
+              listingType="aircraft"
+              initialSaved={!!savedRowId}
+              variant="full"
+              watchContext={watchContext}
+              watchSourcePath={watchSourcePath}
+            />
           </div>
           {notesEnabled && savedRowId && (
             <SavedListingNote savedRowId={savedRowId} note={savedNote} />
