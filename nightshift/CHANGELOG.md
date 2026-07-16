@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T061201Z — PASS — account-alerts-inline
+- Pages: /account, /alerts/manage
+- What: **Signed-in visitors now see their real email alert subscriptions right on the
+  "Account & alerts" page** — a "Your alerts" section lists every active/pending/paused
+  alert (what it's watching, its status, when it last emailed), instead of the page only
+  linking away to a separate "Manage alerts" screen. The section that used to be mislabeled
+  "Email alerts" (it actually showed saved searches) is now correctly titled "Saved
+  searches" so the two concepts aren't conflated.
+- Goal: `[goal]` tier 3 — alert experience / management pillar (GOAL.md: "signed-in users
+  see saved-search ↔ alert unified" — this is the read-only v1 slice). Tier 1 (`[bug]`):
+  none open — prior cycle (`alert-edit-live-match-count`) PASSed. Tier 2 (`[want]`):
+  re-confirmed empty of buildable work — "Save this search" auth-wall reconciliation and
+  the collection-layout mosaic redesign remain flagged for a human product call/mock; the
+  TAP-ingestion / Bay-Area-coverage-benchmark / owner-leads items remain flagged for human
+  sign-off (compliance/ToS/scraping); the dynamic-location seed-personas item is confirmed
+  to have no live user-facing effect (mock-only fixture, never renders on staging/prod).
+  Picked the next open `[P1][goal]` item in Plan-pass batch #4 — chose this one over the
+  admin-only cron-health-panel (needs a new table, human-apply DDL) and subscriber-lookup
+  items since it's a pure UI addition with no schema change, and it advances the actual
+  site experience rather than internal tooling.
+- Spec: nightshift/specs/20260716T061201Z-account-alerts-inline.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0;
+  qa-smoke exit 0 on `/account` + `/alerts/manage` (desktop 1280 + mobile 375, zero
+  app-origin console errors, zero overflow). Refactored `fetchAlertsForEmail` out of
+  `alerts/manage/page.tsx` into a shared `src/lib/alertsForOwner.ts` (byte-identical
+  logic, including the optional-column retry for not-yet-migrated `frequency`/
+  `price_drop_opt_in`/`paused_until`) so both pages read alerts the same way. The
+  logged-out `/account` render is unchanged (screenshots confirm). The signed-in branch
+  (auth-gated, not exercised by the anonymous smoke gate) was verified end-to-end with a
+  scripted Playwright pass against a throwaway `@example.com` account + one throwaway
+  `alerts` row (both created via service role and deleted immediately after, confirmed 0
+  rows/users remain): signed in, loaded `/account` at both viewports, confirmed the "Your
+  alerts" section renders the seeded alert's context/status/cadence line and the "Saved
+  searches" section renders its (now correctly-titled) empty state — screenshots look
+  right at both viewports, no overflow. That same pass surfaced 2-3 console 400s from
+  `Nav.tsx`'s unread-message-badge query against `threads` — this is the already-tracked,
+  already-triaged `nav-unread-badge-migration-fallback` issue (BACKLOG.md, "⚠️ HUMAN ACTION
+  still needed: apply the additive `threads` columns") firing once per page load in a fresh
+  browser tab; confirmed unrelated to this change (untouched files) and not present in the
+  anonymous qa-smoke run, so it didn't block this PASS.
+- Screenshots: nightshift/screenshots/account-alerts-inline/
+- Next: a v2 could add inline pause/delete actions directly on `/account` (today every
+  action still routes to `/alerts/manage`); or truly unify saved-searches and alerts into
+  one list once the "Save this search" auth-wall reconciliation gets its human product
+  call. Separately: the `threads` unread-badge migration (schema.sql lines ~526-529) is
+  still pending human DDL application — flagging again since this cycle's QA tripped over
+  it directly.
+
 ## 20260715T070000Z — PASS — alert-edit-live-match-count
 - Pages: /alerts/manage
 - What: **Editing an alert on the "Your alerts" page now shows a live "N listings

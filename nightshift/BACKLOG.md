@@ -1718,16 +1718,15 @@ and support tooling._
   the owner instead. Read-only + one reused send path, inside the existing admin gate (do
   NOT touch frozen auth checks). Improves the management/support surface. No capture
   point, no `alert_subscribed`.
-- **[P1][goal] "Your alerts" inline on `/account` — saved-search ↔ alert unification v1
-  (read-only).** GOAL.md names "signed-in users see saved-search ↔ alert unified," but
-  `/account`'s alerts card is copy + links only — a signed-in user can't see their actual
-  alerts without bouncing to `/alerts/manage`. Render the session user's alerts inline
-  (context, status badge, frequency, last-sent line — reuse the row-summary conventions
-  `/alerts/manage` already established, via the same `resolveOwnerEmail`-style trust
-  boundary: session email only, service-role read), each row linking to `/alerts/manage`
-  for actions. Read-only v1 — edit/pause/delete stay on manage (next slices if pull
-  exists). Improves `/account` as an alert surface. No new capture point (the page's
-  existing CTA copy already routes to capture), no `alert_subscribed`.
+~~- **[P1][goal] "Your alerts" inline on `/account` — saved-search ↔ alert unification v1
+  (read-only).**~~ ✅ SHIPPED via `account-alerts-inline` (2026-07-16) New "Your alerts"
+  section on `/account` renders every real `alerts` row for the session email (context,
+  status badge, last-sent/cadence line — same conventions as `/alerts/manage`), with a
+  "Manage alerts" link for any action. Extracted `fetchAlertsForEmail` into a shared
+  `src/lib/alertsForOwner.ts` (used by both pages, same optional-column retry logic).
+  The old "Email alerts" section (which actually showed saved searches) was retitled
+  "Saved searches" so the two concepts are no longer conflated. Read-only v1 — no
+  edit/pause/delete, no new capture point, no schema change.
 ~~- **[P1][goal] Mobile sticky "Get alerts for this search" bar on `/aircraft` +
   `/partnerships`.**~~ ✅ SHIPPED via `mobile-sticky-alert-bar` (2026-07-15) New
   `MobileStickyAlertBar.tsx` — mobile-only (`md:hidden`), mirrors `AlertMeChip`'s
