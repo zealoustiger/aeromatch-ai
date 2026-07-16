@@ -1801,15 +1801,21 @@ _All verified against the live codebase + full shipped list above before filing 
 `/admin/alerts` — none of these exist yet). None overlap the two open-but-blocked items
 (ingest-triggered / near-instant sends)._
 
-- **[P1][goal] Target-price watch alerts — "only email me when it drops below $X."**
-  Watch alerts (aircraft + partnership) currently fire on *any* genuine price drop; a
-  buyer with a real budget wants a threshold. Add an optional target-price field to the
-  `WatchAlertButton` capture and to the `/alerts/manage` edit form (`AlertEditForm`),
-  stored in an additive `alerts.target_price` column (graceful-fallback pattern exactly
-  like `paused_until` — must work unmigrated), and have the price-drop send path skip
-  drops still above the target (honesty: the manage row should show "watching for
-  ≤ $X"). Improves the listing-page + manage surfaces; `alert_subscribed` already fires
-  on watch capture — add the has-target flag to its payload so we can see uptake.
+~~- **[P1][goal] Target-price watch alerts — "only email me when it drops below $X."**~~
+  ✅ SHIPPED via `alert-watch-target-price` (2026-07-16) The watch-this-listing capture
+  panel (aircraft + partnership, `AlertSignup watchOnly`) now has an optional "Only email
+  me once it's $X or below" field, threaded through all three subscribe paths (typed
+  email, remembered-email one-tap, signed-in) into an additive `alerts.target_price`
+  column (graceful-fallback insert-retry, same pattern as `paused_until`). The cron's
+  `resolveListingWatch`/`resolvePartnershipWatch` only report a drop once the CURRENT
+  price is at/below the target — a drop that stays above it doesn't fire (still requires
+  a genuine `hasRecentPriceDrop`, never retroactive). `/alerts/manage` shows "watching for
+  ≤ $X" on rows with a target set. `alert_subscribed` carries `has_target_price` (boolean
+  only, never the dollar figure) for uptake visibility. **Not done, intentionally:** editing
+  `target_price` after signup via `AlertEditForm` — watch alerts aren't wired into the
+  `EditableAlertTarget`/`buildAlertCriteriaUpdate` machinery at all today (that form is
+  family-search-only), so adding edit support is a real follow-up slice, not a same-cycle
+  extension.
 ~~- **[P1][goal] Remembered-email one-tap subscribe for returning anonymous subscribers.**~~
   ✅ SHIPPED via `alert-remembered-email-one-tap` (2026-07-16) `alertLocalSubscriptions.ts`
   now also remembers the subscriber's own email (separate `localStorage` key, no

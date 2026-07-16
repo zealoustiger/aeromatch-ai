@@ -2,6 +2,45 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T073451Z — PASS — alert-watch-target-price
+- Pages: /aircraft/listing/[id], /partnerships/[id], /aircraft, /partnerships,
+  /alerts/manage
+- What: **Watching a listing's price for a drop now lets you set a target price
+  — "only email me once it's $X or below" — instead of getting emailed on
+  every drop no matter how small.** The optional field shows up wherever the
+  watch-price capture already lives (the dedicated box on a listing/
+  partnership detail page, and the bell icon on browse cards); leaving it
+  blank keeps today's "alert on any drop" behavior exactly as before.
+  `/alerts/manage` now shows "watching for ≤ $X" on a watch alert with a
+  target set.
+- Goal: alert experience (🔔 GOAL queue, `[P1][goal]` "Target-price watch
+  alerts") — smart, honest alert content per GOAL.md: a genuine drop only
+  fires once it clears the subscriber's real threshold, never a guess and
+  never retroactive without an actual price change.
+- Spec: nightshift/specs/20260716T073451Z-alert-watch-target-price.md
+- Verdict: PASS. `npx next build` + typecheck clean; all 370 unit tests pass
+  (no test changes needed — pure additive param/column, same graceful-
+  fallback shape every prior `alerts.*` slice used). QA smoke gate green on
+  desktop 1280 + mobile 375 across all 4 affected pages (HTTP 200, zero
+  console errors, zero overflow). Visual cycle — screenshots read: manually
+  captured the expanded watch panel on both an aircraft listing (desktop +
+  mobile) and a partnership listing (desktop) and confirmed the new field
+  renders cleanly with no overlap/overflow at either width, correct
+  "buy-in"-vs-"price" wording on the partnership variant. No live DB writes —
+  additive `alerts.target_price` column, fails soft exactly like
+  `paused_until`/`price_drop_opt_in` until a human applies the migration; no
+  signup round-trip was needed to verify this (same as every prior
+  `alerts.*` column ship).
+- Screenshots: nightshift/screenshots/alert-watch-target-price/
+- Next: editing `target_price` on an existing watch alert via
+  `/alerts/manage` — watch alerts aren't wired into `AlertEditForm`'s
+  `EditableAlertTarget` machinery at all today (family-search-only), so this
+  is a real follow-up slice, not a same-cycle extension. ⚠️ HUMAN ACTION:
+  apply the additive `alerts.target_price` migration (schema.sql) against
+  live Supabase before the field actually takes effect — until then it fails
+  soft with zero user-facing error, same as five other pending `alerts.*`
+  migrations.
+
 ## 20260716T072229Z — PASS — alert-digest-per-alert-stop-link
 - Pages: none (email-only change) — the affected surface is the combined
   alert-digest email's HTML/text; `/alerts`, `/alerts/status`, `/alerts/manage`
