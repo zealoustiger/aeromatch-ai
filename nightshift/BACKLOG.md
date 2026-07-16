@@ -2028,13 +2028,27 @@ save-search auth wall → `[want]` product call)._
   one-tap for returning visitors. Why: single biggest breadth win left — GOAL's "never
   more than one click from alert me" becomes literally true on every page. Must stay
   light (no CWV/375px regression; keep the client payload tiny).
-- **[P1][goal] Alert capture on the two browse index hubs — `/aircraft/browse` +
-  `/partnerships/browse`.** Both are pure navigation indexes with ZERO capture today
-  (verified) while every page they link TO has one. Right-noun boxes
-  (`noun="aircraft"`/`sourcePath="/aircraft"` and `noun="partnership"`/
-  `sourcePath="/partnerships"`), one distinct `source` tag per hub, emitting
-  `alert_subscribed`. Why: a visitor scanning the full index is a high-intent buyer who
-  hasn't picked a make yet — exactly who a broad alert serves.
+- ~~**[P1][goal] Alert capture on `/aircraft/browse`.**~~ ✅ SHIPPED via
+  `aircraft-browse-hub-alert` (2026-07-16) — this pure navigation index had ZERO capture
+  today (verified) while every page it links TO has one. Added an `AlertSignup` box
+  (`noun="aircraft"`, `sourcePath="/aircraft"`, `source="browse_hub"` — distinct from the
+  `/aircraft` page's own `browse_footer` box so placement conversion is measurable
+  separately), emitting `alert_subscribed` for free via the shared component.
+  **`/partnerships/browse` correction:** this item originally bundled both hubs as "ZERO
+  capture," but on inspection `/partnerships/browse` already renders
+  `PartnershipLaunchBanner` (a "beta near {area}" waitlist box calling
+  `subscribeToAlerts` directly) — not zero capture, just a different, older capture
+  mechanism than the standard `AlertSignup`. Its real gap: that banner never calls
+  `track('alert_subscribed', …)`, so its conversions are invisible to the standard
+  funnel. Left open below as its own smaller, more accurate item.
+- **[P1][goal] Wire `alert_subscribed` analytics into `PartnershipLaunchBanner`
+  (`/partnerships/browse`).** The banner's `handleSubmit` calls `subscribeToAlerts`
+  directly on success but never calls `track('alert_subscribed', …)` the way every other
+  capture surface (`AlertSignup`, `AlertMeChip`, `MobileStickyAlertBar`, etc.) does —
+  so its real subscriptions don't show up in the placement-conversion data GOAL.md asks
+  for ("every alert surface emits an analytics event"). Add the `track()` call
+  (`source: 'partnership_launch_banner'`, `context`, `source_path`) mirroring the payload
+  shape the other components already use. Small, one-file, no UI change.
 - **[P1][goal] Right-noun capture sweep on the last zero-capture static pages —
   `/about`, `/post`, `/listing-quality`.** All three verified at zero capture. Use the
   "Not ready yet?" band pattern; pick each page's honest noun (`/about` → generic
