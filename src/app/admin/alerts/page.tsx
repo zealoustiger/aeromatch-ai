@@ -1,5 +1,6 @@
 import { Bell, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { getAlertScoreboard, getDigestVoteRollup } from '@/lib/alertScoreboard'
+import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
 
 export const metadata = { title: 'Alert Scoreboard', robots: { index: false } }
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,8 @@ export default async function AlertScoreboardPage() {
 
   return (
     <div className="space-y-6">
+      <AdminAlertSubscriberLookup />
+
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
