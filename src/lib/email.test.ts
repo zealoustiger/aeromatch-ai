@@ -652,6 +652,48 @@ test('combined: footer carries the shared Manage/Unsubscribe links (already mult
   assert.match(text, /Unsubscribe from these: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b/)
 })
 
+test('combined: a section with its own stopUrl renders a per-section "Stop just this alert" link distinct from the shared footer unsubscribe', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
+        stopUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a',
+      },
+      {
+        context: 'Cirrus SR22',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus',
+        stopUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=b',
+      },
+    ],
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a"[^>]*>Stop just this alert</)
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=b"[^>]*>Stop just this alert</)
+  // Each section's stop link carries its OWN single token, never the
+  // combined comma-joined one from the shared footer link.
+  assert.equal((html.match(/token=a,b/g) ?? []).length, 1)
+  assert.match(text, /Stop just this alert: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a/)
+  assert.match(text, /Stop just this alert: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=b/)
+})
+
+test('combined: a section with no stopUrl renders no per-section stop link (fails soft, no dead link)', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+    ],
+  })
+  assert.doesNotMatch(html, /Stop just this alert/)
+  assert.doesNotMatch(text, /Stop just this alert/)
+})
+
 test('combined: with both digest-feedback urls, one shared "Was this digest useful?" row renders (not per-section)', () => {
   const { html, text } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage?token=a',

@@ -1030,6 +1030,13 @@ export type AlertDigestSection = {
   samples?: AlertDigestSample[]
   /** Same honest market-context line `buildAlertDigestEmail` takes — see its doc. */
   marketPulse?: string
+  /** This section's OWN alert's single-token unsubscribe link (not the
+   *  combined, comma-joined `opts.unsubscribeUrl`) — renders a "Stop just
+   *  this alert" link so a subscriber with several due alerts in one email
+   *  can drop just one instead of all-or-nothing (GOAL.md: "offer fewer
+   *  instead of none"). Omitted whenever the row has no `unsubscribe_token`
+   *  yet, same graceful-degrade precedent as `frequencyUrl` above. */
+  stopUrl?: string
 }
 
 /**
@@ -1102,13 +1109,17 @@ export function buildCombinedAlertDigestEmail(opts: {
       : ''
     const isLast = i === sections.length - 1
 
+    const stopLinkHtml = s.stopUrl
+      ? `<a href="${escapeAttr(s.stopUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Stop just this alert</a>`
+      : ''
+
     const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
         <h2 class="ch-heading" style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
         <p class="ch-muted" style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
         ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
-          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>
+          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${stopLinkHtml}
         </p>
       </div>`
 
@@ -1123,7 +1134,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}`
       })
       .join('\n')
-    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}`
+    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`
 
     return { html, text }
   })
