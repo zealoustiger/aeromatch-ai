@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Bell, CheckCircle2, Loader2 } from 'lucide-react'
-import { subscribeSignedInAlert, getExistingAlertForSourcePath } from '@/app/actions'
+import { subscribeSignedInAlert, subscribeToAlerts, getExistingAlertForSourcePath } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
-import { isLocallySubscribed } from '@/lib/alertLocalSubscriptions'
+import { isLocallySubscribed, addLocalSubscription, getLocalEmail } from '@/lib/alertLocalSubscriptions'
 import { createClient } from '@/lib/supabase'
 
 interface Props {
@@ -29,12 +29,22 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
   const [hasExistingAlert, setHasExistingAlert] = useState(false)
   const [locallySubscribed, setLocallySubscribed] = useState(false)
   const [justSubscribed, setJustSubscribed] = useState(false)
+  // This browser's remembered email (see lib/alertLocalSubscriptions.ts) — lets an
+  // anonymous tap subscribe directly instead of scrolling to the page's field.
+  const [rememberedEmail, setRememberedEmail] = useState<string | null>(null)
+  // Distinguishes the just-one-tapped state (still double-opt-in, a confirmation
+  // email is pending) from the confirmed "Alerts on" pill signed-in taps get.
+  const [justOneTapSubscribed, setJustOneTapSubscribed] = useState(false)
   const [pending, setPending] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
     setLocallySubscribed(isLocallySubscribed(sourcePath))
   }, [sourcePath])
+
+  useEffect(() => {
+    setRememberedEmail(getLocalEmail())
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -98,6 +108,26 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
       source_path: sourcePath,
       source: 'filter_toolbar',
     })
+    if (!signedInEmail && rememberedEmail) {
+      setErrorMsg('')
+      setPending(true)
+      const result = await subscribeToAlerts(rememberedEmail, context ?? '', sourcePath, true, 'weekly', 'filter_toolbar')
+      setPending(false)
+      if (result.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      track('alert_subscribed', {
+        context: context || 'all',
+        source_path: sourcePath,
+        source: 'filter_toolbar',
+        one_tap: true,
+      })
+      markAlertSubscriber()
+      addLocalSubscription(sourcePath)
+      setJustOneTapSubscribed(true)
+      return
+    }
     if (!signedInEmail) {
       const el = document.getElementById('alert-email')
       if (el) {
@@ -124,6 +154,15 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
     setJustSubscribed(true)
   }
 
+  if (justOneTapSubscribed) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 py-1.5 pl-3 pr-3.5 text-sm font-medium text-emerald-700">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Check {rememberedEmail} to confirm
+      </span>
+    )
+  }
+
   if (alreadyOn) {
     return (
       <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 py-1.5 pl-3 pr-3.5 text-sm font-medium text-emerald-700">
@@ -143,7 +182,13 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
       className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sky-600 py-1.5 pl-3 pr-3.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
     >
       {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
-      {pending ? 'Saving…' : errorMsg ? 'Try again' : 'Alert me for this search'}
+      {pending
+        ? 'Saving…'
+        : errorMsg
+          ? 'Try again'
+          : rememberedEmail
+            ? `Alert me — ${rememberedEmail}`
+            : 'Alert me for this search'}
     </button>
   )
 }
