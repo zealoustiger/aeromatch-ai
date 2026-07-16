@@ -2042,14 +2042,17 @@ save-search auth wall → `[want]` product call)._
   mechanism than the standard `AlertSignup`. Its real gap: that banner never calls
   `track('alert_subscribed', …)`, so its conversions are invisible to the standard
   funnel. Left open below as its own smaller, more accurate item.
-- **[P1][goal] Wire `alert_subscribed` analytics into `PartnershipLaunchBanner`
-  (`/partnerships/browse`).** The banner's `handleSubmit` calls `subscribeToAlerts`
-  directly on success but never calls `track('alert_subscribed', …)` the way every other
-  capture surface (`AlertSignup`, `AlertMeChip`, `MobileStickyAlertBar`, etc.) does —
-  so its real subscriptions don't show up in the placement-conversion data GOAL.md asks
-  for ("every alert surface emits an analytics event"). Add the `track()` call
-  (`source: 'partnership_launch_banner'`, `context`, `source_path`) mirroring the payload
-  shape the other components already use. Small, one-file, no UI change.
+~~- **[P1][goal] Wire `alert_subscribed` analytics into `PartnershipLaunchBanner`
+  (`/partnerships/browse`).**~~ ✅ SHIPPED via `partnership-banner-alert-tracking`
+  (2026-07-16) The banner's `handleSubmit` called `subscribeToAlerts` directly on success
+  but never called `track('alert_subscribed', …)` the way every other capture surface
+  (`AlertSignup`, `AlertMeChip`, `MobileStickyAlertBar`, etc.) does. Added the `track()`
+  call (`context`, `source_path: sourcePath`, `source: 'partnership_launch_banner'`,
+  `frequency: 'weekly'`) mirroring the payload shape `AlertSignup` already uses, fired only
+  on a successful (non-error) subscribe. `PartnershipLaunchBanner` renders on 5 pages
+  (`/partnerships`, `/partnerships/browse`, `/partnerships/seeking`,
+  `/partnerships/seeking/[id]`, `/partnerships/[id]`) so this closes the analytics gap
+  everywhere the banner appears, not just the browse hub. One file, no UI change.
 - **[P1][goal] Right-noun capture sweep on the last zero-capture static pages —
   `/about`, `/post`, `/listing-quality`.** All three verified at zero capture. Use the
   "Not ready yet?" band pattern; pick each page's honest noun (`/about` → generic
