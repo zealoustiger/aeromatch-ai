@@ -16,6 +16,12 @@ const STORAGE_KEY = 'ch_alert_local_subscriptions'
 /** Caps how many capture points one browser remembers — oldest drops first. */
 const MAX_ENTRIES = 50
 
+// Separate key: the subscriber's own email, remembered on THIS device only, so a
+// return visit to a NEW capture surface (different source_path) can offer a
+// signed-in-style one-tap subscribe instead of retyping. Still no account, no
+// token — just the same address they already typed once on this browser.
+const EMAIL_STORAGE_KEY = 'ch_alert_local_email'
+
 function hasWindow(): boolean {
   return typeof window !== 'undefined' && !!window.localStorage
 }
@@ -46,5 +52,25 @@ export function addLocalSubscription(sourcePath: string): void {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, sourcePath].slice(-MAX_ENTRIES)))
   } catch {
     /* quota / disabled storage — fail soft, the form just re-shows next visit */
+  }
+}
+
+/** This browser's remembered email from a past successful subscribe, if any. */
+export function getLocalEmail(): string | null {
+  if (!hasWindow()) return null
+  try {
+    return window.localStorage.getItem(EMAIL_STORAGE_KEY) || null
+  } catch {
+    return null
+  }
+}
+
+/** Remember the subscriber's own email on THIS device. Idempotent, fails soft. */
+export function setLocalEmail(email: string): void {
+  if (!hasWindow() || !email) return
+  try {
+    window.localStorage.setItem(EMAIL_STORAGE_KEY, email)
+  } catch {
+    /* quota / disabled storage — fail soft, one-tap just never offers */
   }
 }

@@ -11,7 +11,7 @@ import {
 } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
-import { isLocallySubscribed, addLocalSubscription } from '@/lib/alertLocalSubscriptions'
+import { isLocallySubscribed, addLocalSubscription, getLocalEmail, setLocalEmail } from '@/lib/alertLocalSubscriptions'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
@@ -176,10 +176,23 @@ export default function AlertSignup({
   // successful signed-out subscribe. Starts false (matches the server-rendered
   // markup) and only flips after mount, so it never causes a hydration mismatch.
   const [locallySubscribed, setLocallySubscribed] = useState(false)
+  // This browser's remembered email from a past successful subscribe (see
+  // lib/alertLocalSubscriptions.ts) — lets a NEW capture surface (a different
+  // sourcePath the visitor hasn't subscribed to yet) offer a signed-in-style
+  // one-tap button instead of retyping. Starts null (matches the server-rendered
+  // markup) and only flips after mount, so it never causes a hydration mismatch.
+  const [rememberedEmail, setRememberedEmail] = useState<string | null>(null)
+  // "Not you?" escape hatch — bypasses the one-tap button for this render and
+  // falls back to the normal typed-email field.
+  const [useManualEmail, setUseManualEmail] = useState(false)
 
   useEffect(() => {
     setLocallySubscribed(isLocallySubscribed(activeSourcePath))
   }, [activeSourcePath])
+
+  useEffect(() => {
+    setRememberedEmail(getLocalEmail())
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -273,6 +286,43 @@ export default function AlertSignup({
     // effectiveSourcePath, to match how the signed-in existingAlert lookup above
     // is keyed — the deal-only checkbox doesn't change which capture point this is.
     addLocalSubscription(activeSourcePath)
+    setLocalEmail(email)
+    setSubmitted(true)
+  }
+
+  async function handleOneTapSubmit() {
+    if (pending || !rememberedEmail) return
+    setErrorMsg('')
+    setPending(true)
+    const effectiveSourcePath = withDealOnly(activeSourcePath, showDealOnlyOption && dealOnly)
+    const result = await subscribeToAlerts(
+      rememberedEmail,
+      activeContext ?? '',
+      effectiveSourcePath,
+      showPriceDropOption ? priceDropOptIn : true,
+      frequency,
+      source
+    )
+    setPending(false)
+    if (result.error) {
+      setErrorMsg(result.error)
+      return
+    }
+    track('alert_subscribed', {
+      context: activeContext || 'all',
+      source_path: effectiveSourcePath,
+      source,
+      price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
+      frequency,
+      alert_count: showSocialProof ? alertCount : undefined,
+      match_count: hasMatchCount ? activeMatchCount : undefined,
+      deal_only: showDealOnlyOption && dealOnly ? true : undefined,
+      widened: widened ? true : undefined,
+      one_tap: true,
+    })
+    markAlertSubscriber()
+    addLocalSubscription(activeSourcePath)
+    setEmail(rememberedEmail)
     setSubmitted(true)
   }
 
@@ -450,6 +500,24 @@ export default function AlertSignup({
                 className="w-full rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
               >
                 {pending ? 'Saving…' : `Alert me — we'll email ${signedInEmail}`}
+              </button>
+            </div>
+          ) : rememberedEmail && !useManualEmail ? (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleOneTapSubmit}
+                disabled={pending}
+                className="w-full rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
+              >
+                {pending ? 'Saving…' : `Alert me — we'll email ${rememberedEmail}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUseManualEmail(true)}
+                className="mt-2 block text-xs font-medium text-slate-500 underline-offset-2 hover:underline"
+              >
+                Not you? Use a different email
               </button>
             </div>
           ) : (

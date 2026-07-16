@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Bell, CheckCircle2, Loader2, X } from 'lucide-react'
-import { subscribeSignedInAlert, getExistingAlertForSourcePath } from '@/app/actions'
+import { subscribeSignedInAlert, subscribeToAlerts, getExistingAlertForSourcePath } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
-import { isLocallySubscribed } from '@/lib/alertLocalSubscriptions'
+import { isLocallySubscribed, addLocalSubscription, getLocalEmail } from '@/lib/alertLocalSubscriptions'
 import { createClient } from '@/lib/supabase'
 import { useCompareOptional } from './CompareProvider'
 
@@ -57,6 +57,12 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
   const [hasExistingAlert, setHasExistingAlert] = useState(false)
   const [locallySubscribed, setLocallySubscribed] = useState(false)
   const [justSubscribed, setJustSubscribed] = useState(false)
+  // This browser's remembered email (see lib/alertLocalSubscriptions.ts) — lets an
+  // anonymous tap subscribe directly instead of scrolling to the page's field.
+  const [rememberedEmail, setRememberedEmail] = useState<string | null>(null)
+  // Distinguishes the just-one-tapped state (still double-opt-in, a confirmation
+  // email is pending) from the confirmed copy the signed-in tap gets.
+  const [justOneTapSubscribed, setJustOneTapSubscribed] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [pastScrollDepth, setPastScrollDepth] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
@@ -71,7 +77,12 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     setDismissed(isDismissed(sourcePath))
     setPastScrollDepth(false)
     setJustSubscribed(false)
+    setJustOneTapSubscribed(false)
   }, [sourcePath])
+
+  useEffect(() => {
+    setRememberedEmail(getLocalEmail())
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -153,7 +164,11 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
 
   const alreadySubscribed = hasExistingAlert || locallySubscribed
   const visible =
-    pastScrollDepth && !dismissed && !keyboardOpen && !compareTrayShowing && (!alreadySubscribed || justSubscribed)
+    pastScrollDepth &&
+    !dismissed &&
+    !keyboardOpen &&
+    !compareTrayShowing &&
+    (!alreadySubscribed || justSubscribed || justOneTapSubscribed)
 
   const viewedRef = useRef(false)
   useEffect(() => {
@@ -167,12 +182,32 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
   }, [visible, context, sourcePath])
 
   async function handleClick() {
-    if (pending || justSubscribed) return
+    if (pending || justSubscribed || justOneTapSubscribed) return
     track('alert_capture_opened', {
       context: context || 'all',
       source_path: sourcePath,
       source: 'sticky_bar',
     })
+    if (!signedInEmail && rememberedEmail) {
+      setErrorMsg('')
+      setPending(true)
+      const result = await subscribeToAlerts(rememberedEmail, context ?? '', sourcePath, true, 'weekly', 'sticky_bar')
+      setPending(false)
+      if (result.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      track('alert_subscribed', {
+        context: context || 'all',
+        source_path: sourcePath,
+        source: 'sticky_bar',
+        one_tap: true,
+      })
+      markAlertSubscriber()
+      addLocalSubscription(sourcePath)
+      setJustOneTapSubscribed(true)
+      return
+    }
     if (!signedInEmail) {
       const el = document.getElementById('alert-email')
       if (el) {
@@ -210,19 +245,32 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white pb-safe shadow-[0_-2px_12px_rgba(0,0,0,0.10)] md:hidden">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
         {justSubscribed ? (
-          <span className="flex flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             You&apos;ll get alerts for this search
+          </span>
+        ) : justOneTapSubscribed ? (
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span className="truncate">Check {rememberedEmail} to confirm</span>
           </span>
         ) : (
           <button
             type="button"
             onClick={handleClick}
             disabled={pending}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
           >
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-            {pending ? 'Saving…' : errorMsg ? 'Try again' : 'Get alerts for this search'}
+            {pending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Bell className="h-4 w-4 shrink-0" />}
+            <span className="truncate">
+              {pending
+                ? 'Saving…'
+                : errorMsg
+                  ? 'Try again'
+                  : rememberedEmail
+                    ? `Alert me — ${rememberedEmail}`
+                    : 'Get alerts for this search'}
+            </span>
           </button>
         )}
         <button
