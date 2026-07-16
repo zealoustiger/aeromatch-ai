@@ -23,6 +23,7 @@ import WidenAlertNudge, { type WidenSuggestion } from '@/components/WidenAlertNu
 import OverlapAlertNudge from '@/components/OverlapAlertNudge'
 import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
+import TargetPriceEdit from '@/components/TargetPriceEdit'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
 import NewAlertForm from '@/components/NewAlertForm'
 import ManageLinkRequestForm from '@/components/ManageLinkRequestForm'
@@ -338,6 +339,11 @@ export default async function AlertsManagePage({
                           </>
                         ) : null}
                       </p>
+                      {watch && watch.active ? (
+                        <div className="mt-1">
+                          <TargetPriceEdit id={a.id} targetPrice={a.target_price} token={scopeToken} />
+                        </div>
+                      ) : null}
                       {a.status === 'bounced' ? (
                         <p className="mt-0.5 text-xs text-red-600">
                           Your email bounced — resume once it&apos;s fixed.

@@ -1656,6 +1656,28 @@ export async function updateAlertFrequency(id: string, frequency: AlertFrequency
   return { ok: true }
 }
 
+// Set/clear the target price on a "watch this listing" alert — the deferred
+// follow-up from `alert-watch-target-price` (that alert type isn't wired into
+// `updateAlertCriteria`/`buildAlertCriteriaUpdate` at all, since a watch alert
+// has no make/model/state to edit, only this one number). Same ownership
+// proof + missing-column graceful-degrade as `updateAlertPriceDropOptIn`.
+// `targetPrice: null` clears it (watch alert stays active, just with no
+// price ceiling); a non-null value must be a positive integer.
+export async function updateAlertTargetPrice(id: string, targetPrice: number | null, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
+  if ('error' in owned) return { error: owned.error }
+
+  if (targetPrice != null && (!Number.isFinite(targetPrice) || targetPrice <= 0)) {
+    return { error: 'Target price must be a positive number.' }
+  }
+
+  const { error } = await owned.admin.from('alerts').update({ target_price: targetPrice }).eq('id', id)
+  if (error && error.message?.includes('target_price')) return { ok: true }
+  if (error) return { error: 'Failed to update alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
 // Public, token-scoped recovery for the one-click unsubscribe landing page — no
 // session exists there (it's a bare email link), so ownership is proven by the same
 // `unsubscribe_token` the email already carries, not by `loadOwnedAlert`'s signed-in
