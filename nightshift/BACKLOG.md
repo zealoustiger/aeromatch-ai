@@ -1795,6 +1795,72 @@ and support tooling._
   tracked `Nav.tsx` unread-badge 400). Test rows + user deleted immediately after,
   confirmed 0 remain. No schema change, no new capture point.
 
+### Plan-pass batch — 2026-07-16 (Fable)
+_All verified against the live codebase + full shipped list above before filing (checked
+`email.ts`, the Resend webhook route, `alertLocalSubscriptions.ts`, `WatchAlertButton`,
+`/admin/alerts` — none of these exist yet). None overlap the two open-but-blocked items
+(ingest-triggered / near-instant sends)._
+
+- **[P1][goal] Target-price watch alerts — "only email me when it drops below $X."**
+  Watch alerts (aircraft + partnership) currently fire on *any* genuine price drop; a
+  buyer with a real budget wants a threshold. Add an optional target-price field to the
+  `WatchAlertButton` capture and to the `/alerts/manage` edit form (`AlertEditForm`),
+  stored in an additive `alerts.target_price` column (graceful-fallback pattern exactly
+  like `paused_until` — must work unmigrated), and have the price-drop send path skip
+  drops still above the target (honesty: the manage row should show "watching for
+  ≤ $X"). Improves the listing-page + manage surfaces; `alert_subscribed` already fires
+  on watch capture — add the has-target flag to its payload so we can see uptake.
+- **[P1][goal] Remembered-email one-tap subscribe for returning anonymous subscribers.**
+  `alertLocalSubscriptions.ts` deliberately stores only `source_path` — so a repeat
+  email-only subscriber must retype their email on every NEW surface, while signed-in
+  users get one-click. Store the subscriber's own email locally on their own device
+  after a successful subscribe (their email, their browser — still no tokens), and have
+  `AlertSignup` (+ `WatchAlertButton`, `MobileStickyAlertBar`) render the signed-in-style
+  one-tap "Alert me — you@x.com" button with a "Not you?" fallback to the plain field.
+  Biggest remaining friction cut across EVERY capture surface; emits the existing
+  `alert_subscribed` with a `one_tap` property to prove it converts.
+- **[P1][goal] Per-alert "stop just this alert" link in the combined digest email.**
+  When the one-combined-email-per-pass slice shipped, per-alert controls were explicitly
+  deferred (`email.ts` ~line 1048: frequency was "ambiguous across multiple alerts") —
+  but a *pause/stop this alert* link is NOT ambiguous, and today a multi-alert subscriber's
+  only in-email options are all-or-nothing. Add a token-authed per-section "Stop just
+  this alert" link (reuse `pauseAlertByToken` / the unsubscribe-token trust boundary)
+  landing on a small confirmation page with undo/edit/delete. Better granular
+  unsubscribe UX = GOAL.md's "offer fewer instead of none," per alert.
+- **[P1][goal] Email engagement stats — `email.opened`/`email.clicked` webhook →
+  `/admin/alerts`.** The Resend webhook route today handles only `email.bounced` +
+  `email.complained`; UTM proves site-side clicks but we're blind to opens/click-through
+  per email TYPE. Extend the existing webhook with opened/clicked events into an
+  additive log table (fail-soft insert, same pattern as `alert_cron_runs`), and roll up
+  open/click rate per email type on `/admin/alerts`. Note for the cycle: the human must
+  also tick the two new event boxes in the Resend dashboard — code must degrade
+  honestly (panel says "no events received yet") until then. Proves which alert emails
+  actually get read (GOAL.md "prove it converts" — the email half).
+- **[P1][goal] Admin email-template preview gallery (`/admin/alerts/emails`).** Every
+  email builder in `email.ts` returns `{subject, html, text}` but the only way to SEE
+  one is to trigger a real send — so email design/copy regressions ship blind. New
+  admin-gated read-only page rendering every builder (digest, price-drop, buy-in-drop,
+  confirm, confirm-reminder, widen-nudge, recovery, sample…) with honest live-data
+  samples in sandboxed iframes, plus the subject/preheader/text-part alongside, at
+  desktop + 375px width. Makes every FUTURE email cycle QA-able in one page load; zero
+  subscriber-facing risk.
+- **[P1][goal] "Found my aircraft 🎉" exit on the unsubscribe-recovery page.** The
+  recovery page offers pause / switch-to-weekly — but the best possible reason to leave
+  (they bought a plane, possibly via us!) is indistinguishable from churn. Add a
+  one-tap "I found my aircraft" option: congratulates, stops all their alerts, emits
+  `alert_unsubscribed` with `reason: 'found'` (first-ever outcome signal for the whole
+  funnel), and offers ONE honest cross-sell ("flying it with partners? post a share").
+  Improves the unsubscribe surface; turns exits into a success metric + re-entry point.
+- **[P1][goal] "N new since your last visit" on the returning-subscriber nav pill.**
+  The nav already flips "Get alerts" → "My alerts" for known subscribers; make it
+  earn the click. Small read-only API: given the device's locally-stored
+  `source_path`s (already in `alertLocalSubscriptions`) + a locally-stored
+  last-visit timestamp, return how many matching listings are newer than that
+  (reuse `alertMatchCounts.ts` parsing; cap the paths, fail-soft to no badge).
+  Nav pill renders "My alerts · 3 new" linking to `/alerts/manage`. Honest only —
+  no count, no badge; never fabricate. Site-wide delight for the exact people who
+  already converted, and a reason to return.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
