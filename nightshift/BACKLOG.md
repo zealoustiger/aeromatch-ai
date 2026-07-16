@@ -2012,6 +2012,74 @@ auth wall → product call)._
   buckets summed correctly, no crash) — same precedent as prior `/admin/alerts`
   cycles for a panel unreachable by the anonymous QA smoke crawl.
 
+### Plan-pass batch #3 — 2026-07-16 (Fable)
+_All verified un-built by direct code read this pass (checked `Footer.tsx`, both browse
+hubs, `AlertMeChip.tsx` for `share=alert`, `ShareCostPanel.tsx`'s calculator link,
+`/about`+`/post`+`/listing-quality` for capture presence, `/listings` vs the
+`match-alert-digest` cron, and `AlertSignup.tsx` for any capture-time match count). None
+overlap the two open-but-blocked items (instant sends → Vercel-tier human call;
+save-search auth wall → `[want]` product call)._
+
+- **[P1][goal] Site-wide compact alert capture in the footer.** `Footer.tsx` today has
+  only a text link ("Get email alerts" → `/alerts`) — the one component on literally
+  every page has no capture. Add a slim one-field band (new compact rendering or thin
+  wrapper of `AlertSignup`, generic `sourcePath="/"`, `source="footer"`, emits
+  `alert_subscribed`); the remembered-email one-tap already shipped makes it a true
+  one-tap for returning visitors. Why: single biggest breadth win left — GOAL's "never
+  more than one click from alert me" becomes literally true on every page. Must stay
+  light (no CWV/375px regression; keep the client payload tiny).
+- **[P1][goal] Alert capture on the two browse index hubs — `/aircraft/browse` +
+  `/partnerships/browse`.** Both are pure navigation indexes with ZERO capture today
+  (verified) while every page they link TO has one. Right-noun boxes
+  (`noun="aircraft"`/`sourcePath="/aircraft"` and `noun="partnership"`/
+  `sourcePath="/partnerships"`), one distinct `source` tag per hub, emitting
+  `alert_subscribed`. Why: a visitor scanning the full index is a high-intent buyer who
+  hasn't picked a make yet — exactly who a broad alert serves.
+- **[P1][goal] Right-noun capture sweep on the last zero-capture static pages —
+  `/about`, `/post`, `/listing-quality`.** All three verified at zero capture. Use the
+  "Not ready yet?" band pattern; pick each page's honest noun (`/about` → generic
+  `sourcePath="/"`; `/post` + `/listing-quality` are owner/poster-facing → demand-side
+  seeker alerts, `sourcePath="/partnerships/seeking"`, per the earnings-calculator
+  precedent); unique `source` per page so placement conversion is measurable. Why:
+  closes out "entry points everywhere" — after this, every meaningful public page has a
+  capture point.
+- **[P1][goal] Honest capture-time match count in `AlertSignup` — "N match today; we'll
+  email you the new ones."** `getAlertMatchCount` already powers the nav pill and the
+  post-confirm page, but the capture box itself never says whether the alert is live
+  inventory or a long shot. Add an optional server-fetched `matchCount` prop rendered
+  as one honest reassurance line, and wire it on surfaces where the visitor CAN'T
+  already see results (guides, `/tools/*`, 404, footer if shipped) — skip filter/browse
+  pages where the results are right there. When the count is 0, say "none right now —
+  you'll be first to know," never fabricate. Why: capture-conversion polish on the
+  weakest-context surfaces, reusing an existing counter.
+- **[P1][goal] Second caller for the model-aware calculator alert — thread make/model
+  through `ShareCostPanel`'s "Run your own numbers" link.** Flagged follow-up from
+  `cost-calc-model-alert` (shipped earlier today): the panel on `/aircraft/listing/[id]`
+  still links bare `/tools/cost-calculator` (verified), so visitors arriving from a real
+  listing get the generic partnership box instead of the aircraft-scoped one that
+  already exists behind `?make=&model=`. Pass the listing's make/model into
+  `ShareCostPanel` and append the params. Why: completes the calculator's model-aware
+  alert for its highest-intent caller; no new machinery.
+- **[P1][goal] Complete shared-alert attribution — `AlertMeChip` +
+  `MobileStickyAlertBar` detect `?share=alert`.** Explicit follow-up flagged by
+  `alert-share-invite`: today only the footer `AlertSignup` tags `source: 'shared_alert'`;
+  the chip and sticky bar (verified — no share handling in `AlertMeChip.tsx`) keep their
+  own source, so a shared-link visitor who subscribes via the toolbar chip is
+  mis-attributed. Detect the param client-side (reuse `shareAlertLink.ts`), tag the
+  analytics source, and surface the existing "shared with you" note in the chip's
+  expanded state. Server actions already strip the param from `source_path` — no
+  storage change. Why: placement-conversion data for shared links stays honest.
+- **[P1][goal] Disclose the automatic owner match-alert emails on `/listings`.** The
+  `match-alert-digest` cron already emails every active listing owner weekly when new
+  matching pilots/partnerships appear — but no page ever tells the owner this happens,
+  and `/listings` (verified) shows match counts with no mention of the emails. Add one
+  honest line per listing row reading `match_alert_last_sent_at` ("We email you when new
+  matching pilots appear — last sent {date}" / "none sent yet"), linking to the match
+  browse URL the email itself uses. Why: GOAL's never-spam/honesty rule — an email the
+  recipient was never told about reads as spam; disclosure also markets the feature to
+  owners who haven't gotten one yet. (Read-only slice; an opt-out toggle is the natural
+  next slice if wanted.)
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
