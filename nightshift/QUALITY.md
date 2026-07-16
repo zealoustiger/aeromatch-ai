@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-16T09:11:12Z — alert-watch-target-price-edit — score 5/5
+- Strengths: Server action mirrors `updateAlertPriceDropOptIn` exactly (same `loadOwnedAlert` ownership proof, same `error.message?.includes('target_price')` missing-column graceful-degrade, same `revalidatePath`), with dual client+server validation of positive numbers; the new `TargetPriceEdit` client control cleanly covers add/edit/clear/cancel with error state, a11y labels, `flex-wrap` mobile layout, and a good doc comment explaining why watch alerts stay off the `AlertEditForm` criteria path — tightly scoped, reuses `formatPrice`, touches nothing out of scope.
+- Weaknesses / risks: none material — render gates on `watch.active` (spec said "watch truthy"), a defensible narrowing since an inactive/"done" watch has nothing to re-target; client `parseInt` silently truncates decimals, harmless for whole-dollar prices behind `type="number" min=1`.
+- Follow-up: none
+
 ## 2026-07-16T08:21:09Z — admin-email-template-gallery — score 5/5
 - Strengths: Every one of the 11 builder call sites matches its real `email.ts` signature exactly (verified against source); honest live-data discipline is excellent — reuses the existing `getAlertDigestPreview` fetcher, adds a clean genuine-price-drop query that returns null rather than guess, sandboxes each HTML preview in `<iframe sandbox="">`, labels placeholder-fed builders as such, and never touches `sendEmail`/Resend; scoping and the `/admin/listings/sample` drill-down link precedent are spot-on.
 - Weaknesses / risks: none material — `getSamplePriceDropListing` selects a `location` column it never uses; the no-live-drop fallback shows illustrative fabricated price numbers (honestly labeled) and the combined-digest preview drops the spec's `/partnerships/seeking` third fetcher in favor of aircraft+partnership — all defensible, net-positive judgment calls.
