@@ -2,6 +2,63 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T090127Z — PASS — alert-watch-target-price-edit
+- Pages: /alerts/manage
+- What: **A "watch this listing until it drops to $X" alert could never have
+  its target price changed — only delete-and-recreate.** `/alerts/manage`
+  rows for a watch alert now show "Add target price" (no target set) or "Edit
+  target ($X)" (one is set), which expands a one-field inline form to set,
+  change, or remove the price ceiling without touching the rest of the watch.
+- Goal: alert-experience `[goal]` tier — closing a management gap on an
+  existing surface (GOAL.md's "great alert management": see, edit, pause, and
+  delete). Tier 1 (`[bug]`): none open — prior cycle (`guide-alert-right-noun`)
+  PASSed, no unstruck `[bug]` in BACKLOG.md. Tier 2 (`[want]`): re-swept — the
+  two open `[P1]/[P2][want]` items ("Save this search" auth-wall
+  reconciliation, dynamic-location seed personas) are unchanged from every
+  prior cycle's note: the former is flagged as a human product call, the
+  latter has zero live effect today. Dropped to tier 3 — pulled from
+  "Plan-pass batch #2," explicitly named as "the explicitly-deferred follow-up
+  from `alert-watch-target-price`" in that item's own ship note. Picked over
+  its siblings (save→watch cross-sell after hearting, cross-section digest
+  dedupe, "invite your co-buyer" share, admin trend sparklines) because it was
+  the smallest, most concretely-scoped closed gap on an existing surface
+  (2 files touched, no new capture point, no ambiguity in what "done" means).
+- Spec: nightshift/specs/20260716T090127Z-alert-watch-target-price-edit.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0 (clean build, `/alerts/manage` compiled). QA against the PRODUCTION
+  build (`npx next start`, not dev) via `qa-smoke.mjs` on `/alerts/manage` at
+  desktop 1280 + mobile 375: 2/2 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow — `document.documentElement.scrollWidth`
+  confirmed 375 = viewport width, no cut-off content). Visual + functional
+  cycle beyond the anonymous smoke crawl (the signed-out page has no alerts to
+  show): created one throwaway `@example.com` watch-alert row directly via the
+  service-role key (source_path `/aircraft/listing/<real id>?watch=price`,
+  no `target_price`), then drove `/alerts/manage?token=<its own token>` with
+  Playwright — confirmed "Add target price" renders, Save persists an entered
+  value client-side (button flips to "Edit target ($123,000)"), Remove clears
+  it back to "Add target price," zero console errors on any step, and both
+  screenshots (desktop + mobile) show the control sitting cleanly under the
+  "Watching: ..." line with no overlap. **Confirmed honest degrade, matching
+  established precedent (`price_drop_opt_in`/`frequency`):** `alerts.target_price`
+  is one of the columns human DDL hasn't applied to the live DB yet (insert
+  with `target_price` set failed `PGRST204`, confirming it's genuinely
+  missing) — the new `updateAlertTargetPrice` action fails soft (same
+  `error.message?.includes('target_price')` guard as the sibling toggles), so
+  a reload after Save honestly reverts to "Add target price" (verified via a
+  fresh Playwright browser instance) rather than either erroring or silently
+  losing data; UI stays optimistic client-side so it doesn't look broken,
+  exactly the same tradeoff the two prior pending-column features made.
+  ⚠️ HUMAN ACTION still needed: apply the additive `alerts.target_price`
+  column — until then this feature (and the original `alert-watch-target-price`
+  capture-time field) is inert. Test alert row deleted immediately after
+  (verified 0 rows remain matching the test email). `next start` server killed
+  at the end (confirmed via `pgrep` — no lingering `next-server` process).
+- Screenshots: nightshift/screenshots/alert-watch-target-price-edit/
+- Next: the remaining Plan-pass batch #2 items: save→watch cross-sell after
+  hearting a listing, cross-section digest dedupe, "invite your co-buyer"
+  share action, 8-week admin trend sparklines, and the cost-calculator
+  re-scope note from two cycles ago.
+
 ## 20260716T085347Z — PASS — guide-alert-right-noun
 - Pages: /guides/aircraft-pre-purchase-inspection, /guides/aircraft-title-escrow-and-closing,
   /guides/aircraft-co-ownership, /guides/aircraft-partnership-agreement,

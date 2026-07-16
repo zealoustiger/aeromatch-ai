@@ -1911,12 +1911,20 @@ presence, `AircraftSaleCard.tsx`/`/saved` for hearts, `alertScoreboard.ts` for t
 None overlap the two open-but-blocked items (instant sends → Vercel tier; save-search
 auth wall → product call)._
 
-- **[P1][goal] Edit/remove the target price on watch alerts from `/alerts/manage`.** The
-  explicitly-deferred follow-up from `alert-watch-target-price` (its ship note calls this
-  "a real follow-up slice"): watch alerts aren't wired into `AlertEditForm`/
-  `EditableAlertTarget` at all, so a subscriber who set "only below $X" can never change
-  or clear it without delete-and-recreate. Closes a management gap on an existing
-  surface; no new capture point (no new `alert_subscribed`).
+~~- **[P1][goal] Edit/remove the target price on watch alerts from `/alerts/manage`.**~~
+  ✅ SHIPPED via `alert-watch-target-price-edit` (2026-07-16) A watch-alert row on
+  `/alerts/manage` now shows "Add target price" (none set) or "Edit target ($X)" (one is
+  set) — a small inline form (new `TargetPriceEdit.tsx` + `updateAlertTargetPrice` action,
+  same ownership-proof + missing-column graceful-degrade pattern as `PriceDropToggle`/
+  `FrequencyToggle`) lets a subscriber set, change, or clear the price ceiling without
+  deleting and recreating the watch. Deliberately separate from `AlertEditForm`/
+  `buildAlertCriteriaUpdate` — a watch alert has no make/model/state to edit, only this
+  one number. Verified live against the real (not-yet-migrated) prod DB via a throwaway
+  `@example.com` watch-alert row + its own token-scoped manage link: Add/Edit/Remove all
+  work with zero console errors; a reload after Save honestly reverts (confirming
+  `alerts.target_price` is still a pending human-DDL column, same as
+  `price_drop_opt_in`/`frequency` were before their migrations landed) rather than
+  erroring. Test row deleted after.
 - **[P1][goal] Save→watch bridge: one-tap "email me if the price drops" after hearting a
   listing.** Hearting (aircraft + partnership, signed-in) is the highest-intent moment on
   the site with zero alert offer today — after a save, show an inline one-tap watch
