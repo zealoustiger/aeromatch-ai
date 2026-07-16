@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, ArrowRight } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
+import { track } from '@/lib/analytics'
 
 interface Props {
   visitorState: string | null
@@ -33,6 +34,12 @@ export default function PartnershipLaunchBanner({ visitorState, seekerCount, sou
       setErrorMsg(result.error)
       return
     }
+    track('alert_subscribed', {
+      context,
+      source_path: sourcePath,
+      source: 'partnership_launch_banner',
+      frequency: 'weekly',
+    })
     setSubmitted(true)
   }
 
