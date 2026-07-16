@@ -34,6 +34,7 @@ import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuali
 import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassify'
 import { applyPartnershipModelFilter } from '@/lib/partnershipModelFilter'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
+import { dedupeDigestSectionSamples } from '@/lib/alertDigestDedupe'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -1638,20 +1639,28 @@ export async function GET(req: NextRequest) {
 
     // 2+ due, matching alerts for this email in the same pass — one combined
     // email, one section per alert, rather than one email per alert.
-    const sections: AlertDigestSection[] = group.map(({ alert, target, newCount, dropCount, samples, marketPulse }) => ({
-      context: alert.context ?? null,
-      newCount,
-      dropCount,
-      dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
-      listingsUrl: `${SITE_URL}${alert.source_path ?? '/aircraft'}`,
-      samples,
-      marketPulse: marketPulse ?? undefined,
-      // This alert's OWN token, not the combined comma-joined one — lets a
-      // subscriber stop just this section instead of every alert in the
-      // email (GOAL.md: "offer fewer instead of none"). Omitted for a
-      // not-yet-migrated row with no token yet (fails soft, no dead link).
-      stopUrl: alert.unsubscribe_token ? `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}` : undefined,
-    }))
+    // Each section's `samples` is fetched independently per-alert, so a
+    // listing matching more than one of this subscriber's alerts (e.g.
+    // "Cessna 182" + "all of TX") would otherwise render its card once per
+    // matching section — dedupe so it shows once, attributed to its
+    // first-matching section, with an honest "also matches" note. Never
+    // touches newCount/dropCount — those stay the truthful per-alert totals.
+    const sections: AlertDigestSection[] = dedupeDigestSectionSamples(
+      group.map(({ alert, target, newCount, dropCount, samples, marketPulse }) => ({
+        context: alert.context ?? null,
+        newCount,
+        dropCount,
+        dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
+        listingsUrl: `${SITE_URL}${alert.source_path ?? '/aircraft'}`,
+        samples,
+        marketPulse: marketPulse ?? undefined,
+        // This alert's OWN token, not the combined comma-joined one — lets a
+        // subscriber stop just this section instead of every alert in the
+        // email (GOAL.md: "offer fewer instead of none"). Omitted for a
+        // not-yet-migrated row with no token yet (fails soft, no dead link).
+        stopUrl: alert.unsubscribe_token ? `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}` : undefined,
+      }))
+    )
 
     // Any alert's token resolves the same email on /alerts/manage (it looks
     // up the owning email, then lists every alert for it), so the first
