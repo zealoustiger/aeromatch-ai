@@ -878,3 +878,12 @@ create index if not exists alert_cron_runs_created_at_idx on alert_cron_runs (cr
 -- price_drop_opt_in/frequency above) and the cron treats every watch alert as
 -- having no target (current behavior) — no user-facing error either way.
 alter table alerts add column if not exists target_price numeric;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_unsubscribe_reason
+-- Lets the unsubscribe-recovery page ("Changed your mind?") record WHY someone
+-- left when it's an honest success, not churn — specifically "I found my
+-- aircraft." Nullable, no default. Apply in the Supabase SQL editor. Until
+-- applied, markAlertFoundAircraftByToken fails soft and no-ops (same
+-- graceful-fallback pattern as target_price above) — the "Found my aircraft"
+-- button still shows its congratulatory confirmation either way.
+alter table alerts add column if not exists unsubscribe_reason text;
