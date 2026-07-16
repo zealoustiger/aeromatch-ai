@@ -19,6 +19,7 @@ import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { getWatchedListingStatus } from '@/lib/alertWatchStatus'
 import { formatPrice } from '@/lib/utils'
 import AlertEditForm from '@/components/AlertEditForm'
+import ShareAlertButton from '@/components/ShareAlertButton'
 import WidenAlertNudge, { type WidenSuggestion } from '@/components/WidenAlertNudge'
 import OverlapAlertNudge from '@/components/OverlapAlertNudge'
 import PriceDropToggle from '@/components/PriceDropToggle'
@@ -365,13 +366,16 @@ export default async function AlertsManagePage({
                         </p>
                       ) : null}
                     </div>
-                    <AlertEditForm
-                      id={a.id}
-                      status={a.status}
-                      sourcePath={a.source_path}
-                      target={target}
-                      token={scopeToken}
-                    />
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <ShareAlertButton sourcePath={a.source_path} />
+                      <AlertEditForm
+                        id={a.id}
+                        status={a.status}
+                        sourcePath={a.source_path}
+                        target={target}
+                        token={scopeToken}
+                      />
+                    </div>
                   </li>
                 )
               })}

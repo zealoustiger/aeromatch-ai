@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bell, CheckCircle2, Wand2 } from 'lucide-react'
+import { Bell, CheckCircle2, Wand2, Users } from 'lucide-react'
 import {
   subscribeToAlerts,
   subscribeSignedInAlert,
@@ -16,6 +16,7 @@ import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
 import type { SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
+import { stripShareParam } from '@/lib/shareAlertLink'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -106,7 +107,11 @@ export default function AlertSignup({
   // than rendering a second box or navigating away.
   const [widened, setWidened] = useState(false)
   const activeContext = widened && widenSuggestion ? widenSuggestion.context : context
-  const activeSourcePath = widened && widenSuggestion ? widenSuggestion.sourcePath : sourcePath
+  // A page whose sourcePath prop echoes its own full query string (e.g.
+  // /aircraft) would otherwise persist `share=alert` into the stored
+  // criteria — strip it so a shared link's recipient gets a real, matchable
+  // alert rather than one polluted by the share marker (see stripShareParam).
+  const activeSourcePath = widened && widenSuggestion ? widenSuggestion.sourcePath : stripShareParam(sourcePath)
   const activeMatchCount = widened && widenSuggestion ? widenSuggestion.count : matchCount
   // "aircraft" is already plural; everything else just takes an -s.
   const nounPlural = noun === 'aircraft' ? 'aircraft' : `${noun}s`
@@ -195,6 +200,22 @@ export default function AlertSignup({
   // "Not you?" escape hatch — bypasses the one-tap button for this render and
   // falls back to the normal typed-email field.
   const [useManualEmail, setUseManualEmail] = useState(false)
+  // Whether THIS PAGE's own URL (not the sourcePath prop, which may differ —
+  // e.g. a listing-detail watch box) carries `?share=alert` — set by
+  // ShareAlertButton's copied link. Starts false (matches the server-rendered
+  // markup) and only flips after mount, so it never causes a hydration
+  // mismatch. Never derived from the sharer's email/token — those never ride
+  // in the shared URL at all.
+  const [isSharedLink, setIsSharedLink] = useState(false)
+  // Overrides whatever `source` this placement normally tags itself with, so
+  // a subscribe that started from a shared link is attributable to the share
+  // itself rather than bucketed with this page's ordinary conversions.
+  const effectiveSource = isSharedLink ? 'shared_alert' : source
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsSharedLink(new URLSearchParams(window.location.search).get('share') === 'alert')
+  }, [])
 
   useEffect(() => {
     setLocallySubscribed(isLocallySubscribed(activeSourcePath))
@@ -268,7 +289,7 @@ export default function AlertSignup({
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency,
-      source,
+      effectiveSource,
       watchOnly ? parsedTargetPrice : undefined
     )
     setPending(false)
@@ -280,7 +301,7 @@ export default function AlertSignup({
     track('alert_subscribed', {
       context: activeContext || 'all',
       source_path: effectiveSourcePath,
-      source,
+      source: effectiveSource,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
@@ -313,7 +334,7 @@ export default function AlertSignup({
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency,
-      source,
+      effectiveSource,
       watchOnly ? parsedTargetPrice : undefined
     )
     setPending(false)
@@ -324,7 +345,7 @@ export default function AlertSignup({
     track('alert_subscribed', {
       context: activeContext || 'all',
       source_path: effectiveSourcePath,
-      source,
+      source: effectiveSource,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
@@ -350,7 +371,7 @@ export default function AlertSignup({
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency,
-      source,
+      effectiveSource,
       watchOnly ? parsedTargetPrice : undefined
     )
     setPending(false)
@@ -361,7 +382,7 @@ export default function AlertSignup({
     track('alert_subscribed', {
       context: activeContext || 'all',
       source_path: effectiveSourcePath,
-      source,
+      source: effectiveSource,
       price_drop_opt_in: showPriceDropOption ? priceDropOptIn : undefined,
       frequency,
       alert_count: showSocialProof ? alertCount : undefined,
@@ -469,6 +490,12 @@ export default function AlertSignup({
         </div>
       ) : (
         <>
+          {isSharedLink && (
+            <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-sky-700">
+              <Users className="h-3.5 w-3.5" />
+              A ClubHanger member shared this alert with you — set up your own below.
+            </p>
+          )}
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100">
               <Bell className="h-5 w-5 text-sky-600" />

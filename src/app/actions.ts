@@ -39,6 +39,7 @@ import {
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { resolveSnoozeUntil } from '@/lib/alertSnooze'
 import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
+import { stripShareParam } from '@/lib/shareAlertLink'
 import { htmlToReadableText } from '@/lib/htmlText'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
@@ -994,6 +995,14 @@ export async function subscribeToAlerts(
   const confirmToken = crypto.randomUUID()
   const unsubscribeToken = crypto.randomUUID()
 
+  // `share=alert` is a pure UI/attribution marker some client surfaces (a shared
+  // link lands on e.g. /aircraft?make=Piper&share=alert, whose sourcePath echoes
+  // the full query string) would otherwise persist into the STORED criteria,
+  // breaking the digest cron's matching. Strip it here — a server-side chokepoint
+  // that covers every subscribe surface (AlertSignup, AlertMeChip, the sticky
+  // bar), not just the ones that remember to strip client-side.
+  const cleanSourcePath = stripShareParam(sourcePath)
+
   // Plain INSERT (not upsert): the `alerts` table is insert-only for anon (no
   // public SELECT, to protect PII), and PostgREST upsert needs SELECT to detect
   // conflicts — so we insert and treat a unique-violation (same email+context)
@@ -1001,7 +1010,7 @@ export async function subscribeToAlerts(
   const basePayload = {
     email: clean,
     context: context || null,
-    source_path: sourcePath || null,
+    source_path: cleanSourcePath || null,
     status: 'pending',
     confirm_token: confirmToken,
     unsubscribe_token: unsubscribeToken,
@@ -1936,10 +1945,14 @@ export async function subscribeSignedInAlert(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !user.email) return { error: 'Not authenticated' }
 
+  // See subscribeToAlerts — strip the `share=alert` attribution marker so it
+  // never becomes part of the stored, digest-matched criteria.
+  const cleanSourcePath = stripShareParam(sourcePath)
+
   const basePayload = {
     email: user.email,
     context: context || null,
-    source_path: sourcePath || null,
+    source_path: cleanSourcePath || null,
     status: 'confirmed',
     confirmed_at: new Date().toISOString(),
     confirm_token: crypto.randomUUID(),
