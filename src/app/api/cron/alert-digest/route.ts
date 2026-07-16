@@ -781,11 +781,18 @@ type ListingWatchResult =
  * case, so a watch alert never just silently stops firing with no
  * explanation. A query error is treated as "nothing to report this pass"
  * rather than "unavailable" — never fabricate a removal on a transient error.
+ *
+ * `targetPrice` (optional) narrows a genuine drop further: the subscriber only
+ * gets emailed once the CURRENT price is at or below their threshold, not on
+ * every drop no matter how small. A drop that stays above the target is
+ * treated as `dropped: false` this pass — it fires the moment a later drop
+ * clears the threshold, never retroactively without an actual price change.
  */
 async function resolveListingWatch(
   supabase: ReturnType<typeof createAdminClient>,
   listingId: string,
-  since: string
+  since: string,
+  targetPrice?: number | null
 ): Promise<ListingWatchResult> {
   const { data, error } = await supabase
     .from('aircraft_for_sale')
@@ -808,6 +815,9 @@ async function resolveListingWatch(
   }
 
   if (!hasRecentPriceDrop(data, since)) return { kind: 'active', dropped: false }
+  if (targetPrice != null && (data.asking_price == null || data.asking_price > targetPrice)) {
+    return { kind: 'active', dropped: false }
+  }
   return { kind: 'active', dropped: true, sample: toDigestSample(data as AircraftSampleRow, data.previous_price) }
 }
 
@@ -933,11 +943,15 @@ async function fetchPartnershipPriceDropSamples(
  * column error (same precedent as `countNewSeekers`'s `additional_airports`
  * retry) so availability still resolves correctly even before the migration
  * lands; it just can't report a drop until then.
+ *
+ * `targetPrice` (optional) mirrors `resolveListingWatch`'s threshold: a
+ * genuine buy-in drop only fires once the CURRENT buy-in is at or below it.
  */
 async function resolvePartnershipWatch(
   supabase: ReturnType<typeof createAdminClient>,
   partnershipId: string,
-  since: string
+  since: string,
+  targetPrice?: number | null
 ): Promise<ListingWatchResult> {
   const fullCols =
     'id, make, model, year, buy_in_price, previous_buy_in_price, buy_in_price_changed_at, share_type, images, home_airport, city, state, status'
@@ -981,6 +995,9 @@ async function resolvePartnershipWatch(
     price_changed_at: data.buy_in_price_changed_at,
   }
   if (!hasRecentPriceDrop(dropInput, since)) return { kind: 'active', dropped: false }
+  if (targetPrice != null && (data.buy_in_price == null || data.buy_in_price > targetPrice)) {
+    return { kind: 'active', dropped: false }
+  }
   return { kind: 'active', dropped: true, sample: toPartnershipDigestSample(data, data.previous_buy_in_price) }
 }
 
@@ -1302,6 +1319,7 @@ export async function GET(req: NextRequest) {
     unsubscribe_token: string | null
     price_drop_opt_in?: boolean
     frequency?: string
+    target_price?: number | null
   }
 
   // Coarse pre-filter: any alert that could possibly be due, at ANY chosen
@@ -1316,7 +1334,8 @@ export async function GET(req: NextRequest) {
   // subscribers on legacy rows from every digest, forever.
   const LIVE_ALERT_STATUSES = ['confirmed', 'active']
   const baseCols = 'id, email, context, source_path, created_at, last_digest_at, unsubscribe_token'
-  let cols = `${baseCols}, price_drop_opt_in, frequency`
+  const DIGEST_OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'target_price']
+  let cols = `${baseCols}, ${DIGEST_OPTIONAL_COLS.join(', ')}`
   let { data: alerts, error: fetchError } = (await supabase
     .from('alerts')
     .select(cols)
@@ -1326,13 +1345,17 @@ export async function GET(req: NextRequest) {
     error: { message: string } | null
   }
 
-  // Neither, either, or both of price_drop_opt_in/frequency may not be
+  // Any subset of price_drop_opt_in/frequency/target_price may not be
   // migrated live yet — retry without whichever column(s) the error names
   // (PostgREST reports one unknown column per error, so this can take up to
-  // two passes) rather than breaking the whole send run; every alert is then
-  // treated as opted-in / weekly below, both columns' own defaults (current
-  // behavior).
-  for (let i = 0; i < 2 && fetchError && (fetchError.message?.includes('price_drop_opt_in') || fetchError.message?.includes('frequency')); i++) {
+  // three passes) rather than breaking the whole send run; every alert is then
+  // treated as opted-in / weekly / no-target below, each column's own default
+  // (current behavior).
+  for (
+    let i = 0;
+    i < DIGEST_OPTIONAL_COLS.length && fetchError && DIGEST_OPTIONAL_COLS.some((c) => fetchError!.message?.includes(c));
+    i++
+  ) {
     cols = cols
       .split(', ')
       .filter((c) => !fetchError!.message.includes(c))
@@ -1400,7 +1423,7 @@ export async function GET(req: NextRequest) {
     const since = alert.last_digest_at ?? alert.created_at ?? minWindowStart
 
     if (target.type === 'aircraft' && target.listingId) {
-      const watch = await resolveListingWatch(supabase, target.listingId, since)
+      const watch = await resolveListingWatch(supabase, target.listingId, since, alert.target_price)
       if (watch.kind === 'unavailable') {
         unavailableWatches.push({ alert, title: watch.title, browseUrl: watch.browseUrl, noun: 'aircraft' })
         continue
@@ -1417,7 +1440,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (target.type === 'partnership' && target.listingId) {
-      const watch = await resolvePartnershipWatch(supabase, target.listingId, since)
+      const watch = await resolvePartnershipWatch(supabase, target.listingId, since, alert.target_price)
       if (watch.kind === 'unavailable') {
         unavailableWatches.push({ alert, title: watch.title, browseUrl: watch.browseUrl, noun: 'partnership' })
         continue

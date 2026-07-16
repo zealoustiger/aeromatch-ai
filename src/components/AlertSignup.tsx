@@ -159,6 +159,16 @@ export default function AlertSignup({
   const showDealOnlyOption = noun === 'aircraft' && !watchOnly && !sourcePath.includes('deal=good')
   const [dealOnly, setDealOnly] = useState(false)
   const [frequency, setFrequency] = useState<AlertFrequency>('weekly')
+  // Target-price threshold for watch-only alerts — "only email me once it's
+  // actually at a price I'd pay," instead of on every drop no matter how
+  // small. Blank keeps today's "alert on any genuine drop" behavior; kept as
+  // a raw string (like min/maxPrice elsewhere) so an empty field round-trips
+  // cleanly through a controlled number input.
+  const [targetPrice, setTargetPrice] = useState('')
+  const parsedTargetPrice = (() => {
+    const n = parseInt(targetPrice, 10)
+    return targetPrice.trim() && Number.isFinite(n) && n > 0 ? n : undefined
+  })()
   // A signed-in visitor's email is already verified — skip retyping it and
   // subscribe as already-confirmed (no double-opt-in round trip). Read-only
   // client-side session check, same pattern as Nav.tsx.
@@ -258,7 +268,8 @@ export default function AlertSignup({
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency,
-      source
+      source,
+      watchOnly ? parsedTargetPrice : undefined
     )
     setPending(false)
     if (result.error) {
@@ -276,6 +287,7 @@ export default function AlertSignup({
       match_count: hasMatchCount ? activeMatchCount : undefined,
       deal_only: showDealOnlyOption && dealOnly ? true : undefined,
       widened: widened ? true : undefined,
+      has_target_price: watchOnly && parsedTargetPrice != null ? true : undefined,
     })
     // This browser now belongs to a subscriber — the nav's "Get alerts" CTA
     // becomes "My alerts" (see lib/alertSubscriberFlag.ts). Boolean only.
@@ -301,7 +313,8 @@ export default function AlertSignup({
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency,
-      source
+      source,
+      watchOnly ? parsedTargetPrice : undefined
     )
     setPending(false)
     if (result.error) {
@@ -319,6 +332,7 @@ export default function AlertSignup({
       deal_only: showDealOnlyOption && dealOnly ? true : undefined,
       widened: widened ? true : undefined,
       one_tap: true,
+      has_target_price: watchOnly && parsedTargetPrice != null ? true : undefined,
     })
     markAlertSubscriber()
     addLocalSubscription(activeSourcePath)
@@ -336,7 +350,8 @@ export default function AlertSignup({
       effectiveSourcePath,
       showPriceDropOption ? priceDropOptIn : true,
       frequency,
-      source
+      source,
+      watchOnly ? parsedTargetPrice : undefined
     )
     setPending(false)
     if (result.error) {
@@ -354,6 +369,7 @@ export default function AlertSignup({
       signed_in: true,
       deal_only: showDealOnlyOption && dealOnly ? true : undefined,
       widened: widened ? true : undefined,
+      has_target_price: watchOnly && parsedTargetPrice != null ? true : undefined,
     })
     markAlertSubscriber()
     setConfirmedImmediately(true)
@@ -546,6 +562,22 @@ export default function AlertSignup({
                 {pending ? 'Saving…' : watchOnly ? `Watch ${watchWord}` : 'Get alerts'}
               </button>
             </form>
+          )}
+          {watchOnly && (
+            <label htmlFor="alert-target-price" className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+              Only email me once it&rsquo;s $
+              <input
+                id="alert-target-price"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={targetPrice}
+                onChange={(e) => setTargetPrice(e.target.value)}
+                placeholder="any drop"
+                className="w-24 rounded border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-100"
+              />
+              or below (optional)
+            </label>
           )}
           {showPriceDropOption && (
             <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
