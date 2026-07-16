@@ -1997,12 +1997,18 @@ auth wall → product call)._
   `newCount`/`dropCount` stay untouched — only preview cards are deduped, matching GOAL.md's
   honesty rule.
 ~~- **[P1][goal] "Invite your co-buyer" — share an alert from `/alerts/manage`.**~~ ✅ SHIPPED via `alert-share-invite` (2026-07-16) Per-row "Share" button on `/alerts/manage` (`ShareAlertButton`) copies `origin + source_path + ?share=alert` and shows a transient "Copied!" — never the sharer's email/token. Any `AlertSignup` surface reached with `?share=alert` renders a sky-blue "A ClubHanger member shared this alert with you — set up your own below" note above the capture (detected client-side from `window.location.search`, so no hydration mismatch). New `src/lib/shareAlertLink.ts` (`withShareParam`/`stripShareParam`, 8 unit tests). **`share=alert` is a pure UI/attribution marker — stripped server-side in BOTH `subscribeToAlerts` and `subscribeSignedInAlert`** so it can never leak into the stored, digest-matched `source_path` from ANY subscribe surface (the QA caught `AlertMeChip`/sticky-bar one-tap paths persisting the raw path — a client-only strip in `AlertSignup` was insufficient). Live-verified end-to-end via a throwaway `@example.com` session: Share→Copied+clipboard URL, note renders desktop+mobile, and a submit from a shared link stored a clean `/aircraft?make=Piper` row (marker gone); all test rows/user deleted. NOTE: the `alerts` table has no `source` column (the actions' fallback loop drops it), so `source: 'shared_alert'` is analytics-only; only the footer `AlertSignup` tags it — the top `AlertMeChip` keeps its own `filter_toolbar` source. Follow-up: teach `AlertMeChip` to detect `share=alert` for complete attribution.
-- **[P1][goal] 8-week trend sparklines on the `/admin/alerts` funnel.** GOAL.md says
-  judge conversions week-over-week, but `alertScoreboard.ts` only computes this-week vs
-  last-week — no trend beyond one comparison. Add a small 8-week series per funnel stage
-  (subscribed / confirmed / unsubscribed) to the existing scoreboard panel, computed from
-  the timestamps already on the rows. Measurement ("prove it converts"); no new capture
-  point.
+~~- **[P1][goal] 8-week trend sparklines on the `/admin/alerts` funnel.**~~ ✅ SHIPPED
+  via `alert-scoreboard-trend` (2026-07-16) New pure `buildWeeklyTrend()`
+  (`src/lib/alertWeeklyTrend.ts`, 8 unit tests) buckets the scoreboard's already-
+  selected `created_at`/`confirmed_at` into 8 weekly buckets; a new "8-week trend"
+  section on `/admin/alerts` renders subscribed-vs-confirmed as a small bar
+  sparkline. **Not done, intentionally:** the unsubscribed stage — the `alerts`
+  table has no `unsubscribed_at` timestamp (only a `status` flip), so there's no
+  honest per-week bucket for it; the panel says so explicitly rather than
+  fabricating one. Verified end-to-end against the real live DB via a throwaway,
+  uncommitted script calling the real `getAlertScoreboard()` (10 real rows, weekly
+  buckets summed correctly, no crash) — same precedent as prior `/admin/alerts`
+  cycles for a panel unreachable by the anonymous QA smoke crawl.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_

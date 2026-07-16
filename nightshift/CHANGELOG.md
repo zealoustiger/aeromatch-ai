@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T102225Z — PASS — alert-scoreboard-trend
+- Pages: /admin/alerts (admin-only, `noindex`; no public-facing page changed)
+- What: **The alert admin dashboard can now show 8 weeks of subscribed-vs-confirmed
+  history at a glance, not just this-week-vs-last-week.** A new "8-week trend"
+  section on `/admin/alerts` renders a small bar sparkline (one bar pair per week)
+  so the human can see the shape of the funnel's growth, not just a single
+  comparison number.
+- Goal: alert-experience `[goal]` tier — GOAL.md's "prove it converts" / "track
+  PostHog conversions week-over-week." Tier 1 (`[bug]`): none open — swept
+  BACKLOG.md for any unstruck `[bug]` line; every entry already resolved/shipped,
+  and the prior cycle (`alert-share-invite`) PASSed. Tier 2 (`[want]`): re-swept —
+  the two open `[P1]/[P2][want]` items ("Save this search" auth-wall
+  reconciliation, dynamic-location seed personas) remain exactly as flagged in
+  every prior cycle: the former is a human product call on a two-CTA UX question,
+  the latter targets a dev-only mock fixture with zero live effect. Neither
+  buildable this cycle. Dropped to tier 3 — this was the last open item in the 🔔
+  alert-experience `[goal]` section (the other live candidate, "real instant
+  alerts," stays blocked on an unconfirmed Vercel cron-tier plan limit that needs
+  a human call, flagged in two prior cycles' scoping passes).
+- Spec: nightshift/specs/20260716T102225Z-alert-scoreboard-trend.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0. New `src/lib/alertWeeklyTrend.ts` (pure `buildWeeklyTrend()`, extracted
+  standalone like `alertSourceFamily.ts`/`alertDigestDedupe.ts` so it stays
+  unit-testable without a DB) + 8 new unit tests (bucketing correctness, an
+  8-week-old row excluded, null/invalid dates ignored, independent
+  subscribed/confirmed bucketing, accumulation, label format) — all pass; full
+  existing `src/lib/*.test.ts` suite re-run as a regression check, 0 failures.
+  QA against the PRODUCTION build (`npx next start`, not dev) via `qa-smoke.mjs`
+  on `/admin/alerts` at desktop 1280 + mobile 375: 2/2 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow). Visual cycle —
+  screenshots read: the anonymous crawl correctly shows the layout's "Admin only"
+  gate at both viewports (same precedent as every prior `/admin/alerts` cycle —
+  the new panel itself is unreachable by an unauthenticated crawl, so this
+  confirms zero regression for anonymous visitors). Since the panel is genuinely
+  unreachable via the anonymous smoke crawl, independently verified via a
+  throwaway, uncommitted script (deleted after use) that called the real
+  `getAlertScoreboard()` against the live prod DB: returned a correctly-shaped
+  8-entry `weeklyTrend` with real counts (10 total rows; weekly subscribed counts
+  summed to 10; a 3-row confirmed bucket landed in the correct week) — no crash,
+  no NaN, confirming both the query path and the bucketing math work against real
+  data, not just synthetic unit-test fixtures. Read-only; no rows created or
+  modified.
+- Screenshots: nightshift/screenshots/alert-scoreboard-trend/
+- Next: the unsubscribed stage stays untrended (no `unsubscribed_at` timestamp
+  exists — would need a new column + migration to do honestly, a human call
+  since it's schema). The "real instant alerts" item remains the one open
+  alert-experience `[goal]` candidate, gated on confirming the Vercel plan tier.
+
 ## 20260716T101800Z — PASS — alert-share-invite
 - Pages: /alerts/manage, /aircraft (any page rendering `AlertSignup`)
 - What: **Subscribers can now share an alert with the co-buyer they're searching
