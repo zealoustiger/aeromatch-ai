@@ -1,3 +1,37 @@
+## 2026-07-16T10:43:11Z — Night Shift run: 24 cycles (PASS 20 / FAIL 1) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $95.1462 of $120 cap
+
+- PASS — alert-edit-live-match-count — the alert-edit form on `/alerts/manage` now shows a live N listings match right now preview (with an honest 0-match warning) as a subscribe
+- PASS — account-alerts-inline — Signed-in `/account` now shows real email-alert subscriptions inline (context, status, last-sent) instead of just linking away, retitled the misl
+- PASS — overlapping-alert-nudge — Added a conservative already covered by your other alert nudge on /alerts/manage that lets subscribers one-click remove a redundant narrower al
+- PASS — admin-alert-subscriber-lookup — added an email-based subscriber lookup + one-click manage-link resend to `/admin/alerts`, so the human has a support view for I can't fin
+- PASS — alert-cron-run-log — added a Cron health panel on /admin/alerts (last-run counts + a red flag if no successful alert-digest cron run in >36h), backed by a new additive `
+- ABORT — none — plan needed`
+- PASS — alert-remembered-email-one-tap — returning signed-out alert subscribers now get a one-tap Alert me — you@x.com button (no retyping) on every capture surface (AlertSign
+- PASS — alert-digest-per-alert-stop-link — combined alert-digest emails now let a subscriber stop just one alert instead of all of them, via a per-section link reusing the exist
+- PASS — alert-watch-target-price — Added an optional target-price threshold to watch-a-listing price alerts (aircraft + partnership) so subscribers only get emailed once the pri
+- PASS — alert-found-my-aircraft-exit — added a one-tap Found my aircraft 🎉 exit on the alert unsubscribe-recovery page, turning a success (bought the plane) into a distinguis
+- PASS — nav-alert-new-since-pill — the returning-subscriber nav pill now shows an honest My alerts · N new count when a subscriber's saved searches have real new matches since 
+- PASS — admin-email-template-gallery — new `/admin/alerts/emails` admin-gated read-only page renders all 11 `email.ts` builders (real live DB samples for confirm/digest/combined
+- PASS — email-engagement-stats — Tagged every outgoing alert email by type and extended the Resend webhook to log `email.opened`/`email.clicked` into a new fail-soft table, roll
+- ABORT — none — plan needed`
+- PASS — tools-hub-alert-capture — Added email-alert signup boxes to `/tools/earnings-calculator` (demand-side notify me when a pilot starts seeking a partnership) and the `/tool
+- PASS — guide-alert-right-noun — the 2 aircraft-buyer guide pages now offer the correct aircraft-scoped alert (not partnership), and all 8 guide pages got distinct source tags f
+- PASS — alert-watch-target-price-edit — added set/edit/remove control for the target price on watch alerts at `/alerts/manage`, closing a management gap that previously required
+- PASS — save-watch-crosssell — hearting an aircraft-for-sale or partnership listing (signed-in) now offers a one-tap alert me if the price drops banner right at the heart button
+- PASS — digest-dedupe-crosssection — combined alert-digest emails no longer show the same matching listing's photo card twice when it matches two of a subscriber's overlapping a
+- cycle produced no verdict (exit 124)
+- PASS — alert-share-invite — per-row Share on /alerts/manage copies a co-buyer invite link; recipients see a shared with you note and set up their own alert, with the share mark
+- PASS — alert-scoreboard-trend — Added an 8-week subscribed-vs-confirmed trend sparkline to `/admin/alerts` (pure, unit-tested bucketing helper; honestly omits an unsubscribed t
+- PASS — cost-calc-model-alert — the cost calculator's alert-signup box now knows which aircraft you're pricing out when you arrived via a curated make/model page's Estimate your
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.7 on 2 cores, sustained ~20 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 24 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-14T12:23:32Z — Night Shift run: 7 cycles (PASS 6 / FAIL 0) — night budget cap ($120)
 - Models: cycles on sonnet; 0 escalated to opus; 2 quality-judged on opus
 - Night spend so far: $124.0246 of $120 cap
