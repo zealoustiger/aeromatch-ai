@@ -1,3 +1,21 @@
+## 2026-07-16T12:12:19Z — Night Shift run: 9 cycles (PASS 8 / FAIL 0) — night budget cap ($120)
+- Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $121.5590 of $120 cap
+
+- ABORT — none — plan needed`
+- PASS — sharecost-calc-model-link — threaded the aircraft listing's make/model into ShareCostPanel's Run your own numbers link so it lands on the model-aware cost-calculator ale
+- PASS — aircraft-browse-hub-alert — added an alert-capture box to /aircraft/browse (the zero-capture navigation-index hub), and corrected the batch-#3 backlog item after finding
+- PASS — footer-alert-capture — added a slim email-alert capture band to the site footer (renders on every page) so no page is missing an alert entry point, with a remembered-ema
+- PASS — partnership-banner-alert-tracking — wired the missing `alert_subscribed` PostHog event into `PartnershipLaunchBanner` (renders on 5 partnerships pages), closing an analy
+- PASS — listings-match-alert-disclosure — `/listings` now discloses the weekly automatic match-alert email (real send date or honest none sent yet) on each active partnership/se
+- PASS — share-alert-chip-attribution — AlertMeChip (filter-toolbar chip) and MobileStickyAlertBar now detect `?share=alert`, tag conversions `source: 'shared_alert'`, and show t
+- PASS — right-noun-capture-sweep — added an alert-signup box to the last 3 zero-capture pages (`/about`, `/post`, `/listing-quality`); build/typecheck/QA all green, live-verifie
+- PASS — alertsignup-matchcount-sweep — Guide and tool-calculator pages' get alerts boxes now show an honest live match count (e.g. 23 partnerships match right now), closing out 
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.0 on 2 cores, sustained ~13 min — parallel drains are contending; consider more cores or lower --cpus per container
+
+
 ## 2026-07-16T10:43:11Z — Night Shift run: 24 cycles (PASS 20 / FAIL 1) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
 - Night spend so far: $95.1462 of $120 cap
