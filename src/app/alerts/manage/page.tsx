@@ -306,7 +306,8 @@ export default async function AlertsManagePage({
                             {watch.active ? (
                               <span className="text-slate-500">
                                 Watching: {watch.label} — {formatPrice(watch.price)}{' '}
-                                {watch.type === 'partnership' ? 'buy-in ' : ''}today ·{' '}
+                                {watch.type === 'partnership' ? 'buy-in ' : ''}today
+                                {a.target_price ? ` (watching for ≤ ${formatPrice(a.target_price)})` : ''} ·{' '}
                                 <Link
                                   href={
                                     watch.type === 'partnership'

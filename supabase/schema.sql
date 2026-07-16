@@ -866,3 +866,15 @@ create table if not exists alert_cron_runs (
 );
 
 create index if not exists alert_cron_runs_created_at_idx on alert_cron_runs (created_at desc);
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_target_price
+-- Lets a "watch this listing's price" alert (aircraft `?watch=price` /
+-- partnership `?watch=price`) carry an optional target price — the cron only
+-- sends a drop notice once the price is AT or BELOW this figure, instead of on
+-- every drop no matter how small. Nullable, no default — a blank target keeps
+-- today's "alert on any genuine drop" behavior unchanged. Apply in the
+-- Supabase SQL editor. Until applied, every insert path fails soft and
+-- retries without `target_price` (same graceful-fallback pattern as
+-- price_drop_opt_in/frequency above) and the cron treats every watch alert as
+-- having no target (current behavior) — no user-facing error either way.
+alter table alerts add column if not exists target_price numeric;

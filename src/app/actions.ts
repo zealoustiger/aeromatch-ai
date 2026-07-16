@@ -981,7 +981,8 @@ export async function subscribeToAlerts(
   sourcePath: string,
   priceDropOptIn: boolean = true,
   frequency: AlertFrequency = 'weekly',
-  source?: string
+  source?: string,
+  targetPrice?: number
 ) {
   const clean = (email || '').toLowerCase().trim()
   if (!clean || !EMAIL_RE.test(clean)) {
@@ -1010,21 +1011,23 @@ export async function subscribeToAlerts(
     price_drop_opt_in: priceDropOptIn,
     frequency: normalizeFrequency(frequency),
     ...(source ? { source } : {}),
+    ...(targetPrice != null ? { target_price: targetPrice } : {}),
   }
   let { error } = await supabase.from('alerts').insert(payload)
 
-  // Neither, any, or all of price_drop_opt_in/frequency/source may not be
-  // migrated live yet — retry without whichever column(s) the error names
+  // Neither, any, or all of price_drop_opt_in/frequency/source/target_price may
+  // not be migrated live yet — retry without whichever column(s) the error names
   // (PostgREST reports one unknown column per error, so this can take up to
-  // three passes). The core subscription still saves either way (graceful
+  // four passes). The core subscription still saves either way (graceful
   // fallback, same pattern as profiles.favorite_airports); the untaken
   // preference/tag just doesn't take effect until its migration lands (the
-  // digest cron then treats the alert as opted-in / weekly, both column
-  // defaults; `source` simply stays unset).
-  for (let i = 0; i < 3 && error && error.code !== '23505'; i++) {
+  // digest cron then treats the alert as opted-in / weekly / no-target, all
+  // column defaults; `source` simply stays unset).
+  for (let i = 0; i < 4 && error && error.code !== '23505'; i++) {
     if (error.message?.includes('frequency')) delete payload.frequency
     else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
     else if (error.message?.includes('source')) delete payload.source
+    else if (error.message?.includes('target_price')) delete payload.target_price
     else break
     ;({ error } = await supabase.from('alerts').insert(payload))
   }
@@ -1881,7 +1884,8 @@ export async function subscribeSignedInAlert(
   sourcePath: string,
   priceDropOptIn: boolean = true,
   frequency: AlertFrequency = 'weekly',
-  source?: string
+  source?: string,
+  targetPrice?: number
 ) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1901,13 +1905,15 @@ export async function subscribeSignedInAlert(
     price_drop_opt_in: priceDropOptIn,
     frequency: normalizeFrequency(frequency),
     ...(source ? { source } : {}),
+    ...(targetPrice != null ? { target_price: targetPrice } : {}),
   }
   let { error } = await supabase.from('alerts').insert(payload)
 
-  for (let i = 0; i < 3 && error && error.code !== '23505'; i++) {
+  for (let i = 0; i < 4 && error && error.code !== '23505'; i++) {
     if (error.message?.includes('frequency')) delete payload.frequency
     else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
     else if (error.message?.includes('source')) delete payload.source
+    else if (error.message?.includes('target_price')) delete payload.target_price
     else break
     ;({ error } = await supabase.from('alerts').insert(payload))
   }
