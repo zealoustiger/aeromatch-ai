@@ -1,5 +1,6 @@
-import { Bell, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle } from 'lucide-react'
 import { getAlertScoreboard, getDigestVoteRollup } from '@/lib/alertScoreboard'
+import { getLastCronRun } from '@/lib/alertCronHealth'
 import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
 
 export const metadata = { title: 'Alert Scoreboard', robots: { index: false } }
@@ -9,9 +10,15 @@ export const dynamic = 'force-dynamic'
 // signal — mirrors the MIN_PLACEMENT_VOLUME_FOR_RATE honesty floor.
 const MIN_VOTES_FOR_RATE = 10
 
+// A digest cron that hasn't completed a run in this long is worth a red flag —
+// the cron runs daily, so 36h gives one full day of slack before crying wolf.
+const STALE_RUN_HOURS = 36
+
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes] = await Promise.all([getAlertScoreboard(), getDigestVoteRollup()])
+  const [snap, votes, lastRun] = await Promise.all([getAlertScoreboard(), getDigestVoteRollup(), getLastCronRun()])
+  const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
+  const isStale = hoursSinceLastRun === null || hoursSinceLastRun > STALE_RUN_HOURS
   const updated = new Date(snap.computedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
   const maxStatus = Math.max(1, ...snap.statusCounts.map((s) => s.count))
   const maxFamily = Math.max(1, ...snap.topPageFamilies.map((f) => f.count))
@@ -25,6 +32,74 @@ export default async function AlertScoreboardPage() {
   return (
     <div className="space-y-6">
       <AdminAlertSubscriberLookup />
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <Activity className="h-5 w-5 text-sky-500" /> Cron health — <code>alert-digest</code>
+          </h2>
+        </div>
+
+        {!lastRun ? (
+          <p className="text-sm text-slate-400">
+            No cron run data yet — either the digest cron hasn&apos;t run since this health log
+            was added, or the <code>alert_cron_runs</code> table isn&apos;t migrated on the live
+            database yet.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {isStale && (
+              <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> No successful run in over {STALE_RUN_HOURS} hours —
+                the digest may be silently broken.
+              </div>
+            )}
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-sm text-slate-500">
+                Last run{' '}
+                <time className="font-medium text-slate-800">
+                  {new Date(lastRun.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                </time>
+              </span>
+              <span className="text-xs text-slate-400">{Math.round(lastRun.durationMs / 1000)}s</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.processed}</div>
+                <div className="text-xs text-slate-500">alerts checked</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.sent}</div>
+                <div className="text-xs text-slate-500">alerts sent</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.emailsSent}</div>
+                <div className="text-xs text-slate-500">emails sent</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.skipped}</div>
+                <div className="text-xs text-slate-500">skipped (no match)</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.notDue}</div>
+                <div className="text-xs text-slate-500">not due yet</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.unparseable}</div>
+                <div className="text-xs text-slate-500">unparseable</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.remindersSent}</div>
+                <div className="text-xs text-slate-500">confirm reminders</div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-900">{lastRun.widenSuggestionsSent}</div>
+                <div className="text-xs text-slate-500">widen suggestions</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">

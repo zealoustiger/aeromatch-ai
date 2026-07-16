@@ -1269,6 +1269,7 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createAdminClient()
+  const runStartMs = Date.now()
   const nowIso = new Date().toISOString()
   const minWindowStart = new Date(Date.now() - MIN_DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
@@ -1700,5 +1701,24 @@ export async function GET(req: NextRequest) {
   console.log(
     `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent}`
   )
+
+  // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
+  // soft — a not-yet-migrated table (or any other insert error) never affects the real
+  // digest send above, which has already completed by this point.
+  const { error: runLogError } = await supabase.from('alert_cron_runs').insert({
+    processed: total,
+    sent,
+    emails_sent: emailsSent,
+    skipped,
+    unparseable,
+    not_due: notDue,
+    reminders_sent: remindersSent,
+    widen_suggestions_sent: widenSuggestionsSent,
+    duration_ms: Date.now() - runStartMs,
+  })
+  if (runLogError && !runLogError.message?.includes('alert_cron_runs')) {
+    console.error('[alert-digest] run-log insert error:', runLogError.message)
+  }
+
   return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue, remindersSent, widenSuggestionsSent })
 }
