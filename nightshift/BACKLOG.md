@@ -2053,14 +2053,18 @@ save-search auth wall → `[want]` product call)._
   (`/partnerships`, `/partnerships/browse`, `/partnerships/seeking`,
   `/partnerships/seeking/[id]`, `/partnerships/[id]`) so this closes the analytics gap
   everywhere the banner appears, not just the browse hub. One file, no UI change.
-- **[P1][goal] Right-noun capture sweep on the last zero-capture static pages —
-  `/about`, `/post`, `/listing-quality`.** All three verified at zero capture. Use the
-  "Not ready yet?" band pattern; pick each page's honest noun (`/about` → generic
-  `sourcePath="/"`; `/post` + `/listing-quality` are owner/poster-facing → demand-side
-  seeker alerts, `sourcePath="/partnerships/seeking"`, per the earnings-calculator
-  precedent); unique `source` per page so placement conversion is measurable. Why:
-  closes out "entry points everywhere" — after this, every meaningful public page has a
-  capture point.
+~~- **[P1][goal] Right-noun capture sweep on the last zero-capture static pages —
+  `/about`, `/post`, `/listing-quality`.**~~ ✅ SHIPPED via `right-noun-capture-sweep`
+  (2026-07-16) All three verified at zero capture, now each render an `AlertSignup`.
+  `/about` gets a generic box (`sourcePath="/"`, `source="about_page"`) in a new light
+  section above the dark closing CTA (the component's sky-50 card doesn't read on
+  `bg-slate-900`). `/post` and `/listing-quality` are owner/poster-facing, so both get
+  the demand-side seeker box (`noun="seeker"`, `sourcePath="/partnerships/seeking"`,
+  `source="post_chooser"` / `source="listing_quality"` respectively) mirroring the
+  earnings-calculator precedent — `/post` below the 3 choice cards, `/listing-quality`
+  between "Posting a listing? Earn a higher grade." and the FAQ. Live-verified: a
+  throwaway `@example.com` submit on `/post` wrote a real `alerts` row with
+  `source_path: "/partnerships/seeking"`; row deleted after.
 - **[P1][goal] Honest capture-time match count in `AlertSignup` — "N match today; we'll
   email you the new ones."** `getAlertMatchCount` already powers the nav pill and the
   post-confirm page, but the capture box itself never says whether the alert is live
