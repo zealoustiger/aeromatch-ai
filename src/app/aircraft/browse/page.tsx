@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Plane, MapPin, Layers, ArrowRight, GitCompare, Target } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
+import AlertSignup from '@/components/AlertSignup'
 import {
   getInventoryMakeModels,
   STATE_CODES,
@@ -326,6 +327,11 @@ export default async function AircraftBrowsePage() {
             View all aircraft for sale <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+
+        {/* This index page links to every for-sale family but had no capture of its own —
+            a distinct source tag ("browse_hub") from the /aircraft page's own footer box
+            ("browse_footer") so placement conversion is measurable separately. */}
+        <AlertSignup noun="aircraft" sourcePath="/aircraft" source="browse_hub" className="mt-8" />
 
         <ForSaleGuideLinks className="mt-6" />
       </div>
