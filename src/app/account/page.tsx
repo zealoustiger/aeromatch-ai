@@ -18,6 +18,8 @@ import AccountSignOutButton from '@/components/AccountSignOutButton'
 import ProfileAirportsForm from '@/components/ProfileAirportsForm'
 import { SITE_NAME } from '@/lib/seo'
 import type { SavedSearch } from '@/lib/types'
+import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
+import { describeLastDigest, normalizeFrequency } from '@/lib/alertFrequency'
 
 // Private, per-user utility page — keep it out of the index (no SEO value, and it
 // shouldn't dilute crawl budget while STAGE=INDEXING).
@@ -128,12 +130,15 @@ export default async function AccountPage() {
     )
   }
 
-  // Signed-in: the user's saved searches double as their alert subscriptions.
   const { data: searchesData } = await supabase
     .from('saved_searches')
     .select('*')
     .order('created_at', { ascending: false })
   const searches = (searchesData ?? []) as SavedSearch[]
+
+  // Real email-alert subscriptions (the `alerts` table — distinct from saved
+  // searches above). Same service-role-by-email read `/alerts/manage` uses.
+  const alerts = user.email ? await fetchAlertsForEmail(user.email.toLowerCase()) : []
 
   // favorite_airports may not be migrated live yet — fall back to the columns that
   // definitely exist so the page never errors while that migration is pending.
@@ -220,11 +225,93 @@ export default async function AccountPage() {
           </Link>
         </section>
 
-        {/* Email alerts — saved searches are the alert subscriptions */}
-        <section className="ch-panel p-6">
+        {/* Your alerts — the real `alerts` table, read-only here; every action
+            (edit/pause/delete) stays on /alerts/manage. */}
+        <section className="ch-panel mb-6 p-6">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <Bell className="h-5 w-5 text-sky-600" />
-            Email alerts
+            Your alerts
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Every email alert subscribed with <strong className="text-slate-700">{user.email}</strong>,
+            across ClubHanger.
+          </p>
+
+          {alerts.length === 0 ? (
+            <div className="mt-5 rounded-xl border-2 border-dashed border-slate-200 px-5 py-8 text-center">
+              <Bell className="mx-auto mb-2 h-7 w-7 text-slate-300" />
+              <p className="font-medium text-slate-600">No alerts yet</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Look for &ldquo;Get alerts&rdquo; on{' '}
+                <Link href="/aircraft" className="text-sky-600 underline-offset-2 hover:underline">
+                  planes for sale
+                </Link>
+                ,{' '}
+                <Link href="/partnerships" className="text-sky-600 underline-offset-2 hover:underline">
+                  partnerships
+                </Link>{' '}
+                or{' '}
+                <Link href="/partnerships/seeking" className="text-sky-600 underline-offset-2 hover:underline">
+                  pilots seeking a partnership
+                </Link>{' '}
+                — one email field, no extra account needed.
+              </p>
+            </div>
+          ) : (
+            <>
+              <ul className="mt-5 space-y-3">
+                {alerts.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold text-slate-900">{a.context || 'New listings'}</p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            a.status === 'bounced'
+                              ? 'bg-red-50 text-red-700'
+                              : a.status === 'paused'
+                                ? 'bg-slate-100 text-slate-600'
+                                : a.confirmed_at
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {a.status === 'bounced'
+                            ? 'Bounced'
+                            : a.status === 'paused'
+                              ? 'Paused'
+                              : a.confirmed_at
+                                ? 'Active'
+                                : 'Pending confirmation'}
+                        </span>
+                      </div>
+                      {a.status === 'confirmed' ? (
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {describeLastDigest(a.last_digest_at, normalizeFrequency(a.frequency))}
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/alerts/manage"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
+              >
+                Manage alerts <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          )}
+        </section>
+
+        {/* Saved searches */}
+        <section className="ch-panel p-6">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Bookmark className="h-5 w-5 text-sky-600" />
+            Saved searches
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Saving a search doesn&apos;t turn on email alerts by itself — head to{' '}
@@ -232,11 +319,7 @@ export default async function AccountPage() {
               Saved Searches
             </Link>{' '}
             and tap <strong className="text-slate-700">Get email alerts</strong> on any search
-            you want to hear about. Your active alerts live on{' '}
-            <Link href="/alerts/manage" className="text-sky-600 underline-offset-2 hover:underline">
-              Manage alerts
-            </Link>
-            .
+            you want to hear about.
           </p>
 
           {searches.length === 0 ? (
