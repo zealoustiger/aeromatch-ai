@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plane } from 'lucide-react'
 import { STATE_NAMES, SEO_MAKES } from '@/lib/seo'
+import FooterAlertCapture from './FooterAlertCapture'
 
 const POPULAR_STATES = ['TX', 'FL', 'CA', 'AZ', 'WA', 'CO', 'GA', 'NC', 'OH', 'NY']
 
@@ -151,7 +152,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center gap-2 border-t border-slate-100 pt-6 sm:flex-row sm:justify-between">
+        <div className="mt-10 border-t border-slate-100 pt-8">
+          <FooterAlertCapture />
+        </div>
+
+        <div className="mt-6 flex flex-col items-center gap-2 border-t border-slate-100 pt-6 sm:flex-row sm:justify-between">
           <p className="text-sm text-slate-400">© {new Date().getFullYear()} ClubHanger. The modern marketplace for pilots.</p>
           <p className="text-xs text-slate-300">Free to search. Free to post.</p>
         </div>
