@@ -32,6 +32,8 @@ export default async function AlertScoreboardPage() {
   const maxFamily = Math.max(1, ...snap.topPageFamilies.map((f) => f.count))
   const maxSource = Math.max(1, ...snap.topSources.map((s) => s.liveCount))
   const weekDelta = snap.newThisWeek - snap.newLastWeek
+  const maxTrend = Math.max(1, ...snap.weeklyTrend.flatMap((w) => [w.subscribedCount, w.confirmedCount]))
+  const hasTrendData = snap.weeklyTrend.some((w) => w.subscribedCount > 0 || w.confirmedCount > 0)
 
   const voteTotal = votes.upTotal + votes.downTotal
   const voteWeekDelta = votes.upThisWeek + votes.downThisWeek - (votes.upLastWeek + votes.downLastWeek)
@@ -184,6 +186,51 @@ export default async function AlertScoreboardPage() {
               {weekDelta} vs. last week
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">8-week trend</h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Weekly subscribed vs. confirmed counts, by opt-in date — the week-over-week signal
+          GOAL.md asks for, extended past a single this-week/last-week comparison. Unsubscribe
+          timestamps aren&apos;t recorded in the <code>alerts</code> table today (only a status
+          flip, no date), so that stage isn&apos;t trended here — not enough data to show it
+          honestly.
+        </p>
+
+        {!hasTrendData ? (
+          <p className="text-sm text-slate-400">Not enough data yet across the last 8 weeks.</p>
+        ) : (
+          <>
+            <div className="flex items-end gap-3">
+              {snap.weeklyTrend.map((week, i) => (
+                <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                  <div className="flex h-24 w-full items-end justify-center gap-0.5">
+                    <div
+                      className="w-2.5 rounded-t bg-sky-500"
+                      style={{ height: `${(week.subscribedCount / maxTrend) * 100}%` }}
+                      title={`${week.weekLabel}: ${week.subscribedCount} subscribed`}
+                    />
+                    <div
+                      className="w-2.5 rounded-t bg-emerald-500"
+                      style={{ height: `${(week.confirmedCount / maxTrend) * 100}%` }}
+                      title={`${week.weekLabel}: ${week.confirmedCount} confirmed`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400">{week.weekLabel}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-sky-500" /> Subscribed
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Confirmed
+              </span>
+            </div>
+          </>
         )}
       </section>
 

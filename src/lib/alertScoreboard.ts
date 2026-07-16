@@ -1,5 +1,6 @@
 import { createAdminClient } from './supabase-admin'
 import { classifySourcePath } from './alertSourceFamily'
+import { buildWeeklyTrend, type WeeklyTrendPoint } from './alertWeeklyTrend'
 
 // The `alerts` table carries two live-subscriber vocabularies: newer opt-in
 // paths land on `confirmed` (+ `confirmed_at`), while older/direct rows use
@@ -53,8 +54,11 @@ export interface AlertScoreboardSnapshot {
   topPageFamilies: AlertPageFamilyCount[]
   topSources: AlertSourceCount[]
   sourceColumnMigrated: boolean
+  weeklyTrend: WeeklyTrendPoint[]
   computedAt: string
 }
+
+export type { WeeklyTrendPoint }
 
 export interface RecentDigestVote {
   vote: 'up' | 'down'
@@ -159,6 +163,8 @@ export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
     .sort((a, b) => b.liveCount - a.liveCount)
     .slice(0, 12)
 
+  const weeklyTrend = buildWeeklyTrend(rows, now)
+
   return {
     statusCounts,
     total,
@@ -168,6 +174,7 @@ export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
     topPageFamilies,
     topSources,
     sourceColumnMigrated,
+    weeklyTrend,
     computedAt: new Date().toISOString(),
   }
 }
