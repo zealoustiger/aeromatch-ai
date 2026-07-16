@@ -1697,18 +1697,22 @@ and support tooling._
   service role): clearing the model field correctly jumped the live count to 417 real
   Cessna listings, then typing a nonsense model correctly flipped to the 0-match warning,
   zero console errors. Read-only preview — no schema change, no new capture point.
-- **[P1][goal] Daily-cron run log + "Last run" health panel on `/admin/alerts`.** Today
-  the alert-digest cron's outcome is invisible: if sends silently break (e.g. a bad
-  deploy, Resend outage, or one of the 6+ still-unapplied `alerts.*` migrations biting in
-  a new way), nobody notices until a subscriber complains — a silently dead digest is the
-  worst possible "best alert email in aviation." At the end of each
-  `/api/cron/alert-digest` run, insert ONE summary row into a new additive
-  `alert_cron_runs` table (`supabase/schema.sql`; ⚠️ human-apply, fail-soft on `42P01`
-  relation-not-exists like every prior `alerts.*` DDL): digests sent, price-drop sends,
-  reminders/widen emails, skipped/error counts, duration. Render a small read-only "Last
-  run" panel on `/admin/alerts` (inside the existing layout gate — do NOT touch frozen
-  auth): timestamp, counts, and an honest red "no successful run in >36h" flag. Improves:
-  reliability of every alert surface at once. No capture point, no `alert_subscribed`.
+~~- **[P1][goal] Daily-cron run log + "Last run" health panel on `/admin/alerts`.**~~ ✅
+  SHIPPED via `alert-cron-run-log` (2026-07-16) Today the alert-digest cron's outcome is
+  invisible: if sends silently break (e.g. a bad deploy, Resend outage, or one of the 6+
+  still-unapplied `alerts.*` migrations biting in a new way), nobody notices until a
+  subscriber complains — a silently dead digest is the worst possible "best alert email
+  in aviation." At the end of each `/api/cron/alert-digest` run, insert ONE summary row
+  into a new additive `alert_cron_runs` table (`supabase/schema.sql`; ⚠️ human-apply,
+  fail-soft on relation-not-exists like every prior `alerts.*` DDL): processed/sent/
+  emails-sent/skipped/unparseable/not-due/reminders-sent/widen-suggestions-sent counts +
+  duration. New `src/lib/alertCronHealth.ts` (`getLastCronRun`/`getRecentCronRuns`, same
+  fail-soft convention as `facilityRatings.ts`) reads it for a new read-only "Cron
+  health" panel on `/admin/alerts` (inside the existing layout gate — no auth/FREEZE
+  file touched): last-run timestamp, all 8 counts, and an honest red "no successful run
+  in >36h" flag — or an honest "no run data yet" empty state (verified live: the table
+  isn't migrated on the shared DB yet, confirmed via a direct read-only query). No
+  capture point, no `alert_subscribed`.
 ~~- **[P1][goal] Subscriber lookup on `/admin/alerts` — support tooling.**~~ ✅ SHIPPED via
   `admin-alert-subscriber-lookup` (2026-07-16) The scoreboard was aggregate-only; when a
   subscriber replies "I can't find my manage link / why did I get this?", the human had

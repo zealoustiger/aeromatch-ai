@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T064951Z — PASS — alert-cron-run-log
+- Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
+- What: **The daily alert-digest cron's outcome is no longer invisible.** Every run of
+  `/api/cron/alert-digest` now logs a one-row summary (how many alerts it checked, sent,
+  skipped, couldn't parse, weren't due yet, plus confirm-reminder and widen-suggestion
+  sends, and how long it took). A new "Cron health" panel on `/admin/alerts` shows the
+  last run's numbers and puts up a clear red warning if there hasn't been a successful
+  run in over 36 hours — so a silently broken digest (bad deploy, email-provider outage,
+  a still-unapplied migration biting in a new way) gets caught before a subscriber has to
+  complain about missing alerts.
+- Goal: `[goal]` tier 3 — alert experience / reliability (GOAL.md). Tier 1 (`[bug]`):
+  none open — re-confirmed no unstruck `[bug]` entries in BACKLOG.md; prior cycle
+  (`admin-alert-subscriber-lookup`) PASSed, no fix-the-last-FAIL trigger. Tier 2
+  (`[want]`): re-swept every open `[want]` line — same conclusion as the last several
+  cycles: each is either fully shipped (re-confirmed via direct read, e.g. seed-seekers,
+  collection-layout interim polish), explicitly blocked on a human product call/mock
+  (save-search auth-wall reconciliation, wholesale collection-layout redesign), or
+  flagged for human compliance/ToS sign-off before an agent can build (TAP ingestion,
+  Bay-Area coverage benchmark, owner-leads dataset) — none buildable this cycle. Tier 3
+  (`[goal]`): of the two remaining open `[P1][goal]` alert items, picked this one — the
+  "near-instant alerts" sibling is explicitly re-flagged as blocked on a human call about
+  the Vercel plan tier (cron-schedule limits), too high a blast-radius to attempt blind.
+  This item needed only an additive table + a fail-soft insert + a read-only panel, no
+  such risk.
+- Spec: nightshift/specs/20260716T064951Z-alert-cron-run-log.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0;
+  368/368 unit tests pass (`node --experimental-strip-types --test src/lib/*.test.ts`, no
+  test file touched by this change — full-suite re-run as a regression check). qa-smoke
+  exit 0 on `/admin/alerts` + `/aircraft` (desktop 1280 + mobile 375, zero app-origin
+  console errors, zero overflow) — a stale `next start` process from an earlier session
+  was again squatting on :3000 serving a different build (same false-500/overflow
+  symptom the prior cycle also hit); killed the leftover `next-server` process, confirmed
+  the port was clear, reran cleanly against this cycle's own build, 4/4. Non-visual-in-
+  practice cycle (admin-gated UI, same precedent as every prior `/admin/alerts` cycle) —
+  screenshots read and confirm the unchanged, correct "Admin only" gate render at both
+  viewports (the new panel's real render is behind auth, not reachable by the anonymous
+  smoke crawl). **New health-log logic live-verified** against the real (shared) prod DB
+  via a throwaway read-only script (deleted after use, not committed): confirmed
+  `alert_cron_runs` does NOT exist yet on the live DB (`Could not find the table
+  'public.alert_cron_runs' in the schema cache`), so `getLastCronRun()`'s fail-soft path
+  is exercised for real, not just in theory — the panel will render its honest "no run
+  data yet" state until the human applies the migration. Server served via `next start`
+  (not dev), stopped cleanly at the end (verified via `pgrep`).
+- Screenshots: nightshift/screenshots/alert-cron-run-log/
+- Next: apply the `alert_cron_runs` migration on the live Supabase project so the panel
+  starts showing real data after the next cron run. The other remaining open `[P1][goal]`
+  item — "near-instant alerts" — still needs a human call on the Vercel plan tier before
+  a future cycle can attempt the `/api/cron/alert-instant` route + `vercel.json` change.
+
 ## 20260716T063911Z — PASS — admin-alert-subscriber-lookup
 - Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
 - What: **The admin alert page can now look up a subscriber's alerts by email** — for
