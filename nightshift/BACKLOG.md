@@ -1709,15 +1709,21 @@ and support tooling._
   run" panel on `/admin/alerts` (inside the existing layout gate — do NOT touch frozen
   auth): timestamp, counts, and an honest red "no successful run in >36h" flag. Improves:
   reliability of every alert surface at once. No capture point, no `alert_subscribed`.
-- **[P1][goal] Subscriber lookup on `/admin/alerts` — support tooling.** The scoreboard
-  is aggregate-only; when a subscriber replies "I can't find my manage link / why did I
-  get this?", the human has zero support view. Add a lookup form (email in → that
-  address's alerts: context, status, frequency, source, last-sent) plus one button:
-  "Email them their manage link," reusing the exact existing manage-link-recovery email
-  (`alerts-manage-link-email`) — never display raw tokens in the admin UI, send them to
-  the owner instead. Read-only + one reused send path, inside the existing admin gate (do
-  NOT touch frozen auth checks). Improves the management/support surface. No capture
-  point, no `alert_subscribed`.
+~~- **[P1][goal] Subscriber lookup on `/admin/alerts` — support tooling.**~~ ✅ SHIPPED via
+  `admin-alert-subscriber-lookup` (2026-07-16) The scoreboard was aggregate-only; when a
+  subscriber replies "I can't find my manage link / why did I get this?", the human had
+  zero support view. New "Subscriber lookup" section on `/admin/alerts`: an email input →
+  that address's alerts (context/status/frequency/source/last-sent, via new
+  `fetchAlertsForEmailAdmin` in `alertsForOwner.ts` — includes unsubscribed rows, unlike
+  the owner-facing `fetchAlertsForEmail`, and never selects `unsubscribe_token`/
+  `confirm_token`) plus an "Email them their manage link" button that's a thin wrapper
+  around the existing `requestAlertsManageLink` send path (same cooldown, same template,
+  zero reimplementation). New `src/app/admin/alerts/actions.ts` — both actions
+  independently call the existing, untouched `assertAdmin()` from `@/lib/admin-auth`
+  (mirrors `publishDraft`'s pattern), so they're gated even if invoked directly, not just
+  behind the page-level check. No `src/app/admin/**` auth-check code or `ADMIN_EMAILS`
+  logic touched (FREEZE'd) — only calls the existing helper. Read-only lookup, one reused
+  send path, no capture point, no `alert_subscribed`. No schema change.
 ~~- **[P1][goal] "Your alerts" inline on `/account` — saved-search ↔ alert unification v1
   (read-only).**~~ ✅ SHIPPED via `account-alerts-inline` (2026-07-16) New "Your alerts"
   section on `/account` renders every real `alerts` row for the session email (context,

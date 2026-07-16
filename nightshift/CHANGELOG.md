@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T063911Z — PASS — admin-alert-subscriber-lookup
+- Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
+- What: **The admin alert page can now look up a subscriber's alerts by email** — for
+  when someone replies "I can't find my manage link" or "why did I get this?" A new
+  "Subscriber lookup" section takes an email, shows that address's alerts (context,
+  status, frequency, source, last-sent — never raw tokens), and offers one button to
+  email them their manage link, reusing the exact existing recovery-email send path.
+  Before this, `/admin/alerts` was aggregate-only and the human had no support view at all.
+- Goal: `[goal]` tier 3 — alert experience / management-and-support surface (GOAL.md).
+  Tier 1 (`[bug]`): none open — re-confirmed no unstruck `[bug]` entries anywhere in
+  BACKLOG.md; prior cycle (`overlapping-alert-nudge`) PASSed, so no fix-the-last-FAIL
+  trigger either; the one flagged pre-existing issue (`Nav.tsx` unread-badge 400) already
+  has a shipped graceful-degrade fix and only needs human DDL, not code. Tier 2 (`[want]`):
+  swept every open `[want]` line in BACKLOG.md this cycle — all are either fully shipped
+  (re-confirmed, e.g. one-click-save-search, model-variant-rollup, seeker filter rework),
+  explicitly blocked on a human product call/mock (save-search auth-wall reconciliation,
+  collection-layout mosaic redesign), or flagged for human compliance/ToS sign-off before
+  an agent can build (TAP ingestion, Bay-Area coverage benchmark, owner-leads dataset,
+  Controller/AirMart — explicitly "do not build evasion"); none buildable. Tier 3
+  (`[goal]`): picked the lower-risk of the two remaining open `[P1][goal]` items — this
+  one needs zero schema change (pure read + reuse of an existing send path), vs. the
+  sibling "daily-cron run log" item which needs a brand-new `alert_cron_runs` table
+  (human-apply DDL). Left that one + the Vercel-plan-tier-blocked "near-instant alerts"
+  item open for a future cycle.
+- Spec: nightshift/specs/20260716T063911Z-admin-alert-subscriber-lookup.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0;
+  368/368 unit tests pass across all `src/lib/*.test.ts` files (no test file touched by
+  this change — full-suite re-run as a regression check). qa-smoke exit 0 on
+  `/admin/alerts` + `/aircraft` (desktop 1280 + mobile 375, zero app-origin console
+  errors, zero overflow) — a stale `next start` process left running from an earlier,
+  unrelated session was occupying :3000 and serving a different build, causing a false
+  `/aircraft` 500 on the first smoke run; killed it, confirmed the port was clear, reran
+  against this cycle's own `next start`, clean 4/4. Non-visual-in-practice cycle
+  (admin-gated UI, same precedent as every prior `/admin/alerts` cycle) — screenshots read
+  and confirm the unchanged, correct "Admin only" gate render at both viewports, no
+  regression to the admin layout or footer. **New query/action logic live-verified**
+  against the real (shared) prod DB via a throwaway script (deleted after use, not
+  committed): inserted one `qa-admin-alert-lookup-<ts>@example.com` alert row, ran the
+  exact query `fetchAlertsForEmailAdmin` issues (including its graceful fallback for the
+  not-yet-migrated `frequency`/`source` columns — confirmed live: both still 42703 on the
+  real DB, same as documented elsewhere in BACKLOG.md), confirmed it returned exactly that
+  one row with the right context/status and zero raw token fields, then deleted the row
+  (confirmed 0 remain). The `assertAdmin()` gate and `requestAlertsManageLink` send path
+  are pre-existing, unmodified code (proven by `publishDraft` and every prior
+  manage-link-email cycle respectively) — not re-verified from scratch. Server served via
+  `next start` (not dev), stopped cleanly at the end (verified via `pgrep`).
+- Screenshots: nightshift/screenshots/admin-alert-subscriber-lookup/
+- Next: the alert-experience `[goal]` queue's remaining open items: the "Daily-cron run
+  log + health panel" on `/admin/alerts` (needs a new `alert_cron_runs` table, human-apply
+  DDL) and the Vercel-plan-tier-blocked "near-instant alerts" item (needs a human call on
+  upgrading the plan or accepting instant stays unbuilt).
+
 ## 20260716T062732Z — PASS — overlapping-alert-nudge
 - Pages: /alerts/manage
 - What: **Subscribers with a broad alert (e.g. "Cessna") AND a strictly narrower one
