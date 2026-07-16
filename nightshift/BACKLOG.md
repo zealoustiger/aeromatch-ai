@@ -1820,14 +1820,21 @@ _All verified against the live codebase + full shipped list above before filing 
   remembered yet). `WatchAlertButton` needed no change — it only toggles an `AlertSignup
   watchOnly` panel, which inherits this for free. `alert_subscribed` carries `one_tap:
   true` on this path only. No schema change (100% client-side).
-- **[P1][goal] Per-alert "stop just this alert" link in the combined digest email.**
-  When the one-combined-email-per-pass slice shipped, per-alert controls were explicitly
+~~- **[P1][goal] Per-alert "stop just this alert" link in the combined digest email.**~~
+  ✅ SHIPPED via `alert-digest-per-alert-stop-link` (2026-07-16) When the
+  one-combined-email-per-pass slice shipped, per-alert controls were explicitly
   deferred (`email.ts` ~line 1048: frequency was "ambiguous across multiple alerts") —
   but a *pause/stop this alert* link is NOT ambiguous, and today a multi-alert subscriber's
-  only in-email options are all-or-nothing. Add a token-authed per-section "Stop just
-  this alert" link (reuse `pauseAlertByToken` / the unsubscribe-token trust boundary)
-  landing on a small confirmation page with undo/edit/delete. Better granular
-  unsubscribe UX = GOAL.md's "offer fewer instead of none," per alert.
+  only in-email options are all-or-nothing. Added a token-authed per-section "Stop just
+  this alert" link to `buildCombinedAlertDigestEmail` (new `AlertDigestSection.stopUrl`,
+  wired from the cron route as `${SITE_URL}/api/alerts/unsubscribe?token=${alert's own
+  unsubscribe_token}` — NOT the combined comma-joined token). Reuses the existing
+  single-token `/api/alerts/unsubscribe` route + `/alerts/status?state=unsubscribed`
+  page verbatim, which already offers pause/snooze/switch-to-weekly recovery
+  (`UnsubscribeRecover`) and a "Manage your alerts" link scoped to that one alert — no
+  new route, no new page, no schema. Fails soft (no link rendered) for a row with no
+  token yet. Better granular unsubscribe UX = GOAL.md's "offer fewer instead of none,"
+  per alert.
 - **[P1][goal] Email engagement stats — `email.opened`/`email.clicked` webhook →
   `/admin/alerts`.** The Resend webhook route today handles only `email.bounced` +
   `email.complained`; UTM proves site-side clicks but we're blind to opens/click-through

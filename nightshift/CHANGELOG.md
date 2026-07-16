@@ -2,6 +2,76 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T072229Z — PASS — alert-digest-per-alert-stop-link
+- Pages: none (email-only change) — the affected surface is the combined
+  alert-digest email's HTML/text; `/alerts`, `/alerts/status`, `/alerts/manage`
+  smoke-tested as the unchanged pages the new link lands on
+- What: **A subscriber getting one combined email for 2+ due alerts can now stop
+  just ONE of them, instead of only "unsubscribe from all."** Every alert's own
+  section in the combined digest email now carries a small "Stop just this
+  alert" link, separate from the shared all-or-nothing "Unsubscribe from these"
+  footer link. Clicking a section's link lands on the same friendly
+  confirmation page every single-alert unsubscribe already uses — which offers
+  "changed your mind?" pause/snooze/switch-to-weekly recovery for that one
+  alert, plus a link to manage it further. Nothing else about the email or the
+  all-alerts unsubscribe link changed.
+- Goal: `[goal]` tier 3 — alert experience / great alert management (GOAL.md:
+  "one-click unsubscribe that doesn't feel like a dead end (offer 'fewer'
+  instead of 'none')"). Tier 1 (`[bug]`): none open — no unstruck `[bug]` entry
+  anywhere in BACKLOG.md; prior cycle (`alert-remembered-email-one-tap`)
+  PASSed. Tier 2 (`[want]`): re-confirmed empty, same conclusion as many prior
+  cycles — the two open `[P1][want]` items ("Save this search" auth-wall
+  reconciliation, collection-layout mosaic redesign) both remain explicitly
+  flagged as needing a human product call/mock; the ingestion `[P1][want]`s
+  (Trade-A-Plane, Bay-Area coverage benchmark denominator) remain
+  audited-and-blocked (DataDome bot-challenge; no honest FAA/AirNap data
+  source found on a prior attempt). Dropped to tier 3 and picked this item —
+  the top of the five remaining 2026-07-16 plan-pass batch siblings — because
+  it needed zero schema and zero human follow-up to be fully live tonight (it
+  reuses the existing single-token `/api/alerts/unsubscribe` route +
+  `/alerts/status` recovery page verbatim, just wired from a NEW per-section
+  token instead of the combined one) and it's the most literal implementation
+  of GOAL.md's own explicit "offer fewer instead of none" phrase, applied at
+  the per-alert level for the first time.
+- Spec: nightshift/specs/20260716T072229Z-alert-digest-per-alert-stop-link.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0; 370/370 unit tests pass (`node --experimental-strip-types --test
+  src/lib/*.test.ts`, full-suite regression run), including 2 new tests added
+  for this change (a section with `stopUrl` renders its own single-token stop
+  link distinct from the combined footer link; a section without one renders
+  no dead link). This is a non-visual, email-only change with no live page UI
+  to alter, so the mandatory qa-smoke gate ran against the 3 existing pages a
+  subscriber's click could reach (`/alerts`, `/alerts/status`,
+  `/alerts/manage`) — exit 0, HTTP 200 / zero app-origin console errors / zero
+  overflow at desktop 1280 + mobile 375 on all 3 (confirming this change
+  didn't regress them; they render identically since none of their own code
+  changed). The actual new behavior — the email markup itself — was verified
+  directly against the real `buildCombinedAlertDigestEmail` output via the
+  existing dev-only preview route (`/api/dev/email-preview/alert-digest-combined`,
+  served by the same `next start` production server, not `next dev`, and
+  already excluded from crawling/robots): HTTP 200, and the rendered HTML
+  contains exactly 2 "Stop just this alert" links, each pointing at its own
+  section's single token (`token=preview-1`, `token=preview-2`), while the
+  shared footer "Unsubscribe from these" link still carries the combined
+  comma-joined token pair (`token=preview-1,preview-2`) unchanged — confirming
+  the new per-section links are genuinely independent of the existing
+  all-or-nothing one, not a copy of it. No real alert rows, signups, or other
+  prod DB writes were made this cycle (pure code/template change, no live
+  send exercised). Server served via `next start`, stopped cleanly at the end
+  (confirmed via a follow-up curl returning connection-refused).
+- Screenshots: nightshift/screenshots/alert-digest-per-alert-stop-link/ (the 3
+  unchanged pages above, saved per RUNBOOK convention; not the email itself,
+  which isn't a page — the email HTML was verified via the preview route's
+  raw markup instead of a screenshot)
+- Next: five open siblings remain in the 2026-07-16 plan-pass batch (target-price
+  watch alerts — needs an additive `alerts.target_price` column; email
+  engagement stats webhook — needs a human to tick two event boxes in the
+  Resend dashboard; admin email-template preview gallery; "found my aircraft"
+  unsubscribe-recovery exit; "N new since your last visit" nav pill) — a future
+  cycle should pull the next-highest-value one of those needing no human
+  follow-up (the admin email-template gallery or the "found my aircraft" exit
+  are the next zero-dependency candidates).
+
 ## 20260716T070722Z — PASS — alert-remembered-email-one-tap
 - Pages: /aircraft, /aircraft/deals, /partnerships, /partnerships/seeking (every page
   rendering `AlertSignup`, `AlertMeChip`, or `MobileStickyAlertBar` — effectively
