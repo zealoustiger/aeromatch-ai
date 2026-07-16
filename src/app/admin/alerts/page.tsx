@@ -1,4 +1,5 @@
-import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail } from 'lucide-react'
 import { getAlertScoreboard, getDigestVoteRollup } from '@/lib/alertScoreboard'
 import { getLastCronRun } from '@/lib/alertCronHealth'
 import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
@@ -31,6 +32,13 @@ export default async function AlertScoreboardPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/admin/alerts/emails"
+        className="flex w-fit items-center gap-1.5 text-sm font-medium text-sky-700 hover:underline"
+      >
+        <Mail className="h-4 w-4" /> Email template gallery →
+      </Link>
+
       <AdminAlertSubscriberLookup />
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

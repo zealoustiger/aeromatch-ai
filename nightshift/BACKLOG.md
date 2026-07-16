@@ -1850,14 +1850,22 @@ _All verified against the live codebase + full shipped list above before filing 
   also tick the two new event boxes in the Resend dashboard — code must degrade
   honestly (panel says "no events received yet") until then. Proves which alert emails
   actually get read (GOAL.md "prove it converts" — the email half).
-- **[P1][goal] Admin email-template preview gallery (`/admin/alerts/emails`).** Every
-  email builder in `email.ts` returns `{subject, html, text}` but the only way to SEE
-  one is to trigger a real send — so email design/copy regressions ship blind. New
-  admin-gated read-only page rendering every builder (digest, price-drop, buy-in-drop,
-  confirm, confirm-reminder, widen-nudge, recovery, sample…) with honest live-data
-  samples in sandboxed iframes, plus the subject/preheader/text-part alongside, at
-  desktop + 375px width. Makes every FUTURE email cycle QA-able in one page load; zero
-  subscriber-facing risk.
+~~- **[P1][goal] Admin email-template preview gallery (`/admin/alerts/emails`).**~~ ✅
+  SHIPPED via `admin-email-template-gallery` (2026-07-16). New admin-gated read-only
+  page rendering all 11 builders exported from `email.ts` — each shown with its real
+  subject line, HTML in a sandboxed `<iframe srcDoc>`, and the text part in a `<pre>`
+  block. The 4 listing-sample-driven builders (confirm, digest, combined-digest,
+  price-drop) fetch and render REAL current DB rows via the existing
+  `getAlertDigestPreview()` fetcher (same one `/alerts` and "send me a sample" already
+  use) plus a new small genuine-price-drop query — never a fabricated listing; when no
+  live match exists they honestly fall back to the builder's own zero-match copy. The
+  remaining 7 builders (manage-link, email-change-confirm, new-message, seed-inquiry,
+  listing-unavailable, widen-suggestion, match-alert) have no live-row analog to pull
+  from (or pulling one would leak a real user's message/PII into an admin gallery), so
+  they render against clearly-labeled static placeholder data instead — labeled as such
+  in the page, never presented as real. Linked from `/admin/alerts` (not added to the
+  `AdminTabs` bar, matching the existing `/admin/listings/sample` drill-down precedent).
+  No schema, no new dependency, no email actually sent from the page.
 ~~- **[P1][goal] "Found my aircraft 🎉" exit on the unsubscribe-recovery page.**~~ ✅
   SHIPPED via `alert-found-my-aircraft-exit` (2026-07-16) `UnsubscribeRecover.tsx` now
   offers a 4th, visually-separated option below pause/snooze/weekly: "🎉 Found my

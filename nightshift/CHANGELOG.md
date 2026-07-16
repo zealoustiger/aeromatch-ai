@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T081014Z — PASS — admin-email-template-gallery
+- Pages: /admin/alerts, /admin/alerts/emails (admin-only, `noindex`; no public-facing page changed)
+- What: **Every alert/marketplace email template can now be eyeballed in one admin page
+  instead of shipping blind.** `email.ts` has 11 email builders (confirm, digest,
+  combined-digest, price-drop, widen-nudge, listing-unavailable, manage-link,
+  email-change-confirm, new-message, seed-inquiry, match-alert) but until now the only
+  way to see one rendered was to trigger a real send. The new `/admin/alerts/emails`
+  page renders all 11 — subject line, the HTML in a sandboxed preview frame, and the
+  plain-text part — with a link to it from the existing Alert Scoreboard page.
+- Goal: alert-experience `[goal]` tier — GOAL.md's "prove it converts"/quality bar
+  ("the best listing alert email in aviation") needs a way to actually SEE what's being
+  sent before/after a copy change. Tier 1 (`[bug]`): none open — prior cycle
+  (`nav-alert-new-since-pill`) PASSed, no unstruck `[bug]` anywhere in BACKLOG.md. Tier 2
+  (`[want]`): re-swept — the two open `[P1][want]` items (save-search auth-wall
+  reconciliation, collection-layout mosaic redesign) both remain explicitly flagged as
+  needing a human product call/mock, same conclusion as many prior cycles. Dropped to
+  tier 3 and picked this item — it was the item explicitly named "next in line" in the
+  prior cycle's own "Next" note (zero-dependency, admin-gated, no schema).
+- Spec: nightshift/specs/20260716T081014Z-admin-email-template-gallery.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  (new `/admin/alerts/emails` route compiles); 370/370 unit tests pass (no test file
+  touched — `email.ts` itself wasn't changed, only a new caller). Honesty check: the 4
+  builders that take real matching-listing samples (confirm, digest, combined-digest,
+  price-drop) fetch REAL current DB rows — verified independently with a throwaway
+  service-role script (deleted after use, not committed, read-only) that the new
+  genuine-price-drop query returns a real live row (a 2026 Piper Pacer, $46,000 →
+  $39,000) and that `getAlertDigestPreview` has real live aircraft (2,171 active priced)
+  and partnership (23 active) rows to draw from; the remaining 7 builders have no
+  live-row analog (or pulling one would leak a real user's private message/PII into an
+  admin gallery), so they render clearly-labeled static placeholder data instead — never
+  presented as real. QA against the PRODUCTION build (`npx next start` on port 3921) via
+  `qa-smoke.mjs` on `/admin/alerts` + `/admin/alerts/emails` at desktop 1280 + mobile
+  375: 4/4 checks pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow). Visual cycle — screenshots read: both pages correctly show the layout's
+  anonymous "Admin only" gate at both viewports (the qa-smoke crawler is unauthenticated
+  by design, same as every other `/admin/*` page's smoke history) — confirms the new
+  page inherits `src/app/admin/layout.tsx`'s gating with zero new auth code and that an
+  anonymous visitor's async page body never even executes (no wasted queries, no data
+  leak), on-brand and pixel-clean, no overflow. `sendEmail`/Resend is never called from
+  the new page (grepped, confirmed absent). Server served fresh on :3921 (no stale
+  process reused), stopped cleanly at the end (verified via `pgrep`). No prod DB writes
+  — only read-only queries; no test rows created or needing cleanup.
+- Screenshots: nightshift/screenshots/admin-email-template-gallery/
+- Next: a "send me a real test email" action from the gallery (to an admin's own
+  address) is a natural, explicitly-out-of-scope-this-cycle follow-up once the
+  read-only preview proves useful. The sibling `[P1][goal]` "Email engagement stats"
+  webhook item is next in line and needs a human Resend-dashboard action first.
+
 ## 20260716T080710Z — PASS — nav-alert-new-since-pill
 - Pages: / (and every page — the nav renders site-wide), /aircraft, /partnerships, /alerts
 - What: **The "My alerts" nav pill now earns the click.** Before, a returning
