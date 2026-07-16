@@ -2020,14 +2020,15 @@ hubs, `AlertMeChip.tsx` for `share=alert`, `ShareCostPanel.tsx`'s calculator lin
 overlap the two open-but-blocked items (instant sends → Vercel-tier human call;
 save-search auth wall → `[want]` product call)._
 
-- **[P1][goal] Site-wide compact alert capture in the footer.** `Footer.tsx` today has
-  only a text link ("Get email alerts" → `/alerts`) — the one component on literally
-  every page has no capture. Add a slim one-field band (new compact rendering or thin
-  wrapper of `AlertSignup`, generic `sourcePath="/"`, `source="footer"`, emits
-  `alert_subscribed`); the remembered-email one-tap already shipped makes it a true
-  one-tap for returning visitors. Why: single biggest breadth win left — GOAL's "never
-  more than one click from alert me" becomes literally true on every page. Must stay
-  light (no CWV/375px regression; keep the client payload tiny).
+~~- **[P1][goal] Site-wide compact alert capture in the footer.**~~ ✅ SHIPPED via
+  `footer-alert-capture` (2026-07-16) New `FooterAlertCapture` client component
+  (one email field + button, sky-blue accent, remembered-email one-tap via
+  `getLocalEmail`) renders in `Footer.tsx` above the copyright row — `sourcePath="/"`,
+  `source="footer"`, emits `alert_subscribed`. Deliberately thin: no signed-in
+  Supabase check, no match count, no `IntersectionObserver` (those stay in the full
+  `AlertSignup`) to keep the sitewide footer light. QA 8/8 pass (desktop+mobile on
+  `/`, `/aircraft`, `/partnerships`, a guide page), screenshots confirmed clean
+  render, no overflow/overlap. See CHANGELOG.
 - ~~**[P1][goal] Alert capture on `/aircraft/browse`.**~~ ✅ SHIPPED via
   `aircraft-browse-hub-alert` (2026-07-16) — this pure navigation index had ZERO capture
   today (verified) while every page it links TO has one. Added an `AlertSignup` box
