@@ -50,7 +50,7 @@ async function processPartnerships(
       count: fresh.length,
       matchesUrl: `${SITE_URL}${seekerBrowseHrefForPartnership(row)}`,
     })
-    const result = await sendEmail({ to: row.contact_email, subject, html, text })
+    const result = await sendEmail({ to: row.contact_email, subject, html, text, emailType: 'match-alert' })
     if (result.sent || result.reason === 'no-key') {
       await supabase
         .from('partnerships')
@@ -96,7 +96,7 @@ async function processSeekers(
       count: fresh.length,
       matchesUrl: `${SITE_URL}${partnershipBrowseHrefForSeeker(row)}`,
     })
-    const result = await sendEmail({ to: row.contact_email, subject, html, text })
+    const result = await sendEmail({ to: row.contact_email, subject, html, text, emailType: 'match-alert' })
     if (result.sent || result.reason === 'no-key') {
       await supabase
         .from('partnership_seekers')

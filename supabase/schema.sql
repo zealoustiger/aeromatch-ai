@@ -887,3 +887,28 @@ alter table alerts add column if not exists target_price numeric;
 -- graceful-fallback pattern as target_price above) — the "Found my aircraft"
 -- button still shows its congratulatory confirmation either way.
 alter table alerts add column if not exists unsubscribe_reason text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: email_engagement_events
+-- Logs `email.opened`/`email.clicked` webhook events from Resend, tagged by
+-- which email template sent them (the `type` tag `sendEmail`/`email.ts` now
+-- attaches to every send) — feeds the "Email engagement" panel on
+-- /admin/alerts (GOAL.md's "prove it converts," the email half). Additive/new
+-- table, no FK (an event covers one send, not one `alerts` row — we don't
+-- have a reliable way to join a Resend email id back to a specific alert
+-- today). Apply in the Supabase SQL editor. Until applied, the webhook's
+-- insert fails soft (relation-not-exists, same graceful-fallback precedent as
+-- `alert_cron_runs`) — bounce/complaint handling (already live) is
+-- unaffected either way. Also needs a human to tick the `email.opened` and
+-- `email.clicked` boxes for this endpoint in the Resend dashboard — until
+-- then Resend simply never sends these events, same honest-empty-panel
+-- posture.
+create table if not exists email_engagement_events (
+  id               uuid        default gen_random_uuid() primary key,
+  created_at       timestamptz default now(),
+  event_type       text        not null,
+  email_type       text,
+  resend_email_id  text,
+  link_url         text
+);
+
+create index if not exists email_engagement_events_created_at_idx on email_engagement_events (created_at desc);

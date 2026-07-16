@@ -4,7 +4,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
-import { verifyResendWebhookSignature, extractHardBouncedEmails, extractComplainedEmails } from './resendWebhook.ts'
+import {
+  verifyResendWebhookSignature,
+  extractHardBouncedEmails,
+  extractComplainedEmails,
+  extractEngagementEvent,
+} from './resendWebhook.ts'
 
 const SECRET = 'whsec_' + Buffer.from('test-secret-bytes-0000').toString('base64')
 
@@ -135,4 +140,68 @@ test('extractComplainedEmails is defensive against malformed/partial payloads', 
     extractComplainedEmails({ type: 'email.complained', data: { to: 'not-an-array' } }),
     []
   )
+})
+
+test('extractEngagementEvent parses an email.opened event and reads the type tag', () => {
+  const body = {
+    type: 'email.opened',
+    data: { email_id: 'abc-123', tags: [{ name: 'type', value: 'alert-digest' }] },
+  }
+  assert.deepEqual(extractEngagementEvent(body), {
+    eventType: 'opened',
+    emailType: 'alert-digest',
+    resendEmailId: 'abc-123',
+    link: null,
+  })
+})
+
+test('extractEngagementEvent parses an email.clicked event including the clicked link', () => {
+  const body = {
+    type: 'email.clicked',
+    data: {
+      email_id: 'abc-456',
+      tags: [{ name: 'type', value: 'price-drop' }],
+      click: { link: 'https://clubhanger.com/aircraft/listing/1' },
+    },
+  }
+  assert.deepEqual(extractEngagementEvent(body), {
+    eventType: 'clicked',
+    emailType: 'price-drop',
+    resendEmailId: 'abc-456',
+    link: 'https://clubhanger.com/aircraft/listing/1',
+  })
+})
+
+test('extractEngagementEvent buckets an untagged send as null emailType, not a crash', () => {
+  const body = { type: 'email.opened', data: { email_id: 'abc-789' } }
+  assert.deepEqual(extractEngagementEvent(body), {
+    eventType: 'opened',
+    emailType: null,
+    resendEmailId: 'abc-789',
+    link: null,
+  })
+})
+
+test('extractEngagementEvent ignores unrelated event types', () => {
+  assert.equal(extractEngagementEvent({ type: 'email.bounced', data: {} }), null)
+  assert.equal(extractEngagementEvent({ type: 'email.delivered', data: {} }), null)
+})
+
+test('extractEngagementEvent is defensive against malformed/partial payloads', () => {
+  assert.equal(extractEngagementEvent(null), null)
+  assert.equal(extractEngagementEvent(undefined), null)
+  assert.equal(extractEngagementEvent('nope'), null)
+  assert.equal(extractEngagementEvent({}), null)
+  assert.deepEqual(extractEngagementEvent({ type: 'email.opened' }), {
+    eventType: 'opened',
+    emailType: null,
+    resendEmailId: null,
+    link: null,
+  })
+  assert.deepEqual(extractEngagementEvent({ type: 'email.opened', data: { tags: 'not-an-array' } }), {
+    eventType: 'opened',
+    emailType: null,
+    resendEmailId: null,
+    link: null,
+  })
 })

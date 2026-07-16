@@ -3,17 +3,19 @@ import {
   verifyResendWebhookSignature,
   extractHardBouncedEmails,
   extractComplainedEmails,
+  extractEngagementEvent,
 } from '@/lib/resendWebhook'
 import { pauseAlertsForBouncedEmail, unsubscribeAlertsForComplainedEmail } from '@/lib/alertBounce'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
 // ⚠️ HUMAN ACTION: register this endpoint's URL + a signing secret in the
-// Resend dashboard (Webhooks → Add endpoint, subscribe to `email.bounced`
-// AND `email.complained`), then set RESEND_WEBHOOK_SECRET in the
-// environment. Ships dark until then — see nightshift/BACKLOG.md's
-// "Auto-pause alerts on hard email bounces" / "Auto-unsubscribe on spam
-// complaints".
+// Resend dashboard (Webhooks → Add endpoint, subscribe to `email.bounced`,
+// `email.complained`, `email.opened`, AND `email.clicked`), then set
+// RESEND_WEBHOOK_SECRET in the environment. Ships dark until then — see
+// nightshift/BACKLOG.md's "Auto-pause alerts on hard email bounces" /
+// "Auto-unsubscribe on spam complaints" / "Email engagement stats".
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET
 
 export async function POST(request: NextRequest) {
@@ -52,12 +54,28 @@ export async function POST(request: NextRequest) {
 
   const bouncedEmails = extractHardBouncedEmails(body)
   const complainedEmails = extractComplainedEmails(body)
+  const engagementEvent = extractEngagementEvent(body)
   try {
     for (const email of bouncedEmails) {
       await pauseAlertsForBouncedEmail(email)
     }
     for (const email of complainedEmails) {
       await unsubscribeAlertsForComplainedEmail(email)
+    }
+    if (engagementEvent) {
+      // Health log for the /admin/alerts "Email engagement" panel (see
+      // emailEngagement.ts). Fails soft — a not-yet-migrated
+      // `email_engagement_events` table never turns into a 500 here.
+      const admin = createAdminClient()
+      const { error } = await admin.from('email_engagement_events').insert({
+        event_type: engagementEvent.eventType,
+        email_type: engagementEvent.emailType,
+        resend_email_id: engagementEvent.resendEmailId,
+        link_url: engagementEvent.link,
+      })
+      if (error && !error.message?.includes('email_engagement_events')) {
+        console.error('[webhooks/resend] engagement-log insert error:', error.message)
+      }
     }
   } catch {
     // Signature is already verified — a DB hiccup here shouldn't make Resend
@@ -69,5 +87,6 @@ export async function POST(request: NextRequest) {
     ok: true,
     paused: bouncedEmails.length,
     unsubscribed: complainedEmails.length,
+    engagementLogged: engagementEvent ? 1 : 0,
   })
 }
