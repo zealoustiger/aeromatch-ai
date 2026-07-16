@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-16T12:11:59Z — alertsignup-matchcount-sweep — score 4/5
+- Strengths: Exact, faithful execution of a mechanical sweep — every listed page made `async`, one `getAlertMatchCount` call, `matchCount={matchResult?.count}` threaded in; honest 0-case preserved (`hasMatchCount = typeof === 'number'` renders 0, `undefined` from a null result omits the line), `not-found.tsx` correctly left alone, and cost-calculator cleanly hoists the `/aircraft?make=&model=` URLSearchParams into a single `alertSourcePath` reused by both prop and count instead of rebuilding it.
+- Weaknesses / risks: none material — the import+await+prop trio is repeated across 12 files, but each is a separate page component so that's inherent, not extractable duplication; scope was deliberately narrow (no `getAlertMatchCount`/`parseSourcePath` changes, per spec).
+- Follow-up: none
+
 ## 2026-07-16T11:43:36Z — share-alert-chip-attribution — score 5/5
 - Strengths: Precise, faithful mirror of `AlertSignup`'s share detection — identical `isSharedLink` useEffect + `effectiveSource = isSharedLink ? 'shared_alert' : <placement>` derivation cleanly replaces every hardcoded `'filter_toolbar'`/`'sticky_bar'` across all three tracked events and both server actions, so no default-path bytes drift; the `basis-full` note in `AlertMeChip` correctly claims its own row in the parent `flex flex-wrap` container, both notes suppress post-subscribe via the existing `alreadyOn` early-return / `!justSubscribed` guard, and the SSR-false-then-flip pattern avoids hydration mismatch as the spec required.
 - Weaknesses / risks: none material — the "shared this alert with you" copy string is now triplicated across `AlertSignup`/`AlertMeChip`/`MobileStickyAlertBar` with no shared constant, but the spec explicitly mandated the mirror and each placement needs distinct layout classes, so extraction would be over-engineering.
