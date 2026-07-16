@@ -16,7 +16,18 @@ export const metadata: Metadata = {
   },
 }
 
-export default function CostCalculatorPage() {
+type SearchParams = { make?: string; model?: string }
+
+export default async function CostCalculatorPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
+  const make = params.make?.trim()
+  const model = params.model?.trim()
+  const aircraftLabel = make && model ? `${make} ${model}` : undefined
+
   return (
     <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
@@ -60,10 +71,22 @@ export default function CostCalculatorPage() {
 
       {/* sourcePath must be a real, matchable route (see alert-digest's
           parseSourcePath) — "/tools/cost-calculator" itself isn't one, which
-          would silently create an alert that can never fire. Point it at
-          "/partnerships" (bare, all-partnerships) so a "get new-listing
-          alerts" promise here is actually kept. */}
-      <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" source="cost_calculator" />
+          would silently create an alert that can never fire. When the visitor
+          arrived here from a specific aircraft (make+model in the URL), scope
+          the alert to that aircraft's real /aircraft?make=&model= route
+          (same convention as the sold-listing alert on the aircraft detail
+          page) instead of the generic "/partnerships" fallback below. */}
+      {aircraftLabel ? (
+        <AlertSignup
+          noun="aircraft"
+          context={aircraftLabel}
+          sourcePath={`/aircraft?${new URLSearchParams({ make: make!, model: model! }).toString()}`}
+          className="mt-10"
+          source="cost_calculator"
+        />
+      ) : (
+        <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" source="cost_calculator" />
+      )}
     </div>
     </div>
   )
