@@ -747,6 +747,12 @@ export type AlertDigestSample = {
   price: number | null
   previousPrice?: number | null
   url: string
+  /** Set only by the combined-digest cross-section dedupe pass
+   *  (`dedupeDigestSectionSamples`) — this same listing also matched another
+   *  of the subscriber's alerts in this send, so its card was shown once
+   *  here rather than duplicated under that section too. Honesty note, not a
+   *  new match signal. */
+  alsoMatchesLabel?: string
 }
 
 /**
@@ -794,6 +800,9 @@ function sampleCardHtml(s: AlertDigestSample): string {
   const placeholderNote = s.isPlaceholder
     ? `<p style="margin:2px 0 0;font-size:10px;color:#a89f8e;">Not actual plane photo</p>`
     : ''
+  const alsoMatchesNote = s.alsoMatchesLabel
+    ? `<p style="margin:2px 0 0;font-size:10px;color:#0369a1;">${escapeHtml(s.alsoMatchesLabel)}</p>`
+    : ''
 
   return `<a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;padding:12px 0;border-bottom:1px solid #ece6dc;">
         ${photo}
@@ -802,6 +811,7 @@ function sampleCardHtml(s: AlertDigestSample): string {
           ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
           ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
           ${placeholderNote}
+          ${alsoMatchesNote}
         </div>
       </a>`
 }
@@ -1139,7 +1149,7 @@ export function buildCombinedAlertDigestEmail(opts: {
             : sm.price != null
               ? formatUsd(sm.price)
               : ''
-        return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}`
+        return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}`
       })
       .join('\n')
     const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`

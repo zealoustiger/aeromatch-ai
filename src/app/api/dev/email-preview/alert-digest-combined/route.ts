@@ -33,6 +33,10 @@ export async function GET() {
             location: 'Austin, TX',
             price: 219_000,
             url: 'https://clubhanger.com/aircraft/listing/preview-1',
+            // Demonstrates the cross-section dedupe note (`alertDigestDedupe.ts`)
+            // — this preview hand-builds sections rather than going through the
+            // cron's dedupe pass, so the note is set directly here.
+            alsoMatchesLabel: 'Also matches your Texas aircraft alert',
           },
         ],
       },
