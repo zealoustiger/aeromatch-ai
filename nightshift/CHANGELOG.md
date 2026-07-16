@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-16T10:43:11Z — DRAIN SUMMARY
+- Cycles this run: 24 (PASS 20 / FAIL 1 / ABORT 3)
+- Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $95.1462 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260716T060003Z
+
 ## 20260716T103309Z — PASS — cost-calc-model-alert
 - Pages: /tools/cost-calculator, /aircraft/[make]/[model] (e.g. /aircraft/cessna/172)
 - What: **The cost calculator's "get alerts" box now knows which aircraft you're pricing out, when you got there from a specific model's page.** Before, `/tools/cost-calculator` always showed a generic "get partnership alerts" box no matter how you arrived. Now the "Estimate your cost to own a {Make Model} →" link on a curated make/model page (e.g. `/aircraft/cessna/172`) carries `?make=&model=` into the calculator, and when those are present the page swaps in an aircraft-scoped alert box ("Get alerts for new Cessna 172 listings") wired to the real `/aircraft?make=&model=` alert route — same convention the sold-listing alert on the aircraft detail page already uses. Visiting the calculator directly (no query params) is unchanged — same generic partnership box as before.
