@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import EarningsCalculator from '@/components/EarningsCalculator'
+import AlertSignup from '@/components/AlertSignup'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Earnings Calculator — Offset Your Ownership Costs',
@@ -56,6 +57,18 @@ export default function EarningsCalculatorPage() {
           .
         </p>
       </div>
+
+      {/* sourcePath must be a real, matchable route (see alert-digest's
+          parseSourcePath) — "/partnerships/seeking" already is (the seeker
+          alert pipeline). An owner running these numbers is deciding whether
+          to offer shares, so the honest alert here is demand-side: tell them
+          when a pilot actually starts looking. */}
+      <AlertSignup
+        noun="seeker"
+        sourcePath="/partnerships/seeking"
+        className="mt-10"
+        source="earnings_calculator"
+      />
     </div>
     </div>
   )

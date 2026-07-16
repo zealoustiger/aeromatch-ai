@@ -1922,11 +1922,16 @@ auth wall → product call)._
   the site with zero alert offer today — after a save, show an inline one-tap watch
   cross-sell reusing the existing signed-in watch path. New capture point on the save
   interaction; emits `alert_subscribed` with `source: 'save_cross_sell'`.
-- **[P1][goal] Alert capture on `/tools/earnings-calculator` + the `/tools` index.**
-  Verified: neither page has any alert capture (cost-calculator does; these don't) — the
-  last tools-surface gap. Context-appropriate framing (earnings calc is owner-leaning →
-  partnership/seller market-watch angle). New entry point; emits `alert_subscribed` with
-  a distinct `source` per page.
+~~- **[P1][goal] Alert capture on `/tools/earnings-calculator` + the `/tools` index.**~~
+  ✅ SHIPPED via `tools-hub-alert-capture` (2026-07-16) Neither page had any alert capture
+  (cost-calculator did; these didn't). `/tools/earnings-calculator` now offers a
+  `noun="seeker"` box (`sourcePath="/partnerships/seeking"`, `source="earnings_calculator"`)
+  — an owner running these numbers is deciding whether to offer shares, so the honest alert
+  is demand-side ("tell me when a pilot starts looking"). `/tools` (the hub, links to both
+  calculators) got a generic box (`noun="partnership"`, `sourcePath="/partnerships"`,
+  `source="tools_hub"`), mirroring `/tools/cost-calculator`'s existing one. Verified live:
+  both submit and write a real `alerts` row with the correct `source_path`
+  (`/partnerships/seeking` / `/partnerships`) — test rows deleted after.
 - **[P1][goal] Model-aware capture on `/tools/cost-calculator` — prefill from the
   calculated aircraft.** The page's existing `AlertSignup` is generic
   (`sourcePath="/partnerships"`) even though the visitor just told us exactly which

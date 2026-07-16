@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Calculator, TrendingUp, ArrowRight } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
 
 const TITLE = 'Aircraft Partnership Calculators & Tools'
 const DESCRIPTION =
@@ -109,6 +110,11 @@ export default function ToolsHubPage() {
           )
         })}
       </div>
+
+      {/* sourcePath must be a real, matchable route (see alert-digest's
+          parseSourcePath) — bare "/partnerships" already is. This hub links to
+          both calculators, so the box stays general rather than picking a side. */}
+      <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" source="tools_hub" />
 
       <script
         type="application/ld+json"
