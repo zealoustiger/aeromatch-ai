@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T093225Z — PASS — digest-dedupe-crosssection
+- Pages: (email-only — no site page changed; verified via
+  `/api/dev/email-preview/alert-digest-combined` and `/alerts/manage`)
+- What: **A subscriber with two overlapping alerts (e.g. "Cessna 182" + "all of TX")
+  who gets a combined digest email no longer sees the same matching aircraft's photo
+  card twice.** The alert-digest cron built each alert's sample cards independently, so
+  a listing matching more than one of a subscriber's due alerts rendered once per
+  section — read as spam/duplication in a single email. The card now renders once,
+  under whichever alert it first matched, with a small honest note ("Also matches your
+  {other alert} alert") when it was deduped from a later section. Each alert's own "N
+  new"/"N price drop" counts are untouched — only the preview cards are deduped, never
+  the truthful per-alert totals.
+- Goal: alert-experience `[goal]` tier — GOAL.md's "the email a subscriber receives
+  should be the best listing alert email in aviation" / "never spam." Tier 1 (`[bug]`):
+  none open — prior cycle (`save-watch-crosssell`) PASSed, no unstruck `[bug]` in
+  BACKLOG.md. Tier 2 (`[want]`): re-swept — the two open `[P1]/[P2][want]` items remain
+  exactly as flagged in every prior cycle (human product call / zero live effect).
+  Dropped to tier 3 — pulled from "Plan-pass batch #2" (2026-07-16), picked over its
+  two remaining siblings ("invite your co-buyer" share action — passed over in the
+  immediately prior cycle's notes as broader in scope, needing generic per-source_path
+  share handling; 8-week admin trend sparklines — internal-only measurement, lower
+  leverage than a change touching the actual subscriber-facing email content) as the
+  smallest, most directly GOAL.md-aligned slice: it improves the exact artifact GOAL.md
+  singles out as the goal's centerpiece, the alert email itself.
+- Spec: nightshift/specs/20260716T093225Z-digest-dedupe-crosssection.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  New `src/lib/alertDigestDedupe.ts` (pure `dedupeDigestSectionSamples()`) + 7 new unit
+  tests in `alertDigestDedupe.test.ts` (`node --experimental-strip-types --test`), all
+  passing; full `src/lib/*.test.ts` suite re-run as a regression check, 0 failures.
+  QA against the PRODUCTION build (`npx next start`, not dev) via `qa-smoke.mjs` on
+  `/api/dev/email-preview/alert-digest-combined` + `/alerts/manage` at desktop 1280 +
+  mobile 375: 4/4 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow). Visual cycle (email HTML rendering) — screenshots read and confirmed: the
+  preview route's fixture was extended with `alsoMatchesLabel` set on one sample to
+  visually verify the new note renders correctly (small blue-gray line under the specs/
+  price, no overlap, no overflow at either viewport); `/alerts/manage`'s signed-out
+  render confirmed unchanged (no regression). The preview route (`/api/dev/email-
+  preview/alert-digest-combined`) hand-builds its fixture sections directly against
+  `buildCombinedAlertDigestEmail` rather than going through the cron's dedupe pass, so
+  the demo note was set explicitly on the fixture to exercise the new HTML/text
+  rendering path in `sampleCardHtml`/`email.ts`; the actual dedupe *logic* (which
+  section keeps a shared listing, which drops it, which note it gets) is covered by the
+  7 unit tests, not this screenshot. `next start` server confirmed killed at the end.
+- Screenshots: nightshift/screenshots/digest-dedupe-crosssection/
+- Next: the remaining Plan-pass batch #2 items — "invite your co-buyer" share action
+  from `/alerts/manage` (needs generic per-source_path share-link handling, larger
+  scope) and 8-week trend sparklines on the `/admin/alerts` funnel.
+
 ## 20260716T091456Z — PASS — save-watch-crosssell
 - Pages: /aircraft/listing/[id], /partnerships/[id]
 - What: **Hearting a listing now offers a one-tap "alert me if the price drops" —

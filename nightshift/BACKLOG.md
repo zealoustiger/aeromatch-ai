@@ -1985,13 +1985,17 @@ auth wall → product call)._
   instead of bucketed together. The `/guides` hub index (not one of the 8 topical
   guides) intentionally left on `source="guide_page"` — it's a mixed hub, no single
   honest noun.
-- **[P1][goal] Cross-section listing dedupe in the combined digest email.** Verified in
-  the alert-digest cron: sections are built per alert with no cross-section dedupe, so a
-  subscriber with overlapping alerts (e.g. "Cessna 182" + "all of TX") gets the same
-  aircraft card twice in one email — reads as spam. Show each listing card once,
-  attributed to its first-matching section with an honest "also matches your X alert"
-  note; keep the per-alert "N new" counts truthful. Smart/honest-content tier; no new
-  capture point.
+~~- **[P1][goal] Cross-section listing dedupe in the combined digest email.**~~
+  ✅ SHIPPED via `digest-dedupe-crosssection` (2026-07-16) Verified in the alert-digest
+  cron: sections were built per alert with no cross-section dedupe, so a subscriber with
+  overlapping alerts (e.g. "Cessna 182" + "all of TX") got the same aircraft card twice in
+  one email — read as spam. New pure `dedupeDigestSectionSamples()` (`alertDigestDedupe.ts`,
+  7 new unit tests) keeps each sample card in only its first-matching section and attaches
+  an honest "Also matches your X alert" note (`AlertDigestSample.alsoMatchesLabel`,
+  rendered in both HTML `sampleCardHtml` and the plain-text section body); wired into the
+  cron's combined-email branch right before `buildCombinedAlertDigestEmail`. Per-alert
+  `newCount`/`dropCount` stay untouched — only preview cards are deduped, matching GOAL.md's
+  honesty rule.
 - **[P1][goal] "Invite your co-buyer" — share an alert from `/alerts/manage`.** A
   co-ownership marketplace's alerts are naturally shared with the partner you're buying
   with, and there's no share affordance anywhere. Per-row "Share this alert" action that
