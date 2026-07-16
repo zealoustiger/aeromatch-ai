@@ -23,7 +23,7 @@ import {
   buildNewMessageEmail,
   buildSeedInquiryEmail,
 } from '@/lib/email'
-import { getAlertDigestPreview, getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { getAlertDigestPreview, getAlertMatchCount, getNewMatchCountSince } from '@/lib/alertMatchCounts'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
@@ -1966,6 +1966,18 @@ export async function getExistingAlertForSourcePath(sourcePath: string): Promise
 export async function getAlertMatchCountForSourcePath(sourcePath: string): Promise<number | null> {
   const result = await getAlertMatchCount(sourcePath)
   return result?.count ?? null
+}
+
+/** Thin client-callable wrapper around `getNewMatchCountSince` — lets the nav's
+ *  returning-subscriber pill (device-local source_paths + a device-local
+ *  last-visit stamp, no server render pass) fetch an honest "N new since your
+ *  last visit" total. Returns `null` exactly when `getNewMatchCountSince` would
+ *  (nothing to check) — never a fake 0. */
+export async function getNewAlertMatchesSinceForPaths(
+  sourcePaths: string[],
+  since: string
+): Promise<number | null> {
+  return getNewMatchCountSince(sourcePaths, since)
 }
 
 // Saved-search ↔ alert unification (slice 1, see /searches): one click turns a
