@@ -2086,16 +2086,27 @@ save-search auth wall → `[want]` product call)._
   analytics source, and surface the existing "shared with you" note in the chip's
   expanded state. Server actions already strip the param from `source_path` — no
   storage change. Why: placement-conversion data for shared links stays honest.
-- **[P1][goal] Disclose the automatic owner match-alert emails on `/listings`.** The
-  `match-alert-digest` cron already emails every active listing owner weekly when new
-  matching pilots/partnerships appear — but no page ever tells the owner this happens,
-  and `/listings` (verified) shows match counts with no mention of the emails. Add one
-  honest line per listing row reading `match_alert_last_sent_at` ("We email you when new
-  matching pilots appear — last sent {date}" / "none sent yet"), linking to the match
-  browse URL the email itself uses. Why: GOAL's never-spam/honesty rule — an email the
-  recipient was never told about reads as spam; disclosure also markets the feature to
-  owners who haven't gotten one yet. (Read-only slice; an opt-out toggle is the natural
-  next slice if wanted.)
+~~- **[P1][goal] Disclose the automatic owner match-alert emails on `/listings`.**~~ ✅
+  SHIPPED via `listings-match-alert-disclosure` (2026-07-16) `/listings` now renders a
+  small honest line under each active partnership/seeker row ("We email you when new
+  matches appear — last sent {date}" / "— none sent yet"), linking to the same
+  match-browse URL the row's existing `MatchCountBadge` already uses. New
+  `selectActiveWithMatchAlertFallback` helper selects `match_alert_last_sent_at` with a
+  42703 fail-soft retry (confirmed live: the column does NOT exist on the real prod DB
+  yet, same pending-migration state `match-alert-digest`'s own cron already handles) —
+  the fallback path is what actually executes today, always rendering the equally honest
+  "none sent yet" (true, since the cron genuinely no-ops without the column). Aircraft-
+  for-sale rows and past/closed listings intentionally untouched — the cron only emails
+  `partnerships`/`partnership_seekers` owners, and `AircraftForSale` has no
+  `match_alert_last_sent_at` column at all. Verified the new `MatchAlertDisclosure`
+  component's exact render output (both branches) via `renderToStaticMarkup` against the
+  real component logic. Live end-to-end round-trip was attempted via a throwaway
+  `@example.com` account + real magic-link session (service-role `generateLink` +
+  `verifyOtp`, `@supabase/ssr` cookie format) but hit the DB's own
+  `quarantine_test_listing` trigger, which force-flips any `@example.com`-posted row's
+  status to `'test'` on insert/update — by design, so it can't be worked around by
+  re-updating status after insert (the trigger re-fires on `update of ... status` too).
+  All test rows + the throwaway user deleted immediately, confirmed zero remain.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
