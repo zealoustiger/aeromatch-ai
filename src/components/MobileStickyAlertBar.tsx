@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CheckCircle2, Loader2, X } from 'lucide-react'
+import { Bell, CheckCircle2, Loader2, Users, X } from 'lucide-react'
 import { subscribeSignedInAlert, subscribeToAlerts, getExistingAlertForSourcePath } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
@@ -68,6 +68,18 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // Whether THIS PAGE's own URL carries `?share=alert` (set by ShareAlertButton's
+  // copied link) — mirrors AlertSignup's own detection so a subscribe started from
+  // the sticky bar is attributable to the share instead of bucketed with this
+  // placement's ordinary `sticky_bar` conversions. Starts false (matches the
+  // server-rendered markup) and only flips after mount, so no hydration mismatch.
+  const [isSharedLink, setIsSharedLink] = useState(false)
+  const effectiveSource = isSharedLink ? 'shared_alert' : 'sticky_bar'
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsSharedLink(new URLSearchParams(window.location.search).get('share') === 'alert')
+  }, [])
 
   const compare = useCompareOptional()
   const compareTrayShowing = !!compare && compare.ready && compare.count > 0
@@ -177,7 +189,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     track('alert_capture_viewed', {
       context: context || 'all',
       source_path: sourcePath,
-      source: 'sticky_bar',
+      source: effectiveSource,
     })
   }, [visible, context, sourcePath])
 
@@ -186,12 +198,12 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     track('alert_capture_opened', {
       context: context || 'all',
       source_path: sourcePath,
-      source: 'sticky_bar',
+      source: effectiveSource,
     })
     if (!signedInEmail && rememberedEmail) {
       setErrorMsg('')
       setPending(true)
-      const result = await subscribeToAlerts(rememberedEmail, context ?? '', sourcePath, true, 'weekly', 'sticky_bar')
+      const result = await subscribeToAlerts(rememberedEmail, context ?? '', sourcePath, true, 'weekly', effectiveSource)
       setPending(false)
       if (result.error) {
         setErrorMsg(result.error)
@@ -200,7 +212,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
       track('alert_subscribed', {
         context: context || 'all',
         source_path: sourcePath,
-        source: 'sticky_bar',
+        source: effectiveSource,
         one_tap: true,
       })
       markAlertSubscriber()
@@ -218,7 +230,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     }
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeSignedInAlert(context ?? '', sourcePath, true, 'weekly', 'sticky_bar')
+    const result = await subscribeSignedInAlert(context ?? '', sourcePath, true, 'weekly', effectiveSource)
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)
@@ -227,7 +239,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     track('alert_subscribed', {
       context: context || 'all',
       source_path: sourcePath,
-      source: 'sticky_bar',
+      source: effectiveSource,
       signed_in: true,
     })
     markAlertSubscriber()
@@ -243,6 +255,12 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white pb-safe shadow-[0_-2px_12px_rgba(0,0,0,0.10)] md:hidden">
+      {isSharedLink && !justSubscribed && !justOneTapSubscribed && (
+        <p className="mx-auto flex max-w-7xl items-center gap-1.5 px-4 pt-2 text-xs font-medium text-sky-700">
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          A ClubHanger member shared this alert with you — set up your own below.
+        </p>
+      )}
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
         {justSubscribed ? (
           <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">

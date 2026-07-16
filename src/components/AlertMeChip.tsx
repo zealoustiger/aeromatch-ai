@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CheckCircle2, Loader2 } from 'lucide-react'
+import { Bell, CheckCircle2, Loader2, Users } from 'lucide-react'
 import { subscribeSignedInAlert, subscribeToAlerts, getExistingAlertForSourcePath } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
@@ -37,6 +37,18 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
   const [justOneTapSubscribed, setJustOneTapSubscribed] = useState(false)
   const [pending, setPending] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // Whether THIS PAGE's own URL carries `?share=alert` (set by ShareAlertButton's
+  // copied link) — mirrors AlertSignup's own detection so a subscribe started from
+  // the toolbar chip is attributable to the share instead of bucketed with this
+  // placement's ordinary `filter_toolbar` conversions. Starts false (matches the
+  // server-rendered markup) and only flips after mount, so no hydration mismatch.
+  const [isSharedLink, setIsSharedLink] = useState(false)
+  const effectiveSource = isSharedLink ? 'shared_alert' : 'filter_toolbar'
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsSharedLink(new URLSearchParams(window.location.search).get('share') === 'alert')
+  }, [])
 
   useEffect(() => {
     setLocallySubscribed(isLocallySubscribed(sourcePath))
@@ -88,7 +100,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
         track('alert_capture_viewed', {
           context: context || 'all',
           source_path: sourcePath,
-          source: 'filter_toolbar',
+          source: effectiveSource,
         })
         observer.disconnect()
       },
@@ -106,12 +118,12 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
     track('alert_capture_opened', {
       context: context || 'all',
       source_path: sourcePath,
-      source: 'filter_toolbar',
+      source: effectiveSource,
     })
     if (!signedInEmail && rememberedEmail) {
       setErrorMsg('')
       setPending(true)
-      const result = await subscribeToAlerts(rememberedEmail, context ?? '', sourcePath, true, 'weekly', 'filter_toolbar')
+      const result = await subscribeToAlerts(rememberedEmail, context ?? '', sourcePath, true, 'weekly', effectiveSource)
       setPending(false)
       if (result.error) {
         setErrorMsg(result.error)
@@ -120,7 +132,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
       track('alert_subscribed', {
         context: context || 'all',
         source_path: sourcePath,
-        source: 'filter_toolbar',
+        source: effectiveSource,
         one_tap: true,
       })
       markAlertSubscriber()
@@ -138,7 +150,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
     }
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeSignedInAlert(context ?? '', sourcePath, true, 'weekly', 'filter_toolbar')
+    const result = await subscribeSignedInAlert(context ?? '', sourcePath, true, 'weekly', effectiveSource)
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)
@@ -147,7 +159,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
     track('alert_subscribed', {
       context: context || 'all',
       source_path: sourcePath,
-      source: 'filter_toolbar',
+      source: effectiveSource,
       signed_in: true,
     })
     markAlertSubscriber()
@@ -173,22 +185,30 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
   }
 
   return (
-    <button
-      ref={chipRef}
-      type="button"
-      onClick={handleClick}
-      disabled={pending}
-      title={errorMsg || undefined}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sky-600 py-1.5 pl-3 pr-3.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
-    >
-      {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
-      {pending
-        ? 'Saving…'
-        : errorMsg
-          ? 'Try again'
-          : rememberedEmail
-            ? `Alert me — ${rememberedEmail}`
-            : 'Alert me for this search'}
-    </button>
+    <>
+      {isSharedLink && (
+        <p className="flex basis-full items-center gap-1.5 text-xs font-medium text-sky-700">
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          A ClubHanger member shared this alert with you — set up your own below.
+        </p>
+      )}
+      <button
+        ref={chipRef}
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        title={errorMsg || undefined}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sky-600 py-1.5 pl-3 pr-3.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
+      >
+        {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
+        {pending
+          ? 'Saving…'
+          : errorMsg
+            ? 'Try again'
+            : rememberedEmail
+              ? `Alert me — ${rememberedEmail}`
+              : 'Alert me for this search'}
+      </button>
+    </>
   )
 }
