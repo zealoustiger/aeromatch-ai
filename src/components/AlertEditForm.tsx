@@ -1,11 +1,16 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Pencil, CheckCircle2, X } from 'lucide-react'
-import { updateAlertCriteria, removeAlertCriteriaParam } from '@/app/actions'
-import { getHiddenCriteria, type EditableAlertTarget, type HiddenCriterion } from '@/lib/alertEditCriteria'
+import { getAlertMatchCountForSourcePath, updateAlertCriteria, removeAlertCriteriaParam } from '@/app/actions'
+import { buildAlertCriteriaUpdate, getHiddenCriteria, type EditableAlertTarget, type HiddenCriterion } from '@/lib/alertEditCriteria'
 import AlertActions from '@/components/AlertActions'
+
+/** Mirrors `getAlertMatchCount`'s noun choice (`alertMatchCounts.ts`) — aircraft/partnership alerts count listings, seeker alerts count pilots. */
+function nounFor(type: EditableAlertTarget['type']): 'listing' | 'pilot' {
+  return type === 'seeker' ? 'pilot' : 'listing'
+}
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
@@ -50,6 +55,33 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
   const [airport, setAirport] = useState('')
   const [dealOnly, setDealOnly] = useState(false)
   const [hiddenCriteria, setHiddenCriteria] = useState<HiddenCriterion[]>([])
+  const [liveCount, setLiveCount] = useState<number | null>(null)
+
+  // Debounced live "N listings match right now" preview as the form's own fields
+  // change — reuses the same real counting logic as the static per-row count
+  // above (`getAlertMatchCount` via the `getAlertMatchCountForSourcePath` action),
+  // never a client-side guess. Fails soft to "no preview" on error/unrecognized
+  // path, same as the static count; never blocks Save.
+  useEffect(() => {
+    if (!open || !target) return
+    let cancelled = false
+    const handle = setTimeout(() => {
+      const fields =
+        target.type === 'aircraft'
+          ? { make, model, state, minPrice, maxPrice, dealOnly }
+          : target.type === 'partnership'
+            ? { make, state, airport }
+            : { make, model }
+      const { sourcePath: candidatePath } = buildAlertCriteriaUpdate(target.type, sourcePath, fields)
+      getAlertMatchCountForSourcePath(candidatePath).then((count) => {
+        if (!cancelled) setLiveCount(count)
+      })
+    }, 350)
+    return () => {
+      cancelled = true
+      clearTimeout(handle)
+    }
+  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, airport, dealOnly])
 
   function openEdit() {
     if (!target) return
@@ -64,6 +96,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
     setAirport('airport' in target ? target.airport : '')
     setDealOnly('dealOnly' in target ? target.dealOnly : false)
     setHiddenCriteria(getHiddenCriteria(target.type, sourcePath))
+    setLiveCount(null)
     setError(null)
     setOpen(true)
   }
@@ -249,6 +282,14 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
                 ))}
               </div>
             </div>
+          ) : null}
+
+          {liveCount !== null ? (
+            <p className={`mt-3 text-xs ${liveCount > 0 ? 'text-slate-500' : 'text-amber-600'}`}>
+              {liveCount > 0
+                ? `${liveCount} ${nounFor(target.type)}${liveCount === 1 ? '' : 's'} match${liveCount === 1 ? 'es' : ''} right now`
+                : "This alert won't match anything today — consider widening"}
+            </p>
           ) : null}
 
           {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}

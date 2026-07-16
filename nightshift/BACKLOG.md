@@ -1684,17 +1684,19 @@ call) stay flagged for a human, not duplicated here. This batch's weight: manage
 polish, operational reliability (a silent cron failure = worst possible alert experience),
 and support tooling._
 
-- **[P1][goal] Live match-count preview while editing an alert (`/alerts/manage`).**
-  `AlertEditForm` lets a subscriber change make/model/state/price/deal (+ remove hidden
-  advanced chips) completely blind — they can save themselves into a 0-match alert and
-  never know. Add a debounced server action that reuses the exact `countActiveAircraft`/
-  `countActivePartnerships` machinery (`alertMatchCounts.ts` — the same counts `/alerts/
-  manage` already shows per row) to render "N listings match right now" live inside the
-  edit form as criteria change, with an honest 0-match warning ("this alert won't match
-  anything today — consider widening") before save. Why: GOAL.md's management pillar; the
-  capture flow already earned this honesty (`alert-live-match-count`), the edit flow never
-  did. Improves `/alerts/manage`. Read-only preview, no schema change, no new capture
-  point (no `alert_subscribed`).
+~~- **[P1][goal] Live match-count preview while editing an alert (`/alerts/manage`).**~~
+  ✅ SHIPPED via `alert-edit-live-match-count` (2026-07-15) `AlertEditForm` now runs a
+  debounced (~350ms) effect on every make/model/state/price/deal change that rebuilds a
+  candidate `source_path` via the existing `buildAlertCriteriaUpdate` and scores it with
+  the existing `getAlertMatchCountForSourcePath` action (same `getAlertMatchCount`/
+  `countActiveAircraft`/`countActivePartnerships`/`countActiveSeekers` machinery the
+  static per-row count already uses — never a guess). Renders "N listings/pilots match
+  right now" in the same singular/plural + amber-on-zero convention as the static count,
+  plus an honest "This alert won't match anything today — consider widening" line at 0.
+  Live-verified end-to-end against a throwaway `@example.com` alert (seeded + deleted via
+  service role): clearing the model field correctly jumped the live count to 417 real
+  Cessna listings, then typing a nonsense model correctly flipped to the 0-match warning,
+  zero console errors. Read-only preview — no schema change, no new capture point.
 - **[P1][goal] Daily-cron run log + "Last run" health panel on `/admin/alerts`.** Today
   the alert-digest cron's outcome is invisible: if sends silently break (e.g. a bad
   deploy, Resend outage, or one of the 6+ still-unapplied `alerts.*` migrations biting in
