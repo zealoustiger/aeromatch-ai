@@ -77,3 +77,46 @@ export function extractComplainedEmails(body: unknown): string[] {
     .filter((email): email is string => typeof email === 'string' && email.length > 0)
     .map((email) => email.toLowerCase())
 }
+
+export interface EngagementEvent {
+  eventType: 'opened' | 'clicked'
+  /** The `type` tag `sendEmail` attached at send time (see `email.ts`); null for
+   *  an untagged/legacy send — never fabricated, just bucketed as "untagged". */
+  emailType: string | null
+  resendEmailId: string | null
+  /** The clicked URL; always null for an `email.opened` event. */
+  link: string | null
+}
+
+interface ResendEngagementEvent {
+  type?: string
+  data?: {
+    email_id?: unknown
+    tags?: Array<{ name?: unknown; value?: unknown }>
+    click?: { link?: unknown }
+  }
+}
+
+// `email.opened`/`email.clicked` — Resend echoes back whatever `tags` were
+// sent with the original email, so the `type` tag round-trips here and lets
+// the admin engagement rollup group by email template.
+export function extractEngagementEvent(body: unknown): EngagementEvent | null {
+  if (!body || typeof body !== 'object') return null
+  const event = body as ResendEngagementEvent
+  if (event.type !== 'email.opened' && event.type !== 'email.clicked') return null
+
+  const tags = Array.isArray(event.data?.tags) ? event.data.tags : []
+  const typeTag = tags.find((t) => t?.name === 'type')
+  const emailType = typeof typeTag?.value === 'string' ? typeTag.value : null
+
+  const resendEmailId = typeof event.data?.email_id === 'string' ? event.data.email_id : null
+  const link =
+    event.type === 'email.clicked' && typeof event.data?.click?.link === 'string' ? event.data.click.link : null
+
+  return {
+    eventType: event.type === 'email.opened' ? 'opened' : 'clicked',
+    emailType,
+    resendEmailId,
+    link,
+  }
+}

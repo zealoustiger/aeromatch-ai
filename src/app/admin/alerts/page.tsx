@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail } from 'lucide-react'
+import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail, MousePointerClick } from 'lucide-react'
 import { getAlertScoreboard, getDigestVoteRollup } from '@/lib/alertScoreboard'
 import { getLastCronRun } from '@/lib/alertCronHealth'
+import { getEmailEngagementRollup } from '@/lib/emailEngagement'
 import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
 
 export const metadata = { title: 'Alert Scoreboard', robots: { index: false } }
@@ -17,7 +18,13 @@ const STALE_RUN_HOURS = 36
 
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes, lastRun] = await Promise.all([getAlertScoreboard(), getDigestVoteRollup(), getLastCronRun()])
+  const [snap, votes, lastRun, engagement] = await Promise.all([
+    getAlertScoreboard(),
+    getDigestVoteRollup(),
+    getLastCronRun(),
+    getEmailEngagementRollup(),
+  ])
+  const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
   const isStale = hoursSinceLastRun === null || hoursSinceLastRun > STALE_RUN_HOURS
   const updated = new Date(snap.computedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
@@ -311,6 +318,44 @@ export default async function AlertScoreboardPage() {
               ))}
             </div>
           </>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <MousePointerClick className="h-5 w-5 text-sky-500" /> Email engagement
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Opens and clicks per email template, from the Resend <code>email.opened</code>/
+          <code>email.clicked</code> webhook — which alert emails actually get read.
+        </p>
+
+        {engagement.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            No engagement events received yet — either nobody&apos;s opened/clicked a recent
+            email, the <code>email_engagement_events</code> table isn&apos;t migrated on the
+            live database yet, or the <code>email.opened</code>/<code>email.clicked</code>{' '}
+            events aren&apos;t registered on this webhook endpoint in the Resend dashboard yet.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {engagement.map((row) => (
+              <div key={row.emailType}>
+                <div className="mb-1 flex items-baseline justify-between text-sm">
+                  <span className="font-medium text-slate-800">{row.emailType}</span>
+                  <span className="text-slate-500">
+                    {row.opened} opened · {row.clicked} clicked
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-sky-500"
+                    style={{ width: `${((row.opened + row.clicked) / maxEngagement) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </section>
     </div>

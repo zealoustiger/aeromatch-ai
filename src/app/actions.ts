@@ -1054,7 +1054,7 @@ export async function subscribeToAlerts(
     unsubscribeUrl,
     preview: preview ? { count: preview.count, samples: preview.samples } : null,
   })
-  await sendEmail({ to: clean, subject, html, text, unsubscribeUrl })
+  await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
 
   return { ok: true }
 }
@@ -1281,7 +1281,7 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
     unsubscribeUrl,
     preview: preview ? { count: preview.count, samples: preview.samples } : null,
   })
-  await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+  await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
 
   await admin.from('alerts').update({ last_confirm_sent_at: new Date().toISOString() }).eq('id', alert.id)
   // Not-yet-migrated DB (`last_confirm_sent_at` column missing) — the email above
@@ -1395,7 +1395,7 @@ export async function sendSampleDigest(id: string, token?: string) {
     samples: preview?.samples ?? [],
     sampleNote: `your real ${frequency} digest arrives automatically when there's a genuine match.`,
   })
-  await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+  await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'alert-digest' })
 
   await admin.from('alerts').update({ last_confirm_sent_at: new Date().toISOString() }).eq('id', alert.id)
   // Not-yet-migrated DB (`last_confirm_sent_at` missing) — the email above
@@ -1482,7 +1482,7 @@ export async function requestAlertsManageLink(email: string) {
       const manageUrl = `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}`
       const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}`
       const { subject, html, text } = buildManageLinkEmail({ manageUrl })
-      await sendEmail({ to: clean, subject, html, text, unsubscribeUrl })
+      await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'manage-link' })
       await admin
         .from('alerts')
         .update({ last_confirm_sent_at: new Date().toISOString() })
@@ -1538,7 +1538,7 @@ export async function requestAlertEmailChange(newEmail: string, token?: string) 
   const confirmUrl = `${SITE_URL}/api/alerts/confirm-email-change?token=${emailChangeToken}`
   const manageUrl = manageToken ? `${SITE_URL}/alerts/manage?token=${manageToken}` : undefined
   const { subject, html, text } = buildAlertEmailChangeConfirmEmail({ oldEmail: ownerEmail, confirmUrl, manageUrl })
-  await sendEmail({ to: clean, subject, html, text })
+  await sendEmail({ to: clean, subject, html, text, emailType: 'email-change-confirm' })
 
   revalidatePath('/alerts/manage')
   return { ok: true }
@@ -2511,9 +2511,10 @@ async function notifyMessageRecipient(threadId: string, senderId: string): Promi
           body: lastMsg?.body ?? '',
         }),
         to: recipient.email,
+        emailType: 'seed-inquiry',
       })
     } else {
-      await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email })
+      await sendEmail({ ...buildNewMessageEmail({ threadUrl }), to: recipient.email, emailType: 'new-message' })
     }
 
     // Record successful send time so subsequent messages in this thread are suppressed.

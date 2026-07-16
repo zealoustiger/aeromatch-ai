@@ -50,7 +50,7 @@ async function sendInstantFirstDigest(
       samples: preview.samples ?? [],
       firstSend: true,
     })
-    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'alert-digest' })
 
     if (result.sent || result.reason === 'no-key') {
       await supabase.from('alerts').update({ last_digest_at: new Date().toISOString() }).eq('id', alert.id)

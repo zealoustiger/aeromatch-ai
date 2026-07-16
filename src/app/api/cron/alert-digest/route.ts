@@ -1145,7 +1145,7 @@ async function sendStrandedPendingReminders(
       preview: preview ? { count: preview.count, samples: preview.samples } : null,
     })
 
-    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl })
+    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
     if (result.sent || result.reason === 'no-key') {
       await supabase
         .from('alerts')
@@ -1234,7 +1234,7 @@ async function sendWidenSuggestionEmails(
       unsubscribeUrl,
     })
 
-    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl })
+    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'widen-suggestion' })
     if (result.sent || result.reason === 'no-key') {
       await supabase
         .from('alerts')
@@ -1615,7 +1615,14 @@ export async function GET(req: NextRequest) {
             digestFeedbackDownUrl,
           })
 
-      const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+      const result = await sendEmail({
+        to: alert.email,
+        subject,
+        html,
+        text,
+        unsubscribeUrl,
+        emailType: bestDrop ? 'price-drop' : 'alert-digest',
+      })
 
       if (result.sent || result.reason === 'no-key') {
         // Update last_digest_at so we don't re-send for the same window.
@@ -1684,7 +1691,7 @@ export async function GET(req: NextRequest) {
       digestFeedbackDownUrl,
     })
 
-    const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl })
+    const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl, emailType: 'combined-digest' })
 
     if (result.sent || result.reason === 'no-key') {
       const nowStamp = new Date().toISOString()
@@ -1713,7 +1720,7 @@ export async function GET(req: NextRequest) {
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
     const { subject, html, text } = buildListingUnavailableEmail({ title, browseUrl, manageUrl, unsubscribeUrl, noun })
 
-    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl })
+    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'listing-unavailable' })
 
     if (result.sent || result.reason === 'no-key') {
       await supabase

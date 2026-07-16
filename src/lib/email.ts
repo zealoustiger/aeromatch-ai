@@ -28,6 +28,13 @@ export type SendEmailInput = {
    * works and bulk-sender deliverability rules are met.
    */
   unsubscribeUrl?: string
+  /**
+   * A short, stable label for which template this is (e.g. "alert-digest",
+   * "price-drop"). Sent to Resend as a `type` tag, which Resend echoes back on
+   * `email.opened`/`email.clicked` webhook events — the only way to roll up
+   * engagement stats per email type (see `resendWebhook.ts`/`emailEngagement.ts`).
+   */
+  emailType?: string
 }
 
 export type SendEmailResult =
@@ -78,6 +85,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         html: input.html,
         ...(input.text ? { text: input.text } : {}),
         ...(listUnsubscribeHeaders ? { headers: listUnsubscribeHeaders } : {}),
+        ...(input.emailType ? { tags: [{ name: 'type', value: input.emailType }] } : {}),
       }),
     })
     if (!res.ok) {
