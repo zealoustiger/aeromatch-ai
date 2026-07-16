@@ -4,6 +4,7 @@ import { Plane, Handshake, UserSearch, ArrowRight } from 'lucide-react'
 import type { ComponentType } from 'react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PostHandoffBox from '@/components/PostHandoffBox'
+import AlertSignup from '@/components/AlertSignup'
 
 export const metadata: Metadata = {
   title: 'Post a Listing — ClubHanger',
@@ -87,6 +88,17 @@ export default function PostChooserPage() {
             )
           })}
         </div>
+
+        {/* Owner/poster-facing page — the honest alert here is demand-side:
+            tell the poster when a pilot actually starts looking (mirrors the
+            earnings-calculator precedent), not a for-sale/partnership alert
+            they're not the audience for. */}
+        <AlertSignup
+          noun="seeker"
+          sourcePath="/partnerships/seeking"
+          source="post_chooser"
+          className="mt-10"
+        />
       </div>
     </div>
   )

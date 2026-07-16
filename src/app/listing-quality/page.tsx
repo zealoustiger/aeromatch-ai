@@ -4,6 +4,7 @@ import { ShieldCheck, BadgeCheck, Check, ArrowRight } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
+import AlertSignup from '@/components/AlertSignup'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { gradeMeta, QUALITY_SIGNALS, GRADE_CUTOFFS, type Grade } from '@/lib/listingQuality'
 import { TRUST_SIGNALS } from '@/lib/partnershipTrust'
@@ -228,6 +229,15 @@ export default function ListingQualityPage() {
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </section>
+
+        {/* Mostly read by people deciding whether/how to post — the honest
+            alert here is demand-side: tell them when a pilot starts looking. */}
+        <AlertSignup
+          noun="seeker"
+          sourcePath="/partnerships/seeking"
+          source="listing_quality"
+          className="mb-8"
+        />
 
         {/* FAQ */}
         <ModelFaq label="Listing badges" faqs={FAQS} />
