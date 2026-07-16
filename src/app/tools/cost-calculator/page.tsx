@@ -4,6 +4,7 @@ import { Calculator } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import CostCalculator from '@/components/CostCalculator'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Cost Calculator — True Cost of Co-Ownership',
@@ -27,6 +28,10 @@ export default async function CostCalculatorPage({
   const make = params.make?.trim()
   const model = params.model?.trim()
   const aircraftLabel = make && model ? `${make} ${model}` : undefined
+  const alertSourcePath = aircraftLabel
+    ? `/aircraft?${new URLSearchParams({ make: make!, model: model! }).toString()}`
+    : '/partnerships'
+  const matchResult = await getAlertMatchCount(alertSourcePath)
 
   return (
     <div className="ch-surface min-h-screen">
@@ -80,12 +85,19 @@ export default async function CostCalculatorPage({
         <AlertSignup
           noun="aircraft"
           context={aircraftLabel}
-          sourcePath={`/aircraft?${new URLSearchParams({ make: make!, model: model! }).toString()}`}
+          sourcePath={alertSourcePath}
           className="mt-10"
           source="cost_calculator"
+          matchCount={matchResult?.count}
         />
       ) : (
-        <AlertSignup noun="partnership" sourcePath="/partnerships" className="mt-10" source="cost_calculator" />
+        <AlertSignup
+          noun="partnership"
+          sourcePath="/partnerships"
+          className="mt-10"
+          source="cost_calculator"
+          matchCount={matchResult?.count}
+        />
       )}
     </div>
     </div>

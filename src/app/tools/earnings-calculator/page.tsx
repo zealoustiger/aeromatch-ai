@@ -4,6 +4,7 @@ import { TrendingUp } from 'lucide-react'
 import { SITE_URL } from '@/lib/seo'
 import EarningsCalculator from '@/components/EarningsCalculator'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Earnings Calculator — Offset Your Ownership Costs',
@@ -16,7 +17,8 @@ export const metadata: Metadata = {
   },
 }
 
-export default function EarningsCalculatorPage() {
+export default async function EarningsCalculatorPage() {
+  const matchResult = await getAlertMatchCount('/partnerships/seeking')
   return (
     <div className="ch-surface min-h-screen">
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
@@ -68,6 +70,7 @@ export default function EarningsCalculatorPage() {
         sourcePath="/partnerships/seeking"
         className="mt-10"
         source="earnings_calculator"
+        matchCount={matchResult?.count}
       />
     </div>
     </div>

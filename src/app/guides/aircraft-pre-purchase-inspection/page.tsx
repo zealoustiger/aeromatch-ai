@@ -20,6 +20,7 @@ import {
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'Aircraft Pre-Purchase Inspection — A Buyer’s Checklist'
@@ -83,7 +84,8 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function PrePurchaseInspectionGuidePage() {
+export default async function PrePurchaseInspectionGuidePage() {
+  const matchResult = await getAlertMatchCount('/aircraft')
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -409,7 +411,7 @@ export default function PrePurchaseInspectionGuidePage() {
         {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath).
             This guide is about buying an aircraft outright (not a partnership), so the
             honest alert is aircraft-for-sale, not partnerships. */}
-        <AlertSignup noun="aircraft" sourcePath="/aircraft" source="guide_pre_purchase_inspection" className="mt-10" />
+        <AlertSignup noun="aircraft" sourcePath="/aircraft" source="guide_pre_purchase_inspection" className="mt-10" matchCount={matchResult?.count} />
       </article>
 
       <script

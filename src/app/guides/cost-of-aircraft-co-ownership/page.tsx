@@ -4,6 +4,7 @@ import { Calculator, Plane, Wallet, ArrowRight, BookOpen } from 'lucide-react'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { buildArticleJsonLd } from '@/lib/guideJsonLd'
 
 const TITLE = 'How Much Does It Cost to Co-Own an Aircraft?'
@@ -67,7 +68,8 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function CostGuidePage() {
+export default async function CostGuidePage() {
+  const matchResult = await getAlertMatchCount('/partnerships')
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -403,7 +405,7 @@ export default function CostGuidePage() {
         {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath) --
             point it at /partnerships (bare, all-partnerships) rather than this guide's own
             URL, mirroring the /tools/cost-calculator precedent. */}
-        <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_cost_of_co_ownership" className="mt-10" />
+        <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_cost_of_co_ownership" className="mt-10" matchCount={matchResult?.count} />
       </article>
 
       <script
