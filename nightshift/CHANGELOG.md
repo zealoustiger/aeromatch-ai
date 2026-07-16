@@ -2,6 +2,74 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T070722Z — PASS — alert-remembered-email-one-tap
+- Pages: /aircraft, /aircraft/deals, /partnerships, /partnerships/seeking (every page
+  rendering `AlertSignup`, `AlertMeChip`, or `MobileStickyAlertBar` — effectively
+  site-wide, no page-specific code)
+- What: **A signed-out visitor who's already subscribed to one alert on this browser no
+  longer has to retype their email to subscribe to a DIFFERENT alert elsewhere on the
+  site.** Every capture surface (the inline box below listings/search results, the
+  "Alert me for this search" filter-toolbar chip, and the mobile sticky bottom bar) now
+  offers a one-tap "Alert me — you@x.com" button — same convenience signed-in users
+  already got — the moment it recognizes a remembered email from a past successful
+  subscribe on this device. A "Not you?" link (on the main capture box) falls back to
+  the normal typed field. First-time visitors and anyone who's never subscribed see the
+  exact same flow as before — nothing changes until a device has already subscribed once.
+- Goal: `[goal]` tier 3 — alert experience / frictionless capture (GOAL.md: "Frictionless
+  capture... keep it one field"). Tier 1 (`[bug]`): none open — re-confirmed no unstruck
+  `[bug]` entries anywhere in BACKLOG.md; the prior cycle (`alert-cron-run-log`) PASSed,
+  so no fix-the-last-FAIL trigger. Tier 2 (`[want]`): re-swept every open `[want]` line —
+  same conclusion as the last several cycles: the one open `[P1][want]` ("Save this
+  search" auth-wall reconciliation) has its buildable half already shipped
+  (`auth-savesearch-concrete-copy`) and its remaining half is explicitly flagged as a
+  bigger product call needing a human decision, not something an agent should decide
+  unilaterally; the one open `[P2][want]` (dynamic-location seed personas) was
+  re-confirmed to have no live user-facing effect today (the described "Bay Area
+  persona" is a dev-only mock fixture that never renders on staging/prod). Neither
+  buildable this cycle. Tier 3 (`[goal]`): picked this from the freshest (2026-07-16)
+  plan-pass batch over its five siblings (target-price watch alerts, per-alert digest
+  stop-link, email engagement stats, admin email-template gallery, "found my aircraft"
+  exit, nav "N new" pill) because it's the only one needing zero schema/migration and
+  zero human follow-up action to be fully live tonight — the batch's own description
+  called it "the biggest remaining friction cut across EVERY capture surface."
+- Spec: nightshift/specs/20260716T070722Z-alert-remembered-email-one-tap.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0;
+  368/368 unit tests pass (`node --experimental-strip-types --test src/lib/*.test.ts`, no
+  test file touched by this change — full-suite re-run as a regression check). qa-smoke
+  exit 0 on `/aircraft`, `/partnerships`, `/partnerships/seeking`, `/alerts` (desktop 1280
+  + mobile 375, zero app-origin console errors, zero overflow) — these anonymous crawls
+  have no remembered email, so they exercise and confirm the unchanged first-time-visitor
+  render (no regression). Visual cycle (new component states) — screenshots read, all 8
+  match the pre-existing baseline layout. **The actual one-tap behavior — unreachable by
+  the anonymous smoke crawl — was live-verified end-to-end against the real (shared) prod
+  DB** via a throwaway Playwright script (deleted after use, not committed): (1) typed a
+  `qa-onetap-<ts>@example.com` email into the real `/aircraft` `AlertSignup` form, saw the
+  "Almost there" confirmation copy, confirmed the email was written to
+  `ch_alert_local_email` in `localStorage`; (2) on a fresh navigation to
+  `/partnerships/seeking` (different `source_path`, same browser), confirmed the one-tap
+  "Alert me — {email}" button rendered and, on click, produced the same "Almost there"
+  copy (i.e. it really calls the double-opt-in `subscribeToAlerts` action, not a fake
+  confirm); (3) on `/aircraft/deals` confirmed "Not you?" reveals the normal typed field;
+  (4) seeded the remembered email directly and confirmed both `AlertMeChip`
+  (`/aircraft?make=Cessna`, filter-toolbar chip) and `MobileStickyAlertBar`
+  (`/aircraft?make=Piper`, scrolled past the 8th result) render their own one-tap button
+  and, after clicking, an honest "Check {email} to confirm" pill/bar copy — deliberately
+  distinct from the signed-in "Alerts on"/"You'll get alerts" copy, since this path is
+  still pending a confirmation-link click, not actually confirmed. Zero console errors
+  across all of the above. Confirmed via a direct DB read that all 4 real `alerts` rows
+  this created (`/aircraft`, `/partnerships/seeking`, `/aircraft?make=Cessna`,
+  `/aircraft?make=Piper`, all under the one `qa-onetap-...@example.com` email) were
+  deleted immediately after — 0 remain. Server served via `next start` (not dev), stopped
+  cleanly at the end (verified via `pgrep`).
+- Screenshots: nightshift/screenshots/alert-remembered-email-one-tap/
+- Next: the alert-experience `[goal]` queue's 2026-07-16 plan-pass batch still has six
+  open siblings (target-price watch alerts, per-alert "stop just this alert" digest link,
+  email engagement stats webhook, admin email-template preview gallery, "found my
+  aircraft" unsubscribe exit, and the nav "N new since your last visit" pill) — a future
+  cycle should pull the next-highest-value one of those (the email-engagement-stats item
+  needs a human to tick two event boxes in the Resend dashboard before it's fully live,
+  same caveat pattern as `alert_cron_runs`).
+
 ## 20260716T064951Z — PASS — alert-cron-run-log
 - Pages: /admin/alerts (admin-only, behind the existing FREEZE'd admin gate)
 - What: **The daily alert-digest cron's outcome is no longer invisible.** Every run of

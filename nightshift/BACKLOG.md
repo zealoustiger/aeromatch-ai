@@ -1810,15 +1810,16 @@ _All verified against the live codebase + full shipped list above before filing 
   drops still above the target (honesty: the manage row should show "watching for
   ≤ $X"). Improves the listing-page + manage surfaces; `alert_subscribed` already fires
   on watch capture — add the has-target flag to its payload so we can see uptake.
-- **[P1][goal] Remembered-email one-tap subscribe for returning anonymous subscribers.**
-  `alertLocalSubscriptions.ts` deliberately stores only `source_path` — so a repeat
-  email-only subscriber must retype their email on every NEW surface, while signed-in
-  users get one-click. Store the subscriber's own email locally on their own device
-  after a successful subscribe (their email, their browser — still no tokens), and have
-  `AlertSignup` (+ `WatchAlertButton`, `MobileStickyAlertBar`) render the signed-in-style
-  one-tap "Alert me — you@x.com" button with a "Not you?" fallback to the plain field.
-  Biggest remaining friction cut across EVERY capture surface; emits the existing
-  `alert_subscribed` with a `one_tap` property to prove it converts.
+~~- **[P1][goal] Remembered-email one-tap subscribe for returning anonymous subscribers.**~~
+  ✅ SHIPPED via `alert-remembered-email-one-tap` (2026-07-16) `alertLocalSubscriptions.ts`
+  now also remembers the subscriber's own email (separate `localStorage` key, no
+  account/token). `AlertSignup`, `AlertMeChip`, and `MobileStickyAlertBar` all render a
+  signed-in-style one-tap "Alert me — you@x.com" button on any NEW capture surface once a
+  remembered email exists, with a "Not you?" fallback in `AlertSignup` to the plain field
+  (chip/sticky-bar keep their existing scroll-to-field fallback when no email is
+  remembered yet). `WatchAlertButton` needed no change — it only toggles an `AlertSignup
+  watchOnly` panel, which inherits this for free. `alert_subscribed` carries `one_tap:
+  true` on this path only. No schema change (100% client-side).
 - **[P1][goal] Per-alert "stop just this alert" link in the combined digest email.**
   When the one-combined-email-per-pass slice shipped, per-alert controls were explicitly
   deferred (`email.ts` ~line 1048: frequency was "ambiguous across multiple alerts") —
