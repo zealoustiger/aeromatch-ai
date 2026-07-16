@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-16T11:43:36Z — share-alert-chip-attribution — score 5/5
+- Strengths: Precise, faithful mirror of `AlertSignup`'s share detection — identical `isSharedLink` useEffect + `effectiveSource = isSharedLink ? 'shared_alert' : <placement>` derivation cleanly replaces every hardcoded `'filter_toolbar'`/`'sticky_bar'` across all three tracked events and both server actions, so no default-path bytes drift; the `basis-full` note in `AlertMeChip` correctly claims its own row in the parent `flex flex-wrap` container, both notes suppress post-subscribe via the existing `alreadyOn` early-return / `!justSubscribed` guard, and the SSR-false-then-flip pattern avoids hydration mismatch as the spec required.
+- Weaknesses / risks: none material — the "shared this alert with you" copy string is now triplicated across `AlertSignup`/`AlertMeChip`/`MobileStickyAlertBar` with no shared constant, but the spec explicitly mandated the mirror and each placement needs distinct layout classes, so extraction would be over-engineering.
+- Follow-up: none
+
 ## 2026-07-16T11:12:43Z — footer-alert-capture — score 5/5
 - Strengths: Textbook thin-island implementation — `subscribeToAlerts('', '/', true, 'weekly', 'footer')` matches the `AlertMeChip`/`MobileStickyAlertBar` call convention exactly, `track` uses the same `context: 'all'` generic label the siblings derive via `context || 'all'`, and it reuses `markAlertSubscriber`/`addLocalSubscription`/`setLocalEmail`/`getLocalEmail` for a true remembered-email one-tap with a "Not you?" escape hatch; clean pending/error/submitted states, `sr-only` label + `autoComplete="email"`, responsive stacking, and it honors every out-of-scope call (no auth check, no IntersectionObserver, no extra round-trip).
 - Weaknesses / risks: none material — no `required` on the input, but the server's `EMAIL_RE` guard returns a graceful inline error and no sibling uses `required` either; the useEffect localStorage read means a returning subscriber sees a one-frame blank-form flash before the one-tap swaps in, unavoidable and consistent with the sibling pattern.
