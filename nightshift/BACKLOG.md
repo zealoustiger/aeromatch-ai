@@ -1952,23 +1952,25 @@ auth wall → product call)._
   `source="tools_hub"`), mirroring `/tools/cost-calculator`'s existing one. Verified live:
   both submit and write a real `alerts` row with the correct `source_path`
   (`/partnerships/seeking` / `/partnerships`) — test rows deleted after.
-- **[P1][goal] Model-aware capture on `/tools/cost-calculator` — prefill from the
-  calculated aircraft.** The page's existing `AlertSignup` is generic
-  (`sourcePath="/partnerships"`) even though the visitor just told us exactly which
-  make/model they're pricing out. Thread the calculator's selected model into the capture
-  (aircraft noun, model-scoped `sourcePath`, live-match line) via a small client wrapper.
-  Improves an existing capture point's relevance; `source` already set
-  (`cost_calculator`). **Audit note (2026-07-16, `guide-alert-right-noun` cycle's
-  scoping pass):** this item's premise doesn't hold as written — `CostCalculator.tsx`
+~~- **[P1][goal] Model-aware capture on `/tools/cost-calculator` — prefill from the
+  calculated aircraft.**~~ ✅ SHIPPED via `cost-calc-model-alert` (2026-07-16) Built
+  re-scope option (b) from the 2026-07-16 audit note below: the one real caller with
+  make/model context (`/aircraft/[make]/[model]/page.tsx`'s "Estimate your cost to own
+  a {label} →" CTA) now carries `?make=&model=` into `/tools/cost-calculator`; when
+  present, the page swaps its hardcoded generic `AlertSignup` for an aircraft-scoped one
+  (`noun="aircraft"`, `context="{Make} {Model}"`, `sourcePath="/aircraft?make=&model="`)
+  — same convention as the sold-listing alert on the aircraft detail page. No query
+  params → unchanged generic partnership box. `CostCalculator.tsx`'s numeric inputs
+  remain un-prefilled (no honest make/model → typical-cost lookup exists; flagged as a
+  separate, bigger feature, not attempted). **Audit note (2026-07-16,
+  `guide-alert-right-noun` cycle's scoping pass, preserved for context):** this item's
+  original premise ("prefill from the calculated aircraft") didn't hold — `CostCalculator.tsx`
   (both `full` and `compact` variants) has no make/model selector at all, just numeric
-  buy-in/monthly-fixed/wet-rate/hours inputs, and no page links to
-  `/tools/cost-calculator` with a `?make=`/`?model=` query string (checked every
-  caller via `grep`). There is no "calculated aircraft" to prefill from today. Leaving
-  open at P1 since the underlying idea (aircraft-scoped capture on this page) is still
-  good, but it needs re-scoping to either (a) add a make/model picker to the calculator
-  first, or (b) thread make/model through the query string from callers that already
-  know it (e.g. an aircraft listing page's own "see the cost" link) — not a same-cycle
-  "small client wrapper" as originally sized.
+  buy-in/monthly-fixed/wet-rate/hours inputs, and no page linked to
+  `/tools/cost-calculator` with a `?make=`/`?model=` query string at the time. Flagged
+  two re-scope options: (a) add a make/model picker to the calculator first, or (b)
+  thread make/model through the query string from callers that already know it — option
+  (b) is what shipped this cycle.
 ~~- **[P1][goal] Right-noun alert capture on the 8 guide pages.**~~ ✅ SHIPPED via
   `guide-alert-right-noun` (2026-07-16) The 2 genuinely aircraft-buyer guides
   (`aircraft-pre-purchase-inspection`, `aircraft-title-escrow-and-closing` — verified by
