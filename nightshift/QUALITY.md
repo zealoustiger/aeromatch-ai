@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-16T11:12:43Z — footer-alert-capture — score 5/5
+- Strengths: Textbook thin-island implementation — `subscribeToAlerts('', '/', true, 'weekly', 'footer')` matches the `AlertMeChip`/`MobileStickyAlertBar` call convention exactly, `track` uses the same `context: 'all'` generic label the siblings derive via `context || 'all'`, and it reuses `markAlertSubscriber`/`addLocalSubscription`/`setLocalEmail`/`getLocalEmail` for a true remembered-email one-tap with a "Not you?" escape hatch; clean pending/error/submitted states, `sr-only` label + `autoComplete="email"`, responsive stacking, and it honors every out-of-scope call (no auth check, no IntersectionObserver, no extra round-trip).
+- Weaknesses / risks: none material — no `required` on the input, but the server's `EMAIL_RE` guard returns a graceful inline error and no sibling uses `required` either; the useEffect localStorage read means a returning subscriber sees a one-frame blank-form flash before the one-tap swaps in, unavoidable and consistent with the sibling pattern.
+- Follow-up: none
+
 ## 2026-07-16T09:11:12Z — alert-watch-target-price-edit — score 5/5
 - Strengths: Server action mirrors `updateAlertPriceDropOptIn` exactly (same `loadOwnedAlert` ownership proof, same `error.message?.includes('target_price')` missing-column graceful-degrade, same `revalidatePath`), with dual client+server validation of positive numbers; the new `TargetPriceEdit` client control cleanly covers add/edit/clear/cancel with error state, a11y labels, `flex-wrap` mobile layout, and a good doc comment explaining why watch alerts stay off the `AlertEditForm` criteria path — tightly scoped, reuses `formatPrice`, touches nothing out of scope.
 - Weaknesses / risks: none material — render gates on `watch.active` (spec said "watch truthy"), a defensible narrowing since an inactive/"done" watch has nothing to re-target; client `parseInt` silently truncates decimals, harmless for whole-dollar prices behind `type="number" min=1`.
