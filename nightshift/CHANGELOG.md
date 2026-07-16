@@ -2,6 +2,62 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T080710Z — PASS — nav-alert-new-since-pill
+- Pages: / (and every page — the nav renders site-wide), /aircraft, /partnerships, /alerts
+- What: **The "My alerts" nav pill now earns the click.** Before, a returning
+  subscriber's pill just said "My alerts" with nothing to act on. Now, if real new
+  matching listings have shown up on their subscribed searches since their last
+  visit, it says "My alerts · 3 new" (or however many) and still links straight to
+  `/alerts/manage`. Nothing fabricated — a first-ever visit as a known subscriber
+  shows the plain pill (nothing to compare against yet), and it stays plain
+  whenever there's genuinely nothing new. Everyone who isn't a known subscriber
+  sees the exact same "Get alerts" pill as before.
+- Goal: alert-experience `[goal]` tier (GOAL.md: "great alert management" + "site-
+  wide delight for the people who already converted, and a reason to return").
+  Tier 1 (`[bug]`): none open — prior cycle (`alert-found-my-aircraft-exit`)
+  PASSed, no unstruck `[bug]` anywhere in BACKLOG.md. Tier 2 (`[want]`): re-swept
+  — both open `[P1][want]` items (save-search auth-wall reconciliation, collection-
+  layout mosaic redesign) remain explicitly flagged as needing a human product
+  call/mock; not buildable this cycle. Tier 3 (`[goal]`): picked this item — named
+  as the next zero-dependency candidate in the prior cycle's own "Next" note —
+  over its sibling "admin email-template preview gallery" because it's user-facing
+  (site-wide delight vs. admin-only tooling) and needed no schema/migration at all.
+- Spec: nightshift/specs/20260716T075849Z-nav-alert-new-since-pill.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit
+  0; 370/370 unit tests pass (`node --experimental-strip-types --test
+  src/lib/*.test.ts`, full-suite regression run, no test file touched by this
+  change). qa-smoke exit 0 on `/`, `/aircraft`, `/partnerships`, `/alerts`
+  (desktop 1280 + mobile 375, zero app-origin console errors, zero horizontal
+  overflow) — a stale `next-server`/`next start` process left running from an
+  earlier session was occupying :3000/:3651; killed it, served this cycle's own
+  build fresh on :3812. Visual cycle (nav component) — screenshots read: the
+  anonymous crawl's nav renders pixel-identical to before ("Get alerts", no
+  badge) at both viewports, confirming no regression for the ~100% of visitors
+  who aren't yet subscribers. **The actual new-count logic — unreachable by the
+  anonymous smoke crawl — was live-verified end-to-end against the real (shared)
+  prod DB** via a throwaway Playwright script (deleted after use, not committed,
+  no signup/DB writes — only browser `localStorage` was seeded): seeded
+  `ch_alert_subscriber=1`, `ch_alert_local_subscriptions=["/aircraft"]`, and an
+  old (`2020-01-01`) `ch_alert_last_visit_at`, then reloaded — the pill correctly
+  showed an honest non-zero "· N new" count (verified on both a fresh desktop
+  page and a fresh mobile-viewport page) computed from real live `aircraft_for_sale`
+  rows newer than the seeded stamp; confirmed the stamp was rewritten to "now"
+  after that read; an immediate second reload (stamp now recent) correctly
+  dropped back to the plain "My alerts" pill with no count, proving the honesty
+  gate (no stale/repeated counting) works, not just the happy path. A fully
+  anonymous page (no seeded local state) showed the unchanged plain "Get alerts"
+  pill throughout. Server served via `next start` (not dev), stopped cleanly at
+  the end (verified via `pgrep`). No real alert rows, signups, or other prod DB
+  writes were made this cycle — only device-local `localStorage` was touched by
+  the QA script.
+- Screenshots: nightshift/screenshots/nav-alert-new-since-pill/
+- Next: the alert-experience `[goal]` queue's remaining open item is the "admin
+  email-template preview gallery" (`/admin/alerts/emails`) — zero-dependency,
+  admin-gated, next in line. The "email engagement stats" webhook and "near-
+  instant alerts" items both still need a human call (Resend dashboard event
+  boxes; Vercel plan tier for sub-daily cron) before a future cycle can build
+  them further.
+
 ## 20260716T074840Z — PASS — alert-found-my-aircraft-exit
 - Pages: /alerts/status
 - What: **The alert unsubscribe page now has a one-tap "Found my aircraft 🎉" option** alongside the existing pause/snooze/weekly recovery choices. Before, someone unsubscribing because they already bought their plane (a success!) looked identical to someone unsubscribing out of frustration (churn) — both were just "gone." Clicking the new link records the honest reason (new additive `alerts.unsubscribe_reason` column), shows a congratulatory confirmation ("Congrats on the new aircraft! We've stopped these emails."), and offers one non-pushy cross-sell: "Flying it with partners? Post a share →" linking to `/partnerships/new`.

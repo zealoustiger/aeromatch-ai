@@ -1870,15 +1870,20 @@ _All verified against the live codebase + full shipped list above before filing 
   than a literal "stop all their alerts" — reusing `alert_unsubscribed` with a `reason`
   prop wasn't done since that event already fired on page load via `AlertStatusTracker`
   before the visitor makes this choice; a distinct event was truer to the timeline.
-- **[P1][goal] "N new since your last visit" on the returning-subscriber nav pill.**
-  The nav already flips "Get alerts" → "My alerts" for known subscribers; make it
-  earn the click. Small read-only API: given the device's locally-stored
-  `source_path`s (already in `alertLocalSubscriptions`) + a locally-stored
-  last-visit timestamp, return how many matching listings are newer than that
-  (reuse `alertMatchCounts.ts` parsing; cap the paths, fail-soft to no badge).
-  Nav pill renders "My alerts · 3 new" linking to `/alerts/manage`. Honest only —
-  no count, no badge; never fabricate. Site-wide delight for the exact people who
-  already converted, and a reason to return.
+~~- **[P1][goal] "N new since your last visit" on the returning-subscriber nav pill.**~~ ✅
+  SHIPPED via `nav-alert-new-since-pill` (2026-07-16) The nav pill now renders "My
+  alerts · N new" for a known subscriber whenever real matching listings on their
+  locally-subscribed `source_path`s are newer than their locally-stamped last visit
+  — `getLastVisitAt()`/`stampVisitNow()` (new, `alertLocalSubscriptions.ts`) +
+  `getNewMatchCountSince()` (new, `alertMatchCounts.ts`, threads an optional
+  `since` through the existing aircraft/partnership/seeker counters, capped to 8
+  paths, fail-soft per path). First-ever "known subscriber" visit seeds the stamp
+  silently (never counts "since forever" as new); a stamp-then-immediate-revisit
+  correctly shows the plain pill with no count. Live-verified end-to-end with
+  Playwright against the real running server (seeded `localStorage`, no DB writes):
+  an old seeded stamp produced an honest non-zero count on both desktop and mobile
+  pills, re-stamped to now, and an immediate second reload correctly showed no
+  count; anonymous (no local state) visitors are pixel-identical to before.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
