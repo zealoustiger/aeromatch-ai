@@ -16,6 +16,7 @@ import {
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 const TITLE = 'Aircraft Co-Ownership Guides'
 const PATH = '/guides'
@@ -111,7 +112,8 @@ const GUIDES: {
   },
 ]
 
-export default function GuidesHubPage() {
+export default async function GuidesHubPage() {
+  const matchResult = await getAlertMatchCount('/partnerships')
   const collectionJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -205,7 +207,7 @@ export default function GuidesHubPage() {
       {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath) --
           point it at /partnerships (bare, all-partnerships) rather than /guides, mirroring
           the /tools/cost-calculator precedent. */}
-      <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_page" className="mt-10" />
+      <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_page" className="mt-10" matchCount={matchResult?.count} />
 
       <script
         type="application/ld+json"

@@ -2065,15 +2065,22 @@ save-search auth wall → `[want]` product call)._
   between "Posting a listing? Earn a higher grade." and the FAQ. Live-verified: a
   throwaway `@example.com` submit on `/post` wrote a real `alerts` row with
   `source_path: "/partnerships/seeking"`; row deleted after.
-- **[P1][goal] Honest capture-time match count in `AlertSignup` — "N match today; we'll
-  email you the new ones."** `getAlertMatchCount` already powers the nav pill and the
-  post-confirm page, but the capture box itself never says whether the alert is live
-  inventory or a long shot. Add an optional server-fetched `matchCount` prop rendered
-  as one honest reassurance line, and wire it on surfaces where the visitor CAN'T
-  already see results (guides, `/tools/*`, 404, footer if shipped) — skip filter/browse
-  pages where the results are right there. When the count is 0, say "none right now —
-  you'll be first to know," never fabricate. Why: capture-conversion polish on the
-  weakest-context surfaces, reusing an existing counter.
+~~- **[P1][goal] Honest capture-time match count in `AlertSignup` — "N match today; we'll
+  email you the new ones."**~~ ✅ SHIPPED via `alertsignup-matchcount-sweep` (2026-07-16)
+  Wired the existing `matchCount` prop (already built, honest 0-match copy included)
+  into every guides/`/tools/*` page whose alert box had no count at all: the guides hub
+  + all 8 guide detail pages, the tools hub, both `cost-calculator` branches
+  (make/model-scoped and the generic fallback), and `earnings-calculator` — 12 files,
+  each a one-line `getAlertMatchCount(sourcePath)` call threaded into the existing
+  `<AlertSignup>`. Live-verified real, non-fabricated counts render (e.g. "23
+  partnerships match right now" on `/guides`/`/tools`, "32 aircraft match right now" on
+  the make/model-scoped calculator, "13 seekers match right now" on
+  `earnings-calculator`). **`not-found.tsx` intentionally left out of scope:** its box
+  uses `sourcePath="/"`, which `parseSourcePath` doesn't recognize (returns `null`) —
+  there's no real count to attach without changing what the 404 alert itself
+  subscribes to, a bigger, separate decision; the honest behavior there is to keep
+  rendering no line, same as before. Footer (`FooterAlertCapture`) also untouched —
+  deliberately thinner component, no match count by design (see `footer-alert-capture`).
 ~~- **[P1][goal] Second caller for the model-aware calculator alert — thread make/model
   through `ShareCostPanel`'s "Run your own numbers" link.**~~ ✅ SHIPPED via
   `sharecost-calc-model-link` (2026-07-16) — `ShareCostPanel` now accepts optional
