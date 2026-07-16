@@ -1903,6 +1903,64 @@ _All verified against the live codebase + full shipped list above before filing 
   pills, re-stamped to now, and an immediate second reload correctly showed no
   count; anonymous (no local state) visitors are pixel-identical to before.
 
+### Plan-pass batch #2 — 2026-07-16 (Fable)
+_All verified against the live codebase + the full shipped list above before filing
+(checked `AlertEditForm.tsx`/`EditableAlertTarget.tsx` for target-price, the alert-digest
+cron's section builder for dedupe, `src/app/tools/*` + all 8 guide pages for capture
+presence, `AircraftSaleCard.tsx`/`/saved` for hearts, `alertScoreboard.ts` for trends).
+None overlap the two open-but-blocked items (instant sends → Vercel tier; save-search
+auth wall → product call)._
+
+- **[P1][goal] Edit/remove the target price on watch alerts from `/alerts/manage`.** The
+  explicitly-deferred follow-up from `alert-watch-target-price` (its ship note calls this
+  "a real follow-up slice"): watch alerts aren't wired into `AlertEditForm`/
+  `EditableAlertTarget` at all, so a subscriber who set "only below $X" can never change
+  or clear it without delete-and-recreate. Closes a management gap on an existing
+  surface; no new capture point (no new `alert_subscribed`).
+- **[P1][goal] Save→watch bridge: one-tap "email me if the price drops" after hearting a
+  listing.** Hearting (aircraft + partnership, signed-in) is the highest-intent moment on
+  the site with zero alert offer today — after a save, show an inline one-tap watch
+  cross-sell reusing the existing signed-in watch path. New capture point on the save
+  interaction; emits `alert_subscribed` with `source: 'save_cross_sell'`.
+- **[P1][goal] Alert capture on `/tools/earnings-calculator` + the `/tools` index.**
+  Verified: neither page has any alert capture (cost-calculator does; these don't) — the
+  last tools-surface gap. Context-appropriate framing (earnings calc is owner-leaning →
+  partnership/seller market-watch angle). New entry point; emits `alert_subscribed` with
+  a distinct `source` per page.
+- **[P1][goal] Model-aware capture on `/tools/cost-calculator` — prefill from the
+  calculated aircraft.** The page's existing `AlertSignup` is generic
+  (`sourcePath="/partnerships"`) even though the visitor just told us exactly which
+  make/model they're pricing out. Thread the calculator's selected model into the capture
+  (aircraft noun, model-scoped `sourcePath`, live-match line) via a small client wrapper.
+  Improves an existing capture point's relevance; `source` already set
+  (`cost_calculator`).
+- **[P1][goal] Right-noun alert capture on the 8 guide pages.** All guides currently
+  mount the same generic partnership capture (`sourcePath="/partnerships"`,
+  `source="guide_page"`), but several are aircraft-buyer guides (pre-purchase inspection,
+  title/escrow/closing) where an aircraft alert is the honest match. Static per-guide
+  mapping of noun/`sourcePath` (+ per-guide `source` suffix so placement ranking can
+  tell them apart). Improves existing entry points, no new schema.
+- **[P1][goal] Cross-section listing dedupe in the combined digest email.** Verified in
+  the alert-digest cron: sections are built per alert with no cross-section dedupe, so a
+  subscriber with overlapping alerts (e.g. "Cessna 182" + "all of TX") gets the same
+  aircraft card twice in one email — reads as spam. Show each listing card once,
+  attributed to its first-matching section with an honest "also matches your X alert"
+  note; keep the per-alert "N new" counts truthful. Smart/honest-content tier; no new
+  capture point.
+- **[P1][goal] "Invite your co-buyer" — share an alert from `/alerts/manage`.** A
+  co-ownership marketplace's alerts are naturally shared with the partner you're buying
+  with, and there's no share affordance anywhere. Per-row "Share this alert" action that
+  copies a link to the alert's own `source_path` search with a `?share=alert` banner that
+  highlights/scrolls to the capture (recipient sets up their own alert — never exposes
+  the sharer's email/token). New organic entry point; emits `alert_subscribed` with
+  `source: 'shared_alert'`.
+- **[P1][goal] 8-week trend sparklines on the `/admin/alerts` funnel.** GOAL.md says
+  judge conversions week-over-week, but `alertScoreboard.ts` only computes this-week vs
+  last-week — no trend beyond one comparison. Add a small 8-week series per funnel stage
+  (subscribed / confirmed / unsubscribed) to the existing scoreboard panel, computed from
+  the timestamps already on the rows. Measurement ("prove it converts"); no new capture
+  point.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
