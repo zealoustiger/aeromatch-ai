@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-16T08:21:09Z — admin-email-template-gallery — score 5/5
+- Strengths: Every one of the 11 builder call sites matches its real `email.ts` signature exactly (verified against source); honest live-data discipline is excellent — reuses the existing `getAlertDigestPreview` fetcher, adds a clean genuine-price-drop query that returns null rather than guess, sandboxes each HTML preview in `<iframe sandbox="">`, labels placeholder-fed builders as such, and never touches `sendEmail`/Resend; scoping and the `/admin/listings/sample` drill-down link precedent are spot-on.
+- Weaknesses / risks: none material — `getSamplePriceDropListing` selects a `location` column it never uses; the no-live-drop fallback shows illustrative fabricated price numbers (honestly labeled) and the combined-digest preview drops the spec's `/partnerships/seeking` third fetcher in favor of aircraft+partnership — all defensible, net-positive judgment calls.
+- Follow-up: none
+
 ## 2026-07-15T06:22:15Z — alert-widen-suggestion-email — score 4/5
 - Strengths: Faithfully reuses the live widen logic with honest double live re-verification (0-match then >0 widen) before any send, mirrors sendStrandedPendingReminders' shape/fail-soft precisely, and ships strong tests (XSS-escape, singular/plural, byte-exact tokens, empty-context fallback).
 - Weaknesses / risks: sendWidenSuggestionEmails has no .limit() / upper age bound and never stamps the permanently-ineligible (21d+, never-matched, no >0 widen) alerts, so that set only grows and gets re-run through 2 live getAlertMatchCount calls on every daily cron pass.
