@@ -1996,13 +1996,7 @@ auth wall → product call)._
   cron's combined-email branch right before `buildCombinedAlertDigestEmail`. Per-alert
   `newCount`/`dropCount` stay untouched — only preview cards are deduped, matching GOAL.md's
   honesty rule.
-- **[P1][goal] "Invite your co-buyer" — share an alert from `/alerts/manage`.** A
-  co-ownership marketplace's alerts are naturally shared with the partner you're buying
-  with, and there's no share affordance anywhere. Per-row "Share this alert" action that
-  copies a link to the alert's own `source_path` search with a `?share=alert` banner that
-  highlights/scrolls to the capture (recipient sets up their own alert — never exposes
-  the sharer's email/token). New organic entry point; emits `alert_subscribed` with
-  `source: 'shared_alert'`.
+~~- **[P1][goal] "Invite your co-buyer" — share an alert from `/alerts/manage`.**~~ ✅ SHIPPED via `alert-share-invite` (2026-07-16) Per-row "Share" button on `/alerts/manage` (`ShareAlertButton`) copies `origin + source_path + ?share=alert` and shows a transient "Copied!" — never the sharer's email/token. Any `AlertSignup` surface reached with `?share=alert` renders a sky-blue "A ClubHanger member shared this alert with you — set up your own below" note above the capture (detected client-side from `window.location.search`, so no hydration mismatch). New `src/lib/shareAlertLink.ts` (`withShareParam`/`stripShareParam`, 8 unit tests). **`share=alert` is a pure UI/attribution marker — stripped server-side in BOTH `subscribeToAlerts` and `subscribeSignedInAlert`** so it can never leak into the stored, digest-matched `source_path` from ANY subscribe surface (the QA caught `AlertMeChip`/sticky-bar one-tap paths persisting the raw path — a client-only strip in `AlertSignup` was insufficient). Live-verified end-to-end via a throwaway `@example.com` session: Share→Copied+clipboard URL, note renders desktop+mobile, and a submit from a shared link stored a clean `/aircraft?make=Piper` row (marker gone); all test rows/user deleted. NOTE: the `alerts` table has no `source` column (the actions' fallback loop drops it), so `source: 'shared_alert'` is analytics-only; only the footer `AlertSignup` tags it — the top `AlertMeChip` keeps its own `filter_toolbar` source. Follow-up: teach `AlertMeChip` to detect `share=alert` for complete attribution.
 - **[P1][goal] 8-week trend sparklines on the `/admin/alerts` funnel.** GOAL.md says
   judge conversions week-over-week, but `alertScoreboard.ts` only computes this-week vs
   last-week — no trend beyond one comparison. Add a small 8-week series per funnel stage

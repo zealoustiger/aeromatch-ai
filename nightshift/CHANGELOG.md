@@ -2,6 +2,50 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T101800Z — PASS — alert-share-invite
+- Pages: /alerts/manage, /aircraft (any page rendering `AlertSignup`)
+- What: **Subscribers can now share an alert with the co-buyer they're searching
+  with.** Every alert row on `/alerts/manage` gets a "Share" button that copies a
+  link to that alert's own search (its public `source_path` + `?share=alert`) and
+  flashes "Copied!" — nothing of the sharer's (email, token) is ever in the link.
+  When the co-buyer opens the link on any alert-capture page, a friendly note —
+  "A ClubHanger member shared this alert with you — set up your own below" — appears
+  above the signup box, and they set up their *own* alert in one step. A brand-new,
+  organic way into the alert funnel for a marketplace whose alerts are naturally
+  shared between co-owners.
+- Goal: alert-experience `[goal]` tier — GOAL.md's "the best set-alert experience
+  site-wide" / a new organic capture entry point. Tier 1 (`[bug]`): none open (prior
+  cycle `digest-dedupe-crosssection` PASSed; no unstruck `[bug]`). Tier 2 (`[want]`):
+  the two standing `[want]` items remain human-product-call / zero-live-effect, as
+  every prior cycle re-confirmed. Dropped to tier 3 — finished the in-flight
+  "invite your co-buyer" slice from Plan-pass batch #2 (2026-07-16), the most
+  directly funnel-expanding of its remaining siblings.
+- Spec: nightshift/specs/20260716T094525Z-alert-share-invite.md
+- Verdict: PASS — `npx tsc --noEmit` + `rm -rf .next && npx next build` both exit 0;
+  8/8 `shareAlertLink` unit tests pass; QA smoke on `/alerts/manage` + `/aircraft` at
+  desktop 1280 + mobile 375 = 4/4 (HTTP 200, zero app-origin console errors, zero
+  overflow). Visual cycle — screenshots read: the Share button integrates cleanly into
+  the manage-row action group (shows emerald "Copied!" after click), and the shared
+  note renders correctly above the capture box on both desktop and mobile.
+  **QA caught a real data-integrity bug in the initial (client-only) approach:** the
+  `share=alert` marker leaked into the STORED `source_path` when a shared link was
+  used from the top `AlertMeChip`/mobile-sticky one-tap surfaces (which subscribe
+  directly, bypassing `AlertSignup`'s client-side strip) — polluting the criteria the
+  digest cron matches on. Fixed at the server chokepoint: `stripShareParam` now runs
+  inside BOTH `subscribeToAlerts` and `subscribeSignedInAlert`, so no surface can ever
+  persist the marker. Re-verified end-to-end with a throwaway `@example.com` session:
+  a submit from `/aircraft?make=Piper&share=alert` stored a clean `/aircraft?make=Piper`
+  row; all test rows + the test user deleted after (0 rows remain).
+- Honesty note: the live `alerts` table has no `source` column (the actions' fallback
+  loop drops it), so `source: 'shared_alert'` is analytics-only, not a DB row value —
+  and only the footer `AlertSignup` tags it; the top `AlertMeChip` keeps its own
+  `filter_toolbar` source. The core user-facing value (the invite note + a clean,
+  matchable alert from any surface) is fully delivered; complete cross-surface
+  attribution is a small follow-up.
+- Screenshots: nightshift/screenshots/alert-share-invite/
+- Next: teach `AlertMeChip` (and the mobile sticky bar) to detect `?share=alert` and
+  tag `source: 'shared_alert'` too, for complete share attribution.
+
 ## 20260716T093225Z — PASS — digest-dedupe-crosssection
 - Pages: (email-only — no site page changed; verified via
   `/api/dev/email-preview/alert-digest-combined` and `/alerts/manage`)
