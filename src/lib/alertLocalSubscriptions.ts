@@ -22,6 +22,12 @@ const MAX_ENTRIES = 50
 // token — just the same address they already typed once on this browser.
 const EMAIL_STORAGE_KEY = 'ch_alert_local_email'
 
+// Separate key: an ISO timestamp for "when did this browser last look at the
+// site as a known subscriber" — powers the nav pill's honest "N new since your
+// last visit" count (see alertMatchCounts.ts's `since`-scoped counting). Not
+// tied to any single source_path; one stamp per browser, same as the email key.
+const LAST_VISIT_STORAGE_KEY = 'ch_alert_last_visit_at'
+
 function hasWindow(): boolean {
   return typeof window !== 'undefined' && !!window.localStorage
 }
@@ -42,6 +48,11 @@ function readAll(): string[] {
 export function isLocallySubscribed(sourcePath: string): boolean {
   if (!sourcePath) return false
   return readAll().includes(sourcePath)
+}
+
+/** Every source_path this browser has subscribed to, oldest first. */
+export function getLocalSourcePaths(): string[] {
+  return readAll()
 }
 
 /** Record a successful email-only subscribe. Idempotent, fails soft. */
@@ -72,5 +83,27 @@ export function setLocalEmail(email: string): void {
     window.localStorage.setItem(EMAIL_STORAGE_KEY, email)
   } catch {
     /* quota / disabled storage — fail soft, one-tap just never offers */
+  }
+}
+
+/** This browser's last-recorded visit timestamp (ISO string), if any. `null` on
+ *  a first-ever visit — callers should treat that as "nothing to compare against
+ *  yet" rather than "everything is new". */
+export function getLastVisitAt(): string | null {
+  if (!hasWindow()) return null
+  try {
+    return window.localStorage.getItem(LAST_VISIT_STORAGE_KEY) || null
+  } catch {
+    return null
+  }
+}
+
+/** Stamp THIS browser's visit as "now". Idempotent to call every visit; fails soft. */
+export function stampVisitNow(): void {
+  if (!hasWindow()) return
+  try {
+    window.localStorage.setItem(LAST_VISIT_STORAGE_KEY, new Date().toISOString())
+  } catch {
+    /* quota / disabled storage — fail soft, the "N new" badge just never shows */
   }
 }

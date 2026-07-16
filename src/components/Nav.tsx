@@ -12,6 +12,8 @@ import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
 import { localSaveCount, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
 import { isAlertSubscriber, ALERT_SUBSCRIBER_EVENT } from '@/lib/alertSubscriberFlag'
+import { getLocalSourcePaths, getLastVisitAt, stampVisitNow } from '@/lib/alertLocalSubscriptions'
+import { getNewAlertMatchesSinceForPaths } from '@/app/actions'
 
 // About lives in the footer (declutter the top nav per the human's nav-polish ask).
 const links: { href: string; label: string; icon?: LucideIcon }[] = [
@@ -46,6 +48,9 @@ export default function Nav() {
   // localStorage hint, boolean only — see lib/alertSubscriberFlag.ts). When true,
   // the primary "Get alerts" capture CTA becomes "My alerts" → /alerts/manage.
   const [alertSubscriber, setAlertSubscriber] = useState(false)
+  // Honest "N new since your last visit" count for a known subscriber's own
+  // locally-subscribed searches — null renders no badge (unknown/first visit/0).
+  const [newAlertCount, setNewAlertCount] = useState<number | null>(null)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
@@ -143,10 +148,31 @@ export default function Nav() {
   // Close mobile menu on route change
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
+  // Once we know this browser is a known subscriber, compare against its last
+  // visit (read BEFORE re-stamping) for an honest "N new" delta on its own
+  // locally-subscribed searches — then re-stamp so the NEXT visit's delta starts
+  // from now. A first-ever "known subscriber" visit has no prior stamp, so it
+  // just seeds one with no count (never counts "since forever" as new).
+  useEffect(() => {
+    if (!alertSubscriber) { setNewAlertCount(null); return }
+    const lastVisitAt = getLastVisitAt()
+    stampVisitNow()
+    if (!lastVisitAt) return
+    const paths = getLocalSourcePaths()
+    if (paths.length === 0) return
+    let cancelled = false
+    getNewAlertMatchesSinceForPaths(paths, lastVisitAt).then((count) => {
+      if (!cancelled) setNewAlertCount(count)
+    })
+    return () => { cancelled = true }
+  }, [alertSubscriber])
+
   // Returning subscribers get a one-click path to manage; everyone else keeps the
   // capture CTA. `/alerts/manage` still proves ownership itself — this is just the label.
   const alertsHref = alertSubscriber ? '/alerts/manage' : '/alerts'
-  const alertsLabel = alertSubscriber ? 'My alerts' : 'Get alerts'
+  const newAlertSuffix = alertSubscriber && newAlertCount ? ` · ${newAlertCount} new` : ''
+  const alertsLabel = (alertSubscriber ? 'My alerts' : 'Get alerts') + newAlertSuffix
+  const alertsLabelMobile = (alertSubscriber ? 'My alerts' : 'Alerts') + newAlertSuffix
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -238,7 +264,7 @@ export default function Nav() {
               className="flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
               <Bell className="h-3.5 w-3.5" />
-              {alertSubscriber ? 'My alerts' : 'Alerts'}
+              {alertsLabelMobile}
             </Link>
             <button
               onClick={() => setMenuOpen((v) => !v)}

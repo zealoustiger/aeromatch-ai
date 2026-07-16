@@ -226,7 +226,8 @@ async function resolveAircraftAirportState(
 async function countActiveAircraft(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'aircraft' }>,
-  excludeId?: string
+  excludeId?: string,
+  since?: string
 ): Promise<number> {
   let q = supabase
     .from('aircraft_for_sale')
@@ -234,6 +235,7 @@ async function countActiveAircraft(
     .eq('status', 'active')
     .gte('asking_price', PARTS_PRICE_FLOOR)
 
+  if (since) q = q.gte('first_seen_at', since)
   if (target.make) q = q.ilike('make', `%${target.make}%`)
   if (target.model) q = q.eq('model', target.model)
   if (target.modelPattern) q = q.ilike('model', target.modelPattern)
@@ -287,10 +289,12 @@ async function resolveIcaoList(
 async function countActivePartnerships(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'partnership' }>,
-  excludeId?: string
+  excludeId?: string,
+  since?: string
 ): Promise<number> {
   let q = supabase.from('partnerships').select('id', { count: 'exact', head: true }).eq('status', 'active')
 
+  if (since) q = q.gte('created_at', since)
   if (target.make) q = q.ilike('make', `%${target.make}%`)
   q = applyPartnershipModelFilter(q, target.model)
   if (target.state) q = q.eq('state', target.state)
@@ -305,10 +309,12 @@ async function countActivePartnerships(
 
 async function countActiveSeekers(
   supabase: ReturnType<typeof createAdminClient>,
-  target: Extract<AlertTarget, { type: 'seeker' }>
+  target: Extract<AlertTarget, { type: 'seeker' }>,
+  since?: string
 ): Promise<number> {
   let q = supabase.from('partnership_seekers').select('id, preferred_models').eq('status', 'active')
 
+  if (since) q = q.gte('created_at', since)
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
   if (target.state) q = q.eq('state', target.state)
   // Single ICAO, no radius — matches home_airport OR additional_airports, same OR
@@ -324,6 +330,7 @@ async function countActiveSeekers(
       .select('id, preferred_models')
       .eq('status', 'active')
       .eq('home_airport', target.icao)
+    if (since) retry = retry.gte('created_at', since)
     if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
     if (target.state) retry = retry.eq('state', target.state)
     ;({ data, error } = await retry)
@@ -352,26 +359,53 @@ export interface AlertMatchCount {
  * family-wide count derived from a single watched listing (see
  * `alertCrossSell.ts`'s watch cross-sell), the watched listing would otherwise
  * always match its own family and inflate the count by one.
+ *
+ * `since` (ISO timestamp) narrows to matches CREATED on/after that time — used
+ * for "N new since your last visit"-style honest deltas rather than "N active
+ * right now" totals.
  */
 export async function getAlertMatchCount(
   sourcePath: string | null,
-  opts?: { excludeId?: string }
+  opts?: { excludeId?: string; since?: string }
 ): Promise<AlertMatchCount | null> {
   const target = parseSourcePath(sourcePath)
   if (!target) return null
   try {
     const admin = createAdminClient()
     if (target.type === 'aircraft') {
-      return { count: await countActiveAircraft(admin, target, opts?.excludeId), noun: 'listing' }
+      return { count: await countActiveAircraft(admin, target, opts?.excludeId, opts?.since), noun: 'listing' }
     }
     if (target.type === 'seeker') {
-      return { count: await countActiveSeekers(admin, target), noun: 'pilot' }
+      return { count: await countActiveSeekers(admin, target, opts?.since), noun: 'pilot' }
     }
-    return { count: await countActivePartnerships(admin, target, opts?.excludeId), noun: 'listing' }
+    return {
+      count: await countActivePartnerships(admin, target, opts?.excludeId, opts?.since),
+      noun: 'listing',
+    }
   } catch (err) {
     console.error('[alertMatchCounts] count error:', err instanceof Error ? err.message : err)
     return null
   }
+}
+
+/** Caps how many locally-subscribed source_paths one nav-pill check fans out to
+ *  — bounds query cost regardless of how many capture points a long-time
+ *  subscriber has hit (storage itself caps at 50, see alertLocalSubscriptions.ts). */
+const MAX_NEW_SINCE_PATHS = 8
+
+/**
+ * Sum of NEW matches (created on/after `since`) across up to `MAX_NEW_SINCE_PATHS`
+ * of this browser's locally-subscribed source_paths — powers the nav pill's
+ * honest "My alerts · N new" badge. Fails soft per-path (an unrecognized shape or
+ * query error just contributes 0, doesn't sink the whole sum); returns `null`
+ * only when there's nothing to check at all, so the caller renders no badge
+ * rather than a fake 0.
+ */
+export async function getNewMatchCountSince(sourcePaths: string[], since: string): Promise<number | null> {
+  const paths = sourcePaths.filter(Boolean).slice(0, MAX_NEW_SINCE_PATHS)
+  if (paths.length === 0 || !since) return null
+  const results = await Promise.all(paths.map((p) => getAlertMatchCount(p, { since })))
+  return results.reduce((sum, r) => sum + (r?.count ?? 0), 0)
 }
 
 export interface EmptyStateWidenSuggestion {
