@@ -30,6 +30,50 @@ function formatDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// Owners of `partnerships`/`partnership_seekers` get a weekly automatic email when a
+// genuinely new match appears on the other side (see `/api/cron/match-alert-digest`).
+// `match_alert_last_sent_at` isn't guaranteed migrated on every environment yet, so
+// selecting it can 42703 — retry without it rather than losing the whole row set (same
+// fail-soft convention as the partnership/aircraft detail pages).
+async function selectActiveWithMatchAlertFallback<T>(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  table: 'partnerships' | 'partnership_seekers',
+  baseColumns: string,
+  posterId: string
+): Promise<T[]> {
+  const withColumn = await supabase
+    .from(table)
+    .select(`${baseColumns}, match_alert_last_sent_at`)
+    .eq('poster_id', posterId)
+    .in('status', ['active', 'pending'])
+    .order('created_at', { ascending: false })
+
+  if (!withColumn.error) return (withColumn.data ?? []) as T[]
+
+  const fallback = await supabase
+    .from(table)
+    .select(baseColumns)
+    .eq('poster_id', posterId)
+    .in('status', ['active', 'pending'])
+    .order('created_at', { ascending: false })
+
+  return (fallback.data ?? []) as T[]
+}
+
+// Never fabricates a date — a missing/unmigrated column reads as the equally honest
+// "none sent yet" (the cron genuinely no-ops when the column doesn't exist).
+function MatchAlertDisclosure({ lastSentAt, href }: { lastSentAt: string | null | undefined; href: string }) {
+  return (
+    <p className="mt-1 text-xs text-slate-400">
+      <Link href={href} className="hover:text-slate-600 hover:underline">
+        We email you when new matches appear
+      </Link>
+      {' — '}
+      {lastSentAt ? `last sent ${formatDate(lastSentAt)}` : 'none sent yet'}
+    </p>
+  )
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cfg =
     status === 'active'  ? { cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200', label: 'Active' } :
@@ -61,21 +105,21 @@ export default async function MyListingsPage() {
 
   // Fetch partnerships posted by this user.
   // (extra columns feed the completeness/trust chip via evaluateTrust())
-  const { data: partnershipRows } = await supabase
-    .from('partnerships')
-    .select('id, title, make, model, year, buy_in_price, share_type, status, created_at, posted_at, images, image_is_placeholder, registration, monthly_fixed, hourly_wet, description, source_url, poster_id')
-    .eq('poster_id', user.id)
-    .in('status', ['active', 'pending'])
-    .order('created_at', { ascending: false })
+  const partnershipRows = await selectActiveWithMatchAlertFallback<Partnership>(
+    supabase,
+    'partnerships',
+    'id, title, make, model, year, buy_in_price, share_type, status, created_at, posted_at, images, image_is_placeholder, registration, monthly_fixed, hourly_wet, description, source_url, poster_id',
+    user.id
+  )
 
   // Fetch seeking listings posted by this user.
   // (extra columns feed the completeness/trust chip via evaluateSeekerTrust())
-  const { data: seekerRows } = await supabase
-    .from('partnership_seekers')
-    .select('id, title, home_airport, status, created_at, preferred_makes, preferred_models, aircraft_category, max_buy_in, max_monthly, max_hourly, total_hours, ratings_held, poster_id')
-    .eq('poster_id', user.id)
-    .in('status', ['active', 'pending'])
-    .order('created_at', { ascending: false })
+  const seekerRows = await selectActiveWithMatchAlertFallback<PartnershipSeeker>(
+    supabase,
+    'partnership_seekers',
+    'id, title, home_airport, status, created_at, preferred_makes, preferred_models, aircraft_category, max_buy_in, max_monthly, max_hourly, total_hours, ratings_held, poster_id',
+    user.id
+  )
 
   // Past (closed / sold) listings — separate queries so the active sections above stay unchanged.
   const { data: pastAircraftRows } = await supabase
@@ -100,8 +144,8 @@ export default async function MyListingsPage() {
     .order('created_at', { ascending: false })
 
   const aircraft: AircraftForSale[] = (aircraftRows ?? []) as AircraftForSale[]
-  const partnerships: Partnership[] = (partnershipRows ?? []) as Partnership[]
-  const seekers: PartnershipSeeker[] = (seekerRows ?? []) as PartnershipSeeker[]
+  const partnerships: Partnership[] = partnershipRows
+  const seekers: PartnershipSeeker[] = seekerRows
 
   const pastAircraft: AircraftForSale[] = (pastAircraftRows ?? []) as AircraftForSale[]
   const pastPartnerships: Partnership[] = (pastPartnershipRows ?? []) as Partnership[]
@@ -250,6 +294,10 @@ export default async function MyListingsPage() {
                         href={seekerBrowseHrefForPartnership(p)}
                       />
                     </div>
+                    <MatchAlertDisclosure
+                      lastSentAt={p.match_alert_last_sent_at}
+                      href={seekerBrowseHrefForPartnership(p)}
+                    />
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <Link
@@ -309,6 +357,10 @@ export default async function MyListingsPage() {
                           href={partnershipBrowseHrefForSeeker(s)}
                         />
                       </div>
+                      <MatchAlertDisclosure
+                        lastSentAt={s.match_alert_last_sent_at}
+                        href={partnershipBrowseHrefForSeeker(s)}
+                      />
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <Link
