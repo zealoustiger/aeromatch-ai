@@ -415,10 +415,10 @@ export default function TitleEscrowClosingGuidePage() {
           your own tax advisor about your specific purchase.
         </p>
 
-        {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath) --
-            point it at /partnerships (bare, all-partnerships) rather than this guide's own
-            URL, mirroring the /tools/cost-calculator precedent. */}
-        <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_page" className="mt-10" />
+        {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath).
+            This guide is about buying an aircraft outright (not a partnership), so the
+            honest alert is aircraft-for-sale, not partnerships. */}
+        <AlertSignup noun="aircraft" sourcePath="/aircraft" source="guide_title_escrow_closing" className="mt-10" />
       </article>
 
       <script

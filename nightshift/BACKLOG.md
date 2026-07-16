@@ -1938,13 +1938,33 @@ auth wall → product call)._
   make/model they're pricing out. Thread the calculator's selected model into the capture
   (aircraft noun, model-scoped `sourcePath`, live-match line) via a small client wrapper.
   Improves an existing capture point's relevance; `source` already set
-  (`cost_calculator`).
-- **[P1][goal] Right-noun alert capture on the 8 guide pages.** All guides currently
-  mount the same generic partnership capture (`sourcePath="/partnerships"`,
-  `source="guide_page"`), but several are aircraft-buyer guides (pre-purchase inspection,
-  title/escrow/closing) where an aircraft alert is the honest match. Static per-guide
-  mapping of noun/`sourcePath` (+ per-guide `source` suffix so placement ranking can
-  tell them apart). Improves existing entry points, no new schema.
+  (`cost_calculator`). **Audit note (2026-07-16, `guide-alert-right-noun` cycle's
+  scoping pass):** this item's premise doesn't hold as written — `CostCalculator.tsx`
+  (both `full` and `compact` variants) has no make/model selector at all, just numeric
+  buy-in/monthly-fixed/wet-rate/hours inputs, and no page links to
+  `/tools/cost-calculator` with a `?make=`/`?model=` query string (checked every
+  caller via `grep`). There is no "calculated aircraft" to prefill from today. Leaving
+  open at P1 since the underlying idea (aircraft-scoped capture on this page) is still
+  good, but it needs re-scoping to either (a) add a make/model picker to the calculator
+  first, or (b) thread make/model through the query string from callers that already
+  know it (e.g. an aircraft listing page's own "see the cost" link) — not a same-cycle
+  "small client wrapper" as originally sized.
+~~- **[P1][goal] Right-noun alert capture on the 8 guide pages.**~~ ✅ SHIPPED via
+  `guide-alert-right-noun` (2026-07-16) The 2 genuinely aircraft-buyer guides
+  (`aircraft-pre-purchase-inspection`, `aircraft-title-escrow-and-closing` — verified by
+  reading each guide's title/description, not just guessing from the slug) now mount
+  `noun="aircraft"` `sourcePath="/aircraft"` instead of the generic partnership capture,
+  so the price-drop-opt-in and "only good deals" checkboxes (aircraft-only in
+  `AlertSignup`) correctly appear and a submission creates a real `/aircraft`-scoped
+  alert instead of a `/partnerships` one that would never honestly match this guide's
+  content. The other 6 guides are genuinely co-ownership/partnership content (confirmed
+  by title: "How Aircraft Co-Ownership & Partnerships Work," "Flying Club vs.
+  Aircraft Co-Ownership," etc.) — kept `noun="partnership"`/`sourcePath="/partnerships"`
+  as-is, only gave each a distinct `source` tag (was `guide_page` for all 8, now one
+  unique value per guide) so per-guide placement conversion is finally measurable
+  instead of bucketed together. The `/guides` hub index (not one of the 8 topical
+  guides) intentionally left on `source="guide_page"` — it's a mixed hub, no single
+  honest noun.
 - **[P1][goal] Cross-section listing dedupe in the combined digest email.** Verified in
   the alert-digest cron: sections are built per alert with no cross-section dedupe, so a
   subscriber with overlapping alerts (e.g. "Cessna 182" + "all of TX") gets the same
