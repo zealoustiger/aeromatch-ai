@@ -1744,6 +1744,29 @@ export async function updateAlertFrequencyByToken(token: string) {
   return { ok: true }
 }
 
+// Public, token-scoped "I found my aircraft" exit — same trust boundary as
+// pauseAlertByToken above (an unsubscribe link's own token). Doesn't touch
+// `status` (already `unsubscribed` by the time this page renders) — just
+// records WHY, so this exit is distinguishable from generic churn. Missing-
+// column fallback matches every other alerts.* migration: no user-facing
+// error, just a silent no-op until the human applies the migration.
+export async function markAlertFoundAircraftByToken(token: string) {
+  const trimmed = token?.trim()
+  if (!trimmed) return { error: 'Invalid link.' }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ unsubscribe_reason: 'found_aircraft' })
+    .eq('unsubscribe_token', trimmed)
+    .select('id')
+
+  if (error?.message?.includes('unsubscribe_reason')) return { ok: true }
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
+  return { ok: true }
+}
+
 // Post-confirmation cross-sell (see AlertCrossSell.tsx / alertCrossSell.ts): a
 // visitor who just confirmed one alert gets offered a one-click counterpart alert
 // (e.g. aircraft ↔ partnerships for the same make) for the SAME already-verified

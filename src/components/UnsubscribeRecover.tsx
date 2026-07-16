@@ -2,12 +2,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { BellRing, Calendar, Moon, Check } from 'lucide-react'
-import { pauseAlertByToken, snoozeAlertByToken, updateAlertFrequencyByToken } from '@/app/actions'
+import { BellRing, Calendar, Moon, Check, PartyPopper } from 'lucide-react'
+import {
+  pauseAlertByToken,
+  snoozeAlertByToken,
+  updateAlertFrequencyByToken,
+  markAlertFoundAircraftByToken,
+} from '@/app/actions'
 import { formatResumeDate } from '@/lib/alertSnooze'
 import { track } from '@/lib/analytics'
 
-type Action = 'paused' | 'weekly' | 'snoozed'
+type Action = 'paused' | 'weekly' | 'snoozed' | 'found'
 
 export default function UnsubscribeRecover({
   token,
@@ -28,13 +33,15 @@ export default function UnsubscribeRecover({
         ? await pauseAlertByToken(token)
         : action === 'snoozed'
           ? await snoozeAlertByToken(token)
-          : await updateAlertFrequencyByToken(token)
+          : action === 'found'
+            ? await markAlertFoundAircraftByToken(token)
+            : await updateAlertFrequencyByToken(token)
     if (result.error) {
       setStatus('error')
       setErrorMsg(result.error)
       return
     }
-    track('alert_unsubscribe_recovered', { action })
+    track(action === 'found' ? 'alert_found_aircraft' : 'alert_unsubscribe_recovered', { action })
     setDoneAction(action)
     const rd = (result as { resumeDate?: string | null }).resumeDate ?? null
     setResumeDate(formatResumeDate(rd))
@@ -42,6 +49,21 @@ export default function UnsubscribeRecover({
   }
 
   if (status === 'done') {
+    if (doneAction === 'found') {
+      return (
+        <div className="mt-6 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <p className="flex items-center gap-2 font-medium">
+            <PartyPopper className="h-4 w-4 shrink-0" />
+            Congrats on the new aircraft! We&apos;ve stopped these emails.
+          </p>
+          <p className="mt-2">
+            <Link href="/partnerships/new" className="font-medium text-sky-700 hover:text-sky-800">
+              Flying it with partners? Post a share &rarr;
+            </Link>
+          </p>
+        </div>
+      )
+    }
     return (
       <div className="mt-6 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
         <Check className="h-4 w-4 shrink-0" />
@@ -96,6 +118,15 @@ export default function UnsubscribeRecover({
         </button>
       </div>
       {status === 'error' && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
+      <div className="mt-3 border-t border-[#ece6dc] pt-3">
+        <button
+          onClick={() => handleRecover('found')}
+          disabled={status === 'sending'}
+          className="text-sm font-medium text-emerald-700 hover:text-emerald-800 disabled:opacity-40"
+        >
+          🎉 Found my aircraft — no need to keep these
+        </button>
+      </div>
       <p className="mt-3 text-xs text-slate-500">
         <Link href={`/alerts/manage?token=${encodeURIComponent(token)}`} className="font-medium text-sky-600 hover:text-sky-700">
           Manage all your alerts
