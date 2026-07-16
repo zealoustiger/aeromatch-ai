@@ -28,13 +28,22 @@ export default function ShareCostPanel({
   askingPrice,
   engineReservePerYear = 0,
   withEngineReserve,
+  make,
+  model,
 }: {
   askingPrice: number
   engineReservePerYear?: number
   withEngineReserve: boolean
+  make?: string | null
+  model?: string | null
 }) {
   const [selected, setSelected] = useState(1)
   const [hrsPerYear, setHrsPerYear] = useState<HrsPerYear>(100)
+
+  const calculatorHref =
+    make && model
+      ? `/tools/cost-calculator?${new URLSearchParams({ make, model }).toString()}`
+      : '/tools/cost-calculator'
 
   const rows = useMemo(
     () => estimateShareCosts(askingPrice, engineReservePerYear, hrsPerYear),
@@ -209,7 +218,7 @@ export default function ShareCostPanel({
 
       <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
         <Link
-          href="/tools/cost-calculator"
+          href={calculatorHref}
           className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 hover:underline"
         >
           Run your own numbers <ArrowRight className="h-4 w-4" />

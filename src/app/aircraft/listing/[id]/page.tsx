@@ -1031,6 +1031,8 @@ export default async function AircraftListingDetailPage({
                 askingPrice={askingPriceForShareCost}
                 engineReservePerYear={engineLife?.reservePerYear ?? 0}
                 withEngineReserve={!!engineLife}
+                make={p.make}
+                model={p.model}
               />
             )}
           </div>

@@ -2052,14 +2052,13 @@ save-search auth wall → `[want]` product call)._
   pages where the results are right there. When the count is 0, say "none right now —
   you'll be first to know," never fabricate. Why: capture-conversion polish on the
   weakest-context surfaces, reusing an existing counter.
-- **[P1][goal] Second caller for the model-aware calculator alert — thread make/model
-  through `ShareCostPanel`'s "Run your own numbers" link.** Flagged follow-up from
-  `cost-calc-model-alert` (shipped earlier today): the panel on `/aircraft/listing/[id]`
-  still links bare `/tools/cost-calculator` (verified), so visitors arriving from a real
-  listing get the generic partnership box instead of the aircraft-scoped one that
-  already exists behind `?make=&model=`. Pass the listing's make/model into
-  `ShareCostPanel` and append the params. Why: completes the calculator's model-aware
-  alert for its highest-intent caller; no new machinery.
+~~- **[P1][goal] Second caller for the model-aware calculator alert — thread make/model
+  through `ShareCostPanel`'s "Run your own numbers" link.**~~ ✅ SHIPPED via
+  `sharecost-calc-model-link` (2026-07-16) — `ShareCostPanel` now accepts optional
+  `make`/`model` props and appends them to its `/tools/cost-calculator` link
+  (`?make=&model=`) when both are present; falls back to the bare link otherwise. The
+  aircraft listing detail page now passes `p.make`/`p.model` into its existing
+  `<ShareCostPanel>` call.
 - **[P1][goal] Complete shared-alert attribution — `AlertMeChip` +
   `MobileStickyAlertBar` detect `?share=alert`.** Explicit follow-up flagged by
   `alert-share-invite`: today only the footer `AlertSignup` tags `source: 'shared_alert'`;
