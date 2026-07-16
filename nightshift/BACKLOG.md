@@ -1858,13 +1858,18 @@ _All verified against the live codebase + full shipped list above before filing 
   samples in sandboxed iframes, plus the subject/preheader/text-part alongside, at
   desktop + 375px width. Makes every FUTURE email cycle QA-able in one page load; zero
   subscriber-facing risk.
-- **[P1][goal] "Found my aircraft 🎉" exit on the unsubscribe-recovery page.** The
-  recovery page offers pause / switch-to-weekly — but the best possible reason to leave
-  (they bought a plane, possibly via us!) is indistinguishable from churn. Add a
-  one-tap "I found my aircraft" option: congratulates, stops all their alerts, emits
-  `alert_unsubscribed` with `reason: 'found'` (first-ever outcome signal for the whole
-  funnel), and offers ONE honest cross-sell ("flying it with partners? post a share").
-  Improves the unsubscribe surface; turns exits into a success metric + re-entry point.
+~~- **[P1][goal] "Found my aircraft 🎉" exit on the unsubscribe-recovery page.**~~ ✅
+  SHIPPED via `alert-found-my-aircraft-exit` (2026-07-16) `UnsubscribeRecover.tsx` now
+  offers a 4th, visually-separated option below pause/snooze/weekly: "🎉 Found my
+  aircraft — no need to keep these," which congratulates, records the reason (new
+  additive `alerts.unsubscribe_reason` column, ⚠️ human DDL still pending), fires a
+  distinct `alert_found_aircraft` event, and offers ONE honest cross-sell link to
+  `/partnerships/new`. **Scope note:** the token this page carries only proves
+  ownership of the ONE alert being unsubscribed (not a full account), so this records
+  the reason on that alert (already stopped by the existing unsubscribe flow) rather
+  than a literal "stop all their alerts" — reusing `alert_unsubscribed` with a `reason`
+  prop wasn't done since that event already fired on page load via `AlertStatusTracker`
+  before the visitor makes this choice; a distinct event was truer to the timeline.
 - **[P1][goal] "N new since your last visit" on the returning-subscriber nav pill.**
   The nav already flips "Get alerts" → "My alerts" for known subscribers; make it
   earn the click. Small read-only API: given the device's locally-stored
