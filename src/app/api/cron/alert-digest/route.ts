@@ -1616,6 +1616,11 @@ export async function GET(req: NextRequest) {
       listingsUrl: `${SITE_URL}${alert.source_path ?? '/aircraft'}`,
       samples,
       marketPulse: marketPulse ?? undefined,
+      // This alert's OWN token, not the combined comma-joined one — lets a
+      // subscriber stop just this section instead of every alert in the
+      // email (GOAL.md: "offer fewer instead of none"). Omitted for a
+      // not-yet-migrated row with no token yet (fails soft, no dead link).
+      stopUrl: alert.unsubscribe_token ? `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}` : undefined,
     }))
 
     // Any alert's token resolves the same email on /alerts/manage (it looks
