@@ -2,6 +2,36 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260715T070000Z — PASS — alert-edit-live-match-count
+- Pages: /alerts/manage
+- What: **Editing an alert on the "Your alerts" page now shows a live "N listings
+  match right now" preview as you change the make/model/state/price/deal filters** —
+  before, you could save yourself into an alert that matches nothing and never know
+  until the emails stopped coming. Typing something too narrow now shows an honest
+  "won't match anything today — consider widening" warning right in the form.
+- Goal: `[goal]` tier 3 — alert experience / management pillar (GOAL.md: "great alert
+  management"). Tier 1 (`[bug]`): none open. Tier 2 (`[want]`): still empty of
+  buildable work — "Save this search" auth-wall reconciliation and the collection-
+  layout mosaic redesign remain flagged for a human product call/mock; the TAP-
+  ingestion / Bay-Area-coverage-benchmark / owner-leads items remain flagged for
+  human sign-off (compliance/ToS/scraping). Picked the next open `[P1][goal]` item
+  in the alert-experience queue (Plan-pass batch #4) — the two items ahead of it in
+  that batch ("real instant alerts") are both explicitly flagged blocked pending a
+  human call on the Vercel cron-plan tier, so this was the next unblocked slice.
+- Spec: nightshift/specs/20260715T070000Z-alert-edit-live-match-count.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0;
+  qa-smoke exit 0 on `/alerts/manage` (desktop 1280 + mobile 375, zero app console
+  errors, zero overflow); this is a visual/component change so screenshots were read
+  and confirm the logged-out empty state renders unchanged. The actual live-count
+  behavior was verified end-to-end with a scripted Playwright pass against a
+  throwaway `@example.com` alert (seeded via service role, deleted immediately after,
+  verified 0 rows remain): opening Edit, clearing the model field correctly bumped
+  the live count to 417 real Cessna listings, then typing a nonsense model correctly
+  flipped to the amber 0-match warning — zero console errors throughout.
+- Screenshots: nightshift/screenshots/alert-edit-live-match-count/
+- Next: the same live-preview pattern could extend to the hidden-criteria chips
+  (removing one currently has no live count feedback either, only static per-row).
+
 ## 20260715T065342Z — PASS — alert-email-dark-mode
 - Pages: (email-only — no site page changed; verified via `/api/dev/email-preview/*`
   and `/alerts`)
