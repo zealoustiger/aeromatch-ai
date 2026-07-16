@@ -841,3 +841,28 @@ alter table alerts add column if not exists source text;
 -- suggestion without a way to mark a row already-suggested) — no user-facing
 -- error either way.
 alter table alerts add column if not exists widen_suggested_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alert_cron_runs
+-- A visible "Last run" health log for the `alert-digest` cron — today a silently broken
+-- send (bad deploy, Resend outage, one of the migrations above still unapplied) is
+-- invisible until a subscriber complains. One summary row per cron pass; read-only,
+-- admin-viewed on /admin/alerts. Additive/new table, no FK into `alerts` (a run covers
+-- many alerts, not one). Apply in the Supabase SQL editor. Until applied, the cron's
+-- insert fails soft (relation-not-exists, same graceful-fallback precedent as every
+-- `alerts.*` column above) and the digest send itself is completely unaffected — only
+-- the admin health panel has no data to show.
+create table if not exists alert_cron_runs (
+  id                       uuid        default gen_random_uuid() primary key,
+  created_at               timestamptz default now(),
+  processed                int         not null default 0,
+  sent                     int         not null default 0,
+  emails_sent              int         not null default 0,
+  skipped                  int         not null default 0,
+  unparseable              int         not null default 0,
+  not_due                  int         not null default 0,
+  reminders_sent           int         not null default 0,
+  widen_suggestions_sent   int         not null default 0,
+  duration_ms              int         not null default 0
+);
+
+create index if not exists alert_cron_runs_created_at_idx on alert_cron_runs (created_at desc);
