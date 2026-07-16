@@ -2077,15 +2077,23 @@ save-search auth wall → `[want]` product call)._
   (`?make=&model=`) when both are present; falls back to the bare link otherwise. The
   aircraft listing detail page now passes `p.make`/`p.model` into its existing
   `<ShareCostPanel>` call.
-- **[P1][goal] Complete shared-alert attribution — `AlertMeChip` +
-  `MobileStickyAlertBar` detect `?share=alert`.** Explicit follow-up flagged by
-  `alert-share-invite`: today only the footer `AlertSignup` tags `source: 'shared_alert'`;
-  the chip and sticky bar (verified — no share handling in `AlertMeChip.tsx`) keep their
-  own source, so a shared-link visitor who subscribes via the toolbar chip is
-  mis-attributed. Detect the param client-side (reuse `shareAlertLink.ts`), tag the
-  analytics source, and surface the existing "shared with you" note in the chip's
-  expanded state. Server actions already strip the param from `source_path` — no
-  storage change. Why: placement-conversion data for shared links stays honest.
+~~- **[P1][goal] Complete shared-alert attribution — `AlertMeChip` +
+  `MobileStickyAlertBar` detect `?share=alert`.**~~ ✅ SHIPPED via
+  `share-alert-chip-attribution` (2026-07-16) Both components now detect
+  `window.location.search`'s `share=alert` on mount (same starts-false,
+  flips-after-mount pattern `AlertSignup` already uses — no hydration mismatch),
+  tag every `alert_capture_viewed`/`alert_capture_opened`/`alert_subscribed` event
+  and the `subscribeToAlerts`/`subscribeSignedInAlert` `source` argument
+  `'shared_alert'` instead of `'filter_toolbar'`/`'sticky_bar'`, and render the
+  same "A ClubHanger member shared this alert with you — set up your own below."
+  note `AlertSignup` shows — `basis-full` inside the chip's existing `flex-wrap`
+  filter row for `AlertMeChip`, a line above the button row for
+  `MobileStickyAlertBar`. Server actions already stripped `share=alert` from the
+  stored `source_path`; no storage change. Verified live: with `?share=alert` the
+  note renders cleanly on both `/aircraft` (chip, desktop 1280 + mobile 375) and
+  the mobile sticky bar (triggered via incremental scroll past the 8th card, since
+  an instant scroll jump can skip its `IntersectionObserver` — a pre-existing,
+  unrelated quirk); without the param neither renders it, unchanged from before.
 ~~- **[P1][goal] Disclose the automatic owner match-alert emails on `/listings`.**~~ ✅
   SHIPPED via `listings-match-alert-disclosure` (2026-07-16) `/listings` now renders a
   small honest line under each active partnership/seeker row ("We email you when new
