@@ -2,6 +2,63 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T085347Z — PASS — guide-alert-right-noun
+- Pages: /guides/aircraft-pre-purchase-inspection, /guides/aircraft-title-escrow-and-closing,
+  /guides/aircraft-co-ownership, /guides/aircraft-partnership-agreement,
+  /guides/cost-of-aircraft-co-ownership, /guides/flying-club-vs-co-ownership,
+  /guides/how-to-find-aircraft-partners, /guides/leaseback-vs-co-ownership
+- What: **The two guide pages about buying an aircraft outright were offering the
+  wrong kind of alert.** All 8 guide pages mounted the same generic "get partnership
+  alerts" capture box, but "Aircraft Pre-Purchase Inspection" and "Aircraft Title,
+  Escrow & Closing" are about buying a plane outright (not co-ownership) — so
+  promising a partnership alert there was an honest-mismatch, and it silently hid the
+  price-drop/"only good deals" options that only make sense for an aircraft-for-sale
+  alert. Those 2 pages now offer the correct aircraft-scoped alert. The other 6 guides
+  are genuinely about co-ownership/partnerships, so their capture box is unchanged —
+  but every one of the 8 guides now tags its box with a distinct source label instead
+  of all 8 sharing one generic tag, so a future admin view can see which specific
+  guide actually drives signups.
+- Goal: alert-experience `[goal]` tier — GOAL.md's "smart, honest alert content" bar
+  (an alert that can't honestly match the page it's offered on is worse than none) and
+  "prove it converts" (per-placement attribution). Tier 1 (`[bug]`): none open — swept
+  BACKLOG.md, every `[bug]` line is already struck, prior cycle
+  (`tools-hub-alert-capture`) PASSed. Tier 2 (`[want]`): re-swept — the two open
+  `[P1]/[P2][want]` items ("Save this search" auth-wall reconciliation, dynamic-location
+  seed personas) remain exactly as flagged in every prior cycle (human product call /
+  zero live effect). Dropped to tier 3 — pulled from "Plan-pass batch #2." Picked this
+  item over its sibling "Model-aware capture on `/tools/cost-calculator`" (flagged as
+  the suggested next slice in the prior cycle's CHANGELOG) because direct code read
+  showed that item's premise doesn't hold today — `CostCalculator.tsx` has no
+  make/model selector and no page links to `/tools/cost-calculator` with a
+  `?make=`/`?model=` query string, so there is no "calculated aircraft" to thread into
+  the capture yet; left an audit note in BACKLOG.md re-scoping it rather than building
+  something that doesn't match the page. This item was clean, small, and verified
+  buildable as originally written.
+- Spec: nightshift/specs/20260716T085347Z-guide-alert-right-noun.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  (all 8 `/guides/*` routes compiled). QA against the PRODUCTION build
+  (`npx next start` on port 3000, not dev) via `qa-smoke.mjs` on all 8 changed guide
+  pages at desktop 1280 + mobile 375: 16/16 checks pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow). Visual cycle — screenshots read for the 2
+  pages with a visible change (the other 6 are copy-invisible `source`-tag-only
+  changes): both `aircraft-pre-purchase-inspection` and
+  `aircraft-title-escrow-and-closing` render the aircraft-noun alert box correctly,
+  including the "Also alert me when the price drops on a match" and "Only email me
+  good deals (ClubHanger Deal Check)" checkboxes that only appear for
+  `noun="aircraft"` — visible proof the noun switch took effect, no overlap, no
+  overflow, matches the site's warm sky-blue `AlertSignup` styling at both viewports.
+  No DB writes this cycle (pure prop/copy change, no new capture point, no form
+  submitted during QA). Server processes stopped cleanly at the end (verified via
+  `pgrep`/`ps -ef`, no lingering `next-server`/`next start` processes).
+- Screenshots: nightshift/screenshots/guide-alert-right-noun/
+- Next: (1) re-scope "Model-aware capture on `/tools/cost-calculator`" per the audit
+  note added to BACKLOG.md this cycle — needs either a make/model picker added to the
+  calculator or a query-string thread from a caller that already knows the aircraft,
+  not a same-cycle wrapper as originally sized. (2) Remaining Plan-pass batch #2 items:
+  target-price edit on `/alerts/manage`, save→watch cross-sell after hearting a
+  listing, cross-section digest dedupe, "invite your co-buyer" share action, 8-week
+  admin trend sparklines.
+
 ## 20260716T084404Z — PASS — tools-hub-alert-capture
 - Pages: /tools/earnings-calculator, /tools
 - What: **The two `/tools` pages that had zero email-alert capture now both

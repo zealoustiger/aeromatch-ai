@@ -357,7 +357,7 @@ export default function CoOwnershipGuidePage() {
         {/* sourcePath must be a real, matchable route (see alert-digest's parseSourcePath) --
             point it at /partnerships (bare, all-partnerships) rather than this guide's own
             URL, mirroring the /tools/cost-calculator precedent. */}
-        <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_page" className="mt-10" />
+        <AlertSignup noun="partnership" sourcePath="/partnerships" source="guide_aircraft_co_ownership" className="mt-10" />
       </article>
 
       <script
