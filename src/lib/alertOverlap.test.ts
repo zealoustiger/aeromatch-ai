@@ -1,0 +1,130 @@
+/**
+ * Run: node --experimental-strip-types --test src/lib/alertOverlap.test.ts
+ */
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { detectOverlappingAlerts, type OverlapCandidate } from './alertOverlap.ts'
+
+function aircraft(over: Partial<{ make: string; model: string; state: string; minPrice: string; maxPrice: string; dealOnly: boolean }> = {}) {
+  return {
+    type: 'aircraft' as const,
+    make: over.make ?? '',
+    model: over.model ?? '',
+    state: over.state ?? '',
+    minPrice: over.minPrice ?? '',
+    maxPrice: over.maxPrice ?? '',
+    dealOnly: over.dealOnly ?? false,
+  }
+}
+
+function partnership(over: Partial<{ make: string; state: string; airport: string }> = {}) {
+  return { type: 'partnership' as const, make: over.make ?? '', state: over.state ?? '', airport: over.airport ?? '' }
+}
+
+function candidate(over: Partial<OverlapCandidate> & Pick<OverlapCandidate, 'id' | 'target'>): OverlapCandidate {
+  return { status: 'confirmed', context: null, hasHiddenCriteria: false, ...over }
+}
+
+test('narrower (make+model) is flagged as covered by broader (make-only)', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), context: 'Cessna' })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172' }), context: 'Cessna 172' })
+  const overlaps = detectOverlappingAlerts([broad, narrow])
+  assert.equal(overlaps.size, 1)
+  assert.deepEqual(overlaps.get('b'), { narrowerId: 'b', broaderId: 'a', broaderContext: 'Cessna' })
+  assert.equal(overlaps.has('a'), false)
+})
+
+test('case-insensitive make match still detected', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'cessna' }) })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'CESSNA', model: '172' }) })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).has('b'), true)
+})
+
+test('different make values on the same field: not an overlap', () => {
+  const a = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }) })
+  const b = candidate({ id: 'b', target: aircraft({ make: 'Piper', model: '172' }) })
+  assert.equal(detectOverlappingAlerts([a, b]).size, 0)
+})
+
+test('exact-duplicate criteria: no nudge (ambiguous which is narrower)', () => {
+  const a = candidate({ id: 'a', target: aircraft({ make: 'Cessna', model: '172' }) })
+  const b = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172' }) })
+  assert.equal(detectOverlappingAlerts([a, b]).size, 0)
+})
+
+test('price range is exact-match only — narrower min_price is NOT treated as covered', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'Cessna', minPrice: '50000' }) })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', minPrice: '80000' }) })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).size, 0)
+})
+
+test('state narrows a make-only alert', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }) })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', state: 'CA' }) })
+  const overlaps = detectOverlappingAlerts([broad, narrow])
+  assert.equal(overlaps.get('b')?.broaderId, 'a')
+})
+
+test('dealOnly=false is "no constraint" — does not block a match', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'Cessna', dealOnly: false }) })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172', dealOnly: true }) })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).get('b')?.broaderId, 'a')
+})
+
+test('a hidden criterion on the broader side excludes it from comparison', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), hasHiddenCriteria: true })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172' }) })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).size, 0)
+})
+
+test('a hidden criterion on the narrower side excludes it from comparison', () => {
+  const broad = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }) })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172' }), hasHiddenCriteria: true })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).size, 0)
+})
+
+test('a pending (unconfirmed) alert is never flagged or used as a broader candidate', () => {
+  const pending = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), status: 'pending' })
+  const confirmedNarrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172' }) })
+  assert.equal(detectOverlappingAlerts([pending, confirmedNarrow]).size, 0)
+})
+
+test('different alert types never overlap (aircraft vs partnership)', () => {
+  const a = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }) })
+  const b = candidate({ id: 'b', target: partnership({ make: 'Cessna' }) })
+  assert.equal(detectOverlappingAlerts([a, b]).size, 0)
+})
+
+test('a null target (unparseable/legacy source_path) is never compared', () => {
+  const a = candidate({ id: 'a', target: null })
+  const b = candidate({ id: 'b', target: aircraft({ make: 'Cessna', model: '172' }) })
+  assert.equal(detectOverlappingAlerts([a, b]).size, 0)
+})
+
+test('the broadest of two qualifying broader alerts is picked (clearest reason)', () => {
+  const broadest = candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), context: 'Cessna' })
+  const middle = candidate({ id: 'b', target: aircraft({ make: 'Cessna', state: 'CA' }), context: 'Cessna in CA' })
+  const narrow = candidate({ id: 'c', target: aircraft({ make: 'Cessna', state: 'CA', model: '172' }) })
+  const overlaps = detectOverlappingAlerts([broadest, middle, narrow])
+  assert.equal(overlaps.get('c')?.broaderId, 'a')
+})
+
+test('empty target (browse-all) can be a broader alert for anything of its type', () => {
+  const browseAll = candidate({ id: 'a', target: aircraft(), context: null })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna' }) })
+  const overlaps = detectOverlappingAlerts([browseAll, narrow])
+  assert.equal(overlaps.get('b')?.broaderId, 'a')
+  assert.equal(overlaps.get('b')?.broaderContext, 'your other alert')
+})
+
+test('empty target is never itself flagged as narrower (nothing is broader than "everything")', () => {
+  const browseAll = candidate({ id: 'a', target: aircraft() })
+  const narrow = candidate({ id: 'b', target: aircraft({ make: 'Cessna' }) })
+  assert.equal(detectOverlappingAlerts([browseAll, narrow]).has('a'), false)
+})
+
+test('partnership airport narrows a make+state alert', () => {
+  const broad = candidate({ id: 'a', target: partnership({ make: 'Cessna', state: 'CA' }), context: 'Cessna in CA' })
+  const narrow = candidate({ id: 'b', target: partnership({ make: 'Cessna', state: 'CA', airport: 'KHWD' }) })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).get('b')?.broaderId, 'a')
+})

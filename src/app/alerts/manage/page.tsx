@@ -5,8 +5,14 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
 import { SITE_NAME } from '@/lib/seo'
-import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from '@/lib/alertEditCriteria'
+import {
+  parseEditableAlertTarget,
+  computeWidenCandidate,
+  buildAlertCriteriaUpdate,
+  getHiddenCriteria,
+} from '@/lib/alertEditCriteria'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { detectOverlappingAlerts } from '@/lib/alertOverlap'
 import { describeLastDigest, normalizeFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
@@ -14,6 +20,7 @@ import { getWatchedListingStatus } from '@/lib/alertWatchStatus'
 import { formatPrice } from '@/lib/utils'
 import AlertEditForm from '@/components/AlertEditForm'
 import WidenAlertNudge, { type WidenSuggestion } from '@/components/WidenAlertNudge'
+import OverlapAlertNudge from '@/components/OverlapAlertNudge'
 import PriceDropToggle from '@/components/PriceDropToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
@@ -133,6 +140,23 @@ export default async function AlertsManagePage({
   // it's actually watching instead. `null` for every other alert shape.
   const watchStatuses = await Promise.all(alerts.map((a) => getWatchedListingStatus(a.source_path)))
 
+  // Computed once, reused by both the Edit form below and the overlap check
+  // (a confirmed alert whose criteria are a strict, exact subset of another
+  // confirmed alert's — GOAL.md: a combined digest repeating the same
+  // listings across two sections reads as spam). Any alert with a hidden
+  // (non-form-exposed) criterion is excluded from the overlap comparison
+  // entirely — see alertOverlap.ts's header comment.
+  const editTargets = alerts.map((a) => parseEditableAlertTarget(a.source_path))
+  const overlaps = detectOverlappingAlerts(
+    alerts.map((a, i) => ({
+      id: a.id,
+      status: a.status,
+      context: a.context,
+      target: editTargets[i],
+      hasHiddenCriteria: editTargets[i] ? getHiddenCriteria(editTargets[i]!.type, a.source_path).length > 0 : true,
+    }))
+  )
+
   // A confirmed, editable alert matching 0 live listings right now is silently
   // dead (GOAL.md: "widen it" nudge). Pick the single least-destructive
   // loosening (drop model → make-wide, else clear state/airport) and
@@ -219,7 +243,7 @@ export default async function AlertsManagePage({
           ) : (
             <ul className="space-y-3">
               {alerts.map((a, i) => {
-                const target = parseEditableAlertTarget(a.source_path)
+                const target = editTargets[i]
                 const match = matchCounts[i]
                 const watch = watchStatuses[i]
                 const resumeDate = a.status === 'paused' ? formatResumeDate(a.paused_until ?? null) : null
@@ -231,6 +255,10 @@ export default async function AlertsManagePage({
                 // longer dead (see WidenAlertNudge.tsx).
                 const widenEligible = a.status === 'confirmed' && !watch && !!target
                 const isDead = !!match && match.count === 0
+                // Mutually exclusive with the widen nudge — a dead alert gets
+                // "widen this," not "remove this" (the more useful action for
+                // a 0-match alert is broadening it, not deleting it).
+                const overlap = !isDead ? overlaps.get(a.id) : undefined
                 return (
                   <li
                     key={a.id}
@@ -316,6 +344,9 @@ export default async function AlertsManagePage({
                       ) : null}
                       {widenEligible ? (
                         <WidenAlertNudge id={a.id} token={scopeToken} dead={isDead} suggestion={widenSuggestions[i]} />
+                      ) : null}
+                      {overlap ? (
+                        <OverlapAlertNudge id={a.id} token={scopeToken} broaderContext={overlap.broaderContext} />
                       ) : null}
                       {/* Cron only digests status='confirmed' alerts (see
                           alert-digest/route.ts) — showing a "checks daily/

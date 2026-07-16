@@ -2,6 +2,50 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T062732Z — PASS — overlapping-alert-nudge
+- Pages: /alerts/manage
+- What: **Subscribers with a broad alert (e.g. "Cessna") AND a strictly narrower one
+  (e.g. "Cessna 172") now get a heads-up on `/alerts/manage`** — "Already covered by
+  your 'Cessna' alert — remove this one or keep both" — with a one-click removal,
+  instead of silently getting the same new listing twice in their combined digest
+  (which read as spam). Only fires when the narrower alert's criteria are an exact,
+  provable subset of the broader one's; anything ambiguous (different price bands, a
+  hidden advanced filter, exact duplicates) gets no nudge at all.
+- Goal: `[goal]` tier 3 — alert experience / "never spam" (GOAL.md). Tier 1 (`[bug]`):
+  none open — no unstruck `[bug]` entries anywhere in BACKLOG.md, prior cycle
+  (`account-alerts-inline`) PASSed. Tier 2 (`[want]`): re-confirmed empty of buildable
+  work — the "Save this search" auth-wall reconciliation and collection-layout mosaic
+  redesign remain flagged for a human product call/mock; the TAP-ingestion / Bay-Area-
+  coverage-benchmark / owner-leads items remain flagged for human sign-off
+  (compliance/ToS/scraping); the one-click-save-search and model-variant-rollup
+  `[want]` items are both now fully shipped (re-verified this cycle). Picked the last
+  open, unblocked `[P1][goal]` item in the alert-experience queue — the sibling
+  cron-health-panel and subscriber-lookup items both remain open (admin-only tooling,
+  the former needs a new table) but this was chosen over them same as the prior cycle's
+  reasoning: a pure site-facing UI addition with no schema change.
+- Spec: nightshift/specs/20260716T062732Z-overlapping-alert-nudge.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0;
+  368/368 unit tests pass across all `src/lib/*.test.ts` files (16 new in
+  `alertOverlap.test.ts`); qa-smoke exit 0 on `/alerts/manage` (desktop 1280 + mobile
+  375, zero app-origin console errors, zero overflow). Visual cycle (new component) —
+  screenshots read, logged-out render unchanged. The signed-in branch (auth-gated, not
+  exercised by the anonymous smoke gate) was live-verified end-to-end against a
+  throwaway `@example.com` account + two seeded overlapping alerts (service-role
+  `generateLink` + `verifyOtp` to mint a real session, `@supabase/ssr`'s cookie format,
+  not a mock): the nudge rendered with the correct broader-alert name, clicking "remove
+  this one" deleted exactly the narrower row (confirmed via a direct DB read — the
+  broader alert was untouched), zero new console errors beyond the pre-existing,
+  already-tracked `Nav.tsx` unread-badge 400 (`threads` columns not yet migrated,
+  unrelated to this change, first flagged several cycles ago). Test alerts + auth user
+  deleted immediately after; confirmed 0 rows/users remain for that email. No schema
+  change, no new capture point.
+- Screenshots: nightshift/screenshots/overlapping-alert-nudge/
+- Next: the alert-experience `[goal]` queue is now down to the two admin-only items
+  (cron-run-log health panel — needs a new `alert_cron_runs` table, human-apply DDL —
+  and subscriber lookup on `/admin/alerts`) plus the Vercel-plan-tier-blocked "near-
+  instant alerts" item. Next cycle should likely pick one of those, or emit
+  `ABORT — none — plan needed` if a human call is still pending on all three.
+
 ## 20260716T061201Z — PASS — account-alerts-inline
 - Pages: /account, /alerts/manage
 - What: **Signed-in visitors now see their real email alert subscriptions right on the

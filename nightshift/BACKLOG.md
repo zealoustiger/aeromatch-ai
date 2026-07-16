@@ -1760,18 +1760,30 @@ and support tooling._
   background+text pairs already read fine in both schemes. 12 new unit tests assert the
   meta/media-query render in every builder and that `text` parts stay untouched (86/86
   pass). No schema/capture-point change.
-- **[P1][goal] Overlapping-alert cleanup nudge on `/alerts/manage`.** Subscribers
-  accumulate near-duplicate alerts across our ~30 capture points (e.g. `/aircraft?make=
-  Cessna` AND `/aircraft?make=Cessna&model=172`) — the combined digest then repeats the
-  same listings across sections, which reads as spam (GOAL.md: never spam). Pure function
-  over the owner's parsed targets (reuse `parseSourcePath`/`AlertTarget` from
-  `alertMatchCounts.ts`): detect strict subsumption ONLY (every criterion of A is
-  satisfied wherever B fires — be conservative, no fuzzy matching; when unsure, no
-  nudge). Render one honest dismissible nudge on `/alerts/manage` ("Your 'Cessna 172'
-  alert is already covered by your 'Cessna' alert — remove the narrower one?") with a
-  one-click delete that reuses the existing delete action + undo pattern. Unit-test the
-  subsumption function hard (state/price/avionics/model-list edge cases). Improves
-  `/alerts/manage`. No schema change, no capture point.
+~~- **[P1][goal] Overlapping-alert cleanup nudge on `/alerts/manage`.**~~ ✅ SHIPPED via
+  `overlapping-alert-nudge` (2026-07-16) New pure `alertOverlap.ts` detects when a
+  confirmed alert's criteria are a strict, exact subset of another confirmed alert's
+  (e.g. `/aircraft?make=Cessna` vs `/aircraft?make=Cessna&model=172`) — exact-value
+  match only (no range/fuzzy reasoning), and any alert with a hidden (non-form-exposed)
+  criterion is excluded from comparison entirely (never a false "covered" claim). Renders
+  a dismissible "Already covered by your 'Cessna' alert — remove this one or keep both"
+  under the narrower row, mutually exclusive with the existing dead-alert widen nudge.
+  "Remove this one" reuses the existing owner-scoped `deleteAlert` action; "keep both" is
+  a session-local dismiss (mirrors `ManageAlertCrossSell`, no persistence needed). Built
+  on `EditableAlertTarget` (not the fuller `AlertTarget`/`parseSourcePath` in
+  `alertMatchCounts.ts`, which the item originally proposed reusing) so the detector's
+  only dependency is a type-only import — keeps it testable with the plain
+  `node --experimental-strip-types --test` runner despite `alertEditCriteria.ts`
+  importing via the `@/lib/...` alias (same class of limitation flagged on the
+  `alert-edit-hidden-criteria` cycle). 16 unit tests (state/price/dealOnly/hidden-
+  criteria/exact-duplicate/multi-candidate-picks-broadest edge cases). Live-verified
+  end-to-end against a throwaway `@example.com` account + two seeded overlapping alerts
+  (service-role `generateLink` + `verifyOtp` to mint a real session, `@supabase/ssr`
+  cookie format): nudge rendered with the correct broader context, clicking "remove this
+  one" deleted exactly the narrower row (confirmed via a direct DB read — the broader
+  alert survived untouched), zero new console errors (only the pre-existing, already-
+  tracked `Nav.tsx` unread-badge 400). Test rows + user deleted immediately after,
+  confirmed 0 remain. No schema change, no new capture point.
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
