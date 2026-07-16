@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-16T12:12:19Z — DRAIN SUMMARY
+- Cycles this run: 9 (PASS 8 / FAIL 0 / ABORT 1)
+- Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $121.5590 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260716T104315Z
+
 ## 20260716T115854Z — PASS — alertsignup-matchcount-sweep
 - Pages: /guides, /guides/aircraft-co-ownership, /guides/how-to-find-aircraft-partners, /guides/aircraft-partnership-agreement, /guides/leaseback-vs-co-ownership, /guides/cost-of-aircraft-co-ownership, /guides/flying-club-vs-co-ownership, /guides/aircraft-pre-purchase-inspection, /guides/aircraft-title-escrow-and-closing, /tools, /tools/cost-calculator, /tools/earnings-calculator
 - What: **The "get alerts" box on every guide and calculator page now tells you honestly how many real listings/partnerships/pilots match right now, instead of just a bare "get alerts" ask.** `AlertSignup` already had a `matchCount` prop (built and wired on all the filter/browse/family pages where a visitor can already see the results) but the guides + `/tools/*` pages — exactly the surfaces where a visitor CAN'T see any results — never passed it, so their alert box was the least reassuring one on the site. Threaded one `getAlertMatchCount(sourcePath)` call into each of the 12 pages above (the guides hub + 8 guide detail pages' generic partnership/aircraft alert, the tools hub, both branches of the cost-calculator's alert — make/model-scoped and the bare fallback — and the earnings-calculator's seeker alert). Every number is a real, live count computed the same way the rest of the site already does it; the honest 0-match copy ("none right now — be first to know") was already built into the component and just needed a real value to trigger it.
