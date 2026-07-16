@@ -1841,15 +1841,25 @@ _All verified against the live codebase + full shipped list above before filing 
   new route, no new page, no schema. Fails soft (no link rendered) for a row with no
   token yet. Better granular unsubscribe UX = GOAL.md's "offer fewer instead of none,"
   per alert.
-- **[P1][goal] Email engagement stats — `email.opened`/`email.clicked` webhook →
-  `/admin/alerts`.** The Resend webhook route today handles only `email.bounced` +
-  `email.complained`; UTM proves site-side clicks but we're blind to opens/click-through
-  per email TYPE. Extend the existing webhook with opened/clicked events into an
-  additive log table (fail-soft insert, same pattern as `alert_cron_runs`), and roll up
-  open/click rate per email type on `/admin/alerts`. Note for the cycle: the human must
-  also tick the two new event boxes in the Resend dashboard — code must degrade
-  honestly (panel says "no events received yet") until then. Proves which alert emails
-  actually get read (GOAL.md "prove it converts" — the email half).
+~~- **[P1][goal] Email engagement stats — `email.opened`/`email.clicked` webhook →
+  `/admin/alerts`.**~~ ✅ SHIPPED via `email-engagement-stats` (2026-07-16) Every
+  `sendEmail()` call site now tags its email with an `emailType` (11 types, one per
+  builder), sent to Resend as a `tags:[{name:'type',value:...}]` field. The Resend
+  webhook route (`/api/webhooks/resend`) now also handles `email.opened`/
+  `email.clicked` via a new `extractEngagementEvent` (reads the echoed `type` tag +
+  `email_id`/click link), fail-soft inserting into a new additive
+  `email_engagement_events` table (same graceful-degrade pattern as `alert_cron_runs`
+  — a missing table never affects bounce/complaint handling, which is unchanged). New
+  `getEmailEngagementRollup()` aggregates opened/clicked counts per email type
+  (untagged sends bucket as `"untagged"`, never dropped silently); `/admin/alerts` gets
+  a new "Email engagement" panel with an honest "No engagement events received yet"
+  fallback. ⚠️ HUMAN ACTION still needed: apply the additive `email_engagement_events`
+  table (schema.sql) against live Supabase, AND tick the `email.opened`/`email.clicked`
+  boxes for this endpoint in the Resend dashboard — until both happen the panel stays
+  honestly empty (verified live: the webhook's insert attempt against the real,
+  not-yet-migrated prod DB returns the expected "relation does not exist" error, caught
+  by the same message-substring fail-soft guard as `alert_cron_runs`, no spurious log,
+  no crash).
 ~~- **[P1][goal] Admin email-template preview gallery (`/admin/alerts/emails`).**~~ ✅
   SHIPPED via `admin-email-template-gallery` (2026-07-16). New admin-gated read-only
   page rendering all 11 builders exported from `email.ts` — each shown with its real

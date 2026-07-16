@@ -2,6 +2,78 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260716T083444Z — PASS — email-engagement-stats
+- Pages: /admin/alerts (admin-only, `noindex`); no public-facing page changed
+  (the tagging change touches every alert-email send path, but that's
+  server-side/invisible to visitors)
+- What: **Every outgoing alert email is now tagged by type, and the admin
+  scoreboard can finally show which ones actually get opened/clicked** — once
+  a human flips two switches. Before, the Resend webhook only handled hard
+  bounces and spam complaints; there was no way to see engagement at all.
+  Now every `sendEmail()` call carries an `emailType` (alert-confirm,
+  alert-digest, combined-digest, price-drop, widen-suggestion,
+  listing-unavailable, manage-link, email-change-confirm, new-message,
+  seed-inquiry, match-alert), Resend echoes that tag back on
+  `email.opened`/`email.clicked` webhook events, and a new "Email
+  engagement" panel on `/admin/alerts` rolls up open/click counts per type.
+- Goal: alert-experience `[goal]` tier — GOAL.md's "prove it converts," the
+  email half (UTM already proved site-side clicks; this proves whether the
+  email itself gets read at all). Tier 1 (`[bug]`): none open — swept the
+  full BACKLOG.md for any unstruck `[bug]` line; every prior bug entry is
+  already resolved/shipped, and the prior cycle (`admin-email-template-
+  gallery`) PASSed. Tier 2 (`[want]`): re-swept — the two open `[want]` items
+  ("Save this search" auth-wall reconciliation, dynamic-location seed
+  personas) both remain exactly as flagged in every prior cycle: the former
+  needs a human product call on a two-CTA UX question, the latter has zero
+  live effect today (its target is a dev-only mock fixture that never
+  renders on staging/prod). Neither buildable this cycle. Dropped to tier 3
+  — this was the sole remaining open item in the 🔔 alert-experience `[goal]`
+  section of BACKLOG.md (verified via `grep` across the whole file: every
+  other `[goal]` line under that section is already struck `✅ SHIPPED`).
+- Spec: nightshift/specs/20260716T082418Z-email-engagement-stats.md
+- Verdict: PASS — `npx tsc --noEmit` and `rm -rf .next && npx next build`
+  both exit 0 (new `email_engagement_events` insert path + `/admin/alerts`
+  panel compile clean). 375/375 unit tests pass (6 new tests in
+  `resendWebhook.test.ts` for the new `extractEngagementEvent` extractor —
+  opens, clicks with link, untagged-send fallback, unrelated event types,
+  malformed/partial payloads — plus the full existing suite as a regression
+  check). QA against the PRODUCTION build (`npx next start`) via
+  `qa-smoke.mjs` on `/admin/alerts` at desktop 1280 + mobile 375: 2/2 checks
+  pass (HTTP 200, zero app-origin console errors, zero horizontal overflow).
+  Visual cycle — screenshots read: the anonymous crawl correctly shows the
+  layout's "Admin only" gate at both viewports (same precedent as every
+  other `/admin/alerts` cycle — the new panel's actual data render is
+  unreachable by an unauthenticated crawl, so this confirms zero regression
+  for anonymous visitors, not the new panel's own layout). Since the new
+  panel is genuinely unreachable via the anonymous smoke crawl, it was
+  independently verified two other ways: (1) a throwaway read-only script
+  (deleted after use, not committed) called the real `getEmailEngagementRollup()`
+  query path against the live prod DB and confirmed it returns `[]` via the
+  fail-soft catch (table not yet migrated) — proving the panel renders its
+  honest "No engagement events received yet" empty state, not a crash; (2) a
+  throwaway signed-webhook script (deleted after use, not committed) POSTed
+  real Svix-signed `email.opened` and `email.clicked` payloads (plus an
+  unrelated `email.delivered` control and a bad-signature control) at a
+  locally-run production server with a test `RESEND_WEBHOOK_SECRET` set only
+  for that process — confirmed correct signature verification (401 on the
+  bad-signature control), correct tag-based `emailType` extraction, and a
+  fail-soft insert attempt against the real (not-yet-migrated) prod DB that
+  hit the exact expected "relation does not exist" error, silently absorbed
+  by the same message-substring guard `alert_cron_runs` uses (confirmed via
+  the server log: no spurious error printed). No real `email_engagement_events`
+  rows exist (nothing to clean up — the table itself isn't migrated yet) and
+  no other prod DB writes were made. Server processes stopped cleanly at the
+  end (verified via `pgrep`).
+- Screenshots: nightshift/screenshots/email-engagement-stats/
+- Next: (1) apply the `email_engagement_events` migration (schema.sql) +
+  register `email.opened`/`email.clicked` on the webhook endpoint in the
+  Resend dashboard — both flagged as human actions, same pending-DDL pattern
+  as five other `alerts.*`/log-table migrations. (2) The alert-experience
+  `[goal]` queue in BACKLOG.md is now fully drained again — a future cycle
+  should either pull from the "ACTIVATION pillars (secondary)" section or
+  emit `ABORT — none — plan needed` so the next plan pass generates a fresh
+  batch.
+
 ## 20260716T081014Z — PASS — admin-email-template-gallery
 - Pages: /admin/alerts, /admin/alerts/emails (admin-only, `noindex`; no public-facing page changed)
 - What: **Every alert/marketplace email template can now be eyeballed in one admin page
