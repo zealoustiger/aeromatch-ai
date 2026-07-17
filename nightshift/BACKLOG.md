@@ -2402,13 +2402,19 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   other shipped bars are unaffected — regression-verified). Live-verified (Playwright, mobile 375,
   scrolled) that the bar reveals on all 7 pages and the anonymous tap scrolls to + focuses
   `#alert-email`; no prod rows created.
-- **[P1][goal] Mobile sticky alert bar on the partnership hub pages.** Same gap, demand
-  side: `/partnerships/make/[make]`, `/partnerships/near/[icao]`,
-  `/partnerships/state/[state]` have the static `AlertSignup` only. Mount
-  `MobileStickyAlertBar` with each page's existing alert context, partnership-appropriate
-  copy, and a distinct `source` (e.g. `sticky_bar_partnership_hub`). Kept as its own slice
-  (separate surface family + copy) so each cycle stays one surface. Same reveal/fallback
-  caveats as the aircraft-hub item; emits the existing full event set.
+~~- **[P1][goal] Mobile sticky alert bar on the partnership hub pages.**~~ ✅ SHIPPED via
+  `partnership-hub-sticky-alert-bar` (2026-07-17) Mounted `MobileStickyAlertBar` on
+  `/partnerships/make/[make]`, `/partnerships/near/[icao]`, and
+  `/partnerships/state/[state]` — the demand-side sibling to the aircraft hub pages
+  shipped last cycle. Distinct `source` per placement (`sticky_bar_partnership_make`,
+  `_near`, `_state`) for measurable per-placement conversion. Went beyond the default
+  8-card scroll-depth reveal used on the aircraft hubs: these partnership hubs can be
+  thin (`/partnerships/near/[icao]`'s `MIN_NEARBY=2` means as few as 2 cards), so each
+  page also got an `#alert-bar-reveal` sentinel (same fallback pattern as
+  `/aircraft/browse`) and `revealSelector` wired in, so the bar reliably reveals
+  regardless of card count instead of silently never firing on thin pages. Live-verified
+  (Playwright, mobile 375, scrolled) the bar reveals on all 3 pages and the anonymous tap
+  scrolls to + focuses `#alert-email`, zero console errors; no prod rows created.
 - **[P1][goal] Alert capture on the `/aircraft/compare` index hub.** The head-to-head
   comparison INDEX (`src/app/aircraft/compare/page.tsx`) renders zero in-body capture while
   every child comparison page renders two `AlertSignup`s — a buyer browsing matchups has no

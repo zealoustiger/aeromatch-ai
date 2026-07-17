@@ -5,6 +5,7 @@ import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import PartnershipCard from '@/components/PartnershipCard'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
@@ -84,6 +85,7 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
   )
 
   return (
+    <>
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {itemListJsonLd && (
         <script
@@ -122,6 +124,11 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
           {place || airport.icao}
         </p>
       </div>
+
+      {/* Sentinel for MobileStickyAlertBar's reveal — MIN_NEARBY is as low as 2,
+          far short of the component's default 8-card scroll-depth trigger, so it
+          reveals once this has scrolled past instead. */}
+      <div id="alert-bar-reveal" aria-hidden="true" />
 
       <div className="space-y-4">
         {results.map(({ p, distanceNm }) => (
@@ -184,5 +191,12 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
         )}
       </div>
     </div>
+    <MobileStickyAlertBar
+      context={`${airport.icao} area`}
+      sourcePath={`/partnerships/near/${airport.icao.toLowerCase()}`}
+      source="sticky_bar_partnership_near"
+      revealSelector="#alert-bar-reveal"
+    />
+    </>
   )
 }

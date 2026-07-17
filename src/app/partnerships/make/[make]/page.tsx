@@ -9,6 +9,7 @@ import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { getPartnershipListings, countPartnershipsByMake } from '@/lib/partnershipsQuery'
@@ -92,6 +93,7 @@ export default async function MakePartnershipsPage({ params }: Props) {
   const overview = getPartnershipMakeOverview(entry.slug)
 
   return (
+    <>
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {itemListJsonLd && (
         <script
@@ -157,6 +159,11 @@ export default async function MakePartnershipsPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Sentinel for MobileStickyAlertBar's reveal — some makes have far fewer
+          than 8 listing cards for the component's default scroll-depth trigger
+          to ever watch, so it reveals once this has scrolled past instead. */}
+      <div id="alert-bar-reveal" aria-hidden="true" />
 
       {/* About co-owning a {Make} — unique, evergreen editorial prose (content depth
           for the INDEXING stage). Curated makes only; absent → nothing renders.
@@ -226,6 +233,13 @@ export default async function MakePartnershipsPage({ params }: Props) {
           ForSaleGuideLinks on the for-sale surfaces. */}
       <PartnershipResourceLinks className="mt-8" />
     </div>
+    <MobileStickyAlertBar
+      context={entry.name}
+      sourcePath={`/partnerships/make/${entry.slug}`}
+      source="sticky_bar_partnership_make"
+      revealSelector="#alert-bar-reveal"
+    />
+    </>
   )
 }
 

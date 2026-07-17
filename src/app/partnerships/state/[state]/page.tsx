@@ -8,6 +8,7 @@ import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings, countPartnershipsByState } from '@/lib/partnershipsQuery'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
@@ -85,6 +86,7 @@ export default async function StatePartnershipsPage({ params }: Props) {
   const overview = getPartnershipStateOverview(code)
 
   return (
+    <>
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {itemListJsonLd && (
         <script
@@ -122,6 +124,11 @@ export default async function StatePartnershipsPage({ params }: Props) {
           and reach pilots searching in {name}.
         </p>
       </div>
+
+      {/* Sentinel for MobileStickyAlertBar's reveal — some states have far fewer
+          than 8 listing cards for the component's default scroll-depth trigger
+          to ever watch, so it reveals once this has scrolled past instead. */}
+      <div id="alert-bar-reveal" aria-hidden="true" />
 
       {/* Co-owning an aircraft in {State} — unique, evergreen editorial prose (content
           depth for the INDEXING stage). Curated high-GA states only; absent → nothing
@@ -197,6 +204,13 @@ export default async function StatePartnershipsPage({ params }: Props) {
           ForSaleGuideLinks on the for-sale surfaces. */}
       <PartnershipResourceLinks className="mt-8" />
     </div>
+    <MobileStickyAlertBar
+      context={name}
+      sourcePath={`/partnerships/state/${state.toLowerCase()}`}
+      source="sticky_bar_partnership_state"
+      revealSelector="#alert-bar-reveal"
+    />
+    </>
   )
 }
 
