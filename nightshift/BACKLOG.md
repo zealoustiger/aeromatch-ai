@@ -2361,18 +2361,32 @@ the FIRST of a combined digest's comma-separated tokens to the recovery box. Non
 the open-but-blocked items (instant sends → Vercel-tier human call; save-search auth wall →
 `[want]` product call)._
 
-- **[P1][goal] Context-aware footer alert capture.** `FooterAlertCapture` is the only
-  universal entry point (rendered by `Footer` in the root layout, so it's on every page)
-  but it's context-blind: hard-coded `sourcePath '/'` + `source 'footer'`
-  (`FooterAlertCapture.tsx:16-17`), so on `/aircraft/cessna/172` it still captures a
-  generic all-listings alert — and because its subscribed state is keyed on `'/'`, one
-  footer subscribe anywhere suppresses the baseline capture site-wide forever. Make it
-  page-aware: derive `source_path` from `usePathname()` (keep `source: 'footer'` so the
-  funnel column stays comparable; keep the single email field), key the known-subscriber
-  state per-path while still treating an existing bare-`/` subscription as global (don't
-  re-nag old subscribers), and show the context/count line where derivable. Adds no new
-  component — upgrades the baseline capture on EVERY page at once; keeps emitting the
-  existing `alert_subscribed` (+viewed/opened) set, now with a meaningful `source_path`.
+~~- **[P1][goal] Context-aware footer alert capture.**~~ ✅ SHIPPED via `footer-alert-context`
+  (2026-07-17) `FooterAlertCapture` is the only universal entry point (rendered by `Footer`
+  in the root layout, so it's on every page) but was context-blind: hard-coded `sourcePath
+  '/'`, so on `/aircraft/cessna/172` it still captured a generic all-listings alert — and
+  because its subscribed state was keyed on `'/'`, one footer subscribe anywhere suppressed
+  the baseline capture site-wide forever. New pure `src/lib/footerAlertContext.ts`
+  (`deriveFooterAlertTarget(pathname)`) resolves the path shapes `alert-digest`'s
+  `parseSourcePath` already understands — `/aircraft/[make]`, `/aircraft/[make]/[model]`,
+  `/aircraft/[make]/[model]/[stateCode]`, `/aircraft/for-sale/[state]`,
+  `/partnerships/make/[make]`, `/partnerships/state/[state]`, `/partnerships/near/[icao]` —
+  into a real, matchable, page-scoped `{ sourcePath, context }` pair (e.g. "Get email alerts
+  for new Cessna 172 listings" on `/aircraft/cessna/172`, writing `source_path:
+  '/aircraft/cessna/172'`); every other path (including look-alikes `parseSourcePath` can't
+  actually resolve, like `/aircraft/listing/[id]`, `/aircraft/mission/[x]`,
+  `/aircraft/compare/[x]`) safely falls back to the prior universal `/` target rather than
+  risk an alert that can never match. `FooterAlertCapture.tsx` now reads `usePathname()`
+  (no `useSearchParams()` — out of scope, avoids the Suspense-boundary requirement that would
+  add to every page) and keys local-subscription memory/impression tracking/submitted-state
+  off `sourcePath`, resetting on navigation (the root layout doesn't remount `Footer` across
+  client-side nav) while still treating an existing bare-`/` subscription as global (no
+  re-nagging). No new component, no schema change. QA: `tsc`/`next build` clean; `qa-smoke`
+  PASS (0 overflow, 0 console errors, 8/8 checks) on `/`, `/aircraft/cessna`,
+  `/aircraft/cessna/172`, `/partnerships/make/cirrus` at 1280+375; screenshot of
+  `/partnerships/make/cirrus` visually confirms the footer renders "Get email alerts for new
+  Cirrus partnerships". **Not done, intentionally:** query-string-based context (e.g.
+  `/aircraft?make=Cessna`) and the match-count/social-proof line (that's `AlertSignup`'s job).
 - **[P1][goal] Mobile sticky alert bar on the aircraft SEO hub pages.** The scroll-revealed
   `MobileStickyAlertBar` exists on only the 3 live-filter list pages + the aircraft detail
   page; every high-intent aircraft hub — `/aircraft/[make]`, `/aircraft/[make]/[model]`,
