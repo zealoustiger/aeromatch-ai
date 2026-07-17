@@ -912,3 +912,18 @@ create table if not exists email_engagement_events (
 );
 
 create index if not exists email_engagement_events_created_at_idx on email_engagement_events (created_at desc);
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_new_listing_opt_out
+-- Lets a subscriber mute new-listing sends and get ONLY price-drop matches on
+-- an alert ("only email me when something gets cheaper") — the missing
+-- complement to `price_drop_opt_in`, which can only ADD drops on top of
+-- new-listing emails, never mute them. Default false — everyone keeps
+-- getting new-listing sends, the same behavior as today, unless they
+-- explicitly switch to "Drops only" via the /alerts/manage mode toggle.
+-- Aircraft-only, same scope as price_drop_opt_in (partnerships/seekers have
+-- no drops-only UI). Apply in the Supabase SQL editor. Until applied, the
+-- /alerts/manage toggle fails soft (update retries without the column, same
+-- graceful-fallback pattern as price_drop_opt_in/frequency above) and the
+-- digest cron treats every alert as new_listing_opt_out=false — i.e. current
+-- behavior is fully preserved either way.
+alter table alerts add column if not exists new_listing_opt_out boolean not null default false;

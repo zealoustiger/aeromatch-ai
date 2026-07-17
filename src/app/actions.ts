@@ -1635,27 +1635,50 @@ export async function removeAlertCriteriaParam(id: string, key: string, token?: 
   return { ok: true }
 }
 
-// Toggle price-drop matching on/off for one alert, independent of the criteria
-// edit form above (a persistent per-row switch, not hidden behind "Edit"). Same
-// ownership proof as pause/resume/delete. Only meaningful for aircraft-type
-// alerts (see alert-digest's countRecentAircraftPriceDrops) — the UI only
-// renders this toggle for those rows.
-export async function updateAlertPriceDropOptIn(id: string, enabled: boolean, token?: string) {
+export type AlertMode = 'both' | 'new' | 'drops'
+
+// Sets price_drop_opt_in + new_listing_opt_out together as one atomic, always-
+// valid combination ('both' | 'new' only | 'drops' only) — a persistent per-row
+// switch, not hidden behind "Edit". Same ownership proof as pause/resume/
+// delete. Only meaningful for aircraft-type alerts (see alert-digest's
+// countRecentAircraftPriceDrops / the new_listing_opt_out gate) — the UI only
+// renders this toggle for those rows. Writing both columns in one call (rather
+// than two independent toggles) means the UI can never land an alert in the
+// unreachable "neither" state.
+export async function updateAlertMode(id: string, mode: AlertMode, token?: string) {
   const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
-  const { error } = await owned.admin.from('alerts').update({ price_drop_opt_in: enabled }).eq('id', id)
-  // Not-yet-migrated DB (`price_drop_opt_in` column missing) — no-op rather than
-  // surfacing a scary error for what is, until the migration lands, an inert toggle.
-  if (error && error.message?.includes('price_drop_opt_in')) return { ok: true }
+  let payload: Record<string, boolean> = {
+    price_drop_opt_in: mode !== 'new',
+    new_listing_opt_out: mode === 'drops',
+  }
+  let { error } = await owned.admin.from('alerts').update(payload).eq('id', id)
+  // Either column may not be migrated live yet (new_listing_opt_out is brand
+  // new; price_drop_opt_in has been live on some environments longer) — retry
+  // dropping whichever the error names (PostgREST reports one unknown column
+  // per error), same graceful-fallback pattern as every other alerts.* toggle.
+  for (
+    let i = 0;
+    i < 2 && error && (error.message?.includes('price_drop_opt_in') || error.message?.includes('new_listing_opt_out'));
+    i++
+  ) {
+    if (error.message?.includes('new_listing_opt_out')) delete payload.new_listing_opt_out
+    else delete payload.price_drop_opt_in
+    if (Object.keys(payload).length === 0) {
+      error = null
+      break
+    }
+    ;({ error } = await owned.admin.from('alerts').update(payload).eq('id', id))
+  }
   if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }
 }
 
 // Toggle digest cadence (weekly ↔ daily) for one alert. Same ownership proof and
-// persistent-row-switch pattern as updateAlertPriceDropOptIn above, but applies
-// to every alert type (unlike price-drop, cadence isn't aircraft-only).
+// persistent-row-switch pattern as updateAlertMode above, but applies
+// to every alert type (unlike price-drop mode, cadence isn't aircraft-only).
 export async function updateAlertFrequency(id: string, frequency: AlertFrequency, token?: string) {
   const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
@@ -1676,7 +1699,7 @@ export async function updateAlertFrequency(id: string, frequency: AlertFrequency
 // follow-up from `alert-watch-target-price` (that alert type isn't wired into
 // `updateAlertCriteria`/`buildAlertCriteriaUpdate` at all, since a watch alert
 // has no make/model/state to edit, only this one number). Same ownership
-// proof + missing-column graceful-degrade as `updateAlertPriceDropOptIn`.
+// proof + missing-column graceful-degrade as `updateAlertMode`.
 // `targetPrice: null` clears it (watch alert stays active, just with no
 // price ceiling); a non-null value must be a positive integer.
 export async function updateAlertTargetPrice(id: string, targetPrice: number | null, token?: string) {
@@ -1895,9 +1918,9 @@ export async function createManageAlert(
   fields: AlertCriteriaFields,
   token?: string,
   // Duplicate-from-row (see NewAlertForm.tsx's `initial`) carries over the
-  // source alert's own cadence/price-drop setting and tags itself
+  // source alert's own cadence/price-drop mode and tags itself
   // 'manage_duplicate' instead of the plain-"+ New alert" defaults below.
-  opts?: { frequency?: string; priceDropOptIn?: boolean; source?: string }
+  opts?: { frequency?: string; priceDropOptIn?: boolean; newListingOptOut?: boolean; source?: string }
 ) {
   const admin = createAdminClient()
   const ownerEmail = await resolveOwnerEmail(admin, token)
@@ -1923,13 +1946,15 @@ export async function createManageAlert(
   let payload: Record<string, unknown> = {
     ...basePayload,
     price_drop_opt_in: opts?.priceDropOptIn ?? true,
+    new_listing_opt_out: opts?.newListingOptOut ?? false,
     frequency: normalizeFrequency(opts?.frequency ?? 'weekly'),
     source: opts?.source ?? 'manage_new',
   }
   let { error } = await admin.from('alerts').insert(payload)
 
-  for (let i = 0; i < 3 && error && error.code !== '23505'; i++) {
+  for (let i = 0; i < 4 && error && error.code !== '23505'; i++) {
     if (error.message?.includes('frequency')) delete payload.frequency
+    else if (error.message?.includes('new_listing_opt_out')) delete payload.new_listing_opt_out
     else if (error.message?.includes('price_drop_opt_in')) delete payload.price_drop_opt_in
     else if (error.message?.includes('source')) delete payload.source
     else break
@@ -3305,7 +3330,7 @@ export async function relistListing(
 // `poster_id`-scoped) — the cron only ever emails partnerships/seekers, never
 // aircraft-for-sale, so this action doesn't take an 'aircraft' type. Fail-soft
 // no-op if `match_alert_opt_out` isn't migrated yet, same convention as
-// updateAlertPriceDropOptIn.
+// updateAlertMode.
 export async function updateMatchAlertOptOut(
   type: 'partnership' | 'seeker',
   id: string,

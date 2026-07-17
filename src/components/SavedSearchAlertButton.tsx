@@ -6,12 +6,13 @@ import { subscribeSavedSearchAlert, pauseAlert } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import FrequencyToggle from '@/components/FrequencyToggle'
-import PriceDropToggle from '@/components/PriceDropToggle'
+import AlertModeToggle from '@/components/AlertModeToggle'
 
 interface AlertDetail {
   id: string
   frequency: AlertFrequency
   priceDropOptIn: boolean
+  newListingOptOut: boolean
 }
 
 interface Props {
@@ -52,6 +53,10 @@ export default function SavedSearchAlertButton({ searchId, alert: initialAlert, 
         id: result.alertId,
         frequency: result.frequency ?? 'weekly',
         priceDropOptIn: result.priceDropOptIn ?? true,
+        // A freshly-subscribed alert always starts in "both" mode — drops-only
+        // is a manage-time-only choice (see updateAlertMode), never set at
+        // subscribe time.
+        newListingOptOut: false,
       })
     }
   }
@@ -71,7 +76,9 @@ export default function SavedSearchAlertButton({ searchId, alert: initialAlert, 
           <CheckCircle2 className="h-3.5 w-3.5" />
           Alerts on
         </span>
-        {isAircraft ? <PriceDropToggle id={alert.id} enabled={alert.priceDropOptIn} /> : null}
+        {isAircraft ? (
+          <AlertModeToggle id={alert.id} priceDropOptIn={alert.priceDropOptIn} newListingOptOut={alert.newListingOptOut} />
+        ) : null}
         <FrequencyToggle id={alert.id} frequency={alert.frequency} />
         <button
           onClick={handleTurnOff}

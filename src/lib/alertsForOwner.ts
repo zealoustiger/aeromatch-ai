@@ -9,13 +9,21 @@ export interface AlertRow {
   confirmed_at: string | null
   last_digest_at: string | null
   price_drop_opt_in?: boolean
+  new_listing_opt_out?: boolean
   frequency?: string
   paused_until?: string | null
   pending_email?: string | null
   target_price?: number | null
 }
 
-const OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'paused_until', 'pending_email', 'target_price']
+const OPTIONAL_COLS = [
+  'price_drop_opt_in',
+  'new_listing_opt_out',
+  'frequency',
+  'paused_until',
+  'pending_email',
+  'target_price',
+]
 
 // Email-keyed, not user_id-keyed (alerts require no account). Anon/authenticated
 // has no SELECT on this PII-holding table by design (see actions.ts), so this

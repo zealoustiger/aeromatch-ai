@@ -22,7 +22,7 @@ import AlertEditForm from '@/components/AlertEditForm'
 import ShareAlertButton from '@/components/ShareAlertButton'
 import WidenAlertNudge, { type WidenSuggestion } from '@/components/WidenAlertNudge'
 import OverlapAlertNudge from '@/components/OverlapAlertNudge'
-import PriceDropToggle from '@/components/PriceDropToggle'
+import AlertModeToggle from '@/components/AlertModeToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
 import TargetPriceEdit from '@/components/TargetPriceEdit'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
@@ -299,7 +299,12 @@ export default async function AlertsManagePage({
                             alerts (see alert-digest's countRecentAircraftPriceDrops) —
                             partnerships/seekers get no toggle. */}
                         {target?.type === 'aircraft' ? (
-                          <PriceDropToggle id={a.id} enabled={a.price_drop_opt_in ?? true} token={scopeToken} />
+                          <AlertModeToggle
+                            id={a.id}
+                            priceDropOptIn={a.price_drop_opt_in ?? true}
+                            newListingOptOut={a.new_listing_opt_out ?? false}
+                            token={scopeToken}
+                          />
                         ) : null}
                         <FrequencyToggle id={a.id} frequency={normalizeFrequency(a.frequency)} token={scopeToken} />
                       </div>
@@ -378,6 +383,7 @@ export default async function AlertsManagePage({
                         target={target}
                         frequency={a.frequency}
                         priceDropOptIn={a.price_drop_opt_in}
+                        newListingOptOut={a.new_listing_opt_out}
                         token={scopeToken}
                         autoOpen={!!editId && editId === a.id}
                       />

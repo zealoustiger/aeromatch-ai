@@ -5,6 +5,7 @@ export interface SavedSearchAlertDetail {
   id: string
   frequency: AlertFrequency
   priceDropOptIn: boolean
+  newListingOptOut: boolean
 }
 
 /**
@@ -20,28 +21,31 @@ export async function getAlertDetailsBySourcePath(email: string): Promise<Map<st
 
   const admin = createAdminClient()
   const baseCols = ['id', 'source_path']
-  let cols = [...baseCols, 'frequency', 'price_drop_opt_in']
+  const optionalCols = ['frequency', 'price_drop_opt_in', 'new_listing_opt_out']
+  let cols = [...baseCols, ...optionalCols]
+  type Row = {
+    id: string
+    source_path: string | null
+    frequency?: string
+    price_drop_opt_in?: boolean
+    new_listing_opt_out?: boolean
+  }
   let { data, error } = (await admin
     .from('alerts')
     .select(cols.join(', '))
     .eq('email', email)
-    .eq('status', 'confirmed')) as unknown as {
-    data: { id: string; source_path: string | null; frequency?: string; price_drop_opt_in?: boolean }[] | null
-    error: { message: string } | null
-  }
-  // `frequency`/`price_drop_opt_in` may not be migrated live yet — retry without
-  // whichever column(s) the error names (up to two passes), same graceful-degrade
-  // pattern as /alerts/manage's fetchAlertsForEmail, rather than losing the page.
-  for (let i = 0; i < 2 && error && (error.message?.includes('price_drop_opt_in') || error.message?.includes('frequency')); i++) {
+    .eq('status', 'confirmed')) as unknown as { data: Row[] | null; error: { message: string } | null }
+  // Any subset of frequency/price_drop_opt_in/new_listing_opt_out may not be
+  // migrated live yet — retry without whichever column(s) the error names (up
+  // to three passes), same graceful-degrade pattern as /alerts/manage's
+  // fetchAlertsForEmail, rather than losing the page.
+  for (let i = 0; i < optionalCols.length && error && optionalCols.some((c) => error!.message?.includes(c)); i++) {
     cols = cols.filter((c) => !error!.message.includes(c))
     ;({ data, error } = (await admin
       .from('alerts')
       .select(cols.join(', '))
       .eq('email', email)
-      .eq('status', 'confirmed')) as unknown as {
-      data: { id: string; source_path: string | null; frequency?: string; price_drop_opt_in?: boolean }[] | null
-      error: { message: string } | null
-    })
+      .eq('status', 'confirmed')) as unknown as { data: Row[] | null; error: { message: string } | null })
   }
 
   const details = new Map<string, SavedSearchAlertDetail>()
@@ -51,6 +55,7 @@ export async function getAlertDetailsBySourcePath(email: string): Promise<Map<st
       id: row.id,
       frequency: normalizeFrequency(row.frequency),
       priceDropOptIn: row.price_drop_opt_in ?? true,
+      newListingOptOut: row.new_listing_opt_out ?? false,
     })
   }
   return details
