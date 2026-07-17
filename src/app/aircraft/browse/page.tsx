@@ -4,6 +4,7 @@ import { Plane, MapPin, Layers, ArrowRight, GitCompare, Target } from 'lucide-re
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import {
   getInventoryMakeModels,
   STATE_CODES,
@@ -112,6 +113,7 @@ export default async function AircraftBrowsePage() {
   }
 
   return (
+    <>
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <script
@@ -162,6 +164,11 @@ export default async function AircraftBrowsePage() {
             )}
           </p>
         </header>
+
+        {/* Sentinel for MobileStickyAlertBar's reveal — this hub has no repeating
+            <article> cards for the component's default scroll-depth trigger to
+            watch, so it reveals once this has scrolled past instead. */}
+        <div id="alert-bar-reveal" aria-hidden="true" />
 
         {/* ---- By make ---- */}
         {makeGroups.length > 0 && (
@@ -336,5 +343,11 @@ export default async function AircraftBrowsePage() {
         <ForSaleGuideLinks className="mt-6" />
       </div>
     </div>
+    <MobileStickyAlertBar
+      sourcePath="/aircraft"
+      revealSelector="#alert-bar-reveal"
+      source="sticky_bar_browse"
+    />
+    </>
   )
 }

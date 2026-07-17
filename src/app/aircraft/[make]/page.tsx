@@ -9,6 +9,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { getInventoryMakes, resolveMake, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, type SeoMakeModel } from '@/lib/seo'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -140,6 +141,7 @@ export default async function MakeForSalePage({ params }: Props) {
   const faqJsonLd = buildFaqPageJsonLd(entry.faqs, { url: `${SITE_URL}${path}` })
 
   return (
+    <>
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       <script
         type="application/ld+json"
@@ -314,6 +316,8 @@ export default async function MakeForSalePage({ params }: Props) {
           by-state for-sale pages. */}
       <ForSaleGuideLinks className="mt-4" />
     </div>
+    <MobileStickyAlertBar context={entry.make} sourcePath={path} source="sticky_bar_make" />
+    </>
   )
 }
 

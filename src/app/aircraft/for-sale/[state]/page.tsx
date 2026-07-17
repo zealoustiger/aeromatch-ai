@@ -6,6 +6,7 @@ import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countForSaleState, fetchAircraftPage, topMakeModelsForState } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import { STATE_CODES, STATE_NAMES, stateSlug, getStateBySlug, getForSaleStateFaqs, getForSaleStateOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
@@ -100,6 +101,7 @@ export default async function StateAircraftForSalePage({ params }: Props) {
   const overview = getForSaleStateOverview(entry.code)
 
   return (
+    <>
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       {itemListJsonLd && (
         <script
@@ -230,6 +232,8 @@ export default async function StateAircraftForSalePage({ params }: Props) {
           same block on /aircraft and /aircraft/[make]/[model]. */}
       <ForSaleGuideLinks className="mt-4" />
     </div>
+    <MobileStickyAlertBar context={entry.name} sourcePath={path} source="sticky_bar_state" />
+    </>
   )
 }
 
