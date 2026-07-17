@@ -2157,15 +2157,19 @@ confirm-email manage link, partnership price-drop sample cards._
   and `price_drop_opt_in` before it) that the `match-alert-digest` cron now respects
   (skips any row with `match_alert_opt_out === true`). Improves the owner-side alert
   surface; no new capture point.
-- **[P1][goal] Price-drop watch offers on `/saved` — the shopping list with no alerts.**
-  A signed-in user's hearted listings are their highest-intent set, but `/saved` offers
-  zero watch capture (verified: its only boxes are generic `sourcePath="/"` — also
-  currently dead, see the bare-`/` item) — the save→watch banner only ever fires on the
-  FIRST heart on a detail page. Add a per-row "Email me if the price drops" one-tap on
-  each saved aircraft/partnership row (skip seekers — no price), reusing
-  `subscribeSignedInAlert` + the detail pages' `?watch=price` sourcePath convention and
-  `getExistingAlertForSourcePath` so already-watched rows show a quiet "Watching ✓"
-  instead of a redundant offer. Emits `alert_subscribed` (`source: 'saved_page_watch'`).
+~~- **[P1][goal] Price-drop watch offers on `/saved` — the shopping list with no alerts.**~~
+  ✅ SHIPPED via `saved-page-watch-offers` (2026-07-17) New `SavedListingWatchButton`
+  client component, rendered under every saved aircraft/partnership row on `/saved`
+  (seekers skipped — no price). On mount checks `getExistingAlertForSourcePath` for
+  the listing's own `?watch=price` sourcePath (same convention as the detail pages'
+  save→watch cross-sell); shows a quiet "Watching for price drops" state if an alert
+  already exists, otherwise a one-tap "Email me if the price drops" button that calls
+  `subscribeSignedInAlert` (`source: 'saved_page_watch'`) and swaps state in place —
+  no reload. Live-verified end-to-end against the real prod DB with a throwaway
+  `@example.com` account + a real minted session: real `alerts` row written with the
+  correct `source_path`/`context`, UI swap-on-click confirmed, "already watching"
+  state confirmed on a fresh page reload, zero horizontal overflow at 375px — all
+  test rows + the user deleted immediately after.
 - **[P1][goal] Mobile sticky watch bar on listing detail pages.** ✅ SHIPPED (aircraft) via `mobile-sticky-watch-bar-detail` (2026-07-17) — `/aircraft/listing/[id]` now renders a scroll-gated "Watch this listing" bottom bar at 375px reusing the browse bar's one-tap machinery + the page's own `watch=price` context/sourcePath, tagged `source: "sticky_bar_detail"`. **`/partnerships/[id]` deliberately left as a follow-up** — that page already has a persistent `fixed bottom-0` `ContactBar` with multiple stateful heights; stacking a second full-width bottom bar risks the exact overlap this item warns against and needs its own scoped design (fold the watch offer into ContactBar's button row). Pull that as the remaining slice of this item.
   ~~`MobileStickyAlertBar`
   ships only on the two browse pages; on `/aircraft/listing/[id]` and
