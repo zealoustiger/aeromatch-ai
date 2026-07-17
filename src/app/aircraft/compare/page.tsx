@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { GitCompare, ArrowRight } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { COMPARISONS, resolveComparisonModel } from '@/lib/aircraftComparisons'
 
@@ -21,12 +23,14 @@ export const metadata: Metadata = {
   },
 }
 
-export default function CompareIndexPage() {
+export default async function CompareIndexPage() {
   const cards = COMPARISONS.map((c) => {
     const a = resolveComparisonModel(c.a)
     const b = resolveComparisonModel(c.b)
     return a && b ? { slug: c.slug, a, b } : null
   }).filter((x): x is NonNullable<typeof x> => x !== null)
+
+  const alertMatchResult = await getAlertMatchCount('/')
 
   return (
     <div className="ch-surface min-h-screen">
@@ -72,6 +76,14 @@ export default function CompareIndexPage() {
             Browse all aircraft for sale <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+
+        <AlertSignup
+          sourcePath="/"
+          noun="listing"
+          source="compare_hub"
+          className="mt-10"
+          matchCount={alertMatchResult?.count}
+        />
       </div>
     </div>
   )
