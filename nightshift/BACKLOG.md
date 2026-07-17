@@ -2205,16 +2205,16 @@ confirm-email manage link, partnership price-drop sample cards._
   anonymous visitors see the page byte-identical. Honest rule: seed-stamp behavior stays
   as the pill shipped it — never count "since forever." Retention entry point; no new
   capture, no schema change.
-- **[P2][goal] Footer capture: "You're set" state for known subscribers + the missing
-  `alert_capture_viewed` funnel event.** `FooterAlertCapture` renders the same ask on
-  every page forever, even to a visitor who already subscribed right there (verified: it
-  reads `getLocalEmail` only to prefill one-tap, and emits no view event — so the
-  per-placement funnel can't compute footer view→subscribe conversion). Two small fixes
-  in one component: (1) once a local subscription exists, swap to a quiet honest "You're
-  getting alerts — manage them" line linking `/alerts/manage` (keep it thin — no match
-  counts in the footer, per `footer-alert-capture`'s design note); (2) fire a one-shot
-  `alert_capture_viewed` (`source: 'footer'`) via a lightweight IntersectionObserver so
-  the footer joins the standard funnel. No schema change.
+~~- **[P2][goal] Footer capture: "You're set" state for known subscribers + the missing
+  `alert_capture_viewed` funnel event.**~~ ✅ SHIPPED via `footer-alert-capture-known-subscriber`
+  (2026-07-17) `FooterAlertCapture` now checks `isLocallySubscribed('/')` on mount and, when
+  true (and the visitor hasn't just submitted this session), swaps the form/one-tap UI for a
+  quiet "You're getting alerts — manage them" line linking `/alerts/manage` — mirroring
+  `AlertSignup.tsx`'s existing known-subscriber branch. Also fires a one-shot
+  `alert_capture_viewed` (`context: 'all'`, `source_path: '/'`, `source: 'footer'`) via an
+  `IntersectionObserver` (threshold 0.5) on the component's root, same pattern as
+  `AlertSignup.tsx`, so the footer joins the standard impression→subscribe funnel. No schema
+  change, one file (`FooterAlertCapture.tsx`).
 
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
