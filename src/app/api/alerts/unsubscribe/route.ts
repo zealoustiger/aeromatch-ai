@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_URL } from '@/lib/seo'
+import { parseAlertTokens } from '@/lib/alertTokenList'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
 // them — not just the first — rather than leaving the others as a silent
 // "dead end" the subscriber thinks they already opted out of.
 async function applyUnsubscribe(token: string): Promise<boolean> {
-  const tokens = token.split(',').map((t) => t.trim()).filter(Boolean)
+  const tokens = parseAlertTokens(token)
   if (!tokens.length) return false
   try {
     const supabase = createAdminClient()
@@ -38,16 +39,15 @@ async function applyUnsubscribe(token: string): Promise<boolean> {
 // state — pending or confirmed) and land the visitor on a friendly status page.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')?.trim()
-  // Unsubscribed lands with a token forwarded, so the status page can offer a
-  // token-scoped "get fewer emails instead" recovery action (see
-  // pauseAlertByToken). The status page resolves exactly one alert by token,
-  // so a combined-send's comma-separated list only forwards its first token —
-  // the recovery action then applies to that one alert, a reasonable
-  // narrowing since the visitor already just unsubscribed from all of them.
-  const firstToken = token?.split(',')[0]?.trim()
+  // Unsubscribed lands with the FULL token list forwarded, so the status
+  // page's recovery box ("get fewer emails instead" — see pauseAlertByToken
+  // et al.) can apply to every alert a combined-send unsubscribed, not just
+  // the first. The status page and the *ByToken actions both parse this the
+  // same way (parseAlertTokens), so a single-token link behaves exactly as
+  // before.
   const dest = (state: string) =>
     NextResponse.redirect(
-      `${SITE_URL}/alerts/status?state=${state}${state === 'unsubscribed' && firstToken ? `&token=${encodeURIComponent(firstToken)}` : ''}`
+      `${SITE_URL}/alerts/status?state=${state}${state === 'unsubscribed' && token ? `&token=${encodeURIComponent(token)}` : ''}`
     )
 
   if (!token) return dest('invalid')

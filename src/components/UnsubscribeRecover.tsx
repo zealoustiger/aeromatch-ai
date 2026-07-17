@@ -17,14 +17,24 @@ type Action = 'paused' | 'weekly' | 'snoozed' | 'found'
 export default function UnsubscribeRecover({
   token,
   showWeeklyOption = false,
+  alertCount = 1,
 }: {
   token: string
   showWeeklyOption?: boolean
+  /** How many alerts this token (or comma-separated token list, from a
+   *  combined-digest unsubscribe) covers — drives honest "all N" copy. */
+  alertCount?: number
 }) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [doneAction, setDoneAction] = useState<Action | null>(null)
   const [resumeDate, setResumeDate] = useState<string | null>(null)
+  const [doneCount, setDoneCount] = useState(alertCount)
+  const many = alertCount > 1
+  // `/alerts/manage` resolves ownership from a SINGLE alert's token (then shows
+  // every alert for that email) — a combined-digest `token` here can be a
+  // comma-separated list, so only the first token is valid as that page's `?token=`.
+  const manageToken = token.split(',')[0]?.trim() || token
 
   async function handleRecover(action: Action) {
     setStatus('sending')
@@ -41,8 +51,9 @@ export default function UnsubscribeRecover({
       setErrorMsg(result.error)
       return
     }
-    track(action === 'found' ? 'alert_found_aircraft' : 'alert_unsubscribe_recovered', { action })
+    track(action === 'found' ? 'alert_found_aircraft' : 'alert_unsubscribe_recovered', { action, count: alertCount })
     setDoneAction(action)
+    setDoneCount((result as { count?: number }).count ?? alertCount)
     const rd = (result as { resumeDate?: string | null }).resumeDate ?? null
     setResumeDate(formatResumeDate(rd))
     setStatus('done')
@@ -64,16 +75,18 @@ export default function UnsubscribeRecover({
         </div>
       )
     }
+    // "You're" for a single alert, "All 3 of your alerts are" for a combined-digest recovery.
+    const subject = doneCount > 1 ? `All ${doneCount} of your alerts are` : "You're"
+    const message =
+      doneAction === 'weekly'
+        ? `${subject} on weekly emails now, not gone — you'll still hear about new matches, just less often.`
+        : doneAction === 'snoozed' && resumeDate
+          ? `${subject} snoozed until ${resumeDate}, not gone — we'll pick back up automatically then.`
+          : `${subject} paused, not gone — we'll hold off until you resume from any aircraft page.`
     return (
       <div className="mt-6 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
         <Check className="h-4 w-4 shrink-0" />
-        {doneAction === 'weekly'
-          ? "You're on weekly emails now, not gone — you'll still hear about new matches, just less often."
-          : doneAction === 'snoozed'
-            ? resumeDate
-              ? `You're snoozed until ${resumeDate}, not gone — we'll pick back up automatically then.`
-              : "You're paused, not gone — we'll hold off until you resume from any aircraft page."
-            : "You're paused, not gone — we'll hold off until you resume from any aircraft page."}
+        {message}
       </div>
     )
   }
@@ -83,7 +96,7 @@ export default function UnsubscribeRecover({
       <p className="text-sm font-medium text-slate-900">Changed your mind?</p>
       <p className="mt-1 text-sm text-slate-600">
         Get fewer emails instead of none — {showWeeklyOption ? 'switch to weekly, snooze, or pause' : 'snooze or pause'}{' '}
-        this alert instead of unsubscribing completely.
+        {many ? `all ${alertCount} of your alerts` : 'this alert'} instead of unsubscribing completely.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {showWeeklyOption && (
@@ -128,7 +141,7 @@ export default function UnsubscribeRecover({
         </button>
       </div>
       <p className="mt-3 text-xs text-slate-500">
-        <Link href={`/alerts/manage?token=${encodeURIComponent(token)}`} className="font-medium text-sky-600 hover:text-sky-700">
+        <Link href={`/alerts/manage?token=${encodeURIComponent(manageToken)}`} className="font-medium text-sky-600 hover:text-sky-700">
           Manage all your alerts
         </Link>
       </p>
