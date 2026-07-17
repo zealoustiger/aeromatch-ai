@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-17T09:22:42Z — watch-offer-funnel-parity — score 5/5
+- Strengths: Textbook mirror of ContactBarWatchButton's one-shot `viewedRef` + `alert_capture_viewed`/`opened` pattern onto both surfaces — same `{context: context||undefined, source_path, source}` payload, same `state/crossSell !== 'offer'` guard, same eslint-disable convention; opened event correctly fired before the subscribe action resolves, `alert_subscribed` calls untouched, zero UI change exactly as scoped.
+- Weaknesses / risks: none material — the never-reset ref fires viewed once per mount rather than per literal `crossSell → 'offer'` transition, so a dismiss+re-save reopen won't re-fire (arguably better: it also avoids double-counting on the subscribe-error `'subscribing'→'offer'` re-render).
+- Follow-up: none
+
 ## 2026-07-17T07:32:37Z — saved-page-watch-offers — score 4/5
 - Strengths: Cleanly reuses subscribeSignedInAlert/getExistingAlertForSourcePath with the exact detail-page `?watch=price` source_path convention, so cross-surface dedup works; seekers skipped, loading/watching/error states + a11y all handled.
 - Weaknesses / risks: Each row fires its own getExistingAlertForSourcePath on mount — N server-action round-trips per page load (mirrors AlertSignup's single-instance pattern but multiplied), minor at typical saved-list sizes.
