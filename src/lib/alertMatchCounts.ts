@@ -400,10 +400,11 @@ export async function getAlertMatchCount(
   }
 }
 
-/** Caps how many locally-subscribed source_paths one nav-pill check fans out to
- *  — bounds query cost regardless of how many capture points a long-time
- *  subscriber has hit (storage itself caps at 50, see alertLocalSubscriptions.ts). */
-const MAX_NEW_SINCE_PATHS = 8
+/** Caps how many locally-subscribed source_paths one nav-pill (or homepage
+ *  recap) check fans out to — bounds query cost regardless of how many capture
+ *  points a long-time subscriber has hit (storage itself caps at 50, see
+ *  alertLocalSubscriptions.ts). */
+export const MAX_NEW_SINCE_PATHS = 8
 
 /**
  * Sum of NEW matches (created on/after `since`) across up to `MAX_NEW_SINCE_PATHS`

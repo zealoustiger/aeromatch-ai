@@ -172,6 +172,24 @@ export function computeWidenCandidate(target: EditableAlertTarget): WidenCandida
   return null
 }
 
+/**
+ * Human-readable label for a locally-remembered `source_path` — the same
+ * phrasing `buildAlertCriteriaUpdate` computes for a saved alert's `context`
+ * column, reused here for the homepage's "since your last visit" recap module,
+ * which has no DB row to read a stored `context` from (anonymous subscribers
+ * are tracked only by the browser's own remembered source_paths). Returns
+ * `null` for the bare "all" homepage path and any legacy/curated SEO path
+ * shape this module doesn't attempt to phrase (path-segment routes like
+ * `/aircraft/cessna/172`) — callers should fall back to a generic label
+ * ("New listings") rather than guess at a description.
+ */
+export function describeLocalAlertContext(sourcePath: string): string | null {
+  const target = parseEditableAlertTarget(sourcePath)
+  if (!target) return null
+  const [, qs] = sourcePath.split('?')
+  return describeContext(target.type, new URLSearchParams(qs ?? ''))
+}
+
 function describeContext(type: EditableAlertTarget['type'], params: URLSearchParams): string | null {
   if (type === 'aircraft') {
     return describeAircraftFilters(Object.fromEntries(params.entries()))

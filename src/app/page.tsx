@@ -8,6 +8,7 @@ import HomeRails from '@/components/HomeRails'
 import DealsRail from '@/components/DealsRail'
 import AlertSignup from '@/components/AlertSignup'
 import RecentlyViewedAlertBanner from '@/components/RecentlyViewedAlertBanner'
+import HomepageAlertRecap from '@/components/HomepageAlertRecap'
 import { STATE_NAMES, STATE_CODES, stateSlug, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { countForSaleState } from '@/components/AircraftSaleList'
 
@@ -234,6 +235,10 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── SINCE YOUR LAST VISIT — known-subscriber-only recap, renders nothing
+          for everyone else ── */}
+      <HomepageAlertRecap />
 
       {/* ── NEWEST LISTINGS — large photo cards ── */}
       <FeaturedListings />
