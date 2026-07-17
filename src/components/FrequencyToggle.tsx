@@ -7,8 +7,8 @@ import type { AlertFrequency } from '@/lib/alertFrequency'
 
 /**
  * Persistent per-alert digest-cadence switch (not hidden behind "Edit"),
- * mirrors PriceDropToggle's pattern — but renders for every alert type (unlike
- * price-drop, cadence isn't aircraft-only).
+ * mirrors AlertModeToggle's pattern — but renders for every alert type (unlike
+ * price-drop/new-listing mode, cadence isn't aircraft-only).
  */
 export default function FrequencyToggle({
   id,

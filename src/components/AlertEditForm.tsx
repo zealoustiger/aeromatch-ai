@@ -38,12 +38,13 @@ interface Props {
   /** Pre-parsed from `source_path` server-side; null when this alert isn't editable
    *  here (legacy path-segment SEO source, or none) — no Edit button renders then. */
   target: EditableAlertTarget | null
-  /** This row's own cadence + price-drop setting — carried into the Duplicate
-   *  form's created row (see NewAlertForm's `initial`), invisibly (neither is
-   *  an editable field in this form; both are set via the row's own toggles
-   *  after creation, same as any other alert). */
+  /** This row's own cadence + price-drop mode — carried into the Duplicate
+   *  form's created row (see NewAlertForm's `initial`), invisibly (none of
+   *  these are editable fields in this form; all are set via the row's own
+   *  toggles after creation, same as any other alert). */
   frequency?: string
   priceDropOptIn?: boolean
+  newListingOptOut?: boolean
   /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
   token?: string
   /** Opens the form once on mount instead of waiting for the Edit click —
@@ -59,7 +60,17 @@ interface Props {
  * state has a single owner and the whole action cluster stays one flex item in
  * the parent `<li>` row — no fragile multi-child flex-wrap layout needed.
  */
-export default function AlertEditForm({ id, status, sourcePath, target, frequency, priceDropOptIn, token, autoOpen }: Props) {
+export default function AlertEditForm({
+  id,
+  status,
+  sourcePath,
+  target,
+  frequency,
+  priceDropOptIn,
+  newListingOptOut,
+  token,
+  autoOpen,
+}: Props) {
   const [open, setOpen] = useState(false)
   // Mutually exclusive with the Edit form below — only one inline form per row.
   const [duplicating, setDuplicating] = useState(false)
@@ -214,6 +225,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, frequenc
             ...targetToFields(target),
             frequency: normalizeFrequency(frequency),
             priceDropOptIn: priceDropOptIn ?? true,
+            newListingOptOut: newListingOptOut ?? false,
           }}
         />
       ) : null}

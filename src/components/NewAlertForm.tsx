@@ -38,16 +38,17 @@ interface InitialValues {
   dealOnly?: boolean
   frequency?: AlertFrequency
   priceDropOptIn?: boolean
+  newListingOptOut?: boolean
 }
 
 interface Props {
   /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
   token?: string
   /** Prefill from a source row (see AlertEditForm's "Duplicate" button) —
-   *  criteria fields shown in the form, plus `frequency`/`priceDropOptIn`
-   *  carried through to `createManageAlert` invisibly (this form has no
-   *  cadence/price-drop fields of its own; those are set via the row's own
-   *  toggles after creation, same as any other alert). */
+   *  criteria fields shown in the form, plus `frequency`/`priceDropOptIn`/
+   *  `newListingOptOut` carried through to `createManageAlert` invisibly (this
+   *  form has no cadence/price-drop-mode fields of its own; those are set via
+   *  the row's own toggle after creation, same as any other alert). */
   initial?: InitialValues
   /** Tags the created row's `alerts.source` + the `alert_subscribed` event.
    *  Defaults to 'manage_new' (the plain "+ New alert" flow). */
@@ -112,6 +113,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
       const result = await createManageAlert(type, fields, token, {
         frequency: initial?.frequency,
         priceDropOptIn: initial?.priceDropOptIn,
+        newListingOptOut: initial?.newListingOptOut,
         source: source ?? 'manage_new',
       })
       if (result.error) {

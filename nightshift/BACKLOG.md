@@ -2445,15 +2445,23 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   action clusters (View/Send sample/Pause/Snooze/Delete/Edit/Duplicate) rendered
   fully within 375px — re-verified by screenshot, not just `scrollWidth`, per the
   prior cycle's overflow-bug lesson. Both test rows deleted after, 0 remaining.
-- **[P1][goal] Price-drop-ONLY mode.** `price_drop_opt_in` can only ADD drops on top of
-  new-listing emails; a subscriber tracking the market ("only email me when something gets
-  cheaper") has no way to mute new-listing sends. Additive `alerts` column (e.g.
-  `new_listing_opt_out` bool default false — ⚠️ human-apply migration, fail-soft
-  read/write like every prior `alerts.*` DDL) + upgrade the manage-page control to three
-  honest states (new + drops / new only / drops only) + digest crons skip the new-listings
-  section when set (never a drops-only alert receiving new-listing sends). Honest-content
-  pillar: fewer, more-wanted emails; no new capture point. Slice stays aircraft-side
-  (drops only exist there).
+~~- **[P1][goal] Price-drop-ONLY mode.**~~ ✅ SHIPPED via `alert-price-drop-only-mode`
+  (2026-07-17) `price_drop_opt_in` could previously only ADD drops on top of new-listing
+  emails, with no way to mute new-listing sends. New additive `alerts.new_listing_opt_out
+  boolean not null default false` column (⚠️ HUMAN ACTION still needed to apply it live —
+  same fail-soft pattern as every prior `alerts.*` DDL; confirmed live that NONE of the 6
+  pending `alerts.*` migrations exist yet on the shared DB, including this new one and
+  `price_drop_opt_in` itself). The `/alerts/manage` and `/searches` per-row control is now a
+  single 3-state `AlertModeToggle` (replaces the 2-state `PriceDropToggle`) that cycles
+  New+drops → New only → Drops only → …, writing both `price_drop_opt_in`/
+  `new_listing_opt_out` atomically via one `updateAlertMode` action so the UI can never land
+  on the unreachable "neither" state two independent toggles could produce. The digest cron
+  forces `newCount = 0` (skipping the `countNew` query entirely) for aircraft-type alerts
+  with `new_listing_opt_out` set, which falls straight into the existing price-drop-sample/
+  `buildPriceDropEmail` branch with zero new code there; a drops-only alert with no live
+  drops is skipped for the pass exactly like today's "nothing to say" alerts. The "Duplicate
+  this alert" flow now carries the mode through too. No new capture point — every
+  newly-created alert still starts in "both" mode; drops-only is manage-time only.
 ~~- **[P1][goal] Honest zero-match welcome email on confirm.**~~ ✅ SHIPPED via
   `alert-zero-match-welcome` (2026-07-17) A subscriber who clicked the double-opt-in link on
   an alert that currently matches 0 listings got NO email at all — `confirm/route.ts`'s

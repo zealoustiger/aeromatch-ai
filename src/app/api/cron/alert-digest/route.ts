@@ -1334,6 +1334,7 @@ export async function GET(req: NextRequest) {
     last_digest_at: string | null
     unsubscribe_token: string | null
     price_drop_opt_in?: boolean
+    new_listing_opt_out?: boolean
     frequency?: string
     target_price?: number | null
   }
@@ -1350,7 +1351,7 @@ export async function GET(req: NextRequest) {
   // subscribers on legacy rows from every digest, forever.
   const LIVE_ALERT_STATUSES = ['confirmed', 'active']
   const baseCols = 'id, email, context, source_path, created_at, last_digest_at, unsubscribe_token'
-  const DIGEST_OPTIONAL_COLS = ['price_drop_opt_in', 'frequency', 'target_price']
+  const DIGEST_OPTIONAL_COLS = ['price_drop_opt_in', 'new_listing_opt_out', 'frequency', 'target_price']
   let cols = `${baseCols}, ${DIGEST_OPTIONAL_COLS.join(', ')}`
   let { data: alerts, error: fetchError } = (await supabase
     .from('alerts')
@@ -1361,12 +1362,12 @@ export async function GET(req: NextRequest) {
     error: { message: string } | null
   }
 
-  // Any subset of price_drop_opt_in/frequency/target_price may not be
-  // migrated live yet — retry without whichever column(s) the error names
-  // (PostgREST reports one unknown column per error, so this can take up to
-  // three passes) rather than breaking the whole send run; every alert is then
-  // treated as opted-in / weekly / no-target below, each column's own default
-  // (current behavior).
+  // Any subset of price_drop_opt_in/new_listing_opt_out/frequency/target_price
+  // may not be migrated live yet — retry without whichever column(s) the error
+  // names (PostgREST reports one unknown column per error, so this can take up
+  // to four passes) rather than breaking the whole send run; every alert is
+  // then treated as opted-in / not-opted-out / weekly / no-target below, each
+  // column's own default (current behavior).
   for (
     let i = 0;
     i < DIGEST_OPTIONAL_COLS.length && fetchError && DIGEST_OPTIONAL_COLS.some((c) => fetchError!.message?.includes(c));
@@ -1469,7 +1470,12 @@ export async function GET(req: NextRequest) {
       continue
     }
 
-    const newCount = await countNew(supabase, target, since)
+    // Drops-only mode ("Drops only" on /alerts/manage's mode toggle) is
+    // aircraft-only, same scope as price_drop_opt_in below — mutes new-listing
+    // matching entirely rather than just adding drops on top of it. Skips the
+    // countNew query too, not just the send, when opted out.
+    const newListingOptOut = target.type === 'aircraft' && (alert.new_listing_opt_out ?? false)
+    const newCount = newListingOptOut ? 0 : await countNew(supabase, target, since)
     // Price-drop matching applies to aircraft-for-sale and partnership alerts
     // (a partnership's "price" is its buy-in share, tracked on the separate
     // previous_buy_in_price/buy_in_price_changed_at column pair) — seekers have
