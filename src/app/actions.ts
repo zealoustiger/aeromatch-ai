@@ -44,6 +44,7 @@ import {
 } from '@/lib/alertEditCriteria'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { resolveSnoozeUntil } from '@/lib/alertSnooze'
+import { parseAlertTokens } from '@/lib/alertTokenList'
 import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import { stripShareParam } from '@/lib/shareAlertLink'
 import { htmlToReadableText } from '@/lib/htmlText'
@@ -1695,41 +1696,45 @@ export async function updateAlertTargetPrice(id: string, targetPrice: number | n
 
 // Public, token-scoped recovery for the one-click unsubscribe landing page — no
 // session exists there (it's a bare email link), so ownership is proven by the same
-// `unsubscribe_token` the email already carries, not by `loadOwnedAlert`'s signed-in
+// `unsubscribe_token`(s) the email already carries, not by `loadOwnedAlert`'s signed-in
 // email match. Lets someone who just unsubscribed get "fewer emails" instead of
 // "none" without creating an account. Same recoverable `paused` status the
-// authenticated pause/resume flow uses (digest cron already skips it).
+// authenticated pause/resume flow uses (digest cron already skips it). `token` is
+// usually one alert's token, but a combined-digest unsubscribe forwards every
+// covered alert's token comma-separated (see /api/alerts/unsubscribe) — applying to
+// all of them, not just the first, so "pause instead" actually rescues everything
+// the click just unsubscribed.
 export async function pauseAlertByToken(token: string) {
-  const trimmed = token?.trim()
-  if (!trimmed) return { error: 'Invalid link.' }
+  const tokens = parseAlertTokens(token)
+  if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('alerts')
     .update({ status: 'paused' })
-    .eq('unsubscribe_token', trimmed)
+    .in('unsubscribe_token', tokens)
     .select('id')
 
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
-  return { ok: true }
+  return { ok: true, count: data.length }
 }
 
 // Public, token-scoped "snooze 30 days" recovery — same trust boundary as
-// pauseAlertByToken above (an unsubscribe link's own token), offered
+// pauseAlertByToken above (an unsubscribe link's own token list), offered
 // alongside it on the recovery box so a visitor who wants a real end date
 // (not indefinite) doesn't have to create an account first. Missing-column
 // fallback matches snoozeAlert's: a plain pause, no user-facing error.
 export async function snoozeAlertByToken(token: string) {
-  const trimmed = token?.trim()
-  if (!trimmed) return { error: 'Invalid link.' }
+  const tokens = parseAlertTokens(token)
+  if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
   const pausedUntil = resolveSnoozeUntil(new Date().toISOString())
   let { data, error } = await admin
     .from('alerts')
     .update({ status: 'paused', paused_until: pausedUntil })
-    .eq('unsubscribe_token', trimmed)
+    .in('unsubscribe_token', tokens)
     .select('id')
 
   // Column not migrated yet — fall back to a plain indefinite pause, and
@@ -1740,17 +1745,17 @@ export async function snoozeAlertByToken(token: string) {
     ;({ data, error } = await admin
       .from('alerts')
       .update({ status: 'paused' })
-      .eq('unsubscribe_token', trimmed)
+      .in('unsubscribe_token', tokens)
       .select('id'))
   }
 
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
-  return { ok: true, resumeDate: persistedResumeDate }
+  return { ok: true, count: data.length, resumeDate: persistedResumeDate }
 }
 
 // Public, token-scoped "fewer instead of none" recovery — the literal GOAL.md ask
-// alongside pauseAlertByToken's "pause instead" option. Revives the alert to
+// alongside pauseAlertByToken's "pause instead" option. Revives the alert(s) to
 // `confirmed` (unlike pause, this one should actually keep sending, just at the
 // least-frequent cadence) with `frequency: 'weekly'`. Same graceful-degrade
 // precedent as every other `alerts.frequency` write: if the column isn't
@@ -1758,50 +1763,50 @@ export async function snoozeAlertByToken(token: string) {
 // un-unsubscribed instead of a scary error (today's un-migrated default cadence
 // is already weekly-ish, so the outcome matches what "weekly" promises).
 export async function updateAlertFrequencyByToken(token: string) {
-  const trimmed = token?.trim()
-  if (!trimmed) return { error: 'Invalid link.' }
+  const tokens = parseAlertTokens(token)
+  if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
   let { data, error } = await admin
     .from('alerts')
     .update({ status: 'confirmed', frequency: normalizeFrequency('weekly') })
-    .eq('unsubscribe_token', trimmed)
+    .in('unsubscribe_token', tokens)
     .select('id')
 
   if (error && error.message?.includes('frequency')) {
     ;({ data, error } = await admin
       .from('alerts')
       .update({ status: 'confirmed' })
-      .eq('unsubscribe_token', trimmed)
+      .in('unsubscribe_token', tokens)
       .select('id'))
   }
 
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
-  return { ok: true }
+  return { ok: true, count: data.length }
 }
 
 // Public, token-scoped "I found my aircraft" exit — same trust boundary as
-// pauseAlertByToken above (an unsubscribe link's own token). Doesn't touch
+// pauseAlertByToken above (an unsubscribe link's own token list). Doesn't touch
 // `status` (already `unsubscribed` by the time this page renders) — just
 // records WHY, so this exit is distinguishable from generic churn. Missing-
 // column fallback matches every other alerts.* migration: no user-facing
 // error, just a silent no-op until the human applies the migration.
 export async function markAlertFoundAircraftByToken(token: string) {
-  const trimmed = token?.trim()
-  if (!trimmed) return { error: 'Invalid link.' }
+  const tokens = parseAlertTokens(token)
+  if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('alerts')
     .update({ unsubscribe_reason: 'found_aircraft' })
-    .eq('unsubscribe_token', trimmed)
+    .in('unsubscribe_token', tokens)
     .select('id')
 
-  if (error?.message?.includes('unsubscribe_reason')) return { ok: true }
+  if (error?.message?.includes('unsubscribe_reason')) return { ok: true, count: tokens.length }
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
-  return { ok: true }
+  return { ok: true, count: data.length }
 }
 
 // Post-confirmation cross-sell (see AlertCrossSell.tsx / alertCrossSell.ts): a

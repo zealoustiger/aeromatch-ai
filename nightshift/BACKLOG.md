@@ -2473,15 +2473,26 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   alert (407 real matches) confirmed exactly as before with `last_digest_at` stamped; an
   unparseable listing-watch `source_path` confirmed with no email and no digest stamp. Zero
   console/server errors across all three.
-- **[P1][goal] Recover ALL alerts after a combined-digest unsubscribe.** One click on a
-  combined digest's unsubscribe link correctly kills all N covered alerts, but the
-  `/alerts/status` recovery box is handed only the FIRST token
-  (`unsubscribe/route.ts:47`), so "switch to weekly / snooze 30 days / pause instead"
-  silently rescues 1 of N — a subscriber who thinks they downgraded everything stays
-  unsubscribed from the rest. Forward the full comma-separated token list and make
-  `UnsubscribeRecover` + its server actions apply to every listed alert, with honest count
-  copy ("all 3 of your alerts → weekly"). GOAL.md's "offer fewer instead of none,"
-  completed for the multi-alert case; no new capture point.
+~~- **[P1][goal] Recover ALL alerts after a combined-digest unsubscribe.**~~ ✅ SHIPPED via
+  `alert-unsubscribe-recover-all` (2026-07-17) `/api/alerts/unsubscribe`'s GET handler now
+  forwards the FULL comma-separated token list to `/alerts/status` instead of just the
+  first. New pure `src/lib/alertTokenList.ts` (`parseAlertTokens`, unit-tested — trims,
+  dedupes, drops empty segments) is shared by the route's existing `applyUnsubscribe` and
+  the four token-scoped recovery actions (`pauseAlertByToken`/`snoozeAlertByToken`/
+  `updateAlertFrequencyByToken`/`markAlertFoundAircraftByToken` in `actions.ts`), which now
+  `.in('unsubscribe_token', tokens)` instead of `.eq()` and return the affected count.
+  `/alerts/status` looks up ALL matching alerts (not just one) to compute an honest count +
+  whether any are on daily frequency (drives the "switch to weekly" option); `UnsubscribeRecover`
+  takes a new `alertCount` prop and says "all 3 of your alerts" once count > 1 (byte-identical
+  singular copy at count 1). The "Manage all your alerts" link still uses only the first token
+  (`/alerts/manage` resolves ownership from one token, then shows every alert for that email
+  anyway). No schema/migration change. Live end-to-end verified against the real DB (service-role
+  insert + a real Playwright click-through of the actual unsubscribe→status→recover flow,
+  rewriting the prod-hostname redirect to localhost so the local build's code — not the deployed
+  site — was what got exercised): a 3-alert combined unsubscribe correctly flipped all 3 to
+  `unsubscribed`, the recovery box showed "all 3 of your alerts," and "Pause instead" flipped all
+  3 to `paused` with matching done-state copy; a separate single-alert case behaved byte-for-byte
+  as before. All 4 test rows deleted after (0 remain).
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)

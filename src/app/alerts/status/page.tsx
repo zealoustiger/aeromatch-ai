@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { isListingWatchPath } from '@/lib/alertWatchStatus'
+import { parseAlertTokens } from '@/lib/alertTokenList'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -169,32 +170,43 @@ export default async function AlertStatusPage({
     }
   }
 
-  // The recovery box's "Switch to weekly instead" option only makes sense for an
-  // alert that was firing daily — for a weekly (or not-yet-migrated) alert, the
-  // resulting cadence would be identical to what it already was, so hide it.
-  // `unsubscribe_token` is the same `token` the unsubscribe link forwards here.
+  // The recovery box's "Switch to weekly instead" option only makes sense if AT
+  // LEAST ONE covered alert was firing daily — for a weekly (or not-yet-migrated)
+  // alert, the resulting cadence would be identical to what it already was.
+  // `token` is the same value the unsubscribe link forwards here — usually one
+  // alert's `unsubscribe_token`, but a combined-digest unsubscribe forwards every
+  // covered alert's token comma-separated, so this looks up ALL of them (not just
+  // one) to compute an honest recovery-box count + cadence.
   let unsubFrequency: AlertFrequency = 'weekly'
   let unsubSourcePath: string | null = null
+  let unsubCount = 0
   if (key === 'unsubscribed' && token) {
+    const tokens = parseAlertTokens(token)
     const admin = createAdminClient()
-    let { data, error } = await admin
+    let cols = ['frequency', 'source_path']
+    let { data, error } = (await admin
       .from('alerts')
-      .select('frequency, source_path')
-      .eq('unsubscribe_token', token)
-      .maybeSingle()
+      .select(cols.join(', '))
+      .in('unsubscribe_token', tokens)) as unknown as {
+      data: { frequency?: string; source_path: string | null }[] | null
+      error: { message: string } | null
+    }
     // `frequency` may not be migrated live yet — same graceful-degrade retry
     // precedent as the `confirmed` branch above / `/alerts/manage`'s fetchAlertsForEmail.
     if (error?.message?.includes('frequency')) {
-      ;({ data, error } = await admin
+      cols = cols.filter((c) => c !== 'frequency')
+      ;({ data, error } = (await admin
         .from('alerts')
-        .select('source_path')
-        .eq('unsubscribe_token', token)
-        .maybeSingle())
+        .select(cols.join(', '))
+        .in('unsubscribe_token', tokens)) as unknown as {
+        data: { frequency?: string; source_path: string | null }[] | null
+        error: { message: string } | null
+      })
     }
-    if (!error) {
-      const row = data as { frequency?: string; source_path?: string | null } | null
-      unsubFrequency = normalizeFrequency(row?.frequency)
-      unsubSourcePath = row?.source_path ?? null
+    if (!error && data) {
+      unsubCount = data.length
+      unsubFrequency = data.some((row) => normalizeFrequency(row.frequency) === 'daily') ? 'daily' : 'weekly'
+      unsubSourcePath = data[0]?.source_path ?? null
     }
   }
 
@@ -246,7 +258,7 @@ export default async function AlertStatusPage({
             />
           )}
           {key === 'unsubscribed' && token && (
-            <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} />
+            <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} alertCount={Math.max(unsubCount, 1)} />
           )}
           {key === 'confirmed' && token && crossSell && (
             <AlertCrossSell originalToken={token} suggestion={crossSell} />
