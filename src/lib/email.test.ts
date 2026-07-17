@@ -10,6 +10,7 @@ import {
   buildAlertConfirmEmail,
   buildListingUnavailableEmail,
   buildWidenSuggestionEmail,
+  buildAlertZeroMatchWelcomeEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
   buildManageLinkEmail,
@@ -939,6 +940,82 @@ test('buildWidenSuggestionEmail: context and widen description are HTML-escaped'
   assert.match(html, /&lt;script&gt;/)
 })
 
+// ─── buildAlertZeroMatchWelcomeEmail (confirm-time zero-match welcome) ─────
+
+const ZERO_MATCH_BASE = {
+  context: 'Cessna 152 in Montana',
+  frequency: 'weekly' as const,
+  manageUrl: 'https://clubhanger.com/alerts/manage?token=xyz',
+  unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+}
+
+test('buildAlertZeroMatchWelcomeEmail: subject names the alert context and confirms', () => {
+  const { subject } = buildAlertZeroMatchWelcomeEmail(ZERO_MATCH_BASE)
+  assert.equal(subject, "Cessna 152 in Montana is confirmed — we're watching")
+})
+
+test('buildAlertZeroMatchWelcomeEmail: falls back to generic "Your alert" subject when context is null/empty', () => {
+  assert.equal(
+    buildAlertZeroMatchWelcomeEmail({ ...ZERO_MATCH_BASE, context: null }).subject,
+    "Your alert is confirmed — we're watching"
+  )
+})
+
+test('buildAlertZeroMatchWelcomeEmail: names the real cadence, never claims "instant"', () => {
+  const { html, text } = buildAlertZeroMatchWelcomeEmail({ ...ZERO_MATCH_BASE, frequency: 'daily' })
+  assert.match(html, /checks run daily/)
+  assert.match(text, /checks run daily/)
+  assert.doesNotMatch(html, /instant/i)
+})
+
+test('buildAlertZeroMatchWelcomeEmail: without a widen candidate, renders no widen section — never a guess', () => {
+  const { html, text } = buildAlertZeroMatchWelcomeEmail({ ...ZERO_MATCH_BASE, widen: null })
+  assert.doesNotMatch(html, /Widen this alert/)
+  assert.doesNotMatch(text, /In the meantime/)
+})
+
+test('buildAlertZeroMatchWelcomeEmail: with a widen candidate, renders the real description/count/link', () => {
+  const { html, text } = buildAlertZeroMatchWelcomeEmail({
+    ...ZERO_MATCH_BASE,
+    widen: {
+      description: 'Search every state',
+      count: 42,
+      noun: 'listing',
+      url: 'https://clubhanger.com/aircraft?make=Cessna',
+    },
+  })
+  assert.match(html, /Search every state/)
+  assert.match(html, /42 listings/)
+  assert.match(html, /Widen this alert/)
+  assert.match(text, /Search every state/)
+  assert.match(text, /42 listings/)
+})
+
+test('buildAlertZeroMatchWelcomeEmail: singular widen noun has no trailing "s"', () => {
+  const { text } = buildAlertZeroMatchWelcomeEmail({
+    ...ZERO_MATCH_BASE,
+    widen: { description: 'Search every state', count: 1, noun: 'pilot', url: 'https://clubhanger.com/partnerships' },
+  })
+  assert.match(text, /1 pilot right now/)
+  assert.doesNotMatch(text, /1 pilots/)
+})
+
+test('buildAlertZeroMatchWelcomeEmail: manage and unsubscribe links appear in both html and text; unsubscribeUrl stays byte-exact', () => {
+  const { html, text } = buildAlertZeroMatchWelcomeEmail(ZERO_MATCH_BASE)
+  assert.ok(text.includes(ZERO_MATCH_BASE.unsubscribeUrl))
+  assert.ok(html.includes(ZERO_MATCH_BASE.unsubscribeUrl))
+  assert.match(html, /alerts\/manage\?token=xyz&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=confirm/)
+})
+
+test('buildAlertZeroMatchWelcomeEmail: context is HTML-escaped', () => {
+  const { html } = buildAlertZeroMatchWelcomeEmail({
+    ...ZERO_MATCH_BASE,
+    context: 'Cessna <script>alert(1)</script>',
+  })
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&lt;script&gt;/)
+})
+
 // ─── UTM attribution on alert-email site-page links ────────────────────────
 // Site-page links (listing cards, "View all matches", manage link) carry
 // utm_source=alert_email&utm_medium=email&utm_campaign=<confirm|digest|price_drop|combined>
@@ -1145,6 +1222,7 @@ test('every HTML email builder opts into light+dark color-scheme support', () =>
     buildAlertConfirmEmail(CONFIRM_BASE).html,
     buildListingUnavailableEmail(UNAVAILABLE_BASE).html,
     buildWidenSuggestionEmail(WIDEN_BASE).html,
+    buildAlertZeroMatchWelcomeEmail(ZERO_MATCH_BASE).html,
     buildManageLinkEmail({ manageUrl: 'https://clubhanger.com/alerts/manage?token=xyz' }).html,
     buildAlertEmailChangeConfirmEmail({
       oldEmail: 'old@example.com',

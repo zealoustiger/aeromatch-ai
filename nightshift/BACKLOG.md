@@ -2442,15 +2442,25 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   section when set (never a drops-only alert receiving new-listing sends). Honest-content
   pillar: fewer, more-wanted emails; no new capture point. Slice stays aircraft-side
   (drops only exist there).
-- **[P1][goal] Honest zero-match welcome email on confirm.** A subscriber who clicks the
-  double-opt-in link on an alert that currently matches 0 listings gets NO email at all —
-  `confirm/route.ts`'s instant first digest deliberately returns when `preview.count === 0`,
-  so the highest-intent moment in the funnel ends in silence. Send a dedicated honest
-  welcome instead: "You're confirmed — nothing matches right now, we're watching; expect
-  {cadence} emails when something does," plus the existing widen-suggestion logic
-  (`buildWidenSuggestionEmail`'s broadening candidates) and the manage link. Never
-  fabricate matches; no new capture point — closes the one lifecycle path that ends in
-  dead air.
+~~- **[P1][goal] Honest zero-match welcome email on confirm.**~~ ✅ SHIPPED via
+  `alert-zero-match-welcome` (2026-07-17) A subscriber who clicked the double-opt-in link on
+  an alert that currently matches 0 listings got NO email at all — `confirm/route.ts`'s
+  instant first digest deliberately returned when `preview.count === 0`, so the
+  highest-intent moment in the funnel ended in silence. New `buildAlertZeroMatchWelcomeEmail`
+  (`email.ts`) sends "You're confirmed — nothing matches right now, we're watching; checks
+  run {cadence}," plus an optional real one-step widen suggestion
+  (`getEmptyStateWidenSuggestion`, already re-verified against a live count — never a guess)
+  and the manage link. Deliberately does NOT stamp `last_digest_at`, so the normal cron still
+  delivers the first real digest whenever a genuine match later appears. An unparseable
+  `source_path` (e.g. a listing-watch alert) keeps the prior no-email behavior — can't
+  honestly say anything either way. No schema change, no new capture point. 8 new unit tests.
+  Live-verified against the real DB (3 throwaway `@example.com` alerts via service-role
+  insert + a direct hit on the running production server's confirm route, all 3 rows deleted
+  after): a Cessna alert with a deliberately-nonexistent model (0 matches, real widen
+  candidate) confirmed with `last_digest_at` staying null; a plain `/aircraft?make=Cessna`
+  alert (407 real matches) confirmed exactly as before with `last_digest_at` stamped; an
+  unparseable listing-watch `source_path` confirmed with no email and no digest stamp. Zero
+  console/server errors across all three.
 - **[P1][goal] Recover ALL alerts after a combined-digest unsubscribe.** One click on a
   combined digest's unsubscribe link correctly kills all N covered alerts, but the
   `/alerts/status` recovery box is handed only the FIRST token

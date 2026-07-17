@@ -647,6 +647,79 @@ Unsubscribe: ${opts.unsubscribeUrl}`
   return { subject, html, text }
 }
 
+/**
+ * One-time "you're confirmed, nothing matches yet" welcome email — sent
+ * instead of silence when a subscriber double-opt-in confirms an alert that
+ * currently has zero live matches (the confirm route used to just return
+ * without sending anything in that case, the one lifecycle path that ended
+ * in dead air). Never fabricates a match; `widen` — when passed — is a
+ * single honest one-step-looser candidate the caller has already
+ * re-verified against a real live count (see `getEmptyStateWidenSuggestion`),
+ * same rule `buildWidenSuggestionEmail`'s later "hasn't matched in weeks"
+ * nudge uses. Omitted entirely when there's no honest widen candidate.
+ */
+export function buildAlertZeroMatchWelcomeEmail(opts: {
+  context: string | null
+  frequency: 'daily' | 'weekly'
+  manageUrl: string
+  unsubscribeUrl: string
+  widen?: { description: string; count: number; noun: 'listing' | 'pilot'; url: string } | null
+}): { subject: string; html: string; text: string } {
+  const label = opts.context?.trim() || 'Your alert'
+  const subject = `${label} is confirmed — we're watching`
+  const manageUrl = withUtm(opts.manageUrl, 'confirm')
+
+  const widenHtml = opts.widen
+    ? `<div style="background:#f8f7f4;border:1px solid #ece6dc;border-radius:10px;padding:14px 16px;margin:0 0 22px;">
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#475569;">
+            In the meantime: <strong>${escapeHtml(opts.widen.description)}</strong> would show <strong>${opts.widen.count} ${opts.widen.noun}${opts.widen.count === 1 ? '' : 's'}</strong> right now.
+            <a href="${escapeAttr(withUtm(opts.widen.url, 'widen'))}" style="color:#0284c7;">Widen this alert &rarr;</a>
+          </p>
+        </div>`
+    : ''
+  const widenText = opts.widen
+    ? `\nIn the meantime: ${opts.widen.description} would show ${opts.widen.count} ${opts.widen.noun}${opts.widen.count === 1 ? '' : 's'} right now — ${withUtm(opts.widen.url, 'widen')}\n`
+    : ''
+
+  const html = `<!doctype html>
+<html>
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(`You're confirmed. Nothing matches ${label} right now — we're watching and will email you the moment something does.`)}
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 10px;">You&rsquo;re confirmed &mdash; we&rsquo;re watching</h1>
+        <p class="ch-text" style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+          Nothing matches <strong>${escapeHtml(label)}</strong> right now, so there&rsquo;s no digest to send just yet. We&rsquo;ll email you the moment something does &mdash; checks run ${opts.frequency}.
+        </p>
+        ${widenHtml}
+        <p style="margin:0;">
+          <a href="${escapeAttr(manageUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Manage your alerts
+          </a>
+        </p>
+      </div>
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you just confirmed an alert on ClubHanger.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `You're confirmed — we're watching
+
+Nothing matches ${label} right now, so there's no digest to send just yet. We'll email you the moment something does — checks run ${opts.frequency}.
+${widenText}
+Manage your alerts: ${manageUrl}
+
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
 function formatUsd(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
