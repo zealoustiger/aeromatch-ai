@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase'
 import { getOrCreateThread, sendMessage } from '@/app/actions'
 import { getMessageDraft, setMessageDraft, clearMessageDraft } from '@/lib/messageDraft'
 import AlertSignup from './AlertSignup'
+import ContactBarWatchButton from './ContactBarWatchButton'
 import type { User } from '@supabase/supabase-js'
 
 interface Props {
@@ -27,6 +28,15 @@ interface Props {
   alertSourcePath?: string
   alertCount?: number
   matchCount?: number
+  /** The listing's own `?watch=price` context/sourcePath (same values passed
+   *  to `SaveListingButton`'s save→watch cross-sell and the page's own watch
+   *  `AlertSignup` box) — renders a compact one-tap "Watch" button in the
+   *  default button row when provided. */
+  watchContext?: string
+  watchSourcePath?: string
+  /** Selector for the page's watch `AlertSignup` box, used as a scroll/focus
+   *  fallback for anonymous visitors with no remembered email. */
+  watchFallbackSelector?: string
 }
 
 export default function ContactBar({
@@ -42,6 +52,9 @@ export default function ContactBar({
   alertSourcePath,
   alertCount,
   matchCount,
+  watchContext,
+  watchSourcePath,
+  watchFallbackSelector,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -258,6 +271,13 @@ export default function ContactBar({
               <Phone className="h-4 w-4" />
               Call
             </a>
+          )}
+          {watchSourcePath && (
+            <ContactBarWatchButton
+              context={watchContext}
+              sourcePath={watchSourcePath}
+              fallbackSelector={watchFallbackSelector}
+            />
           )}
         </div>
       </div>

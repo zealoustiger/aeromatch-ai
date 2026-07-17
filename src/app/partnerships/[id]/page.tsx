@@ -517,6 +517,12 @@ export default async function PartnershipDetailPage({
     nearbyCtx = null
   }
 
+  // This listing's own watch/price-drop context — reused by SaveListingButton's
+  // save→watch cross-sell, the "Watch this partnership" AlertSignup box below,
+  // and ContactBar's mobile Watch button so all three refer to the exact same alert.
+  const watchContext = [p.year, p.make, p.model].filter(Boolean).join(' ') || undefined
+  const watchSourcePath = `/partnerships/${p.id}?watch=price`
+
   return (
     <>
       {/* Warm cream page surface (Etsy × Airbnb token sweep, slice 5). The sticky
@@ -550,8 +556,8 @@ export default async function PartnershipDetailPage({
                 listingId={p.id}
                 initialSaved={!!savedRowId}
                 variant="full"
-                watchContext={[p.year, p.make, p.model].filter(Boolean).join(' ') || undefined}
-                watchSourcePath={`/partnerships/${p.id}?watch=price`}
+                watchContext={watchContext}
+                watchSourcePath={watchSourcePath}
               />
             </div>
             {notesEnabled && savedRowId && (
@@ -982,15 +988,20 @@ export default async function PartnershipDetailPage({
                 aircraft listing page's "watch this listing" box: a pilot
                 eyeing THIS specific share, not the whole make/model family
                 search above. Distinct, listing-scoped source_path so the
-                alert-digest cron's parseSourcePath can tell it apart. */}
-            <AlertSignup
-              context={[p.year, p.make, p.model].filter(Boolean).join(' ') || undefined}
-              source="partnership_watch"
-              sourcePath={`/partnerships/${p.id}?watch=price`}
-              noun="partnership"
-              watchOnly
-              className="mt-4"
-            />
+                alert-digest cron's parseSourcePath can tell it apart. Wrapped
+                with a stable id so ContactBar's mobile Watch button can
+                scroll+focus this exact box (not the family-alert box above,
+                which can render the same `id="alert-email"` when anonymous). */}
+            <div id="partnership-watch-box">
+              <AlertSignup
+                context={watchContext}
+                source="partnership_watch"
+                sourcePath={watchSourcePath}
+                noun="partnership"
+                watchOnly
+                className="mt-4"
+              />
+            </div>
 
             {/* Monetization intent signals — same honest fake-door pattern as
                 the aircraft-for-sale listing page's broker/services CTAs,
@@ -1065,6 +1076,9 @@ export default async function PartnershipDetailPage({
             ? `/partnerships?${new URLSearchParams({ make: p.make, ...(p.model ? { model: p.model } : {}) }).toString()}`
             : '/partnerships'
         }
+        watchContext={watchContext}
+        watchSourcePath={watchSourcePath}
+        watchFallbackSelector="#partnership-watch-box"
       />
     </>
   )
