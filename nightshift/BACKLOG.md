@@ -2543,16 +2543,25 @@ human call; save-search auth wall → `[want]` product call)._
   + the throwaway auth user deleted immediately after; confirmed 0 remain. The only console
   errors during the signed-in pass were the pre-existing, already-documented `Nav.tsx`
   unread-badge `threads` 400s (unrelated — `Nav.tsx` untouched by this diff).
-- **[P1][goal] "Open Gmail/Outlook" deep link + spam-folder line on the pending-confirm
-  panel.** The double-opt-in round trip is the funnel's biggest cliff (the save-search
-  `[want]` above documents a real observed never-came-back bounce), yet `AlertSignup`'s
-  "Almost there — check your inbox" panel offers only a resend button. Add a provider
-  deep link — "Open Gmail" → mail.google.com, outlook/hotmail/live → outlook.live.com,
-  yahoo → mail.yahoo.com, icloud → icloud.com/mail — derived from the submitted address's
-  domain via a small pure helper (unit-tested; unrecognized domains render nothing, never
-  a guess), plus one honest "Can't find it? Check your spam folder" line. Same treatment
-  on `/alerts/status`'s pending panel if it renders one. Improves confirm-through on every
-  capture surface at once; no new capture point, no schema change.
+~~- **[P1][goal] "Open Gmail/Outlook" deep link + spam-folder line on the pending-confirm
+  panel.**~~ ✅ SHIPPED via `alert-confirm-deeplink` (2026-07-17) New pure
+  `src/lib/emailProviderLink.ts` (`getEmailProviderLink`, 14 unit tests) maps
+  gmail/googlemail, outlook/hotmail/live/msn, yahoo/yahoo.co.uk/ymail, icloud/me/mac, and
+  aol to their webmail inbox URL, case-insensitively, `null` for anything unrecognized
+  (never a guessed link). `AlertSignup.tsx`'s "Almost there — check your inbox" panel now
+  renders an "Open {Provider}" button (new-tab, only when the submitted address resolves)
+  plus an always-present "Can't find it? Check your spam folder." line, above the existing
+  resend control. **Scoped to `AlertSignup` only** — verified by code read that
+  `/alerts/status` has no pending-confirm state to attach this to (its panels are all
+  terminal confirm/unsubscribe/invalid states, not a capture form). No schema/action
+  change. Live-verified: a real `@example.com` submission showed the correct
+  "no known provider" case (spam line + resend, no button) cleanly laid out; the Gmail
+  branch was verified by capturing the real successful server-action response format from
+  that same submission and replaying it via Playwright route interception for a
+  `gmail.com` address — so the "Open Gmail" button/href/target render correctly without
+  ever sending a real request or writing a fake-looking-domain row to the shared prod DB
+  (policy: only `@example.com` may hit the live insert path). Both real test rows deleted
+  after (0 remain).
 - **[P1][goal] Email-typo guard at capture — "Did you mean gmail.com?".** A typo'd address
   (`gmial.com`, `hotmial.com`, `gmail.con`…) currently captures fine, sends the confirm
   into the void, and leaves a visitor who *thinks* they're covered with a dead pending

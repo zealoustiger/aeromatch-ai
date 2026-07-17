@@ -17,6 +17,7 @@ import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
 import type { SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import { stripShareParam } from '@/lib/shareAlertLink'
+import { getEmailProviderLink } from '@/lib/emailProviderLink'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -431,6 +432,20 @@ export default function AlertSignup({
               We just emailed you a confirmation link. Click it to start getting alerts when
               {' '}{doneCopy}
             </p>
+            {(() => {
+              const providerLink = getEmailProviderLink(email)
+              return providerLink ? (
+                <a
+                  href={providerLink.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+                >
+                  Open {providerLink.label}
+                </a>
+              ) : null
+            })()}
+            <p className="mt-2 text-xs text-slate-500">Can&rsquo;t find it? Check your spam folder.</p>
             <p className="mt-2 text-xs text-slate-500">
               {resendState === 'sent' ? (
                 'Sent! Check your inbox again in a moment.'
