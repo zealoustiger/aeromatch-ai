@@ -2238,15 +2238,18 @@ combined digest's sections carry `stopUrl` but no edit link. None overlap the tw
 open-but-blocked items (instant sends → Vercel-tier human call; save-search auth wall →
 `[want]` product call)._
 
-- **[P1][goal] One-tap "Alert me for this search" chip on `/partnerships/seeking`'s
-  filter toolbar.** `AlertMeChip` ships in both `ActiveFilterChips` (aircraft) and
-  `PartnershipActiveFilterChips`, but `SeekerActiveFilterChips` has none — an owner who
-  filters pilots by model/airport gets no one-tap alert for that exact demand search.
-  Drop the existing chip in with the page's already-computed `alertContext`/
-  `alertSourcePath` (`/partnerships/seeking?...` — the digest cron already parses it) and
-  a distinct `source` (e.g. `filter_toolbar_seeking`) so its conversion is measurable
-  apart from the buyer-side chips. Adds a new capture point on the demand-side browse
-  surface; emits `alert_subscribed` for free via the shared chip machinery.
+~~- **[P1][goal] One-tap "Alert me for this search" chip on `/partnerships/seeking`'s
+  filter toolbar.**~~ ✅ SHIPPED via `seeker-filter-alert-chip` (2026-07-17) `AlertMeChip`
+  ships in both `ActiveFilterChips` (aircraft) and `PartnershipActiveFilterChips`, but
+  `SeekerActiveFilterChips` had none — an owner who filters pilots by model/airport got
+  no one-tap alert for that exact demand search. Added an optional `source` prop to
+  `AlertMeChip` (defaults to the existing `'filter_toolbar'`, still superseded by the
+  `shared_alert` share-link detection) so callers can tag their placement distinctly, then
+  threaded the page's already-computed `alertContext`/`alertSourcePath` into
+  `SeekerActiveFilterChips` (mirrors `PartnershipActiveFilterChips`) and rendered the chip
+  with `source="filter_toolbar_seeking"` — its conversion is now measurable apart from the
+  buyer-side chips. No change to `/aircraft` or `/partnerships`' existing chip behavior
+  (they omit the new prop, so they keep firing `filter_toolbar` exactly as before).
 - **[P1][goal] Mobile sticky alert bar on `/partnerships/seeking`.** The scroll-revealed
   `MobileStickyAlertBar` covers `/aircraft` + `/partnerships` browse and the aircraft
   detail page, but the seeker browse page — owners on their phones checking for pilot
