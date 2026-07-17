@@ -55,6 +55,7 @@ export interface Partnership {
   status: ListingStatus
   poster_id: string | null
   match_alert_last_sent_at: string | null
+  match_alert_opt_out?: boolean | null
 }
 
 export interface AircraftForSale {
@@ -195,6 +196,7 @@ export interface PartnershipSeeker {
   status: ListingStatus
   poster_id: string | null
   match_alert_last_sent_at: string | null
+  match_alert_opt_out?: boolean | null
 }
 
 export interface PartnershipFilters {

@@ -36,6 +36,10 @@ async function processPartnerships(
   let sent = 0
   let skipped = 0
   for (const row of (rows ?? []) as Partnership[]) {
+    if (row.match_alert_opt_out === true) {
+      skipped++
+      continue
+    }
     const since = row.match_alert_last_sent_at ?? row.created_at
     const matches = await getMatchingSeekersForPartnership(row)
     const fresh = matches.filter((s) => s.created_at >= since)
@@ -82,6 +86,10 @@ async function processSeekers(
   let sent = 0
   let skipped = 0
   for (const row of (rows ?? []) as PartnershipSeeker[]) {
+    if (row.match_alert_opt_out === true) {
+      skipped++
+      continue
+    }
     const since = row.match_alert_last_sent_at ?? row.created_at
     const matches = await getMatchingPartnershipsForSeeker(row)
     const fresh = matches.filter((p) => p.created_at >= since)
