@@ -2295,7 +2295,7 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   `alertsignup-matchcount-sweep`) so the widest capture surfaces carry "N listings match
   right now" credibility. `FooterAlertCapture` stays count-free by design (deliberately
   thin). No new capture point or event — improves conversion honesty at capture.
-- **[P1][goal] Complete the view→subscribe funnel on the remaining watch-offer
+- ~~**[P1][goal] Complete the view→subscribe funnel on the remaining watch-offer
   surfaces.** `SavedListingWatchButton` (`source: 'saved_page_watch'`) and
   `SaveListingButton`'s save→watch cross-sell banner (`source: 'save_cross_sell'`) fire
   only `alert_subscribed`, so their per-placement conversion denominator doesn't exist —
@@ -2303,7 +2303,15 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   `alert_capture_viewed`/`alert_capture_opened`/`alert_subscribed` set. Add the missing
   one-shot impression events (and `alert_capture_opened` where an offer expands),
   mirroring `ContactBarWatchButton`'s payload shape. Pure analytics, no UI change — makes
-  the newest watch placements comparable in the `/admin/alerts` per-source funnel.
+  the newest watch placements comparable in the `/admin/alerts` per-source funnel.~~
+  ✅ SHIPPED via `watch-offer-funnel-parity` (2026-07-17) Both surfaces now fire the
+  full event set. `SavedListingWatchButton` fires a one-shot `alert_capture_viewed`
+  (`source: 'saved_page_watch'`) when it first renders the offer state + `alert_capture_opened`
+  at the top of `handleSubscribe`; `SaveListingButton`'s cross-sell banner fires
+  `alert_capture_viewed` (`source: 'save_cross_sell'`) when `crossSell` first opens to `'offer'`
+  + `alert_capture_opened` at the top of `handleWatchSubscribe` — both mirroring
+  `ContactBarWatchButton`'s `viewedRef` one-shot + `{context, source_path, source}` payload
+  exactly. Zero UI/JSX change; existing `alert_subscribed` calls untouched.
 - **[P1][goal] Per-section "Edit this alert" link in the combined digest email.**
   `alert-digest-per-alert-stop-link` gave each digest section a token-authed "Stop just
   this alert" link — but a subscriber whose criteria are slightly wrong (too narrow, wrong
