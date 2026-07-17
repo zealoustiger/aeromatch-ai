@@ -2415,13 +2415,14 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   regardless of card count instead of silently never firing on thin pages. Live-verified
   (Playwright, mobile 375, scrolled) the bar reveals on all 3 pages and the anonymous tap
   scrolls to + focuses `#alert-email`, zero console errors; no prod rows created.
-- **[P1][goal] Alert capture on the `/aircraft/compare` index hub.** The head-to-head
-  comparison INDEX (`src/app/aircraft/compare/page.tsx`) renders zero in-body capture while
-  every child comparison page renders two `AlertSignup`s — a buyer browsing matchups has no
-  alert path until they pick one. Add one `AlertSignup` (bare-`/` combined context with
-  `matchCount` + `noun="listing"`, same pattern as `alert-matchcount-bare-root`), tagged
-  `source="compare_hub"`, emitting `alert_subscribed`. This is an alert entry point on an
-  existing indexed page, NOT new SEO surface (SEO stays parked).
+~~- **[P1][goal] Alert capture on the `/aircraft/compare` index hub.**~~ ✅ SHIPPED via
+  `compare-hub-alert-capture` (2026-07-17) The head-to-head comparison INDEX
+  (`src/app/aircraft/compare/page.tsx`) previously rendered zero in-body capture while
+  every child comparison page renders two `AlertSignup`s. Added one `AlertSignup` below
+  the comparison card grid using the bare-`/` combined context pattern
+  (`getAlertMatchCount('/')`, `noun="listing"`, `sourcePath="/"`), tagged
+  `source="compare_hub"` for per-placement `alert_subscribed` attribution — same pattern
+  already used on `/` and `/about`. No new route, no new SEO surface.
 - **[P1][goal] "Duplicate this alert" on `/alerts/manage`.** Cloning-then-tweaking is the
   natural way to cover a sibling model or nearby state (the overlap/cross-sell nudges prove
   subscribers hold near-identical alerts), but today the only path is re-entering
