@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_URL } from '@/lib/seo'
-import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
-import { buildAlertDigestEmail, sendEmail } from '@/lib/email'
+import { getAlertDigestPreview, getEmptyStateWidenSuggestion } from '@/lib/alertMatchCounts'
+import { buildAlertDigestEmail, buildAlertZeroMatchWelcomeEmail, sendEmail } from '@/lib/email'
 import { normalizeFrequency } from '@/lib/alertFrequency'
 
 export const dynamic = 'force-dynamic'
@@ -29,13 +29,40 @@ async function sendInstantFirstDigest(
 ) {
   try {
     const preview = await getAlertDigestPreview(alert.source_path)
-    if (!preview || preview.count === 0) return // honest zero-case: no extra email
+    if (!preview) return // unrecognized source_path shape — can't honestly say anything either way
 
     const unsubToken = alert.unsubscribe_token ?? ''
-    const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
     const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
     const freq = normalizeFrequency(frequency)
+
+    if (preview.count === 0) {
+      // Nothing to send as a digest, but silence is a dead end — send an
+      // honest "you're confirmed, we're watching" welcome instead, with an
+      // optional real widen suggestion. Deliberately does NOT stamp
+      // `last_digest_at` — that stays null so the normal cron still treats
+      // this alert as never-sent and delivers the first real digest the
+      // moment a genuine match appears.
+      const widenSuggestion = await getEmptyStateWidenSuggestion(alert.source_path)
+      const { subject, html, text } = buildAlertZeroMatchWelcomeEmail({
+        context: alert.context,
+        frequency: freq,
+        manageUrl,
+        unsubscribeUrl,
+        widen: widenSuggestion
+          ? {
+              description: widenSuggestion.description,
+              count: widenSuggestion.count,
+              noun: widenSuggestion.noun,
+              url: `${SITE_URL}${widenSuggestion.sourcePath}`,
+            }
+          : null,
+      })
+      await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'alert-zero-match-welcome' })
+      return
+    }
+
+    const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
     const frequencyUrl =
       freq === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
 
