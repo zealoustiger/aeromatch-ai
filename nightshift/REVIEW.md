@@ -1,3 +1,26 @@
+## 2026-07-17T13:23:48Z — Night Shift run: 13 cycles (PASS 10 / FAIL 1) — night budget cap ($120)
+- Models: cycles on sonnet; 1 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $120.0750 of $120 cap
+
+- ABORT — none — plan needed`
+- PASS — footer-alert-context — the site-wide footer email-alert box now derives page-specific context (e.g. Get email alerts for new Cessna 172 listings) from the URL on make/mo
+- cycle produced no verdict (exit 124)
+- PASS — aircraft-hub-sticky-alert-bar — mobile sticky Get alerts bar now on all 7 aircraft SEO hub pages, plus fixed a CompareProvider reveal bug that would have left it dead on
+- PASS — partnership-hub-sticky-alert-bar — Added the mobile scroll-revealed Get alerts for this search sticky bar to the 3 partnership hub pages (`/partnerships/make/[make]`, `/
+- PASS — compare-hub-alert-capture — Added an email alert-capture box to `/aircraft/compare` (the head-to-head comparison index), which previously had none while every child comp
+- PASS — alert-zero-match-welcome — confirming a brand-new alert with zero live matches now sends an honest you're confirmed, we're watching welcome email (with an optional real 
+- PASS — alert-manage-duplicate — Added a per-row Duplicate this alert button on /alerts/manage that pre-fills the new-alert form from an existing alert's criteria, frequency, an
+- PASS — alert-unsubscribe-recover-all — combined-digest unsubscribe links now let a subscriber recover ALL covered alerts (not just the first) via the `/alerts/status` pause / s
+- PASS — alert-price-drop-only-mode — added a 3-state alert control (New+drops / New only / Drops only) to `/alerts/manage` and `/searches`, closing out plan-pass batch #2 in the
+- ABORT — none — plan needed`
+- PASS — alert-resubscribe-after-unsubscribe — a subscriber who unsubscribes from an alert and later re-enters the same email now actually gets resubscribed (fresh confirm email 
+- PASS — alert-confirm-deeplink — added an Open Gmail/Outlook/Yahoo/iCloud/AOL inbox deep link + spam-folder line to the `AlertSignup` pending-confirmation panel, shipped and mer
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 7.7 on 2 cores, sustained ~23 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 13 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-17T10:18:09Z — Night Shift run: 21 cycles (PASS 15 / FAIL 3) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus
 - Night spend so far: $69.1683 of $120 cap
