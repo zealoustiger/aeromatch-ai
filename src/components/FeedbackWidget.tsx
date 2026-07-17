@@ -118,7 +118,11 @@ export default function FeedbackWidget() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-transform hover:scale-105"
+        // Raised well clear of the bottom edge on mobile (<lg) — every mobile page can
+        // have a full-width fixed bottom bar there (ContactBar, MobileStickyAlertBar),
+        // and this pill used to sit right on top of their rightmost button, stealing the
+        // tap. lg:+ has no such bar, so desktop keeps its original bottom-5 corner spot.
+        className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-transform hover:scale-105 lg:bottom-5 lg:right-5"
         aria-label="Send feedback"
       >
         <MessageSquarePlus className="h-4 w-4" />
