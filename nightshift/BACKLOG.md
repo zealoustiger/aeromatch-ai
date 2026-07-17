@@ -2127,6 +2127,80 @@ save-search auth wall → `[want]` product call)._
   re-updating status after insert (the trigger re-fires on `update of ... status` too).
   All test rows + the throwaway user deleted immediately, confirmed zero remain.
 
+### Plan-pass batch #4 — 2026-07-16 (Fable)
+_All verified un-built by direct code read this pass: `parseSourcePath` (`alert-digest`
+cron `resolveTarget` falls through to `return null` for a bare `/`, and `alertMatchCounts`
+mirrors it); `/listings` disclosure is read-only (no `match_alert_opt_out` anywhere in
+`src/`); `/saved` has zero watch offer (no `SaveListingButton`/watch on its rows, generic
+`sourcePath="/"` boxes only); `MobileStickyAlertBar` renders only on `/aircraft` +
+`/partnerships` browse; `src/app/page.tsx` has no `getNewMatchCountSince` usage;
+`FooterAlertCapture` tracks only `alert_subscribed` (no `alert_capture_viewed`) and never
+swaps state for a known subscriber. None overlap the two open-but-blocked items (instant
+sends → Vercel-tier human call; save-search auth wall → `[want]` product call). Already
+built, so NOT re-filed: List-Unsubscribe headers, admin per-source funnel, partnership
+radius matching, seeker digest samples, snooze + pause-all, anonymous manage-link request,
+confirm-email manage link, partnership price-drop sample cards._
+
+- **[P1][goal] Make bare-`/` alerts actually fire — today the site's widest capture
+  points subscribe people to nothing.** Verified: the digest cron's `parseSourcePath`
+  returns `null` for `source_path='/'` (bare `/` falls through every `resolveTarget`
+  branch), and `alertMatchCounts` mirrors it — so every alert captured with
+  `sourcePath="/"` (site-wide `FooterAlertCapture`, homepage band, `not-found.tsx`,
+  `/about`, `/saved`'s fallback box) is stored, confirmed… and then never matched, never
+  counted, never emailed. Bug-adjacent honesty gap: the confirm email promises alerts
+  that can never come. Teach BOTH parsers to treat bare `/` as an honest "any new
+  listing" target — e.g. a new `all` target summing aircraft + partnership counts and
+  merging samples in the (already multi-section-capable) digest builder — or, if a
+  combined target won't fit one cycle, repoint the `/` capture surfaces at a parseable
+  path and note the re-scope. Fixes ~5 existing surfaces at once; no new capture point,
+  no new event (surfaces already emit `alert_subscribed`).
+- **[P1][goal] Owner match-alert opt-out toggle on `/listings`.** The natural next slice
+  explicitly flagged by `listings-match-alert-disclosure`: the "We email you when new
+  matches appear" line is read-only — an owner who doesn't want the weekly
+  `match-alert-digest` email has no off switch (GOAL.md: never spam; offer "fewer"
+  instead of nothing). Add a small per-listing "Pause these emails" toggle next to the
+  disclosure line (partnership + seeker rows only — the cron only emails those), backed
+  by an additive opt-out column on `partnerships`/`partnership_seekers` (⚠️ human-DDL,
+  fail-soft 42703 retry like every prior column) that the `match-alert-digest` cron
+  respects. Improves the owner-side alert surface; no new capture point.
+- **[P1][goal] Price-drop watch offers on `/saved` — the shopping list with no alerts.**
+  A signed-in user's hearted listings are their highest-intent set, but `/saved` offers
+  zero watch capture (verified: its only boxes are generic `sourcePath="/"` — also
+  currently dead, see the bare-`/` item) — the save→watch banner only ever fires on the
+  FIRST heart on a detail page. Add a per-row "Email me if the price drops" one-tap on
+  each saved aircraft/partnership row (skip seekers — no price), reusing
+  `subscribeSignedInAlert` + the detail pages' `?watch=price` sourcePath convention and
+  `getExistingAlertForSourcePath` so already-watched rows show a quiet "Watching ✓"
+  instead of a redundant offer. Emits `alert_subscribed` (`source: 'saved_page_watch'`).
+- **[P1][goal] Mobile sticky watch bar on listing detail pages.** `MobileStickyAlertBar`
+  ships only on the two browse pages; on `/aircraft/listing/[id]` and
+  `/partnerships/[id]` — the highest-intent pages on the site — the watch capture sits
+  deep in the sidebar, below the fold at 375px. Add a detail-page variant ("Watch this
+  listing — price-drop alerts") reusing the existing bar's IntersectionObserver-reveal +
+  remembered-email/signed-in one-tap patterns and the page's own watch
+  `context`/`sourcePath`, with a distinct `source` (e.g. `sticky_bar_detail`) so its
+  conversion is measurable separately. Must not overlap/fight the pages' existing
+  bottom-of-page content at 375px (QA both listing types).
+- **[P2][goal] Known-subscriber homepage module — "N new since your last visit."** The
+  nav pill (`nav-alert-new-since-pill`) already computes real new-match counts from
+  `alertLocalSubscriptions` + `getNewMatchCountSince`; the homepage itself shows a known
+  subscriber nothing personal (verified: no usage in `src/app/page.tsx`). Add a small
+  module near the top of `/` for known subscribers only: their alert contexts with real
+  new-since counts, each linking to its `source_path` search (and `/alerts/manage`);
+  anonymous visitors see the page byte-identical. Honest rule: seed-stamp behavior stays
+  as the pill shipped it — never count "since forever." Retention entry point; no new
+  capture, no schema change.
+- **[P2][goal] Footer capture: "You're set" state for known subscribers + the missing
+  `alert_capture_viewed` funnel event.** `FooterAlertCapture` renders the same ask on
+  every page forever, even to a visitor who already subscribed right there (verified: it
+  reads `getLocalEmail` only to prefill one-tap, and emits no view event — so the
+  per-placement funnel can't compute footer view→subscribe conversion). Two small fixes
+  in one component: (1) once a local subscription exists, swap to a quiet honest "You're
+  getting alerts — manage them" line linking `/alerts/manage` (keep it thin — no match
+  counts in the footer, per `footer-alert-capture`'s design note); (2) fire a one-shot
+  `alert_capture_viewed` (`source: 'footer'`) via a lightweight IntersectionObserver so
+  the footer joins the standard funnel. No schema change.
+
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
