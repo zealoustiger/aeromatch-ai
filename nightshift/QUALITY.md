@@ -3,6 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-17T11:46:45Z — partnership-hub-sticky-alert-bar — score 4/5
+- Strengths: Exact-mirror of the aircraft-hub pattern with the right subtlety — each sticky bar reuses its page's `AlertSignup` `context`+`sourcePath` verbatim (so `getExistingAlertForSourcePath` dedups the two prompts cleanly), distinct `sticky_bar_partnership_{make,near,state}` source tags per acceptance, and a well-commented `#alert-bar-reveal` sentinel copying `/aircraft/browse`'s fallback so thin hubs (near/[icao] MIN_NEARBY=2) actually fire; nothing else on the pages touched.
+- Weaknesses / risks: none material — only nit is the fragment's inner `<div>` left un-re-indented to keep the diff minimal (cosmetic; build/lint passed).
+- Follow-up: none
 ## 2026-07-17T10:40:28Z — footer-alert-context — score 4/5
 - Strengths: Nails every acceptance criterion — copy, `source_path`, safe `/` fallback for unmatchable look-alikes (validated via `getMakeBySlug`/`STATE_NAMES` so it never mints an alert `parseSourcePath` can't match), and the subtle bit the gate can't see: keying every stateful effect (submitted/local-sub/impression) off `sourcePath` so a client-side nav across the never-remounted Footer resets cleanly and doesn't re-nag a `/`-subscriber.
 - Weaknesses / risks: The derived `context` strings ("Cessna listings", "partnerships near KAUS") are written to the shared `alerts.context` column, but that column elsewhere holds the app's bare-noun convention (make-page `AlertSignup` passes `context={entry.make}` = "Cessna") — so the same source_path now yields two different context labels, defeating the email+context dedup between footer and page signup and producing inconsistent digest section names (`alertDigestDedupe` labels sections from `context`).
