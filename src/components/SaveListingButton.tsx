@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { Heart, Bell, CheckCircle2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
@@ -83,6 +83,20 @@ export default function SaveListingButton({
     return () => window.removeEventListener(LOCAL_SAVES_EVENT, sync)
   }, [user, listingId, listingType])
 
+  // One-shot impression so this placement's view→subscribe conversion is
+  // computable in the /admin/alerts funnel, matching every other watch-offer
+  // surface (ContactBarWatchButton, MobileStickyAlertBar, SavedListingWatchButton).
+  const crossSellViewedRef = useRef(false)
+  useEffect(() => {
+    if (crossSell !== 'offer' || crossSellViewedRef.current) return
+    crossSellViewedRef.current = true
+    track('alert_capture_viewed', {
+      context: watchContext || undefined,
+      source_path: watchSourcePath,
+      source: 'save_cross_sell',
+    })
+  }, [crossSell, watchContext, watchSourcePath])
+
   const authNext = (() => {
     const qs = searchParams.toString()
     return qs ? `${pathname}?${qs}` : pathname
@@ -127,6 +141,11 @@ export default function SaveListingButton({
 
   async function handleWatchSubscribe() {
     if (!watchSourcePath || crossSell === 'subscribing') return
+    track('alert_capture_opened', {
+      context: watchContext || undefined,
+      source_path: watchSourcePath,
+      source: 'save_cross_sell',
+    })
     setCrossSellError('')
     setCrossSell('subscribing')
     const result = await subscribeSignedInAlert(watchContext ?? '', watchSourcePath, true, 'weekly', 'save_cross_sell')

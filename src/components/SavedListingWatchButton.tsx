@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import { subscribeSignedInAlert, getExistingAlertForSourcePath } from '@/app/actions'
 import { track } from '@/lib/analytics'
@@ -37,8 +37,28 @@ export default function SavedListingWatchButton({ context, sourcePath, className
     }
   }, [sourcePath])
 
+  // One-shot impression so this placement's view→subscribe conversion is
+  // computable in the /admin/alerts funnel, matching every other watch-offer
+  // surface (ContactBarWatchButton, MobileStickyAlertBar).
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    if (state !== 'offer' || viewedRef.current) return
+    viewedRef.current = true
+    track('alert_capture_viewed', {
+      context: context || undefined,
+      source_path: sourcePath,
+      source: 'saved_page_watch',
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+
   async function handleSubscribe() {
     if (state === 'subscribing') return
+    track('alert_capture_opened', {
+      context: context || undefined,
+      source_path: sourcePath,
+      source: 'saved_page_watch',
+    })
     setError('')
     setState('subscribing')
     const result = await subscribeSignedInAlert(context ?? '', sourcePath, true, 'weekly', 'saved_page_watch')
