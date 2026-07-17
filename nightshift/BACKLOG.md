@@ -2387,18 +2387,21 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   `/partnerships/make/cirrus` visually confirms the footer renders "Get email alerts for new
   Cirrus partnerships". **Not done, intentionally:** query-string-based context (e.g.
   `/aircraft?make=Cessna`) and the match-count/social-proof line (that's `AlertSignup`'s job).
-- **[P1][goal] Mobile sticky alert bar on the aircraft SEO hub pages.** The scroll-revealed
-  `MobileStickyAlertBar` exists on only the 3 live-filter list pages + the aircraft detail
-  page; every high-intent aircraft hub — `/aircraft/[make]`, `/aircraft/[make]/[model]`,
-  `/aircraft/[make]/[model]/[state]`, `/aircraft/for-sale/[state]`,
-  `/aircraft/mission/[mission]`, `/aircraft/deals`, `/aircraft/browse` — ships only the
-  static below-list `AlertSignup`. Mount the bar with each page's already-computed
-  `alertContext`/`alertSourcePath` and a distinct `source` (e.g. `sticky_bar_hub`) so its
-  conversion is measurable. Mind the two known couplings from prior cycles: the default
-  reveal waits for the 8th `<article>` (short hubs may need `revealSelector` or a lower
-  threshold — verify it actually reveals on a thin state page), and the signed-out tap
-  falls back to scrolling to `#alert-email` (present — every hub renders an anonymous
-  `AlertSignup`). Reuses the bar's existing full viewed/opened/`alert_subscribed` event set.
+~~- **[P1][goal] Mobile sticky alert bar on the aircraft SEO hub pages.**~~ ✅ SHIPPED via `aircraft-hub-sticky-alert-bar` (2026-07-17) The scroll-revealed
+  `MobileStickyAlertBar` now mounts on all 7 high-intent aircraft hubs — `/aircraft/[make]`,
+  `/aircraft/[make]/[model]`, `/aircraft/[make]/[model]/[state]`, `/aircraft/for-sale/[state]`,
+  `/aircraft/mission/[mission]`, `/aircraft/deals`, `/aircraft/browse` — each with the page's
+  own `context`/`sourcePath` and a distinct `source` (`sticky_bar_make`, `_make_model`,
+  `_make_model_state`, `_state`, `_mission`, `_deals`, `_browse`) so per-placement conversion is
+  measurable. `/aircraft/browse` (a pure link hub with zero result `<article>`s) reveals via a new
+  `#alert-bar-reveal` sentinel div. **Reveal bug found + fixed mid-cycle:** the default card
+  observer attached one-shot to the mount-time 8th `<article>`, which the 3 `CompareProvider` hubs
+  (make/model, make/model/state, mission) replace on re-render — leaving it watching a detached
+  node that never fired, so the bar silently never revealed on those 3 pages. Now re-targets the
+  live 8th card via a persistent `MutationObserver` (no-op on stable pages, so `/aircraft` and the
+  other shipped bars are unaffected — regression-verified). Live-verified (Playwright, mobile 375,
+  scrolled) that the bar reveals on all 7 pages and the anonymous tap scrolls to + focuses
+  `#alert-email`; no prod rows created.
 - **[P1][goal] Mobile sticky alert bar on the partnership hub pages.** Same gap, demand
   side: `/partnerships/make/[make]`, `/partnerships/near/[icao]`,
   `/partnerships/state/[state]` have the static `AlertSignup` only. Mount
