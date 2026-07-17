@@ -23,7 +23,13 @@ import {
   buildNewMessageEmail,
   buildSeedInquiryEmail,
 } from '@/lib/email'
-import { getAlertDigestPreview, getAlertMatchCount, getNewMatchCountSince } from '@/lib/alertMatchCounts'
+import {
+  getAlertDigestPreview,
+  getAlertMatchCount,
+  getNewMatchCountSince,
+  MAX_NEW_SINCE_PATHS,
+} from '@/lib/alertMatchCounts'
+import { describeLocalAlertContext } from '@/lib/alertEditCriteria'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
@@ -2013,6 +2019,40 @@ export async function getNewAlertMatchesSinceForPaths(
   since: string
 ): Promise<number | null> {
   return getNewMatchCountSince(sourcePaths, since)
+}
+
+export interface AlertRecapItem {
+  sourcePath: string
+  count: number
+  noun: 'listing' | 'pilot'
+  label: string
+}
+
+/** Per-source_path breakdown of "N new since `since`" for a known subscriber's
+ *  own device-remembered search contexts — the homepage "since your last visit"
+ *  recap module's data source. Same underlying counts `getNewAlertMatchesSinceForPaths`
+ *  sums into one nav-pill total, but kept per-path (with a human label) so the
+ *  module can list and link each search individually. Only returns paths with a
+ *  real new match (never a 0-count row), so the module stays honest and tight. */
+export async function getNewAlertMatchesBreakdownForPaths(
+  sourcePaths: string[],
+  since: string
+): Promise<AlertRecapItem[]> {
+  const paths = sourcePaths.filter(Boolean).slice(0, MAX_NEW_SINCE_PATHS)
+  if (paths.length === 0 || !since) return []
+  const results = await Promise.all(
+    paths.map(async (sourcePath): Promise<AlertRecapItem | null> => {
+      const match = await getAlertMatchCount(sourcePath, { since })
+      if (!match || match.count <= 0) return null
+      return {
+        sourcePath,
+        count: match.count,
+        noun: match.noun,
+        label: describeLocalAlertContext(sourcePath) ?? 'New listings',
+      }
+    })
+  )
+  return results.filter((r): r is AlertRecapItem => r !== null)
 }
 
 // Saved-search ↔ alert unification (slice 1, see /searches): one click turns a

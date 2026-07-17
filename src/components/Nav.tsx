@@ -12,7 +12,7 @@ import ProfileMenu, { Avatar } from '@/components/ProfileMenu'
 import type { AviatorConfig } from '@/components/AviatorAvatar'
 import { localSaveCount, LOCAL_SAVES_EVENT } from '@/lib/localSaves'
 import { isAlertSubscriber, ALERT_SUBSCRIBER_EVENT } from '@/lib/alertSubscriberFlag'
-import { getLocalSourcePaths, getLastVisitAt, stampVisitNow } from '@/lib/alertLocalSubscriptions'
+import { getLocalSourcePaths, readAndStampVisit } from '@/lib/alertLocalSubscriptions'
 import { getNewAlertMatchesSinceForPaths } from '@/app/actions'
 
 // About lives in the footer (declutter the top nav per the human's nav-polish ask).
@@ -155,8 +155,7 @@ export default function Nav() {
   // just seeds one with no count (never counts "since forever" as new).
   useEffect(() => {
     if (!alertSubscriber) { setNewAlertCount(null); return }
-    const lastVisitAt = getLastVisitAt()
-    stampVisitNow()
+    const lastVisitAt = readAndStampVisit()
     if (!lastVisitAt) return
     const paths = getLocalSourcePaths()
     if (paths.length === 0) return

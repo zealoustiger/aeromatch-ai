@@ -107,3 +107,26 @@ export function stampVisitNow(): void {
     /* quota / disabled storage — fail soft, the "N new" badge just never shows */
   }
 }
+
+// Cached across every caller for the lifetime of this page load — reset only on
+// a fresh navigation/reload, when the module re-evaluates.
+let visitStamp: { lastVisitAt: string | null } | undefined
+
+/**
+ * Read this browser's pre-visit last-visit-at stamp and re-stamp it to "now" —
+ * exactly ONCE per page load, no matter how many components call this. Both the
+ * nav pill and the homepage "since your last visit" recap need the identical
+ * "since" boundary for one visit; if each called `getLastVisitAt`/`stampVisitNow`
+ * independently, whichever mounted second would read the value the first already
+ * overwrote and always see "since just now" (0 new, even for a real returning
+ * subscriber). The first caller this page load does the real read+stamp; every
+ * later caller reuses that cached result.
+ */
+export function readAndStampVisit(): string | null {
+  if (!visitStamp) {
+    const lastVisitAt = getLastVisitAt()
+    stampVisitNow()
+    visitStamp = { lastVisitAt }
+  }
+  return visitStamp.lastVisitAt
+}
