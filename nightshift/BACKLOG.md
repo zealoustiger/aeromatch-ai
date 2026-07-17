@@ -2170,7 +2170,7 @@ confirm-email manage link, partnership price-drop sample cards._
   correct `source_path`/`context`, UI swap-on-click confirmed, "already watching"
   state confirmed on a fresh page reload, zero horizontal overflow at 375px — all
   test rows + the user deleted immediately after.
-- **[P1][goal] Mobile sticky watch bar on listing detail pages.** ✅ SHIPPED (aircraft) via `mobile-sticky-watch-bar-detail` (2026-07-17) — `/aircraft/listing/[id]` now renders a scroll-gated "Watch this listing" bottom bar at 375px reusing the browse bar's one-tap machinery + the page's own `watch=price` context/sourcePath, tagged `source: "sticky_bar_detail"`. **`/partnerships/[id]` deliberately left as a follow-up** — that page already has a persistent `fixed bottom-0` `ContactBar` with multiple stateful heights; stacking a second full-width bottom bar risks the exact overlap this item warns against and needs its own scoped design (fold the watch offer into ContactBar's button row). Pull that as the remaining slice of this item.
+~~- **[P1][goal] Mobile sticky watch bar on listing detail pages.**~~ ✅ FULLY SHIPPED — aircraft via `mobile-sticky-watch-bar-detail` (2026-07-17), `/aircraft/listing/[id]`'s scroll-gated "Watch this listing" bottom bar. **Partnerships slice ✅ SHIPPED via `contactbar-watch-button` (2026-07-17)** — `/partnerships/[id]`'s mobile `ContactBar` (the page's existing persistent bottom bar) now renders a compact "Watch" button as a 4th button in its default button row (new `ContactBarWatchButton`, self-contained, reusing `SavedListingWatchButton`/`MobileStickyAlertBar`'s exact subscribe machinery — signed-in one-tap via `subscribeSignedInAlert`, anon one-tap via `subscribeToAlerts` when a browser-remembered email exists, else scrolls+focuses the page's own "Watch this partnership" `AlertSignup` box), tagged `source: "sticky_bar_detail"`, same watchContext/watchSourcePath the page's SaveListingButton cross-sell + watch box already use (hoisted to shared consts). No second stacked bar — avoids the exact overlap this item originally flagged. Live-verified against the real prod DB with a throwaway `@example.com` account + minted session: real `alerts` row written (`source_path` = the listing's own `?watch=price`, `status: 'confirmed'`), button swaps to "Watching" in place, persists across a fresh reload; anonymous real-click (not `.click()`) correctly scrolls to + focuses the intended watch box's email field (not the family-alert box above it — both can render a duplicate `id="alert-email"` when anonymous, worked around with a scoped wrapper id, `#partnership-watch-box`). **Bonus finding, not fixed this cycle (filed as a new `[bug]` below):** the global `FeedbackWidget` (`fixed bottom-5 right-5`) already overlapped `ContactBar`'s rightmost button before this change too (confirmed: this listing's sole pre-existing "Email" button already spanned full-width under the same corner) — pre-existing, not a regression, but a real tap-target bug worth its own cycle.
   ~~`MobileStickyAlertBar`
   ships only on the two browse pages; on `/aircraft/listing/[id]` and
   `/partnerships/[id]` — the highest-intent pages on the site — the watch capture sits
@@ -2180,6 +2180,24 @@ confirm-email manage link, partnership price-drop sample cards._
   `context`/`sourcePath`, with a distinct `source` (e.g. `sticky_bar_detail`) so its
   conversion is measurable separately. Must not overlap/fight the pages' existing
   bottom-of-page content at 375px (QA both listing types).~~
+- **[P1][bug] `FeedbackWidget` overlaps the rightmost button of every mobile fixed
+  bottom bar — a real tap-target bug, not just a visual nit.** Found + confirmed live
+  during `contactbar-watch-button` (2026-07-17): `FeedbackWidget` renders
+  `fixed bottom-5 right-5 z-40` on every page (no path-based hiding), which sits later
+  in the DOM than `ContactBar`/`MobileStickyAlertBar` (same `z-40`/`z-50`) so it wins
+  the actual click at that screen position — confirmed via Playwright bounding boxes
+  (feedback pill fully inside the last button's tap area) and a real click that opened
+  the feedback modal instead of the intended action. This is pre-existing (verified:
+  `/partnerships/[id]`'s sole "Email" button, full-width before this cycle's Watch
+  button was added, already sat under the same corner) — affects `ContactBar`'s
+  rightmost button (Call/Email/Watch) on `/partnerships/[id]` and likely
+  `MobileStickyAlertBar`'s subscribe button on `/aircraft`, `/partnerships`, and
+  `/aircraft/listing/[id]` too (same fixed-bottom-right widget, same z-index tier —
+  not yet individually confirmed on those pages, worth a quick check). Fix needs its
+  own scoped design (raise `FeedbackWidget`'s bottom offset when a sticky bottom bar
+  is mounted, or move it to bottom-left, or shrink/relocate it) — bigger than a
+  one-line change since `FeedbackWidget` has no awareness of what else is on screen;
+  don't rush a fix that shifts it site-wide without checking every page.
 - **[P2][goal] Known-subscriber homepage module — "N new since your last visit."** The
   nav pill (`nav-alert-new-since-pill`) already computes real new-match counts from
   `alertLocalSubscriptions` + `getNewMatchCountSince`; the homepage itself shows a known
