@@ -2501,6 +2501,95 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   `unsubscribed`, the recovery box showed "all 3 of your alerts," and "Pause instead" flipped all
   3 to `paused` with matching done-state copy; a separate single-alert case behaved byte-for-byte
   as before. All 4 test rows deleted after (0 remain).
+
+### Plan-pass batch #3 — 2026-07-17 (Fable)
+_Entry-point surfaces are now genuinely saturated (every route family, browse card, filter
+toolbar, sticky bar, and the footer has capture with known-subscriber states), so this batch
+targets the next frontier: **capture quality + subscriber lifecycle** — the places a
+captured intent silently dies or under-delivers. All verified un-built by direct code read
+this pass: `src/app/actions.ts:1055` returns `{ ok: true }` on a 23505 unique-violation
+regardless of the existing row's `status` (an `unsubscribed` row is a permanent silent dead
+end); `AlertSignup.tsx`'s "Almost there — check your inbox" panel (~line 429) has no
+provider deep link and no spam-folder line; no typo/`did-you-mean` logic exists anywhere in
+`src/components/`; `api/alerts/frequency/route.ts` documents itself as daily→weekly
+("fewer") only — no upgrade direction; capture inputs carry `autoComplete="email"` but no
+`inputMode`/`spellCheck`/`enterKeyHint` anywhere; `UnsubscribeRecover.tsx` fires no
+reason/why event. None overlap the open-but-blocked items (instant sends → Vercel-tier
+human call; save-search auth wall → `[want]` product call)._
+
+- **[P1][goal] Re-subscribe after unsubscribe actually works.** Verified at
+  `src/app/actions.ts:1055`: the subscribe action treats a 23505 unique-violation on
+  `(email, source_path)` as an idempotent `{ ok: true }` no matter the existing row's
+  `status` — so a subscriber who unsubscribed and later re-enters their email at ANY
+  capture point sees the success UI but the row stays `unsubscribed` forever: no confirm
+  email, no digests, ever. Fix in the shared create path (improves every capture surface at
+  once): on 23505, service-role-read the conflicting row; if `status='unsubscribed'`, flip
+  it back to `pending` with fresh confirm/unsubscribe tokens and send the normal
+  double-opt-in email — reusing the existing resend rate-limit column so a re-submit can't
+  become a confirmation-spam vector (the anti-spam reason the no-op exists). Any other
+  status keeps today's idempotent no-op exactly. No new capture point (the existing
+  client-side `alert_subscribed` events keep firing as they do today); no schema change.
+- **[P1][goal] "Open Gmail/Outlook" deep link + spam-folder line on the pending-confirm
+  panel.** The double-opt-in round trip is the funnel's biggest cliff (the save-search
+  `[want]` above documents a real observed never-came-back bounce), yet `AlertSignup`'s
+  "Almost there — check your inbox" panel offers only a resend button. Add a provider
+  deep link — "Open Gmail" → mail.google.com, outlook/hotmail/live → outlook.live.com,
+  yahoo → mail.yahoo.com, icloud → icloud.com/mail — derived from the submitted address's
+  domain via a small pure helper (unit-tested; unrecognized domains render nothing, never
+  a guess), plus one honest "Can't find it? Check your spam folder" line. Same treatment
+  on `/alerts/status`'s pending panel if it renders one. Improves confirm-through on every
+  capture surface at once; no new capture point, no schema change.
+- **[P1][goal] Email-typo guard at capture — "Did you mean gmail.com?".** A typo'd address
+  (`gmial.com`, `hotmial.com`, `gmail.con`…) currently captures fine, sends the confirm
+  into the void, and leaves a visitor who *thinks* they're covered with a dead pending
+  alert — the least honest failure mode a capture form can have. New pure
+  `suggestEmailFix(email)` helper (unit-tested): edit-distance-1 match against the ~10 top
+  consumer domains + common TLD slips, returning a suggested address or null. Render below
+  `AlertSignup`'s email field as a one-tap "Did you mean **name@gmail.com**?" chip that
+  replaces the value — suggest-only, never auto-corrects, never blocks submission (plenty
+  of real domains are near-misses). `AlertSignup` first (every major surface funnels
+  through it); the sweep item below carries it to the remaining inputs. No schema change.
+- **[P1][goal] Weekly→daily one-click upgrade in high-volume digests.** The one-click
+  cadence link in email footers only goes one way — daily→weekly "fewer emails"
+  (`api/alerts/frequency/route.ts` is documented daily-only). But a weekly subscriber
+  whose search just matched a burst of listings is seeing week-old inventory in a
+  marketplace where good aircraft go fast. When a weekly digest's section counts total ≥5
+  new matches, add one honest line — "Busy week for this search — switch to daily
+  digests" — linking to the existing token-scoped frequency route extended with the
+  upgrade direction (same one-click, no-login pattern as "fewer emails"; idempotent if
+  already daily). Only rendered when the volume threshold is genuinely met — never an
+  upsell on a quiet search. Rides the existing `frequency` column (⚠️ still-pending
+  human-apply migration; same fail-soft norm as every `alerts.*` column). No new capture
+  point; extends the digest-vs-instant pillar honestly within the daily-cron ceiling.
+- **[P2][goal] Typo-guard + mobile-keyboard attribute sweep on the remaining email
+  inputs.** Carry `suggestEmailFix` (item above) plus the missing input attributes —
+  `inputMode="email"`, `spellCheck={false}`, `enterKeyHint="send"`, and
+  `autoComplete="email"` where absent — across every other capture input:
+  `FooterAlertCapture`, `WatchAlertButton`, `ContactBarWatchButton`,
+  `SavedListingWatchButton`, `SaveListingButton`'s cross-sell field, `NewAlertForm`, and
+  `MobileStickyAlertBar`'s inline field if it renders one (verified: today only
+  `AlertSignup`/`FooterAlertCapture` even set `autoComplete`). Mechanical, one cycle, no
+  behavior change beyond the suggestion chip; kills fat-finger friction on the 375px
+  keyboards where most capture happens. No new capture point.
+- **[P2][goal] One-tap unsubscribe-reason chips on `/alerts/status`.** After an
+  unsubscribe, the recovery box offers alternatives but we learn nothing about *why*
+  people leave — the one number the "prove it converts" loop is missing on the churn
+  side. Below the existing recovery options, add four optional one-tap chips — "Too many
+  emails" / "Not relevant" / "Found my aircraft" / "Just done" — that fire a single
+  PostHog `alert_unsubscribe_reason` event (reason + alert count + source family) and
+  swap to a brief honest thanks. Analytics-only: no schema change, no email, skippable,
+  fires at most once per unsubscribe visit. Complements the shipped
+  `alert_unsubscribed` funnel event and the digest 👍/👎 loop.
+- **[P2][goal] "Delete all my alerts & data" self-serve on `/alerts/manage`.** Per-row
+  delete and vacation-mode pause-all exist, but a subscriber who wants ClubHanger to
+  forget them entirely has to delete rows one by one and take our word the email is gone.
+  Add a collapsed "Delete everything" affordance at the bottom of `/alerts/manage`
+  (token- or signed-in-owner-scoped, typed-confirmation gated) that hard-deletes every
+  alert row for that email and says plainly what was removed. Trust/privacy polish that
+  makes the unsubscribe promise credible — and an honest complement to the shipped
+  email-change flow. User-initiated deletion of their own rows only (FREEZE's bulk-delete
+  ban covers agent-initiated data destruction, not a subscriber's own right to leave); no
+  schema change.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
