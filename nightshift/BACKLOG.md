@@ -2180,24 +2180,22 @@ confirm-email manage link, partnership price-drop sample cards._
   `context`/`sourcePath`, with a distinct `source` (e.g. `sticky_bar_detail`) so its
   conversion is measurable separately. Must not overlap/fight the pages' existing
   bottom-of-page content at 375px (QA both listing types).~~
-- **[P1][bug] `FeedbackWidget` overlaps the rightmost button of every mobile fixed
-  bottom bar — a real tap-target bug, not just a visual nit.** Found + confirmed live
-  during `contactbar-watch-button` (2026-07-17): `FeedbackWidget` renders
-  `fixed bottom-5 right-5 z-40` on every page (no path-based hiding), which sits later
-  in the DOM than `ContactBar`/`MobileStickyAlertBar` (same `z-40`/`z-50`) so it wins
-  the actual click at that screen position — confirmed via Playwright bounding boxes
-  (feedback pill fully inside the last button's tap area) and a real click that opened
-  the feedback modal instead of the intended action. This is pre-existing (verified:
-  `/partnerships/[id]`'s sole "Email" button, full-width before this cycle's Watch
-  button was added, already sat under the same corner) — affects `ContactBar`'s
-  rightmost button (Call/Email/Watch) on `/partnerships/[id]` and likely
-  `MobileStickyAlertBar`'s subscribe button on `/aircraft`, `/partnerships`, and
-  `/aircraft/listing/[id]` too (same fixed-bottom-right widget, same z-index tier —
-  not yet individually confirmed on those pages, worth a quick check). Fix needs its
-  own scoped design (raise `FeedbackWidget`'s bottom offset when a sticky bottom bar
-  is mounted, or move it to bottom-left, or shrink/relocate it) — bigger than a
-  one-line change since `FeedbackWidget` has no awareness of what else is on screen;
-  don't rush a fix that shifts it site-wide without checking every page.
+~~- **[P1][bug] `FeedbackWidget` overlaps the rightmost button of every mobile fixed
+  bottom bar — a real tap-target bug, not just a visual nit.**~~ ✅ SHIPPED via
+  `feedbackwidget-mobile-overlap` (2026-07-17). `FeedbackWidget`'s trigger pill now
+  renders at `bottom-24 right-4` below the `lg` breakpoint (was `bottom-5 right-5`
+  everywhere), clearing every mobile fixed bottom bar's tap area with margin — desktop
+  (`lg:` and up) keeps the exact original `bottom-5 right-5` position, byte-identical.
+  Verified via Playwright bounding-box comparison on both previously-affected surfaces:
+  `/partnerships/[id]`'s `ContactBar` (Feedback pill bottom 716px vs. bar top 754px, 38px
+  clear) and `/aircraft`'s `MobileStickyAlertBar` once scroll-revealed (Feedback bottom
+  716px vs. bar top 748px, 32px clear) — plus a **real mouse click** (not `.click()`) on
+  the `ContactBar` "Watch" button confirmed it reaches its own handler (focuses
+  `#alert-email`), not the feedback modal. Desktop bbox re-confirmed unchanged
+  (20px from right, 20px from bottom, matching pre-fix). Scoped to `FeedbackWidget.tsx`
+  only — no change to `ContactBar`/`MobileStickyAlertBar`/`SeekerContactBar`;
+  `CompareTray`/`DeviceSaveSync` (conditional, rare, not named in the original finding)
+  left untouched per the item's own "don't rush a fix that shifts it site-wide" caution.
 - **[P2][goal] Known-subscriber homepage module — "N new since your last visit."** The
   nav pill (`nav-alert-new-since-pill`) already computes real new-match counts from
   `alertLocalSubscriptions` + `getNewMatchCountSince`; the homepage itself shows a known
