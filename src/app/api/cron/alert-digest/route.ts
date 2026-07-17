@@ -1694,6 +1694,12 @@ export async function GET(req: NextRequest) {
         // email (GOAL.md: "offer fewer instead of none"). Omitted for a
         // not-yet-migrated row with no token yet (fails soft, no dead link).
         stopUrl: alert.unsubscribe_token ? `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}` : undefined,
+        // Deep-links to this exact row on /alerts/manage with its edit form
+        // pre-opened — same token this section's stopUrl already carries, so
+        // no new ownership proof is needed.
+        editUrl: alert.unsubscribe_token
+          ? `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}&edit=${alert.id}#alert-${alert.id}`
+          : undefined,
       }))
     )
 

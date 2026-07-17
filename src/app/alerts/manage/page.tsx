@@ -49,6 +49,8 @@ export default async function AlertsManagePage({
   const params = await searchParams
   const rawToken = params.token
   const urlToken = Array.isArray(rawToken) ? rawToken[0] : rawToken
+  const rawEdit = params.edit
+  const editId = Array.isArray(rawEdit) ? rawEdit[0] : rawEdit
 
   const supabase = await createServerSupabaseClient()
   const {
@@ -264,7 +266,8 @@ export default async function AlertsManagePage({
                 return (
                   <li
                     key={a.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                    id={`alert-${a.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 scroll-mt-24"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -374,6 +377,7 @@ export default async function AlertsManagePage({
                         sourcePath={a.source_path}
                         target={target}
                         token={scopeToken}
+                        autoOpen={!!editId && editId === a.id}
                       />
                     </div>
                   </li>

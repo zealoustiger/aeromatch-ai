@@ -32,6 +32,10 @@ interface Props {
   target: EditableAlertTarget | null
   /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
   token?: string
+  /** Opens the form once on mount instead of waiting for the Edit click —
+   *  set by the parent page when this row is the one named by `?edit=<id>`
+   *  (the digest email's per-section "Edit this alert" deep link). */
+  autoOpen?: boolean
 }
 
 /**
@@ -41,7 +45,7 @@ interface Props {
  * state has a single owner and the whole action cluster stays one flex item in
  * the parent `<li>` row — no fragile multi-child flex-wrap layout needed.
  */
-export default function AlertEditForm({ id, status, sourcePath, target, token }: Props) {
+export default function AlertEditForm({ id, status, sourcePath, target, token, autoOpen }: Props) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -100,6 +104,13 @@ export default function AlertEditForm({ id, status, sourcePath, target, token }:
     setError(null)
     setOpen(true)
   }
+
+  // Digest email deep link (`?edit=<id>` on /alerts/manage) — open this row's
+  // form once on first render instead of requiring an extra click.
+  useEffect(() => {
+    if (autoOpen) openEdit()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleRemoveHidden(key: string) {
     if (!target) return

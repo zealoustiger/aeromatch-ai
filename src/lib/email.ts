@@ -1055,6 +1055,13 @@ export type AlertDigestSection = {
    *  instead of none"). Omitted whenever the row has no `unsubscribe_token`
    *  yet, same graceful-degrade precedent as `frequencyUrl` above. */
   stopUrl?: string
+  /** This section's own alert deep-linked into the token-scoped
+   *  `/alerts/manage` view with its edit form pre-opened — lets a subscriber
+   *  whose criteria are slightly wrong (too narrow, wrong state, stale price
+   *  cap) fix them in one click instead of stopping the whole alert
+   *  (GOAL.md: "offer fewer instead of none," applied to relevance). Omitted
+   *  under the same no-token graceful-degrade as `stopUrl`. */
+  editUrl?: string
 }
 
 /**
@@ -1127,6 +1134,9 @@ export function buildCombinedAlertDigestEmail(opts: {
       : ''
     const isLast = i === sections.length - 1
 
+    const editLinkHtml = s.editUrl
+      ? `<a href="${escapeAttr(s.editUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Edit this alert</a>`
+      : ''
     const stopLinkHtml = s.stopUrl
       ? `<a href="${escapeAttr(s.stopUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Stop just this alert</a>`
       : ''
@@ -1137,7 +1147,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
-          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${stopLinkHtml}
+          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${editLinkHtml}${stopLinkHtml}
         </p>
       </div>`
 
@@ -1152,7 +1162,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}`
       })
       .join('\n')
-    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`
+    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`
 
     return { html, text }
   })
