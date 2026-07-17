@@ -3,6 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-17T10:40:28Z — footer-alert-context — score 4/5
+- Strengths: Nails every acceptance criterion — copy, `source_path`, safe `/` fallback for unmatchable look-alikes (validated via `getMakeBySlug`/`STATE_NAMES` so it never mints an alert `parseSourcePath` can't match), and the subtle bit the gate can't see: keying every stateful effect (submitted/local-sub/impression) off `sourcePath` so a client-side nav across the never-remounted Footer resets cleanly and doesn't re-nag a `/`-subscriber.
+- Weaknesses / risks: The derived `context` strings ("Cessna listings", "partnerships near KAUS") are written to the shared `alerts.context` column, but that column elsewhere holds the app's bare-noun convention (make-page `AlertSignup` passes `context={entry.make}` = "Cessna") — so the same source_path now yields two different context labels, defeating the email+context dedup between footer and page signup and producing inconsistent digest section names (`alertDigestDedupe` labels sections from `context`).
+- Follow-up: none
 ## 2026-07-17T10:01:39Z — digest-edit-alert-link — score 5/5
 - Strengths: Hits every acceptance criterion exactly — `editUrl` mirrors the existing `stopUrl` no-token graceful-degrade in the same object, `escapeAttr`-guarded href, both html+text bodies, `scroll-mt-24`+`id="alert-<id>"` for the hash offset, and `autoOpen` reuses the existing `openEdit()` (which already guards `!target`, so a non-editable row fails soft), with the mount-once `useEffect([])` matching the surrounding eslint-disable idiom; single-alert path and stopUrl untouched, preview route updated for QA.
 - Weaknesses / risks: none material — empty-dep `useEffect` fires only on mount, so a client-side nav re-adding `?edit=` won't re-open, but that's not a real digest-link flow (each link is a fresh page load).
