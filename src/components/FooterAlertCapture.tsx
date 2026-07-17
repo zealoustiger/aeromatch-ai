@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
+import { deriveFooterAlertTarget } from '@/lib/footerAlertContext'
 import {
   addLocalSubscription,
   getLocalEmail,
@@ -13,7 +15,6 @@ import {
   setLocalEmail,
 } from '@/lib/alertLocalSubscriptions'
 
-const SOURCE_PATH = '/'
 const SOURCE = 'footer'
 
 /**
@@ -23,8 +24,19 @@ const SOURCE = 'footer'
  * Still reuses the remembered-email one-tap pattern (`getLocalEmail`) so a
  * returning subscriber gets a true one-tap here too, and tracks impressions the
  * same way `AlertSignup` does so footer conversion is measurable.
+ *
+ * Context-aware: `deriveFooterAlertTarget` reads the current pathname so a
+ * make/model/state hub gets a real, matchable, page-scoped alert instead of
+ * always the generic site-wide one — see that module for which path shapes
+ * resolve to what. The root layout doesn't remount Footer across client-side
+ * navigations, so every stateful bit here keys off `sourcePath` and resets
+ * when it changes (a subscribe confirmation from the last page shouldn't
+ * bleed into the next one).
  */
 export default function FooterAlertCapture() {
+  const pathname = usePathname()
+  const { sourcePath, context } = useMemo(() => deriveFooterAlertTarget(pathname || '/'), [pathname])
+
   const [email, setEmail] = useState('')
   const [rememberedEmail, setRememberedEmail] = useState<string | null>(null)
   const [useManualEmail, setUseManualEmail] = useState(false)
@@ -36,49 +48,57 @@ export default function FooterAlertCapture() {
 
   useEffect(() => {
     setRememberedEmail(getLocalEmail())
-    setLocallySubscribed(isLocallySubscribed(SOURCE_PATH))
-  }, [])
+    // A subscribe at the generic `/` capture (or one from a prior page this
+    // session) already covers this visitor everywhere — never re-nag just
+    // because this render's sourcePath is more specific.
+    setLocallySubscribed(isLocallySubscribed('/') || isLocallySubscribed(sourcePath))
+    setSubmitted(false)
+    setConfirmedEmail('')
+    setUseManualEmail(false)
+    setErrorMsg('')
+  }, [sourcePath])
 
   // Impression denominator for "prove it converts" — same payload shape/pattern as
   // AlertSignup's own tracked impression, so footer view→subscribe conversion is
-  // measurable like every other capture point. Fires once regardless of which of
-  // the three states below is rendering.
+  // measurable like every other capture point. Fires once per sourcePath (a client
+  // navigation to a new context is a fresh impression, not a re-fire of the old one).
   const rootRef = useRef<HTMLDivElement>(null)
   const viewedRef = useRef(false)
   useEffect(() => {
+    viewedRef.current = false
     const el = rootRef.current
     if (!el || typeof IntersectionObserver === 'undefined') return
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (viewedRef.current || !entry.isIntersecting) return
         viewedRef.current = true
-        track('alert_capture_viewed', { context: 'all', source_path: SOURCE_PATH, source: SOURCE })
+        track('alert_capture_viewed', { context: context ?? 'all', source_path: sourcePath, source: SOURCE })
         observer.disconnect()
       },
       { threshold: 0.5 }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [sourcePath, context])
 
   async function subscribe(targetEmail: string, oneTap: boolean) {
     if (pending) return
     setErrorMsg('')
     setPending(true)
-    const result = await subscribeToAlerts(targetEmail, '', SOURCE_PATH, true, 'weekly', SOURCE)
+    const result = await subscribeToAlerts(targetEmail, context ?? '', sourcePath, true, 'weekly', SOURCE)
     setPending(false)
     if (result.error) {
       setErrorMsg(result.error)
       return
     }
     track('alert_subscribed', {
-      context: 'all',
-      source_path: SOURCE_PATH,
+      context: context ?? 'all',
+      source_path: sourcePath,
       source: SOURCE,
       one_tap: oneTap || undefined,
     })
     markAlertSubscriber()
-    addLocalSubscription(SOURCE_PATH)
+    addLocalSubscription(sourcePath)
     setLocalEmail(targetEmail)
     setConfirmedEmail(targetEmail)
     setSubmitted(true)
@@ -98,7 +118,7 @@ export default function FooterAlertCapture() {
     return (
       <div ref={rootRef} className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-600" />
-        Check {confirmedEmail} to confirm — you&rsquo;ll hear about new listings.
+        Check {confirmedEmail} to confirm — you&rsquo;ll hear about new {context ?? 'listings'}.
       </div>
     )
   }
@@ -119,7 +139,7 @@ export default function FooterAlertCapture() {
     <div ref={rootRef} className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
       <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
         <Bell className="h-4 w-4 shrink-0 text-sky-600" />
-        Get email alerts for new listings
+        Get email alerts for new {context ?? 'listings'}
       </div>
       {rememberedEmail && !useManualEmail ? (
         <div className="mt-3 flex items-center gap-2 sm:mt-0">
