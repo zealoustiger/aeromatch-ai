@@ -124,6 +124,11 @@ type AlertTarget =
       listingId?: string
     }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
+  /** Bare `/` — the site-wide capture points (footer, homepage, /about,
+   *  /saved fallback, not-found) that carry no family/location filter at
+   *  all. "Any new listing" = aircraft ∪ partnerships (no seekers — these
+   *  surfaces are all buyer-facing, not "find me a partner" framed). */
+  | { type: 'all' }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
   if (!v) return undefined
@@ -294,6 +299,10 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
 
   // /partnerships → all partnerships
   if (p === '/partnerships') return { type: 'partnership' }
+
+  // / → the site-wide, no-filter capture points. Previously fell through to
+  // null here — captured, confirmed, and silently never matched/emailed.
+  if (p === '/') return { type: 'all' }
 
   return null
 }
@@ -658,6 +667,12 @@ async function countNew(
 ): Promise<number> {
   if (target.type === 'aircraft') return countNewAircraft(supabase, target, since)
   if (target.type === 'seeker') return countNewSeekers(supabase, target, since)
+  if (target.type === 'all') {
+    return (
+      (await countNewAircraft(supabase, { type: 'aircraft' }, since)) +
+      (await countNewPartnerships(supabase, { type: 'partnership' }, since))
+    )
+  }
   return countNewPartnerships(supabase, target, since)
 }
 
@@ -1469,7 +1484,10 @@ export async function GET(req: NextRequest) {
         ? await countRecentAircraftPriceDrops(supabase, target, since)
         : target.type === 'partnership'
           ? await countRecentPartnershipPriceDrops(supabase, target, since)
-          : 0
+          : target.type === 'all'
+            ? (await countRecentAircraftPriceDrops(supabase, { type: 'aircraft' }, since)) +
+              (await countRecentPartnershipPriceDrops(supabase, { type: 'partnership' }, since))
+            : 0
 
     if (newCount === 0 && dropCount === 0) {
       skipped++
@@ -1490,9 +1508,26 @@ export async function GET(req: NextRequest) {
           ? newCount > 0
             ? await fetchNewPartnershipSamples(supabase, target, since)
             : await fetchPartnershipPriceDropSamples(supabase, target, since)
-          : newCount > 0
-            ? await fetchNewSeekerSamples(supabase, target, since)
-            : []
+          : target.type === 'all'
+            ? await (async () => {
+                // Fill from aircraft first, top up with partnerships only if
+                // needed — avoids a wasted query once aircraft alone fills
+                // the digest's sample cap.
+                const aircraftFetch = newCount > 0 ? fetchNewAircraftSamples : fetchAircraftPriceDropSamples
+                const partnershipFetch = newCount > 0 ? fetchNewPartnershipSamples : fetchPartnershipPriceDropSamples
+                const aircraftSamples = await aircraftFetch(supabase, { type: 'aircraft' }, since)
+                if (aircraftSamples.length >= MAX_DIGEST_SAMPLES) return aircraftSamples
+                const partnershipSamples = await partnershipFetch(
+                  supabase,
+                  { type: 'partnership' },
+                  since,
+                  MAX_DIGEST_SAMPLES - aircraftSamples.length
+                )
+                return [...aircraftSamples, ...partnershipSamples]
+              })()
+            : newCount > 0
+              ? await fetchNewSeekerSamples(supabase, target, since)
+              : []
 
     // Market-pulse line — aircraft alerts with a clean, curated make+model
     // target get the make+model line; aircraft alerts with a make but no

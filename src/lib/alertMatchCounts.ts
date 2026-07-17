@@ -71,6 +71,9 @@ type AlertTarget =
       radius?: number
     }
   | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
+  /** Bare `/` — mirrors the cron parser's `'all'` target (see its header
+   *  comment): aircraft ∪ partnerships, no seekers. */
+  | { type: 'all' }
 
 const numOrUndef = (v: string | undefined): number | undefined => {
   if (!v) return undefined
@@ -177,6 +180,8 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
   if (p === '/partnerships/seeking') return { type: 'seeker' }
 
   if (p === '/partnerships') return { type: 'partnership' }
+
+  if (p === '/') return { type: 'all' }
 
   return null
 }
@@ -377,6 +382,13 @@ export async function getAlertMatchCount(
     }
     if (target.type === 'seeker') {
       return { count: await countActiveSeekers(admin, target, opts?.since), noun: 'pilot' }
+    }
+    if (target.type === 'all') {
+      const [aircraft, partnerships] = await Promise.all([
+        countActiveAircraft(admin, { type: 'aircraft' }, opts?.excludeId, opts?.since),
+        countActivePartnerships(admin, { type: 'partnership' }, opts?.excludeId, opts?.since),
+      ])
+      return { count: aircraft + partnerships, noun: 'listing' }
     }
     return {
       count: await countActivePartnerships(admin, target, opts?.excludeId, opts?.since),
@@ -656,6 +668,17 @@ export async function getAlertDigestPreview(sourcePath: string | null, limit = 3
     const admin = createAdminClient()
     if (target.type === 'aircraft') return await previewAircraft(admin, target, limit)
     if (target.type === 'seeker') return await previewSeekers(admin, target, limit)
+    if (target.type === 'all') {
+      const [aircraft, partnerships] = await Promise.all([
+        previewAircraft(admin, { type: 'aircraft' }, limit),
+        previewPartnerships(admin, { type: 'partnership' }, limit),
+      ])
+      return {
+        count: aircraft.count + partnerships.count,
+        noun: 'listing',
+        samples: [...aircraft.samples, ...partnerships.samples].slice(0, limit),
+      }
+    }
     return await previewPartnerships(admin, target, limit)
   } catch (err) {
     console.error('[alertMatchCounts] preview error:', err instanceof Error ? err.message : err)
