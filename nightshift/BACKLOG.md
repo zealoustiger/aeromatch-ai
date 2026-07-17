@@ -2328,25 +2328,22 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   updated with real `editUrl` fixtures for future visual QA. **Bug found during this
   cycle's QA, NOT fixed here (out of scope) — see the new `[P1][bug]` entry below.**
 
-- **[P1][bug] `/alerts/manage` row action buttons overflow horizontally at 375px
-  when a real alert is present.** Found live while QA-verifying `digest-edit-alert-link`
-  (seeded a real throwaway `@example.com` confirmed alert — the automated smoke gate never
-  catches this because it only ever exercises the logged-out/no-alerts empty state, which
-  has no row to overflow). Confirmed **pre-existing on `staging` before this cycle**
-  (git-stash A/B: `document.documentElement.scrollWidth` = 705px vs. `clientWidth` = 375px
-  at mobile width even with the edit form closed) — not a regression from this cycle's
-  change, and this cycle's own new `autoOpen` behavior doesn't make it worse (opened-form
-  width identical on both old and new code, 725px). Root cause: the row's action-button
-  cluster wrapper (`src/app/alerts/manage/page.tsx:372`,
-  `<div className="flex shrink-0 flex-wrap items-center gap-2">` around `ShareAlertButton`
-  + `AlertEditForm`'s View/Pause/Resume/Delete/Edit buttons) has `shrink-0` — that forces
-  the div to lay out at its max-content width (as if nothing inside it ever wrapped)
-  regardless of the `<li>`'s available width, so at 375px the button row spills off the
-  right edge instead of the inner `flex-wrap` actually kicking in. Likely fix: drop the
-  outer `shrink-0` (or swap for `min-w-0`) so the wrapper can shrink and its own
-  `flex-wrap` takes over — needs live verification with a real alert row across every
-  status (confirmed/paused/bounced/pending, since each renders a different button set)
-  before landing.
+~~- **[P1][bug] `/alerts/manage` row action buttons overflow horizontally at 375px
+  when a real alert is present.**~~ ✅ SHIPPED via `alert-manage-row-overflow` (2026-07-17)
+  Fixed the outer wrapper exactly as diagnosed (`src/app/alerts/manage/page.tsx:372`,
+  `shrink-0` → `min-w-0`, keeping `flex-wrap`) — **plus a second, deeper instance of the
+  same root cause found live during this cycle's QA**: `AlertActions.tsx`'s own button-row
+  wrapper (`flex shrink-0 items-center gap-1.5`, no `flex-wrap`) is nested one level inside
+  the wrapper above; once the outer fix let it wrap onto its own line, its own `shrink-0` +
+  no-wrap still forced it to render at max-content width, and because the parent row
+  (`AlertEditForm.tsx:151`) is `justify-end`, the unbreakable block bled off the **left**
+  edge instead of the right — `document.documentElement.scrollWidth` stayed a clean 375px
+  (passing the smoke gate's overflow check) while the real "Send sample" button rendered at
+  `x: -86.8`, fully invisible and unclickable. Fixed with the same pattern
+  (`shrink-0` → `min-w-0 flex-wrap`). Verified live with 2 seeded throwaway `@example.com`
+  alerts (confirmed + paused, the two widest button sets) via Playwright bounding-box
+  checks on every button — all render fully on-screen (0 left/right clipping) at 375px and
+  1280px; rows + account deleted after, 0 remain.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
