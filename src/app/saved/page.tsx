@@ -6,6 +6,7 @@ import AircraftSaleCard from '@/components/AircraftSaleCard'
 import SeekerCard from '@/components/SeekerCard'
 import DeviceSavedListings from '@/components/DeviceSavedListings'
 import SavedListingNote from '@/components/SavedListingNote'
+import SavedListingWatchButton from '@/components/SavedListingWatchButton'
 import AlertSignup from '@/components/AlertSignup'
 import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { getSeekersByIds } from '@/lib/seekersQuery'
@@ -202,6 +203,11 @@ export default async function SavedPage() {
                         dealVerdict={compVerdicts.get(p.id)?.dealVerdict ?? null}
                         saveCount={partnershipSaveCounts.get(p.id) ?? 0}
                       />
+                      <SavedListingWatchButton
+                        context={[p.year, p.make, p.model].filter(Boolean).join(' ') || undefined}
+                        sourcePath={`/partnerships/${p.id}?watch=price`}
+                        className="mt-2"
+                      />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
                       )}
@@ -231,6 +237,11 @@ export default async function SavedPage() {
                         dealVerdict={verdict?.dealVerdict ?? null}
                         saveCount={aircraftSaveCounts.get(a.id) ?? 0}
                         familyCount={verdict?.familyCount ?? null}
+                      />
+                      <SavedListingWatchButton
+                        context={[a.year, a.make, a.model].filter(Boolean).join(' ') || undefined}
+                        sourcePath={`/aircraft/listing/${a.id}?watch=price`}
+                        className="mt-2"
                       />
                       {notesEnabled && meta && (
                         <SavedListingNote savedRowId={meta.savedRowId} note={meta.note} />
