@@ -1,11 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Bell, CheckCircle2 } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
-import { addLocalSubscription, getLocalEmail, setLocalEmail } from '@/lib/alertLocalSubscriptions'
+import {
+  addLocalSubscription,
+  getLocalEmail,
+  isLocallySubscribed,
+  setLocalEmail,
+} from '@/lib/alertLocalSubscriptions'
 
 const SOURCE_PATH = '/'
 const SOURCE = 'footer'
@@ -13,9 +19,10 @@ const SOURCE = 'footer'
 /**
  * Slim, site-wide email capture — renders inside `Footer.tsx`, so it's the one
  * alert entry point present on literally every page. Deliberately a thin island:
- * no signed-in detection, no match count, no IntersectionObserver — those live
- * in the full `AlertSignup`. Still reuses the remembered-email one-tap pattern
- * (`getLocalEmail`) so a returning subscriber gets a true one-tap here too.
+ * no signed-in detection, no match count — those live in the full `AlertSignup`.
+ * Still reuses the remembered-email one-tap pattern (`getLocalEmail`) so a
+ * returning subscriber gets a true one-tap here too, and tracks impressions the
+ * same way `AlertSignup` does so footer conversion is measurable.
  */
 export default function FooterAlertCapture() {
   const [email, setEmail] = useState('')
@@ -25,9 +32,33 @@ export default function FooterAlertCapture() {
   const [confirmedEmail, setConfirmedEmail] = useState('')
   const [pending, setPending] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [locallySubscribed, setLocallySubscribed] = useState(false)
 
   useEffect(() => {
     setRememberedEmail(getLocalEmail())
+    setLocallySubscribed(isLocallySubscribed(SOURCE_PATH))
+  }, [])
+
+  // Impression denominator for "prove it converts" — same payload shape/pattern as
+  // AlertSignup's own tracked impression, so footer view→subscribe conversion is
+  // measurable like every other capture point. Fires once regardless of which of
+  // the three states below is rendering.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (viewedRef.current || !entry.isIntersecting) return
+        viewedRef.current = true
+        track('alert_capture_viewed', { context: 'all', source_path: SOURCE_PATH, source: SOURCE })
+        observer.disconnect()
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   async function subscribe(targetEmail: string, oneTap: boolean) {
@@ -65,15 +96,27 @@ export default function FooterAlertCapture() {
 
   if (submitted) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
+      <div ref={rootRef} className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-600" />
         Check {confirmedEmail} to confirm — you&rsquo;ll hear about new listings.
       </div>
     )
   }
 
+  if (locallySubscribed) {
+    return (
+      <div ref={rootRef} className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-600" />
+        You&rsquo;re getting alerts —{' '}
+        <Link href="/alerts/manage" className="font-medium text-sky-700 underline-offset-2 hover:underline">
+          manage them
+        </Link>
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+    <div ref={rootRef} className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
       <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
         <Bell className="h-4 w-4 shrink-0 text-sky-600" />
         Get email alerts for new listings
