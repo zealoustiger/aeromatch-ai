@@ -2313,16 +2313,40 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   + `alert_capture_opened` at the top of `handleWatchSubscribe` — both mirroring
   `ContactBarWatchButton`'s `viewedRef` one-shot + `{context, source_path, source}` payload
   exactly. Zero UI/JSX change; existing `alert_subscribed` calls untouched.
-- **[P1][goal] Per-section "Edit this alert" link in the combined digest email.**
-  `alert-digest-per-alert-stop-link` gave each digest section a token-authed "Stop just
-  this alert" link — but a subscriber whose criteria are slightly wrong (too narrow, wrong
-  state, stale price cap) has no in-email path except stop-or-ignore. Add an "Edit this
-  alert" link beside each section's stop link, deep-linking to the alert's token-scoped
-  `/alerts/manage` view (the same per-alert manage-token mechanics the target-price-edit
-  cycle verified live) so "wrong criteria" becomes an edit instead of an unsubscribe —
-  GOAL.md's "offer fewer instead of none," applied to relevance. Fails soft (no link) for
-  rows without a token; no schema change, no new capture point.
+~~- **[P1][goal] Per-section "Edit this alert" link in the combined digest email.**~~ ✅
+  SHIPPED via `digest-edit-alert-link` (2026-07-17) Each combined-digest section now
+  renders an "Edit this alert" link beside its existing "Stop just this alert" link
+  (html + text), pointing at `/alerts/manage?token=<this alert's own token>&edit=<id>
+  #alert-<id>` — same graceful no-token degrade as `stopUrl`. `/alerts/manage` reads the
+  new `?edit=` param, gives each alert row a stable `id="alert-<id>"` (so the URL hash
+  scrolls straight to it) and passes a new `autoOpen` prop into `AlertEditForm`, which
+  opens the edit form once on mount instead of waiting for a click. Verified live against
+  a real throwaway `@example.com` confirmed test alert (deleted after): `/alerts/manage
+  ?token=...` alone left the form collapsed; `...&edit=<id>` auto-opened it pre-filled
+  (Make: Cessna, Model: 172) scrolled to the right row — confirmed via Playwright, not
+  just code read. Dev preview route (`/api/dev/email-preview/alert-digest-combined`) also
+  updated with real `editUrl` fixtures for future visual QA. **Bug found during this
+  cycle's QA, NOT fixed here (out of scope) — see the new `[P1][bug]` entry below.**
 
+- **[P1][bug] `/alerts/manage` row action buttons overflow horizontally at 375px
+  when a real alert is present.** Found live while QA-verifying `digest-edit-alert-link`
+  (seeded a real throwaway `@example.com` confirmed alert — the automated smoke gate never
+  catches this because it only ever exercises the logged-out/no-alerts empty state, which
+  has no row to overflow). Confirmed **pre-existing on `staging` before this cycle**
+  (git-stash A/B: `document.documentElement.scrollWidth` = 705px vs. `clientWidth` = 375px
+  at mobile width even with the edit form closed) — not a regression from this cycle's
+  change, and this cycle's own new `autoOpen` behavior doesn't make it worse (opened-form
+  width identical on both old and new code, 725px). Root cause: the row's action-button
+  cluster wrapper (`src/app/alerts/manage/page.tsx:372`,
+  `<div className="flex shrink-0 flex-wrap items-center gap-2">` around `ShareAlertButton`
+  + `AlertEditForm`'s View/Pause/Resume/Delete/Edit buttons) has `shrink-0` — that forces
+  the div to lay out at its max-content width (as if nothing inside it ever wrapped)
+  regardless of the `<li>`'s available width, so at 375px the button row spills off the
+  right edge instead of the inner `flex-wrap` actually kicking in. Likely fix: drop the
+  outer `shrink-0` (or swap for `min-w-0`) so the wrapper can shrink and its own
+  `flex-wrap` takes over — needs live verification with a real alert row across every
+  status (confirmed/paused/bounced/pending, since each renders a different button set)
+  before landing.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
