@@ -211,7 +211,12 @@ export default async function SeekingPartnershipsPage({
 
           {/* Results */}
           <div className="min-w-0 flex-1">
-            <SeekerActiveFilterChips params={params} models={seekerModels} />
+            <SeekerActiveFilterChips
+              params={params}
+              models={seekerModels}
+              alertContext={alertContext}
+              alertSourcePath={alertSourcePath}
+            />
             {/* "Save this search" button — appears when filters are active so the
                 owner can recall their preferred seeker search later (parity with
                 /aircraft and /partnerships). Hides when no filters are set. */}

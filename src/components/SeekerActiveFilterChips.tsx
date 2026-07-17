@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 import { STATE_NAMES } from '@/lib/seo'
 import { groupModelVariants } from '@/lib/modelGroups'
+import AlertMeChip from '@/components/AlertMeChip'
 
 type Params = Record<string, string | undefined>
 const BASE = '/partnerships/seeking'
@@ -23,12 +24,19 @@ interface Chip { key: string; label: string; href: string }
 export default function SeekerActiveFilterChips({
   params,
   models,
+  alertContext,
+  alertSourcePath,
 }: {
   params: Params
   /** Model-token option list (already make-scoped by the caller) — when present,
    *  fully-selected variant groups collapse to a single "{base} (all)" chip
    *  (mirrors PartnershipActiveFilterChips); omit and chips stay per-model. */
   models?: string[]
+  /** Same context/source-path the page's footer `AlertSignup` already receives —
+   *  threaded through so the one-tap 🔔 chip below subscribes to the exact same
+   *  search (mirrors PartnershipActiveFilterChips). */
+  alertContext?: string
+  alertSourcePath?: string
 }) {
   const chips: Chip[] = []
   const num = (raw: string | undefined): number | null => {
@@ -151,6 +159,9 @@ export default function SeekerActiveFilterChips({
         <Link href={BASE} className="ml-1 text-xs font-medium text-slate-400 underline-offset-2 transition-colors hover:text-slate-600 hover:underline">
           Clear all
         </Link>
+      )}
+      {alertSourcePath && (
+        <AlertMeChip context={alertContext} sourcePath={alertSourcePath} source="filter_toolbar_seeking" />
       )}
     </div>
   )

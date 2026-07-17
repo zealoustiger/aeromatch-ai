@@ -14,6 +14,10 @@ interface Props {
   context?: string
   /** Reproducible source path for the active filter set, e.g. "/aircraft?make=Cessna". */
   sourcePath: string
+  /** Overrides the default `'filter_toolbar'` attribution tag so callers on a
+   *  distinct surface (e.g. the seeker browse page) get separately measurable
+   *  conversion. Still superseded by the `shared_alert` share-link detection. */
+  source?: string
 }
 
 /**
@@ -24,7 +28,7 @@ interface Props {
  * `context`/`sourcePath`) with the email field focused — no separate subscribe path,
  * just a shortcut to the one that already exists below the results.
  */
-export default function AlertMeChip({ context, sourcePath }: Props) {
+export default function AlertMeChip({ context, sourcePath, source = 'filter_toolbar' }: Props) {
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null)
   const [hasExistingAlert, setHasExistingAlert] = useState(false)
   const [locallySubscribed, setLocallySubscribed] = useState(false)
@@ -43,7 +47,7 @@ export default function AlertMeChip({ context, sourcePath }: Props) {
   // placement's ordinary `filter_toolbar` conversions. Starts false (matches the
   // server-rendered markup) and only flips after mount, so no hydration mismatch.
   const [isSharedLink, setIsSharedLink] = useState(false)
-  const effectiveSource = isSharedLink ? 'shared_alert' : 'filter_toolbar'
+  const effectiveSource = isSharedLink ? 'shared_alert' : source
 
   useEffect(() => {
     if (typeof window === 'undefined') return
