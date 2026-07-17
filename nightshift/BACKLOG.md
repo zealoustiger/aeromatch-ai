@@ -2423,16 +2423,28 @@ the open-but-blocked items (instant sends → Vercel-tier human call; save-searc
   (`getAlertMatchCount('/')`, `noun="listing"`, `sourcePath="/"`), tagged
   `source="compare_hub"` for per-placement `alert_subscribed` attribution — same pattern
   already used on `/` and `/about`. No new route, no new SEO surface.
-- **[P1][goal] "Duplicate this alert" on `/alerts/manage`.** Cloning-then-tweaking is the
-  natural way to cover a sibling model or nearby state (the overlap/cross-sell nudges prove
-  subscribers hold near-identical alerts), but today the only path is re-entering
-  everything in `NewAlertForm`. Add a per-row Duplicate action that opens the existing
-  `NewAlertForm` prefilled from the source row (criteria, frequency, price-drop, target
-  price; same email); saving goes through the normal create path (the
-  `unique(email, source_path)` guard already rejects exact clones) and fires
-  `alert_subscribed` with `source: 'manage_duplicate'`. Improves management + adds a
-  measurable capture point. Mind the 375px action-row width — that row just had an
-  overflow bug fixed; re-verify with real seeded rows, bounding-box style.
+~~- **[P1][goal] "Duplicate this alert" on `/alerts/manage`.**~~ ✅ SHIPPED via
+  `alert-manage-duplicate` (2026-07-17) A per-row "Duplicate" button (next to Edit,
+  same `target !== null` visibility gate) opens the existing `NewAlertForm`
+  pre-filled with that row's make/model/state/price-range (or airport, for
+  partnerships) via the existing `targetToFields` helper, plus its frequency and
+  price-drop opt-in carried through invisibly (`createManageAlert` gained an
+  optional 4th `opts` param — `frequency`/`priceDropOptIn`/`source` — defaulting
+  to the prior hardcoded weekly/true/`manage_new` so the plain "+ New alert" flow
+  is unchanged). Saving goes through the normal create path, tagged
+  `source: 'manage_duplicate'`; the existing `unique(email, source_path)` guard
+  still handles an exact-clone submission as an idempotent no-op. **Not carried:**
+  `target_price` — it only applies to single-listing "watch" alerts, which have no
+  `target`/no Edit-or-Duplicate UI at all (out of scope, noted in the spec).
+  Live-verified end-to-end against the real DB (throwaway `@example.com` alert,
+  service-role insert + a real Playwright click-through of the manage page via its
+  own token link): Duplicate button appeared, form pre-filled exactly
+  make=Cessna/model=172/state=CA, changed model to 182 and submitted — a genuinely
+  new row was created (2 rows existed pre-cleanup) with the source row's Weekly
+  cadence + price-drop-on carried over, zero console errors, both rows' full
+  action clusters (View/Send sample/Pause/Snooze/Delete/Edit/Duplicate) rendered
+  fully within 375px — re-verified by screenshot, not just `scrollWidth`, per the
+  prior cycle's overflow-bug lesson. Both test rows deleted after, 0 remaining.
 - **[P1][goal] Price-drop-ONLY mode.** `price_drop_opt_in` can only ADD drops on top of
   new-listing emails; a subscriber tracking the market ("only email me when something gets
   cheaper") has no way to mute new-listing sends. Additive `alerts` column (e.g.
