@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-17T07:32:37Z — saved-page-watch-offers — score 4/5
+- Strengths: Cleanly reuses subscribeSignedInAlert/getExistingAlertForSourcePath with the exact detail-page `?watch=price` source_path convention, so cross-surface dedup works; seekers skipped, loading/watching/error states + a11y all handled.
+- Weaknesses / risks: Each row fires its own getExistingAlertForSourcePath on mount — N server-action round-trips per page load (mirrors AlertSignup's single-instance pattern but multiplied), minor at typical saved-list sizes.
+- Follow-up: none
+
 ## 2026-07-17T07:16:25Z — mobile-sticky-watch-bar-detail — score 4/5
 - Strengths: Clean, backward-safe generalization — new `revealSelector`/`source`/label props all default to the exact original hardcoded strings (`source ?? 'sticky_bar'`, browse copy) so the two existing callers are byte-for-byte unchanged; the two scroll-gate effects branch cleanly on `revealSelector` (early-return guards, no tangling), and the detail sentinel gate deliberately fires on "scrolled entirely past" (`rect.bottom < 0`) rather than a naive IntersectionObserver-visible, with a comment explaining the short-gallery immediate-fire pitfall it avoids; reuses the page's own `watchContext`/`watchSourcePath` (`?watch=price`) so the `alreadySubscribed`/`getExistingAlertForSourcePath` and per-listing dismiss gates come for free, rAF-throttled passive scroll listener, partnerships correctly deferred.
 - Weaknesses / risks: none material — the detail gate does no initial `check()` at mount, so a page restored at a scrolled position needs one scroll event to reveal (minor); `alreadySubscribed` is only re-derived on `signedInEmail`/`sourcePath` change, so subscribing via the in-page `AlertSignup watchOnly` panel in the same session won't hide the still-mounted bar until remount; no bottom spacer added, so the fixed bar covers the last sliver of content at scroll-end (shared with existing browse bars, dismiss mitigates).
