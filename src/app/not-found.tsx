@@ -1,11 +1,15 @@
 import Link from 'next/link'
 import { Compass } from 'lucide-react'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 // Root not-found: Next.js renders this inside RootLayout (Nav/Footer stay) for both
 // notFound() calls and any URL that matches no route at all, and automatically returns
 // a real 404 status + noindex — no metadata export needed here.
-export default function NotFound() {
+export default async function NotFound() {
+  // Real combined aircraft+partnership count — never fabricate, so this fails
+  // soft to no count line rather than a fake number.
+  const alertMatchResult = await getAlertMatchCount('/')
   return (
     <div className="mx-auto flex min-h-[50vh] max-w-xl flex-col items-center justify-center px-4 py-16 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-50 text-sky-500">
@@ -31,7 +35,13 @@ export default function NotFound() {
         </Link>
       </div>
 
-      <AlertSignup sourcePath="/" className="mt-12 w-full text-left" source="not_found" />
+      <AlertSignup
+        sourcePath="/"
+        className="mt-12 w-full text-left"
+        source="not_found"
+        noun="listing"
+        matchCount={alertMatchResult?.count}
+      />
     </div>
   )
 }

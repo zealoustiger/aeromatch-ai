@@ -11,6 +11,7 @@ import RecentlyViewedAlertBanner from '@/components/RecentlyViewedAlertBanner'
 import HomepageAlertRecap from '@/components/HomepageAlertRecap'
 import { STATE_NAMES, STATE_CODES, stateSlug, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { countForSaleState } from '@/components/AircraftSaleList'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 const faqItems = [
   {
@@ -188,6 +189,10 @@ const resources = [
 ]
 
 export default async function HomePage() {
+  // Real combined aircraft+partnership count for the bare-`/` alert box below —
+  // never fabricate, so this fails soft to no count line rather than a fake number.
+  const alertMatchResult = await getAlertMatchCount('/')
+
   // For-sale-by-state internal links — gated to states with REAL live inventory via
   // the SAME `countForSaleState` source of truth the sitemap + /aircraft/browse use,
   // so every link resolves to a real (non-404, indexable) /aircraft/for-sale/[state]
@@ -262,7 +267,13 @@ export default async function HomePage() {
                 <p className="mt-2 text-lg text-slate-500">
                   Tell us what you&apos;re looking for and we&apos;ll email you the moment it&apos;s listed.
                 </p>
-                <AlertSignup sourcePath="/" className="mt-8 text-left" source="homepage_band" />
+                <AlertSignup
+                  sourcePath="/"
+                  className="mt-8 text-left"
+                  source="homepage_band"
+                  noun="listing"
+                  matchCount={alertMatchResult?.count}
+                />
               </div>
             }
           />
