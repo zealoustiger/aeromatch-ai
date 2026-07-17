@@ -10,6 +10,7 @@ import AlertSignup from '@/components/AlertSignup'
 import ModelFaq from '@/components/ModelFaq'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { MISSIONS, getMission } from '@/lib/missions'
 import { SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { buildAircraftItemListJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
@@ -207,6 +208,11 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
         </div>
       </div>
       <CompareTray />
+      <MobileStickyAlertBar
+        context={`${m.label} aircraft for sale`}
+        sourcePath={alertSourcePath}
+        source="sticky_bar_mission"
+      />
     </CompareProvider>
   )
 }

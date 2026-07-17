@@ -5,6 +5,7 @@ import { TrendingDown, Plane, Info } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AircraftSaleCard from '@/components/AircraftSaleCard'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { fetchUnderMarketDeals, DEAL_MIN_PCT } from '@/components/AircraftSaleList'
 import { SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
@@ -37,6 +38,7 @@ export default async function AircraftDealsPage() {
   const deals = await fetchUnderMarketDeals(48)
 
   return (
+    <>
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 pb-16 sm:px-6 sm:py-10 lg:px-8">
         <Breadcrumbs
@@ -114,5 +116,11 @@ export default async function AircraftDealsPage() {
         />
       </div>
     </div>
+    <MobileStickyAlertBar
+      context="good deal"
+      sourcePath="/aircraft?deal=good"
+      source="sticky_bar_deals"
+    />
+    </>
   )
 }

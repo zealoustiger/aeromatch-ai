@@ -182,19 +182,26 @@ export default function MobileStickyAlertBar({
   }, [sourcePath, revealSelector])
 
   // Scroll-depth gate, card variant (browse pages, default): the results list
-  // can still be streaming in when this component mounts (Suspense), so watch
-  // for the sentinel card via MutationObserver until it actually exists in the
-  // DOM, then switch to a one-shot IntersectionObserver on it.
+  // can still be streaming in when this component mounts (Suspense), and on
+  // hub pages wrapped in `CompareProvider` the card DOM is re-rendered (new
+  // nodes) once the provider becomes ready — so a one-shot observer attached to
+  // the mount-time 8th card ends up watching a detached node that never fires.
+  // Keep the MutationObserver running and re-target the live 8th card whenever
+  // the DOM changes, only tearing both down once the reveal actually fires.
   useEffect(() => {
     if (revealSelector) return
     if (typeof IntersectionObserver === 'undefined') return
     let intersectionObserver: IntersectionObserver | null = null
     let mutationObserver: MutationObserver | null = null
+    let observedTarget: Element | null = null
 
     function tryObserve() {
-      if (intersectionObserver) return
       const target = document.querySelectorAll('article')[SCROLL_DEPTH_CARD_INDEX]
-      if (!target) return
+      if (!target || target === observedTarget) return
+      // (Re)attach to the current 8th card — the previous one may have been
+      // replaced by a Suspense/CompareProvider re-render.
+      intersectionObserver?.disconnect()
+      observedTarget = target
       intersectionObserver = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
@@ -206,15 +213,11 @@ export default function MobileStickyAlertBar({
         { threshold: 0 }
       )
       intersectionObserver.observe(target)
-      mutationObserver?.disconnect()
-      mutationObserver = null
     }
 
     tryObserve()
-    if (!intersectionObserver) {
-      mutationObserver = new MutationObserver(tryObserve)
-      mutationObserver.observe(document.body, { childList: true, subtree: true })
-    }
+    mutationObserver = new MutationObserver(tryObserve)
+    mutationObserver.observe(document.body, { childList: true, subtree: true })
 
     return () => {
       intersectionObserver?.disconnect()

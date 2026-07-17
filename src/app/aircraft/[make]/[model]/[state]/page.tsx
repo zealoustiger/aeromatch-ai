@@ -22,6 +22,7 @@ import {
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 
 type Props = { params: Promise<{ make: string; model: string; state: string }> }
 
@@ -272,6 +273,11 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
       <ForSaleGuideLinks className="mt-4" />
     </div>
     <CompareTray />
+    <MobileStickyAlertBar
+      context={`${label} in ${st.name}`}
+      sourcePath={path}
+      source="sticky_bar_make_model_state"
+    />
     </CompareProvider>
   )
 }
