@@ -2264,15 +2264,17 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   `scrollTo(bottom)` jump skips past the reveal threshold without triggering it — real
   users scroll incrementally, so this matches actual behavior): bar renders correctly
   styled, clears `FeedbackWidget`'s pill, at 375px.
-- **[P1][goal] Filled-partnership page: alert capture instead of a 404.**
-  `/partnerships/[id]` queries `.eq('status','active')`, so once a partnership fills,
-  every inbound link/share/bookmark dead-ends at a 404 with only the generic bare-`/`
-  capture. Aircraft already solved this (sold-listing page: honest "no longer available"
-  copy, noindex + canonical, make/model-scoped alert box) — mirror it for partnerships:
-  render the filled partnership's page shell with "this partnership has been filled,"
-  a make/airport-scoped `AlertSignup` ("alert me when a similar share opens near {airport}",
-  `source: 'ended_partnership'`, emits `alert_subscribed`), and noindex. New capture point
-  at the highest-regret moment a buyer has ("the one I wanted is gone").
+~~- **[P1][goal] Filled-partnership page: alert capture instead of a 404.**~~ ✅
+  AUDIT-CONFIRMED ALREADY SHIPPED 2026-07-17 (found during `partnershiplaunchbanner-funnel-
+  parity` scoping). This plan-pass batch entry was a stale duplicate — the exact feature
+  (honest "filled" copy, noindex + canonical, family-scoped `AlertSignup`) was already
+  fully shipped via `partnership-filled-landing` (2026-07-14): `getClosedPartnershipById`
+  in `src/lib/partnerships.ts` + `FilledPartnershipPage` in `src/app/partnerships/[id]/
+  page.tsx` (confirmed via direct code read: `generateMetadata` and the default export both
+  fall back to the closed-partnership render with `robots: {index: false}` + self-canonical
+  before hitting `notFound()`). Only real gap vs. the new ask: airport-scoped alert copy
+  ("near {airport}") instead of make/model-family scoping — a plausible small follow-up, not
+  a rebuild, if a human wants it.
 - **[P1][goal] `PartnershipLaunchBanner` funnel parity — impression event +
   known-subscriber state.** The banner (renders on 5 pages: `/partnerships`,
   `/partnerships/browse`, `/partnerships/seeking`, `/partnerships/seeking/[id]`,

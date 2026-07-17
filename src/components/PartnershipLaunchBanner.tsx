@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, ArrowRight } from 'lucide-react'
 import { subscribeToAlerts } from '@/app/actions'
 import { track } from '@/lib/analytics'
+import { addLocalSubscription, isLocallySubscribed, setLocalEmail } from '@/lib/alertLocalSubscriptions'
 
 interface Props {
   visitorState: string | null
@@ -17,11 +18,37 @@ export default function PartnershipLaunchBanner({ visitorState, seekerCount, sou
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [pending, setPending] = useState(false)
+  const [locallySubscribed, setLocallySubscribed] = useState(false)
 
   const area = visitorState || 'your area'
   const context = visitorState
     ? `partnership near ${area}`
     : 'aircraft partnership'
+
+  useEffect(() => {
+    setLocallySubscribed(isLocallySubscribed(sourcePath))
+  }, [sourcePath])
+
+  // Impression denominator — same one-shot IntersectionObserver pattern
+  // `footer-alert-capture-known-subscriber` shipped for FooterAlertCapture, so this
+  // banner's view→subscribe conversion is finally measurable like every other surface.
+  const rootRef = useRef<HTMLElement>(null)
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (viewedRef.current || !entry.isIntersecting) return
+        viewedRef.current = true
+        track('alert_capture_viewed', { context, source_path: sourcePath, source: 'partnership_launch_banner' })
+        observer.disconnect()
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [context, sourcePath])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,12 +67,14 @@ export default function PartnershipLaunchBanner({ visitorState, seekerCount, sou
       source: 'partnership_launch_banner',
       frequency: 'weekly',
     })
+    addLocalSubscription(sourcePath)
+    setLocalEmail(email)
     setSubmitted(true)
   }
 
   if (submitted) {
     return (
-      <section className="my-4 rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
+      <section ref={rootRef} className="my-4 rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-violet-600" />
           <span className="text-slate-700">
@@ -67,8 +96,22 @@ export default function PartnershipLaunchBanner({ visitorState, seekerCount, sou
     )
   }
 
+  if (locallySubscribed) {
+    return (
+      <section ref={rootRef} className="my-4 rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-slate-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-violet-600" />
+          You&apos;re on the list &mdash;{' '}
+          <Link href="/alerts/manage" className="font-medium text-violet-700 underline-offset-2 hover:underline">
+            manage your alerts
+          </Link>
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <section className="my-4 rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
+    <section ref={rootRef} className="my-4 rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
       <p className="text-sm leading-relaxed text-slate-700">
         We&apos;re in beta near <strong className="text-violet-700">{area}</strong>.
         {seekerCount > 0 && (
