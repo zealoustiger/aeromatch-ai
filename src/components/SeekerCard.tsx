@@ -73,7 +73,7 @@ export default function SeekerCard({
   const listed = listedAgo(seeker.created_at)
 
   return (
-    <div className="relative">
+    <article className="relative">
       <Link
         href={`/partnerships/seeking/${seeker.id}`}
         className="block rounded-xl border border-slate-200 bg-white p-5 pr-12 shadow-sm transition-shadow hover:shadow-md"
@@ -187,6 +187,6 @@ export default function SeekerCard({
       <div className="absolute right-3 top-3 z-10">
         <SaveListingButton listingId={seeker.id} listingType="seeker" initialSaved={saved} variant="icon" />
       </div>
-    </div>
+    </article>
   )
 }

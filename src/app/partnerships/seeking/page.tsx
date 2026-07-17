@@ -14,6 +14,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import AlertSignup from '@/components/AlertSignup'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
 import { getSeekerMakes, getSeekerModels, getSeekerCount } from '@/lib/seekersQuery'
@@ -144,6 +145,7 @@ export default async function SeekingPartnershipsPage({
   const matchResult = await getAlertMatchCount(alertSourcePath)
 
   return (
+    <>
     <div className="ch-surface min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         {itemListJsonLd && (
@@ -272,6 +274,15 @@ export default async function SeekingPartnershipsPage({
         </div>
       </div>
     </div>
+    <MobileStickyAlertBar
+      context={alertContext}
+      sourcePath={alertSourcePath}
+      source="sticky_bar_seeking"
+      idleLabel="Get alerts for new pilots"
+      emailLabel="Alert me"
+      confirmedLabel="You'll get alerts when a pilot matches"
+    />
+    </>
   )
 }
 
