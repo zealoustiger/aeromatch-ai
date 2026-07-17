@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-17T13:23:48Z — DRAIN SUMMARY
+- Cycles this run: 13 (PASS 10 / FAIL 1 / ABORT 2)
+- Models: cycles on sonnet; 1 escalated to opus; 3 quality-judged on opus
+- Night spend so far: $120.0750 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260717T101813Z
+
 ## 20260717T131405Z — PASS — alert-confirm-deeplink
 - Pages: none (component-only change — every page that renders `AlertSignup`'s
   post-submit "check your inbox" panel, i.e. every alert capture point site-wide)
