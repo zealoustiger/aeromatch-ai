@@ -3,6 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-17T12:19:38Z — alert-manage-duplicate — score 4/5
+- Strengths: Clean, minimal, exactly-scoped — `createManageAlert` gains an optional `opts` object whose `?? 'weekly'/true/'manage_new'` defaults keep every existing caller byte-identical, `NewAlertForm` is reused as-is (prefill via `initial` + `autoOpen`/`onClose` so the parent owns visibility), Duplicate is gated on `target` and made mutually exclusive with Edit (each toggle closes the other), and criteria are threaded through the existing `targetToFields` helper rather than re-deriving; comments explain the invisible frequency/price-drop carryover well.
+- Weaknesses / risks: The shared "Alert created" toast is dead in the duplicate path — `handleSubmit` sets `created=true` then immediately calls `onClose()`, which unmounts `NewAlertForm` before the toast renders, so a duplicate confirms only via the refreshed row list (the plain "+ New alert" flow still shows the toast); separately, an aircraft alert's `dealOnly`/"good deals only" flag is silently dropped on duplicate (documented as out-of-scope in `InitialValues`, but a real behavior gap for deals-only sources).
+- Follow-up: none
 ## 2026-07-17T11:46:45Z — partnership-hub-sticky-alert-bar — score 4/5
 - Strengths: Exact-mirror of the aircraft-hub pattern with the right subtlety — each sticky bar reuses its page's `AlertSignup` `context`+`sourcePath` verbatim (so `getExistingAlertForSourcePath` dedups the two prompts cleanly), distinct `sticky_bar_partnership_{make,near,state}` source tags per acceptance, and a well-commented `#alert-bar-reveal` sentinel copying `/aircraft/browse`'s fallback so thin hubs (near/[icao] MIN_NEARBY=2) actually fire; nothing else on the pages touched.
 - Weaknesses / risks: none material — only nit is the fragment's inner `<div>` left un-re-indented to keep the diff minimal (cosmetic; build/lint passed).
