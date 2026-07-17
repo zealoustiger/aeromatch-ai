@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-17T10:18:09Z — DRAIN SUMMARY
+- Cycles this run: 21 (PASS 15 / FAIL 3 / ABORT 3)
+- Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $69.1683 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260717T060007Z
+
 ## 20260717T100330Z — PASS — alert-manage-row-overflow
 - Pages: /alerts/manage
 - What: **The alert-row action-button cluster (Share, View, Send sample, Pause/Resume, Snooze, Delete, Edit) on `/alerts/manage` no longer spills off the screen — or worse, renders invisibly off the left edge — at 375px whenever a real alert is present.** The prior cycle (`digest-edit-alert-link`) filed this as a `[P1][bug]`: seeding a real confirmed test alert showed `scrollWidth` 705px vs. `clientWidth` 375px, because the row's button-cluster wrapper (`src/app/alerts/manage/page.tsx:372`) had `shrink-0`, forcing it to lay out at max-content width instead of letting its own `flex-wrap` kick in. Fixed exactly as diagnosed: `shrink-0` → `min-w-0`. **Live QA then surfaced a second, deeper instance of the identical pattern that the diagnosis hadn't caught:** `AlertActions.tsx`'s own button wrapper (Send sample/Pause/Snooze/Delete) was *also* `shrink-0` with no internal `flex-wrap` — once the outer fix let it wrap onto its own line, this inner block still couldn't shrink or wrap, and because its parent row (`AlertEditForm.tsx:151`) uses `justify-end`, the unbreakable block bled off the **left** edge instead of the right. That meant `scrollWidth` stayed a clean 375px (the naive check would have read PASS) while the real "Send sample" button rendered at `x: -86.8` — on-screen nowhere, fully unclickable. Fixed with the same `shrink-0` → `min-w-0 flex-wrap` pattern. Two files, CSS-class-only changes, no logic/behavior change.
