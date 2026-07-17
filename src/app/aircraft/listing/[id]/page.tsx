@@ -49,6 +49,7 @@ import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs'
 import PhotoGallery from '@/components/PhotoGallery'
 import SaveListingButton from '@/components/SaveListingButton'
 import ShareListingButton from '@/components/ShareListingButton'
+import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import SimilarAircraft from '@/components/SimilarAircraft'
 import PartnershipRailCard from '@/components/PartnershipRailCard'
 import SeekerRailCard from '@/components/SeekerRailCard'
@@ -875,6 +876,10 @@ export default async function AircraftListingDetailPage({
               alt={label}
               imageIsPlaceholder={p.image_is_placeholder}
             />
+            {/* Sentinel for MobileStickyAlertBar's reveal — the bar appears once
+                a mobile visitor has scrolled past the gallery, matching the
+                browse-page "scrolled past the fold" trigger. */}
+            <div id="watch-bar-reveal" aria-hidden="true" />
 
             <div className="ch-panel p-6">
               {/* Badges */}
@@ -1256,6 +1261,15 @@ export default async function AircraftListingDetailPage({
           <SimilarAircraft current={p} />
         </div>
       </div>
+      <MobileStickyAlertBar
+        context={watchContext}
+        sourcePath={watchSourcePath}
+        revealSelector="#watch-bar-reveal"
+        source="sticky_bar_detail"
+        idleLabel="Watch this listing"
+        emailLabel="Watch"
+        confirmedLabel="You'll get price-drop alerts"
+      />
     </div>
   )
 }

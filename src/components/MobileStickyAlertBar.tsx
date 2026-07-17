@@ -15,6 +15,23 @@ interface Props {
   context?: string
   /** Reproducible source path for the active filter set, e.g. "/aircraft?make=Cessna". */
   sourcePath: string
+  /** CSS selector for the element whose scroll-into-view reveals the bar.
+   *  Defaults to the 8th result card (browse pages' "scrolled past the fold"
+   *  signal); detail pages have no repeating cards, so they pass their own
+   *  sentinel element's selector instead. */
+  revealSelector?: string
+  /** Per-placement analytics attribution, e.g. "sticky_bar_detail" to
+   *  distinguish a listing-detail bar from the browse-page one. Defaults to
+   *  "sticky_bar"; still overridden to "shared_alert" when the page URL
+   *  carries `?share=alert`. */
+  source?: string
+  /** Idle button copy (before any remembered email is known). */
+  idleLabel?: string
+  /** Idle button copy prefix once a remembered email is known — rendered as
+   *  "{emailLabel} — {email}". */
+  emailLabel?: string
+  /** Copy shown after a signed-in one-tap subscribe succeeds. */
+  confirmedLabel?: string
 }
 
 const DISMISS_KEY_PREFIX = 'ch_sticky_alert_bar_dismissed:'
@@ -51,8 +68,19 @@ function persistDismissed(sourcePath: string): void {
  * hitting a per-card bell or the footer AlertSignup. Mirrors AlertMeChip's
  * subscribe logic 1:1 — same server actions, same existing-alert checks, same
  * event names — just packaged as a bottom bar instead of a filter-toolbar chip.
+ * `revealSelector`/`source`/label props let listing-detail pages reuse the same
+ * reveal + one-tap machinery for a listing-scoped "watch this listing" bar
+ * instead of the browse-page's "alert for this search" copy.
  */
-export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
+export default function MobileStickyAlertBar({
+  context,
+  sourcePath,
+  revealSelector,
+  source,
+  idleLabel = 'Get alerts for this search',
+  emailLabel = 'Alert me',
+  confirmedLabel = "You'll get alerts for this search",
+}: Props) {
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null)
   const [hasExistingAlert, setHasExistingAlert] = useState(false)
   const [locallySubscribed, setLocallySubscribed] = useState(false)
@@ -74,7 +102,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
   // placement's ordinary `sticky_bar` conversions. Starts false (matches the
   // server-rendered markup) and only flips after mount, so no hydration mismatch.
   const [isSharedLink, setIsSharedLink] = useState(false)
-  const effectiveSource = isSharedLink ? 'shared_alert' : 'sticky_bar'
+  const effectiveSource = isSharedLink ? 'shared_alert' : (source ?? 'sticky_bar')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -121,11 +149,44 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
     }
   }, [signedInEmail, sourcePath])
 
-  // Scroll-depth gate: the results list can still be streaming in when this
-  // component mounts (Suspense), so watch for the sentinel card via
-  // MutationObserver until it actually exists in the DOM, then switch to a
-  // one-shot IntersectionObserver on it.
+  // Scroll-depth gate, sentinel variant (detail pages, `revealSelector` set):
+  // reveal once the sentinel has scrolled entirely above the viewport. A plain
+  // "is it in view" IntersectionObserver would fire immediately at mount on a
+  // listing with a short gallery (sentinel already on-screen on load), showing
+  // the bar with zero scroll — so this gates on the element having actually
+  // scrolled past, not merely being visible.
   useEffect(() => {
+    if (!revealSelector) return
+    if (typeof window === 'undefined') return
+    let raf = 0
+    function check() {
+      const target = document.querySelector(revealSelector!)
+      if (!target) return
+      if (target.getBoundingClientRect().bottom < 0) {
+        setPastScrollDepth(true)
+        window.removeEventListener('scroll', onScroll)
+      }
+    }
+    function onScroll() {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        check()
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [sourcePath, revealSelector])
+
+  // Scroll-depth gate, card variant (browse pages, default): the results list
+  // can still be streaming in when this component mounts (Suspense), so watch
+  // for the sentinel card via MutationObserver until it actually exists in the
+  // DOM, then switch to a one-shot IntersectionObserver on it.
+  useEffect(() => {
+    if (revealSelector) return
     if (typeof IntersectionObserver === 'undefined') return
     let intersectionObserver: IntersectionObserver | null = null
     let mutationObserver: MutationObserver | null = null
@@ -159,7 +220,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
       intersectionObserver?.disconnect()
       mutationObserver?.disconnect()
     }
-  }, [sourcePath])
+  }, [sourcePath, revealSelector])
 
   // Keyboard-avoidance: hide whenever the visual viewport shrinks meaningfully
   // (mobile on-screen keyboard open), so the bar never floats over a focused input.
@@ -265,7 +326,7 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
         {justSubscribed ? (
           <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
-            You&apos;ll get alerts for this search
+            {confirmedLabel}
           </span>
         ) : justOneTapSubscribed ? (
           <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
@@ -286,8 +347,8 @@ export default function MobileStickyAlertBar({ context, sourcePath }: Props) {
                 : errorMsg
                   ? 'Try again'
                   : rememberedEmail
-                    ? `Alert me — ${rememberedEmail}`
-                    : 'Get alerts for this search'}
+                    ? `${emailLabel} — ${rememberedEmail}`
+                    : idleLabel}
             </span>
           </button>
         )}

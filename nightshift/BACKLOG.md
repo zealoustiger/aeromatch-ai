@@ -2166,7 +2166,8 @@ confirm-email manage link, partnership price-drop sample cards._
   `subscribeSignedInAlert` + the detail pages' `?watch=price` sourcePath convention and
   `getExistingAlertForSourcePath` so already-watched rows show a quiet "Watching ✓"
   instead of a redundant offer. Emits `alert_subscribed` (`source: 'saved_page_watch'`).
-- **[P1][goal] Mobile sticky watch bar on listing detail pages.** `MobileStickyAlertBar`
+- **[P1][goal] Mobile sticky watch bar on listing detail pages.** ✅ SHIPPED (aircraft) via `mobile-sticky-watch-bar-detail` (2026-07-17) — `/aircraft/listing/[id]` now renders a scroll-gated "Watch this listing" bottom bar at 375px reusing the browse bar's one-tap machinery + the page's own `watch=price` context/sourcePath, tagged `source: "sticky_bar_detail"`. **`/partnerships/[id]` deliberately left as a follow-up** — that page already has a persistent `fixed bottom-0` `ContactBar` with multiple stateful heights; stacking a second full-width bottom bar risks the exact overlap this item warns against and needs its own scoped design (fold the watch offer into ContactBar's button row). Pull that as the remaining slice of this item.
+  ~~`MobileStickyAlertBar`
   ships only on the two browse pages; on `/aircraft/listing/[id]` and
   `/partnerships/[id]` — the highest-intent pages on the site — the watch capture sits
   deep in the sidebar, below the fold at 375px. Add a detail-page variant ("Watch this
@@ -2174,7 +2175,7 @@ confirm-email manage link, partnership price-drop sample cards._
   remembered-email/signed-in one-tap patterns and the page's own watch
   `context`/`sourcePath`, with a distinct `source` (e.g. `sticky_bar_detail`) so its
   conversion is measurable separately. Must not overlap/fight the pages' existing
-  bottom-of-page content at 375px (QA both listing types).
+  bottom-of-page content at 375px (QA both listing types).~~
 - **[P2][goal] Known-subscriber homepage module — "N new since your last visit."** The
   nav pill (`nav-alert-new-since-pill`) already computes real new-match counts from
   `alertLocalSubscriptions` + `getNewMatchCountSince`; the homepage itself shows a known
