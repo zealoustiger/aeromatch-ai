@@ -2223,6 +2223,87 @@ confirm-email manage link, partnership price-drop sample cards._
 _(The plan pass on Opus/Fable will append more alert-experience `[P1][goal]` tasks here as
 this queue drains — see PLAN_TASK.md.)_
 
+### Plan-pass batch — 2026-07-17 (Fable)
+_All verified un-built by direct code read this pass: `SeekerActiveFilterChips.tsx` imports
+no `AlertMeChip`; `MobileStickyAlertBar` mounts only on `/aircraft`, `/partnerships`, and
+`/aircraft/listing/[id]` (not `/partnerships/seeking`); `/partnerships/[id]` hard-filters
+`.eq('status','active')` (a filled partnership 404s — aircraft's sold-listing alert
+treatment has no partnership analog); `PartnershipLaunchBanner` fires no
+`alert_capture_viewed` and has no known-subscriber state; the `sourcePath="/"` boxes
+(homepage band, `/about`, `not-found.tsx`, `/saved` fallback) pass no `matchCount` even
+though `alert-any-listing-target` made `getAlertMatchCount('/')` real;
+`SavedListingWatchButton`/`SaveListingButton` fire only `alert_subscribed` (no impression
+event) while `ContactBarWatchButton` fires the full viewed/opened/subscribed set; the
+combined digest's sections carry `stopUrl` but no edit link. None overlap the two
+open-but-blocked items (instant sends → Vercel-tier human call; save-search auth wall →
+`[want]` product call)._
+
+- **[P1][goal] One-tap "Alert me for this search" chip on `/partnerships/seeking`'s
+  filter toolbar.** `AlertMeChip` ships in both `ActiveFilterChips` (aircraft) and
+  `PartnershipActiveFilterChips`, but `SeekerActiveFilterChips` has none — an owner who
+  filters pilots by model/airport gets no one-tap alert for that exact demand search.
+  Drop the existing chip in with the page's already-computed `alertContext`/
+  `alertSourcePath` (`/partnerships/seeking?...` — the digest cron already parses it) and
+  a distinct `source` (e.g. `filter_toolbar_seeking`) so its conversion is measurable
+  apart from the buyer-side chips. Adds a new capture point on the demand-side browse
+  surface; emits `alert_subscribed` for free via the shared chip machinery.
+- **[P1][goal] Mobile sticky alert bar on `/partnerships/seeking`.** The scroll-revealed
+  `MobileStickyAlertBar` covers `/aircraft` + `/partnerships` browse and the aircraft
+  detail page, but the seeker browse page — owners on their phones checking for pilot
+  demand — has no persistent capture at 375px (the `AlertSignup` sits below the full
+  list). Reuse the already-generalized bar (copy-override props exist since
+  `mobile-sticky-watch-bar-detail`) with honest demand-side copy ("Get an email when a
+  pilot starts looking"), the page's `alertContext`/`alertSourcePath`, and a distinct
+  `source` (e.g. `sticky_bar_seeking`) emitting `alert_subscribed`. QA 375px clearance
+  against `FeedbackWidget`'s repositioned pill, same as the prior bar cycles.
+- **[P1][goal] Filled-partnership page: alert capture instead of a 404.**
+  `/partnerships/[id]` queries `.eq('status','active')`, so once a partnership fills,
+  every inbound link/share/bookmark dead-ends at a 404 with only the generic bare-`/`
+  capture. Aircraft already solved this (sold-listing page: honest "no longer available"
+  copy, noindex + canonical, make/model-scoped alert box) — mirror it for partnerships:
+  render the filled partnership's page shell with "this partnership has been filled,"
+  a make/airport-scoped `AlertSignup` ("alert me when a similar share opens near {airport}",
+  `source: 'ended_partnership'`, emits `alert_subscribed`), and noindex. New capture point
+  at the highest-regret moment a buyer has ("the one I wanted is gone").
+- **[P1][goal] `PartnershipLaunchBanner` funnel parity — impression event +
+  known-subscriber state.** The banner (renders on 5 pages: `/partnerships`,
+  `/partnerships/browse`, `/partnerships/seeking`, `/partnerships/seeking/[id]`,
+  `/partnerships/[id]`) got `alert_subscribed` tracking in `partnership-banner-alert-tracking`,
+  but still fires no `alert_capture_viewed` (its view→subscribe conversion is invisible to
+  the standard funnel every other surface reports into) and re-asks a browser that already
+  subscribed forever. Mirror the `footer-alert-capture-known-subscriber` cycle exactly:
+  one-shot `IntersectionObserver` impression (`source: 'partnership_launch_banner'`) +
+  an `isLocallySubscribed` "You're set — manage your alerts" swap. One file, five surfaces,
+  no new capture point — improves measurement and the never-nag experience.
+- **[P1][goal] Honest live-count line on the bare-`/` capture boxes.**
+  `alert-any-listing-target` made `getAlertMatchCount('/')` return a real combined
+  aircraft∪partnership count (verified live: 2,159), but the boxes that predate it still
+  render with no count: the homepage band (`source="homepage_band"`), `/about`,
+  `not-found.tsx` (whose earlier match-count exclusion was explicitly *because* bare `/`
+  parsed to `null` — that blocker is gone), and `/saved`'s fallback box. Thread the
+  existing `matchCount` prop through each (same one-line pattern as
+  `alertsignup-matchcount-sweep`) so the widest capture surfaces carry "N listings match
+  right now" credibility. `FooterAlertCapture` stays count-free by design (deliberately
+  thin). No new capture point or event — improves conversion honesty at capture.
+- **[P1][goal] Complete the view→subscribe funnel on the remaining watch-offer
+  surfaces.** `SavedListingWatchButton` (`source: 'saved_page_watch'`) and
+  `SaveListingButton`'s save→watch cross-sell banner (`source: 'save_cross_sell'`) fire
+  only `alert_subscribed`, so their per-placement conversion denominator doesn't exist —
+  while `ContactBarWatchButton` already fires the full
+  `alert_capture_viewed`/`alert_capture_opened`/`alert_subscribed` set. Add the missing
+  one-shot impression events (and `alert_capture_opened` where an offer expands),
+  mirroring `ContactBarWatchButton`'s payload shape. Pure analytics, no UI change — makes
+  the newest watch placements comparable in the `/admin/alerts` per-source funnel.
+- **[P1][goal] Per-section "Edit this alert" link in the combined digest email.**
+  `alert-digest-per-alert-stop-link` gave each digest section a token-authed "Stop just
+  this alert" link — but a subscriber whose criteria are slightly wrong (too narrow, wrong
+  state, stale price cap) has no in-email path except stop-or-ignore. Add an "Edit this
+  alert" link beside each section's stop link, deep-linking to the alert's token-scoped
+  `/alerts/manage` view (the same per-alert manage-token mechanics the target-price-edit
+  cycle verified live) so "wrong criteria" becomes an edit instead of an unsubscribe —
+  GOAL.md's "offer fewer instead of none," applied to relevance. Fails soft (no link) for
+  rows without a token; no schema change, no new capture point.
+
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
