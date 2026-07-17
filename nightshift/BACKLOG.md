@@ -2250,15 +2250,20 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   with `source="filter_toolbar_seeking"` — its conversion is now measurable apart from the
   buyer-side chips. No change to `/aircraft` or `/partnerships`' existing chip behavior
   (they omit the new prop, so they keep firing `filter_toolbar` exactly as before).
-- **[P1][goal] Mobile sticky alert bar on `/partnerships/seeking`.** The scroll-revealed
-  `MobileStickyAlertBar` covers `/aircraft` + `/partnerships` browse and the aircraft
-  detail page, but the seeker browse page — owners on their phones checking for pilot
-  demand — has no persistent capture at 375px (the `AlertSignup` sits below the full
-  list). Reuse the already-generalized bar (copy-override props exist since
-  `mobile-sticky-watch-bar-detail`) with honest demand-side copy ("Get an email when a
-  pilot starts looking"), the page's `alertContext`/`alertSourcePath`, and a distinct
-  `source` (e.g. `sticky_bar_seeking`) emitting `alert_subscribed`. QA 375px clearance
-  against `FeedbackWidget`'s repositioned pill, same as the prior bar cycles.
+~~- **[P1][goal] Mobile sticky alert bar on `/partnerships/seeking`.**~~ ✅ SHIPPED via
+  `seeker-sticky-alert-bar` (2026-07-17) The scroll-revealed `MobileStickyAlertBar` now
+  also ships on `/partnerships/seeking` (previously only `/aircraft` + `/partnerships`
+  browse + the aircraft detail page), with honest demand-side copy ("Get alerts for new
+  pilots" / "You'll get alerts when a pilot matches") and `source: "sticky_bar_seeking"`
+  so its conversions are measurable apart from the other two bars. **Discovered
+  mid-cycle:** `SeekerCard`'s outer wrapper was a `<div>`, not `<article>` like
+  `AircraftSaleCard`/`PartnershipCard` — the bar's default scroll-depth reveal targets the
+  8th `<article>` on the page, so without this fix the bar would have silently never
+  appeared on this page. Fixed as a one-line semantic tag swap (no class/behavior change).
+  Verified live with a scripted incremental-scroll Playwright check (a single
+  `scrollTo(bottom)` jump skips past the reveal threshold without triggering it — real
+  users scroll incrementally, so this matches actual behavior): bar renders correctly
+  styled, clears `FeedbackWidget`'s pill, at 375px.
 - **[P1][goal] Filled-partnership page: alert capture instead of a 404.**
   `/partnerships/[id]` queries `.eq('status','active')`, so once a partnership fills,
   every inbound link/share/bookmark dead-ends at a 404 with only the generic bare-`/`
