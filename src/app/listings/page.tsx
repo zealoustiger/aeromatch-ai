@@ -7,6 +7,7 @@ import { formatPrice, formatShareType } from '@/lib/utils'
 import type { AircraftForSale, Partnership, PartnershipSeeker } from '@/lib/types'
 import DeactivateListingButton from '@/components/DeactivateListingButton'
 import RelistListingButton from '@/components/RelistListingButton'
+import MatchAlertOptOutToggle from '@/components/MatchAlertOptOutToggle'
 import AircraftTrustBadge from '@/components/AircraftTrustBadge'
 import TrustBadge from '@/components/TrustBadge'
 import SeekerTrustBadge from '@/components/SeekerTrustBadge'
@@ -32,44 +33,58 @@ function formatDate(iso: string | null | undefined): string {
 
 // Owners of `partnerships`/`partnership_seekers` get a weekly automatic email when a
 // genuinely new match appears on the other side (see `/api/cron/match-alert-digest`).
-// `match_alert_last_sent_at` isn't guaranteed migrated on every environment yet, so
-// selecting it can 42703 — retry without it rather than losing the whole row set (same
-// fail-soft convention as the partnership/aircraft detail pages).
+// `match_alert_last_sent_at` and `match_alert_opt_out` aren't guaranteed migrated on
+// every environment yet — and may land in separate migrations — so this cascades
+// through 3 tiers (both columns → `match_alert_last_sent_at` only → neither) rather
+// than losing the whole row set on a single 42703 (same fail-soft convention as the
+// partnership/aircraft detail pages).
 async function selectActiveWithMatchAlertFallback<T>(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   table: 'partnerships' | 'partnership_seekers',
   baseColumns: string,
   posterId: string
 ): Promise<T[]> {
-  const withColumn = await supabase
-    .from(table)
-    .select(`${baseColumns}, match_alert_last_sent_at`)
-    .eq('poster_id', posterId)
-    .in('status', ['active', 'pending'])
-    .order('created_at', { ascending: false })
+  const query = (columns: string) =>
+    supabase
+      .from(table)
+      .select(columns)
+      .eq('poster_id', posterId)
+      .in('status', ['active', 'pending'])
+      .order('created_at', { ascending: false })
 
-  if (!withColumn.error) return (withColumn.data ?? []) as T[]
+  const withBoth = await query(`${baseColumns}, match_alert_last_sent_at, match_alert_opt_out`)
+  if (!withBoth.error) return (withBoth.data ?? []) as T[]
 
-  const fallback = await supabase
-    .from(table)
-    .select(baseColumns)
-    .eq('poster_id', posterId)
-    .in('status', ['active', 'pending'])
-    .order('created_at', { ascending: false })
+  const withLastSentOnly = await query(`${baseColumns}, match_alert_last_sent_at`)
+  if (!withLastSentOnly.error) return (withLastSentOnly.data ?? []) as T[]
 
+  const fallback = await query(baseColumns)
   return (fallback.data ?? []) as T[]
 }
 
 // Never fabricates a date — a missing/unmigrated column reads as the equally honest
 // "none sent yet" (the cron genuinely no-ops when the column doesn't exist).
-function MatchAlertDisclosure({ lastSentAt, href }: { lastSentAt: string | null | undefined; href: string }) {
+function MatchAlertDisclosure({
+  lastSentAt,
+  href,
+  type,
+  id,
+  optedOut,
+}: {
+  lastSentAt: string | null | undefined
+  href: string
+  type: 'partnership' | 'seeker'
+  id: string
+  optedOut: boolean
+}) {
   return (
-    <p className="mt-1 text-xs text-slate-400">
+    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-slate-400">
       <Link href={href} className="hover:text-slate-600 hover:underline">
         We email you when new matches appear
       </Link>
       {' — '}
       {lastSentAt ? `last sent ${formatDate(lastSentAt)}` : 'none sent yet'}
+      <MatchAlertOptOutToggle type={type} id={id} optedOut={optedOut} />
     </p>
   )
 }
@@ -297,6 +312,9 @@ export default async function MyListingsPage() {
                     <MatchAlertDisclosure
                       lastSentAt={p.match_alert_last_sent_at}
                       href={seekerBrowseHrefForPartnership(p)}
+                      type="partnership"
+                      id={p.id}
+                      optedOut={p.match_alert_opt_out === true}
                     />
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -360,6 +378,9 @@ export default async function MyListingsPage() {
                       <MatchAlertDisclosure
                         lastSentAt={s.match_alert_last_sent_at}
                         href={partnershipBrowseHrefForSeeker(s)}
+                        type="seeker"
+                        id={s.id}
+                        optedOut={s.match_alert_opt_out === true}
                       />
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">

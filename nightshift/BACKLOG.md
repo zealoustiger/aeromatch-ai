@@ -2143,15 +2143,20 @@ confirm-email manage link, partnership price-drop sample cards._
 
 ~~- **[P1][goal] Make bare-`/` alerts actually fire — today the site's widest capture
   points subscribe people to nothing.**~~ ✅ SHIPPED via `alert-any-listing-target` (2026-07-16) Both source-path parsers (the `alert-digest` cron's `resolveTarget` and `alertMatchCounts.ts`'s `parseSourcePath`) now map a bare `/` to a new `{ type: 'all' }` target = aircraft ∪ partnerships (no seekers — the affected surfaces are all buyer-facing). The cron's `countNew`/`dropCount`/samples branches sum both families and merge digest samples (aircraft first, top up with partnerships to `MAX_DIGEST_SAMPLES`); `getAlertMatchCount('/')` and `getAlertDigestPreview('/')` return a real combined `listing` count instead of `null`. Fixes ~5 existing capture surfaces at once (site-wide `FooterAlertCapture`, homepage band, `not-found.tsx`, `/about`, `/saved`'s fallback) — every one now matches, counts, and emails honestly instead of silently subscribing people to nothing. No schema change, no new capture point, no new event. Verified live against the real prod DB (read-only): bare `/` resolved to 2159 real listings with merged samples (was `null` pre-fix); no OTHER target type's behavior changed. `marketPulse`/`bestDrop`/`dropNoun` left untouched — `'all'` falls through to their existing sane defaults (aggregate digest template, generic "price drop" label, no market-pulse line).
-- **[P1][goal] Owner match-alert opt-out toggle on `/listings`.** The natural next slice
+~~- **[P1][goal] Owner match-alert opt-out toggle on `/listings`.**~~ ✅ SHIPPED via
+  `match-alert-opt-out-toggle` (2026-07-17) The natural next slice
   explicitly flagged by `listings-match-alert-disclosure`: the "We email you when new
   matches appear" line is read-only — an owner who doesn't want the weekly
   `match-alert-digest` email has no off switch (GOAL.md: never spam; offer "fewer"
-  instead of nothing). Add a small per-listing "Pause these emails" toggle next to the
-  disclosure line (partnership + seeker rows only — the cron only emails those), backed
-  by an additive opt-out column on `partnerships`/`partnership_seekers` (⚠️ human-DDL,
-  fail-soft 42703 retry like every prior column) that the `match-alert-digest` cron
-  respects. Improves the owner-side alert surface; no new capture point.
+  instead of nothing). Added a small "(pause these emails)"/"(paused — resume)" toggle
+  next to the disclosure line (partnership + seeker rows only — the cron only emails
+  those), backed by a new `match_alert_opt_out` column on `partnerships`/
+  `partnership_seekers` referenced defensively (⚠️ still needs the human-run
+  `ALTER TABLE`; confirmed live neither column exists yet — code fails soft on both
+  `/listings`' read and the toggle's write, same convention as `match_alert_last_sent_at`
+  and `price_drop_opt_in` before it) that the `match-alert-digest` cron now respects
+  (skips any row with `match_alert_opt_out === true`). Improves the owner-side alert
+  surface; no new capture point.
 - **[P1][goal] Price-drop watch offers on `/saved` — the shopping list with no alerts.**
   A signed-in user's hearted listings are their highest-intent set, but `/saved` offers
   zero watch capture (verified: its only boxes are generic `sourcePath="/"` — also

@@ -3250,3 +3250,32 @@ export async function relistListing(
 
   revalidatePath('/listings')
 }
+
+// Pause/resume the weekly `match-alert-digest` email for one partnership/seeker
+// listing. Same ownership shape as deactivateListing/relistListing (session-based,
+// `poster_id`-scoped) — the cron only ever emails partnerships/seekers, never
+// aircraft-for-sale, so this action doesn't take an 'aircraft' type. Fail-soft
+// no-op if `match_alert_opt_out` isn't migrated yet, same convention as
+// updateAlertPriceDropOptIn.
+export async function updateMatchAlertOptOut(
+  type: 'partnership' | 'seeker',
+  id: string,
+  optOut: boolean
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const table = type === 'partnership' ? 'partnerships' : 'partnership_seekers'
+  const { error } = await supabase
+    .from(table)
+    .update({ match_alert_opt_out: optOut })
+    .eq('id', id)
+    .eq('poster_id', user.id)
+
+  if (error && error.message?.includes('match_alert_opt_out')) return { ok: true }
+  if (error) return { error: 'Failed to update alert setting.' }
+
+  revalidatePath('/listings')
+  return { ok: true }
+}
