@@ -369,7 +369,7 @@ export default async function AlertsManagePage({
                         </p>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <ShareAlertButton sourcePath={a.source_path} />
                       <AlertEditForm
                         id={a.id}

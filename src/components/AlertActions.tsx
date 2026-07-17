@@ -44,7 +44,7 @@ export default function AlertActions({ id, status, token }: { id: string; status
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       {status === 'pending' ? (
         <button
           onClick={handleResend}
