@@ -3,7 +3,10 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
-## 2026-07-17T09:22:42Z — watch-offer-funnel-parity — score 5/5
+## 2026-07-17T10:01:39Z — digest-edit-alert-link — score 5/5
+- Strengths: Hits every acceptance criterion exactly — `editUrl` mirrors the existing `stopUrl` no-token graceful-degrade in the same object, `escapeAttr`-guarded href, both html+text bodies, `scroll-mt-24`+`id="alert-<id>"` for the hash offset, and `autoOpen` reuses the existing `openEdit()` (which already guards `!target`, so a non-editable row fails soft), with the mount-once `useEffect([])` matching the surrounding eslint-disable idiom; single-alert path and stopUrl untouched, preview route updated for QA.
+- Weaknesses / risks: none material — empty-dep `useEffect` fires only on mount, so a client-side nav re-adding `?edit=` won't re-open, but that's not a real digest-link flow (each link is a fresh page load).
+- Follow-up: none
 - Strengths: Textbook mirror of ContactBarWatchButton's one-shot `viewedRef` + `alert_capture_viewed`/`opened` pattern onto both surfaces — same `{context: context||undefined, source_path, source}` payload, same `state/crossSell !== 'offer'` guard, same eslint-disable convention; opened event correctly fired before the subscribe action resolves, `alert_subscribed` calls untouched, zero UI change exactly as scoped.
 - Weaknesses / risks: none material — the never-reset ref fires viewed once per mount rather than per literal `crossSell → 'offer'` transition, so a dismiss+re-save reopen won't re-fire (arguably better: it also avoids double-counting on the subscribe-error `'subscribing'→'offer'` re-render).
 - Follow-up: none
