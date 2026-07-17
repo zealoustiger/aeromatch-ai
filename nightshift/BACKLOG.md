@@ -2196,15 +2196,19 @@ confirm-email manage link, partnership price-drop sample cards._
   only — no change to `ContactBar`/`MobileStickyAlertBar`/`SeekerContactBar`;
   `CompareTray`/`DeviceSaveSync` (conditional, rare, not named in the original finding)
   left untouched per the item's own "don't rush a fix that shifts it site-wide" caution.
-- **[P2][goal] Known-subscriber homepage module — "N new since your last visit."** The
-  nav pill (`nav-alert-new-since-pill`) already computes real new-match counts from
-  `alertLocalSubscriptions` + `getNewMatchCountSince`; the homepage itself shows a known
-  subscriber nothing personal (verified: no usage in `src/app/page.tsx`). Add a small
-  module near the top of `/` for known subscribers only: their alert contexts with real
-  new-since counts, each linking to its `source_path` search (and `/alerts/manage`);
-  anonymous visitors see the page byte-identical. Honest rule: seed-stamp behavior stays
-  as the pill shipped it — never count "since forever." Retention entry point; no new
-  capture, no schema change.
+~~- **[P2][goal] Known-subscriber homepage module — "N new since your last visit."**~~ ✅
+  SHIPPED via `homepage-known-subscriber-recap` (2026-07-17) New `HomepageAlertRecap`
+  client module renders between the hero and `FeaturedListings` on `/`, known-subscribers
+  only (`isAlertSubscriber()`): lists each of the browser's remembered searches with a
+  real live "N new listings/pilots since your last visit" count (`getAlertMatchCount`
+  scoped by `since`), each linking to that search plus a `/alerts/manage` link. Anonymous
+  visitors and a subscriber's first-ever visit (no prior last-visit stamp) render nothing
+  — never counts "since forever." New shared `readAndStampVisit()` in
+  `alertLocalSubscriptions.ts` makes the read-then-restamp happen exactly once per page
+  load so this module and `Nav`'s existing "N new" pill (both mounted on `/`) agree on the
+  identical `since` boundary instead of racing to overwrite the stamp first — live-verified
+  both surfaces report the same count (407) off a seeded old stamp. No new capture point,
+  no schema change.
 ~~- **[P2][goal] Footer capture: "You're set" state for known subscribers + the missing
   `alert_capture_viewed` funnel event.**~~ ✅ SHIPPED via `footer-alert-capture-known-subscriber`
   (2026-07-17) `FooterAlertCapture` now checks `isLocallySubscribed('/')` on mount and, when
