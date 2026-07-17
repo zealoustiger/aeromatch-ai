@@ -19,6 +19,7 @@ import {
 import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
 import { getSaveCounts } from '@/lib/saveCounts'
 import { deriveSavedAlertContext } from '@/lib/savedAlertContext'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
 export default async function SavedPage() {
@@ -148,6 +149,11 @@ export default async function SavedPage() {
   // "get new-listing alerts" box (still a real capture point on this page).
   const savedAlertCtx = deriveSavedAlertContext(partnerships, aircraft)
 
+  // Real combined aircraft+partnership count for the bare-`/` fallback alert boxes
+  // below (used only when there's no listing-derived savedAlertCtx) — never
+  // fabricate, so this fails soft to no count line rather than a fake number.
+  const alertMatchResult = await getAlertMatchCount('/')
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -181,7 +187,13 @@ export default async function SavedPage() {
             <Heart className="inline-block h-3.5 w-3.5 -translate-y-px text-sky-500" aria-hidden="true" />{' '}
             on any listing to save it here.
           </p>
-          <AlertSignup sourcePath="/" source="saved_page" className="mt-8" />
+          <AlertSignup
+            sourcePath="/"
+            source="saved_page"
+            className="mt-8"
+            noun="listing"
+            matchCount={alertMatchResult?.count}
+          />
         </div>
       ) : (
         <div className="space-y-10">
@@ -288,7 +300,12 @@ export default async function SavedPage() {
               source="saved_page"
             />
           ) : (
-            <AlertSignup sourcePath="/" source="saved_page" />
+            <AlertSignup
+              sourcePath="/"
+              source="saved_page"
+              noun="listing"
+              matchCount={alertMatchResult?.count}
+            />
           )}
 
           <p className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-slate-400">

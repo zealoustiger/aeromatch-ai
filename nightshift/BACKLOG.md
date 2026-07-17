@@ -2275,25 +2275,26 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   before hitting `notFound()`). Only real gap vs. the new ask: airport-scoped alert copy
   ("near {airport}") instead of make/model-family scoping — a plausible small follow-up, not
   a rebuild, if a human wants it.
-- **[P1][goal] `PartnershipLaunchBanner` funnel parity — impression event +
-  known-subscriber state.** The banner (renders on 5 pages: `/partnerships`,
-  `/partnerships/browse`, `/partnerships/seeking`, `/partnerships/seeking/[id]`,
-  `/partnerships/[id]`) got `alert_subscribed` tracking in `partnership-banner-alert-tracking`,
-  but still fires no `alert_capture_viewed` (its view→subscribe conversion is invisible to
-  the standard funnel every other surface reports into) and re-asks a browser that already
-  subscribed forever. Mirror the `footer-alert-capture-known-subscriber` cycle exactly:
-  one-shot `IntersectionObserver` impression (`source: 'partnership_launch_banner'`) +
-  an `isLocallySubscribed` "You're set — manage your alerts" swap. One file, five surfaces,
-  no new capture point — improves measurement and the never-nag experience.
-- **[P1][goal] Honest live-count line on the bare-`/` capture boxes.**
-  `alert-any-listing-target` made `getAlertMatchCount('/')` return a real combined
-  aircraft∪partnership count (verified live: 2,159), but the boxes that predate it still
-  render with no count: the homepage band (`source="homepage_band"`), `/about`,
-  `not-found.tsx` (whose earlier match-count exclusion was explicitly *because* bare `/`
-  parsed to `null` — that blocker is gone), and `/saved`'s fallback box. Thread the
-  existing `matchCount` prop through each (same one-line pattern as
-  `alertsignup-matchcount-sweep`) so the widest capture surfaces carry "N listings match
-  right now" credibility. `FooterAlertCapture` stays count-free by design (deliberately
+~~- **[P1][goal] `PartnershipLaunchBanner` funnel parity — impression event +
+  known-subscriber state.**~~ ✅ SHIPPED via `partnershiplaunchbanner-funnel-parity`
+  (2026-07-17) — audit correction: this was already shipped 2 cycles ago but the
+  BACKLOG line was never struck. `PartnershipLaunchBanner` now fires a one-shot
+  `IntersectionObserver` `alert_capture_viewed` impression + checks
+  `isLocallySubscribed(sourcePath)` on mount to swap in a "You're on the list —
+  manage your alerts" state, mirroring `footer-alert-capture-known-subscriber`
+  exactly. See CHANGELOG 2026-07-17T085744Z.
+~~- **[P1][goal] Honest live-count line on the bare-`/` capture boxes.**~~ ✅ SHIPPED
+  via `alert-matchcount-bare-root` (2026-07-17) `alert-any-listing-target` made
+  `getAlertMatchCount('/')` return a real combined aircraft∪partnership count (verified
+  live: 2,159 → 2,159 at ship time too), but the boxes that predate it still rendered with
+  no count: the homepage band (`source="homepage_band"`), `/about`, `not-found.tsx` (whose
+  earlier match-count exclusion was explicitly *because* bare `/` parsed to `null` — that
+  blocker is gone), and `/saved`'s two bare-`/` fallback boxes. Threaded the existing
+  `matchCount` prop (+ explicit `noun="listing"` so the combined count pluralizes/words
+  correctly, matching `getAlertMatchCount`'s own `noun: 'listing'`) through each — same
+  one-line pattern as `alertsignup-matchcount-sweep`. `about/page.tsx` and `not-found.tsx`
+  became `async` server components to await the count (both were sync, no `'use client'`,
+  safe). `FooterAlertCapture` stays count-free by design (deliberately
   thin). No new capture point or event — improves conversion honesty at capture.
 - ~~**[P1][goal] Complete the view→subscribe funnel on the remaining watch-offer
   surfaces.** `SavedListingWatchButton` (`source: 'saved_page_watch'`) and

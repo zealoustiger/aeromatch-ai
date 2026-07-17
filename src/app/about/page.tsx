@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Plane, Users, ArrowRight, Heart } from 'lucide-react'
 import type { Metadata } from 'next'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
 export const metadata: Metadata = {
   title: 'About — ClubHanger',
@@ -28,7 +29,10 @@ const frustrations = [
   },
 ]
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  // Real combined aircraft+partnership count — never fabricate, so this fails
+  // soft to no count line rather than a fake number.
+  const alertMatchResult = await getAlertMatchCount('/')
   return (
     <div>
       {/* ── HERO ── */}
@@ -189,7 +193,12 @@ export default function AboutPage() {
       {/* ── ALERTS ── */}
       <section className="bg-white py-16">
         <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
-          <AlertSignup sourcePath="/" source="about_page" />
+          <AlertSignup
+            sourcePath="/"
+            source="about_page"
+            noun="listing"
+            matchCount={alertMatchResult?.count}
+          />
         </div>
       </section>
 
