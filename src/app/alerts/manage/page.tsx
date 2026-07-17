@@ -376,6 +376,8 @@ export default async function AlertsManagePage({
                         status={a.status}
                         sourcePath={a.source_path}
                         target={target}
+                        frequency={a.frequency}
+                        priceDropOptIn={a.price_drop_opt_in}
                         token={scopeToken}
                         autoOpen={!!editId && editId === a.id}
                       />
