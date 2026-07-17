@@ -1,3 +1,34 @@
+## 2026-07-17T10:18:09Z — Night Shift run: 21 cycles (PASS 15 / FAIL 3) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $69.1683 of $120 cap
+
+- ABORT — none — plan needed
+- cycle produced no verdict (exit 124)
+- PASS — alert-any-listing-target — bare-`/` any new listing alerts now match, count, and fire (aircraft ∪ partnerships) across the site's 5 widest capture points
+- PASS — match-alert-opt-out-toggle — added a per-listing pause these emails toggle on `/listings` next to the existing match-alert disclosure, so partnership/seeker owners can n
+- cycle produced no verdict (exit 124)
+- PASS — mobile-sticky-watch-bar-detail — aircraft listing detail pages now show a scroll-triggered Watch this listing price-drop bar on mobile, reusing the browse bar's one-tap 
+- PASS — saved-page-watch-offers — /saved now offers a one-tap email me if the price drops alert on every saved aircraft/partnership row, live-verified end-to-end against the rea
+- PASS — contactbar-watch-button — added a one-tap Watch (price-drop alert) button to /partnerships/[id]'s mobile ContactBar, closing the remaining partnerships slice of the mobi
+- PASS — feedbackwidget-mobile-overlap — Fixed the tier-1 bug filed last cycle: the floating Feedback button now sits well above mobile sticky bottom bars (raised to `bottom-24` 
+- PASS — footer-alert-capture-known-subscriber — the site-wide footer alert-signup box now shows a quiet you're getting alerts line (instead of re-asking) for a browser that alre
+- PASS — homepage-known-subscriber-recap — added a Since your last visit module near the top of `/` that shows known alert subscribers real, live new-match counts for their own r
+- ABORT — none — plan needed
+- PASS — seeker-filter-alert-chip — added the one-tap Alert me for this search chip to /partnerships/seeking's filter toolbar, reusing AlertMeChip with a new distinct `filter_too
+- PASS — seeker-sticky-alert-bar — added a mobile scroll-revealed Get alerts for new pilots sticky bar to `/partnerships/seeking` (reusing the existing `MobileStickyAlertBar`), f
+- PASS — partnershiplaunchbanner-funnel-parity — added a one-shot impression event + known-subscriber you're on the list state to `PartnershipLaunchBanner` (live on 5 partnership
+- cycle produced no verdict (exit 0)
+- PASS — watch-offer-funnel-parity — finished an interrupted cycle: `SavedListingWatchButton` (`saved_page_watch`) and `SaveListingButton`'s save→watch cross-sell banner (`save
+- PASS — alert-matchcount-bare-root — Threaded real N listings match right now live counts into the 4 widest bare-`/` alert boxes (homepage, /about, 404 page, /saved), and fixed 
+- PASS — digest-edit-alert-link — combined alert-digest email sections now carry an Edit this alert link that deep-links straight into a pre-opened, pre-filled edit form on `/ale
+- PASS — alert-manage-row-overflow — Fixed the filed P1 bug where `/alerts/manage`'s row action buttons overflowed at 375px, plus a second deeper instance of the same `shrink-0`/
+- ABORT — none — plan needed
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.6 on 2 cores, sustained ~39 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 2 of 21 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-16T12:12:19Z — Night Shift run: 9 cycles (PASS 8 / FAIL 0) — night budget cap ($120)
 - Models: cycles on sonnet; 0 escalated to opus; 3 quality-judged on opus
 - Night spend so far: $121.5590 of $120 cap
