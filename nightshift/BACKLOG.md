@@ -2344,6 +2344,98 @@ open-but-blocked items (instant sends → Vercel-tier human call; save-search au
   alerts (confirmed + paused, the two widest button sets) via Playwright bounding-box
   checks on every button — all render fully on-screen (0 left/right clipping) at 375px and
   1280px; rows + account deleted after, 0 remain.
+
+### Plan-pass batch #2 — 2026-07-17 (Fable)
+_All verified un-built by direct code read this pass (two full audits: route coverage of
+every `page.tsx`, and the subscribe→confirm→manage→unsubscribe lifecycle):
+`FooterAlertCapture` hard-codes `SOURCE_PATH='/'`/`SOURCE='footer'` and gates its
+known-subscriber state on `isLocallySubscribed('/')`; `MobileStickyAlertBar` mounts on
+exactly 4 pages (`/aircraft`, `/partnerships`, `/partnerships/seeking`,
+`/aircraft/listing/[id]`) — no make/model/state/mission/deals/airport hub has it;
+`/aircraft/compare` (the index hub) renders no in-body capture while each child
+`/aircraft/compare/[comparison]` page renders two; `/alerts/manage` has no duplicate-alert
+action; `price_drop_opt_in` only ADDS drops on top of new-listing sends (no drops-only
+mode, no backing column); `api/alerts/confirm/route.ts` returns without sending anything
+when `preview.count === 0`; `api/alerts/unsubscribe/route.ts:47` deliberately forwards only
+the FIRST of a combined digest's comma-separated tokens to the recovery box. None overlap
+the open-but-blocked items (instant sends → Vercel-tier human call; save-search auth wall →
+`[want]` product call)._
+
+- **[P1][goal] Context-aware footer alert capture.** `FooterAlertCapture` is the only
+  universal entry point (rendered by `Footer` in the root layout, so it's on every page)
+  but it's context-blind: hard-coded `sourcePath '/'` + `source 'footer'`
+  (`FooterAlertCapture.tsx:16-17`), so on `/aircraft/cessna/172` it still captures a
+  generic all-listings alert — and because its subscribed state is keyed on `'/'`, one
+  footer subscribe anywhere suppresses the baseline capture site-wide forever. Make it
+  page-aware: derive `source_path` from `usePathname()` (keep `source: 'footer'` so the
+  funnel column stays comparable; keep the single email field), key the known-subscriber
+  state per-path while still treating an existing bare-`/` subscription as global (don't
+  re-nag old subscribers), and show the context/count line where derivable. Adds no new
+  component — upgrades the baseline capture on EVERY page at once; keeps emitting the
+  existing `alert_subscribed` (+viewed/opened) set, now with a meaningful `source_path`.
+- **[P1][goal] Mobile sticky alert bar on the aircraft SEO hub pages.** The scroll-revealed
+  `MobileStickyAlertBar` exists on only the 3 live-filter list pages + the aircraft detail
+  page; every high-intent aircraft hub — `/aircraft/[make]`, `/aircraft/[make]/[model]`,
+  `/aircraft/[make]/[model]/[state]`, `/aircraft/for-sale/[state]`,
+  `/aircraft/mission/[mission]`, `/aircraft/deals`, `/aircraft/browse` — ships only the
+  static below-list `AlertSignup`. Mount the bar with each page's already-computed
+  `alertContext`/`alertSourcePath` and a distinct `source` (e.g. `sticky_bar_hub`) so its
+  conversion is measurable. Mind the two known couplings from prior cycles: the default
+  reveal waits for the 8th `<article>` (short hubs may need `revealSelector` or a lower
+  threshold — verify it actually reveals on a thin state page), and the signed-out tap
+  falls back to scrolling to `#alert-email` (present — every hub renders an anonymous
+  `AlertSignup`). Reuses the bar's existing full viewed/opened/`alert_subscribed` event set.
+- **[P1][goal] Mobile sticky alert bar on the partnership hub pages.** Same gap, demand
+  side: `/partnerships/make/[make]`, `/partnerships/near/[icao]`,
+  `/partnerships/state/[state]` have the static `AlertSignup` only. Mount
+  `MobileStickyAlertBar` with each page's existing alert context, partnership-appropriate
+  copy, and a distinct `source` (e.g. `sticky_bar_partnership_hub`). Kept as its own slice
+  (separate surface family + copy) so each cycle stays one surface. Same reveal/fallback
+  caveats as the aircraft-hub item; emits the existing full event set.
+- **[P1][goal] Alert capture on the `/aircraft/compare` index hub.** The head-to-head
+  comparison INDEX (`src/app/aircraft/compare/page.tsx`) renders zero in-body capture while
+  every child comparison page renders two `AlertSignup`s — a buyer browsing matchups has no
+  alert path until they pick one. Add one `AlertSignup` (bare-`/` combined context with
+  `matchCount` + `noun="listing"`, same pattern as `alert-matchcount-bare-root`), tagged
+  `source="compare_hub"`, emitting `alert_subscribed`. This is an alert entry point on an
+  existing indexed page, NOT new SEO surface (SEO stays parked).
+- **[P1][goal] "Duplicate this alert" on `/alerts/manage`.** Cloning-then-tweaking is the
+  natural way to cover a sibling model or nearby state (the overlap/cross-sell nudges prove
+  subscribers hold near-identical alerts), but today the only path is re-entering
+  everything in `NewAlertForm`. Add a per-row Duplicate action that opens the existing
+  `NewAlertForm` prefilled from the source row (criteria, frequency, price-drop, target
+  price; same email); saving goes through the normal create path (the
+  `unique(email, source_path)` guard already rejects exact clones) and fires
+  `alert_subscribed` with `source: 'manage_duplicate'`. Improves management + adds a
+  measurable capture point. Mind the 375px action-row width — that row just had an
+  overflow bug fixed; re-verify with real seeded rows, bounding-box style.
+- **[P1][goal] Price-drop-ONLY mode.** `price_drop_opt_in` can only ADD drops on top of
+  new-listing emails; a subscriber tracking the market ("only email me when something gets
+  cheaper") has no way to mute new-listing sends. Additive `alerts` column (e.g.
+  `new_listing_opt_out` bool default false — ⚠️ human-apply migration, fail-soft
+  read/write like every prior `alerts.*` DDL) + upgrade the manage-page control to three
+  honest states (new + drops / new only / drops only) + digest crons skip the new-listings
+  section when set (never a drops-only alert receiving new-listing sends). Honest-content
+  pillar: fewer, more-wanted emails; no new capture point. Slice stays aircraft-side
+  (drops only exist there).
+- **[P1][goal] Honest zero-match welcome email on confirm.** A subscriber who clicks the
+  double-opt-in link on an alert that currently matches 0 listings gets NO email at all —
+  `confirm/route.ts`'s instant first digest deliberately returns when `preview.count === 0`,
+  so the highest-intent moment in the funnel ends in silence. Send a dedicated honest
+  welcome instead: "You're confirmed — nothing matches right now, we're watching; expect
+  {cadence} emails when something does," plus the existing widen-suggestion logic
+  (`buildWidenSuggestionEmail`'s broadening candidates) and the manage link. Never
+  fabricate matches; no new capture point — closes the one lifecycle path that ends in
+  dead air.
+- **[P1][goal] Recover ALL alerts after a combined-digest unsubscribe.** One click on a
+  combined digest's unsubscribe link correctly kills all N covered alerts, but the
+  `/alerts/status` recovery box is handed only the FIRST token
+  (`unsubscribe/route.ts:47`), so "switch to weekly / snooze 30 days / pause instead"
+  silently rescues 1 of N — a subscriber who thinks they downgraded everything stays
+  unsubscribed from the rest. Forward the full comma-separated token list and make
+  `UnsubscribeRecover` + its server actions apply to every listed alert, with honest count
+  copy ("all 3 of your alerts → weekly"). GOAL.md's "offer fewer instead of none,"
+  completed for the multi-alert case; no new capture point.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
