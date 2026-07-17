@@ -6,6 +6,7 @@ import { Plus, CheckCircle2, X } from 'lucide-react'
 import { createManageAlert } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { EditableAlertTarget } from '@/lib/alertEditCriteria'
+import type { AlertFrequency } from '@/lib/alertFrequency'
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
@@ -24,9 +25,39 @@ const TYPE_OPTIONS: { type: EditableAlertTarget['type']; label: string }[] = [
   { type: 'seeker', label: 'Seeking a partnership' },
 ]
 
+interface InitialValues {
+  type: EditableAlertTarget['type']
+  make?: string
+  model?: string
+  state?: string
+  minPrice?: string
+  maxPrice?: string
+  airport?: string
+  /** Present on an aircraft `EditableAlertTarget` (via `targetToFields`) but
+   *  unused here — this form has no "good deals only" field of its own. */
+  dealOnly?: boolean
+  frequency?: AlertFrequency
+  priceDropOptIn?: boolean
+}
+
 interface Props {
   /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
   token?: string
+  /** Prefill from a source row (see AlertEditForm's "Duplicate" button) —
+   *  criteria fields shown in the form, plus `frequency`/`priceDropOptIn`
+   *  carried through to `createManageAlert` invisibly (this form has no
+   *  cadence/price-drop fields of its own; those are set via the row's own
+   *  toggles after creation, same as any other alert). */
+  initial?: InitialValues
+  /** Tags the created row's `alerts.source` + the `alert_subscribed` event.
+   *  Defaults to 'manage_new' (the plain "+ New alert" flow). */
+  source?: string
+  /** Mount already open, prefilled, with no collapsed "+ New alert" trigger —
+   *  used when a parent (AlertEditForm's Duplicate button) owns visibility. */
+  autoOpen?: boolean
+  /** Called on Cancel and after a successful create, only relevant in
+   *  `autoOpen` mode where the parent owns whether this is mounted at all. */
+  onClose?: () => void
 }
 
 /**
@@ -36,30 +67,36 @@ interface Props {
  * selector up front (an existing alert already knows its type from source_path;
  * a new one doesn't).
  */
-export default function NewAlertForm({ token }: Props) {
+export default function NewAlertForm({ token, initial, source, autoOpen, onClose }: Props) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(!!autoOpen)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState(false)
 
-  const [type, setType] = useState<EditableAlertTarget['type']>('aircraft')
-  const [make, setMake] = useState('')
-  const [model, setModel] = useState('')
-  const [state, setState] = useState('')
-  const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
-  const [airport, setAirport] = useState('')
+  const [type, setType] = useState<EditableAlertTarget['type']>(initial?.type ?? 'aircraft')
+  const [make, setMake] = useState(initial?.make ?? '')
+  const [model, setModel] = useState(initial?.model ?? '')
+  const [state, setState] = useState(initial?.state ?? '')
+  const [minPrice, setMinPrice] = useState(initial?.minPrice ?? '')
+  const [maxPrice, setMaxPrice] = useState(initial?.maxPrice ?? '')
+  const [airport, setAirport] = useState(initial?.airport ?? '')
 
   function reset() {
-    setType('aircraft')
-    setMake('')
-    setModel('')
-    setState('')
-    setMinPrice('')
-    setMaxPrice('')
-    setAirport('')
+    setType(initial?.type ?? 'aircraft')
+    setMake(initial?.make ?? '')
+    setModel(initial?.model ?? '')
+    setState(initial?.state ?? '')
+    setMinPrice(initial?.minPrice ?? '')
+    setMaxPrice(initial?.maxPrice ?? '')
+    setAirport(initial?.airport ?? '')
     setError(null)
+  }
+
+  function handleCancel() {
+    setOpen(false)
+    reset()
+    onClose?.()
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -72,18 +109,23 @@ export default function NewAlertForm({ token }: Props) {
           : type === 'partnership'
             ? { make, state, airport }
             : { make, model }
-      const result = await createManageAlert(type, fields, token)
+      const result = await createManageAlert(type, fields, token, {
+        frequency: initial?.frequency,
+        priceDropOptIn: initial?.priceDropOptIn,
+        source: source ?? 'manage_new',
+      })
       if (result.error) {
         setError(result.error)
         return
       }
       if (!result.alreadyExisted) {
-        track('alert_subscribed', { source: 'manage_new', alert_type: type, signed_in: !token })
+        track('alert_subscribed', { source: source ?? 'manage_new', alert_type: type, signed_in: !token })
       }
       setOpen(false)
       reset()
       setCreated(true)
       router.refresh()
+      onClose?.()
     })
   }
 
@@ -206,10 +248,7 @@ export default function NewAlertForm({ token }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setOpen(false)
-                reset()
-              }}
+              onClick={handleCancel}
               disabled={isPending}
               className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-50"
             >
@@ -217,7 +256,7 @@ export default function NewAlertForm({ token }: Props) {
             </button>
           </div>
         </form>
-      ) : (
+      ) : autoOpen ? null : (
         <button
           type="button"
           onClick={() => setOpen(true)}

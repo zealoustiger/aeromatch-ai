@@ -1888,7 +1888,11 @@ export async function subscribeManageCrossSell(context: string, sourcePath: stri
 export async function createManageAlert(
   type: EditableAlertTarget['type'],
   fields: AlertCriteriaFields,
-  token?: string
+  token?: string,
+  // Duplicate-from-row (see NewAlertForm.tsx's `initial`) carries over the
+  // source alert's own cadence/price-drop setting and tags itself
+  // 'manage_duplicate' instead of the plain-"+ New alert" defaults below.
+  opts?: { frequency?: string; priceDropOptIn?: boolean; source?: string }
 ) {
   const admin = createAdminClient()
   const ownerEmail = await resolveOwnerEmail(admin, token)
@@ -1913,9 +1917,9 @@ export async function createManageAlert(
   }
   let payload: Record<string, unknown> = {
     ...basePayload,
-    price_drop_opt_in: true,
-    frequency: normalizeFrequency('weekly'),
-    source: 'manage_new',
+    price_drop_opt_in: opts?.priceDropOptIn ?? true,
+    frequency: normalizeFrequency(opts?.frequency ?? 'weekly'),
+    source: opts?.source ?? 'manage_new',
   }
   let { error } = await admin.from('alerts').insert(payload)
 

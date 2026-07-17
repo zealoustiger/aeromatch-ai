@@ -2,10 +2,18 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Pencil, CheckCircle2, X } from 'lucide-react'
+import { ExternalLink, Pencil, Copy, CheckCircle2, X } from 'lucide-react'
 import { getAlertMatchCountForSourcePath, updateAlertCriteria, removeAlertCriteriaParam } from '@/app/actions'
-import { buildAlertCriteriaUpdate, getHiddenCriteria, type EditableAlertTarget, type HiddenCriterion } from '@/lib/alertEditCriteria'
+import {
+  buildAlertCriteriaUpdate,
+  getHiddenCriteria,
+  targetToFields,
+  type EditableAlertTarget,
+  type HiddenCriterion,
+} from '@/lib/alertEditCriteria'
+import { normalizeFrequency } from '@/lib/alertFrequency'
 import AlertActions from '@/components/AlertActions'
+import NewAlertForm from '@/components/NewAlertForm'
 
 /** Mirrors `getAlertMatchCount`'s noun choice (`alertMatchCounts.ts`) — aircraft/partnership alerts count listings, seeker alerts count pilots. */
 function nounFor(type: EditableAlertTarget['type']): 'listing' | 'pilot' {
@@ -30,6 +38,12 @@ interface Props {
   /** Pre-parsed from `source_path` server-side; null when this alert isn't editable
    *  here (legacy path-segment SEO source, or none) — no Edit button renders then. */
   target: EditableAlertTarget | null
+  /** This row's own cadence + price-drop setting — carried into the Duplicate
+   *  form's created row (see NewAlertForm's `initial`), invisibly (neither is
+   *  an editable field in this form; both are set via the row's own toggles
+   *  after creation, same as any other alert). */
+  frequency?: string
+  priceDropOptIn?: boolean
   /** Set only on the token-scoped (no-account) `/alerts/manage?token=` path. */
   token?: string
   /** Opens the form once on mount instead of waiting for the Edit click —
@@ -45,8 +59,10 @@ interface Props {
  * state has a single owner and the whole action cluster stays one flex item in
  * the parent `<li>` row — no fragile multi-child flex-wrap layout needed.
  */
-export default function AlertEditForm({ id, status, sourcePath, target, token, autoOpen }: Props) {
+export default function AlertEditForm({ id, status, sourcePath, target, frequency, priceDropOptIn, token, autoOpen }: Props) {
   const [open, setOpen] = useState(false)
+  // Mutually exclusive with the Edit form below — only one inline form per row.
+  const [duplicating, setDuplicating] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -102,6 +118,7 @@ export default function AlertEditForm({ id, status, sourcePath, target, token, a
     setHiddenCriteria(getHiddenCriteria(target.type, sourcePath))
     setLiveCount(null)
     setError(null)
+    setDuplicating(false)
     setOpen(true)
   }
 
@@ -170,7 +187,36 @@ export default function AlertEditForm({ id, status, sourcePath, target, token, a
             {open ? 'Cancel' : 'Edit'}
           </button>
         ) : null}
+        {target ? (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              setDuplicating((d) => !d)
+            }}
+            title="Create a new alert prefilled from this one"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {duplicating ? 'Cancel' : 'Duplicate'}
+          </button>
+        ) : null}
       </div>
+
+      {duplicating && target ? (
+        <NewAlertForm
+          token={token}
+          source="manage_duplicate"
+          autoOpen
+          onClose={() => setDuplicating(false)}
+          initial={{
+            type: target.type,
+            ...targetToFields(target),
+            frequency: normalizeFrequency(frequency),
+            priceDropOptIn: priceDropOptIn ?? true,
+          }}
+        />
+      ) : null}
 
       {open && target ? (
         <form
