@@ -2141,19 +2141,8 @@ built, so NOT re-filed: List-Unsubscribe headers, admin per-source funnel, partn
 radius matching, seeker digest samples, snooze + pause-all, anonymous manage-link request,
 confirm-email manage link, partnership price-drop sample cards._
 
-- **[P1][goal] Make bare-`/` alerts actually fire — today the site's widest capture
-  points subscribe people to nothing.** Verified: the digest cron's `parseSourcePath`
-  returns `null` for `source_path='/'` (bare `/` falls through every `resolveTarget`
-  branch), and `alertMatchCounts` mirrors it — so every alert captured with
-  `sourcePath="/"` (site-wide `FooterAlertCapture`, homepage band, `not-found.tsx`,
-  `/about`, `/saved`'s fallback box) is stored, confirmed… and then never matched, never
-  counted, never emailed. Bug-adjacent honesty gap: the confirm email promises alerts
-  that can never come. Teach BOTH parsers to treat bare `/` as an honest "any new
-  listing" target — e.g. a new `all` target summing aircraft + partnership counts and
-  merging samples in the (already multi-section-capable) digest builder — or, if a
-  combined target won't fit one cycle, repoint the `/` capture surfaces at a parseable
-  path and note the re-scope. Fixes ~5 existing surfaces at once; no new capture point,
-  no new event (surfaces already emit `alert_subscribed`).
+~~- **[P1][goal] Make bare-`/` alerts actually fire — today the site's widest capture
+  points subscribe people to nothing.**~~ ✅ SHIPPED via `alert-any-listing-target` (2026-07-16) Both source-path parsers (the `alert-digest` cron's `resolveTarget` and `alertMatchCounts.ts`'s `parseSourcePath`) now map a bare `/` to a new `{ type: 'all' }` target = aircraft ∪ partnerships (no seekers — the affected surfaces are all buyer-facing). The cron's `countNew`/`dropCount`/samples branches sum both families and merge digest samples (aircraft first, top up with partnerships to `MAX_DIGEST_SAMPLES`); `getAlertMatchCount('/')` and `getAlertDigestPreview('/')` return a real combined `listing` count instead of `null`. Fixes ~5 existing capture surfaces at once (site-wide `FooterAlertCapture`, homepage band, `not-found.tsx`, `/about`, `/saved`'s fallback) — every one now matches, counts, and emails honestly instead of silently subscribing people to nothing. No schema change, no new capture point, no new event. Verified live against the real prod DB (read-only): bare `/` resolved to 2159 real listings with merged samples (was `null` pre-fix); no OTHER target type's behavior changed. `marketPulse`/`bestDrop`/`dropNoun` left untouched — `'all'` falls through to their existing sane defaults (aggregate digest template, generic "price drop" label, no market-pulse line).
 - **[P1][goal] Owner match-alert opt-out toggle on `/listings`.** The natural next slice
   explicitly flagged by `listings-match-alert-disclosure`: the "We email you when new
   matches appear" line is read-only — an owner who doesn't want the weekly
