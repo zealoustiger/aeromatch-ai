@@ -1049,10 +1049,16 @@ export async function subscribeToAlerts(
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed.
-  // Idempotent success, and crucially we skip the email so a re-submit can't be
-  // used to spam an address with confirmation mail.
+  // Idempotent success. If the conflicting row was previously unsubscribed,
+  // revive it (fresh tokens + a real resend) rather than leaving the visitor
+  // in a silent, permanent dead end; any other status stays a true no-op, and
+  // we still skip the email there so a re-submit can't be used to spam an
+  // address with confirmation mail.
   if (error) {
-    if (error.code === '23505') return { ok: true }
+    if (error.code === '23505') {
+      await reviveIfUnsubscribed(createAdminClient(), clean, cleanSourcePath || null, 'pending')
+      return { ok: true }
+    }
     return { error: 'Something went wrong. Please try again.' }
   }
 
@@ -1305,6 +1311,56 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
   // be rate-limited until the migration lands, same graceful-fallback pattern
   // as price_drop_opt_in/frequency.
   return { ok: true }
+}
+
+// Shared by subscribeToAlerts/subscribeSignedInAlert: a 23505 conflict on
+// (email, source_path) might be hitting a row the same person PREVIOUSLY
+// unsubscribed from — until now that was treated as an idempotent no-op
+// forever, so re-entering the same email at the same capture point after
+// changing their mind silently never resubscribed them. `targetStatus` is
+// `'pending'` for the anon double-opt-in path (fresh tokens + a real resend,
+// rate-limited by sendConfirmationResend's existing cooldown so a resubmit
+// loop can't spam confirmation mail) or `'confirmed'` for the signed-in path
+// (the session already proves the email — no second opt-in needed, same
+// precedent as that function's initial insert). Any other existing status is
+// left untouched — still a true no-op.
+async function reviveIfUnsubscribed(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+  sourcePath: string | null,
+  targetStatus: 'pending' | 'confirmed'
+) {
+  const cols = 'id, email, status, source_path, context, confirm_token, unsubscribe_token, last_confirm_sent_at'
+  const lookup = (selectCols: string) => {
+    const q = admin.from('alerts').select(selectCols).eq('email', email)
+    return sourcePath ? q.eq('source_path', sourcePath) : q.is('source_path', null)
+  }
+  let { data: existing, error } = (await lookup(cols).maybeSingle()) as {
+    data: ResendableAlert | null
+    error: { message: string } | null
+  }
+  if (error?.message?.includes('last_confirm_sent_at')) {
+    ;({ data: existing } = (await lookup(cols.replace(', last_confirm_sent_at', '')).maybeSingle()) as {
+      data: ResendableAlert | null
+    })
+  }
+  if (!existing || existing.status !== 'unsubscribed') return
+
+  const confirm_token = crypto.randomUUID()
+  const unsubscribe_token = crypto.randomUUID()
+  await admin
+    .from('alerts')
+    .update({
+      status: targetStatus,
+      confirm_token,
+      unsubscribe_token,
+      confirmed_at: targetStatus === 'confirmed' ? new Date().toISOString() : null,
+    })
+    .eq('id', existing.id)
+
+  if (targetStatus === 'pending') {
+    await sendConfirmationResend(admin, { ...existing, confirm_token, unsubscribe_token, last_confirm_sent_at: null })
+  }
 }
 
 const RESEND_COLS = 'id, email, status, source_path, context, confirm_token, unsubscribe_token'
@@ -2016,8 +2072,17 @@ export async function subscribeSignedInAlert(
     ;({ error } = await supabase.from('alerts').insert(payload))
   }
 
-  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
-  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  // 23505 = unique_violation on (email, source_path) — already subscribed. If
+  // that row was previously unsubscribed, revive it straight to `confirmed` —
+  // the session already proves this email, so no second opt-in is needed,
+  // same as the fresh-insert path above. Any other status is a true no-op.
+  if (error) {
+    if (error.code === '23505') {
+      await reviveIfUnsubscribed(createAdminClient(), user.email, cleanSourcePath || null, 'confirmed')
+    } else {
+      return { error: 'Something went wrong. Please try again.' }
+    }
+  }
   return { ok: true, email: user.email }
 }
 

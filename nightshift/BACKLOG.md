@@ -2517,18 +2517,32 @@ provider deep link and no spam-folder line; no typo/`did-you-mean` logic exists 
 reason/why event. None overlap the open-but-blocked items (instant sends → Vercel-tier
 human call; save-search auth wall → `[want]` product call)._
 
-- **[P1][goal] Re-subscribe after unsubscribe actually works.** Verified at
-  `src/app/actions.ts:1055`: the subscribe action treats a 23505 unique-violation on
-  `(email, source_path)` as an idempotent `{ ok: true }` no matter the existing row's
-  `status` — so a subscriber who unsubscribed and later re-enters their email at ANY
-  capture point sees the success UI but the row stays `unsubscribed` forever: no confirm
-  email, no digests, ever. Fix in the shared create path (improves every capture surface at
-  once): on 23505, service-role-read the conflicting row; if `status='unsubscribed'`, flip
-  it back to `pending` with fresh confirm/unsubscribe tokens and send the normal
-  double-opt-in email — reusing the existing resend rate-limit column so a re-submit can't
-  become a confirmation-spam vector (the anti-spam reason the no-op exists). Any other
-  status keeps today's idempotent no-op exactly. No new capture point (the existing
-  client-side `alert_subscribed` events keep firing as they do today); no schema change.
+~~- **[P1][goal] Re-subscribe after unsubscribe actually works.**~~ ✅ SHIPPED via
+  `alert-resubscribe-after-unsubscribe` (2026-07-17) New shared `reviveIfUnsubscribed`
+  helper in `src/app/actions.ts`, wired into both halves of `AlertSignup`'s capture path:
+  `subscribeToAlerts` (anon/double-opt-in — on a 23505 conflict, an `unsubscribed` row now
+  flips back to `pending` with fresh confirm/unsubscribe tokens + `confirmed_at` cleared,
+  then gets a real resend via the existing `sendConfirmationResend` helper, so the existing
+  `last_confirm_sent_at` cooldown still protects against a resubmit-spam vector) and
+  `subscribeSignedInAlert` (signed-in one-click — revives straight to `confirmed`, no
+  second opt-in, matching that function's own no-second-opt-in precedent). Any other
+  existing status (`pending`/`confirmed`/`paused`) is untouched — still a true no-op, byte-
+  identical to before. **Scoped to these 2 functions this cycle** (the two `AlertSignup`
+  branches — by far the dominant, every-major-surface capture path); the 4 narrower,
+  ownership-scoped alert-insert paths (`subscribeManageCrossSell`, `createManageAlert`,
+  `subscribeToConfirmedAlert`, `subscribeSavedSearchAlert`) are unchanged, natural follow-up.
+  No schema change, no new capture point. Live-verified end-to-end against the real prod DB
+  (2 throwaway `@example.com` rows seeded directly as `status: 'unsubscribed'`, both deleted
+  after): the anon row, resubmitted via a real Playwright form-fill on `/aircraft?make=...`,
+  flipped `unsubscribed → pending` with rotated tokens and `confirmed_at` cleared (confirmed
+  the not-yet-migrated `last_confirm_sent_at` column fails soft exactly like every other
+  `alerts.*` column, per the established pattern); the signed-in row, resubmitted via a real
+  minted session (service-role `generateLink` + `verifyOtp`, `@supabase/ssr`'s own cookie-
+  writing code path, not a mock) clicking the real one-click button, flipped
+  `unsubscribed → confirmed` with rotated tokens and a fresh `confirmed_at`. Both test rows
+  + the throwaway auth user deleted immediately after; confirmed 0 remain. The only console
+  errors during the signed-in pass were the pre-existing, already-documented `Nav.tsx`
+  unread-badge `threads` 400s (unrelated — `Nav.tsx` untouched by this diff).
 - **[P1][goal] "Open Gmail/Outlook" deep link + spam-folder line on the pending-confirm
   panel.** The double-opt-in round trip is the funnel's biggest cliff (the save-search
   `[want]` above documents a real observed never-came-back bounce), yet `AlertSignup`'s
