@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-18T08:48:14Z — alert-crosssell-rightnoun — score 5/5
+- Strengths: Exactly the right-noun fix the spec asked for — `/partnerships/[id]`'s justPosted box flips from re-offering the poster their own market (`noun="partnership"` → `/partnerships`) to the demand-side seeker cross-sell (`noun="seeker"` → `/partnerships/seeking`), and the seeking detail's justPosted banner gains the counterpart partnership box by reusing the page's already-computed `alertContext`/`alertSourcePath` (no new derivation, no new component); distinct `source` values (`post_success_partnership`/`post_success_seeking`) keep per-placement attribution clean, `p.make` fallback preserved on both branches, and the replacement comments match the surrounding house style.
+- Weaknesses / risks: none material — `AlertSignup`'s generic copy renders "a new {ctx} seeker is listed" rather than the spec's aspirational "pilot seeking a share appears," but that's an inherent, in-scope consequence of correctly reusing the shared component instead of forking it.
+- Follow-up: none
+
 ## 2026-07-18T08:06:52Z — admin-alert-funnel-weekly — score 4/5
 - Strengths: Clean sibling to `alertScoreboard.ts` — reuses its exact WoW windows, `LIVE_STATUSES` set, and `source`-column graceful-degrade; scrupulously honest labeling (created/confirmed get real WoW deltas, paused/unsub/bounced render as explicit "current totals, not weekly"); piggybacks the daily cron (no new vercel.json entry), gated by a pure Monday+`ADMIN_EMAILS` guard that leaves the existing digest path untouched and wrapped in try/catch so a summary failure can't 500 the run; 9 focused tests cover flat/negative deltas, empty sources, unmigrated column, and dashboard-URL escaping.
 - Weaknesses / risks: On a non-`source` DB read error `getAlertFunnelWeeklySnapshot` returns all-zeros rather than aborting the send, so a transient read failure could email admins a misleading "0 new, 0 confirmed" funnel; also counts `sendEmail` `no-key` results as sent, mildly inflating the `adminSummarySent` log metric.
