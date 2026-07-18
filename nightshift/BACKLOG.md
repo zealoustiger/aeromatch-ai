@@ -2897,7 +2897,8 @@ view-in-browser or share affordance._
   engagement events yet" empty state (never a fabricated 0/0). Improves: GOAL's
   prove-it-converts pillar (send → open → click is the missing middle of the funnel). No
   new capture point, no analytics-shape change.
-- **[P1][goal] "Demand with no supply" line in the Monday admin email.** Alert criteria
+~~- **[P1][goal] "Demand with no supply" line in the Monday admin email.**~~ ✅ SHIPPED via
+  `admin-demand-no-supply` (2026-07-18) Alert criteria
   are a free demand signal nothing reads: a subscriber asking for a "Mooney M20 in Ohio"
   that inventory can't match gets only silence (or a one-time widen email) — and the human
   never learns which inventory to go chase. In `alertFunnelWeekly`, group confirmed alerts

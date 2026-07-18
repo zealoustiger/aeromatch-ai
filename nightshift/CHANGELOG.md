@@ -2,6 +2,70 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T102652Z — PASS — admin-demand-no-supply
+- Pages: (internal — Monday admin alert-funnel email only; no rendered-page UI change)
+- What: **The weekly admin email now surfaces which alert searches have subscribers
+  waiting but zero live inventory to show them** — a free "go find this" shopping list.
+  A subscriber's alert criteria (e.g. "Mooney in Ohio") are a real demand signal that
+  previously went unread once the one-time widen email had already fired; now the top
+  ~10 highest-subscriber confirmed searches get a live match-count check every Monday,
+  and any that come back with a genuine 0 render as "{search}: N waiting, 0 matches" in
+  a new "Demand with no supply" section, right below "Top sources this week."
+- Goal: alert-experience (measurement pillar: "prove it converts" — closing the loop from
+  raw demand to an inventory-acquisition target) — tier 3 `[goal]`. Tier 1 (`[bug]`): most
+  recent CHANGELOG entry (`admin-email-engagement-wow`) was a PASS; swept BACKLOG.md for
+  any unstruck `[bug]` line — none found. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing blocked-on-human set as every recent cycle's
+  audit (save-search auth-wall reconciliation and the collection-layout mosaic redesign
+  both need a human product call/mock; Trade-A-Plane/Controller.com bot-protection-
+  blocked; Bay-Area coverage benchmark blocked on a real FAA/AirNav denominator;
+  owner-leads dataset needs compliance review; dynamic-location seed personas has no live
+  effect) — none buildable autonomously. Dropped to tier 3: picked the item the prior
+  cycle's "Next" note named explicitly as the pick to keep the admin-email work contiguous
+  (shares `alertFunnelWeekly.ts`/`buildAdminAlertFunnelEmail` with the just-shipped email-
+  engagement row) over the other open `[P1]` (instant-alerts demand probe on the frequency
+  picker — a separate on-site surface, better as its own cycle). Checked it off in
+  BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T102652Z-admin-demand-no-supply.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0 clean.
+  Full `node --test` suite (473 tests across `src/lib/*.test.ts`, up from 470 — 3 new
+  tests) passes, 0 failures: extended `email.test.ts`'s `ADMIN_FUNNEL_BASE` fixture with a
+  2-entry `demandWithNoSupply` list + added coverage for the rendered rows, the "every top
+  search has live matches" empty state (confirmed alerts exist, nothing unmatched), and a
+  distinct "no confirmed alerts yet" state (zero live alerts at all) — never the same
+  fabricated blank for both. Implementation: `alertFunnelWeekly.ts` now selects
+  `source_path` alongside its existing base columns (always present since the table's
+  original schema, no migration-fallback dance needed), groups live-status
+  (`active`/`confirmed`) rows by exact `source_path`, takes the top 10 by subscriber count,
+  and live-verifies each via the existing `getAlertMatchCount` (`alertMatchCounts.ts`) in
+  parallel — a path that fails to parse or errors is silently dropped, only a real 0 gets
+  listed. Labels reuse `describeLocalAlertContext` (`alertEditCriteria.ts`), falling back to
+  the raw `source_path` for shapes it can't phrase (never blank). `buildAdminAlertFunnelEmail`
+  (`email.ts`) renders the new section as its own labeled table between "Top sources this
+  week" and the dashboard-link footer, same shape in both HTML and plain-text. No schema
+  change, no new capture point — reuses the `alerts.source_path` column and the existing
+  match-count query path already proven by `/alerts/manage`'s narrow/widen nudges. QA:
+  non-visual, internal-email-only cycle — killed a stale `next-server` process left
+  squatting on port 3000 from an earlier cycle (serving a stale build, which is what
+  initially made the smoke gate see 500s and a missing-chunk pageerror against the WRONG
+  server) before starting this cycle's own production build; `qa-smoke.mjs` on `/` and
+  `/admin/alerts` then went 4/4 pass clean (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at desktop 1280 + mobile 375; screenshots saved for the audit trail,
+  not read into the verdict per the non-visual convention), and curled
+  `/api/dev/email-preview/admin-alert-funnel` to confirm the new section renders with the
+  fixture's "Mooney in Ohio: 4 waiting · 0 matches" / "Diamond: 2 waiting · 0 matches" rows.
+  Server log grepped clean of errors; process confirmed stopped, port 3000 free before
+  finishing.
+- Screenshots: nightshift/screenshots/admin-demand-no-supply/
+- Next: the plan-pass batch #6 alert-experience `[goal]` queue has 5 open items left: the
+  other `[P1]` (an honest "Instant — interested?" demand-probe affordance on
+  `/alerts/manage`'s `FrequencyToggle`) and 4×`[P2]`s (rank digest samples by deal quality;
+  per-listing "not relevant?" feedback link; tokenized live "view in browser" digest page;
+  "share this alert with a partner" digest footer line). Pick the instant-alerts demand
+  probe next (tier 3, since tiers 1 & 2 remain empty/blocked-on-human as of this cycle) —
+  it's the last `[P1]` in the batch and gives the blocked instant-sends item real data
+  instead of letting it keep rotting.
+
 ## 20260718T101728Z — PASS — admin-email-engagement-wow
 - Pages: (internal — Monday admin alert-funnel email only; no rendered-page UI change)
 - What: **The weekly admin email now shows whether the digest/alert emails themselves are
