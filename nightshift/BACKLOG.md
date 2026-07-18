@@ -2646,6 +2646,82 @@ human call; save-search auth wall → `[want]` product call)._
   token validity; the signed-in path keeps the simpler inline confirmation (its session
   isn't affected by the deletion). No schema change; per-row `deleteAlert`/`AlertActions`
   untouched.
+
+### Plan-pass batch #4 — 2026-07-18 (Fable)
+_Batch #3 fully drained. Entry-point capture is now genuinely saturated (verified this
+pass: every route family incl. guides/tools/compare has in-body or footer capture; Nav
+carries the alerts CTA; `/alerts` landing already renders live-count popular chips with
+real digest-sample previews; digest emails already have preheaders, photos, market pulse,
+👍/👎 feedback links, partnership price-drop counts+samples, seeker samples, List-Unsubscribe
+headers; `alert_confirmed` fires via `AlertStatusTracker`; `TargetPriceEdit`, pending-row
+Resend, bounced-status handling, and snooze auto-resume all exist). So this batch targets
+the remaining verified gaps: **email content quality, lifecycle correctness, WoW
+measurement, and management polish**. All verified un-built by direct code read this pass:
+`reviveIfUnsubscribed` is called from exactly 2 of the 6 alert-insert paths
+(`actions.ts:1059`/`:2098` only); `email.ts` contains zero deal/comps/below-market wording;
+only 2 crons exist (both `0 8 * * *`) and neither computes any admin/WoW summary; no
+overlap/subset logic anywhere under `src/app/alerts/` or `src/lib/alert*.ts`; zero
+`aria-live`/`role="status"` in `AlertSignup.tsx`/`FooterAlertCapture.tsx`/
+`MobileStickyAlertBar.tsx`; no export/download control on `/alerts/manage`. None overlap
+the two open-but-blocked items (instant sends → Vercel-tier human call; save-search auth
+wall → `[want]` product call)._
+
+- **[P1][goal] Revive unsubscribed rows on the 4 remaining alert-insert paths.** The
+  `alert-resubscribe-after-unsubscribe` cycle wired `reviveIfUnsubscribed` into the two
+  `AlertSignup` paths only and explicitly flagged the rest as the natural follow-up:
+  `subscribeToConfirmedAlert` (actions.ts:1914), `subscribeManageCrossSell` (:1955),
+  `createManageAlert` (:1989, also the Duplicate flow), and `subscribeSavedSearchAlert`
+  (:2179) still treat a 23505 conflict on an `unsubscribed` row as a silent no-op success —
+  a permanent dead end on the confirm-page cross-sell, manage "+ New alert"/Duplicate, and
+  `/searches` surfaces. Reuse the existing helper (revive to `confirmed` on the
+  ownership-proven paths, matching each path's own no-second-opt-in precedent). Improves:
+  lifecycle correctness on 4 existing capture surfaces; no new capture point, existing
+  `alert_subscribed` events unchanged.
+- **[P1][goal] Honest price-context line on aircraft digest samples ("~12% below similar
+  172s").** The digest sample cards (photo/title/price) carry zero market context while the
+  listing page already computes the ClubHanger Estimate/Deal Check from our own comps
+  (`src/lib/aircraftComps.ts`). At digest-build time, run the aircraft new-listing samples
+  through the existing comp helpers and render one short line/badge ONLY when the
+  established honesty floors pass (min comps + dead-band — same bar as on-site; render
+  nothing otherwise, never a guess). This is the "best listing alert email in aviation" +
+  proprietary-data pillar in one slice. Improves: digest email content quality; no new
+  capture point.
+- **[P1][goal] Monday admin alert-funnel week-over-week summary email.** GOAL.md says to
+  judge alerts week-over-week, but nothing computes WoW anywhere — `/admin/alerts` needs a
+  visit. Piggyback inside the existing daily `alert-digest` cron run (fire only when the
+  run date is Monday — NO new `vercel.json` cron entry, so it dodges the flagged
+  Hobby-tier daily-only limit): compute created/confirmed/unsubscribed/paused counts this
+  week vs last, split by the alert rows' stored `source`, straight from the `alerts` table
+  (DB-derived, not PostHog), and email it to the admin recipients via the existing send
+  infra (read `ADMIN_EMAILS`; do not touch admin auth gating — FREEZE). Improves: the
+  "prove it converts" pillar lands in the inbox weekly; no new capture point.
+- **[P2][goal] Overlapping-alert hint on `/alerts/manage`.** No subset/overlap logic
+  exists: an owner with `/aircraft?make=Cessna` and `/aircraft?make=Cessna&model=172`
+  double-receives every 172 in both digests forever. New pure, unit-testable
+  target-subset check over the owner's parsed alert targets (same param semantics
+  `parseSourcePath`/`alertMatchCounts` already use); render a quiet per-row hint ("Already
+  covered by your broader Cessna alert") with a one-tap delete of the redundant row via
+  the existing `deleteAlert`. Hint-only — never auto-delete, never block creating
+  overlapping alerts. Improves: `/alerts/manage` management quality + the never-spam
+  guardrail; no new capture point.
+- **[P2][goal] Screen-reader pass on the capture components — `aria-live` on every
+  async state swap.** Verified zero `aria-live`/`role="status"` in `AlertSignup.tsx`,
+  `FooterAlertCapture.tsx`, `MobileStickyAlertBar.tsx` (and the chips they drive): the
+  "Almost there — check your inbox" panel, error lines, typo-suggestion chip, and
+  "Alerts on" swaps are all silent to assistive tech — a blind visitor who submits gets
+  no feedback at all. Add polite live regions / `role="status"` to the success, error,
+  and pending panels, plus a label/association audit of the email inputs, across the
+  shared capture components in one sweep. Improves: frictionless capture for AT users on
+  every surface at once (all funnels through these components); no new capture point, no
+  analytics change.
+- **[P2][goal] "Download my alert data" self-serve export on `/alerts/manage`.** The
+  delete-all cycle shipped "forget me entirely" but there's no way to see what we hold
+  first: add a small "Download my alert data" link beside it that returns the owner's
+  full alert rows (criteria, status, frequency, timestamps) as a JSON file download,
+  behind the exact same `resolveOwnerEmail` trust boundary (works signed-in AND via
+  manage-link token; read-only, no schema change). Improves: `/alerts/manage`
+  self-serve data transparency — the natural sibling of delete-all; no new capture
+  point.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
