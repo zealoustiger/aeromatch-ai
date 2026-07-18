@@ -2805,12 +2805,20 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   state swap.** The explicitly-named "Next" from `alert-capture-aria-live` (which covered
   only the 3 capture components): zero `aria-live`/`role="status"` exists anywhere under
   `src/app/alerts/` today. Sweep `AlertEditForm` (debounced live match-count preview,
-  save success/error), the manage rows' pause/resume/delete/resend feedback,
-  `UpdateAlertEmailForm`'s pending banner + cancel, `NewAlertForm`, the delete-all and
-  export confirmations, `FrequencyToggle`, `TargetPriceEdit`, and `/alerts/status`'s
-  `UnsubscribeRecover` action results. Same treatment as the capture sweep: pure
-  `aria-*`/`role` attribute additions (`role="status"` for success, `role="alert"` for
-  errors), no className/layout/copy change — non-visual cycle. No new capture point.
+  save success/error), `UpdateAlertEmailForm`'s pending banner + cancel, `NewAlertForm`,
+  the delete-all and export confirmations, and `/alerts/status`'s `UnsubscribeRecover`
+  action results. Same treatment as the capture sweep: pure `aria-*`/`role` attribute
+  additions (`role="status"` for success, `role="alert"` for errors), no className/
+  layout/copy change — non-visual cycle. No new capture point.
+  ~~**Slice 1: the manage rows' pause/resume/snooze/delete/resend/send-sample feedback
+  (`AlertActions`), `FrequencyToggle`, `TargetPriceEdit`.**~~ ✅ SHIPPED via
+  `alert-manage-actions-aria-live` (2026-07-18) These 3 components — the highest-
+  frequency interaction surface on the page — now announce every async result via
+  `role="alert"` (errors) or a visually-hidden `role="status" aria-live="polite"` region
+  (pause/resume/snooze/delete/resend/send-sample confirmations, frequency-change/revert,
+  target-price saved/removed). Pure attribute additions, no visual change. **Remaining:**
+  `AlertEditForm`, `NewAlertForm`, `UpdateAlertEmailForm`, `DeleteAllAlertsControl`,
+  `DownloadAlertDataLink`, `/alerts/status`'s `UnsubscribeRecover` — pick up next.
 - **[P2][goal] "Narrow this alert?" nudge for very-high-volume alerts on
   `/alerts/manage`.** The honest inverse of the widen nudge: a make-only or nationwide
   alert matching hundreds of listings produces bloated digests that read as spam — the

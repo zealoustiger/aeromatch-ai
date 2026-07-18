@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T092646Z — PASS — alert-manage-actions-aria-live
+- Pages: /alerts/manage (component-level a11y change, no visual/layout change)
+- What: **Screen-reader users now hear the result of the most-used actions on the
+  "Your alerts" management page** — pause, resume, snooze, delete, resend confirmation,
+  send-sample-digest on each alert row, plus the frequency toggle and the target-price
+  edit control. Before this cycle these all swapped state silently (a button's label
+  flipping from "Resend" to "Sent!", a status badge changing after a pause/resume click,
+  a form quietly collapsing after a save) with zero screen-reader announcement — a
+  sighted user sees the confirmation, a screen-reader user gets nothing. Continues the
+  accessibility sweep the `alert-capture-aria-live` cycle started on the 3 shared capture
+  components; this cycle covers the next-highest-traffic surface named in its own "Next"
+  follow-up and the standing `[P2][goal]` backlog item.
+- Goal: alert-experience (great alert *management* — accessibility on an existing,
+  high-frequency surface) — tier 3 `[goal]`. Tier 1 (`[bug]`): most recent CHANGELOG
+  entry (`alert-pause-bounce-wow-delta`) was a PASS; no unstruck `[bug]` line found in
+  BACKLOG.md. Tier 2 (`[want]`): every unstruck `[want]` line re-checked — same standing
+  blocked-on-human (save-search auth wall reconciliation, mosaic layout redesign) /
+  bot-walled-scrape (Trade-A-Plane/Controller/AirMart/AeroTrader) / needs-compliance
+  (owner-leads dataset) set as recent cycles, none buildable autonomously. Dropped to
+  tier 3 and picked the "Screen-reader pass on the manage surface" item explicitly named
+  as `alert-pause-bounce-wow-delta`'s open follow-up — scoped down to the 3 highest-value
+  components (`AlertActions`, `FrequencyToggle`, `TargetPriceEdit`) to keep the cycle
+  small; `AlertEditForm`, `NewAlertForm`, `UpdateAlertEmailForm`, `DeleteAllAlertsControl`,
+  `DownloadAlertDataLink`, and `/alerts/status`'s `UnsubscribeRecover` are left for a
+  follow-up slice (named in the backlog item, not yet swept), same partial-sweep
+  precedent `alert-capture-aria-live` set.
+- Spec: nightshift/specs/20260718T092646Z-alert-manage-actions-aria-live.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean. Full `node --test` suite (466 tests across `src/lib/*.test.ts`) passes, 0
+  failures (this cycle touched no `src/lib` files). Pure `aria-*`/`role` attribute +
+  `sr-only` live-region additions — no className/layout/copy/behavior change: error
+  messages now carry `role="alert"`; new success/confirmation announcements (resend
+  "Confirmation email resent.", send-sample "Sample digest sent.", pause/resume/snooze/
+  delete, frequency-change/revert, target-price saved/removed) render in visually-hidden
+  `role="status" aria-live="polite"` regions. QA against the PRODUCTION build (`next
+  start`) via `qa-smoke.mjs` on `/alerts/manage`: 2/2 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at desktop 1280 + mobile 375). Confirmed the
+  `aria-live`/`sr-only` attributes reached the client bundle (`grep aria-live
+  .next/static/chunks`). Non-visual cycle — screenshots saved for the audit trail, not
+  read into the QA verdict per convention. Server stopped, port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-manage-actions-aria-live/
+- Next: the remaining named components in the same backlog item —
+  `AlertEditForm` (debounced live match-count preview, save success/error),
+  `NewAlertForm`, `UpdateAlertEmailForm`'s pending banner + cancel, the delete-all and
+  export confirmations, and `/alerts/status`'s `UnsubscribeRecover` action results — pick
+  those up next to fully close the `[P2][goal]` item. Separately, the alert-experience
+  `[P2][goal]` queue still has 2 other open items after this one: the "narrow this
+  alert?" nudge for very-high-volume alerts, and Digest 👍/👎 feedback vote counts in the
+  Monday admin email.
+
 ## 20260718T092355Z — PASS — alert-pause-bounce-wow-delta
 - Pages: (internal — Monday admin alert-funnel email + `/alerts/manage`, `/alerts/status`
   server actions; no rendered-page UI change)
