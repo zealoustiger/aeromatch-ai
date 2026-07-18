@@ -2,6 +2,65 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T080514Z — PASS — admin-alert-funnel-weekly
+- Pages: (no user-facing route — the admin-only Monday alert-funnel summary email, sent via
+  the existing `/api/cron/alert-digest` cron; visually verified via the dev-only
+  `/api/dev/email-preview/admin-alert-funnel` preview route)
+- What: **The daily alert-digest cron now sends admins a real week-over-week alert-funnel
+  summary every Monday** — new signups and confirmations this week vs last, current
+  paused/unsubscribed/bounced/live totals, and a top-5 capture-source breakdown, all pulled
+  straight from the `alerts` table. Before this cycle, "judging alerts week-over-week"
+  (GOAL.md) meant manually visiting `/admin/alerts`; now it lands in the inbox. No new
+  `vercel.json` cron entry — piggybacks the existing daily run, gated on UTC Monday, so it
+  dodges the Hobby-tier daily-only cron limit flagged in the backlog.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`alert-digest-price-context`) was a PASS; swept BACKLOG.md for any unstruck `[bug]` line —
+  none found. Tier 2 (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]` line — same
+  standing set as recent cycles (save-search auth wall — explicitly flagged as needing a
+  human product call, not agent-buildable; mosaic redesign; Trade-A-Plane; Bay-Area
+  benchmark; owner-leads dataset; bot-walled competitor scrapes) — none buildable
+  autonomously. Dropped to tier 3 and picked the sole remaining `[P1][goal]` item named as
+  "Next" by the prior cycle: the Monday admin alert-funnel WoW summary email. Checked it off
+  in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T075422Z-admin-alert-funnel-weekly.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0. New
+  pure `getAlertFunnelWeeklySnapshot()` in `src/lib/alertFunnelWeekly.ts` (admin-client read,
+  same graceful `source`-column-not-migrated-yet degrade `alertScoreboard.ts` already uses)
+  computes real created/confirmed WoW counts from `created_at`/`confirmed_at`. **Honesty
+  gate, deliberately scoped down:** paused/unsubscribed/bounced render as explicitly-labeled
+  "current totals (not weekly)" rather than a WoW delta — the `alerts` table has no
+  `unsubscribed_at`/`paused_at` timestamp, so a genuine weekly delta for those statuses isn't
+  derivable from what's stored today; fabricating one would violate GOAL.md's honesty
+  guardrail. New pure `buildAdminAlertFunnelEmail()` in `src/lib/email.ts` (type-only import
+  of the snapshot type, preserving that file's zero-runtime-import convention so it stays
+  testable via plain `node --experimental-strip-types --test`) — 9 new unit tests (subject
+  naming, positive/flat/negative WoW delta wording, the honesty-gate label + no fabricated
+  delta on paused/unsubscribed, per-source table rendering, empty-sources honest fallback,
+  source-column-not-migrated note, dashboard link) plus added to the existing "every HTML
+  builder is dark-mode-safe" cross-cutting test — full `src/lib/*.test.ts` suite green, 0
+  failures across all files. The cron route's new `sendMondayAdminFunnelSummary()` guards on
+  `new Date(nowIso).getUTCDay() === 1` (UTC Monday) and a non-empty `ADMIN_EMAILS`, runs only
+  after every alert in the run has already been processed, and is wrapped in try/catch so an
+  email-summary failure can never turn an otherwise-healthy digest run into a 500 — every
+  other branch of the route is unchanged. QA against the PRODUCTION build (`npx next start -p
+  3000`; found and killed one stale `next-server` left running from a prior cycle before
+  starting this cycle's own — same recurring issue flagged in recent CHANGELOG entries) via
+  `qa-smoke.mjs` on `/admin/alerts`, `/alerts/manage`: 4/4 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at desktop 1280 + mobile 375). Non-visual cycle
+  (cron/data logic + email template, no user-facing page change) — fetched the dev-only
+  `/api/dev/email-preview/admin-alert-funnel` route from the running production server and
+  confirmed the real rendered HTML carries the correct subject line, WoW counts, and
+  per-source rows against fixture data; screenshots saved for the audit trail but not read
+  per the non-visual-cycle rule. Server stopped, port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/admin-alert-funnel-weekly/
+- Next: A schema follow-up (additive `unsubscribed_at`/`paused_at` columns on `alerts`,
+  populated going forward) would let a future cycle upgrade those two lines from "current
+  total" to a true WoW delta — flag as a `[P2][goal]` if picked up. The 🔔 `[P1][goal]` queue
+  is now fully drained; tiers 1/2 remain empty, so the next cycle should either find a fresh
+  `[bug]`/`[want]`, drop to `[P2][goal]` items (overlapping-alert hint, aria-live pass,
+  "download my alert data" export), or emit `ABORT — none — plan needed` for a fresh
+  Opus/Fable plan-pass refill.
+
 ## 20260718T081500Z — PASS — alert-digest-price-context
 - Pages: (no user-facing route — the weekly/daily alert-digest email, sent via
   `/api/cron/alert-digest`; visually verified via the dev-only
