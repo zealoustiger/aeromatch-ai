@@ -43,6 +43,13 @@ const STATES = {
     title: "You're on weekly emails now",
     body: "This alert will email you at most once a week instead of daily — same matches, fewer emails. You're still subscribed, nothing else changed.",
   },
+  daily: {
+    icon: MailOpen,
+    tint: 'text-emerald-600',
+    ring: 'bg-emerald-50',
+    title: "You're on daily emails now",
+    body: "This alert will check for new matches once a day instead of once a week — same alert, sooner. You're still subscribed, nothing else changed.",
+  },
   invalid: {
     icon: AlertCircle,
     tint: 'text-amber-600',
@@ -87,6 +94,7 @@ function resolveState(raw: string | string[] | undefined): StateKey {
   return v === 'confirmed' ||
     v === 'unsubscribed' ||
     v === 'weekly' ||
+    v === 'daily' ||
     v === 'cross_sell_added' ||
     v === 'email_changed' ||
     v === 'digest_feedback_up' ||
@@ -271,6 +279,13 @@ export default async function AlertStatusPage({
             </p>
           )}
           {key === 'weekly' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'daily' && token && (
             <p className="mt-4 text-sm text-slate-500">
               <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
                 Manage your alerts
