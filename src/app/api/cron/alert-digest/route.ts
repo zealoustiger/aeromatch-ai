@@ -33,6 +33,7 @@ import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { filterToGoodDeals, compVsMarket, buildFamilyPriceMap } from '@/lib/aircraftComps'
+import { rankSamplesByDealQuality } from '@/lib/dealRanking'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
 import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassify'
 import { applyPartnershipModelFilter } from '@/lib/partnershipModelFilter'
@@ -811,7 +812,13 @@ async function fetchNewAircraftSamples(
   const rows = (data ?? []) as AircraftSampleRow[]
   const narrowed = target.dealOnly ? await filterToGoodDeals(supabase, rows as any[]) : rows
   const familyPriceMap = getFamilyPriceMap ? await getFamilyPriceMap() : null
-  return (narrowed as AircraftSampleRow[]).slice(0, limit).map((row) => toDigestSample(row, undefined, familyPriceMap))
+  // Lead with the biggest honest below-market deal rather than always
+  // whatever listed most recently — pure re-sort of the already-fetched
+  // candidates, no widening of the query (see rankSamplesByDealQuality).
+  const ranked = familyPriceMap
+    ? rankSamplesByDealQuality(narrowed as AircraftSampleRow[], (row) => compVsMarket(row, familyPriceMap))
+    : (narrowed as AircraftSampleRow[])
+  return ranked.slice(0, limit).map((row) => toDigestSample(row, undefined, familyPriceMap))
 }
 
 /** Up to `limit` real aircraft matching `target` whose most recent price

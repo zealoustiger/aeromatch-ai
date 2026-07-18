@@ -2,6 +2,71 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T104710Z — PASS — digest-samples-rank-by-deal
+- Pages: (internal — new-listing aircraft alert digest emails only; no rendered-page UI change)
+- What: **The alert digest email now leads with the best deal, not just the newest
+  listing.** Every new-listing sample already carries an honest "vs market" comp
+  verdict (the same `compVsMarket` math as the on-site pill), but the samples always
+  rendered newest-first regardless of price — so a listing 25% under market could sit
+  below three at-market ones in the same email. Samples now sort below-market-first
+  (biggest honest discount leads, newest as tiebreak); anything without enough comp
+  data to judge keeps the old newest-first order, appended after — never a fabricated
+  rank.
+- Goal: alert-experience (smart, honest alert content pillar — "the email a subscriber
+  receives should be the best listing alert email in aviation," GOAL.md) — tier 3
+  `[goal]`. Tier 1 (`[bug]`): most recent CHANGELOG entry (`alert-instant-interest-
+  nudge`) was a PASS; swept BACKLOG.md for any unstruck `[bug]` line — none found (all
+  are struck/shipped; the one stray reference is a stale pointer to an already-shipped
+  item, noted by a prior cycle). Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing blocked-on-human set as every recent cycle's
+  audit (save-search auth-wall reconciliation and the collection-layout mosaic redesign
+  both need a human product call/mock; Trade-A-Plane/Controller/AirMart/AeroTrader
+  bot-protection-blocked; Bay-Area coverage benchmark blocked on a real FAA/AirNav
+  denominator; owner-leads dataset needs compliance review; dynamic-location seed
+  personas has no live effect) — none buildable autonomously. Dropped to tier 3: the
+  plan-pass batch #6 alert-experience queue's 3 `[P1]`s are now all shipped (per the
+  prior cycle's "Next" note); picked the first of the 4 remaining `[P2]`s — this one is
+  the most self-contained (pure sort, no new capture point, no email-template change)
+  and most directly serves GOAL.md's explicit "best listing alert email in aviation"
+  bar. Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T104710Z-digest-samples-rank-by-deal.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean. Full `node --test` suite (479 tests across `src/lib/*.test.ts`, up from 473 —
+  6 new tests) passes, 0 failures. New pure `rankSamplesByDealQuality` helper lives in a
+  brand-new `src/lib/dealRanking.ts` rather than alongside `compVsMarket` in
+  `aircraftComps.ts` — discovered mid-cycle that `aircraftComps.ts` has real (non-type)
+  runtime imports from `@/lib/seo`/`@/lib/aircraftEstimate` that the plain
+  `node --experimental-strip-types --test` runner here can't resolve (no path-alias
+  loader configured), which is why that file has zero direct unit tests today despite
+  several pure functions; `dealRanking.ts` takes a `getComp` callback instead of
+  importing `compVsMarket` itself, keeping it dependency-free and fully unit-testable
+  (6 new tests: below-market-first + biggest-discount-first, ties keep newest-first
+  order, no-comp rows append after all below-market rows in original order,
+  above-market rows never rank ahead of below-market ones, already-sorted input passes
+  through unchanged, empty input). `fetchNewAircraftSamples`
+  (`src/app/api/cron/alert-digest/route.ts`) now re-sorts its already-fetched candidate
+  rows through the new helper (passing the existing `familyPriceMap` via a
+  `compVsMarket` closure) before slicing to the display limit — no widened DB query, no
+  schema change. `fetchAircraftPriceDropSamples` (price-drop samples, which already show
+  a before/after price) and the partnership/seeker sample paths are untouched, per the
+  spec's out-of-scope note. QA: non-visual, sort-order-only cycle (no UI/template
+  change) — served the PRODUCTION build (`next start`), `qa-smoke.mjs` on `/`,
+  `/alerts/manage`, and `/api/dev/email-preview/alert-digest` 6/6 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow at desktop 1280 + mobile 375;
+  screenshots saved for the audit trail, not read into the verdict per the non-visual
+  convention). Deliberately did NOT trigger the real `/api/cron/alert-digest` route
+  live to verify against real subscriber data — that route sends actual emails to real
+  subscribers, which would violate the "don't create prod side-effects for QA"
+  guardrail; the dev email-preview route uses static fixtures (not the live sort path),
+  so correctness here rests on the 6 unit tests + code review of the wiring rather than
+  a live email render. Confirmed port 3000 free before finishing.
+- Screenshots: nightshift/screenshots/digest-samples-rank-by-deal/
+- Next: 3 `[P2]`s remain open in the plan-pass batch #6 alert-experience queue:
+  per-listing "not relevant?" feedback link on digest samples; tokenized live "view in
+  browser" page for digest emails; "Buying with a partner? Share this alert" line in the
+  digest footer. Pick the next one (tier 3, since tiers 1 & 2 remain empty/blocked-on-
+  human as of this cycle).
+
 ## 20260718T103737Z — PASS — alert-instant-interest-nudge
 - Pages: /alerts/manage
 - What: **Every alert row on the manage page now has an honest "Instant —
