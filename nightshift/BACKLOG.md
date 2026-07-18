@@ -2731,6 +2731,91 @@ wall → `[want]` product call)._
   session) as every other bulk alert action. `confirm_token`/`unsubscribe_token`/
   `email_change_token` are deliberately never included (bearer secrets, not "data about
   the user"). No schema change.
+
+### Plan-pass batch #5 — 2026-07-18 (Fable)
+_Batch #4 fully drained (all 6 items shipped 2026-07-18). The two long-open blocked items
+are unchanged and untouched below (instant sends → Vercel-tier human call; save-search
+auth wall → `[want]` product call). All verified un-built by direct code read this pass:
+`/alerts/manage`'s no-token/no-session state offers only "sign in with the same email" —
+no lost-link recovery flow exists anywhere under `src/app/alerts/` or
+`src/app/api/alerts/`; `alertWeeklyTrend.ts:8`, `alertFunnelWeekly.ts:23`, and
+`email.ts:1417` all document the missing `unsubscribed_at`/`paused_at` timestamps that
+keep the Monday admin email on labeled current-totals; the post-success `?posted=1`
+banners on `/partnerships/[id]` (page.tsx:570) and `/partnerships/seeking/[id]` link to
+browse pages but render zero alert capture (and `src/app/partnerships/new/`,
+`.../seeking/new/`, `src/app/aircraft/new/` grep clean of any alert ref); zero
+`aria-live`/`role="status"` in `AlertEditForm.tsx` or anywhere under `src/app/alerts/`;
+no narrow/tighten logic anywhere (`alertOverlap.ts` is subset-between-alerts only, the
+widen path is 0-match-only); `alertFunnelWeekly.ts` never reads the `feedback` table the
+`digest-feedback` route inserts 👍/👎 votes into. Also confirmed already-shipped, so NOT
+re-filed: email dark-mode head, RFC 8058 one-click headers, confirm-email match previews,
+live match count in `AlertEditForm`, cross-alert digest sample dedupe, partnership
+filled/unavailable watch emails, bounced-status UX on manage, admin subscriber lookup,
+weekly/snooze/pause options in `UnsubscribeRecover`._
+
+- **[P1][goal] "Email me my manage link" — lost-link recovery on `/alerts/manage`.** The
+  no-token/no-session state says "sign in with the same email," but anonymous email-only
+  subscribers have no account — a subscriber who deleted their alert emails has NO path
+  back to pause/edit/delete (the only dead end left in the no-account lifecycle). Add a
+  one-field email form to that state: if any alerts exist for the address, email a manage
+  link (mint from a row's existing `unsubscribe_token` — the exact token
+  `/alerts/manage?token=` already resolves; new small builder in `email.ts`, unit-tested
+  like its siblings); ALWAYS render the same neutral "if we have alerts for that address,
+  a link is on its way" regardless of match (no address enumeration). Rate-limit sends
+  per address (reuse the `last_confirm_sent_at` cooldown pattern; if a new additive
+  nullable `alerts.*` column is needed, ⚠️ human-apply + fail-soft like every prior one).
+  Improves: alert management surface. Not a capture point — no `alert_subscribed`.
+- **[P1][goal] Right-noun alert cross-sell in the post-success banners
+  (`/partnerships/[id]?posted=1` + `/partnerships/seeking/[id]?posted=1`).** The moment
+  after posting is peak intent for the counterpart alert, and today's "Your partnership
+  is live!" banner only links away to browse: a partnership poster wants "email me when a
+  pilot seeking a {make/model} share appears" (demand-side seeker alert, mirroring
+  `/post`'s precedent); a seeking poster wants "email me when a new {model} partnership
+  lists." Render the right-noun `AlertSignup` inside each `justPosted` banner, prefilled
+  from the just-posted listing's own fields (posters are always signed in on these flows,
+  so the one-click subscribe path already works), with distinct sources
+  (`post_success_partnership` / `post_success_seeking`) so each placement's conversion is
+  measurable — emits `alert_subscribed`. Adds 2 new capture points. Slice: the two
+  partnership banners this cycle; `/aircraft/listing/[id]?posted=1` (seller → demand-
+  interest alert) is the follow-up slice.
+- **[P1][goal] Status-change timestamps → real WoW deltas in the Monday admin email.**
+  Additive nullable `alerts.unsubscribed_at`/`alerts.paused_at`/`alerts.bounced_at`
+  (⚠️ human-apply, fail-soft, same as every prior `alerts.*` DDL), stamped at every
+  status-flip path (unsubscribe routes incl. one-click + recover-all, pause/snooze
+  actions + `pauseAlertByToken`, the Resend bounce webhook) and cleared on
+  resume/`reviveIfUnsubscribed`. Then upgrade `alertFunnelWeekly` to honest
+  week-over-week deltas for those statuses, keeping today's explicitly-labeled
+  current-totals rendering as the pre-migration fallback (must degrade exactly as now
+  until the columns exist). This is the exact "Next" flagged by
+  `admin-alert-funnel-weekly`. Measurement pillar; no new capture point.
+- **[P2][goal] Screen-reader pass on the manage surface — `aria-live` on every async
+  state swap.** The explicitly-named "Next" from `alert-capture-aria-live` (which covered
+  only the 3 capture components): zero `aria-live`/`role="status"` exists anywhere under
+  `src/app/alerts/` today. Sweep `AlertEditForm` (debounced live match-count preview,
+  save success/error), the manage rows' pause/resume/delete/resend feedback,
+  `UpdateAlertEmailForm`'s pending banner + cancel, `NewAlertForm`, the delete-all and
+  export confirmations, `FrequencyToggle`, `TargetPriceEdit`, and `/alerts/status`'s
+  `UnsubscribeRecover` action results. Same treatment as the capture sweep: pure
+  `aria-*`/`role` attribute additions (`role="status"` for success, `role="alert"` for
+  errors), no className/layout/copy change — non-visual cycle. No new capture point.
+- **[P2][goal] "Narrow this alert?" nudge for very-high-volume alerts on
+  `/alerts/manage`.** The honest inverse of the widen nudge: a make-only or nationwide
+  alert matching hundreds of listings produces bloated digests that read as spam — the
+  never-spam pillar cuts both ways. When an alert's live match count (reuse
+  `getAlertMatchCount`) exceeds a threshold (~75), render a nudge offering 1–2 concrete
+  one-tap tighteners derived from the alert's own missing criteria (add the dominant
+  model / add a state / add a price cap — `computeWidenCandidate` in reverse), applied
+  via the existing `buildAlertCriteriaUpdate`; only offer a tightener after live-
+  verifying it still leaves >0 matches — never a guess, never a dead end. No schema
+  change; no new capture point.
+- **[P2][goal] Digest 👍/👎 feedback counts in the Monday admin email.** The
+  `digest-feedback` route has been inserting votes into the `feedback` table since the
+  👍/👎 links shipped, but nothing reads them — the loop is deaf to the one direct
+  quality signal subscribers send back. Add up/down counts (this week vs last, via
+  `feedback.created_at` + the digest-feedback rows' own shape) as a line in
+  `alertFunnelWeekly`'s Monday summary, with an explicit "no votes yet" state — an
+  honest zero, not an omission. No schema change; measurement pillar; no new capture
+  point.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
