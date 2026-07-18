@@ -1041,6 +1041,10 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   emailClickedLastWeek: 6,
   emailOpenedTotal: 143,
   emailClickedTotal: 48,
+  demandWithNoSupply: [
+    { sourcePath: '/aircraft?make=Mooney&state=OH', label: 'Mooney in Ohio', subscriberCount: 4 },
+    { sourcePath: '/partnerships?make=Diamond', label: 'Diamond', subscriberCount: 2 },
+  ],
   sourceColumnMigrated: true,
   unsubscribedAtMigrated: true,
   pausedAtMigrated: true,
@@ -1208,6 +1212,34 @@ test('buildAdminAlertFunnelEmail: with zero sources this week, an honest empty l
   )
   assert.match(html, /No new alerts this week/)
   assert.match(text, /\(no new alerts this week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: demand-with-no-supply renders each waiting search with its subscriber count', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Demand with no supply/)
+  assert.match(html, /Mooney in Ohio/)
+  assert.match(html, /4 waiting · 0 matches/)
+  assert.match(text, /Mooney in Ohio: 4 waiting, 0 matches/)
+  assert.match(text, /Diamond: 2 waiting, 0 matches/)
+})
+
+test('buildAdminAlertFunnelEmail: with confirmed alerts but none currently unmatched, an honest "every search has matches" line renders, not a blank table', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, demandWithNoSupply: [] },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /Every top search has live matches right now/)
+  assert.match(text, /Every top search has live matches right now/)
+})
+
+test('buildAdminAlertFunnelEmail: with zero confirmed alerts at all, a distinct "no confirmed alerts yet" line renders instead of the has-matches claim', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, demandWithNoSupply: [], liveTotal: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No confirmed alerts yet/)
+  assert.match(text, /No confirmed alerts yet/)
+  assert.doesNotMatch(html, /Every top search has live matches/)
 })
 
 test('buildAdminAlertFunnelEmail: when the source column is not migrated, an honest note renders instead of a silent gap', () => {

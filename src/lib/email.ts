@@ -1463,6 +1463,29 @@ export function buildAdminAlertFunnelEmail(
     ? `Digest feedback: 👍 ${snapshot.digestVotesUpThisWeek} (${formatWeekDelta(snapshot.digestVotesUpThisWeek, snapshot.digestVotesUpLastWeek)}), 👎 ${snapshot.digestVotesDownThisWeek} (${formatWeekDelta(snapshot.digestVotesDownThisWeek, snapshot.digestVotesDownLastWeek)})\n`
     : `Digest feedback: No votes yet\n`
 
+  const demandGapRowsHtml = snapshot.demandWithNoSupply
+    .map(
+      (row) => `
+          <tr>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#334155;">${escapeHtml(row.label)}</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#0f172a;text-align:right;font-weight:600;">${row.subscriberCount} waiting · 0 matches</td>
+          </tr>`
+    )
+    .join('')
+
+  const demandGapEmptyMessage =
+    snapshot.liveTotal === 0 ? 'No confirmed alerts yet.' : 'Every top search has live matches right now.'
+
+  const demandGapSectionHtml = snapshot.demandWithNoSupply.length
+    ? `<table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:20px;">
+          ${demandGapRowsHtml}
+        </table>`
+    : `<p class="ch-muted" style="font-size:13px;color:#94a3b8;margin:0 0 20px;">${escapeHtml(demandGapEmptyMessage)}</p>`
+
+  const demandGapSectionText = snapshot.demandWithNoSupply.length
+    ? snapshot.demandWithNoSupply.map((row) => `  - ${row.label}: ${row.subscriberCount} waiting, 0 matches`).join('\n')
+    : `  (${demandGapEmptyMessage})`
+
   const hasEverEngaged = snapshot.emailOpenedTotal > 0 || snapshot.emailClickedTotal > 0
   const emailEngagementHtml = hasEverEngaged
     ? `<tr>
@@ -1567,6 +1590,9 @@ export function buildAdminAlertFunnelEmail(
         </table>
         ${migratedNote}
 
+        <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Demand with no supply</p>
+        ${demandGapSectionHtml}
+
         <p style="margin:20px 0 0;">
           <a href="${escapeAttr(dashboardUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
@@ -1592,6 +1618,9 @@ Current totals (not weekly):
 
 Top sources this week:
 ${sourceRowsText}
+
+Demand with no supply:
+${demandGapSectionText}
 
 Full dashboard: ${dashboardUrl}`
 
