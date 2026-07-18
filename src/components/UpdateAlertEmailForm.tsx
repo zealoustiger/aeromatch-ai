@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { Mail } from 'lucide-react'
 import { requestAlertEmailChange, cancelAlertEmailChange } from '@/app/actions'
+import { suggestEmailFix } from '@/lib/suggestEmailFix'
 
 /**
  * "Update email" on `/alerts/manage` — owner-level, not per-row, so it lives
@@ -23,6 +24,10 @@ export default function UpdateAlertEmailForm({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  // Suggest-only "did you mean gmail.com?" — never auto-corrects, never blocks
+  // submission of the as-typed address (see lib/suggestEmailFix.ts). Matters more
+  // here than most capture points: a typo silently misroutes every future alert.
+  const emailSuggestion = suggestEmailFix(email)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -81,28 +86,42 @@ export default function UpdateAlertEmailForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2 sm:flex-row" noValidate>
-      <label htmlFor="new-alert-email" className="sr-only">
-        New email address
-      </label>
-      <input
-        id="new-alert-email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="new@email.com"
-        autoComplete="email"
-        className="w-full flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-      />
-      <button
-        type="submit"
-        disabled={isPending || !email}
-        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
-      >
-        <Mail className="h-3.5 w-3.5" />
-        {isPending ? 'Sending…' : 'Send confirmation'}
-      </button>
-      {error ? <p className="text-xs text-red-600 sm:w-full">{error}</p> : null}
-    </form>
+    <div>
+      <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2 sm:flex-row" noValidate>
+        <label htmlFor="new-alert-email" className="sr-only">
+          New email address
+        </label>
+        <input
+          id="new-alert-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="new@email.com"
+          autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
+          enterKeyHint="send"
+          className="w-full flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        />
+        <button
+          type="submit"
+          disabled={isPending || !email}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+        >
+          <Mail className="h-3.5 w-3.5" />
+          {isPending ? 'Sending…' : 'Send confirmation'}
+        </button>
+        {error ? <p className="text-xs text-red-600 sm:w-full">{error}</p> : null}
+      </form>
+      {emailSuggestion && (
+        <button
+          type="button"
+          onClick={() => setEmail(emailSuggestion)}
+          className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline"
+        >
+          Did you mean <span className="font-semibold">{emailSuggestion}</span>?
+        </button>
+      )}
+    </div>
   )
 }

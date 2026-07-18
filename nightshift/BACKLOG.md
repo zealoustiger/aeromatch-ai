@@ -2587,14 +2587,28 @@ human call; save-search auth wall → `[want]` product call)._
   `frequencyUrl` for the same "ambiguous across multiple alerts" reason) and to the
   aggregate digest template (the rich single-price-drop template is unaffected — same
   precedent as `frequencyUrl`'s existing scoping).
-- **[P2][goal] Typo-guard + mobile-keyboard attribute sweep on the remaining email
-  inputs.** Carry `suggestEmailFix` (item above) plus the missing input attributes —
-  `inputMode="email"`, `spellCheck={false}`, `enterKeyHint="send"`, and
-  `autoComplete="email"` where absent — across every other capture input:
-  `FooterAlertCapture`, `WatchAlertButton`, `ContactBarWatchButton`,
-  `SavedListingWatchButton`, `SaveListingButton`'s cross-sell field, `NewAlertForm`, and
-  `MobileStickyAlertBar`'s inline field if it renders one (verified: today only
-  `AlertSignup`/`FooterAlertCapture` even set `autoComplete`). Mechanical, one cycle, no
+~~- **[P2][goal] Typo-guard + mobile-keyboard attribute sweep on the remaining email
+  inputs.**~~ ✅ SHIPPED via `alert-typo-guard-keyboard-sweep` (2026-07-18). Re-audited
+  each named component by direct code read before building: only `FooterAlertCapture`
+  actually renders its own `<input type="email">` — `WatchAlertButton`,
+  `ContactBarWatchButton`, `SavedListingWatchButton`, `SaveListingButton`'s cross-sell,
+  and `MobileStickyAlertBar` are all signed-in/remembered-email one-tap buttons that
+  defer to `AlertSignup`'s field (scroll+focus) when no email is known — no input of
+  their own to change; `NewAlertForm` is criteria-only (make/model/state/price), no
+  email field. So the real sweep was `AlertSignup` (add the 3 missing attributes;
+  `autoComplete`+the typo chip already shipped) + `FooterAlertCapture` (add the chip +
+  all 4 attributes). A `grep -rn 'type="email"'` across `src/` also surfaced
+  `UpdateAlertEmailForm` (the `/alerts/manage` "change the email these alerts go to"
+  flow, not named in this item but the same silent-misroute typo risk) — included in
+  the sweep too. All three now carry `inputMode="email"`, `spellCheck={false}`,
+  `enterKeyHint="send"`, `autoComplete="email"`, and the same suggest-only "Did you mean
+  pilot@gmail.com?" chip (reusing `suggestEmailFix`, never auto-corrects, never blocks
+  submission). Live-verified with Playwright against the real running server (not just
+  code read): the footer chip on `/` correctly suggests+fills `pilot@gmail.com` from
+  `pilot@gmial.com` with all 4 attributes present, zero console errors; `/aircraft`'s
+  `AlertSignup` field carries the 3 new attributes; `UpdateAlertEmailForm` on
+  `/alerts/manage?token=…` (a throwaway `@example.com` alert seeded via service role,
+  deleted immediately after) shows the same working chip + attributes. Mechanical, no
   behavior change beyond the suggestion chip; kills fat-finger friction on the 375px
   keyboards where most capture happens. No new capture point.
 - **[P2][goal] One-tap unsubscribe-reason chips on `/alerts/status`.** After an

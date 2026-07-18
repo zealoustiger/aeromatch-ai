@@ -598,6 +598,9 @@ export default function AlertSignup({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 autoComplete="email"
+                inputMode="email"
+                spellCheck={false}
+                enterKeyHint="send"
                 className="w-full flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
               />
               <button
