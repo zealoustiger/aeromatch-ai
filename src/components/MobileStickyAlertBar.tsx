@@ -327,12 +327,12 @@ export default function MobileStickyAlertBar({
       )}
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
         {justSubscribed ? (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
+          <span role="status" aria-live="polite" className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             {confirmedLabel}
           </span>
         ) : justOneTapSubscribed ? (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
+          <span role="status" aria-live="polite" className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span className="truncate">Check {rememberedEmail} to confirm</span>
           </span>
@@ -344,7 +344,7 @@ export default function MobileStickyAlertBar({
             className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-sky-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-60"
           >
             {pending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Bell className="h-4 w-4 shrink-0" />}
-            <span className="truncate">
+            <span aria-live="polite" className="truncate">
               {pending
                 ? 'Saving…'
                 : errorMsg

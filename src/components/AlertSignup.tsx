@@ -418,7 +418,7 @@ export default function AlertSignup({
   return (
     <section ref={sectionRef} className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
       {submitted && confirmedImmediately ? (
-        <div className="flex items-start gap-3">
+        <div role="status" aria-live="polite" className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
             <h2 className="text-base font-semibold text-slate-900">You&rsquo;re set — alerts are on.</h2>
@@ -428,7 +428,7 @@ export default function AlertSignup({
           </div>
         </div>
       ) : submitted ? (
-        <div className="flex items-start gap-3">
+        <div role="status" aria-live="polite" className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
             <h2 className="text-base font-semibold text-slate-900">Almost there — check your inbox.</h2>
@@ -472,7 +472,7 @@ export default function AlertSignup({
           </div>
         </div>
       ) : existingAlert ? (
-        <div className="flex items-start gap-3">
+        <div role="status" aria-live="polite" className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
             <h2 className="text-base font-semibold text-slate-900">
@@ -490,7 +490,7 @@ export default function AlertSignup({
           </div>
         </div>
       ) : !signedInEmail && locallySubscribed ? (
-        <div className="flex items-start gap-3">
+        <div role="status" aria-live="polite" className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
             <h2 className="text-base font-semibold text-slate-900">
@@ -613,13 +613,15 @@ export default function AlertSignup({
             </form>
           )}
           {emailSuggestion && (
-            <button
-              type="button"
-              onClick={() => setEmail(emailSuggestion)}
-              className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline"
-            >
-              Did you mean <span className="font-semibold">{emailSuggestion}</span>?
-            </button>
+            <div role="status" aria-live="polite">
+              <button
+                type="button"
+                onClick={() => setEmail(emailSuggestion)}
+                className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline"
+              >
+                Did you mean <span className="font-semibold">{emailSuggestion}</span>?
+              </button>
+            </div>
           )}
           {watchOnly && (
             <label htmlFor="alert-target-price" className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
@@ -670,7 +672,7 @@ export default function AlertSignup({
               <option value="daily">Daily digest</option>
             </select>
           </label>
-          {errorMsg && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
+          {errorMsg && <p role="alert" className="mt-2 text-xs text-red-600">{errorMsg}</p>}
         </>
       )}
     </section>
