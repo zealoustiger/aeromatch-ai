@@ -2765,7 +2765,7 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   per address (reuse the `last_confirm_sent_at` cooldown pattern; if a new additive
   nullable `alerts.*` column is needed, ⚠️ human-apply + fail-soft like every prior one).
   Improves: alert management surface. Not a capture point — no `alert_subscribed`.
-- **[P1][goal] Right-noun alert cross-sell in the post-success banners
+~~- **[P1][goal] Right-noun alert cross-sell in the post-success banners
   (`/partnerships/[id]?posted=1` + `/partnerships/seeking/[id]?posted=1`).** The moment
   after posting is peak intent for the counterpart alert, and today's "Your partnership
   is live!" banner only links away to browse: a partnership poster wants "email me when a
@@ -2777,7 +2777,18 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   (`post_success_partnership` / `post_success_seeking`) so each placement's conversion is
   measurable — emits `alert_subscribed`. Adds 2 new capture points. Slice: the two
   partnership banners this cycle; `/aircraft/listing/[id]?posted=1` (seller → demand-
-  interest alert) is the follow-up slice.
+  interest alert) is the follow-up slice.~~ ✅ SHIPPED via `alert-crosssell-rightnoun`
+  (2026-07-18). The `/partnerships/[id]` banner's `AlertSignup` was actually already
+  live (from an earlier `post-success-alert-crosssell` cycle) but pointed at the WRONG
+  noun (`noun="partnership"`, `sourcePath="/partnerships?make=..."` — the poster's own
+  market); corrected to `noun="seeker"` / `sourcePath="/partnerships/seeking?make=..."`
+  / `source="post_success_partnership"`. `/partnerships/seeking/[id]` had no box at all
+  in its `justPosted` banner — added one reusing the page's own existing
+  `alertContext`/`alertSourcePath` (the same values its `isOwner` box already used),
+  `noun="partnership"`, `source="post_success_seeking"`. No schema change. QA: smoke
+  PASS (200/0 console errors/0 overflow, desktop 1280 + mobile 375) against real listing
+  IDs with `?posted=1`, screenshots read and confirmed correct copy/layout on both
+  pages. `/aircraft/listing/[id]?posted=1` remains the explicit follow-up slice.
 - **[P1][goal] Status-change timestamps → real WoW deltas in the Monday admin email.**
   Additive nullable `alerts.unsubscribed_at`/`alerts.paused_at`/`alerts.bounced_at`
   (⚠️ human-apply, fail-soft, same as every prior `alerts.*` DDL), stamped at every

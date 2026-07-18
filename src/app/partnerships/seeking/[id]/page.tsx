@@ -268,6 +268,19 @@ export default async function SeekerDetailPage({
               View all my listings →
             </Link>
           </p>
+          {/* Right-noun cross-sell — this poster wants an owner to list a
+              matching share, not another seeker like themselves. Reuses the
+              same alertContext/alertSourcePath the isOwner box below already
+              computes from this listing's own preferences. The poster is
+              signed in by definition, so AlertSignup renders the one-click
+              confirmed subscribe path. */}
+          <AlertSignup
+            context={alertContext}
+            source="post_success_seeking"
+            sourcePath={alertSourcePath}
+            noun="partnership"
+            className="mt-3"
+          />
         </div>
       )}
 
