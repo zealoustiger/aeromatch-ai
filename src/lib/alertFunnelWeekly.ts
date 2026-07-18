@@ -19,13 +19,17 @@ export interface AlertFunnelWeeklySnapshot {
   createdLastWeek: number
   confirmedThisWeek: number
   confirmedLastWeek: number
-  /** Real week-over-week unsubscribe counts, bucketed off `unsubscribed_at` —
-   *  only meaningful when `unsubscribedAtMigrated` is true (see below). */
+  /** Real week-over-week unsubscribe/paused/bounced counts, bucketed off
+   *  `unsubscribed_at`/`paused_at`/`bounced_at` — only meaningful when the
+   *  matching `*AtMigrated` flag (see below) is true. */
   unsubscribedThisWeek: number
   unsubscribedLastWeek: number
-  /** Current point-in-time totals, NOT week-over-week — the `alerts` table has
-   *  no `paused_at`/`bounced_at` timestamp, so an honest weekly delta for
-   *  those two statuses can't be computed from what's stored today. */
+  pausedThisWeek: number
+  pausedLastWeek: number
+  bouncedThisWeek: number
+  bouncedLastWeek: number
+  /** Current point-in-time totals, NOT week-over-week — always accurate
+   *  regardless of migration status (a plain `status` count). */
   liveTotal: number
   pendingTotal: number
   pausedTotal: number
@@ -33,10 +37,13 @@ export interface AlertFunnelWeeklySnapshot {
   bouncedTotal: number
   topSourcesThisWeek: AlertFunnelSourceRow[]
   sourceColumnMigrated: boolean
-  /** False until the `alerts.unsubscribed_at` migration is applied live — see
-   *  supabase/schema.sql's `alerts_unsubscribed_at` block. While false,
-   *  unsubscribedThisWeek/unsubscribedLastWeek are always 0 (never fabricated). */
+  /** False until the matching `alerts.*_at` migration is applied live — see
+   *  supabase/schema.sql's `alerts_unsubscribed_at` / `alerts_paused_bounced_at`
+   *  blocks. While false, that status's WoW fields above are always 0 (never
+   *  fabricated). */
   unsubscribedAtMigrated: boolean
+  pausedAtMigrated: boolean
+  bouncedAtMigrated: boolean
   computedAt: string
 }
 
@@ -54,12 +61,12 @@ const LIVE_STATUSES = new Set(['active', 'confirmed'])
  */
 export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Promise<AlertFunnelWeeklySnapshot> {
   const admin = createAdminClient()
-  // `source` and `unsubscribed_at` may independently be un-migrated live —
-  // retry dropping whichever one the error names, up to once each (order-
-  // independent), same graceful-fallback pattern as alertsForOwner.ts's
-  // OPTIONAL_COLS loop.
+  // `source`, `unsubscribed_at`, `paused_at`, and `bounced_at` may
+  // independently be un-migrated live — retry dropping whichever one the
+  // error names, up to once each (order-independent), same graceful-fallback
+  // pattern as alertsForOwner.ts's OPTIONAL_COLS loop.
   const baseCols = ['status', 'created_at', 'confirmed_at']
-  const optionalCols = ['source', 'unsubscribed_at']
+  const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at']
   let cols = [...baseCols, ...optionalCols]
   let { data, error } = await admin.from('alerts').select(cols.join(', '))
   for (
@@ -72,12 +79,16 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   }
   const sourceColumnMigrated = cols.includes('source')
   const unsubscribedAtMigrated = cols.includes('unsubscribed_at')
+  const pausedAtMigrated = cols.includes('paused_at')
+  const bouncedAtMigrated = cols.includes('bounced_at')
   const rows = (data ?? []) as unknown as {
     status: string | null
     source?: string | null
     created_at: string | null
     confirmed_at: string | null
     unsubscribed_at?: string | null
+    paused_at?: string | null
+    bounced_at?: string | null
   }[]
 
   const oneWeekAgo = now - 7 * DAY_MS
@@ -89,6 +100,10 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   let confirmedLastWeek = 0
   let unsubscribedThisWeek = 0
   let unsubscribedLastWeek = 0
+  let pausedThisWeek = 0
+  let pausedLastWeek = 0
+  let bouncedThisWeek = 0
+  let bouncedLastWeek = 0
   let liveTotal = 0
   let pendingTotal = 0
   let pausedTotal = 0
@@ -132,6 +147,22 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
         else if (unsubscribedAt >= twoWeeksAgo) unsubscribedLastWeek++
       }
     }
+
+    if (pausedAtMigrated) {
+      const pausedAt = row.paused_at ? new Date(row.paused_at).getTime() : NaN
+      if (!Number.isNaN(pausedAt)) {
+        if (pausedAt >= oneWeekAgo) pausedThisWeek++
+        else if (pausedAt >= twoWeeksAgo) pausedLastWeek++
+      }
+    }
+
+    if (bouncedAtMigrated) {
+      const bouncedAt = row.bounced_at ? new Date(row.bounced_at).getTime() : NaN
+      if (!Number.isNaN(bouncedAt)) {
+        if (bouncedAt >= oneWeekAgo) bouncedThisWeek++
+        else if (bouncedAt >= twoWeeksAgo) bouncedLastWeek++
+      }
+    }
   }
 
   const topSourcesThisWeek: AlertFunnelSourceRow[] = [...sourceThisWeek.entries()]
@@ -152,6 +183,10 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     confirmedLastWeek,
     unsubscribedThisWeek,
     unsubscribedLastWeek,
+    pausedThisWeek,
+    pausedLastWeek,
+    bouncedThisWeek,
+    bouncedLastWeek,
     liveTotal,
     pendingTotal,
     pausedTotal,
@@ -160,6 +195,8 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     topSourcesThisWeek,
     sourceColumnMigrated,
     unsubscribedAtMigrated,
+    pausedAtMigrated,
+    bouncedAtMigrated,
     computedAt: new Date(now).toISOString(),
   }
 }

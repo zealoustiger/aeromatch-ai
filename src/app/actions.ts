@@ -1111,7 +1111,18 @@ export async function pauseAlert(id: string, token?: string) {
   if ('error' in owned) return { error: owned.error }
   if (owned.alert.status !== 'confirmed') return { error: 'Only an active alert can be paused.' }
 
-  const { error } = await owned.admin.from('alerts').update({ status: 'paused' }).eq('id', id)
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ status: 'paused', paused_at: new Date().toISOString() })
+    .eq('id', id)
+  // Not-yet-migrated DB (`paused_at` column missing) — retry the plain status
+  // flip, same graceful-fallback pattern as every other alerts.* column.
+  if (error?.message?.includes('paused_at')) {
+    const { error: fallbackError } = await owned.admin.from('alerts').update({ status: 'paused' }).eq('id', id)
+    if (fallbackError) return { error: 'Failed to pause alert.' }
+    revalidatePath('/alerts/manage')
+    return { ok: true }
+  }
   if (error) return { error: 'Failed to pause alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }
@@ -1129,15 +1140,24 @@ export async function snoozeAlert(id: string, token?: string) {
   if (owned.alert.status !== 'confirmed') return { error: 'Only an active alert can be snoozed.' }
 
   const pausedUntil = resolveSnoozeUntil(new Date().toISOString())
-  const { error } = await owned.admin
-    .from('alerts')
-    .update({ status: 'paused', paused_until: pausedUntil })
-    .eq('id', id)
-  if (error?.message?.includes('paused_until')) {
-    const { error: fallbackError } = await owned.admin.from('alerts').update({ status: 'paused' }).eq('id', id)
-    if (fallbackError) return { error: 'Failed to snooze alert.' }
-    revalidatePath('/alerts/manage')
-    return { ok: true }
+  // paused_until and paused_at may independently be un-migrated live — retry
+  // dropping whichever one the error names, up to once each (order-independent),
+  // same graceful-fallback pattern as snoozeAlertByToken below.
+  let payload: Record<string, unknown> = {
+    status: 'paused',
+    paused_until: pausedUntil,
+    paused_at: new Date().toISOString(),
+  }
+  const optionalKeys = ['paused_until', 'paused_at']
+  let { error } = await owned.admin.from('alerts').update(payload).eq('id', id)
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ error } = await owned.admin.from('alerts').update(payload).eq('id', id))
   }
   if (error) return { error: 'Failed to snooze alert.' }
   revalidatePath('/alerts/manage')
@@ -1153,18 +1173,27 @@ export async function resumeAlert(id: string, token?: string) {
     return { error: 'Only a paused alert can be resumed.' }
   }
 
-  const { error } = await owned.admin
-    .from('alerts')
-    .update({ status: 'confirmed', paused_until: null })
-    .eq('id', id)
-  // A resume must never fail just because paused_until isn't migrated yet —
-  // retry the plain status flip (the same update this action always did
-  // before snooze existed).
-  if (error?.message?.includes('paused_until')) {
-    const { error: fallbackError } = await owned.admin.from('alerts').update({ status: 'confirmed' }).eq('id', id)
-    if (fallbackError) return { error: 'Failed to resume alert.' }
-    revalidatePath('/alerts/manage')
-    return { ok: true }
+  // paused_until/paused_at/bounced_at may independently be un-migrated live —
+  // retry dropping whichever one the error names, up to once each
+  // (order-independent), same graceful-fallback pattern used elsewhere in
+  // this file. A resume must never fail just because one of them isn't
+  // migrated yet.
+  let payload: Record<string, unknown> = {
+    status: 'confirmed',
+    paused_until: null,
+    paused_at: null,
+    bounced_at: null,
+  }
+  const optionalKeys = ['paused_until', 'paused_at', 'bounced_at']
+  let { error } = await owned.admin.from('alerts').update(payload).eq('id', id)
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ error } = await owned.admin.from('alerts').update(payload).eq('id', id))
   }
   if (error) return { error: 'Failed to resume alert.' }
   revalidatePath('/alerts/manage')
@@ -1181,29 +1210,30 @@ export async function pauseAllAlerts(untilIso: string, token?: string) {
   const ownerEmail = await resolveOwnerEmail(admin, token)
   if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
 
-  const { data, error } = await admin
-    .from('alerts')
-    .update({ status: 'paused', paused_until: untilIso })
-    .eq('email', ownerEmail)
-    .eq('status', 'confirmed')
-    .select('id')
-  if (error?.message?.includes('paused_until')) {
-    const { data: fallbackData, error: fallbackError } = await admin
-      .from('alerts')
-      .update({ status: 'paused' })
-      .eq('email', ownerEmail)
-      .eq('status', 'confirmed')
-      .select('id')
-    if (fallbackError) return { error: 'Failed to pause alerts.' }
-    revalidatePath('/alerts/manage')
-    // dateApplied: false — the not-yet-migrated column means these paused
-    // indefinitely, not until `untilIso`; the caller must not claim a resume
-    // date that wasn't actually stored (GOAL.md's honesty gate).
-    return { ok: true, count: fallbackData?.length ?? 0, dateApplied: false }
+  // paused_until and paused_at may independently be un-migrated live — retry
+  // dropping whichever one the error names, up to once each (order-independent),
+  // same graceful-fallback pattern as snoozeAlertByToken below. dateApplied
+  // tracks whether paused_until specifically survived — the caller must not
+  // claim a resume date that wasn't actually stored (GOAL.md's honesty gate).
+  let payload: Record<string, unknown> = {
+    status: 'paused',
+    paused_until: untilIso,
+    paused_at: new Date().toISOString(),
+  }
+  const optionalKeys = ['paused_until', 'paused_at']
+  let { data, error } = await admin.from('alerts').update(payload).eq('email', ownerEmail).eq('status', 'confirmed').select('id')
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ data, error } = await admin.from('alerts').update(payload).eq('email', ownerEmail).eq('status', 'confirmed').select('id'))
   }
   if (error) return { error: 'Failed to pause alerts.' }
   revalidatePath('/alerts/manage')
-  return { ok: true, count: data?.length ?? 0, dateApplied: true }
+  return { ok: true, count: data?.length ?? 0, dateApplied: 'paused_until' in payload }
 }
 
 export async function resumeAllAlerts(token?: string) {
@@ -1211,22 +1241,40 @@ export async function resumeAllAlerts(token?: string) {
   const ownerEmail = await resolveOwnerEmail(admin, token)
   if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
 
-  const { data, error } = await admin
+  // Resume both paused AND bounced rows (a prior version of this action only
+  // queried status='paused', so a bulk-resume silently left every bounced
+  // alert stuck — resumeAlert's single-row path already treats 'bounced' as
+  // resumable, this brings the bulk path to parity).
+  //
+  // paused_until/paused_at/bounced_at may independently be un-migrated live —
+  // retry dropping whichever one the error names, up to once each
+  // (order-independent), same graceful-fallback pattern as pauseAllAlerts above.
+  let payload: Record<string, unknown> = {
+    status: 'confirmed',
+    paused_until: null,
+    paused_at: null,
+    bounced_at: null,
+  }
+  const optionalKeys = ['paused_until', 'paused_at', 'bounced_at']
+  let { data, error } = await admin
     .from('alerts')
-    .update({ status: 'confirmed', paused_until: null })
+    .update(payload)
     .eq('email', ownerEmail)
-    .eq('status', 'paused')
+    .in('status', ['paused', 'bounced'])
     .select('id')
-  if (error?.message?.includes('paused_until')) {
-    const { data: fallbackData, error: fallbackError } = await admin
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ data, error } = await admin
       .from('alerts')
-      .update({ status: 'confirmed' })
+      .update(payload)
       .eq('email', ownerEmail)
-      .eq('status', 'paused')
-      .select('id')
-    if (fallbackError) return { error: 'Failed to resume alerts.' }
-    revalidatePath('/alerts/manage')
-    return { ok: true, count: fallbackData?.length ?? 0 }
+      .in('status', ['paused', 'bounced'])
+      .select('id'))
   }
   if (error) return { error: 'Failed to resume alerts.' }
   revalidatePath('/alerts/manage')
@@ -1802,20 +1850,24 @@ export async function pauseAlertByToken(token: string) {
   if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
-  let { data, error } = await admin
-    .from('alerts')
-    .update({ status: 'paused', unsubscribed_at: null })
-    .in('unsubscribe_token', tokens)
-    .select('id')
-
-  // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the plain
-  // status flip, same graceful-fallback pattern as every other alerts.* write.
-  if (error?.message?.includes('unsubscribed_at')) {
-    ;({ data, error } = await admin
-      .from('alerts')
-      .update({ status: 'paused' })
-      .in('unsubscribe_token', tokens)
-      .select('id'))
+  // unsubscribed_at and paused_at may independently be un-migrated live —
+  // retry dropping whichever one the error names, up to once each (order-
+  // independent), same graceful-fallback pattern as every alerts.* write above.
+  let payload: Record<string, unknown> = {
+    status: 'paused',
+    unsubscribed_at: null,
+    paused_at: new Date().toISOString(),
+  }
+  const optionalKeys = ['unsubscribed_at', 'paused_at']
+  let { data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id'))
   }
 
   if (error) return { error: 'Something went wrong. Please try again.' }
@@ -1834,11 +1886,17 @@ export async function snoozeAlertByToken(token: string) {
 
   const admin = createAdminClient()
   const pausedUntil = resolveSnoozeUntil(new Date().toISOString())
-  // paused_until and unsubscribed_at may independently be un-migrated live —
-  // retry dropping whichever one the error names, up to once each (order-
-  // independent), same graceful-fallback pattern as every alerts.* write above.
-  let payload: Record<string, unknown> = { status: 'paused', paused_until: pausedUntil, unsubscribed_at: null }
-  const optionalKeys = ['paused_until', 'unsubscribed_at']
+  // paused_until, unsubscribed_at, and paused_at may independently be
+  // un-migrated live — retry dropping whichever one the error names, up to
+  // once each (order-independent), same graceful-fallback pattern as every
+  // alerts.* write above.
+  let payload: Record<string, unknown> = {
+    status: 'paused',
+    paused_until: pausedUntil,
+    unsubscribed_at: null,
+    paused_at: new Date().toISOString(),
+  }
+  const optionalKeys = ['paused_until', 'unsubscribed_at', 'paused_at']
   let { data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
   for (
     let i = 0;
@@ -1869,15 +1927,20 @@ export async function updateAlertFrequencyByToken(token: string) {
   if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
-  // frequency and unsubscribed_at may independently be un-migrated live —
-  // retry dropping whichever one the error names, up to once each (order-
-  // independent), same graceful-fallback pattern as every alerts.* write above.
+  // frequency, unsubscribed_at, paused_at, and bounced_at may independently be
+  // un-migrated live — retry dropping whichever one the error names, up to
+  // once each (order-independent), same graceful-fallback pattern as every
+  // alerts.* write above. This can revive a row from 'unsubscribed', 'paused',
+  // or 'bounced' (matched by unsubscribe_token alone, no status filter), so
+  // clear both status-timestamp columns alongside unsubscribed_at.
   let payload: Record<string, unknown> = {
     status: 'confirmed',
     frequency: normalizeFrequency('weekly'),
     unsubscribed_at: null,
+    paused_at: null,
+    bounced_at: null,
   }
-  const optionalKeys = ['frequency', 'unsubscribed_at']
+  const optionalKeys = ['frequency', 'unsubscribed_at', 'paused_at', 'bounced_at']
   let { data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
   for (
     let i = 0;

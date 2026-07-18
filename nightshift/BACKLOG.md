@@ -2786,28 +2786,21 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   PASS (200/0 console errors/0 overflow, desktop 1280 + mobile 375) against real listing
   IDs with `?posted=1`, screenshots read and confirmed correct copy/layout on both
   pages. `/aircraft/listing/[id]?posted=1` remains the explicit follow-up slice.
-- **[P1][goal] Status-change timestamps → real WoW deltas in the Monday admin email.**
-  Additive nullable `alerts.unsubscribed_at`/`alerts.paused_at`/`alerts.bounced_at`
-  (⚠️ human-apply, fail-soft, same as every prior `alerts.*` DDL), stamped at every
-  status-flip path (unsubscribe routes incl. one-click + recover-all, pause/snooze
-  actions + `pauseAlertByToken`, the Resend bounce webhook) and cleared on
-  resume/`reviveIfUnsubscribed`. Then upgrade `alertFunnelWeekly` to honest
-  week-over-week deltas for those statuses, keeping today's explicitly-labeled
-  current-totals rendering as the pre-migration fallback (must degrade exactly as now
-  until the columns exist). This is the exact "Next" flagged by
-  `admin-alert-funnel-weekly`. Measurement pillar; no new capture point.
-  — **slice 1 (`unsubscribed_at`) ✅ SHIPPED via `alert-unsub-wow-delta` (2026-07-18):**
-  additive `alerts.unsubscribed_at` (⚠️ human-apply, fail-soft). Stamped by the one-click
-  unsubscribe route (`applyUnsubscribe`) and the Resend spam-complaint handler
-  (`unsubscribeAlertsForComplainedEmail`); cleared back to `null` by every path that
-  revives an alert away from `'unsubscribed'` — the 3 `UnsubscribeRecover` token actions
-  (`pauseAlertByToken`, `snoozeAlertByToken`, `updateAlertFrequencyByToken`) and
-  `reviveIfUnsubscribed`. `getAlertFunnelWeeklySnapshot` now returns real
-  `unsubscribedThisWeek`/`unsubscribedLastWeek` + `unsubscribedAtMigrated`;
-  `buildAdminAlertFunnelEmail` renders a genuine "Unsubscribed … vs last week" WoW row
-  once migrated, current-totals stock count unchanged either way. **Remaining: slice 2
-  (`paused_at`/`bounced_at`)** — deferred to keep this cycle's diff reviewable; not
-  attempted yet.
+- ~~**[P1][goal] Status-change timestamps → real WoW deltas in the Monday admin email.**~~
+  ✅ SHIPPED via `alert-unsub-wow-delta` (2026-07-18, slice 1) + `alert-pause-bounce-wow-delta`
+  (2026-07-18, slice 2) — additive nullable `alerts.unsubscribed_at`/`alerts.paused_at`/
+  `alerts.bounced_at` (⚠️ human-apply, fail-soft, same as every prior `alerts.*` DDL), stamped
+  at every status-flip path (unsubscribe routes incl. one-click + recover-all, pause/snooze
+  actions + `pauseAlertByToken`/`snoozeAlertByToken`, the Resend bounce/complaint webhook, the
+  listing-watch cron auto-pause) and cleared on every resume/revive path
+  (`resumeAlert`/`resumeAllAlerts`, the cron's snooze auto-resume, `reviveIfUnsubscribed`, the 3
+  `UnsubscribeRecover` token actions, and the confirm-link route for an edge-case stale link).
+  `getAlertFunnelWeeklySnapshot` returns real `unsubscribedThisWeek`/`pausedThisWeek`/
+  `bouncedThisWeek` (+ `*LastWeek` + `*AtMigrated`); `buildAdminAlertFunnelEmail` renders a
+  genuine WoW row for each once migrated, current-totals stock counts unchanged either way.
+  **Slice 2 bonus fix:** `resumeAllAlerts` previously only queried `.eq('status','paused')`, so
+  bulk-"Resume all" silently never resumed bounced rows even though the single-row `resumeAlert`
+  explicitly supports it — now `.in('status', ['paused','bounced'])`. This closes the item.
 - **[P2][goal] Screen-reader pass on the manage surface — `aria-live` on every async
   state swap.** The explicitly-named "Next" from `alert-capture-aria-live` (which covered
   only the 3 capture components): zero `aria-live`/`role="status"` exists anywhere under

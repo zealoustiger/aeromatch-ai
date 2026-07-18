@@ -2,6 +2,80 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T092355Z — PASS — alert-pause-bounce-wow-delta
+- Pages: (internal — Monday admin alert-funnel email + `/alerts/manage`, `/alerts/status`
+  server actions; no rendered-page UI change)
+- What: **The weekly admin email now tells us honestly whether Paused and Bounced alerts
+  are trending up or down, not just a running total — closing out the same gap last
+  cycle fixed for Unsubscribed.** Before this cycle, the Monday "alert funnel" email
+  showed real week-over-week deltas for New signups, Confirmed, and (as of last cycle)
+  Unsubscribed — but Paused and Bounced still only showed a flat current total, because
+  the `alerts` table had no timestamp for *when* a row most recently paused or bounced.
+  It now stamps `paused_at` on every pause path (manual pause, 30-day snooze, bulk
+  "pause all," the two token-based unsubscribe-recovery actions, and the cron's
+  auto-pause when a watched listing/partnership goes unavailable) and `bounced_at` when
+  the Resend bounce webhook auto-pauses a dead address — clearing both on every path
+  that revives an alert back to active, so the email can show real "Paused: 2 (+1 vs
+  last week)" / "Bounced: 1 (flat vs last week)" lines instead of a static count.
+- Goal: alert-experience (measurement pillar: "prove it converts," the honesty half —
+  see GOAL.md's "never fabricate" guardrail) — tier 3 `[goal]`. Tier 1 (`[bug]`): most
+  recent CHANGELOG entry (`alert-unsub-wow-delta`) was a PASS; swept BACKLOG.md, no
+  unstruck `[bug]` line found. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing blocked-on-human (save-search auth wall,
+  mosaic redesign option) / bot-walled-scrape (Trade-A-Plane/Controller/AirMart/
+  AeroTrader) / needs-compliance-review (owner-leads dataset) / no-live-effect
+  (dynamic-location seed personas) set as recent cycles — none buildable
+  autonomously. Dropped to tier 3 and picked up slice 2 of
+  `alert-unsub-wow-delta`'s own explicitly-named "Next": `paused_at`/`bounced_at`,
+  the remaining half of the "Status-change timestamps" `[P1][goal]` item. Also fixed a
+  real bug surfaced while implementing it (see Verdict) and closed the whole backlog
+  item off in BACKLOG.md this cycle (both slices now shipped).
+- Spec: nightshift/specs/20260718T091047Z-alert-pause-bounce-wow-delta.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean (no warnings). Full `node --test` suite (466 tests across `src/lib/*.test.ts`)
+  passes, 0 failures — extended `email.test.ts`'s `buildAdminAlertFunnelEmail` coverage
+  with mirrored migrated/not-migrated pairs for Paused and Bounced (6 new tests) and
+  rewrote the old "paused/bounced never get a WoW delta" test, which is no longer true
+  by design. New additive `alerts.paused_at`/`alerts.bounced_at` columns (⚠️ apply
+  against live Supabase — confirmed live via a direct read-only query that neither
+  column exists yet; every touched write path fails soft and retries without whichever
+  column errors, same graceful-fallback pattern as every prior `alerts.*` column).
+  **Bug found + fixed:** `resumeAllAlerts` (bulk "Resume all" on `/alerts/manage`)
+  only ever queried `.eq('status', 'paused')`, so a subscriber with a bounced alert
+  clicking "Resume all" silently never resumed it — the single-row `resumeAlert`
+  action already explicitly supports resuming from `'bounced'` (with a comment
+  explaining why), the bulk path just never got the same fix. Now
+  `.in('status', ['paused', 'bounced'])`. Live-verified the full fail-soft chain
+  against the real, not-yet-migrated live DB with a throwaway `@example.com` test row
+  (service-role insert, no browser/session round-trip): simulated `pauseAlert`'s
+  update (missing `paused_at` → retries with just the status flip → succeeds, status
+  becomes `paused`), `resumeAlert`'s update (missing `paused_until`/`paused_at`/
+  `bounced_at` → retries down to a plain status flip → succeeds, status becomes
+  `confirmed`), and `pauseAlertsForBouncedEmail`'s update (missing `bounced_at`/
+  `paused_at` → retries → succeeds, status becomes `bounced`) — all three degraded
+  cleanly with zero errors surfaced; test row deleted immediately after (confirmed 0
+  rows remain), scratch script deleted before finishing. QA against the PRODUCTION
+  build (`next start`) via `qa-smoke.mjs` on `/alerts/manage`, `/alerts/status`: 4/4
+  pass (HTTP 200, zero app-origin console errors, zero horizontal overflow at desktop
+  1280 + mobile 375). Also curled `/api/dev/email-preview/admin-alert-funnel` and
+  confirmed the rendered HTML shows the new Paused/Bounced WoW rows with correct
+  deltas alongside the unchanged current-totals stock counts. Non-visual cycle (email
+  content + server-action/cron logic, no rendered UI change) — screenshots saved for
+  the audit trail, not read into the QA verdict per convention. Server stopped, port
+  3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-pause-bounce-wow-delta/
+- Next: The alert-experience `[P2][goal]` queue still has 3 open items (screen-reader
+  `aria-live` sweep on the manage-surface async controls; "narrow this alert?" nudge
+  for very-high-volume alerts; Digest 👍/👎 feedback vote counts in the Monday admin
+  email) — pick the next one by the same tier scoping. Separately, a real UI follow-up
+  surfaced but not fixed this cycle (out of scope, backend-only slice): `/alerts/manage`'s
+  `VacationModeControl` "Resume all (N)" button visibility is still gated on
+  `pausedAlertCount` only (`status === 'paused'`), so a subscriber with ONLY bounced
+  alerts and zero paused ones won't see the button at all, even though the backend fix
+  above means clicking it (if visible) would now correctly resume bounced rows too —
+  worth widening that count to include bounced in a future cycle.
+
+
 ## 20260718T085420Z — PASS — alert-unsub-wow-delta
 - Pages: (internal — Monday admin alert-funnel email + `/alerts/manage`, `/alerts/status` server actions; no rendered-page UI change)
 - What: **The weekly admin email now tells us honestly whether unsubscribes are going up or down, instead of just a running total.** Before this cycle, the Monday "alert funnel" email to admins showed New signups and Confirmed with a real week-over-week delta ("+5 vs last week"), but Unsubscribed only ever showed a flat current total — the table had no timestamp for *when* someone unsubscribed, so it couldn't compute a weekly trend without making one up. It now stamps the moment an alert unsubscribes (one-click link or a spam complaint) and clears that stamp if the person recovers (pause/snooze/"fewer emails" from the recovery page), so the email can show a real "Unsubscribed: 3 (-2 vs last week)" line — an honest churn signal, not a guess.

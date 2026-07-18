@@ -20,6 +20,10 @@ export async function GET() {
     confirmedLastWeek: 6,
     unsubscribedThisWeek: 3,
     unsubscribedLastWeek: 5,
+    pausedThisWeek: 2,
+    pausedLastWeek: 1,
+    bouncedThisWeek: 1,
+    bouncedLastWeek: 1,
     liveTotal: 142,
     pendingTotal: 11,
     pausedTotal: 5,
@@ -33,6 +37,8 @@ export async function GET() {
     ],
     sourceColumnMigrated: true,
     unsubscribedAtMigrated: true,
+    pausedAtMigrated: true,
+    bouncedAtMigrated: true,
     computedAt: '2026-07-18T08:00:00.000Z',
   }
 
