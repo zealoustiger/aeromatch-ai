@@ -1250,6 +1250,23 @@ export async function resumeAllAlerts(token?: string) {
   return { ok: true, count: data?.length ?? 0 }
 }
 
+// Hard-deletes EVERY alert row for the owner's email — the "delete all my
+// alerts & data" self-serve affordance on /alerts/manage. Same trust boundary
+// as pauseAllAlerts/resumeAllAlerts (resolveOwnerEmail, no row-id needed);
+// gated client-side by a typed-confirmation input, not just a window.confirm.
+// User-initiated deletion of their own rows only — distinct from the
+// FREEZE'd bulk-delete-of-others'-data case.
+export async function deleteAllAlerts(token?: string) {
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const { data, error } = await admin.from('alerts').delete().eq('email', ownerEmail).select('id')
+  if (error) return { error: 'Failed to delete alerts.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true, count: data?.length ?? 0 }
+}
+
 // Deletes the alert row outright (the management page's own delete affordance,
 // distinct from the one-click email `unsubscribe` link, which just flips status).
 export async function deleteAlert(id: string, token?: string) {
