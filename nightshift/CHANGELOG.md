@@ -2,6 +2,69 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T064431Z — PASS — alert-delete-all
+- Pages: /alerts/manage (no other page touched)
+- What: **A subscriber who wants ClubHanger to forget them entirely no longer has to
+  delete alerts one by one and take our word the rest are gone** — a new collapsed
+  "Delete all my alerts & data" link at the bottom of `/alerts/manage` expands into a
+  typed-confirmation box (must type `DELETE` before the button enables) that hard-deletes
+  every alert tied to that email in one action, then shows a plain "Deleted N alerts.
+  Nothing else is stored for you on ClubHanger." confirmation with links back to browse.
+  Works both signed-in and via the no-account "manage link" token.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`alert-unsubscribe-reason-chips`) was a PASS; swept BACKLOG.md for any unstruck `[bug]`
+  line — none found. Tier 2 (`[want]`): checked every unstruck `[P1]`/`[P2][want]` line —
+  same standing set as the last several cycles (save-search auth wall, collection-layout
+  mosaic redesign, Trade-A-Plane ingestion, Bay-Area coverage benchmark, owner-leads
+  dataset, Controller.com/AirMart/AeroTrader bot-walled) — none buildable autonomously.
+  Dropped to tier 3 and picked the sole remaining plan-pass batch #3 item named as "Next"
+  by the prior cycle. Closes BACKLOG.md's 🔔 GOAL `[P2][goal]` "Delete all my alerts &
+  data" self-serve item — batch #3 is now fully drained; the next cycle should run a
+  fresh Opus/Fable plan-pass refill per GOAL.md unless a `[bug]`/`[want]` appears first.
+- Spec: nightshift/specs/20260718T064431Z-alert-delete-all.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  (twice — once before, once after the mid-cycle fix below). New `deleteAllAlerts(token?)`
+  server action in `actions.ts` mirrors the existing `pauseAllAlerts`/`resumeAllAlerts`
+  bulk pattern (`resolveOwnerEmail`, no row-id) — no new pure-function module, so no new
+  unit tests; existing suite unaffected. QA against the PRODUCTION build (`npx next start
+  -p 3000`; found and killed one stale `next-server` left running from a prior cycle
+  before starting this cycle's own — same recurring issue flagged the last two cycles)
+  via `qa-smoke.mjs` on `/alerts/manage`, `/`: 4/4 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at desktop 1280 + mobile 375). Visual cycle — went
+  well beyond the smoke gate with a real Playwright pass: seeded two throwaway
+  `@example.com` confirmed alerts via the service-role key, drove `/alerts/manage?token=…`
+  with a real browser, confirmed the confirm button stays disabled until typing the exact
+  word `DELETE`, clicked through, and confirmed both rows were actually gone from the DB.
+  **Bug found and fixed mid-cycle:** the first pass of this live test caught that deleting
+  every row for a token-scoped visitor also deletes the one alert the token itself was
+  minted from — the page's automatic post-action refresh then re-resolved the dead token
+  to nothing and rendered the generic "this link is no longer valid" sign-in wall instead
+  of a confirmation (technically accurate, but a confusing, unearned dead end right after
+  a deliberate deletion). Fixed by having the token-path branch redirect client-side to
+  `/alerts/manage?deleted=N`, which the page now renders as a dedicated confirmation card
+  regardless of token validity; re-ran the full build+typecheck+smoke+Playwright sequence
+  after the fix and confirmed the confirmation now shows correctly with zero console
+  errors, zero "invalid link" text, and working browse-aircraft/browse-partnerships links.
+  The signed-in (session) path was not live-tested with a real magic-link session this
+  cycle (time-boxed after the token-path bug fix) — verified by code read instead: session
+  resolution is untouched by deleting alert rows, `scopeToken` is always `undefined` for a
+  signed-in visitor (page.tsx: "a signed-in session always wins"), so `DeleteAllAlertsControl`
+  always takes the inline-confirmation branch for that path — the same pattern already
+  proven live by `VacationModeControl`'s `pauseAllAlerts`/`resumeAllAlerts` (a local
+  "Resumed N alerts" message that survives the same revalidatePath-triggered refresh).
+  Screenshots read at both viewports (anonymous crawl only reaches the sign-in wall, same
+  ceiling noted the last several cycles): no overlap, no overflow at 375px. All test rows
+  deleted (confirmed 0 remain); scratch scripts (`scripts/tmp-qa-*.mjs`) deleted before
+  finishing; stale + this cycle's own `next-server` both stopped, port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-delete-all/
+- Next: BACKLOG.md's 🔔 GOAL plan-pass batch #3 is now fully drained. The next cycle
+  should run a fresh Opus/Fable plan-pass refill per GOAL.md (tiers 1/2 still empty as of
+  this cycle) to generate the next alert-experience `[goal]` batch — emit `ABORT — none —
+  plan needed` if picked up by the cheap execution model instead. Also worth a standing
+  health-check: a stale `next-server` left running between cycles has now recurred three
+  cycles in a row; if it keeps happening, worth a small addition to the RUNBOOK's QA step
+  to always check/kill port 3000 before starting, not just when the start command fails.
+
 ## 20260718T063645Z — PASS — alert-unsubscribe-reason-chips
 - Pages: /alerts/status (no other page touched)
 - What: **A subscriber who just unsubscribed from an alert now gets asked, in one
