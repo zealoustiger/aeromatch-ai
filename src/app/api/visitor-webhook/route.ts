@@ -11,6 +11,16 @@ const HOME_CITY = (process.env.VISITOR_HOME_CITY || 'Oakland').toLowerCase()
 const BOT_RE =
   /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|slackbot|whatsapp|telegram|headless|lighthouse|preview|monitor|ahrefs|semrush|dataprovider|python-requests|curl|wget|axios|node-fetch/i
 
+// Known link-preview / "unfurl" bots — fetched once whenever someone pastes a
+// ClubHanger URL into that app (Facebook, Slack, iMessage, etc.) so the share
+// renders a title/image/description card. High-volume and zero-signal (every
+// share = one hit, regardless of who shared it or whether a human ever visits),
+// so these are logged to visitor_threads as usual (still counted in admin bot
+// stats) but never posted to Slack — unlike other bots/scrapers, which stay
+// visible since those ARE worth a human noticing.
+const PREVIEW_BOT_RE =
+  /facebookexternalhit|meta-externalagent|twitterbot|slackbot-linkexpanding|slack-imgproxy|whatsapp|telegrambot|linkedinbot|discordbot|redditbot|pinterest|quora link preview|bingpreview|skypeuripreview|embedly|iframely|vkshare|\bviber\b|^line\//i
+
 // Cloud / datacenter / hosting orgs — a "visitor" whose IP belongs to one of
 // these is almost always a bot (crawler, scraper, uptime monitor) running on a
 // server, not a person. We TAG these rather than drop them, so the channel still
@@ -188,6 +198,12 @@ export async function POST(request: NextRequest) {
   // still shows where they're roughly from in Slack instead of a blank.
   const loc = [city, region].filter(Boolean).join(', ') || country || 'Unknown location'
 
+  // Known unfurl/link-preview bot → log for stats, never post to Slack (see
+  // PREVIEW_BOT_RE above). Checked before the DB round-trip so a flood of these
+  // (e.g. a link shared widely on Facebook) costs one cheap regex test, not a
+  // wasted `visitor_threads` lookup.
+  const isPreviewBot = PREVIEW_BOT_RE.test(ua)
+
   const admin = createAdminClient()
   const { data: existing } = await admin
     .from('visitor_threads')
@@ -196,7 +212,25 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   try {
-    if (!existing) {
+    if (!existing && isPreviewBot) {
+      // Known unfurl bot on its very first hit: skip the ipinfo.io lookup, the
+      // burst-detection query, and BOTH Slack posts entirely — just log it so
+      // it still counts in admin bot stats. (A preview bot essentially never
+      // sends a second event, so the `else` reply-branch below is moot for it,
+      // but isPreviewBot still guards it below for safety.)
+      await admin.from('visitor_threads').insert({
+        session_id: sessionId,
+        slack_thread_ts: null,
+        city,
+        region,
+        country,
+        ip,
+        user_agent: ua,
+        is_bot: true,
+        ip_org: null,
+        first_path: path,
+      })
+    } else if (!existing) {
       // First action this session → classify (bot vs human) and start a thread.
       // The IP-org lookup only runs here, once per session, not on every event.
       const org = await ipOrg(ip)
@@ -268,12 +302,16 @@ export async function POST(request: NextRequest) {
         unfurl_links: false,
       })
     } else {
-      await slack('chat.postMessage', {
-        channel: CHANNEL,
-        thread_ts: existing.slack_thread_ts,
-        text: describe(event, path, props),
-        unfurl_links: false,
-      })
+      // existing.slack_thread_ts is null for a preview-bot session (no thread was
+      // ever posted) — skip the Slack reply in that case, just bump the counters.
+      if (existing.slack_thread_ts && !isPreviewBot) {
+        await slack('chat.postMessage', {
+          channel: CHANNEL,
+          thread_ts: existing.slack_thread_ts,
+          text: describe(event, path, props),
+          unfurl_links: false,
+        })
+      }
       await admin
         .from('visitor_threads')
         .update({ last_seen: new Date().toISOString(), event_count: (existing.event_count ?? 1) + 1 })
