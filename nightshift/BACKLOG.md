@@ -2828,16 +2828,30 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   audited and left untouched — it's a plain download `<a>` with no client state to
   announce. Pure attribute + minimal state-plumbing additions, no visual/behavior
   change. **This closes the whole item — both slices shipped.**
-- **[P2][goal] "Narrow this alert?" nudge for very-high-volume alerts on
-  `/alerts/manage`.** The honest inverse of the widen nudge: a make-only or nationwide
-  alert matching hundreds of listings produces bloated digests that read as spam — the
-  never-spam pillar cuts both ways. When an alert's live match count (reuse
-  `getAlertMatchCount`) exceeds a threshold (~75), render a nudge offering 1–2 concrete
-  one-tap tighteners derived from the alert's own missing criteria (add the dominant
-  model / add a state / add a price cap — `computeWidenCandidate` in reverse), applied
-  via the existing `buildAlertCriteriaUpdate`; only offer a tightener after live-
-  verifying it still leaves >0 matches — never a guess, never a dead end. No schema
-  change; no new capture point.
+~~- **[P2][goal] "Narrow this alert?" nudge for very-high-volume alerts on
+  `/alerts/manage`.**~~ ✅ SHIPPED via `alert-narrow-nudge` (2026-07-18) The honest
+  inverse of the widen nudge: a make-only or nationwide alert matching hundreds of
+  listings produces bloated digests that read as spam — the never-spam pillar cuts both
+  ways. New `getNarrowSuggestions` (`alertMatchCounts.ts`) — above a 75-match threshold,
+  computes up to 2 candidate tighteners (dominant model, dominant state, price cap at
+  the matching set's median) from the alert's own missing editable criteria, then
+  re-verifies each against a real live count via the existing `getAlertMatchCount`
+  before ever offering it (drops anything that would leave 0 matches or doesn't
+  actually shrink the count). New `NarrowAlertNudge.tsx` (same shape as
+  `WidenAlertNudge.tsx`) renders the buttons; applies via the existing
+  `updateAlertCriteria` server action — no new action, no schema change, no new capture
+  point. Aircraft-type alerts only this cycle (partnerships/seekers never approach the
+  threshold on this marketplace today — 23 total active partnerships site-wide — so a
+  parallel path for them would be untestable dead code; revisit if inventory grows).
+  Live-verified against real prod data (read-only aggregation query) + two throwaway
+  `@example.com` test alert rows (seeded + deleted via service role): a "Cessna"
+  make-only alert (416 live matches) correctly surfaced "Only Cessna 172 — 34 listings"
+  and "Only in California — 48 listings," clicking one updated the DB row's
+  `source_path`/`context` in place and swapped to a confirmation line with zero page
+  reload; a nationwide alert (2,176 matches) rendered both tighteners correctly wrapped
+  at 375px with zero overflow/console errors; an already-narrow alert (34 matches, below
+  threshold) and a low-volume partnership alert (6 matches) both correctly rendered no
+  nudge. Both test rows deleted immediately after (confirmed 0 remain).
 ~~- **[P2][goal] Digest 👍/👎 feedback counts in the Monday admin email.**~~ ✅ SHIPPED
   via `admin-digest-vote-counts` (2026-07-18) The
   `digest-feedback` route has been inserting votes into the `feedback` table since the

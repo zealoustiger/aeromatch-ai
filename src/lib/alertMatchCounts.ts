@@ -1,5 +1,5 @@
 import { createAdminClient } from './supabase-admin'
-import { getStateBySlug, getMakeBySlug, getMakeModel, SITE_URL } from './seo'
+import { getStateBySlug, getMakeBySlug, getMakeModel, STATE_NAMES, SITE_URL } from './seo'
 import { matchesModelFilter } from './seekerModelFilter'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from './listingQuality'
 import { parseAvionicsFilter, fetchAvionicsMatchIds } from './avionicsClassify'
@@ -7,7 +7,14 @@ import { applyPartnershipModelFilter } from './partnershipModelFilter'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
 import { formatShareType, formatPriceK } from './utils'
-import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from './alertEditCriteria'
+import {
+  parseEditableAlertTarget,
+  computeWidenCandidate,
+  buildAlertCriteriaUpdate,
+  targetToFields,
+  type EditableAlertTarget,
+  type AlertCriteriaFields,
+} from './alertEditCriteria'
 import { priceStats } from './aircraftComps'
 import type { AlertDigestSample } from './email'
 
@@ -458,6 +465,141 @@ export async function getEmptyStateWidenSuggestion(
     count: match.count,
     noun: match.noun,
   }
+}
+
+export interface NarrowSuggestion {
+  fields: AlertCriteriaFields
+  description: string
+  count: number
+  noun: 'listing' | 'pilot'
+}
+
+/** Above this many live matches, a make-only/nationwide alert's digest reads
+ *  as spam rather than a curated match list (GOAL.md: never-spam cuts both
+ *  ways — the mirror image of the widen nudge above). */
+const NARROW_THRESHOLD = 75
+
+/**
+ * Most common non-empty `column` value among active, priced aircraft matching
+ * an alert's CURRENT make/state/price filters — the "what would tighten this
+ * the most" signal for `getNarrowSuggestions`. Capped at 3,000 rows (same
+ * order of magnitude as `getMarketPulseLine`'s cap) and aggregated
+ * client-side; approximate is fine because every candidate this feeds gets
+ * re-verified with a real live count before ever being offered. Returns
+ * `null` on a query error or an all-empty column.
+ */
+async function dominantAircraftValue(
+  admin: ReturnType<typeof createAdminClient>,
+  column: 'model' | 'state',
+  target: Extract<EditableAlertTarget, { type: 'aircraft' }>
+): Promise<string | null> {
+  let q = admin
+    .from('aircraft_for_sale')
+    .select(column)
+    .eq('status', 'active')
+    .gte('asking_price', PARTS_PRICE_FLOOR)
+    .limit(3000)
+  if (target.make) q = q.ilike('make', `%${target.make}%`)
+  if (target.state) q = q.eq('state', target.state)
+  const min = target.minPrice ? parseInt(target.minPrice, 10) : undefined
+  const max = target.maxPrice ? parseInt(target.maxPrice, 10) : undefined
+  if (min !== undefined && Number.isFinite(min)) q = q.gte('asking_price', min)
+  if (max !== undefined && Number.isFinite(max)) q = q.lte('asking_price', max)
+
+  const { data, error } = await q
+  if (error || !data) return null
+  const counts = new Map<string, number>()
+  for (const row of data as Record<string, string | null>[]) {
+    const v = (row[column] ?? '').trim()
+    if (!v) continue
+    counts.set(v, (counts.get(v) ?? 0) + 1)
+  }
+  let best: string | null = null
+  let bestCount = 0
+  for (const [v, c] of counts) {
+    if (c > bestCount) {
+      best = v
+      bestCount = c
+    }
+  }
+  return best
+}
+
+/**
+ * The honest inverse of `getEmptyStateWidenSuggestion` above (GOAL.md:
+ * never-spam cuts both ways) — for a confirmed AIRCRAFT alert already
+ * matching more than `NARROW_THRESHOLD` live listings, offer up to 2 concrete
+ * one-tap tighteners (add the dominant model, add the dominant state, or cap
+ * the price at the matching set's own median) derived from the alert's own
+ * missing criteria. Every candidate is re-verified against a real live count
+ * before being offered — a candidate that would leave 0 matches, or doesn't
+ * actually shrink the count, is silently dropped, never guessed.
+ *
+ * Aircraft-only for now: partnership/seeker alert volume never approaches the
+ * threshold on this marketplace today (23 total active partnerships
+ * site-wide) — building a parallel path for them would be untestable dead
+ * code, not a real feature. Revisit once inventory grows.
+ */
+export async function getNarrowSuggestions(
+  sourcePath: string | null,
+  currentCount: number
+): Promise<NarrowSuggestion[]> {
+  if (currentCount <= NARROW_THRESHOLD) return []
+  const target = parseEditableAlertTarget(sourcePath)
+  if (!target || target.type !== 'aircraft') return []
+
+  const admin = createAdminClient()
+  const candidates: { fields: AlertCriteriaFields; description: string }[] = []
+
+  if (!target.model) {
+    const model = await dominantAircraftValue(admin, 'model', target)
+    if (model) {
+      candidates.push({
+        fields: { ...targetToFields(target), model },
+        description: target.make ? `Only ${target.make} ${model}` : `Only ${model}`,
+      })
+    }
+  }
+  if (!target.state) {
+    const state = await dominantAircraftValue(admin, 'state', target)
+    if (state) {
+      candidates.push({
+        fields: { ...targetToFields(target), state },
+        description: `Only in ${STATE_NAMES[state] ?? state}`,
+      })
+    }
+  }
+  if (!target.maxPrice && candidates.length < 2) {
+    let q = admin
+      .from('aircraft_for_sale')
+      .select('asking_price')
+      .eq('status', 'active')
+      .gte('asking_price', PARTS_PRICE_FLOOR)
+      .limit(3000)
+    if (target.make) q = q.ilike('make', `%${target.make}%`)
+    if (target.model) q = q.eq('model', target.model)
+    if (target.state) q = q.eq('state', target.state)
+    if (target.minPrice) q = q.gte('asking_price', parseInt(target.minPrice, 10))
+    const { data } = await q
+    const prices = (data ?? []).map((r) => r.asking_price as number | null).filter((p): p is number => p != null)
+    const stats = priceStats(prices)
+    if (stats) {
+      candidates.push({
+        fields: { ...targetToFields(target), maxPrice: String(stats.median) },
+        description: `Under ${formatPriceK(stats.median)}`,
+      })
+    }
+  }
+
+  const verified: NarrowSuggestion[] = []
+  for (const candidate of candidates.slice(0, 2)) {
+    const { sourcePath: narrowedPath } = buildAlertCriteriaUpdate(target.type, sourcePath, candidate.fields)
+    const match = await getAlertMatchCount(narrowedPath)
+    if (match && match.count > 0 && match.count < currentCount) {
+      verified.push({ fields: candidate.fields, description: candidate.description, count: match.count, noun: match.noun })
+    }
+  }
+  return verified
 }
 
 export interface AlertDigestPreview {
