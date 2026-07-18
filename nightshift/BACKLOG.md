@@ -2907,7 +2907,8 @@ view-in-browser or share affordance._
   subscribers waiting · 0 live matches") as an inventory-acquisition shopping list.
   Cap the path count to bound query volume; explicit "every top search has live matches"
   empty state. No schema change, no new capture point.
-- **[P1][goal] Instant-alerts demand probe on the frequency picker.** The real
+~~- **[P1][goal] Instant-alerts demand probe on the frequency picker.**~~ ✅ SHIPPED via
+  `alert-instant-interest-nudge` (2026-07-18) The real
   instant-sends item is blocked on a Vercel-tier human call — give that call data instead
   of letting it rot. On `/alerts/manage`'s `FrequencyToggle`, add an honest non-selectable
   "Instant — interested?" affordance ("We check daily today; tap if you'd want
