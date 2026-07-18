@@ -1029,6 +1029,12 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
     { source: 'card_watch', createdThisWeek: 6, createdLastWeek: 3 },
     { source: 'filter_toolbar', createdThisWeek: 4, createdLastWeek: 4 },
   ],
+  digestVotesUpThisWeek: 5,
+  digestVotesDownThisWeek: 1,
+  digestVotesUpLastWeek: 3,
+  digestVotesDownLastWeek: 2,
+  digestVotesUpTotal: 19,
+  digestVotesDownTotal: 6,
   sourceColumnMigrated: true,
   unsubscribedAtMigrated: true,
   pausedAtMigrated: true,
@@ -1131,6 +1137,31 @@ test('buildAdminAlertFunnelEmail: when bouncedAtMigrated is false, bounced rende
   assert.doesNotMatch(text, /Bounced: \d+ \(/)
   assert.match(html, /Bounced<\/td>\s*<td[^>]*>2<\/td>/)
   assert.match(text, /Bounced: 2/)
+})
+
+test('buildAdminAlertFunnelEmail: digest feedback votes render with a week-over-week delta for both up and down', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Digest feedback \(👍\/👎\)/)
+  assert.match(html, /👍 5 \/ 👎 1/)
+  assert.match(text, /Digest feedback: 👍 5 \(\+2 vs last week\), 👎 1 \(-1 vs last week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: with zero votes ever recorded, an honest "No votes yet" line renders instead of a fabricated rate', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      digestVotesUpThisWeek: 0,
+      digestVotesDownThisWeek: 0,
+      digestVotesUpLastWeek: 0,
+      digestVotesDownLastWeek: 0,
+      digestVotesUpTotal: 0,
+      digestVotesDownTotal: 0,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No votes yet/)
+  assert.match(text, /Digest feedback: No votes yet/)
+  assert.doesNotMatch(html, /👍 0 \/ 👎 0/)
 })
 
 test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {

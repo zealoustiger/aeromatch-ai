@@ -1447,6 +1447,22 @@ export function buildAdminAlertFunnelEmail(
     ? ''
     : `<p class="ch-muted" style="font-size:11px;line-height:1.5;color:#a89f8e;margin:8px 0 0;">Per-source breakdown unavailable — the \`alerts.source\` column isn&rsquo;t migrated live yet.</p>`
 
+  const hasEverVoted = snapshot.digestVotesUpTotal > 0 || snapshot.digestVotesDownTotal > 0
+  const digestFeedbackHtml = hasEverVoted
+    ? `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Digest feedback (👍/👎)</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">👍 ${snapshot.digestVotesUpThisWeek} / 👎 ${snapshot.digestVotesDownThisWeek}</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.digestVotesUpThisWeek, snapshot.digestVotesUpLastWeek))} 👍, ${escapeHtml(formatWeekDelta(snapshot.digestVotesDownThisWeek, snapshot.digestVotesDownLastWeek))} 👎</td></tr>`
+    : `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Digest feedback (👍/👎)</td>
+            <td style="padding:4px 0;text-align:right;font-size:13px;color:#94a3b8;">No votes yet</td>
+          </tr>`
+
+  const digestFeedbackText = hasEverVoted
+    ? `Digest feedback: 👍 ${snapshot.digestVotesUpThisWeek} (${formatWeekDelta(snapshot.digestVotesUpThisWeek, snapshot.digestVotesUpLastWeek)}), 👎 ${snapshot.digestVotesDownThisWeek} (${formatWeekDelta(snapshot.digestVotesDownThisWeek, snapshot.digestVotesDownLastWeek)})\n`
+    : `Digest feedback: No votes yet\n`
+
   const html = `<!doctype html>
 <html>
   <head>${emailColorSchemeHead()}</head>
@@ -1496,6 +1512,7 @@ export function buildAdminAlertFunnelEmail(
           <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek))}</td></tr>`
               : ''
           }
+          ${digestFeedbackHtml}
         </table>
 
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Current totals (not weekly)</p>
@@ -1548,7 +1565,7 @@ export function buildAdminAlertFunnelEmail(
 
 New signups: ${snapshot.createdThisWeek} (${formatWeekDelta(snapshot.createdThisWeek, snapshot.createdLastWeek)})
 Confirmed: ${snapshot.confirmedThisWeek} (${formatWeekDelta(snapshot.confirmedThisWeek, snapshot.confirmedLastWeek)})
-${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}
+${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}${digestFeedbackText}
 Current totals (not weekly):
   Live: ${snapshot.liveTotal}
   Pending confirmation: ${snapshot.pendingTotal}

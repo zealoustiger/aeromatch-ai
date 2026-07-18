@@ -1,4 +1,5 @@
 import { createAdminClient } from './supabase-admin'
+import { getDigestVoteRollup } from './alertScoreboard'
 
 // The date `alert-source-column` shipped — rows from before this never got a
 // `source` tag at all. Same fallback label `alertScoreboard.ts` uses.
@@ -36,6 +37,16 @@ export interface AlertFunnelWeeklySnapshot {
   unsubscribedTotal: number
   bouncedTotal: number
   topSourcesThisWeek: AlertFunnelSourceRow[]
+  /** The one direct quality signal subscribers send back — 👍/👎 on the
+   *  digest email itself, from the `feedback` table (`type='digest_vote'`,
+   *  see `getDigestVoteRollup`). Real counts, not a rate — too low-volume
+   *  for a % to be honest yet. */
+  digestVotesUpThisWeek: number
+  digestVotesDownThisWeek: number
+  digestVotesUpLastWeek: number
+  digestVotesDownLastWeek: number
+  digestVotesUpTotal: number
+  digestVotesDownTotal: number
   sourceColumnMigrated: boolean
   /** False until the matching `alerts.*_at` migration is applied live — see
    *  supabase/schema.sql's `alerts_unsubscribed_at` / `alerts_paused_bounced_at`
@@ -61,6 +72,7 @@ const LIVE_STATUSES = new Set(['active', 'confirmed'])
  */
 export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Promise<AlertFunnelWeeklySnapshot> {
   const admin = createAdminClient()
+  const voteRollupPromise = getDigestVoteRollup(now)
   // `source`, `unsubscribed_at`, `paused_at`, and `bounced_at` may
   // independently be un-migrated live — retry dropping whichever one the
   // error names, up to once each (order-independent), same graceful-fallback
@@ -174,6 +186,8 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     .sort((a, b) => b.createdThisWeek - a.createdThisWeek)
     .slice(0, TOP_SOURCES_LIMIT)
 
+  const voteRollup = await voteRollupPromise
+
   return {
     weekStart: new Date(oneWeekAgo).toISOString(),
     weekEnd: new Date(now).toISOString(),
@@ -193,6 +207,12 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     unsubscribedTotal,
     bouncedTotal,
     topSourcesThisWeek,
+    digestVotesUpThisWeek: voteRollup.upThisWeek,
+    digestVotesDownThisWeek: voteRollup.downThisWeek,
+    digestVotesUpLastWeek: voteRollup.upLastWeek,
+    digestVotesDownLastWeek: voteRollup.downLastWeek,
+    digestVotesUpTotal: voteRollup.upTotal,
+    digestVotesDownTotal: voteRollup.downTotal,
     sourceColumnMigrated,
     unsubscribedAtMigrated,
     pausedAtMigrated,
