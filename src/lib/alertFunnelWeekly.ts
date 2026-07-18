@@ -1,6 +1,8 @@
 import { createAdminClient } from './supabase-admin'
 import { getDigestVoteRollup } from './alertScoreboard'
 import { getEmailEngagementWeeklyRollup } from './emailEngagement'
+import { getAlertMatchCount } from './alertMatchCounts'
+import { describeLocalAlertContext } from './alertEditCriteria'
 
 // The date `alert-source-column` shipped — rows from before this never got a
 // `source` tag at all. Same fallback label `alertScoreboard.ts` uses.
@@ -8,10 +10,22 @@ const UNTAGGED_SOURCE = '(untagged)'
 
 const TOP_SOURCES_LIMIT = 5
 
+// Bounds how many distinct `source_path`s get a live `getAlertMatchCount`
+// check per run — the highest-subscriber searches are the ones worth
+// chasing inventory for, and this keeps the query volume predictable
+// regardless of how many distinct alert searches exist.
+const DEMAND_GAP_CHECK_LIMIT = 10
+
 export interface AlertFunnelSourceRow {
   source: string
   createdThisWeek: number
   createdLastWeek: number
+}
+
+export interface DemandGapRow {
+  sourcePath: string
+  label: string
+  subscriberCount: number
 }
 
 export interface AlertFunnelWeeklySnapshot {
@@ -60,6 +74,16 @@ export interface AlertFunnelWeeklySnapshot {
   emailClickedLastWeek: number
   emailOpenedTotal: number
   emailClickedTotal: number
+  /** Top confirmed/live alert searches that currently have ZERO matching
+   *  listings — a free inventory-acquisition signal ("N subscribers waiting,
+   *  nothing to show them"). Computed by live-verifying the top
+   *  `DEMAND_GAP_CHECK_LIMIT` highest-subscriber `source_path`s via
+   *  `getAlertMatchCount`; a path that fails to parse or errors is silently
+   *  excluded, never guessed at. An empty array can mean either no confirmed
+   *  alerts exist yet or every checked search has live matches — the caller
+   *  distinguishes those two using `liveTotal`, never a single fabricated
+   *  blank state for both. */
+  demandWithNoSupply: DemandGapRow[]
   sourceColumnMigrated: boolean
   /** False until the matching `alerts.*_at` migration is applied live — see
    *  supabase/schema.sql's `alerts_unsubscribed_at` / `alerts_paused_bounced_at`
@@ -91,7 +115,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   // independently be un-migrated live — retry dropping whichever one the
   // error names, up to once each (order-independent), same graceful-fallback
   // pattern as alertsForOwner.ts's OPTIONAL_COLS loop.
-  const baseCols = ['status', 'created_at', 'confirmed_at']
+  const baseCols = ['status', 'created_at', 'confirmed_at', 'source_path']
   const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at']
   let cols = [...baseCols, ...optionalCols]
   let { data, error } = await admin.from('alerts').select(cols.join(', '))
@@ -110,6 +134,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const rows = (data ?? []) as unknown as {
     status: string | null
     source?: string | null
+    source_path: string | null
     created_at: string | null
     confirmed_at: string | null
     unsubscribed_at?: string | null
@@ -138,11 +163,16 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
 
   const sourceThisWeek = new Map<string, number>()
   const sourceLastWeek = new Map<string, number>()
+  const sourcePathSubscribers = new Map<string, number>()
 
   for (const row of rows) {
     const status = row.status || 'unknown'
-    if (LIVE_STATUSES.has(status)) liveTotal++
-    else if (status === 'pending') pendingTotal++
+    if (LIVE_STATUSES.has(status)) {
+      liveTotal++
+      if (row.source_path) {
+        sourcePathSubscribers.set(row.source_path, (sourcePathSubscribers.get(row.source_path) ?? 0) + 1)
+      }
+    } else if (status === 'pending') pendingTotal++
     else if (status === 'paused') pausedTotal++
     else if (status === 'unsubscribed') unsubscribedTotal++
     else if (status === 'bounced') bouncedTotal++
@@ -200,6 +230,22 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     .sort((a, b) => b.createdThisWeek - a.createdThisWeek)
     .slice(0, TOP_SOURCES_LIMIT)
 
+  const topSourcePaths = [...sourcePathSubscribers.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, DEMAND_GAP_CHECK_LIMIT)
+  const demandGapChecks = await Promise.all(
+    topSourcePaths.map(async ([sourcePath, subscriberCount]) => {
+      const match = await getAlertMatchCount(sourcePath)
+      if (!match || match.count > 0) return null
+      return {
+        sourcePath,
+        label: describeLocalAlertContext(sourcePath) ?? sourcePath,
+        subscriberCount,
+      }
+    })
+  )
+  const demandWithNoSupply: DemandGapRow[] = demandGapChecks.filter((row): row is DemandGapRow => row !== null)
+
   const voteRollup = await voteRollupPromise
   const emailEngagement = await emailEngagementPromise
 
@@ -234,6 +280,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     emailClickedLastWeek: emailEngagement.clickedLastWeek,
     emailOpenedTotal: emailEngagement.openedTotal,
     emailClickedTotal: emailEngagement.clickedTotal,
+    demandWithNoSupply,
     sourceColumnMigrated,
     unsubscribedAtMigrated,
     pausedAtMigrated,

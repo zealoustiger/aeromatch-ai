@@ -47,6 +47,10 @@ export async function GET() {
     emailClickedLastWeek: 6,
     emailOpenedTotal: 143,
     emailClickedTotal: 48,
+    demandWithNoSupply: [
+      { sourcePath: '/aircraft?make=Mooney&state=OH', label: 'Mooney in Ohio', subscriberCount: 4 },
+      { sourcePath: '/partnerships?make=Diamond', label: 'Diamond', subscriberCount: 2 },
+    ],
     sourceColumnMigrated: true,
     unsubscribedAtMigrated: true,
     pausedAtMigrated: true,
