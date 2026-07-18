@@ -2989,7 +2989,7 @@ subscribe time; `alertFrequency.ts` is elapsed-days only (no day-of-week anywher
 input while `AircraftSaleFilters.tsx:67` treats the same comma-joined `model` param as
 chip multi-select._
 
-- **[P1][goal] Minimum-meaningful-drop floor on price-drop digest sends.** The never-spam
+~~- **[P1][goal] Minimum-meaningful-drop floor on price-drop digest sends.** The never-spam
   pillar cuts against trivial repricing: `priceDropAmount` (`src/lib/priceDrops.ts`)
   counts ANY decrease, so a $100 nudge on a $150k listing emails every matching
   price-drop subscriber as if it were news. Add a pure, unit-tested
@@ -2998,7 +2998,8 @@ chip multi-select._
   matches and samples. Explicitly EXEMPT single-listing watch alerts with an owner-set
   `target_price` (the subscriber named their own threshold — honor it exactly) and keep
   the watch path's existing any-drop behavior unless a target is set. Improves: digest
-  email content honesty (fewer noise sends). No new capture point, no schema change.
+  email content honesty (fewer noise sends). No new capture point, no schema change.~~
+  ✅ SHIPPED via `price-drop-meaningful-floor` (2026-07-18)
 - **[P1][goal] Close the two deaf feedback loops in the Monday admin email.** Batch #6
   shipped per-listing "Not relevant?" votes (`digest_listing_vote` rows) and the
   instant-interest probe (`instant_alert_interest` rows) — both explicitly deferred

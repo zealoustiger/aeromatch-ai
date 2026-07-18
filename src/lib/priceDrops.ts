@@ -45,3 +45,20 @@ export function priceDropAmount(subject: PriceDropSubject): number | null {
   if (subject.asking_price >= subject.previous_price) return null
   return subject.previous_price - subject.asking_price
 }
+
+/** A drop counts as "meaningful" (worth a search-scoped price-drop alert) once
+ *  it clears either an honest percent floor or a flat-dollar floor — trivial
+ *  repricing (e.g. $100 off a $150k listing) shouldn't email every matching
+ *  subscriber. Deliberately NOT applied to single-listing "watch this
+ *  listing" alerts (`resolveListingWatch`/`resolvePartnershipWatch` in the
+ *  alert-digest cron) — a subscriber watching one specific listing wants to
+ *  hear about any genuine drop, not just ones that clear a search-wide bar. */
+export const MIN_MEANINGFUL_DROP_PERCENT = 0.01
+export const MIN_MEANINGFUL_DROP_DOLLARS = 500
+
+export function isMeaningfulPriceDrop(subject: PriceDropSubject): boolean {
+  const amount = priceDropAmount(subject)
+  if (amount == null) return false
+  if (amount >= MIN_MEANINGFUL_DROP_DOLLARS) return true
+  return amount / (subject.previous_price as number) >= MIN_MEANINGFUL_DROP_PERCENT
+}
