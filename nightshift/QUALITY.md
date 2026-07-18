@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-18T08:06:52Z — admin-alert-funnel-weekly — score 4/5
+- Strengths: Clean sibling to `alertScoreboard.ts` — reuses its exact WoW windows, `LIVE_STATUSES` set, and `source`-column graceful-degrade; scrupulously honest labeling (created/confirmed get real WoW deltas, paused/unsub/bounced render as explicit "current totals, not weekly"); piggybacks the daily cron (no new vercel.json entry), gated by a pure Monday+`ADMIN_EMAILS` guard that leaves the existing digest path untouched and wrapped in try/catch so a summary failure can't 500 the run; 9 focused tests cover flat/negative deltas, empty sources, unmigrated column, and dashboard-URL escaping.
+- Weaknesses / risks: On a non-`source` DB read error `getAlertFunnelWeeklySnapshot` returns all-zeros rather than aborting the send, so a transient read failure could email admins a misleading "0 new, 0 confirmed" funnel; also counts `sendEmail` `no-key` results as sent, mildly inflating the `adminSummarySent` log metric.
+- Follow-up: none
+
 ## 2026-07-18T07:51:46Z — alert-digest-price-context — score 4/5
 - Strengths: Honest, well-scoped comp line reusing existing `compVsMarket` floors; lazy/memoized family-map getter fetches at most once per run and only when aircraft new-listing samples exist; paginates past Supabase's 1000-row cap; non-fatal on fetch error; dark-inbox-safe fixed-contrast pill; 6 new tests cover all 3 comp branches + $X.XM formatting + the honesty-gate null case.
 - Weaknesses / risks: Diverges from spec's file layout — `compLabel`/tests landed in `email.ts`/`email.test.ts` (defensible: honors email.ts's import-free convention) rather than `aircraftComps.ts`, at the cost of a small commented `formatPriceK` copy; the digest's population floor is a third redundant `50_000` constant (`PARTS_PRICE_FLOOR`) that equals on-site `BUYER_PRICE_FLOOR` today but could silently diverge if one is edited.
