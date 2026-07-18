@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-18T07:51:46Z — alert-digest-price-context — score 4/5
+- Strengths: Honest, well-scoped comp line reusing existing `compVsMarket` floors; lazy/memoized family-map getter fetches at most once per run and only when aircraft new-listing samples exist; paginates past Supabase's 1000-row cap; non-fatal on fetch error; dark-inbox-safe fixed-contrast pill; 6 new tests cover all 3 comp branches + $X.XM formatting + the honesty-gate null case.
+- Weaknesses / risks: Diverges from spec's file layout — `compLabel`/tests landed in `email.ts`/`email.test.ts` (defensible: honors email.ts's import-free convention) rather than `aircraftComps.ts`, at the cost of a small commented `formatPriceK` copy; the digest's population floor is a third redundant `50_000` constant (`PARTS_PRICE_FLOOR`) that equals on-site `BUYER_PRICE_FLOOR` today but could silently diverge if one is edited.
+- Follow-up: none
+
 ## 2026-07-18T07:33:57Z — alert-revive-remaining-paths — score 5/5
 - Strengths: Disciplined, exactly-scoped mirror of the existing `subscribeSignedInAlert` revive pattern across all 4 target paths — each passes the correct already-proven owner email (`original.email` / `ownerEmail` via `resolveOwnerEmail` / `user.email`), the guarded `if (error) { if 23505 revive else return err }` shape preserves the non-23505 error message verbatim, `reviveIfUnsubscribed`'s internal `status !== 'unsubscribed'` guard keeps every other conflict a true no-op, and the `subscribeSavedSearchAlert` `createAdminClient()` hoist is minimal with the pre-existing PII-select comment correctly extended; `createManageAlert` even preserves `alreadyExisted: error?.code === '23505'` so caller messaging is byte-identical, with a comment explaining why.
 - Weaknesses / risks: none material — revive is fire-and-forget (`await` but result unchecked), but that is faithful to the shipped precedent and intentionally silent, so a failed revive degrades to today's no-op rather than surfacing an error.
