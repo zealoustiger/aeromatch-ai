@@ -47,6 +47,13 @@ export async function GET() {
     emailClickedLastWeek: 6,
     emailOpenedTotal: 143,
     emailClickedTotal: 48,
+    notRelevantListings: [
+      { pagePath: '/aircraft/listing/abc123', title: '1978 Cessna 172N — $89,500', count: 3 },
+      { pagePath: '/partnerships/def456', title: 'Cirrus SR22 1/4 share — KPAO', count: 2 },
+    ],
+    notRelevantTotalThisWeek: 5,
+    instantInterestThisWeek: 4,
+    instantInterestAllTime: 17,
     demandWithNoSupply: [
       { sourcePath: '/aircraft?make=Mooney&state=OH', label: 'Mooney in Ohio', subscriberCount: 4 },
       { sourcePath: '/partnerships?make=Diamond', label: 'Diamond', subscriberCount: 2 },

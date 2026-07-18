@@ -1298,6 +1298,13 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   emailClickedLastWeek: 6,
   emailOpenedTotal: 143,
   emailClickedTotal: 48,
+  notRelevantListings: [
+    { pagePath: '/aircraft/listing/abc123', title: '1978 Cessna 172N — $89,500', count: 3 },
+    { pagePath: '/partnerships/def456', title: 'Cirrus SR22 1/4 share — KPAO', count: 2 },
+  ],
+  notRelevantTotalThisWeek: 5,
+  instantInterestThisWeek: 4,
+  instantInterestAllTime: 17,
   demandWithNoSupply: [
     { sourcePath: '/aircraft?make=Mooney&state=OH', label: 'Mooney in Ohio', subscriberCount: 4 },
     { sourcePath: '/partnerships?make=Diamond', label: 'Diamond', subscriberCount: 2 },
@@ -1454,6 +1461,44 @@ test('buildAdminAlertFunnelEmail: with zero engagement events ever recorded, an 
   assert.match(html, /No engagement events yet/)
   assert.match(text, /Email engagement: No engagement events yet/)
   assert.doesNotMatch(html, /👀 0 \/ 🖱️ 0/)
+})
+
+test('buildAdminAlertFunnelEmail: instant-alerts interest renders this-week + all-time tap counts', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Instant-alerts interest \(taps\)/)
+  assert.match(html, /⚡ 4 this week/)
+  assert.match(html, /17 all-time/)
+  assert.match(text, /Instant-alerts interest: ⚡ 4 this week, 17 all-time/)
+})
+
+test('buildAdminAlertFunnelEmail: with zero instant-interest taps ever, an honest empty line renders instead of a fabricated 0', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, instantInterestThisWeek: 0, instantInterestAllTime: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /Instant-alerts interest \(taps\)/)
+  assert.match(html, /No interest recorded yet/)
+  assert.match(text, /Instant-alerts interest: No interest recorded yet/)
+  assert.doesNotMatch(html, /⚡ 0 this week/)
+})
+
+test('buildAdminAlertFunnelEmail: least-relevant listings render their stored titles and flag counts', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Least relevant listings this week/)
+  assert.match(html, /1978 Cessna 172N/)
+  assert.match(html, /3 flagged/)
+  assert.match(text, /Least relevant listings this week:/)
+  assert.match(text, /1978 Cessna 172N — \$89,500: 3 flagged/)
+})
+
+test('buildAdminAlertFunnelEmail: with no "not relevant" votes this week, an honest empty line renders instead of a blank table', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, notRelevantListings: [], notRelevantTotalThisWeek: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /Least relevant listings this week/)
+  assert.match(html, /No listings flagged as off-target this week/)
+  assert.match(text, /\(no listings flagged as off-target this week\)/)
 })
 
 test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {

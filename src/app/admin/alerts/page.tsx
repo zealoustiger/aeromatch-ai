@@ -1,6 +1,11 @@
 import Link from 'next/link'
-import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail, MousePointerClick } from 'lucide-react'
-import { getAlertScoreboard, getDigestVoteRollup } from '@/lib/alertScoreboard'
+import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail, MousePointerClick, Flag, Zap } from 'lucide-react'
+import {
+  getAlertScoreboard,
+  getDigestVoteRollup,
+  getNotRelevantListingsRollup,
+  getInstantInterestRollup,
+} from '@/lib/alertScoreboard'
 import { getLastCronRun } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
 import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
@@ -18,11 +23,13 @@ const STALE_RUN_HOURS = 36
 
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes, lastRun, engagement] = await Promise.all([
+  const [snap, votes, lastRun, engagement, notRelevant, instantInterest] = await Promise.all([
     getAlertScoreboard(),
     getDigestVoteRollup(),
     getLastCronRun(),
     getEmailEngagementRollup(),
+    getNotRelevantListingsRollup(),
+    getInstantInterestRollup(),
   ])
   const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
@@ -402,6 +409,66 @@ export default async function AlertScoreboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <Flag className="h-5 w-5 text-rose-500" /> Least relevant listings this week
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Per-sample &quot;Not relevant?&quot; taps from digest emails, rolled up by listing over
+          the last 7 days — which listings subscribers keep flagging as off-target for their
+          alert. Real counts only.
+        </p>
+
+        {notRelevant.topThisWeek.length === 0 ? (
+          <p className="text-sm text-slate-400">No listings flagged as off-target this week.</p>
+        ) : (
+          <div className="space-y-2">
+            {notRelevant.topThisWeek.map((row, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate font-medium text-slate-800">
+                  {row.pagePath ? (
+                    <Link href={row.pagePath} className="hover:underline">
+                      {row.title}
+                    </Link>
+                  ) : (
+                    row.title
+                  )}
+                </span>
+                <span className="shrink-0 text-slate-500">
+                  {row.count} flag{row.count === 1 ? '' : 's'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <Zap className="h-5 w-5 text-amber-500" /> Instant-alerts interest
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Taps on the &quot;I&apos;d want instant (within-the-hour) alerts&quot; probe — real
+          demand data for the still-blocked Vercel cron-tier decision. Nothing is sent instantly
+          today; this only accumulates the signal.
+        </p>
+
+        {instantInterest.allTime === 0 ? (
+          <p className="text-sm text-slate-400">No interest recorded yet — not enough data.</p>
+        ) : (
+          <div className="flex items-end gap-6">
+            <div>
+              <div className="text-2xl font-bold text-slate-900">{instantInterest.thisWeek}</div>
+              <div className="text-xs text-slate-500">this week</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-400">{instantInterest.allTime}</div>
+              <div className="text-xs text-slate-500">all time</div>
+            </div>
           </div>
         )}
       </section>
