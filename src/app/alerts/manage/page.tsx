@@ -25,6 +25,7 @@ import NarrowAlertNudge from '@/components/NarrowAlertNudge'
 import OverlapAlertNudge from '@/components/OverlapAlertNudge'
 import AlertModeToggle from '@/components/AlertModeToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
+import InstantInterestNudge from '@/components/InstantInterestNudge'
 import TargetPriceEdit from '@/components/TargetPriceEdit'
 import ManageAlertCrossSell from '@/components/ManageAlertCrossSell'
 import NewAlertForm from '@/components/NewAlertForm'
@@ -375,6 +376,7 @@ export default async function AlertsManagePage({
                           />
                         ) : null}
                         <FrequencyToggle id={a.id} frequency={normalizeFrequency(a.frequency)} token={scopeToken} />
+                        <InstantInterestNudge id={a.id} token={scopeToken} />
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
                         Subscribed {new Date(a.created_at).toLocaleDateString()}

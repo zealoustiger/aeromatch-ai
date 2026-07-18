@@ -1813,6 +1813,24 @@ export async function updateAlertFrequency(id: string, frequency: AlertFrequency
   return { ok: true }
 }
 
+// Instant sends aren't real yet (blocked on a Vercel cron-tier decision) — this
+// never flips the alert's actual frequency, it only records an honest "would
+// you want this" interest signal in the existing feedback table so the human
+// has real demand data for that decision, same shape as the digest-vote insert.
+export async function recordInstantAlertInterest(id: string, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
+  if ('error' in owned) return { error: owned.error }
+
+  const { error } = await owned.admin.from('feedback').insert({
+    type: 'instant_alert_interest',
+    message: 'Interested in instant (within-the-hour) alerts',
+    email: owned.alert.email,
+    page_path: owned.alert.source_path,
+  })
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  return { ok: true }
+}
+
 // Set/clear the target price on a "watch this listing" alert — the deferred
 // follow-up from `alert-watch-target-price` (that alert type isn't wired into
 // `updateAlertCriteria`/`buildAlertCriteriaUpdate` at all, since a watch alert
