@@ -1,3 +1,25 @@
+## 2026-07-18T12:23:51Z — Night Shift run: 12 cycles (PASS 9 / FAIL 1) — night budget cap ($120)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $124.6348 of $120 cap
+
+- ABORT — none — plan needed
+- PASS — admin-email-engagement-wow — Added a Email engagement (opened/clicked) week-over-week row to the Monday admin alert-funnel email, reusing the already-ingested Resend ope
+- PASS — admin-demand-no-supply — Monday admin alert-funnel email now lists top confirmed alert searches with zero live matches (N waiting, 0 matches), a free inventory-acquisiti
+- PASS — alert-instant-interest-nudge — added an honest Instant — interested? demand-probe pill next to the Daily/Weekly toggle on /alerts/manage, capturing real interest signa
+- PASS — digest-samples-rank-by-deal — new-listing alert digest samples now sort below-market-first (biggest honest discount leads, newest as tiebreak) instead of always newest-f
+- PASS — digest-listing-not-relevant — Added a per-listing Not relevant? feedback link to every digest email sample card (single + combined templates, HTML + text), wired through
+- PASS — digest-share-with-partner — added a quiet Buying with a partner? Share this alert link to both new-listing alert digest email templates (single + combined), linking to t
+- PASS — digest-view-in-browser — added a View in browser link to alert-digest emails linking to a new `/alerts/digest/view` page that shows an alert's real current live matches;
+- ABORT — none — plan needed
+- PASS — price-drop-meaningful-floor — price-drop alert digests now skip trivial repricing (<1% and <$500 drops) so subscribers only get emailed on genuine discounts; single-list
+- cycle produced no verdict (exit 124)
+- PASS — digest-feedback-loops-rollup — the Monday admin alert-funnel email (and /admin/alerts) now surface the two feedback signals the site already collected but never read: pe
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 7.0 on 2 cores, sustained ~29 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 12 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-18T10:07:14Z — Night Shift run: 21 cycles (PASS 17 / FAIL 1) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus
 - Night spend so far: $81.4290 of $120 cap
