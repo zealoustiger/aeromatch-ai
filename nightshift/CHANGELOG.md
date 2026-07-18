@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-18T12:23:51Z — DRAIN SUMMARY
+- Cycles this run: 12 (PASS 9 / FAIL 1 / ABORT 2)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $124.6348 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260718T100718Z
+
 ## 20260718T115306Z — PASS — digest-feedback-loops-rollup
 - Pages: /admin/alerts, plus the Monday admin alert-funnel email (internal admin
   surfaces only — no public-facing page changed)
