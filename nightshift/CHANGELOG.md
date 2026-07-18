@@ -2,6 +2,56 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T063645Z — PASS — alert-unsubscribe-reason-chips
+- Pages: /alerts/status (no other page touched)
+- What: **A subscriber who just unsubscribed from an alert now gets asked, in one
+  tap, why they left** — instead of us learning nothing about the churn side of the
+  funnel. Below the existing "snooze / pause / switch to weekly" recovery box, four
+  optional chips — "Too many emails," "Not relevant," "Found my aircraft," "Just
+  done" — let them tell us in one click; picking one swaps to a brief "Thanks —
+  that helps." Entirely optional and skippable — ignoring the chips changes
+  nothing, and the existing recovery actions are unaffected.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG
+  entry (`alert-typo-guard-keyboard-sweep`) was a PASS; swept BACKLOG.md for any
+  unstruck `[bug]` line — none found. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing set as the last several cycles, all
+  either already fully shipped or flagged as needing a human product/compliance
+  call (save-search auth wall, collection-layout mosaic redesign, Trade-A-Plane
+  ingestion, Bay-Area coverage benchmark, owner-leads dataset, Controller.com/
+  AirMart/AeroTrader bot-walled) — none buildable autonomously. Dropped to tier 3
+  and picked the first of the 2 remaining plan-pass batch #3 items named as "Next"
+  by the prior cycle: the unsubscribe-reason chips (the other, "Delete all my
+  alerts & data" self-serve, is next). Closes BACKLOG.md's 🔔 GOAL `[P2][goal]`
+  "One-tap unsubscribe-reason chips on `/alerts/status`" item.
+- Spec: nightshift/specs/20260718T063645Z-alert-unsubscribe-reason-chips.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit
+  0. No new pure-function module this cycle (chip click handler + `track()` call
+  live directly in `UnsubscribeRecover.tsx`, same convention as its existing
+  `handleRecover` calls) — no new unit tests needed, existing suite unaffected. QA
+  against the PRODUCTION build (`npx next start -p 3000`; verified port 3000 was
+  free before starting, no stray leftover server this cycle) via `qa-smoke.mjs` on
+  `/alerts/status`, `/`: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at desktop 1280 + mobile 375) — note the anonymous crawl
+  can't reach the token-gated recovery box, so this is the automated gate's
+  ceiling. Visual cycle — went further with a real Playwright pass: seeded one
+  throwaway `@example.com` confirmed alert via the service-role key, visited
+  `/alerts/status?state=unsubscribed&token=...`, confirmed all 4 chips render,
+  clicked "Not relevant," confirmed the row swaps to "Thanks — that helps." with
+  no page reload, and confirmed the `/api/visitor-webhook` request (the `track()`
+  fan-out) carried the exact payload `{event: "alert_unsubscribe_reason", props:
+  {reason: "not_relevant", count: 1, source_path: "/aircraft?make=Cessna&model=172"}}`
+  — zero console errors. Screenshots read at both viewports: chips wrap cleanly
+  under "Manage all your alerts," no overlap with the sticky Feedback button, no
+  overflow at 375px. Test alert row deleted immediately after (confirmed 1 row
+  removed); all scratch scripts (`scripts/tmp-qa-*.mjs`) deleted before finishing.
+  Server stopped cleanly after, port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-unsubscribe-reason-chips/
+- Next: the sole remaining plan-pass batch #3 item — "Delete all my alerts & data"
+  self-serve on `/alerts/manage` (`[P2][goal]`, user-initiated deletion of their
+  own rows, no schema change). Once that ships, batch #3 is fully drained and the
+  next cycle should run a fresh Opus/Fable plan-pass refill per GOAL.md, unless a
+  `[bug]`/`[want]` has appeared by then.
+
 ## 20260718T062341Z — PASS — alert-typo-guard-keyboard-sweep
 - Pages: none (component-only — the footer email capture on every page, `AlertSignup`'s
   manual field on every alert-capture point, and `/alerts/manage`'s "change email" form)

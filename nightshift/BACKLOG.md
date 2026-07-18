@@ -2611,15 +2611,24 @@ human call; save-search auth wall → `[want]` product call)._
   deleted immediately after) shows the same working chip + attributes. Mechanical, no
   behavior change beyond the suggestion chip; kills fat-finger friction on the 375px
   keyboards where most capture happens. No new capture point.
-- **[P2][goal] One-tap unsubscribe-reason chips on `/alerts/status`.** After an
-  unsubscribe, the recovery box offers alternatives but we learn nothing about *why*
-  people leave — the one number the "prove it converts" loop is missing on the churn
-  side. Below the existing recovery options, add four optional one-tap chips — "Too many
-  emails" / "Not relevant" / "Found my aircraft" / "Just done" — that fire a single
-  PostHog `alert_unsubscribe_reason` event (reason + alert count + source family) and
-  swap to a brief honest thanks. Analytics-only: no schema change, no email, skippable,
-  fires at most once per unsubscribe visit. Complements the shipped
-  `alert_unsubscribed` funnel event and the digest 👍/👎 loop.
+~~- **[P2][goal] One-tap unsubscribe-reason chips on `/alerts/status`.**~~ ✅ SHIPPED
+  via `alert-unsubscribe-reason-chips` (2026-07-18). `UnsubscribeRecover.tsx`'s idle
+  recovery box now has a "Mind telling us why?" row below the existing "Manage all
+  your alerts" link — four one-tap chips ("Too many emails" / "Not relevant" /
+  "Found my aircraft" / "Just done") that call the existing `track()` helper with
+  `alert_unsubscribe_reason` (`reason`, `count: alertCount`, `source_path`) and swap
+  to "Thanks — that helps." on click. `source_path` is the page's already-computed
+  `unsubSourcePath`, newly threaded down as a prop (page.tsx was the only caller).
+  Analytics-only — no schema/DB/email change; chips only render in the idle/error
+  state, disappearing once a recovery action is taken. Live-verified end-to-end: a
+  throwaway `@example.com` confirmed alert seeded via the service-role key, visited
+  `/alerts/status?state=unsubscribed&token=...` with a real Playwright browser —
+  chips rendered, clicking "Not relevant" swapped to the thanks line, and the
+  `/api/visitor-webhook` request (the `track()` fan-out) carried the exact payload
+  `{event: "alert_unsubscribe_reason", props: {reason: "not_relevant", count: 1,
+  source_path: "/aircraft?make=Cessna&model=172"}}`. Zero console errors, zero
+  horizontal overflow at 375px (screenshots confirm no overlap with the sticky
+  Feedback button). Test row deleted immediately after (confirmed 1 row removed).
 - **[P2][goal] "Delete all my alerts & data" self-serve on `/alerts/manage`.** Per-row
   delete and vacation-mode pause-all exist, but a subscriber who wants ClubHanger to
   forget them entirely has to delete rows one by one and take our word the email is gone.

@@ -14,23 +14,41 @@ import { track } from '@/lib/analytics'
 
 type Action = 'paused' | 'weekly' | 'snoozed' | 'found'
 
+const UNSUB_REASONS = [
+  { key: 'too_many_emails', label: 'Too many emails' },
+  { key: 'not_relevant', label: 'Not relevant' },
+  { key: 'found_aircraft', label: 'Found my aircraft' },
+  { key: 'just_done', label: 'Just done' },
+] as const
+
 export default function UnsubscribeRecover({
   token,
   showWeeklyOption = false,
   alertCount = 1,
+  sourcePath = null,
 }: {
   token: string
   showWeeklyOption?: boolean
   /** How many alerts this token (or comma-separated token list, from a
    *  combined-digest unsubscribe) covers — drives honest "all N" copy. */
   alertCount?: number
+  /** The unsubscribed alert's source_path, threaded through only for the
+   *  reason-chip analytics event — never rendered. */
+  sourcePath?: string | null
 }) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [doneAction, setDoneAction] = useState<Action | null>(null)
   const [resumeDate, setResumeDate] = useState<string | null>(null)
   const [doneCount, setDoneCount] = useState(alertCount)
+  const [reason, setReason] = useState<string | null>(null)
   const many = alertCount > 1
+
+  function handleReason(key: string) {
+    if (reason) return
+    track('alert_unsubscribe_reason', { reason: key, count: alertCount, source_path: sourcePath ?? undefined })
+    setReason(key)
+  }
   // `/alerts/manage` resolves ownership from a SINGLE alert's token (then shows
   // every alert for that email) — a combined-digest `token` here can be a
   // comma-separated list, so only the first token is valid as that page's `?token=`.
@@ -145,6 +163,26 @@ export default function UnsubscribeRecover({
           Manage all your alerts
         </Link>
       </p>
+      <div className="mt-3 border-t border-[#ece6dc] pt-3">
+        {reason ? (
+          <p className="text-xs text-slate-500">Thanks — that helps.</p>
+        ) : (
+          <>
+            <p className="text-xs text-slate-500">Mind telling us why?</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {UNSUB_REASONS.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => handleReason(r.key)}
+                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

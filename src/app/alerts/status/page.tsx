@@ -266,7 +266,12 @@ export default async function AlertStatusPage({
             />
           )}
           {key === 'unsubscribed' && token && (
-            <UnsubscribeRecover token={token} showWeeklyOption={unsubFrequency === 'daily'} alertCount={Math.max(unsubCount, 1)} />
+            <UnsubscribeRecover
+              token={token}
+              showWeeklyOption={unsubFrequency === 'daily'}
+              alertCount={Math.max(unsubCount, 1)}
+              sourcePath={unsubSourcePath}
+            />
           )}
           {key === 'confirmed' && token && crossSell && (
             <AlertCrossSell originalToken={token} suggestion={crossSell} />
