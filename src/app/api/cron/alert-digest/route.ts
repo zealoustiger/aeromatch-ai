@@ -25,7 +25,7 @@ import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
 import { hasRecentPriceDrop } from '@/lib/priceDrops'
-import { intervalDaysFor, isDigestDue, normalizeFrequency } from '@/lib/alertFrequency'
+import { intervalDaysFor, isDigestDue, normalizeFrequency, shouldOfferDailyUpgrade } from '@/lib/alertFrequency'
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
@@ -1594,6 +1594,14 @@ export async function GET(req: NextRequest) {
       // no lighter cadence left to switch to.
       const frequencyUrl =
         frequency === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
+      // One-click "switch to daily" upgrade nudge — only for a genuinely busy
+      // weekly digest (see `shouldOfferDailyUpgrade`); never an upsell on a
+      // quiet search. Scoped to the aggregate digest template only, same as
+      // `frequencyUrl` above.
+      const upgradeUrl =
+        unsubToken && shouldOfferDailyUpgrade(frequency, newCount + dropCount)
+          ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}&dir=daily`
+          : undefined
       // One-click "was this digest useful?" footer links — see the
       // digest-feedback route. Only the aggregate digest template offers
       // these (matches the crossSell precedent just below).
@@ -1651,6 +1659,7 @@ export async function GET(req: NextRequest) {
             manageUrl,
             unsubscribeUrl,
             frequencyUrl,
+            upgradeUrl,
             crossSell: crossSellOpt,
             marketPulse: marketPulse ?? undefined,
             digestFeedbackUpUrl,

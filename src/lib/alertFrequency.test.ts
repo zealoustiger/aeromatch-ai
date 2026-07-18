@@ -3,7 +3,13 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeLastDigest, intervalDaysFor, isDigestDue, normalizeFrequency } from './alertFrequency.ts'
+import {
+  describeLastDigest,
+  intervalDaysFor,
+  isDigestDue,
+  normalizeFrequency,
+  shouldOfferDailyUpgrade,
+} from './alertFrequency.ts'
 
 const DAY_MS = 86_400_000
 const NOW = Date.UTC(2026, 6, 11) // fixed "now" so the math is deterministic
@@ -62,4 +68,19 @@ test('describeLastDigest: sent → short date + cadence', () => {
 
 test('describeLastDigest: malformed date string falls back to "nothing sent yet"', () => {
   assert.equal(describeLastDigest('not-a-date', 'weekly'), 'Nothing sent yet — checks weekly')
+})
+
+test('shouldOfferDailyUpgrade: weekly alert at/above the threshold → true', () => {
+  assert.equal(shouldOfferDailyUpgrade('weekly', 5), true)
+  assert.equal(shouldOfferDailyUpgrade('weekly', 9), true)
+})
+
+test('shouldOfferDailyUpgrade: weekly alert below the threshold → false', () => {
+  assert.equal(shouldOfferDailyUpgrade('weekly', 4), false)
+  assert.equal(shouldOfferDailyUpgrade('weekly', 0), false)
+})
+
+test('shouldOfferDailyUpgrade: daily alert never offered (no faster cadence to switch to)', () => {
+  assert.equal(shouldOfferDailyUpgrade('daily', 10), false)
+  assert.equal(shouldOfferDailyUpgrade('daily', 0), false)
 })

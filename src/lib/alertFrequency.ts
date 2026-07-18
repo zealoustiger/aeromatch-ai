@@ -27,6 +27,20 @@ export function intervalDaysFor(frequency: AlertFrequency): number {
   return INTERVAL_DAYS[frequency]
 }
 
+/** A weekly digest is "busy" enough to honestly suggest daily cadence at this
+ *  many total (new-listing + price-drop) matches in one send. */
+export const DIGEST_UPGRADE_THRESHOLD = 5
+
+/**
+ * True when a digest is worth offering the one-click "switch to daily"
+ * upgrade — only for a weekly-cadence alert (a daily one has no faster
+ * cadence left) whose send genuinely cleared the volume bar. Never an
+ * upsell on a quiet search.
+ */
+export function shouldOfferDailyUpgrade(frequency: AlertFrequency, totalMatches: number): boolean {
+  return frequency === 'weekly' && totalMatches >= DIGEST_UPGRADE_THRESHOLD
+}
+
 /**
  * True when an alert with the given `frequency` and `lastDigestAt` (null if
  * never sent) is due for another send as of `nowIso`.

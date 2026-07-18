@@ -916,6 +916,12 @@ export function buildAlertDigestEmail(opts: {
    *  alerts (a weekly alert has no "fewer" cadence to offer). Renders as a
    *  third footer link alongside Manage/Unsubscribe. */
   frequencyUrl?: string
+  /** Token-scoped "switch to daily" upgrade link — present only when the
+   *  caller has already confirmed (via `shouldOfferDailyUpgrade`) this is a
+   *  weekly-cadence alert whose send genuinely cleared the volume bar.
+   *  Renders as one honest line above the footer; never an upsell on a
+   *  quiet search. */
+  upgradeUrl?: string
   samples?: AlertDigestSample[]
   /** When set, renders this send as an honest preview rather than a real
    *  digest firing: subject gets a `Sample: ` prefix, and an on-brand banner
@@ -1017,6 +1023,9 @@ export function buildAlertDigestEmail(opts: {
   const marketPulseHtml = opts.marketPulse
     ? `<p style="margin:0 0 16px;font-size:12px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;">${escapeHtml(opts.marketPulse)}</p>`
     : ''
+  const upgradeNudgeHtml = opts.upgradeUrl
+    ? `<p style="margin:16px 4px 0;font-size:12px;line-height:1.6;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;">Busy week for this search — <a href="${escapeAttr(opts.upgradeUrl)}" style="color:#b45309;font-weight:600;">switch to daily digests</a>.</p>`
+    : ''
   const digestFeedbackHtml =
     opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
       ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Was this digest useful? <a href="${escapeAttr(opts.digestFeedbackUpUrl)}" style="color:#a89f8e;">&#128077; Yes</a> &middot; <a href="${escapeAttr(opts.digestFeedbackDownUrl)}" style="color:#a89f8e;">&#128078; No</a></p>`
@@ -1058,6 +1067,7 @@ export function buildAlertDigestEmail(opts: {
         </p>
       </div>
       ${crossSellHtml}
+      ${upgradeNudgeHtml}
       ${digestFeedbackHtml}
       <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
@@ -1097,11 +1107,14 @@ export function buildAlertDigestEmail(opts: {
 
   const crossSellText = opts.crossSell ? `\n${opts.crossSell.label}\n${opts.crossSell.acceptUrl}\n` : ''
   const marketPulseText = opts.marketPulse ? `\n${opts.marketPulse}\n` : ''
+  const upgradeNudgeText = opts.upgradeUrl
+    ? `\nBusy week for this search — switch to daily digests: ${opts.upgradeUrl}\n`
+    : ''
 
   const text = `${sampleBannerText}${bodyCopyText}
 ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
-${crossSellText}${digestFeedbackText}
+${crossSellText}${upgradeNudgeText}${digestFeedbackText}
 Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
