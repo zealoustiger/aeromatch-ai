@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T061333Z — PASS — alert-digest-upgrade-nudge
+- Pages: none (component/backend-only — every weekly-cadence alert digest email,
+  plus `/alerts/status`)
+- What: **A subscriber on weekly alert emails whose search just had a genuinely busy
+  week (5+ new matches/price drops in one digest) now sees a one-tap "switch to daily
+  digests" line in that email** — instead of the one-click cadence switch only working
+  in the "fewer emails" (daily→weekly) direction. Clicking it flips to daily instantly,
+  no login, same pattern as the existing "Get fewer emails" link. Never shown on a quiet
+  week — the volume bar has to be genuinely cleared.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`alert-email-typo-guard`) was a PASS; swept BACKLOG.md for any unstruck `[bug]` line —
+  none found. Tier 2 (`[want]`): checked every unstruck `[P1]`/`[P2][want]` line — all
+  either already fully shipped (missing only the strike-through) or explicitly flagged as
+  needing a human product/compliance call (save-search auth wall, collection-layout
+  mosaic redesign, Trade-A-Plane ingestion, Bay-Area coverage benchmark, owner-leads
+  dataset, Controller.com — bot-walled/outreach-gated/awaiting-a-mock); none buildable
+  autonomously. Dropped to tier 3 and picked the first unstruck `[P1][goal]` item in the
+  🔔 GOAL section — the "weekly→daily one-click upgrade" item named as the top "Next" item
+  by the prior cycle. Closes that BACKLOG.md item.
+- Spec: nightshift/specs/20260718T061333Z-alert-digest-upgrade-nudge.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0. New
+  pure `shouldOfferDailyUpgrade` + `DIGEST_UPGRADE_THRESHOLD` in `alertFrequency.ts` (5 new
+  unit tests: at/above threshold → true, below → false, daily-cadence alert never offered)
+  — full `node --test` suite (432 files / 445 tests, 0 fail) unaffected. The daily→weekly
+  `/api/alerts/frequency` route is generalized with an optional `?dir=daily` param
+  (default stays `weekly` — verified via curl that a request with no `dir` still redirects
+  to `state=weekly`, and `dir=daily` redirects to `state=daily`, both against a
+  nonexistent test token so no real row was touched — no prod DB writes this cycle). New
+  `/alerts/status?state=daily` confirmation state verified rendering correctly via curl
+  (exact copy + "Manage your alerts" link to the right token-scoped URL). QA against the
+  PRODUCTION build (`npx next start -p 3000`) via `qa-smoke.mjs` on `/`, `/aircraft`,
+  `/alerts/status`: 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at desktop 1280 + mobile 375). Non-visual/backend cycle (email-template copy +
+  route logic) — `/alerts/status` does render new UI, so its copy/link was confirmed
+  directly (via curl) rather than read from screenshots; screenshots still saved for the
+  audit trail per the smoke gate default. Server stopped cleanly after, no stray
+  `next-server` process left running.
+- Screenshots: nightshift/screenshots/alert-digest-upgrade-nudge/
+- Next: 3 remaining plan-pass batch #3 items in BACKLOG.md's 🔔 GOAL section — typo-guard/
+  keyboard-attribute sweep across the remaining capture inputs (`[P2]`, now unblocked since
+  `suggestEmailFix` exists), one-tap unsubscribe-reason chips on `/alerts/status` (`[P2]`),
+  "Delete all my alerts & data" self-serve on `/alerts/manage` (`[P2]`). The combined
+  (multi-alert-per-email) digest send path still has no upgrade nudge, same scoping as its
+  existing `frequencyUrl` gap — worth a slice if that path ever grows a per-alert cadence
+  story. Also worth a periodic BACKLOG hygiene pass — a few older `[want]` items are fully
+  shipped per their own body text but were never struck through (slows the tier-2 sweep).
+
 ## 20260718T060233Z — PASS — alert-email-typo-guard
 - Pages: none (component-only change — every page that renders `AlertSignup`'s
   manual email-entry form, i.e. every alert capture point site-wide)

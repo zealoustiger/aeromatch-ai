@@ -2573,18 +2573,20 @@ human call; save-search auth wall → `[want]` product call)._
   auto-corrects, never blocks submission. **Scoped to `AlertSignup` only** (every major
   surface funnels through it); the sweep item below still carries it to the remaining
   inputs. No schema change.
-- **[P1][goal] Weekly→daily one-click upgrade in high-volume digests.** The one-click
-  cadence link in email footers only goes one way — daily→weekly "fewer emails"
-  (`api/alerts/frequency/route.ts` is documented daily-only). But a weekly subscriber
-  whose search just matched a burst of listings is seeing week-old inventory in a
-  marketplace where good aircraft go fast. When a weekly digest's section counts total ≥5
-  new matches, add one honest line — "Busy week for this search — switch to daily
-  digests" — linking to the existing token-scoped frequency route extended with the
-  upgrade direction (same one-click, no-login pattern as "fewer emails"; idempotent if
-  already daily). Only rendered when the volume threshold is genuinely met — never an
-  upsell on a quiet search. Rides the existing `frequency` column (⚠️ still-pending
-  human-apply migration; same fail-soft norm as every `alerts.*` column). No new capture
-  point; extends the digest-vs-instant pillar honestly within the daily-cron ceiling.
+~~- **[P1][goal] Weekly→daily one-click upgrade in high-volume digests.**~~ ✅ SHIPPED
+  via `alert-digest-upgrade-nudge` (2026-07-18) The one-click cadence link in email
+  footers only went one way — daily→weekly "fewer emails". New pure
+  `shouldOfferDailyUpgrade` (`alertFrequency.ts`) fires only for a weekly-cadence alert
+  whose send has ≥5 total (new-listing + price-drop) matches; `buildAlertDigestEmail`
+  renders one honest line — "Busy week for this search — switch to daily digests" — above
+  the footer, linking to `/api/alerts/frequency?token=...&dir=daily` (the existing
+  daily→weekly route generalized with a `dir` param, defaulting to `weekly` so every
+  already-sent email link keeps working unchanged). New `/alerts/status?state=daily`
+  confirmation mirrors the existing `weekly` one. **Scoped to the single-alert digest send
+  path only** (the combined multi-alert-per-email path already omits the daily→weekly
+  `frequencyUrl` for the same "ambiguous across multiple alerts" reason) and to the
+  aggregate digest template (the rich single-price-drop template is unaffected — same
+  precedent as `frequencyUrl`'s existing scoping).
 - **[P2][goal] Typo-guard + mobile-keyboard attribute sweep on the remaining email
   inputs.** Carry `suggestEmailFix` (item above) plus the missing input attributes —
   `inputMode="email"`, `spellCheck={false}`, `enterKeyHint="send"`, and
