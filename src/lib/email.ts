@@ -10,6 +10,8 @@
 // Server-only — never import into a client component (it reads server env + the
 // API key).
 
+import type { CompResult } from '@/lib/aircraftComps'
+
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
 /** Sender identity. Override with ALERTS_FROM_EMAIL once a domain is verified. */
@@ -724,6 +726,35 @@ function formatUsd(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
+/** Compact price label: "$118k" or "$1.3M" — a standalone copy of
+ *  `formatPriceK` (src/lib/utils.ts) kept local so this file stays
+ *  import-free (a deliberate existing convention — see the top of the
+ *  file — so its plain-text-email builders stay trivially unit-testable
+ *  without pulling in React/Tailwind-adjacent deps transitively). */
+function formatPriceK(dollars: number): string {
+  if (dollars >= 1_000_000) {
+    const m = Math.round(dollars / 100_000) / 10
+    return `$${m}M`
+  }
+  const k = Math.round(dollars / 1_000)
+  return `$${k}k`
+}
+
+/**
+ * Plain-text rendering of a `CompResult` (the on-site "vs market" comp,
+ * `src/lib/aircraftComps.ts`) for the digest email — same honesty floors and
+ * copy as the on-site `CompPill` ("~N% below avg · $Xk median · N comps"),
+ * just without the badge markup. Pure; caller is responsible for the same
+ * `compVsMarket` null check the on-site pill already requires (no comp →
+ * no line, never a fabricated claim).
+ */
+export function compLabel(comp: CompResult): string {
+  const medianK = formatPriceK(comp.median)
+  const suffix = ` · ${medianK} median · ${comp.count} comps`
+  if (comp.kind === 'near') return `Near avg${suffix}`
+  return `~${comp.pct}% ${comp.kind} avg${suffix}`
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -819,6 +850,17 @@ export type AlertDigestSample = {
   location: string | null
   price: number | null
   previousPrice?: number | null
+  /** Honest market-context line ("~12% below avg · $52k median · 8 comps"),
+   *  from `compLabel(compVsMarket(...))` — aircraft new-listing samples only.
+   *  Omitted whenever the family has too few comps to publish a trustworthy
+   *  claim (same honesty floor as the on-site "vs market" pill) — never a
+   *  fabricated/guessed comparison. */
+  compLabel?: string | null
+  /** True only when the comp behind `compLabel` is `kind === 'below'` — the
+   *  "good deal for a buyer" case the on-site `CompPill` highlights in
+   *  emerald. Used purely to pick the pill color; never set without
+   *  `compLabel` also set. */
+  compBelowAvg?: boolean
   url: string
   /** Set only by the combined-digest cross-section dedupe pass
    *  (`dedupeDigestSectionSamples`) — this same listing also matched another
@@ -876,6 +918,12 @@ function sampleCardHtml(s: AlertDigestSample): string {
   const alsoMatchesNote = s.alsoMatchesLabel
     ? `<p style="margin:2px 0 0;font-size:10px;color:#0369a1;">${escapeHtml(s.alsoMatchesLabel)}</p>`
     : ''
+  // Fixed-contrast background+text pair (not a plain text color) so it reads
+  // correctly in both light and dark inboxes without an emailColorSchemeHead
+  // class — same convention this file documents for status badges/CTAs.
+  const compLabelHtml = s.compLabel
+    ? `<p style="margin:3px 0 0;"><span style="display:inline-block;background:${s.compBelowAvg ? '#ecfdf5' : '#f1f5f9'};color:${s.compBelowAvg ? '#047857' : '#475569'};padding:1px 7px;border-radius:9999px;font-size:11px;font-weight:600;">${escapeHtml(s.compLabel)}</span></p>`
+    : ''
 
   return `<a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;padding:12px 0;border-bottom:1px solid #ece6dc;">
         ${photo}
@@ -883,6 +931,7 @@ function sampleCardHtml(s: AlertDigestSample): string {
           <p style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;">${escapeHtml(s.title)}</p>
           ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
           ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
+          ${compLabelHtml}
           ${placeholderNote}
           ${alsoMatchesNote}
         </div>
@@ -1094,7 +1143,7 @@ export function buildAlertDigestEmail(opts: {
       ]
         .filter(Boolean)
         .join(' · ')
-      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}\n  ${s.url}`
+      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}${s.compLabel ? ` [${s.compLabel}]` : ''}\n  ${s.url}`
     })
     .join('\n')
 
@@ -1245,7 +1294,7 @@ export function buildCombinedAlertDigestEmail(opts: {
             : sm.price != null
               ? formatUsd(sm.price)
               : ''
-        return `- ${sm.title}${price ? ` — ${price}` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}`
+        return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}`
       })
       .join('\n')
     const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`

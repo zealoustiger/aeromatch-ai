@@ -2,6 +2,63 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T081500Z — PASS — alert-digest-price-context
+- Pages: (no user-facing route — the weekly/daily alert-digest email, sent via
+  `/api/cron/alert-digest`; visually verified via the dev-only
+  `/api/dev/email-preview/alert-digest` preview route)
+- What: **A new-listing aircraft match in your alert digest email now tells you whether it's
+  a good deal** — a small "~9% below avg · $240k median · 6 comps" line under the price,
+  computed from real comps against other active listings of the same make+model, exactly
+  the same math and honesty floor as the on-site "vs market" pill already shown on
+  `/aircraft` cards. When there aren't enough comps to trust the comparison (fewer than 4
+  other priced listings in the family), the line simply doesn't render — never a guessed or
+  fabricated claim. This is the "best listing alert email in aviation" + proprietary-data
+  pillar landing directly in the inbox, not just on-site.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`alert-revive-remaining-paths`) was a PASS; swept BACKLOG.md for any unstruck `[bug]`
+  line — none found. Tier 2 (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]`
+  line — same standing set as recent cycles (save-search auth wall, mosaic redesign,
+  Trade-A-Plane, Bay-Area benchmark, owner-leads dataset, bot-walled competitor scrapes) —
+  none buildable autonomously. Dropped to tier 3 and picked the first of the two remaining
+  `[P1][goal]` items in the 🔔 section (the other, the Monday admin funnel summary email, is
+  next). Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T073714Z-alert-digest-price-context.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0. New
+  pure `compLabel()` lives in `src/lib/email.ts` (not `aircraftComps.ts`) deliberately — that
+  file has zero top-level runtime imports by convention (only type-only ones), which is what
+  lets its unit tests run via plain `node --experimental-strip-types --test` without a
+  module-alias resolver; co-locating `compLabel` there keeps it in that same trivially-
+  testable set. 6 new unit tests (4 `compLabel` branch cases + 2 digest-builder integration
+  cases: pill renders with `compLabel` set, no pill/no "median" string anywhere when omitted)
+  — full suite (all `*.test.ts` in `src/lib/`) still green, 0 failures. The cron route
+  (`alert-digest/route.ts`) computes the make+model family price map (paginated
+  `aircraft_for_sale` read, make/model/asking_price only) via a lazy, request-scoped
+  memoized getter — verified by code read that a due-alert loop with zero aircraft
+  new-listing samples never calls it, and that it fetches at most once even when multiple
+  aircraft alerts are due in the same run. `fetchAircraftPriceDropSamples` was given a
+  matching (unused) 5th param purely so its call-signature stays union-compatible with
+  `fetchNewAircraftSamples` at the existing `aircraftFetch` conditional-assignment call
+  sites (`target.type === 'all'` branch) — price-drop samples intentionally don't get the
+  comp line (see spec's out-of-scope). QA against the PRODUCTION build (`npx next start -p
+  3000`; found and killed one stale `next-server` left running from a prior cycle before
+  starting this cycle's own — same recurring issue flagged in recent CHANGELOG entries) via
+  `qa-smoke.mjs` on `/searches`, `/alerts/manage` (the closest live alert-management
+  surfaces; the actual changed code has no page route): 4/4 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at desktop 1280 + mobile 375). Went further:
+  fetched the dev-only `/api/dev/email-preview/alert-digest` route from the running
+  production server and confirmed the real rendered HTML contains the comp pill with the
+  expected copy and emerald `#ecfdf5` styling; screenshotted it for visual confirmation — the
+  pill renders cleanly under the price, no overlap with the "Not actual plane photo" caption
+  on the second (price-drop, correctly comp-less) sample card below it. Scratch screenshot
+  script deleted after use; server stopped, port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-digest-price-context/ (includes
+  `email-preview.png`, the rendered digest-email preview with the new comp pill)
+- Next: The 🔔 alert-experience `[P1][goal]` queue has one item left from this batch: the
+  Monday admin alert-funnel week-over-week summary email (piggybacks on the existing daily
+  cron, fires only when the run date is Monday). After that, tiers 1/2 remain empty and the
+  queue drops to `[P2][goal]` items (overlapping-alert hint, screen-reader `aria-live` pass,
+  "download my alert data" export) before needing another Opus/Fable plan-pass refill.
+
 ## 20260718T073300Z — PASS — alert-revive-remaining-paths
 - Pages: /alerts/status, /alerts/manage, /searches
 - What: **A subscriber who previously unsubscribed and later re-subscribes no longer hits

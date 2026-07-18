@@ -18,6 +18,7 @@ import {
   buildNewMessageEmail,
   buildSeedInquiryEmail,
   buildMatchAlertEmail,
+  compLabel,
 } from './email.ts'
 
 const BASE = {
@@ -188,6 +189,68 @@ test('digest: sample cards render photo, specs, and price; "See all" CTA when mo
   assert.match(html, /Austin, TX/)
   assert.match(html, />\$219,000</)
   assert.match(html, />\s*See all Cessna 172 matches\s*</) // 5 total, 1 shown → more remain
+})
+
+test('compLabel: below-median comp renders "~N% below avg · median · comps"', () => {
+  assert.equal(compLabel({ kind: 'below', pct: 12, count: 8, median: 52_000 }), '~12% below avg · $52k median · 8 comps')
+})
+
+test('compLabel: above-median comp renders "~N% above avg · median · comps"', () => {
+  assert.equal(compLabel({ kind: 'above', pct: 7, count: 5, median: 118_000 }), '~7% above avg · $118k median · 5 comps')
+})
+
+test('compLabel: near-median comp renders "Near avg · median · comps" with no percent', () => {
+  assert.equal(compLabel({ kind: 'near', pct: 0, count: 12, median: 90_000 }), 'Near avg · $90k median · 12 comps')
+})
+
+test('compLabel: a million-dollar median formats compactly ($X.XM)', () => {
+  assert.equal(compLabel({ kind: 'below', pct: 3, count: 6, median: 1_250_000 }), '~3% below avg · $1.3M median · 6 comps')
+})
+
+test('digest: a sample with compLabel renders the market-context pill in an emerald "below avg" style', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+        compLabel: '~12% below avg · $250k median · 8 comps',
+        compBelowAvg: true,
+      },
+    ],
+  })
+  assert.match(html, /#ecfdf5/) // emerald background for a below-avg deal
+  assert.match(html, /~12% below avg &middot;? ?\$250k median &middot;? ?8 comps|~12% below avg · \$250k median · 8 comps/)
+  assert.match(text, /\[~12% below avg · \$250k median · 8 comps\]/)
+})
+
+test('digest: a sample with no compLabel renders no market-context pill (honesty gate)', () => {
+  const { html } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+      },
+    ],
+  })
+  assert.doesNotMatch(html, /median/)
 })
 
 test('digest: a placeholder sample photo carries an honest "Not actual plane photo" caption', () => {

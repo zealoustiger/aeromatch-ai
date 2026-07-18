@@ -9,6 +9,7 @@ import {
   buildListingUnavailableEmail,
   buildWidenSuggestionEmail,
   pickBestPriceDropSample,
+  compLabel,
   type AlertDigestSample,
   type AlertDigestSection,
 } from '@/lib/email'
@@ -29,7 +30,7 @@ import { intervalDaysFor, isDigestDue, normalizeFrequency, shouldOfferDailyUpgra
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius } from '@/lib/airports'
-import { filterToGoodDeals } from '@/lib/aircraftComps'
+import { filterToGoodDeals, compVsMarket, buildFamilyPriceMap } from '@/lib/aircraftComps'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
 import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassify'
 import { applyPartnershipModelFilter } from '@/lib/partnershipModelFilter'
@@ -691,8 +692,19 @@ type AircraftSampleRow = {
   smoh?: number | null
 }
 
-function toDigestSample(row: AircraftSampleRow, previousPrice?: number | null): AlertDigestSample {
+function toDigestSample(
+  row: AircraftSampleRow,
+  previousPrice?: number | null,
+  familyPriceMap?: Map<string, number[]> | null
+): AlertDigestSample {
   const realPhoto = pickRealPhoto(row.images)
+  // Honest market-context line — same `compVsMarket` honesty floors (>= 4
+  // other priced comps in the family) as the on-site "vs market" pill; below
+  // the floor `comp` is null and the sample renders with no line at all,
+  // never a guessed comparison.
+  const comp = familyPriceMap
+    ? compVsMarket({ make: row.make, model: row.model, asking_price: row.asking_price }, familyPriceMap)
+    : null
   return {
     title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Aircraft',
     photoUrl: realPhoto ?? getPlaceholderPhoto(row.make ?? ''),
@@ -702,17 +714,71 @@ function toDigestSample(row: AircraftSampleRow, previousPrice?: number | null): 
     location: row.location,
     price: row.asking_price,
     previousPrice,
+    compLabel: comp ? compLabel(comp) : undefined,
+    compBelowAvg: comp?.kind === 'below',
     url: `${SITE_URL}/aircraft/listing/${row.id}`,
   }
 }
 
+// Build a make+model FAMILY -> sorted asking-prices map across ALL active,
+// priced aircraft listings, for the digest email's honest "vs market" sample
+// line (`toDigestSample`) — the same read `AircraftSaleList.tsx`'s
+// `fetchFamilyPriceMap` does for the on-site card pill, computed here from
+// the admin client instead of a server-component Supabase client. A single
+// `.limit()` request silently caps at ~1000 rows regardless of the value
+// passed, so this pages through in batches to cover the full population (a
+// dense make would otherwise be undersampled, skewing the median). Computed
+// AT MOST ONCE per cron run via the memoized getter below — non-fatal; any
+// failure just means samples render with no comp line (see `toDigestSample`).
+async function fetchAircraftFamilyPriceMap(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<Map<string, number[]>> {
+  const rows: { make: string | null; model: string | null; asking_price: number | null }[] = []
+  let offset = 0
+  const batchSize = 1000
+  try {
+    for (;;) {
+      const { data, error } = await supabase
+        .from('aircraft_for_sale')
+        .select('make, model, asking_price')
+        .eq('status', 'active')
+        .gte('asking_price', PARTS_PRICE_FLOOR)
+        .range(offset, offset + batchSize - 1)
+      if (error || !data) break
+      rows.push(...data)
+      if (data.length < batchSize) break
+      offset += batchSize
+    }
+  } catch (err) {
+    console.error('[alert-digest] family price map fetch error:', err)
+    return new Map()
+  }
+  return buildFamilyPriceMap(rows)
+}
+
+/** Lazy, request-scoped memoization so a cron run whose due alerts never
+ *  touch `fetchNewAircraftSamples` (e.g. all partnership/seeker alerts, or
+ *  an aircraft alert with zero new matches) never pays for this fetch. */
+function familyPriceMapGetter(supabase: ReturnType<typeof createAdminClient>): () => Promise<Map<string, number[]>> {
+  let cached: Promise<Map<string, number[]>> | null = null
+  return () => {
+    if (!cached) cached = fetchAircraftFamilyPriceMap(supabase)
+    return cached
+  }
+}
+
 /** Up to `limit` real, newly-listed aircraft matching `target` since `since`,
- *  for the digest email's preview cards. Mirrors `countNewAircraft`'s filters. */
+ *  for the digest email's preview cards. Mirrors `countNewAircraft`'s filters.
+ *  `getFamilyPriceMap`, when passed, attaches an honest "vs market" comp line
+ *  to each sample (see `toDigestSample`) — omitted entirely (no fetch, no
+ *  line) by callers that don't want the comp context, e.g. price-drop
+ *  samples, which already show a before/after price. */
 async function fetchNewAircraftSamples(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'aircraft' }>,
   since: string,
-  limit = MAX_DIGEST_SAMPLES
+  limit = MAX_DIGEST_SAMPLES,
+  getFamilyPriceMap?: () => Promise<Map<string, number[]>>
 ): Promise<AlertDigestSample[]> {
   // A deal-only alert can't apply the DB-side `.limit(limit)` before knowing
   // which candidates are actually good deals — fetch a wider pool (still
@@ -742,7 +808,8 @@ async function fetchNewAircraftSamples(
   }
   const rows = (data ?? []) as AircraftSampleRow[]
   const narrowed = target.dealOnly ? await filterToGoodDeals(supabase, rows as any[]) : rows
-  return (narrowed as AircraftSampleRow[]).slice(0, limit).map((row) => toDigestSample(row))
+  const familyPriceMap = getFamilyPriceMap ? await getFamilyPriceMap() : null
+  return (narrowed as AircraftSampleRow[]).slice(0, limit).map((row) => toDigestSample(row, undefined, familyPriceMap))
 }
 
 /** Up to `limit` real aircraft matching `target` whose most recent price
@@ -753,7 +820,12 @@ async function fetchAircraftPriceDropSamples(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'aircraft' }>,
   since: string,
-  limit = MAX_DIGEST_SAMPLES
+  limit = MAX_DIGEST_SAMPLES,
+  // Unused — accepted only so this shares a call signature with
+  // `fetchNewAircraftSamples` for the `aircraftFetch` union call sites below.
+  // A price-drop sample already shows a before/after price, so it doesn't
+  // get the "vs market" comp line (see the spec's out-of-scope note).
+  _getFamilyPriceMap?: () => Promise<Map<string, number[]>>
 ): Promise<AlertDigestSample[]> {
   let q: any = supabase
     .from('aircraft_for_sale')
@@ -1302,6 +1374,11 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createAdminClient()
+  // Memoized so this run fetches the family price map (for the digest
+  // sample's honest "vs market" comp line) at most once total, and only if
+  // some due alert actually needs it — most cron runs have zero due aircraft
+  // new-listing alerts most days.
+  const getFamilyPriceMap = familyPriceMapGetter(supabase)
   const runStartMs = Date.now()
   const nowIso = new Date().toISOString()
   const minWindowStart = new Date(Date.now() - MIN_DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
@@ -1508,7 +1585,7 @@ export async function GET(req: NextRequest) {
     const samples =
       target.type === 'aircraft'
         ? newCount > 0
-          ? await fetchNewAircraftSamples(supabase, target, since)
+          ? await fetchNewAircraftSamples(supabase, target, since, MAX_DIGEST_SAMPLES, getFamilyPriceMap)
           : await fetchAircraftPriceDropSamples(supabase, target, since)
         : target.type === 'partnership'
           ? newCount > 0
@@ -1521,7 +1598,7 @@ export async function GET(req: NextRequest) {
                 // the digest's sample cap.
                 const aircraftFetch = newCount > 0 ? fetchNewAircraftSamples : fetchAircraftPriceDropSamples
                 const partnershipFetch = newCount > 0 ? fetchNewPartnershipSamples : fetchPartnershipPriceDropSamples
-                const aircraftSamples = await aircraftFetch(supabase, { type: 'aircraft' }, since)
+                const aircraftSamples = await aircraftFetch(supabase, { type: 'aircraft' }, since, MAX_DIGEST_SAMPLES, getFamilyPriceMap)
                 if (aircraftSamples.length >= MAX_DIGEST_SAMPLES) return aircraftSamples
                 const partnershipSamples = await partnershipFetch(
                   supabase,

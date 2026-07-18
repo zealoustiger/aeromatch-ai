@@ -2677,15 +2677,20 @@ wall → `[want]` product call)._
   ownership-proven paths, matching each path's own no-second-opt-in precedent). Improves:
   lifecycle correctness on 4 existing capture surfaces; no new capture point, existing
   `alert_subscribed` events unchanged.
-- **[P1][goal] Honest price-context line on aircraft digest samples ("~12% below similar
-  172s").** The digest sample cards (photo/title/price) carry zero market context while the
-  listing page already computes the ClubHanger Estimate/Deal Check from our own comps
-  (`src/lib/aircraftComps.ts`). At digest-build time, run the aircraft new-listing samples
-  through the existing comp helpers and render one short line/badge ONLY when the
-  established honesty floors pass (min comps + dead-band — same bar as on-site; render
-  nothing otherwise, never a guess). This is the "best listing alert email in aviation" +
-  proprietary-data pillar in one slice. Improves: digest email content quality; no new
-  capture point.
+~~- **[P1][goal] Honest price-context line on aircraft digest samples ("~12% below similar
+  172s").**~~ ✅ SHIPPED via `alert-digest-price-context` (2026-07-18) New-listing aircraft
+  digest samples now carry an honest "~N% below/above avg · $Xk median · N comps" pill,
+  computed via the existing `compVsMarket`/`buildFamilyPriceMap` comp helpers
+  (`src/lib/aircraftComps.ts`) against a family price map fetched once per cron run
+  (paginated, mirrors `AircraftSaleList.tsx`'s `fetchFamilyPriceMap`, memoized so a run with
+  no due aircraft new-listing alerts never fetches it). Same honesty floor as the on-site
+  "vs market" pill (`MIN_OTHER_COMPS`/`DEAD_BAND`) — renders nothing when the family has too
+  few comps, never a guessed comparison. New pure `compLabel()` in `src/lib/email.ts`
+  (co-located, no cross-module runtime import, so it stays unit-testable the same way every
+  other email builder in this file is) renders the line in both HTML (emerald pill for a
+  below-avg deal, slate for above/near) and plain-text digest bodies. **Scoped down,
+  intentionally:** price-drop samples (already show a before/after price) and partnership/
+  seeker samples (no comp math exists for those types) don't get the line this cycle.
 - **[P1][goal] Monday admin alert-funnel week-over-week summary email.** GOAL.md says to
   judge alerts week-over-week, but nothing computes WoW anywhere — `/admin/alerts` needs a
   visit. Piggyback inside the existing daily `alert-digest` cron run (fire only when the
