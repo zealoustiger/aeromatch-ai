@@ -1942,8 +1942,17 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
     ;({ error } = await admin.from('alerts').insert(payload))
   }
 
-  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
-  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  // 23505 = unique_violation on (email, source_path) — already subscribed. If that
+  // row was previously unsubscribed, revive it straight to `confirmed` (the
+  // originating confirm_token already proved this email once this cycle — same
+  // no-second-opt-in precedent as the fresh insert above).
+  if (error) {
+    if (error.code === '23505') {
+      await reviveIfUnsubscribed(admin, original.email, sourcePath || null, 'confirmed')
+    } else {
+      return { error: 'Something went wrong. Please try again.' }
+    }
+  }
   return { ok: true }
 }
 
@@ -1973,8 +1982,17 @@ export async function subscribeManageCrossSell(context: string, sourcePath: stri
     ;({ error } = await admin.from('alerts').insert(payload))
   }
 
-  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
-  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  // 23505 = unique_violation on (email, source_path) — already subscribed. If that
+  // row was previously unsubscribed, revive it straight to `confirmed` — ownership is
+  // already proven above via resolveOwnerEmail, same no-second-opt-in precedent as
+  // the fresh insert.
+  if (error) {
+    if (error.code === '23505') {
+      await reviveIfUnsubscribed(admin, ownerEmail, sourcePath || null, 'confirmed')
+    } else {
+      return { error: 'Something went wrong. Please try again.' }
+    }
+  }
   revalidatePath('/alerts/manage')
   return { ok: true }
 }
@@ -2034,8 +2052,18 @@ export async function createManageAlert(
     ;({ error } = await admin.from('alerts').insert(payload))
   }
 
-  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
-  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
+  // 23505 = unique_violation on (email, source_path) — already subscribed. If that
+  // row was previously unsubscribed, revive it straight to `confirmed` — ownership is
+  // already proven above via resolveOwnerEmail, same no-second-opt-in precedent as
+  // the fresh insert. `alreadyExisted` still reflects the pre-revive state (a row
+  // already existed, dead or not) so the caller's messaging is unchanged.
+  if (error) {
+    if (error.code === '23505') {
+      await reviveIfUnsubscribed(admin, ownerEmail, sourcePath || null, 'confirmed')
+    } else {
+      return { error: 'Something went wrong. Please try again.' }
+    }
+  }
   revalidatePath('/alerts/manage')
   return { ok: true, alreadyExisted: error?.code === '23505' }
 }
@@ -2208,15 +2236,26 @@ export async function subscribeSavedSearchAlert(searchId: string) {
     ;({ error } = await supabase.from('alerts').insert(payload))
   }
 
-  // 23505 = unique_violation on (email, source_path) — already subscribed, idempotent success.
-  if (error && error.code !== '23505') return { error: 'Something went wrong. Please try again.' }
-
   // `alerts` has no SELECT policy for the authenticated client (PII protection —
   // see savedSearchAlerts.ts), so `.select()` on the insert above can't return the
   // row. Look it up via the admin client instead (covers both the fresh-insert and
   // the idempotent-conflict path identically) so the caller can render the
-  // frequency/price-drop toggles inline without a full page reload.
+  // frequency/price-drop toggles inline without a full page reload. Also needed for
+  // the revive-on-conflict check just below.
   const admin = createAdminClient()
+
+  // 23505 = unique_violation on (email, source_path) — already subscribed. If that
+  // row was previously unsubscribed, revive it straight to `confirmed` — the signed-in
+  // session already proves this email, same no-second-opt-in precedent as the fresh
+  // insert above.
+  if (error) {
+    if (error.code === '23505') {
+      await reviveIfUnsubscribed(admin, user.email, sourcePath || null, 'confirmed')
+    } else {
+      return { error: 'Something went wrong. Please try again.' }
+    }
+  }
+
   const { data: row } = await admin
     .from('alerts')
     .select('id, frequency, price_drop_opt_in')
