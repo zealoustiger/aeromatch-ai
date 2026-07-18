@@ -2940,16 +2940,21 @@ view-in-browser or share affordance._
   `type` — never a client-supplied URL) and redirecting to a new "Thanks — noted!" status
   page. No schema change, no new capture point. Surfacing the rollup in the Monday email
   remains the follow-up slice.
-- **[P2][goal] Tokenized live "view in browser" page for digest emails.** Standard
-  best-in-class email affordance this digest lacks: image-blocking clients render a
-  broken-looking email with no escape hatch. Add a header link in the digest builders →
-  a new tokenized page (e.g. `/alerts/digest/view?token=...`, same
-  `unsubscribe_token` trust boundary as the other alert token routes) that renders the
-  alert's CURRENT matches server-side, honestly labeled "Live view — updated since your
-  email was sent" (nothing stores sent HTML, so never pretend to archive the exact email;
-  a live view is the honest version). Reuse the digest match queries + on-site card
-  components; page carries the alert's manage/unsubscribe links so it doubles as a
-  management entry point. No schema change, no new capture point.
+~~- **[P2][goal] Tokenized live "view in browser" page for digest emails.**~~ ✅ SHIPPED
+  via `digest-view-in-browser` (2026-07-18) Standard
+  best-in-class email affordance this digest lacked: image-blocking clients render a
+  broken-looking email with no escape hatch. Both digest builders
+  (`buildAlertDigestEmail`/`buildCombinedAlertDigestEmail`) gain an optional `viewUrl` that
+  renders a quiet "View in browser" link (top-of-email for the single template, per-section
+  for the combined one); the cron computes it from each alert's own `unsubscribe_token`. New
+  `/alerts/digest/view?token=...` page (same trust boundary as `/alerts/manage`) resolves
+  the alert by token and renders its CURRENT matches via the existing `getAlertDigestPreview`
+  as on-site cards (same `ch-card` treatment `AlertsLanding.tsx` uses), honestly labeled
+  "Live view — updated since your email was sent." An invalid/missing token renders the same
+  honest "no longer valid" pattern `/alerts/manage` uses. Links to `/alerts/manage?token=...`
+  to manage/unsubscribe. No raw on-page unsubscribe anchor (avoids link-prefetch risk on a
+  GET unsubscribe route). No schema change, no new capture point. This closes the
+  plan-pass batch #6 alert-experience `[goal]` queue.
 ~~- **[P2][goal] "Buying with a partner? Share this alert" line in the digest footer.**~~
   ✅ SHIPPED via `digest-share-with-partner` (2026-07-18) `buildAlertDigestEmail` gains
   an optional `shareUrl` opt rendering a quiet "Buying with a partner? Share this alert"
