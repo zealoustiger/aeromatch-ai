@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-18T09:51:13Z — admin-digest-vote-counts — score 4/5
+- Strengths: Hits every acceptance criterion cleanly — reuses `getDigestVoteRollup()` (no duplicated query), threads the snapshot's `now` into it so the vote windows align with the funnel's and the rollup becomes unit-testable, kicks the fetch off as a concurrent promise, and renders an honest "No votes yet" state (test asserts no fabricated `👍 0 / 👎 0`) across both HTML and plain-text plus the dev preview fixture.
+- Weaknesses / risks: minor — the HTML WoW-delta line ("+2 vs last week 👍, -1 vs last week 👎") reads a little awkwardly, and the rollup's pre-existing 500-row `limit` means totals would silently understate at high vote volume (not introduced here, low-volume today).
+- Follow-up: none
+
 ## 2026-07-18T08:48:14Z — alert-crosssell-rightnoun — score 5/5
 - Strengths: Exactly the right-noun fix the spec asked for — `/partnerships/[id]`'s justPosted box flips from re-offering the poster their own market (`noun="partnership"` → `/partnerships`) to the demand-side seeker cross-sell (`noun="seeker"` → `/partnerships/seeking`), and the seeking detail's justPosted banner gains the counterpart partnership box by reusing the page's already-computed `alertContext`/`alertSourcePath` (no new derivation, no new component); distinct `source` values (`post_success_partnership`/`post_success_seeking`) keep per-placement attribution clean, `p.make` fallback preserved on both branches, and the replacement comments match the surrounding house style.
 - Weaknesses / risks: none material — `AlertSignup`'s generic copy renders "a new {ctx} seeker is listed" rather than the spec's aspirational "pilot seeking a share appears," but that's an inherent, in-scope consequence of correctly reusing the shared component instead of forking it.
