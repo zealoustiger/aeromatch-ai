@@ -1014,6 +1014,8 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   createdLastWeek: 9,
   confirmedThisWeek: 8,
   confirmedLastWeek: 6,
+  unsubscribedThisWeek: 3,
+  unsubscribedLastWeek: 5,
   liveTotal: 142,
   pendingTotal: 11,
   pausedTotal: 5,
@@ -1024,6 +1026,7 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
     { source: 'filter_toolbar', createdThisWeek: 4, createdLastWeek: 4 },
   ],
   sourceColumnMigrated: true,
+  unsubscribedAtMigrated: true,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -1056,12 +1059,32 @@ test('buildAdminAlertFunnelEmail: a down week renders a negative delta, not a fa
   assert.match(text, /New signups: 4 \(-5 vs last week\)/)
 })
 
-test('buildAdminAlertFunnelEmail: paused/unsubscribed/bounced are labeled "current totals (not weekly)", never given a WoW delta', () => {
+test('buildAdminAlertFunnelEmail: paused/bounced are labeled "current totals (not weekly)", never given a WoW delta', () => {
   const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
   assert.match(html, /Current totals \(not weekly\)/)
   assert.match(text, /Current totals \(not weekly\)/)
   assert.doesNotMatch(html, /Paused[\s\S]{0,80}vs last week/)
+  assert.doesNotMatch(html, /Bounced[\s\S]{0,80}vs last week/)
+})
+
+test('buildAdminAlertFunnelEmail: unsubscribed gets a real week-over-week delta once unsubscribedAtMigrated is true', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Unsubscribed[\s\S]{0,300}vs last week/)
+  assert.match(text, /Unsubscribed: 3 \(-2 vs last week\)/)
+  // The current-totals stock count (23, distinct from the weekly flow of 3)
+  // must still render unchanged alongside the new WoW row.
+  assert.match(html, /Unsubscribed<\/td>\s*<td[^>]*>23<\/td>/)
+})
+
+test('buildAdminAlertFunnelEmail: when unsubscribedAtMigrated is false, unsubscribed renders only as a current total — no WoW row, no regression', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, unsubscribedAtMigrated: false, unsubscribedThisWeek: 0, unsubscribedLastWeek: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
   assert.doesNotMatch(html, /Unsubscribed[\s\S]{0,80}vs last week/)
+  assert.doesNotMatch(text, /Unsubscribed: \d+ \(/)
+  assert.match(html, /Unsubscribed<\/td>\s*<td[^>]*>23<\/td>/)
+  assert.match(text, /Unsubscribed: 23/)
 })
 
 test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {

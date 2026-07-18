@@ -17,11 +17,21 @@ async function applyUnsubscribe(token: string): Promise<boolean> {
   if (!tokens.length) return false
   try {
     const supabase = createAdminClient()
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('alerts')
-      .update({ status: 'unsubscribed' })
+      .update({ status: 'unsubscribed', unsubscribed_at: new Date().toISOString() })
       .in('unsubscribe_token', tokens)
       .select('id')
+
+    // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the plain
+    // status flip rather than failing the unsubscribe itself.
+    if (error?.message?.includes('unsubscribed_at')) {
+      ;({ data, error } = await supabase
+        .from('alerts')
+        .update({ status: 'unsubscribed' })
+        .in('unsubscribe_token', tokens)
+        .select('id'))
+    }
 
     if (error) {
       console.error('[alerts/unsubscribe] update failed:', error.message)
