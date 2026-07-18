@@ -11,7 +11,7 @@ import {
   buildAlertCriteriaUpdate,
   getHiddenCriteria,
 } from '@/lib/alertEditCriteria'
-import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { getAlertMatchCount, getNarrowSuggestions } from '@/lib/alertMatchCounts'
 import { detectOverlappingAlerts } from '@/lib/alertOverlap'
 import { describeLastDigest, normalizeFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
@@ -21,6 +21,7 @@ import { formatPrice } from '@/lib/utils'
 import AlertEditForm from '@/components/AlertEditForm'
 import ShareAlertButton from '@/components/ShareAlertButton'
 import WidenAlertNudge, { type WidenSuggestion } from '@/components/WidenAlertNudge'
+import NarrowAlertNudge from '@/components/NarrowAlertNudge'
 import OverlapAlertNudge from '@/components/OverlapAlertNudge'
 import AlertModeToggle from '@/components/AlertModeToggle'
 import FrequencyToggle from '@/components/FrequencyToggle'
@@ -235,6 +236,21 @@ export default async function AlertsManagePage({
     })
   )
 
+  // The honest inverse: a confirmed alert already matching a LOT of live
+  // listings right now (GOAL.md: never-spam cuts both ways — a make-only or
+  // nationwide alert's digest reads as spam just as much as a dead alert's
+  // silence does). `getNarrowSuggestions` short-circuits to `[]` below its
+  // own volume threshold, so this is cheap for the common (non-high-volume)
+  // row on this marketplace's current inventory.
+  const narrowSuggestions = await Promise.all(
+    alerts.map((a, i) => {
+      if (a.status !== 'confirmed') return Promise.resolve([])
+      const match = matchCounts[i]
+      if (!match) return Promise.resolve([])
+      return getNarrowSuggestions(a.source_path, match.count)
+    })
+  )
+
   // Cross-sell (see ManageAlertCrossSell.tsx / GOAL.md's "digest → manage → grow
   // loop"): try each confirmed alert's source_path (most recent first) until one
   // yields a suggestion the visitor doesn't already have — never a duplicate or
@@ -412,6 +428,9 @@ export default async function AlertsManagePage({
                       ) : null}
                       {widenEligible ? (
                         <WidenAlertNudge id={a.id} token={scopeToken} dead={isDead} suggestion={widenSuggestions[i]} />
+                      ) : null}
+                      {!isDead ? (
+                        <NarrowAlertNudge id={a.id} token={scopeToken} suggestions={narrowSuggestions[i]} />
                       ) : null}
                       {overlap ? (
                         <OverlapAlertNudge id={a.id} token={scopeToken} broaderContext={overlap.broaderContext} />
