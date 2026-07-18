@@ -2,6 +2,81 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T095544Z — PASS — alert-narrow-nudge
+- Pages: /alerts/manage
+- What: **A subscriber whose alert is matching a huge pile of listings (say,
+  every Cessna for sale nationwide) now gets a one-tap way to trim it down**,
+  instead of just quietly getting a bloated weekly email. When an alert
+  matches more than ~75 live listings, the page now shows "Matching a lot
+  right now — narrow it?" with 1-2 real, live-verified suggestions — e.g.
+  "Only Cessna 172 — 34 listings" or "Only in California — 48 listings."
+  One click applies it immediately, no page reload, no extra typing. This is
+  the mirror image of the existing "this alert is dead, want to widen it?"
+  nudge — a good alert experience means it's never too narrow OR too broad.
+- Goal: alert-experience (great alert *management* — closing the last open
+  `[P2][goal]` item in the queue) — tier 3 `[goal]`. Tier 1 (`[bug]`): most
+  recent CHANGELOG entry (`admin-digest-vote-counts`) was a PASS; swept
+  BACKLOG.md, no unstruck `[bug]` line found. Tier 2 (`[want]`): re-checked
+  every unstruck `[P1]`/`[P2][want]` line — same standing set as every recent
+  cycle's audit (save-search auth-wall reconciliation and the collection-
+  layout mosaic redesign both explicitly flagged as needing a human product
+  call/mock; Trade-A-Plane/Controller/AirMart/AeroTrader bot-protection-
+  blocked; Bay-Area coverage benchmark blocked on a real denominator;
+  owner-leads dataset needs compliance review; dynamic-location seed personas
+  has no live effect) — none buildable autonomously. Dropped to tier 3 and
+  picked the one item explicitly named as the queue's last open slot in the
+  prior cycle's "Next" note. Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T095544Z-alert-narrow-nudge.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0 clean. Full `node --test` suite (468 tests) passes, 0 failures
+  (this cycle's new DB-query code — `getNarrowSuggestions` in
+  `alertMatchCounts.ts` — follows that file's existing untested-by-design
+  pattern, same as every other function in it: it calls `createAdminClient()`
+  directly against live Supabase with no mocking seam, so it's verified via
+  live checks instead, same precedent as the digest cron). Implementation:
+  new `getNarrowSuggestions(sourcePath, currentCount)` — above a 75-match
+  threshold, computes up to 2 candidate tighteners (dominant model, dominant
+  state, price cap at the matching set's median) from the alert's own missing
+  editable criteria (`parseEditableAlertTarget`), then re-verifies each
+  against a real live count via the existing `getAlertMatchCount` before ever
+  offering it — a candidate that would leave 0 matches or doesn't actually
+  shrink the count is silently dropped. New `NarrowAlertNudge.tsx` client
+  component (same shape/pattern as the existing `WidenAlertNudge.tsx`)
+  renders the buttons; applies via the existing `updateAlertCriteria` server
+  action — no new server action, no schema change, no new capture point.
+  Aircraft-type alerts only this cycle: partnership/seeker alert volume never
+  approaches the threshold on this marketplace today (queried live: 23 total
+  active partnerships site-wide) — a parallel path for them would be
+  untestable dead code, not a real feature; noted as a follow-up if inventory
+  grows. Live-verified end-to-end against real prod data + two throwaway
+  `@example.com` test alert rows (seeded + deleted via service role, real
+  browser via Playwright against the running production server): a
+  "Cessna" make-only alert (416 live matches) correctly surfaced "Only
+  Cessna 172 — 34 listings" and "Only in California — 48 listings"; clicking
+  one updated the DB row's `source_path`/`context` in place (confirmed via a
+  direct read-only query) and swapped to a confirmation line with zero page
+  reload and zero console errors; a nationwide `/aircraft` alert (2,176
+  matches) rendered both tighteners correctly wrapped at mobile 375px with
+  zero overflow/console errors; an already-narrow alert (34 matches, below
+  threshold) and a low-volume partnership alert (6 matches) both correctly
+  rendered no nudge. Both test rows deleted immediately after (confirmed 0
+  remain via a follow-up query). QA against the PRODUCTION build (`next
+  start`) via `qa-smoke.mjs` on `/alerts/manage`: 2/2 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow at desktop 1280 +
+  mobile 375). Visual cycle (new rendered UI) — screenshots read into the QA
+  verdict; also killed a stale `next-server` process left running on port
+  3000 from an earlier, uncleanly-ended cycle before starting this cycle's
+  own server, and confirmed the port was free again before finishing.
+- Screenshots: nightshift/screenshots/alert-narrow-nudge/
+- Next: the standing alert-experience `[P2][goal]` queue is now empty as of
+  this cycle (the last 3 items — aria-live sweep, digest vote counts, and
+  this narrow nudge — all shipped across the last few cycles). The two `[P1]`
+  "instant alerts" items remain explicitly human-blocked (need a Vercel plan-
+  tier decision for sub-daily cron). Next cycle should re-sweep BACKLOG.md for
+  any new `[bug]`/`[want]` items first; if the goal queue is still empty,
+  emit `ABORT — none — plan needed` to trigger a fresh Opus/Fable plan-pass
+  batch of alert-experience `[goal]` tasks.
+
 ## 20260718T094330Z — PASS — admin-digest-vote-counts
 - Pages: (internal — Monday admin alert-funnel email only; no rendered-page UI change)
 - What: **The weekly admin email now shows whether subscribers are giving the alert
