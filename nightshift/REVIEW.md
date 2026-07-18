@@ -1,3 +1,34 @@
+## 2026-07-18T10:07:14Z — Night Shift run: 21 cycles (PASS 17 / FAIL 1) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus
+- Night spend so far: $81.4290 of $120 cap
+
+- PASS — alert-email-typo-guard — added a suggest-only Did you mean pilot@gmail.com? typo-correction chip to the alert-signup email field site-wide, so a fat-fingered domain no l
+- PASS — alert-digest-upgrade-nudge — Busy weekly alert digests (≥5 matches) now show a one-click switch to daily digests link, mirroring the existing daily→weekly fewer emai
+- PASS — alert-typo-guard-keyboard-sweep — extended the did you mean gmail.com? typo-guard chip and mobile-keyboard-friendly input attributes from AlertSignup to the footer email
+- PASS — alert-unsubscribe-reason-chips — added four one-tap why did you unsubscribe chips to the `/alerts/status` recovery box, firing an analytics-only `alert_unsubscribe_reaso
+- PASS — alert-delete-all — shipped a typed-confirmation-gated Delete all my alerts & data self-serve action on `/alerts/manage` (both signed-in and token-scoped paths), catching
+- ABORT — none — plan needed
+- cycle produced no verdict (exit 124)
+- PASS — alert-revive-remaining-paths — the 4 remaining alert re-subscribe paths (confirm-page cross-sell, manage +New alert/Duplicate, /searches) now revive a previously-unsubsc
+- PASS — alert-digest-price-context — Added an honest, comp-derived ~N% below/above avg · $Xk median · N comps market-context line to new-listing aircraft cards in alert digest
+- PASS — admin-alert-funnel-weekly — added a Monday-only (UTC) admin email to the existing alert-digest cron summarizing real week-over-week signup/confirm counts, current paused
+- PASS — alert-data-export — Added a Download my alert data self-serve JSON export link on /alerts/manage, the read-only sibling of the existing delete-all control, gated by the 
+- PASS — alert-capture-aria-live — added aria-live/role=status/role=alert to the alert-signup, footer-capture, and mobile sticky-bar components so success/error/typo-suggestion s
+- ABORT — none — plan needed
+- PASS — alert-crosssell-rightnoun — fixed the `/partnerships/[id]` post-success banner's alert box to offer the right-noun seeker alert (was pointing at the poster's own market)
+- PASS — alert-unsub-wow-delta — Monday admin alert-funnel email now shows a real week-over-week Unsubscribed delta (new `alerts.unsubscribed_at` column, stamped/cleared at every
+- PASS — alert-pause-bounce-wow-delta — Monday admin alert-funnel email now shows real week-over-week Paused/Bounced deltas (additive `paused_at`/`bounced_at` columns, stamped/cl
+- PASS — alert-manage-actions-aria-live — `/alerts/manage`'s pause/resume/snooze/delete/resend/send-sample actions, frequency toggle, and target-price edit now announce their res
+- PASS — alert-manage-forms-aria-live — Added screen-reader announcements (`aria-live`/`role=status`/`role=alert`) to the 5 remaining `/alerts/manage` + `/alerts/status` forms (A
+- PASS — admin-digest-vote-counts — the Monday admin alert-funnel email now surfaces the digest 👍/👎 feedback vote counts (this week vs last, with an honest no votes yet sta
+- PASS — alert-narrow-nudge — Added the Narrow this alert? nudge on `/alerts/manage`: aircraft alerts matching >75 live listings now get 1-2 live-verified one-tap tighteners (dom
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 7.3 on 2 cores, sustained ~62 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 21 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-17T13:23:48Z — Night Shift run: 13 cycles (PASS 10 / FAIL 1) — night budget cap ($120)
 - Models: cycles on sonnet; 1 escalated to opus; 3 quality-judged on opus
 - Night spend so far: $120.0750 of $120 cap
