@@ -120,7 +120,7 @@ export default function FooterAlertCapture() {
 
   if (submitted) {
     return (
-      <div ref={rootRef} className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
+      <div ref={rootRef} role="status" aria-live="polite" className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-600" />
         Check {confirmedEmail} to confirm — you&rsquo;ll hear about new {context ?? 'listings'}.
       </div>
@@ -129,7 +129,7 @@ export default function FooterAlertCapture() {
 
   if (locallySubscribed) {
     return (
-      <div ref={rootRef} className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
+      <div ref={rootRef} role="status" aria-live="polite" className="flex items-center gap-2 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-600" />
         You&rsquo;re getting alerts —{' '}
         <Link href="/alerts/manage" className="font-medium text-sky-700 underline-offset-2 hover:underline">
@@ -190,15 +190,17 @@ export default function FooterAlertCapture() {
         </form>
       )}
       {emailSuggestion && !(rememberedEmail && !useManualEmail) && (
-        <button
-          type="button"
-          onClick={() => setEmail(emailSuggestion)}
-          className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline sm:basis-full"
-        >
-          Did you mean <span className="font-semibold">{emailSuggestion}</span>?
-        </button>
+        <div role="status" aria-live="polite" className="sm:basis-full">
+          <button
+            type="button"
+            onClick={() => setEmail(emailSuggestion)}
+            className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline"
+          >
+            Did you mean <span className="font-semibold">{emailSuggestion}</span>?
+          </button>
+        </div>
       )}
-      {errorMsg && <p className="mt-2 text-xs text-red-600 sm:basis-full">{errorMsg}</p>}
+      {errorMsg && <p role="alert" className="mt-2 text-xs text-red-600 sm:basis-full">{errorMsg}</p>}
     </div>
   )
 }
