@@ -1412,13 +1412,12 @@ function formatWeekRange(startIso: string, endIso: string): string {
 /**
  * The Monday admin alert-funnel week-over-week summary (GOAL.md: "judge
  * alerts week-over-week"). DB-derived from `getAlertFunnelWeeklySnapshot`.
- * created/confirmed/unsubscribed all have real timestamps, so they get an
- * honest WoW delta (unsubscribed only once `unsubscribedAtMigrated` is true —
- * see supabase/schema.sql's `alerts_unsubscribed_at` block; renders in the
- * current-totals table only, exactly as before, until then). paused/bounced
- * still have no timestamp column, so those stay plainly-labeled current
- * totals, never a fabricated "this week" number. Internal-only, no
- * unsubscribe link (not a subscriber-facing email).
+ * created/confirmed/unsubscribed/paused/bounced all have real timestamps, so
+ * each gets an honest WoW delta once its matching `*AtMigrated` flag is true
+ * (see supabase/schema.sql's `alerts_unsubscribed_at` /
+ * `alerts_paused_bounced_at` blocks) — rendering in the current-totals table
+ * only, exactly as before, until then. Internal-only, no unsubscribe link
+ * (not a subscriber-facing email).
  */
 export function buildAdminAlertFunnelEmail(
   snapshot: AlertFunnelWeeklySnapshot,
@@ -1479,6 +1478,24 @@ export function buildAdminAlertFunnelEmail(
           <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek))}</td></tr>`
               : ''
           }
+          ${
+            snapshot.pausedAtMigrated
+              ? `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Paused</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.pausedThisWeek}</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek))}</td></tr>`
+              : ''
+          }
+          ${
+            snapshot.bouncedAtMigrated
+              ? `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Bounced</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.bouncedThisWeek}</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek))}</td></tr>`
+              : ''
+          }
         </table>
 
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Current totals (not weekly)</p>
@@ -1531,7 +1548,7 @@ export function buildAdminAlertFunnelEmail(
 
 New signups: ${snapshot.createdThisWeek} (${formatWeekDelta(snapshot.createdThisWeek, snapshot.createdLastWeek)})
 Confirmed: ${snapshot.confirmedThisWeek} (${formatWeekDelta(snapshot.confirmedThisWeek, snapshot.confirmedLastWeek)})
-${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}
+${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}
 Current totals (not weekly):
   Live: ${snapshot.liveTotal}
   Pending confirmation: ${snapshot.pendingTotal}

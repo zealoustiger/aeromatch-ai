@@ -1016,6 +1016,10 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   confirmedLastWeek: 6,
   unsubscribedThisWeek: 3,
   unsubscribedLastWeek: 5,
+  pausedThisWeek: 2,
+  pausedLastWeek: 1,
+  bouncedThisWeek: 1,
+  bouncedLastWeek: 1,
   liveTotal: 142,
   pendingTotal: 11,
   pausedTotal: 5,
@@ -1027,6 +1031,8 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   ],
   sourceColumnMigrated: true,
   unsubscribedAtMigrated: true,
+  pausedAtMigrated: true,
+  bouncedAtMigrated: true,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -1059,12 +1065,12 @@ test('buildAdminAlertFunnelEmail: a down week renders a negative delta, not a fa
   assert.match(text, /New signups: 4 \(-5 vs last week\)/)
 })
 
-test('buildAdminAlertFunnelEmail: paused/bounced are labeled "current totals (not weekly)", never given a WoW delta', () => {
+test('buildAdminAlertFunnelEmail: paused/bounced current totals always render under "Current totals (not weekly)"', () => {
   const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
   assert.match(html, /Current totals \(not weekly\)/)
   assert.match(text, /Current totals \(not weekly\)/)
-  assert.doesNotMatch(html, /Paused[\s\S]{0,80}vs last week/)
-  assert.doesNotMatch(html, /Bounced[\s\S]{0,80}vs last week/)
+  assert.match(html, /Paused<\/td>\s*<td[^>]*>5<\/td>/)
+  assert.match(html, /Bounced<\/td>\s*<td[^>]*>2<\/td>/)
 })
 
 test('buildAdminAlertFunnelEmail: unsubscribed gets a real week-over-week delta once unsubscribedAtMigrated is true', () => {
@@ -1085,6 +1091,46 @@ test('buildAdminAlertFunnelEmail: when unsubscribedAtMigrated is false, unsubscr
   assert.doesNotMatch(text, /Unsubscribed: \d+ \(/)
   assert.match(html, /Unsubscribed<\/td>\s*<td[^>]*>23<\/td>/)
   assert.match(text, /Unsubscribed: 23/)
+})
+
+test('buildAdminAlertFunnelEmail: paused gets a real week-over-week delta once pausedAtMigrated is true', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Paused[\s\S]{0,300}vs last week/)
+  assert.match(text, /Paused: 2 \(\+1 vs last week\)/)
+  // The current-totals stock count (5, distinct from the weekly flow of 2)
+  // must still render unchanged alongside the new WoW row.
+  assert.match(html, /Paused<\/td>\s*<td[^>]*>5<\/td>/)
+})
+
+test('buildAdminAlertFunnelEmail: when pausedAtMigrated is false, paused renders only as a current total — no WoW row, no regression', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, pausedAtMigrated: false, pausedThisWeek: 0, pausedLastWeek: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.doesNotMatch(html, /Paused[\s\S]{0,80}vs last week/)
+  assert.doesNotMatch(text, /Paused: \d+ \(/)
+  assert.match(html, /Paused<\/td>\s*<td[^>]*>5<\/td>/)
+  assert.match(text, /Paused: 5/)
+})
+
+test('buildAdminAlertFunnelEmail: bounced gets a real week-over-week delta once bouncedAtMigrated is true', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Bounced[\s\S]{0,300}vs last week/)
+  assert.match(text, /Bounced: 1 \(flat vs last week\)/)
+  // The current-totals stock count (2, distinct from the weekly flow of 1)
+  // must still render unchanged alongside the new WoW row.
+  assert.match(html, /Bounced<\/td>\s*<td[^>]*>2<\/td>/)
+})
+
+test('buildAdminAlertFunnelEmail: when bouncedAtMigrated is false, bounced renders only as a current total — no WoW row, no regression', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, bouncedAtMigrated: false, bouncedThisWeek: 0, bouncedLastWeek: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.doesNotMatch(html, /Bounced[\s\S]{0,80}vs last week/)
+  assert.doesNotMatch(text, /Bounced: \d+ \(/)
+  assert.match(html, /Bounced<\/td>\s*<td[^>]*>2<\/td>/)
+  assert.match(text, /Bounced: 2/)
 })
 
 test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {

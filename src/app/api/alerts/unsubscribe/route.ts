@@ -17,20 +17,27 @@ async function applyUnsubscribe(token: string): Promise<boolean> {
   if (!tokens.length) return false
   try {
     const supabase = createAdminClient()
-    let { data, error } = await supabase
-      .from('alerts')
-      .update({ status: 'unsubscribed', unsubscribed_at: new Date().toISOString() })
-      .in('unsubscribe_token', tokens)
-      .select('id')
-
-    // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the plain
-    // status flip rather than failing the unsubscribe itself.
-    if (error?.message?.includes('unsubscribed_at')) {
-      ;({ data, error } = await supabase
-        .from('alerts')
-        .update({ status: 'unsubscribed' })
-        .in('unsubscribe_token', tokens)
-        .select('id'))
+    // unsubscribed_at, paused_at, and bounced_at may independently be
+    // un-migrated live — retry dropping whichever one the error names, up to
+    // once each (order-independent), same graceful-fallback pattern as every
+    // other alerts.* column. "Works from any prior state" includes paused/
+    // bounced, so clear both alongside setting unsubscribed_at.
+    let payload: Record<string, unknown> = {
+      status: 'unsubscribed',
+      unsubscribed_at: new Date().toISOString(),
+      paused_at: null,
+      bounced_at: null,
+    }
+    const optionalKeys = ['unsubscribed_at', 'paused_at', 'bounced_at']
+    let { data, error } = await supabase.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
+    for (
+      let i = 0;
+      i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+      i++
+    ) {
+      const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+      payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+      ;({ data, error } = await supabase.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id'))
     }
 
     if (error) {

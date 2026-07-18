@@ -1420,16 +1420,16 @@ export async function GET(req: NextRequest) {
   // Auto-resume snoozed alerts whose "Snooze 30 days" date has passed (GOAL.md:
   // a real resume, not "we'll check back soon") before the due-alert fetch
   // below, so a just-resumed row can be picked up in this same pass. No-ops
-  // gracefully (logs + continues) if `paused_until` isn't migrated live yet —
-  // every snoozed alert simply stays paused until a human applies it, same as
-  // every other pending `alerts.*` column.
+  // gracefully (logs + continues) if `paused_until`/`paused_at` isn't migrated
+  // live yet — every snoozed alert simply stays paused until a human applies
+  // it, same as every other pending `alerts.*` column.
   const { error: resumeError } = await supabase
     .from('alerts')
-    .update({ status: 'confirmed', paused_until: null })
+    .update({ status: 'confirmed', paused_until: null, paused_at: null })
     .eq('status', 'paused')
     .not('paused_until', 'is', null)
     .lte('paused_until', nowIso)
-  if (resumeError && !resumeError.message?.includes('paused_until')) {
+  if (resumeError && !resumeError.message?.includes('paused_until') && !resumeError.message?.includes('paused_at')) {
     console.error('[alert-digest] snooze auto-resume error:', resumeError.message)
   }
 
@@ -1899,10 +1899,19 @@ export async function GET(req: NextRequest) {
     const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'listing-unavailable' })
 
     if (result.sent || result.reason === 'no-key') {
-      await supabase
+      const { error: watchPauseError } = await supabase
         .from('alerts')
-        .update({ status: 'paused', last_digest_at: new Date().toISOString() })
+        .update({ status: 'paused', last_digest_at: new Date().toISOString(), paused_at: new Date().toISOString() })
         .eq('id', alert.id)
+      // Not-yet-migrated DB (`paused_at` column missing) — retry the update
+      // without it rather than leaving the alert stuck un-paused after the
+      // one-time notice already sent.
+      if (watchPauseError?.message?.includes('paused_at')) {
+        await supabase
+          .from('alerts')
+          .update({ status: 'paused', last_digest_at: new Date().toISOString() })
+          .eq('id', alert.id)
+      }
       sent++
       emailsSent++
     }

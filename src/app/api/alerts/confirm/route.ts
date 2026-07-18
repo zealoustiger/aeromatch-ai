@@ -135,10 +135,31 @@ export async function GET(req: NextRequest) {
 
     const wasPending = existing.status === 'pending'
 
-    const { error: updateError } = await supabase
-      .from('alerts')
-      .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
-      .eq('id', existing.id)
+    // The lookup above only excludes 'unsubscribed', so an old confirm link
+    // clicked after the row has since been paused or bounced still lands here
+    // — clear both status-timestamp columns alongside the confirm, same as
+    // every other path that lands on 'confirmed' (resumeAlert et al). Each
+    // may independently be un-migrated live — retry dropping whichever one
+    // the error names, up to once each.
+    let payload: Record<string, unknown> = {
+      status: 'confirmed',
+      confirmed_at: new Date().toISOString(),
+      paused_at: null,
+      bounced_at: null,
+    }
+    const optionalKeys = ['paused_at', 'bounced_at']
+    let { error: updateError } = await supabase.from('alerts').update(payload).eq('id', existing.id)
+    for (
+      let i = 0;
+      i < optionalKeys.length &&
+      updateError &&
+      optionalKeys.some((k) => k in payload && updateError!.message?.includes(k));
+      i++
+    ) {
+      const dropKey = optionalKeys.find((k) => k in payload && updateError!.message?.includes(k))!
+      payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+      ;({ error: updateError } = await supabase.from('alerts').update(payload).eq('id', existing.id))
+    }
 
     if (updateError) {
       console.error('[alerts/confirm] update failed:', updateError.message)

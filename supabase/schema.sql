@@ -943,3 +943,26 @@ alter table alerts add column if not exists new_listing_opt_out boolean not null
 -- graceful-fallback pattern as every `alerts.*` column above) and the funnel
 -- email keeps rendering unsubscribes as a current-total only, exactly as today.
 alter table alerts add column if not exists unsubscribed_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_paused_bounced_at
+-- Slice 2 of the status-change-timestamps item (slice 1 was unsubscribed_at
+-- above): records WHEN an alert flipped to `status='paused'` or
+-- `status='bounced'` — today only the status itself is stored, so the Monday
+-- admin funnel email can only show current-total Paused/Bounced counts, never
+-- an honest week-over-week delta (see alertFunnelWeekly.ts /
+-- email.ts's buildAdminAlertFunnelEmail). Both nullable, no default,
+-- forward-only — rows paused/bounced before this migration simply have no
+-- timestamp and won't appear in a WoW bucket, same honest-gap posture as
+-- unsubscribed_at above. `paused_at` is stamped by pauseAlert/snoozeAlert/
+-- pauseAllAlerts/pauseAlertByToken/snoozeAlertByToken (src/app/actions.ts) and
+-- the alert-digest cron's listing-watch auto-pause; cleared by resumeAlert/
+-- resumeAllAlerts and the cron's snooze auto-resume. `bounced_at` is stamped
+-- by pauseAlertsForBouncedEmail (src/lib/alertBounce.ts); cleared by
+-- resumeAlert (which already accepts a prior 'bounced' status) and
+-- resumeAllAlerts (now also resumes bounced rows, not just paused ones). Apply
+-- in the Supabase SQL editor. Until applied, every write path fails soft and
+-- retries without the column (same graceful-fallback pattern as every
+-- `alerts.*` column above) and the funnel email keeps rendering Paused/Bounced
+-- as current-totals only, exactly as today.
+alter table alerts add column if not exists paused_at timestamptz;
+alter table alerts add column if not exists bounced_at timestamptz;
