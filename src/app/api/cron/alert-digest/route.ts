@@ -720,6 +720,8 @@ function toDigestSample(
     compLabel: comp ? compLabel(comp) : undefined,
     compBelowAvg: comp?.kind === 'below',
     url: `${SITE_URL}/aircraft/listing/${row.id}`,
+    id: row.id,
+    type: 'aircraft',
   }
 }
 
@@ -944,6 +946,8 @@ function toPartnershipDigestSample(row: PartnershipSampleRow, previousPrice?: nu
     price: row.buy_in_price,
     previousPrice,
     url: `${SITE_URL}/partnerships/${row.id}`,
+    id: row.id,
+    type: 'partnership',
   }
 }
 
@@ -1123,6 +1127,8 @@ function toSeekerDigestSample(row: SeekerSampleRow): AlertDigestSample {
     location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
     price: null,
     url: `${SITE_URL}/partnerships/seeking/${row.id}`,
+    id: row.id,
+    type: 'seeker',
   }
 }
 
@@ -1722,9 +1728,12 @@ export async function GET(req: NextRequest) {
           : undefined
       // One-click "was this digest useful?" footer links — see the
       // digest-feedback route. Only the aggregate digest template offers
-      // these (matches the crossSell precedent just below).
-      const digestFeedbackUpUrl = unsubToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${unsubToken}&vote=up` : undefined
-      const digestFeedbackDownUrl = unsubToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${unsubToken}&vote=down` : undefined
+      // these (matches the crossSell precedent just below). Also the shared
+      // base for each sample's own "Not relevant?" link (see
+      // notRelevantLink in email.ts) — same token, no vote param yet.
+      const digestFeedbackBaseUrl = unsubToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${unsubToken}` : undefined
+      const digestFeedbackUpUrl = digestFeedbackBaseUrl ? `${digestFeedbackBaseUrl}&vote=up` : undefined
+      const digestFeedbackDownUrl = digestFeedbackBaseUrl ? `${digestFeedbackBaseUrl}&vote=down` : undefined
 
       // When this send is purely about a price drop (no new listings to also
       // report) on an aircraft OR partnership alert, feature the single best
@@ -1782,6 +1791,7 @@ export async function GET(req: NextRequest) {
             marketPulse: marketPulse ?? undefined,
             digestFeedbackUpUrl,
             digestFeedbackDownUrl,
+            digestFeedbackBaseUrl,
           })
 
       const result = await sendEmail({
@@ -1862,8 +1872,9 @@ export async function GET(req: NextRequest) {
       : undefined
     // Same one-click vote as the single-alert path — the first alert's token
     // is enough to resolve the responder's email (mirrors manageUrl above).
-    const digestFeedbackUpUrl = firstToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${firstToken}&vote=up` : undefined
-    const digestFeedbackDownUrl = firstToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${firstToken}&vote=down` : undefined
+    const digestFeedbackBaseUrl = firstToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${firstToken}` : undefined
+    const digestFeedbackUpUrl = digestFeedbackBaseUrl ? `${digestFeedbackBaseUrl}&vote=up` : undefined
+    const digestFeedbackDownUrl = digestFeedbackBaseUrl ? `${digestFeedbackBaseUrl}&vote=down` : undefined
 
     const { subject, html, text } = buildCombinedAlertDigestEmail({
       sections,
@@ -1872,6 +1883,7 @@ export async function GET(req: NextRequest) {
       crossSell: crossSellOpt,
       digestFeedbackUpUrl,
       digestFeedbackDownUrl,
+      digestFeedbackBaseUrl,
     })
 
     const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl, emailType: 'combined-digest' })

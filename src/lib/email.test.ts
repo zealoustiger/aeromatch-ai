@@ -351,6 +351,143 @@ test('digest: with only one digest-feedback url, no row renders (they are always
   assert.doesNotMatch(text, /Was this digest useful/)
 })
 
+test('digest: with digestFeedbackBaseUrl and a sample id, a per-sample "Not relevant?" link renders (HTML + text)', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=xyz',
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+        id: 'abc',
+        type: 'aircraft',
+      },
+    ],
+  })
+  assert.match(html, /Not relevant\?/)
+  assert.match(
+    html,
+    /href="https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=xyz&amp;listing=abc&amp;type=aircraft&amp;title=2015%20Cessna%20172S%20Skyhawk"/
+  )
+  assert.match(
+    text,
+    /Not relevant\? https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=xyz&listing=abc&type=aircraft&title=2015%20Cessna%20172S%20Skyhawk/
+  )
+})
+
+test('digest: without digestFeedbackBaseUrl, no "Not relevant?" link renders even with sample ids', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+        id: 'abc',
+        type: 'aircraft',
+      },
+    ],
+  })
+  assert.doesNotMatch(html, /Not relevant\?/)
+  assert.doesNotMatch(text, /Not relevant\?/)
+})
+
+test('digest: with digestFeedbackBaseUrl but no sample id, no "Not relevant?" link renders for that sample', () => {
+  const { html } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=xyz',
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+      },
+    ],
+  })
+  assert.doesNotMatch(html, /Not relevant\?/)
+})
+
+test('combined digest: with digestFeedbackBaseUrl, each section\'s sample gets its own "Not relevant?" link', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=a',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172',
+        samples: [
+          {
+            title: '2015 Cessna 172S Skyhawk',
+            photoUrl: null,
+            isPlaceholder: false,
+            year: 2015,
+            ttaf: 1240,
+            location: 'Austin, TX',
+            price: 219_000,
+            url: 'https://clubhanger.com/aircraft/listing/abc',
+            id: 'abc',
+            type: 'aircraft',
+          },
+        ],
+      },
+    ],
+  })
+  assert.match(html, /Not relevant\?/)
+  assert.match(html, /listing=abc&amp;type=aircraft/)
+  assert.match(text, /Not relevant\? https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=a&listing=abc&type=aircraft/)
+})
+
+test('digest: sample cards never nest the "Not relevant?" link inside the card\'s own <a> (invalid HTML)', () => {
+  const { html } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=xyz',
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+        id: 'abc',
+        type: 'aircraft',
+      },
+    ],
+  })
+  const cardAnchorClose = html.indexOf('</a>')
+  const notRelevantIndex = html.indexOf('Not relevant?')
+  assert.ok(cardAnchorClose > -1 && notRelevantIndex > cardAnchorClose)
+})
+
 test('digest: sampleNote prefixes the subject with "Sample:" and renders a sample banner', () => {
   const { subject, html, text } = buildAlertDigestEmail({
     ...DIGEST_BASE,
