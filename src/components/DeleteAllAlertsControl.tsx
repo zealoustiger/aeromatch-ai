@@ -48,7 +48,11 @@ export default function DeleteAllAlertsControl({ token, email, count }: { token?
 
   if (deletedCount !== null) {
     return (
-      <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <p
+        className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+        role="status"
+        aria-live="polite"
+      >
         Deleted {deletedCount} alert{deletedCount === 1 ? '' : 's'} for <strong>{email}</strong>. Nothing else is
         stored for this address on ClubHanger.
       </p>
@@ -114,7 +118,11 @@ export default function DeleteAllAlertsControl({ token, email, count }: { token?
               Cancel
             </button>
           </div>
-          {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+          {error ? (
+            <p className="mt-2 text-xs text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

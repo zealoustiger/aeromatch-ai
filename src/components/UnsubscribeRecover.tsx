@@ -80,7 +80,11 @@ export default function UnsubscribeRecover({
   if (status === 'done') {
     if (doneAction === 'found') {
       return (
-        <div className="mt-6 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div
+          className="mt-6 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          role="status"
+          aria-live="polite"
+        >
           <p className="flex items-center gap-2 font-medium">
             <PartyPopper className="h-4 w-4 shrink-0" />
             Congrats on the new aircraft! We&apos;ve stopped these emails.
@@ -102,7 +106,11 @@ export default function UnsubscribeRecover({
           ? `${subject} snoozed until ${resumeDate}, not gone — we'll pick back up automatically then.`
           : `${subject} paused, not gone — we'll hold off until you resume from any aircraft page.`
     return (
-      <div className="mt-6 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+      <div
+        className="mt-6 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+        role="status"
+        aria-live="polite"
+      >
         <Check className="h-4 w-4 shrink-0" />
         {message}
       </div>
@@ -148,7 +156,11 @@ export default function UnsubscribeRecover({
           {status === 'sending' ? 'Pausing…' : 'Pause instead'}
         </button>
       </div>
-      {status === 'error' && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
+      {status === 'error' && (
+        <p className="mt-2 text-xs text-red-600" role="alert">
+          {errorMsg}
+        </p>
+      )}
       <div className="mt-3 border-t border-[#ece6dc] pt-3">
         <button
           onClick={() => handleRecover('found')}
@@ -165,7 +177,9 @@ export default function UnsubscribeRecover({
       </p>
       <div className="mt-3 border-t border-[#ece6dc] pt-3">
         {reason ? (
-          <p className="text-xs text-slate-500">Thanks — that helps.</p>
+          <p className="text-xs text-slate-500" role="status" aria-live="polite">
+            Thanks — that helps.
+          </p>
         ) : (
           <>
             <p className="text-xs text-slate-500">Mind telling us why?</p>

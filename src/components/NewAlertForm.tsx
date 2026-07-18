@@ -74,6 +74,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState(false)
+  const [announcement, setAnnouncement] = useState<string | null>(null)
 
   const [type, setType] = useState<EditableAlertTarget['type']>(initial?.type ?? 'aircraft')
   const [make, setMake] = useState(initial?.make ?? '')
@@ -126,6 +127,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
       setOpen(false)
       reset()
       setCreated(true)
+      setAnnouncement('Alert created.')
       router.refresh()
       onClose?.()
     })
@@ -133,6 +135,9 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
 
   return (
     <div className="mb-4">
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
       {open ? (
         <form
           onSubmit={handleSubmit}
@@ -238,7 +243,11 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
             ) : null}
           </div>
 
-          {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+          {error ? (
+            <p className="mt-2 text-xs text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
 
           <div className="mt-3 flex items-center gap-2">
             <button
