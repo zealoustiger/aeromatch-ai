@@ -2,6 +2,66 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T115306Z — PASS — digest-feedback-loops-rollup
+- Pages: /admin/alerts, plus the Monday admin alert-funnel email (internal admin
+  surfaces only — no public-facing page changed)
+- What: **The Monday admin alert-funnel email now surfaces two demand signals the
+  site was already collecting but nobody could read.** (1) A "Least relevant listings
+  this week" section lists the aircraft/partnership listings subscribers keep tapping
+  "Not relevant?" on in their digest emails (top 5 by count, with the listing title +
+  how many flags). (2) An "Instant-alerts interest" line shows how many people tapped
+  "I'd want instant alerts" this week and all-time — the demand ledger for the still-
+  blocked decision on real instant sends. Both also appear on the `/admin/alerts`
+  dashboard. Honest empty states everywhere ("No listings flagged as off-target this
+  week" / "No interest recorded yet") — never a fabricated 0.
+- Goal: alert-experience (prove-it-converts pillar — the loop can finally hear the two
+  feedback signals it asked for). Tier 3 `[goal]`, second item in plan-pass batch #7.
+  Tier 1 (`[bug]`): most recent CHANGELOG entry (`price-drop-meaningful-floor`) was a
+  PASS; swept BACKLOG.md for any unstruck `[bug]` line — none found. Tier 2 (`[want]`):
+  re-checked every unstruck `[P1]`/`[P2][want]` line — same standing blocked-on-human
+  set as every recent cycle (save-search auth-wall reconciliation + collection-layout
+  mosaic need a human product call/mock; competitor-scrape items bot-blocked; Bay-Area
+  benchmark needs a real FAA denominator; owner-leads needs compliance review) — none
+  buildable autonomously. Dropped to tier 3: picked the `[P1][goal]` named as the prior
+  cycle's "Next" note. Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T115306Z-digest-feedback-loops-rollup.md
+- Verdict: PASS. `npx tsc --noEmit` and `npx next build` both exit 0 clean. Full
+  `node --test` suite (502 tests, up from 498 — 4 new tests) passes, 0 failures: new
+  `buildAdminAlertFunnelEmail` coverage for the instant-interest line (present + honest
+  empty state) and the least-relevant-listings section (present with stored titles/flag
+  counts + honest empty state), HTML and text. Implementation: two pure-ish rollups in
+  `src/lib/alertScoreboard.ts` — `getNotRelevantListingsRollup` (groups last-7-days
+  `feedback` rows where `type='digest_listing_vote'` by `page_path`, top 5 by count,
+  title derived from the stored `Not relevant: <title>` message, never fabricated) and
+  `getInstantInterestRollup` (real this-week + all-time `instant_alert_interest` counts).
+  Wired both into `AlertFunnelWeeklySnapshot` (`src/lib/alertFunnelWeekly.ts`), rendered
+  in `buildAdminAlertFunnelEmail` (`src/lib/email.ts`, HTML + text, mirroring the
+  existing `digestFeedbackHtml`/`demandGapSectionHtml` patterns), and mirrored as two
+  small sections on `/admin/alerts` (`src/app/admin/alerts/page.tsx`). Dev preview
+  fixture (`/api/dev/email-preview/admin-alert-funnel`) updated to exercise both. No
+  schema change, no new capture point — both signals already write to the `feedback`
+  table. QA: visual cycle — served the PRODUCTION build (`npx next build` +
+  `npx next start` on port 3000) and ran `qa-smoke.mjs` against `/admin/alerts` and the
+  dev email-preview route: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at desktop 1280 + mobile 375). Read the email-preview screenshot
+  into the verdict: the "Instant-alerts interest (taps): ⚡ 4 this week / 17 all-time"
+  line renders correctly between Email engagement and Current totals, and the "Least
+  relevant listings this week" section renders below "Demand with no supply" with both
+  fixture listings + flag counts, clean layout. NOTE: `/admin/alerts` sits behind the
+  admin auth gate, so headless QA renders the "Admin only — sign in" gate page (still
+  200 / no console errors / no overflow) rather than the dashboard itself; the email is
+  the required surface per the backlog item and it's fully verified — the admin-page
+  sections reuse the page's own proven section patterns and typecheck clean. Confirmed
+  port 3000 free before finishing; no prod test data created (read-only fixtures only).
+- Screenshots: nightshift/screenshots/digest-feedback-loops-rollup/
+- Next: plan-pass batch #7 has 5 items open. The next most self-contained slices are the
+  two `[P2][goal]` UI-only ones with no migration dependency — the "heads up, this
+  overlaps an alert you already have" subscribe-success hint (`detectOverlappingAlerts`
+  already exists, just needs wiring at subscribe time) and the multi-model chips on the
+  alert edit form (browse parity). The remaining three (`email-engagement recipient`
+  attribution, digest-cron reliability line, weekly-digest day-of-week) each need a
+  human-applied additive migration first — same fail-soft DDL precedent as prior asks.
+
 ## 20260718T114523Z — PASS — price-drop-meaningful-floor
 - Pages: (internal — new-listing/price-drop alert digest cron only; no rendered-page
   UI change)
