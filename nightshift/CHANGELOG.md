@@ -2,6 +2,79 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T081052Z — PASS — alert-data-export
+- Pages: /alerts/manage
+- What: **A subscriber can now download every alert we hold for their email as a JSON
+  file, right next to the "delete all my alerts & data" control.** Before this cycle,
+  "forget me entirely" existed but there was no way to first see what ClubHanger
+  actually holds. A new quiet "Download my alert data" link (works signed-in or via
+  the no-account manage-link token, same as delete-all) triggers a real file download
+  containing every alert row tied to that email — including paused and unsubscribed
+  ones, since a complete "what do you hold on me" export can't quietly omit rows the
+  live management list itself hides. Deliberately excludes the three bearer-secret
+  columns (`confirm_token`, `unsubscribe_token`, `email_change_token`) — those are
+  unauthenticated action-link credentials, not "data about the user," and must never
+  end up inside a file the owner might forward or store insecurely.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG
+  entry (`admin-alert-funnel-weekly`) was a PASS; swept BACKLOG.md for any unstruck
+  `[bug]` line — none found. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing set as recent cycles (save-search auth wall
+  explicitly flagged needing a human product call; mosaic redesign; Trade-A-Plane;
+  Bay-Area benchmark; owner-leads dataset; bot-walled competitor scrapes) — none
+  buildable autonomously. Dropped to tier 3. The 🔔 alert-experience `[P1][goal]` queue
+  is genuinely drained (the one open P1, near-instant/"instant" alerts, is explicitly
+  flagged blocked on a human Vercel-plan-tier decision — not attempted again this
+  cycle). Of the three remaining `[P2][goal]` items, found during scoping that
+  "Overlapping-alert hint on `/alerts/manage`" was **already shipped** two cycles ago
+  (`overlapping-alert-nudge`, 2026-07-16 — `src/lib/alertOverlap.ts` +
+  `OverlapAlertNudge.tsx` are live on the page today) but never checked off in
+  BACKLOG.md — struck it off this cycle as housekeeping (no code change, just the
+  backlog record). Picked the "Download my alert data" export as the remaining P2 item
+  over the `aria-live` screen-reader sweep — smaller, more contained, and the more
+  natural direct sibling of last week's delete-all work. Checked it off in BACKLOG.md
+  this cycle.
+- Spec: nightshift/specs/20260718T081052Z-alert-data-export.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  Extracted the existing `resolveOwnerEmail` ownership-proof helper out of
+  `src/app/actions.ts` into a new `src/lib/alertOwner.ts` (zero behavior change — every
+  existing action call site now imports it instead of the local definition) so the new
+  route can share it. New `fetchAllAlertsForEmail` in `src/lib/alertsForOwner.ts` reuses
+  the exact fail-soft optional-column retry pattern `fetchAlertsForEmail` already has
+  (some of `frequency`/`price_drop_opt_in`/`paused_until`/etc. may not be migrated live
+  yet), but — unlike that function — does NOT filter out `status='unsubscribed'` rows,
+  since the export must be complete. New `GET /api/alerts/export` route resolves
+  ownership via token or session, 401s with a JSON error (not a file, not a 500) on a
+  missing/invalid/expired token or no session, and otherwise streams the rows back with
+  a `Content-Disposition: attachment` header. Full `node --test` suite (460 tests across
+  all `src/lib/*.test.ts`) unaffected, 0 failures — no new pure-function module needed
+  its own unit tests (the new code is I/O: DB reads + a route handler, matching the
+  existing untested-by-convention shape of `fetchAlertsForEmail`/`fetchAlertsForEmailAdmin`
+  in the same file). QA against the PRODUCTION build (`npx next start -p 3000`; killed
+  nothing stale this time — port 3000 was already free) via `qa-smoke.mjs` on
+  `/alerts/manage`, `/alerts/status`: 4/4 pass (HTTP 200, zero app-origin console errors,
+  zero horizontal overflow at desktop 1280 + mobile 375). Went well beyond the smoke
+  gate's anonymous ceiling (which only reaches the sign-in wall) with two real
+  service-role-seeded `@example.com` end-to-end passes: (1) a plain-`fetch` test — seeded
+  one confirmed + one unsubscribed alert, hit the export route with the real
+  `unsubscribe_token`, confirmed the returned JSON contains both rows with real
+  criteria/status/timestamps and that neither `confirm_token` nor `unsubscribe_token`
+  appears anywhere in the response body (string-search leak check), confirmed a garbage
+  token 401s with "This link is no longer valid." and no token/session 401s with "Not
+  authenticated"; (2) a real-browser Playwright pass at both viewports — confirmed the
+  link is visible, fully within bounds (no overflow at either 1280 or 375), zero console
+  errors, and that a genuine mouse click fires a real browser `download` event with the
+  expected filename (not a navigation or error). All seeded rows deleted immediately
+  after each pass (confirmed 0 rows remain both times); both scratch scripts
+  (`scripts/tmp-qa-export*.mjs`) deleted before finishing; server stopped, port 3000
+  confirmed free.
+- Screenshots: nightshift/screenshots/alert-data-export/
+- Next: The 🔔 alert-experience `[P2][goal]` queue has one item left: the `aria-live`
+  screen-reader sweep across `AlertSignup`/`FooterAlertCapture`/`MobileStickyAlertBar`
+  (verified zero `aria-live`/`role="status"` in any of the three — a real, still-open
+  gap, not stale like the overlap item was). After that, tiers 1/2/3 are all empty
+  again and the next cycle should run a fresh Opus/Fable plan-pass refill per GOAL.md
+  unless a `[bug]`/`[want]` appears first.
+
 ## 20260718T080514Z — PASS — admin-alert-funnel-weekly
 - Pages: (no user-facing route — the admin-only Monday alert-funnel summary email, sent via
   the existing `/api/cron/alert-digest` cron; visually verified via the dev-only
