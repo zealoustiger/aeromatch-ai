@@ -2707,16 +2707,22 @@ wall → `[want]` product call)._
   (pure, unit-tested subset check over parsed alert targets) + `OverlapAlertNudge.tsx`
   render exactly this hint on `/alerts/manage` today, with one-tap removal via the
   existing `deleteAlert`. See CHANGELOG 2026-07-16T062732Z.
-- **[P2][goal] Screen-reader pass on the capture components — `aria-live` on every
-  async state swap.** Verified zero `aria-live`/`role="status"` in `AlertSignup.tsx`,
-  `FooterAlertCapture.tsx`, `MobileStickyAlertBar.tsx` (and the chips they drive): the
-  "Almost there — check your inbox" panel, error lines, typo-suggestion chip, and
-  "Alerts on" swaps are all silent to assistive tech — a blind visitor who submits gets
-  no feedback at all. Add polite live regions / `role="status"` to the success, error,
-  and pending panels, plus a label/association audit of the email inputs, across the
-  shared capture components in one sweep. Improves: frictionless capture for AT users on
-  every surface at once (all funnels through these components); no new capture point, no
-  analytics change.
+~~- **[P2][goal] Screen-reader pass on the capture components — `aria-live` on every
+  async state swap.**~~ ✅ SHIPPED via `alert-capture-aria-live` (2026-07-18) Verified zero
+  `aria-live`/`role="status"` in `AlertSignup.tsx`, `FooterAlertCapture.tsx`,
+  `MobileStickyAlertBar.tsx` (and the chips they drive): the "Almost there — check your
+  inbox" panel, error lines, typo-suggestion chip, and "Alerts on" swaps were all silent
+  to assistive tech — a blind visitor who submits got no feedback at all. Added
+  `role="status" aria-live="polite"` to all 4 `AlertSignup` info panels (confirmed-
+  immediately, submitted/pending-confirm, existing-alert, locally-subscribed) + the
+  email-typo suggestion, `role="alert"` to its error line; the same treatment on
+  `FooterAlertCapture`'s submitted/locally-subscribed panels + typo suggestion + error
+  line; and `role="status" aria-live="polite"` on `MobileStickyAlertBar`'s
+  justSubscribed/justOneTapSubscribed "alerts on" swap plus `aria-live="polite"` on its
+  button's pending/error/idle label span. Label/association audit: every email `<input>`
+  already had a proper `sr-only` `<label htmlFor>` or wrapping `<label>` — no changes
+  needed there. Pure `aria-*`/`role` attribute additions, no className/layout/copy change
+  — non-visual. No new capture point, no analytics change.
 ~~- **[P2][goal] "Download my alert data" self-serve export on `/alerts/manage`.**~~ ✅
   SHIPPED via `alert-data-export` (2026-07-18) A "Download my alert data" link above the
   delete-all control returns every alert row tied to the owner's email (including

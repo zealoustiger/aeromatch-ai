@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T082043Z — PASS — alert-capture-aria-live
+- Pages: /aircraft, /partnerships, /partnerships/seeking, /aircraft/listing/[id] (any page rendering the footer/sticky-bar capture)
+- What: **The email-alert signup boxes now tell screen-reader users what happened after they submit.** Before this change, "Almost there — check your inbox," "You're already getting alerts," error messages, the "Did you mean gmail.com?" typo suggestion, and the mobile sticky bar's "alerts are on" confirmation all swapped into the page silently — a screen-reader user who tapped "Get alerts" had no idea whether it worked. These state swaps now announce via `role="status"`/`role="alert"`/`aria-live="polite"` across all three shared capture components (`AlertSignup`, the footer capture, the mobile sticky bar), which cover every alert entry point site-wide.
+- Goal: alert-experience (frictionless capture) — accessibility gap on an existing, universal capture surface; the highest-priority buildable item left in the alert-experience `[goal]` queue this cycle (the two open P1s — instant-send cron, "save this search" auth-wall reconciliation — are both explicitly human-decision-gated, and the `[want]` tier is fully shipped/blocked-on-human as of this cycle's audit).
+- Spec: nightshift/specs/20260718T082043Z-alert-capture-aria-live.md
+- Verdict: PASS. `npx next build` clean (no type/lint errors). QA smoke (production build, `next start`) on /aircraft, /partnerships, /partnerships/seeking, and a real `/aircraft/listing/[id]` — all 200, zero app console errors, zero horizontal overflow at desktop 1280 + mobile 375. Non-visual cycle (pure `aria-*`/`role` attribute additions, no className/layout/copy change) — screenshots saved for the audit trail but not read into QA judgment per the non-visual-cycle rule. Confirmed the attributes reached the client bundle (`grep aria-live .next/static/chunks`).
+- Screenshots: nightshift/screenshots/alert-capture-aria-live/
+- Next: `AlertEditForm` and other manage-page components weren't audited this pass (out of scope, not named in the backlog item); the alert-experience `[goal]` queue is now fully drained again — next cycle should emit `ABORT — none — plan needed` unless a `[bug]`/`[want]` has landed by then.
+
 ## 20260718T081052Z — PASS — alert-data-export
 - Pages: /alerts/manage
 - What: **A subscriber can now download every alert we hold for their email as a JSON
