@@ -2,6 +2,60 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T073300Z — PASS — alert-revive-remaining-paths
+- Pages: /alerts/status, /alerts/manage, /searches
+- What: **A subscriber who previously unsubscribed and later re-subscribes no longer hits
+  a silent dead end** on four more alert-capture surfaces. Before this cycle, if you'd
+  unsubscribed from an alert and then re-subscribed via the confirm-page cross-sell, the
+  manage page's "+ New alert" / Duplicate, or `/searches` "Get email alerts," the request
+  quietly succeeded on the surface but your alert stayed dead (the underlying row was still
+  `unsubscribed`) — so you never actually got emails again. All four of those paths now
+  revive the dead row straight back to `confirmed`, matching the two `AlertSignup` paths
+  that already did this. No new capture point, no UI change — a pure lifecycle-correctness
+  fix on surfaces that were already there.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`alert-delete-all`) was a PASS; swept BACKLOG.md for any unstruck `[bug]` line — none.
+  Tier 2 (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]` line — same standing set
+  the last several cycles (save-search auth wall, mosaic redesign, Trade-A-Plane ingestion,
+  Bay-Area benchmark, owner-leads dataset, bot-walled competitor scrapes) — none buildable
+  autonomously. Dropped to tier 3 and picked the highest-value `[P1][goal]` in the 🔔
+  section: "Revive unsubscribed rows on the 4 remaining alert-insert paths" (the natural
+  follow-up the `alert-resubscribe-after-unsubscribe` cycle explicitly flagged). Checked it
+  off in BACKLOG.md this cycle. Friction removed: a permanent re-subscribe dead end on 4
+  ownership-proven capture surfaces. **Note:** this cycle resumed an interrupted prior run —
+  the `night/alert-revive-remaining-paths` branch already carried the (uncommitted, un-QA'd,
+  un-merged) implementation off the current staging tip; verified it for correctness, then
+  ran the full build/typecheck/QA/land gate.
+- Spec: nightshift/specs/20260718T070809Z-alert-revive-remaining-paths.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  Change is `src/app/actions.ts` only: `subscribeToConfirmedAlert`, `subscribeManageCrossSell`,
+  `createManageAlert`, `subscribeSavedSearchAlert` now call
+  `reviveIfUnsubscribed(admin, email, sourcePath, 'confirmed')` on a 23505 conflict instead
+  of a silent no-op success; a non-23505 error still returns the existing error message
+  unchanged; `reviveIfUnsubscribed` internally guards to only touch rows that are actually
+  `status:'unsubscribed'`, so a live confirmed row remains a true no-op. `subscribeSavedSearchAlert`
+  hoisted its existing `createAdminClient()` call a few lines earlier (single declaration,
+  no duplicate) so the revive check can reuse it. Non-visual cycle (server-action logic, no
+  UI change) — screenshots saved for the audit trail but not read. QA against the PRODUCTION
+  build (`npx next start -p 3000`) via `qa-smoke.mjs` on `/alerts/status`, `/alerts/manage`,
+  `/searches`: 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow
+  at desktop 1280 + mobile 375). Went beyond the smoke gate with a real end-to-end DB test:
+  seeded an `unsubscribed` `@example.com` alert + a matching saved_search, minted a real
+  magic-link session, drove the signed-in `/searches` "Get email alerts" click in a real
+  browser, and confirmed the row flipped `unsubscribed → confirmed` (with a real
+  `confirmed_at`). The one browser console 400 seen in that signed-in test is a client-side
+  resource fetch (not app-origin JS; qa-smoke reported zero app-origin errors) and cannot be
+  caused by a purely server-side revive change — orthogonal/environmental. All test rows +
+  the auth user deleted immediately after (verified 0 `qa-alert-revive-%@example.com` rows
+  and 0 matching users remain); scratch script (`scripts/tmp-qa-revive.mjs`) deleted before
+  finishing; server stopped, port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-revive-remaining-paths/
+- Next: The 🔔 alert-experience `[P1][goal]` queue still has open items from the fresh
+  plan-pass batch (e.g. honest price-context line on digest samples, Monday admin
+  alert-funnel week-over-week summary email, ingest-triggered near-instant alerts). Tiers
+  1/2 remain empty; the next cycle should pull the next `[P1][goal]` slice unless a
+  `[bug]`/`[want]` appears first.
+
 ## 20260718T064431Z — PASS — alert-delete-all
 - Pages: /alerts/manage (no other page touched)
 - What: **A subscriber who wants ClubHanger to forget them entirely no longer has to

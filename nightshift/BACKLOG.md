@@ -2666,7 +2666,7 @@ overlap/subset logic anywhere under `src/app/alerts/` or `src/lib/alert*.ts`; ze
 the two open-but-blocked items (instant sends → Vercel-tier human call; save-search auth
 wall → `[want]` product call)._
 
-- **[P1][goal] Revive unsubscribed rows on the 4 remaining alert-insert paths.** The
+~~- **[P1][goal] Revive unsubscribed rows on the 4 remaining alert-insert paths.**~~ ✅ SHIPPED via `alert-revive-remaining-paths` (2026-07-18) All four paths (`subscribeToConfirmedAlert`, `subscribeManageCrossSell`, `createManageAlert`, `subscribeSavedSearchAlert`) now call `reviveIfUnsubscribed(admin, email, sourcePath, 'confirmed')` on a 23505 conflict instead of silently no-op'ing — an unsubscribed subscriber who re-subscribes on any of those surfaces is now flipped back to `confirmed` (ownership already proven on each path). Live-verified end-to-end against the real prod DB: seeded an `unsubscribed` `@example.com` alert, drove the signed-in `/searches` "Get email alerts" click in a real browser, confirmed the row flipped `unsubscribed → confirmed`; all test rows/users deleted after (0 remain). The
   `alert-resubscribe-after-unsubscribe` cycle wired `reviveIfUnsubscribed` into the two
   `AlertSignup` paths only and explicitly flagged the rest as the natural follow-up:
   `subscribeToConfirmedAlert` (actions.ts:1914), `subscribeManageCrossSell` (:1955),
