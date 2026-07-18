@@ -8,11 +8,13 @@ import {
   buildPriceDropEmail,
   buildListingUnavailableEmail,
   buildWidenSuggestionEmail,
+  buildAdminAlertFunnelEmail,
   pickBestPriceDropSample,
   compLabel,
   type AlertDigestSample,
   type AlertDigestSection,
 } from '@/lib/email'
+import { getAlertFunnelWeeklySnapshot } from '@/lib/alertFunnelWeekly'
 import {
   getAlertDigestPreview,
   getMarketPulseLine,
@@ -1358,6 +1360,38 @@ async function getDigestCrossSell(
 
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
+/**
+ * Monday-only admin alert-funnel week-over-week summary (GOAL.md: "judge
+ * alerts week-over-week", the "prove it converts" pillar landing in the
+ * inbox). Piggybacks this existing daily cron run instead of a new
+ * `vercel.json` cron entry (Hobby-tier is daily-cron-only, already flagged
+ * in the backlog). Computed and sent only after every alert above has
+ * already been processed, and wrapped in try/catch so a summary-email
+ * failure can never turn an otherwise-healthy digest run into a 500.
+ */
+async function sendMondayAdminFunnelSummary(nowIso: string): Promise<number> {
+  if (new Date(nowIso).getUTCDay() !== 1) return 0
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim())
+    .filter(Boolean)
+  if (adminEmails.length === 0) return 0
+
+  try {
+    const snapshot = await getAlertFunnelWeeklySnapshot()
+    const { subject, html, text } = buildAdminAlertFunnelEmail(snapshot, `${SITE_URL}/admin/alerts`)
+    let sentCount = 0
+    for (const to of adminEmails) {
+      const result = await sendEmail({ to, subject, html, text, emailType: 'admin-alert-funnel-weekly' })
+      if (result.sent || result.reason === 'no-key') sentCount++
+    }
+    return sentCount
+  } catch (err) {
+    console.error('[alert-digest] Monday admin funnel summary error:', err)
+    return 0
+  }
+}
+
 export async function GET(req: NextRequest) {
   // Protect the route in production. Vercel passes the CRON_SECRET via the
   // Authorization header when cron.config is set. In development / staging
@@ -1874,9 +1908,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const adminSummarySent = await sendMondayAdminFunnelSummary(nowIso)
+
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent}`
   )
 
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
@@ -1897,5 +1933,15 @@ export async function GET(req: NextRequest) {
     console.error('[alert-digest] run-log insert error:', runLogError.message)
   }
 
-  return Response.json({ processed: total, sent, emailsSent, skipped, unparseable, notDue, remindersSent, widenSuggestionsSent })
+  return Response.json({
+    processed: total,
+    sent,
+    emailsSent,
+    skipped,
+    unparseable,
+    notDue,
+    remindersSent,
+    widenSuggestionsSent,
+    adminSummarySent,
+  })
 }

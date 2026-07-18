@@ -11,6 +11,7 @@
 // API key).
 
 import type { CompResult } from '@/lib/aircraftComps'
+import type { AlertFunnelWeeklySnapshot } from '@/lib/alertFunnelWeekly'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
@@ -1392,6 +1393,145 @@ export function buildMatchAlertEmail(opts: {
   const text = `${countLabel} for ${opts.listingLabel} on ClubHanger.
 
 View your matches: ${opts.matchesUrl}`
+
+  return { subject, html, text }
+}
+
+function formatWeekDelta(thisWeek: number, lastWeek: number): string {
+  const delta = thisWeek - lastWeek
+  if (delta === 0) return 'flat vs last week'
+  return `${delta > 0 ? '+' : ''}${delta} vs last week`
+}
+
+function formatWeekRange(startIso: string, endIso: string): string {
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return `${fmt(startIso)} – ${fmt(endIso)}`
+}
+
+/**
+ * The Monday admin alert-funnel week-over-week summary (GOAL.md: "judge
+ * alerts week-over-week"). DB-derived from `getAlertFunnelWeeklySnapshot`
+ * (created/confirmed have real timestamps so they get an honest WoW delta;
+ * paused/unsubscribed/bounced don't — the `alerts` table has no
+ * `unsubscribed_at`/`paused_at` column — so those render as plainly-labeled
+ * current totals, never a fabricated "this week" number). Internal-only, no
+ * unsubscribe link (not a subscriber-facing email).
+ */
+export function buildAdminAlertFunnelEmail(
+  snapshot: AlertFunnelWeeklySnapshot,
+  dashboardUrl: string
+): { subject: string; html: string; text: string } {
+  const weekRange = formatWeekRange(snapshot.weekStart, snapshot.weekEnd)
+  const subject = `Alert funnel — ${weekRange}: ${snapshot.createdThisWeek} new, ${snapshot.confirmedThisWeek} confirmed`
+
+  const sourceRowsHtml = snapshot.topSourcesThisWeek.length
+    ? snapshot.topSourcesThisWeek
+        .map(
+          (row) => `
+          <tr>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#334155;">${escapeHtml(row.source)}</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#0f172a;text-align:right;font-weight:600;">${row.createdThisWeek}</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#94a3b8;text-align:right;">${row.createdLastWeek}</td>
+          </tr>`
+        )
+        .join('')
+    : `<tr><td colspan="3" style="padding:6px 10px;font-size:13px;color:#94a3b8;">No new alerts this week.</td></tr>`
+
+  const sourceRowsText = snapshot.topSourcesThisWeek.length
+    ? snapshot.topSourcesThisWeek.map((row) => `  - ${row.source}: ${row.createdThisWeek} (last week: ${row.createdLastWeek})`).join('\n')
+    : '  (no new alerts this week)'
+
+  const migratedNote = snapshot.sourceColumnMigrated
+    ? ''
+    : `<p class="ch-muted" style="font-size:11px;line-height:1.5;color:#a89f8e;margin:8px 0 0;">Per-source breakdown unavailable — the \`alerts.source\` column isn&rsquo;t migrated live yet.</p>`
+
+  const html = `<!doctype html>
+<html>
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(`${snapshot.createdThisWeek} new alert signups, ${snapshot.confirmedThisWeek} confirmed this week.`)}
+    <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger — admin</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 4px;">Alert funnel — ${escapeHtml(weekRange)}</h1>
+        <p class="ch-muted" style="font-size:12px;color:#a89f8e;margin:0 0 20px;">Week-over-week, computed from the \`alerts\` table.</p>
+
+        <table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:18px;">
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">New signups</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.createdThisWeek}</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.createdThisWeek, snapshot.createdLastWeek))}</td></tr>
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Confirmed (double opt-in)</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.confirmedThisWeek}</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.confirmedThisWeek, snapshot.confirmedLastWeek))}</td></tr>
+        </table>
+
+        <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Current totals (not weekly)</p>
+        <table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:20px;">
+          <tr>
+            <td style="padding:3px 0;font-size:13px;color:#334155;">Live (active + confirmed)</td>
+            <td style="padding:3px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.liveTotal}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;font-size:13px;color:#334155;">Pending confirmation</td>
+            <td style="padding:3px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.pendingTotal}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;font-size:13px;color:#334155;">Paused</td>
+            <td style="padding:3px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.pausedTotal}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;font-size:13px;color:#334155;">Unsubscribed</td>
+            <td style="padding:3px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.unsubscribedTotal}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;font-size:13px;color:#334155;">Bounced</td>
+            <td style="padding:3px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.bouncedTotal}</td>
+          </tr>
+        </table>
+
+        <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Top sources this week</p>
+        <table role="presentation" width="100%" style="border-collapse:collapse;">
+          <tr>
+            <td style="padding:4px 10px 4px 0;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.03em;">Source</td>
+            <td style="padding:4px 10px;font-size:11px;color:#94a3b8;text-align:right;text-transform:uppercase;letter-spacing:0.03em;">This week</td>
+            <td style="padding:4px 10px;font-size:11px;color:#94a3b8;text-align:right;text-transform:uppercase;letter-spacing:0.03em;">Last week</td>
+          </tr>
+          ${sourceRowsHtml}
+        </table>
+        ${migratedNote}
+
+        <p style="margin:20px 0 0;">
+          <a href="${escapeAttr(dashboardUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
+            Open full dashboard
+          </a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`
+
+  const text = `Alert funnel — ${weekRange}
+
+New signups: ${snapshot.createdThisWeek} (${formatWeekDelta(snapshot.createdThisWeek, snapshot.createdLastWeek)})
+Confirmed: ${snapshot.confirmedThisWeek} (${formatWeekDelta(snapshot.confirmedThisWeek, snapshot.confirmedLastWeek)})
+
+Current totals (not weekly):
+  Live: ${snapshot.liveTotal}
+  Pending confirmation: ${snapshot.pendingTotal}
+  Paused: ${snapshot.pausedTotal}
+  Unsubscribed: ${snapshot.unsubscribedTotal}
+  Bounced: ${snapshot.bouncedTotal}
+
+Top sources this week:
+${sourceRowsText}
+
+Full dashboard: ${dashboardUrl}`
 
   return { subject, html, text }
 }
