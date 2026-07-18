@@ -2950,16 +2950,15 @@ view-in-browser or share affordance._
   a live view is the honest version). Reuse the digest match queries + on-site card
   components; page carries the alert's manage/unsubscribe links so it doubles as a
   management entry point. No schema change, no new capture point.
-- **[P2][goal] "Buying with a partner? Share this alert" line in the digest footer.**
-  The share affordance exists on-site only (`ShareAlertButton` on `/alerts/manage`,
-  `share=alert` param the receiving `AlertSignup` already reads) — the email, where a
-  co-buyer conversation actually happens ("forward this to your partner"), has none.
-  Add one quiet footer line to the digest builders linking the alert's own
-  `source_path` via the existing `withShareParam` (a plain site URL — never a tokenized
-  link, so a forwarded email can't leak manage/unsubscribe control). The recipient lands
-  on the live search with the share-aware alert box open. One `email.ts` line + tests;
-  emits nothing itself — the receiving page's existing `alert_subscribed` (with its own
-  source) measures conversion. No schema change.
+~~- **[P2][goal] "Buying with a partner? Share this alert" line in the digest footer.**~~
+  ✅ SHIPPED via `digest-share-with-partner` (2026-07-18) `buildAlertDigestEmail` gains
+  an optional `shareUrl` opt rendering a quiet "Buying with a partner? Share this alert"
+  footer line (HTML + text); `AlertDigestSection` (the combined-email template) gains a
+  per-section `shareUrl` rendered next to the existing Edit/Stop links, scoped to that
+  section only. The alert-digest cron computes both from the alert's own `source_path`
+  via the existing `withShareParam` (plain site URL, never a tokenized manage/
+  unsubscribe link). No schema change, no new capture point — the receiving page's
+  existing share-aware `AlertSignup`/`alert_subscribed` measures conversion.
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
 The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
