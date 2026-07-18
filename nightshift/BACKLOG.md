@@ -2562,16 +2562,17 @@ human call; save-search auth wall → `[want]` product call)._
   ever sending a real request or writing a fake-looking-domain row to the shared prod DB
   (policy: only `@example.com` may hit the live insert path). Both real test rows deleted
   after (0 remain).
-- **[P1][goal] Email-typo guard at capture — "Did you mean gmail.com?".** A typo'd address
-  (`gmial.com`, `hotmial.com`, `gmail.con`…) currently captures fine, sends the confirm
-  into the void, and leaves a visitor who *thinks* they're covered with a dead pending
-  alert — the least honest failure mode a capture form can have. New pure
-  `suggestEmailFix(email)` helper (unit-tested): edit-distance-1 match against the ~10 top
-  consumer domains + common TLD slips, returning a suggested address or null. Render below
-  `AlertSignup`'s email field as a one-tap "Did you mean **name@gmail.com**?" chip that
-  replaces the value — suggest-only, never auto-corrects, never blocks submission (plenty
-  of real domains are near-misses). `AlertSignup` first (every major surface funnels
-  through it); the sweep item below carries it to the remaining inputs. No schema change.
+~~- **[P1][goal] Email-typo guard at capture — "Did you mean gmail.com?".**~~ ✅ SHIPPED
+  via `alert-email-typo-guard` (2026-07-18) A typo'd address (`gmial.com`, `hotmial.com`,
+  `gmail.con`…) used to capture fine, send the confirm into the void, and leave a visitor
+  who *thinks* they're covered with a dead pending alert. New pure `src/lib/suggestEmailFix.ts`
+  (16 unit tests) does a Damerau-Levenshtein-≤1 match (covers transpositions like `gmial`)
+  against the top 10 consumer domains, returning a suggested address or `null` — never a
+  wild guess. `AlertSignup.tsx` renders it below the email field as a one-tap "Did you
+  mean **name@gmail.com**?" chip that replaces the value — suggest-only, never
+  auto-corrects, never blocks submission. **Scoped to `AlertSignup` only** (every major
+  surface funnels through it); the sweep item below still carries it to the remaining
+  inputs. No schema change.
 - **[P1][goal] Weekly→daily one-click upgrade in high-volume digests.** The one-click
   cadence link in email footers only goes one way — daily→weekly "fewer emails"
   (`api/alerts/frequency/route.ts` is documented daily-only). But a weekly subscriber
