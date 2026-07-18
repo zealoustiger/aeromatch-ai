@@ -2,6 +2,73 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T103737Z — PASS — alert-instant-interest-nudge
+- Pages: /alerts/manage
+- What: **Every alert row on the manage page now has an honest "Instant —
+  interested?" pill next to the Daily/Weekly toggle.** Real within-the-hour
+  alert sends are blocked on a human Vercel-cron-tier decision — this doesn't
+  build that (and never renders "Instant" as an actual selectable cadence,
+  per the honesty rule), it just gives that pending decision real demand
+  data: one tap records an interest signal and swaps to an inline "Thanks —
+  noted!" confirmation, no page reload.
+- Goal: alert-experience (measurement pillar: "prove it converts" — feeding
+  real demand data to a blocked decision instead of letting it rot) — tier 3
+  `[goal]`. Tier 1 (`[bug]`): most recent CHANGELOG entry (`admin-demand-no-
+  supply`) was a PASS; swept BACKLOG.md for any unstruck `[bug]` line — none
+  found. Tier 2 (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]`
+  line — same standing blocked-on-human set as every recent cycle's audit
+  (save-search auth-wall reconciliation and the collection-layout mosaic
+  redesign both need a human product call/mock; Trade-A-Plane/Controller/
+  AirMart/AeroTrader bot-protection-blocked; Bay-Area coverage benchmark
+  blocked on a real FAA/AirNav denominator; owner-leads dataset needs
+  compliance review; dynamic-location seed personas has no live effect) —
+  none buildable autonomously. Dropped to tier 3: picked the exact item the
+  prior cycle's (`admin-demand-no-supply`) "Next" note named as the pick —
+  the last open `[P1]` in the plan-pass batch #6 alert-experience queue.
+  Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T103737Z-alert-instant-interest-nudge.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0 clean. Full `node --test` suite (473 tests) passes, 0 failures
+  (new server action `recordInstantAlertInterest` reuses the existing
+  `loadOwnedAlert` ownership-proof helper and the `feedback` table insert
+  pattern already used by the digest-vote route — no new testable pure
+  logic to unit-cover, consistent with how `pauseAlert`/`updateAlertFrequency`
+  etc. are verified live rather than unit-tested). Implementation: new
+  `recordInstantAlertInterest(id, token?)` in `actions.ts` inserts one
+  `feedback` row (`type: 'instant_alert_interest'`, real `email`/`page_path`
+  from the owned alert, no schema change); new client component
+  `InstantInterestNudge.tsx` (mirrors `WidenAlertNudge`'s local-state
+  confirmation-swap pattern, no page reload) fires
+  `track('instant_alert_interest', { alert_id })` via the existing
+  `@/lib/analytics` wrapper on success; rendered in `alerts/manage/page.tsx`
+  directly next to the existing `FrequencyToggle`. `FrequencyToggle` itself
+  is untouched — still only Daily/Weekly, so "Instant" never appears as a
+  real cadence. QA: visual cycle (new rendered UI) — served the PRODUCTION
+  build (`next start`), `qa-smoke.mjs` on `/alerts/manage` 2/2 pass (HTTP
+  200, zero app-origin console errors, zero horizontal overflow at desktop
+  1280 + mobile 375; screenshots read into the verdict, look correct — pill
+  sits cleanly next to Weekly/New+drops on both viewports, no overflow).
+  Since qa-smoke has no token and the manage page shows nothing to click
+  without one, also live-verified end-to-end with a throwaway
+  `@example.com` test alert row (seeded + deleted via service role): loaded
+  `/alerts/manage?token=...` via Playwright at desktop 1280 and mobile 375,
+  clicked the real pill, confirmed the inline "Thanks — noted!" swap with
+  zero console errors and zero reload, and confirmed via a direct read-only
+  query that exactly one `feedback` row landed with the correct
+  `type`/`email`/`page_path`. Test alert + feedback row deleted immediately
+  after (confirmed 0 remain via a follow-up query); killed the QA `next
+  start` server and confirmed port 3000 free before finishing.
+- Screenshots: nightshift/screenshots/alert-instant-interest-nudge/
+- Next: the plan-pass batch #6 alert-experience `[goal]` queue is now fully
+  drained of `[P1]`s — 4 `[P2]`s remain open (rank digest samples by deal
+  quality; per-listing "not relevant?" feedback link; tokenized live "view
+  in browser" digest page; "share this alert with a partner" digest footer
+  line). Also: a natural admin-side follow-up now unblocked by this cycle —
+  surface the `instant_alert_interest` count in the weekly admin email
+  (same rollup pattern as `admin-email-engagement-wow`/`admin-demand-no-
+  supply`) once a few real signals accumulate, so the human can see the
+  demand data build up without querying the table directly.
+
 ## 20260718T102652Z — PASS — admin-demand-no-supply
 - Pages: (internal — Monday admin alert-funnel email only; no rendered-page UI change)
 - What: **The weekly admin email now surfaces which alert searches have subscribers
