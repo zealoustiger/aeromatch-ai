@@ -2691,15 +2691,15 @@ wall → `[want]` product call)._
   below-avg deal, slate for above/near) and plain-text digest bodies. **Scoped down,
   intentionally:** price-drop samples (already show a before/after price) and partnership/
   seeker samples (no comp math exists for those types) don't get the line this cycle.
-- **[P1][goal] Monday admin alert-funnel week-over-week summary email.** GOAL.md says to
-  judge alerts week-over-week, but nothing computes WoW anywhere — `/admin/alerts` needs a
-  visit. Piggyback inside the existing daily `alert-digest` cron run (fire only when the
-  run date is Monday — NO new `vercel.json` cron entry, so it dodges the flagged
-  Hobby-tier daily-only limit): compute created/confirmed/unsubscribed/paused counts this
-  week vs last, split by the alert rows' stored `source`, straight from the `alerts` table
-  (DB-derived, not PostHog), and email it to the admin recipients via the existing send
-  infra (read `ADMIN_EMAILS`; do not touch admin auth gating — FREEZE). Improves: the
-  "prove it converts" pillar lands in the inbox weekly; no new capture point.
+~~- **[P1][goal] Monday admin alert-funnel week-over-week summary email.**~~ ✅ SHIPPED via
+  `admin-alert-funnel-weekly` (2026-07-18) The daily `alert-digest` cron now fires a Monday-
+  only (UTC) admin summary — no new `vercel.json` entry — computing real created/confirmed
+  week-over-week counts + a top-5 `source` breakdown from the `alerts` table, emailed to
+  every address in `ADMIN_EMAILS`. **Scoped down, intentionally:** unsubscribed/paused/
+  bounced render as explicitly-labeled **current totals**, not a WoW delta — the `alerts`
+  table has no `unsubscribed_at`/`paused_at` timestamp, so an honest weekly delta for those
+  statuses isn't derivable without a schema change (flagged as a "Next" follow-up, not built
+  this cycle).
 - **[P2][goal] Overlapping-alert hint on `/alerts/manage`.** No subset/overlap logic
   exists: an owner with `/aircraft?make=Cessna` and `/aircraft?make=Cessna&model=172`
   double-receives every 172 in both digests forever. New pure, unit-testable

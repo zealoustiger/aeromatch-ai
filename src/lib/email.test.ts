@@ -18,8 +18,10 @@ import {
   buildNewMessageEmail,
   buildSeedInquiryEmail,
   buildMatchAlertEmail,
+  buildAdminAlertFunnelEmail,
   compLabel,
 } from './email.ts'
+import type { AlertFunnelWeeklySnapshot } from './alertFunnelWeekly.ts'
 
 const BASE = {
   title: '2013 Cessna 172S Skyhawk',
@@ -1003,6 +1005,94 @@ test('buildWidenSuggestionEmail: context and widen description are HTML-escaped'
   assert.match(html, /&lt;script&gt;/)
 })
 
+// ─── buildAdminAlertFunnelEmail (Monday admin WoW summary) ─────────────────
+
+const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
+  weekStart: '2026-07-11T08:00:00.000Z',
+  weekEnd: '2026-07-18T08:00:00.000Z',
+  createdThisWeek: 14,
+  createdLastWeek: 9,
+  confirmedThisWeek: 8,
+  confirmedLastWeek: 6,
+  liveTotal: 142,
+  pendingTotal: 11,
+  pausedTotal: 5,
+  unsubscribedTotal: 23,
+  bouncedTotal: 2,
+  topSourcesThisWeek: [
+    { source: 'card_watch', createdThisWeek: 6, createdLastWeek: 3 },
+    { source: 'filter_toolbar', createdThisWeek: 4, createdLastWeek: 4 },
+  ],
+  sourceColumnMigrated: true,
+  computedAt: '2026-07-18T08:00:00.000Z',
+}
+
+test('buildAdminAlertFunnelEmail: subject names the week range and headline created/confirmed counts', () => {
+  const { subject } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.equal(subject, 'Alert funnel — Jul 11 – Jul 18: 14 new, 8 confirmed')
+})
+
+test('buildAdminAlertFunnelEmail: renders a positive week-over-week delta for both created and confirmed', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /\+5 vs last week/)
+  assert.match(html, /\+2 vs last week/)
+  assert.match(text, /New signups: 14 \(\+5 vs last week\)/)
+  assert.match(text, /Confirmed: 8 \(\+2 vs last week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: a flat week renders "flat vs last week", not "+0"', () => {
+  const { text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, createdThisWeek: 9, createdLastWeek: 9 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(text, /New signups: 9 \(flat vs last week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: a down week renders a negative delta, not a fabricated positive spin', () => {
+  const { text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, createdThisWeek: 4, createdLastWeek: 9 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(text, /New signups: 4 \(-5 vs last week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: paused/unsubscribed/bounced are labeled "current totals (not weekly)", never given a WoW delta', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Current totals \(not weekly\)/)
+  assert.match(text, /Current totals \(not weekly\)/)
+  assert.doesNotMatch(html, /Paused[\s\S]{0,80}vs last week/)
+  assert.doesNotMatch(html, /Unsubscribed[\s\S]{0,80}vs last week/)
+})
+
+test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /card_watch/)
+  assert.match(text, /card_watch: 6 \(last week: 3\)/)
+})
+
+test('buildAdminAlertFunnelEmail: with zero sources this week, an honest empty line renders instead of a blank table', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, topSourcesThisWeek: [] },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No new alerts this week/)
+  assert.match(text, /\(no new alerts this week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: when the source column is not migrated, an honest note renders instead of a silent gap', () => {
+  const { html } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, sourceColumnMigrated: false },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /alerts\.source.*column isn&rsquo;t migrated live yet/)
+})
+
+test('buildAdminAlertFunnelEmail: the dashboard link points at the passed-in URL', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /href="https:\/\/clubhanger\.com\/admin\/alerts"/)
+  assert.match(text, /https:\/\/clubhanger\.com\/admin\/alerts/)
+})
+
 // ─── buildAlertZeroMatchWelcomeEmail (confirm-time zero-match welcome) ─────
 
 const ZERO_MATCH_BASE = {
@@ -1306,6 +1396,7 @@ test('every HTML email builder opts into light+dark color-scheme support', () =>
       count: 2,
       matchesUrl: 'https://clubhanger.com/partnerships/p-1',
     }).html,
+    buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts').html,
   ]
 
   for (const html of htmls) {
