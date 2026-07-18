@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T062341Z — PASS — alert-typo-guard-keyboard-sweep
+- Pages: none (component-only — the footer email capture on every page, `AlertSignup`'s
+  manual field on every alert-capture point, and `/alerts/manage`'s "change email" form)
+- What: **The "Did you mean pilot@gmail.com?" typo-guard chip (shipped last cycle on
+  the main alert-signup box) now also covers the two other places a visitor types their
+  own email into the alert system** — the site-wide footer capture and the "change the
+  email these alerts go to" form on `/alerts/manage` — plus all three inputs now use
+  mobile-friendly keyboard attributes (`inputMode="email"`, `spellCheck={false}`,
+  `enterKeyHint="send"`) so phone keyboards show the right layout and don't
+  autocorrect/spell-check an email address.
+- Goal: `[goal]` alert experience — tier 3. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`alert-digest-upgrade-nudge`) was a PASS; swept BACKLOG.md for any unstruck `[bug]`
+  line — none found. Tier 2 (`[want]`): checked every unstruck `[P1]`/`[P2][want]` line —
+  same standing set as prior cycles, all either fully shipped (missing only the
+  strike-through) or flagged as needing a human product/compliance call; none buildable
+  autonomously. Dropped to tier 3 and picked the first "Next" item named by the prior
+  cycle: the typo-guard/keyboard-attribute sweep (`[P2][goal]`), now unblocked since
+  `suggestEmailFix` shipped. Closes BACKLOG.md's 🔔 GOAL "Typo-guard + mobile-keyboard
+  attribute sweep" item — re-scoped after direct code read found most of the originally
+  named components (`WatchAlertButton`, `ContactBarWatchButton`, `SavedListingWatchButton`,
+  `SaveListingButton`, `NewAlertForm`, `MobileStickyAlertBar`) render no email input of
+  their own; see the BACKLOG.md strike-through for the corrected scope (`AlertSignup` +
+  `FooterAlertCapture` + the newly-surfaced `UpdateAlertEmailForm`).
+- Spec: nightshift/specs/20260718T062341Z-alert-typo-guard-keyboard-sweep.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0.
+  `suggestEmailFix`'s existing 16 unit tests unaffected (pure function, no logic change —
+  only new call sites). QA against the PRODUCTION build (`npx next start -p 3000`) via
+  `qa-smoke.mjs` on `/`, `/alerts/manage`: 4/4 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at desktop 1280 + mobile 375). Visual cycle (new chip
+  UI) — went beyond the smoke gate with real Playwright interaction: typed
+  `pilot@gmial.com` into the footer capture on `/` and confirmed the chip renders,
+  fills the corrected address on click, and carries all 4 attributes; confirmed
+  `AlertSignup`'s field on `/aircraft` carries the 3 new attributes; seeded one
+  throwaway `@example.com` alert via the service-role key to reach `/alerts/manage`'s
+  "change email" form (`UpdateAlertEmailForm` only renders once a token/session resolves
+  a real owner), confirmed the same chip + attributes there, then deleted the test row
+  immediately after (verified 1 row deleted, no other tables touched). Zero console
+  errors across all checks. Server stopped cleanly after, no stray `next-server` process
+  left running (also found and killed one stale `next-server` left over from an earlier
+  session before starting this cycle's own).
+- Screenshots: nightshift/screenshots/alert-typo-guard-keyboard-sweep/
+- Next: 2 remaining plan-pass batch #3 items in BACKLOG.md's 🔔 GOAL section — one-tap
+  unsubscribe-reason chips on `/alerts/status` (`[P2]`, analytics-only, no schema
+  change), "Delete all my alerts & data" self-serve on `/alerts/manage` (`[P2]`,
+  user-initiated deletion, no schema change). Both tier-1/tier-2 checked clean this
+  cycle too — same standing `[P1][want]` items (save-search auth wall, collection-layout
+  mosaic redesign, Trade-A-Plane ingestion, Bay-Area coverage benchmark, owner-leads
+  dataset, Controller.com) remain human-call-only. Also: a stale `next-server` process
+  was found still running from a prior cycle at the start of this one (killed before
+  starting a fresh server) — worth a health-check sweep if this recurs, since a leftover
+  server could mean a future cycle QAs against a stale build without realizing it.
+
 ## 20260718T061333Z — PASS — alert-digest-upgrade-nudge
 - Pages: none (component/backend-only — every weekly-cadence alert digest email,
   plus `/alerts/status`)

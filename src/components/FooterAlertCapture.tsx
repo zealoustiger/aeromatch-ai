@@ -14,6 +14,7 @@ import {
   isLocallySubscribed,
   setLocalEmail,
 } from '@/lib/alertLocalSubscriptions'
+import { suggestEmailFix } from '@/lib/suggestEmailFix'
 
 const SOURCE = 'footer'
 
@@ -45,6 +46,9 @@ export default function FooterAlertCapture() {
   const [pending, setPending] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [locallySubscribed, setLocallySubscribed] = useState(false)
+  // Suggest-only "did you mean gmail.com?" — never auto-corrects, never blocks
+  // submission of the as-typed address (see lib/suggestEmailFix.ts).
+  const emailSuggestion = suggestEmailFix(email)
 
   useEffect(() => {
     setRememberedEmail(getLocalEmail())
@@ -171,6 +175,9 @@ export default function FooterAlertCapture() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
             autoComplete="email"
+            inputMode="email"
+            spellCheck={false}
+            enterKeyHint="send"
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 sm:w-56"
           />
           <button
@@ -181,6 +188,15 @@ export default function FooterAlertCapture() {
             {pending ? 'Saving…' : 'Get alerts'}
           </button>
         </form>
+      )}
+      {emailSuggestion && !(rememberedEmail && !useManualEmail) && (
+        <button
+          type="button"
+          onClick={() => setEmail(emailSuggestion)}
+          className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline sm:basis-full"
+        >
+          Did you mean <span className="font-semibold">{emailSuggestion}</span>?
+        </button>
       )}
       {errorMsg && <p className="mt-2 text-xs text-red-600 sm:basis-full">{errorMsg}</p>}
     </div>
