@@ -2918,15 +2918,17 @@ view-in-browser or share affordance._
   "Instant" as a real cadence option (the honesty rule: no cadence that isn't real).
   Improves: digest-vs-instant pillar with real demand data; count surfaces later via the
   existing feedback rollup (follow-up). No new capture point.
-- **[P2][goal] Rank aircraft new-listing digest samples by deal quality.** Sample queries
-  return newest-first (`created_at desc` at `alert-digest/route.ts:1143`), yet the cron
-  already computes an honest comp position per sample (the `compVsMarket` price-context
-  pill) — so a 12%-below-market 172 can sit below three at-market ones. Sort each alert's
-  new-listing samples below-market-first (biggest honest discount first, newest as
-  tiebreak); listings without comp data keep newest-first order after the ranked ones —
-  never fabricate a rank from missing comps. Pure in-cron sort using data already fetched,
-  no schema change, no new capture point; the best listing alert email in aviation leads
-  with the best deal.
+~~- **[P2][goal] Rank aircraft new-listing digest samples by deal quality.**~~ ✅ SHIPPED
+  via `digest-samples-rank-by-deal` (2026-07-18) Sample queries returned newest-first
+  (`created_at`/`first_seen_at desc`), yet the cron already computes an honest comp
+  position per sample (the `compVsMarket` price-context pill) — so a 12%-below-market 172
+  could sit below three at-market ones. `fetchNewAircraftSamples` now re-sorts its
+  already-fetched candidate rows via a new pure `rankSamplesByDealQuality` helper
+  (`src/lib/dealRanking.ts`, unit-tested — 6 tests): rows with a `'below'` comp verdict
+  sort first (biggest discount first, newest as tiebreak); rows with no/near/above comp
+  data keep their original newest-first relative order, appended after. No widened
+  query, no schema change, no new capture point; price-drop/partnership/seeker samples
+  untouched.
 - **[P2][goal] Per-listing "not relevant?" feedback link on digest samples.** Digest
   👍/👎 is whole-digest only — when a subscriber's alert matches noise, the loop can't
   learn WHICH listing read as noise. Add a tiny per-sample "Not relevant?" link (HTML +
