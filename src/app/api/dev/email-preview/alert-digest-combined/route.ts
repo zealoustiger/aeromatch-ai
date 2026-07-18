@@ -15,6 +15,7 @@ export async function GET() {
   const { html } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage?token=preview',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=preview-1,preview-2',
+    digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=preview-1',
     sections: [
       {
         context: 'Cessna 172',
@@ -34,6 +35,8 @@ export async function GET() {
             location: 'Austin, TX',
             price: 219_000,
             url: 'https://clubhanger.com/aircraft/listing/preview-1',
+            id: 'preview-1',
+            type: 'aircraft',
             // Demonstrates the cross-section dedupe note (`alertDigestDedupe.ts`)
             // — this preview hand-builds sections rather than going through the
             // cron's dedupe pass, so the note is set directly here.
@@ -59,6 +62,8 @@ export async function GET() {
             price: 285_000,
             previousPrice: 310_000,
             url: 'https://clubhanger.com/aircraft/listing/preview-2',
+            id: 'preview-2',
+            type: 'aircraft',
           },
         ],
       },

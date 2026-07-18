@@ -138,7 +138,7 @@ export function buildAlertConfirmEmail(opts: {
     ? ''
     : samples.length > 0
       ? `<p style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 10px;">Here&rsquo;s what you&rsquo;d be watching:</p>
-        <div style="margin:0 0 22px;">${samples.map(sampleCardHtml).join('')}</div>`
+        <div style="margin:0 0 22px;">${samples.map((s) => sampleCardHtml(s)).join('')}</div>`
       : `<p style="font-size:13px;line-height:1.6;color:#64748b;background:#f8f7f4;border:1px solid #ece6dc;border-radius:10px;padding:10px 12px;margin:0 0 22px;">None match right now &mdash; you&rsquo;ll be first to know when one does.</p>`
 
   const previewCount = opts.preview?.count ?? null
@@ -869,6 +869,15 @@ export type AlertDigestSample = {
    *  here rather than duplicated under that section too. Honesty note, not a
    *  new match signal. */
   alsoMatchesLabel?: string
+  /** This sample's underlying row id (`aircraft_for_sale` / `partnerships` /
+   *  `partnership_seekers`) — used only to build the per-sample "Not
+   *  relevant?" feedback link (see `digestFeedbackBaseUrl`). Omitted
+   *  entirely (e.g. the pre-confirmation preview in `buildAlertConfirmEmail`)
+   *  just means that link never renders for this card. */
+  id?: string
+  /** Which table `id` refers to — lets the digest-feedback route rebuild the
+   *  listing's real detail path without trusting a client-supplied URL. */
+  type?: 'aircraft' | 'partnership' | 'seeker'
 }
 
 /**
@@ -902,7 +911,19 @@ function specsLine(s: AlertDigestSample): string {
   return parts.join(' &middot; ')
 }
 
-function sampleCardHtml(s: AlertDigestSample): string {
+/** Builds the one-click "Not relevant?" link for a single digest sample —
+ *  see the digest-feedback route's `listing` param. `undefined` whenever the
+ *  caller has no `digestFeedbackBaseUrl` (no token yet, e.g. the
+ *  pre-confirmation preview) or the sample carries no `id` — never a broken
+ *  link. `s.type` is forwarded so the route can rebuild the listing's real
+ *  detail path server-side instead of trusting a client-supplied URL. */
+function notRelevantLink(baseUrl: string | undefined, s: AlertDigestSample): string | undefined {
+  if (!baseUrl || !s.id) return undefined
+  const typeParam = s.type ? `&type=${s.type}` : ''
+  return `${baseUrl}&listing=${encodeURIComponent(s.id)}${typeParam}&title=${encodeURIComponent(s.title)}`
+}
+
+function sampleCardHtml(s: AlertDigestSample, notRelevantUrl?: string): string {
   const photo = s.photoUrl
     ? `<img src="${escapeAttr(s.photoUrl)}" alt="${escapeAttr(s.title)}" width="88" height="66" style="width:88px;height:66px;object-fit:cover;border-radius:8px;flex-shrink:0;display:block;" />`
     : ''
@@ -925,18 +946,28 @@ function sampleCardHtml(s: AlertDigestSample): string {
   const compLabelHtml = s.compLabel
     ? `<p style="margin:3px 0 0;"><span style="display:inline-block;background:${s.compBelowAvg ? '#ecfdf5' : '#f1f5f9'};color:${s.compBelowAvg ? '#047857' : '#475569'};padding:1px 7px;border-radius:9999px;font-size:11px;font-weight:600;">${escapeHtml(s.compLabel)}</span></p>`
     : ''
+  // Rendered as a sibling AFTER the card's own <a>, never nested inside it
+  // (nested anchors are invalid HTML and unreliable across email clients).
+  // Right-aligned + tiny so it reads as a quiet footer affordance, never
+  // competing with the listing CTA above it.
+  const notRelevantHtml = notRelevantUrl
+    ? `<p style="margin:2px 0 0;text-align:right;"><a href="${escapeAttr(notRelevantUrl)}" style="font-size:10px;color:#c2b8a3;text-decoration:none;">Not relevant?</a></p>`
+    : ''
 
-  return `<a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;padding:12px 0;border-bottom:1px solid #ece6dc;">
-        ${photo}
-        <div style="min-width:0;">
-          <p style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;">${escapeHtml(s.title)}</p>
-          ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
-          ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
-          ${compLabelHtml}
-          ${placeholderNote}
-          ${alsoMatchesNote}
-        </div>
-      </a>`
+  return `<div style="padding:12px 0;border-bottom:1px solid #ece6dc;">
+        <a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;">
+          ${photo}
+          <div style="min-width:0;">
+            <p style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;">${escapeHtml(s.title)}</p>
+            ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
+            ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
+            ${compLabelHtml}
+            ${placeholderNote}
+            ${alsoMatchesNote}
+          </div>
+        </a>
+        ${notRelevantHtml}
+      </div>`
 }
 
 /**
@@ -1008,6 +1039,11 @@ export function buildAlertDigestEmail(opts: {
    *  same precedent as `frequencyUrl`. */
   digestFeedbackUpUrl?: string
   digestFeedbackDownUrl?: string
+  /** Base URL (token embedded, no `vote`/`listing`/`type`/`title` yet — see
+   *  `notRelevantLink`) for each sample's own "Not relevant?" link. Same
+   *  no-token graceful-degrade as `digestFeedbackUpUrl` — a sample with no
+   *  `id` also never gets the link even when this is set. */
+  digestFeedbackBaseUrl?: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -1049,7 +1085,7 @@ export function buildAlertDigestEmail(opts: {
         : subjectBase
 
   const samplesHtml = samples.length
-    ? `<div style="margin:0 0 20px;">${samples.map(sampleCardHtml).join('')}</div>`
+    ? `<div style="margin:0 0 20px;">${samples.map((s) => sampleCardHtml(s, notRelevantLink(opts.digestFeedbackBaseUrl, s))).join('')}</div>`
     : ''
   const remaining = total - samples.length
   const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
@@ -1144,7 +1180,8 @@ export function buildAlertDigestEmail(opts: {
       ]
         .filter(Boolean)
         .join(' · ')
-      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}${s.compLabel ? ` [${s.compLabel}]` : ''}\n  ${s.url}`
+      const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, s)
+      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}${s.compLabel ? ` [${s.compLabel}]` : ''}\n  ${s.url}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
     })
     .join('\n')
 
@@ -1229,6 +1266,11 @@ export function buildCombinedAlertDigestEmail(opts: {
    *  (same "never spam" precedent as `crossSell`). */
   digestFeedbackUpUrl?: string
   digestFeedbackDownUrl?: string
+  /** Same per-sample "Not relevant?" base URL as `buildAlertDigestEmail`'s
+   *  option — applied to every section's sample cards (each still uses its
+   *  own sample's `id`/`type`/`title`, just sharing this one token-scoped
+   *  base). */
+  digestFeedbackBaseUrl?: string
 }): { subject: string; html: string; text: string } {
   const sections = opts.sections
   const totalNew = sections.reduce((n, s) => n + s.newCount, 0)
@@ -1263,7 +1305,7 @@ export function buildCombinedAlertDigestEmail(opts: {
     const remaining = s.newCount + s.dropCount - samples.length
     const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
     const samplesHtml = samples.length
-      ? `<div style="margin:0 0 14px;">${samples.map(sampleCardHtml).join('')}</div>`
+      ? `<div style="margin:0 0 14px;">${samples.map((sm) => sampleCardHtml(sm, notRelevantLink(opts.digestFeedbackBaseUrl, sm))).join('')}</div>`
       : ''
     const marketPulseHtml = s.marketPulse
       ? `<p style="margin:0 0 12px;font-size:11px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:6px 10px;">${escapeHtml(s.marketPulse)}</p>`
@@ -1295,7 +1337,8 @@ export function buildCombinedAlertDigestEmail(opts: {
             : sm.price != null
               ? formatUsd(sm.price)
               : ''
-        return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}`
+        const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, sm)
+        return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
       })
       .join('\n')
     const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`

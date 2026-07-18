@@ -18,6 +18,7 @@ export async function GET() {
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=preview',
     marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
+    digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=preview',
     samples: [
       {
         title: '2015 Cessna 172S Skyhawk',
@@ -30,6 +31,8 @@ export async function GET() {
         compLabel: '~9% below avg · $240k median · 6 comps',
         compBelowAvg: true,
         url: 'https://clubhanger.com/aircraft/listing/preview-1',
+        id: 'preview-1',
+        type: 'aircraft',
       },
       {
         title: '2009 Cessna 172S Skyhawk',
@@ -41,6 +44,8 @@ export async function GET() {
         price: 165_000,
         previousPrice: 179_900,
         url: 'https://clubhanger.com/aircraft/listing/preview-2',
+        id: 'preview-2',
+        type: 'aircraft',
       },
     ],
   })

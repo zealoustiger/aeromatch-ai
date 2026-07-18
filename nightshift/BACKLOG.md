@@ -2929,15 +2929,17 @@ view-in-browser or share affordance._
   data keep their original newest-first relative order, appended after. No widened
   query, no schema change, no new capture point; price-drop/partnership/seeker samples
   untouched.
-- **[P2][goal] Per-listing "not relevant?" feedback link on digest samples.** Digest
-  👍/👎 is whole-digest only — when a subscriber's alert matches noise, the loop can't
-  learn WHICH listing read as noise. Add a tiny per-sample "Not relevant?" link (HTML +
-  plain-text digests) hitting the existing `/api/alerts/digest-feedback` route with a new
-  optional `listing` param, recorded as a `digest_listing_vote` row in the existing
-  `feedback` table (listing id + title in `message`/`page_path` — no schema change), same
-  token trust boundary + friendly redirect as the digest vote. Keep it visually quiet (one
-  small footer-of-card link, never competing with the listing CTA). Surfacing the rollup
-  in the Monday email is the follow-up slice, not this one. No new capture point.
+~~- **[P2][goal] Per-listing "not relevant?" feedback link on digest samples.**~~ ✅ SHIPPED
+  via `digest-listing-not-relevant` (2026-07-18) Digest 👍/👎 was whole-digest only — when a
+  subscriber's alert matched noise, the loop couldn't learn WHICH listing read as noise.
+  Every digest sample card (single + combined templates, HTML + plain text) now shows a
+  quiet, right-aligned "Not relevant?" link, only when the subscriber has a token AND the
+  sample carries an `id`. It hits `/api/alerts/digest-feedback` with new `listing`/`type`/
+  `title` params, recording a `digest_listing_vote` row in the existing `feedback` table
+  (message = title, page_path = the listing's real detail path rebuilt server-side from
+  `type` — never a client-supplied URL) and redirecting to a new "Thanks — noted!" status
+  page. No schema change, no new capture point. Surfacing the rollup in the Monday email
+  remains the follow-up slice.
 - **[P2][goal] Tokenized live "view in browser" page for digest emails.** Standard
   best-in-class email affordance this digest lacks: image-blocking clients render a
   broken-looking email with no escape hatch. Add a header link in the digest builders →

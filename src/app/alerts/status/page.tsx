@@ -85,6 +85,13 @@ const STATES = {
     title: "Thanks — we'll do better",
     body: 'Sorry that digest missed the mark. You can switch to fewer emails, pause, or fine-tune exactly what you get anytime.',
   },
+  digest_listing_feedback: {
+    icon: ThumbsDown,
+    tint: 'text-amber-600',
+    ring: 'bg-amber-50',
+    title: 'Thanks — noted!',
+    body: "We'll factor that into what shows up in your future alert emails.",
+  },
 } as const
 
 type StateKey = keyof typeof STATES
@@ -98,7 +105,8 @@ function resolveState(raw: string | string[] | undefined): StateKey {
     v === 'cross_sell_added' ||
     v === 'email_changed' ||
     v === 'digest_feedback_up' ||
-    v === 'digest_feedback_down'
+    v === 'digest_feedback_down' ||
+    v === 'digest_listing_feedback'
     ? v
     : 'invalid'
 }
@@ -319,6 +327,13 @@ export default async function AlertStatusPage({
             </p>
           )}
           {key === 'digest_feedback_up' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'digest_listing_feedback' && token && (
             <p className="mt-4 text-sm text-slate-500">
               <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
                 Manage your alerts
