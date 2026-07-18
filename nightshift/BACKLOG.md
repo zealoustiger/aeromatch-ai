@@ -2863,6 +2863,97 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   when zero votes have ever been recorded, so it never shows a fabricated 👍 0 / 👎 0.
 ---
 
+### Plan-pass batch #6 — 2026-07-18 (Fable)
+_Batch #5 fully drained; only the two long-standing blocked items remain (instant sends →
+Vercel-tier human call; save-search auth wall → `[want]` product call) — both untouched.
+Capture/entry-point breadth re-verified as genuinely saturated, so this batch targets the
+remaining verified gaps: **admin measurement, digest content quality, and a demand probe
+for the blocked instant item.** Confirmed already-shipped this pass, so NOT (re-)filed:
+`/aircraft/listing/[id]?posted=1` seller cross-sell (the banner already renders
+`AlertSignup source="post_success"` with match/alert counts — the `alert-crosssell-rightnoun`
+"follow-up slice" note is stale), per-placement conversion ranking on `/admin/alerts`,
+stranded-pending confirm reminder, one-time widen email for never-matched alerts, 404-page
+capture, cost-calculator prefilled capture, `share=alert` links (on-site
+`ShareAlertButton`), UTM tagging on digest links (`email.ts:823`), Resend
+opened/clicked ingestion (`email_engagement_events` via `/api/webhooks/resend`), and
+`target_price` honored in the digest's watch resolution. All items below verified
+un-built by direct code read this pass: `alertFunnelWeekly.ts` contains zero
+open/click/engagement or demand-gap content; `getEmailEngagementRollup`
+(`emailEngagement.ts`) is all-time-only and read only by `/admin/alerts`; no `instant`
+in `FrequencyToggle.tsx` (only alertFrequency.ts doc comments explaining why it doesn't
+exist); digest sample queries order `created_at desc` only; `digest-feedback/route.ts`
+records digest-level votes only (no per-listing param); `email.ts` greps clean of any
+view-in-browser or share affordance._
+
+- **[P1][goal] Email open/click week-over-week in the Monday admin email.** The Resend
+  webhook has been ingesting `email.opened`/`email.clicked` into `email_engagement_events`
+  (with `created_at`), but the Monday funnel email never reads it — the human can see
+  created/confirmed WoW yet has no idea whether the digests themselves get opened. Add a
+  week-windowed engagement rollup (this week vs last, per `email_type`, opened + clicked)
+  to `getAlertFunnelWeeklySnapshot` and render it as an "Email engagement" row in
+  `buildAdminAlertFunnelEmail` — reuse/extend `emailEngagement.ts` rather than duplicating
+  the query; same fail-soft convention when the table isn't migrated, explicit "no
+  engagement events yet" empty state (never a fabricated 0/0). Improves: GOAL's
+  prove-it-converts pillar (send → open → click is the missing middle of the funnel). No
+  new capture point, no analytics-shape change.
+- **[P1][goal] "Demand with no supply" line in the Monday admin email.** Alert criteria
+  are a free demand signal nothing reads: a subscriber asking for a "Mooney M20 in Ohio"
+  that inventory can't match gets only silence (or a one-time widen email) — and the human
+  never learns which inventory to go chase. In `alertFunnelWeekly`, group confirmed alerts
+  by normalized `source_path`, take the top ~10 by subscriber count, live-verify each via
+  the existing `getAlertMatchCount`, and list the ones with 0 current matches ("3
+  subscribers waiting · 0 live matches") as an inventory-acquisition shopping list.
+  Cap the path count to bound query volume; explicit "every top search has live matches"
+  empty state. No schema change, no new capture point.
+- **[P1][goal] Instant-alerts demand probe on the frequency picker.** The real
+  instant-sends item is blocked on a Vercel-tier human call — give that call data instead
+  of letting it rot. On `/alerts/manage`'s `FrequencyToggle`, add an honest non-selectable
+  "Instant — interested?" affordance ("We check daily today; tap if you'd want
+  within-the-hour alerts") that records a one-tap interest signal (PostHog
+  `instant_alert_interest` + a `feedback`-table row, same shape as the digest-vote insert
+  — no schema change) and thanks the subscriber without promising anything. Never renders
+  "Instant" as a real cadence option (the honesty rule: no cadence that isn't real).
+  Improves: digest-vs-instant pillar with real demand data; count surfaces later via the
+  existing feedback rollup (follow-up). No new capture point.
+- **[P2][goal] Rank aircraft new-listing digest samples by deal quality.** Sample queries
+  return newest-first (`created_at desc` at `alert-digest/route.ts:1143`), yet the cron
+  already computes an honest comp position per sample (the `compVsMarket` price-context
+  pill) — so a 12%-below-market 172 can sit below three at-market ones. Sort each alert's
+  new-listing samples below-market-first (biggest honest discount first, newest as
+  tiebreak); listings without comp data keep newest-first order after the ranked ones —
+  never fabricate a rank from missing comps. Pure in-cron sort using data already fetched,
+  no schema change, no new capture point; the best listing alert email in aviation leads
+  with the best deal.
+- **[P2][goal] Per-listing "not relevant?" feedback link on digest samples.** Digest
+  👍/👎 is whole-digest only — when a subscriber's alert matches noise, the loop can't
+  learn WHICH listing read as noise. Add a tiny per-sample "Not relevant?" link (HTML +
+  plain-text digests) hitting the existing `/api/alerts/digest-feedback` route with a new
+  optional `listing` param, recorded as a `digest_listing_vote` row in the existing
+  `feedback` table (listing id + title in `message`/`page_path` — no schema change), same
+  token trust boundary + friendly redirect as the digest vote. Keep it visually quiet (one
+  small footer-of-card link, never competing with the listing CTA). Surfacing the rollup
+  in the Monday email is the follow-up slice, not this one. No new capture point.
+- **[P2][goal] Tokenized live "view in browser" page for digest emails.** Standard
+  best-in-class email affordance this digest lacks: image-blocking clients render a
+  broken-looking email with no escape hatch. Add a header link in the digest builders →
+  a new tokenized page (e.g. `/alerts/digest/view?token=...`, same
+  `unsubscribe_token` trust boundary as the other alert token routes) that renders the
+  alert's CURRENT matches server-side, honestly labeled "Live view — updated since your
+  email was sent" (nothing stores sent HTML, so never pretend to archive the exact email;
+  a live view is the honest version). Reuse the digest match queries + on-site card
+  components; page carries the alert's manage/unsubscribe links so it doubles as a
+  management entry point. No schema change, no new capture point.
+- **[P2][goal] "Buying with a partner? Share this alert" line in the digest footer.**
+  The share affordance exists on-site only (`ShareAlertButton` on `/alerts/manage`,
+  `share=alert` param the receiving `AlertSignup` already reads) — the email, where a
+  co-buyer conversation actually happens ("forward this to your partner"), has none.
+  Add one quiet footer line to the digest builders linking the alert's own
+  `source_path` via the existing `withShareParam` (a plain site URL — never a tokenized
+  link, so a forwarded email can't leak manage/unsubscribe control). The recipient lands
+  on the live search with the share-aware alert box open. One `email.ts` line + tests;
+  emits nothing itself — the receiving page's existing `alert_subscribed` (with its own
+  source) measures conversion. No schema change.
+
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
 The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
 pillar item only when the alert queue above is genuinely exhausted, or a `[want]`/`[bug]`
