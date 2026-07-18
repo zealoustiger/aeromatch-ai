@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-18T10:07:14Z — DRAIN SUMMARY
+- Cycles this run: 21 (PASS 17 / FAIL 1 / ABORT 3)
+- Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus
+- Night spend so far: $81.4290 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260718T060004Z
+
 ## 20260718T095544Z — PASS — alert-narrow-nudge
 - Pages: /alerts/manage
 - What: **A subscriber whose alert is matching a huge pile of listings (say,
