@@ -2,6 +2,60 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T094330Z — PASS — admin-digest-vote-counts
+- Pages: (internal — Monday admin alert-funnel email only; no rendered-page UI change)
+- What: **The weekly admin email now shows whether subscribers are giving the alert
+  digest a thumbs up or down, instead of silently collecting those votes and never
+  reading them back.** Every digest email has had 👍/👎 links for a while (the
+  `digest-feedback` route inserts each click into the `feedback` table), and
+  `/admin/alerts` already showed a live vote rollup — but the Monday summary email
+  itself never surfaced them, so the loop was deaf to the one direct quality signal
+  subscribers send back. It now shows a "Digest feedback (👍/👎)" line with this
+  week's up/down counts and a week-over-week delta on each, right alongside the
+  existing created/confirmed/unsubscribed/paused/bounced rows.
+- Goal: alert-experience (measurement pillar: "prove it converts" — reading the one
+  signal we already capture) — tier 3 `[goal]`. Tier 1 (`[bug]`): most recent
+  CHANGELOG entry (`alert-manage-forms-aria-live`) was a PASS; swept BACKLOG.md, no
+  unstruck `[bug]` line found. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing set as every recent cycle's audit (save-
+  search auth-wall reconciliation and the collection-layout mosaic redesign both
+  explicitly flagged as needing a human product call/mock; Trade-A-Plane ingestion /
+  Controller / AirMart / AeroTrader are bot-protection-blocked per the standing
+  guardrail; Bay-Area coverage benchmark's FAA/AirNav denominator repeatedly
+  attempted-and-honestly-aborted; owner-leads dataset needs a compliance review;
+  dynamic-location seed personas has no live effect) — none buildable autonomously.
+  Dropped to tier 3 and picked the last of the 2 open `[P2][goal]` alert-experience
+  items named in the prior cycle's "Next" note (the aria-live sweep and this one) —
+  chose this over the "narrow this alert?" nudge as the smaller, more contained slice
+  (reuses an existing rollup function vs. a new UI nudge + live-verified tighteners).
+  Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T094330Z-admin-digest-vote-counts.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean. Full `node --test` suite (468 tests across `src/lib/*.test.ts`, up from 466 —
+  2 new tests) passes, 0 failures: extended `email.test.ts`'s `buildAdminAlertFunnelEmail`
+  fixture + coverage for the new row (real WoW delta on both up and down) and the
+  "no votes ever recorded" honest-zero state. Implementation: `alertFunnelWeekly.ts`
+  now calls the existing `getDigestVoteRollup()` (`alertScoreboard.ts`, already backs
+  `/admin/alerts`) instead of duplicating its query/classify logic — gave that function
+  an optional `now` param (defaulting to `Date.now()`, unchanged behavior for its
+  existing caller) so it composes with `getAlertFunnelWeeklySnapshot`'s own testable
+  `now`. No schema change (reads the same `feedback`/`type='digest_vote'` rows
+  `/admin/alerts` already reads). QA: non-visual, internal-email-only cycle — served
+  the PRODUCTION build (`next start`), confirmed `/` and `/admin/alerts` both return
+  200 with no errors in the server log, and curled
+  `/api/dev/email-preview/admin-alert-funnel` to confirm the new "Digest feedback
+  (👍/👎)" row renders with the fixture's 👍 5 / 👎 1 counts and correct WoW deltas.
+  Screenshots not applicable (no rendered-page change, per convention for non-visual
+  cycles) — this cycle produces no new screenshot dir. Server process confirmed
+  stopped, port 3000 free.
+- Screenshots: n/a (no rendered-page UI change this cycle)
+- Next: the alert-experience `[P2][goal]` queue's remaining open item is the "narrow
+  this alert?" nudge for very-high-volume alerts on `/alerts/manage` (make-only/
+  nationwide alerts matching hundreds of listings get a 1-2 concrete one-tap
+  tightener, live-verified to leave >0 matches). That was the only item left in the
+  queue as of this cycle — pick it next, or if the queue reads as exhausted, emit
+  `ABORT — none — plan needed` to trigger a fresh Opus/Fable plan-pass batch.
+
 ## 20260718T093510Z — PASS — alert-manage-forms-aria-live
 - Pages: /alerts/manage, /alerts/status (component-level a11y change, no visual/layout
   change)
