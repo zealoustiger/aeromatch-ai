@@ -2,6 +2,57 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T093510Z — PASS — alert-manage-forms-aria-live
+- Pages: /alerts/manage, /alerts/status (component-level a11y change, no visual/layout
+  change)
+- What: **Screen-reader users now hear the result of every remaining form/control on
+  the alert management surfaces** — editing an alert's criteria, creating a new alert,
+  changing the email alerts go to, deleting all alerts and data, and the recovery
+  actions (pause/snooze/switch-to-weekly/found-my-aircraft) on the unsubscribe-recovery
+  box. This closes out the sweep the prior cycle (`alert-manage-actions-aria-live`)
+  started and explicitly left as its "Next": `AlertEditForm` (save success, hidden-
+  criteria removal, the debounced live match-count preview, errors), `NewAlertForm`
+  (create success/error), `UpdateAlertEmailForm` (email-change sent/canceled/error),
+  `DeleteAllAlertsControl` (deletion confirmation/error), and `/alerts/status`'s
+  `UnsubscribeRecover` (every recovery result, the reason-chip "Thanks" swap, errors).
+  `DownloadAlertDataLink` was audited and left untouched — it's a plain download `<a>`
+  with no client-side state change to announce.
+- Goal: alert-experience (great alert *management* — accessibility, closing the
+  standing `[P2][goal]` item) — tier 3 `[goal]`. Tier 1 (`[bug]`): most recent
+  CHANGELOG entry (`alert-manage-actions-aria-live`) was a PASS; swept BACKLOG.md,
+  no unstruck `[bug]` line found. Tier 2 (`[want]`): the one open `[P1][want]`
+  (save-search-vs-AlertSignup reconciliation) is explicitly flagged as a bigger
+  product call needing a human decision, not buildable autonomously — its one
+  actionable sub-item already shipped (`auth-savesearch-concrete-copy`). Dropped to
+  tier 3 and picked up exactly the "Remaining" list named in slice 1's own backlog
+  entry, closing the whole item (both slices now shipped) rather than leaving a
+  partial sweep open a third cycle.
+- Spec: nightshift/specs/20260718T093510Z-alert-manage-forms-aria-live.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean. Full `node --test` suite (466 tests across `src/lib/*.test.ts`) passes, 0
+  failures (this cycle touched no `src/lib` files, so no test changes expected or
+  made). Pure `aria-*`/`role` attribute + minimal state-plumbing additions (an
+  `announcement` string used only to feed a live region's text) — no className/
+  layout/copy/behavior change. `UpdateAlertEmailForm`'s multiple early-return
+  branches were given a shared persistent `sr-only role="status" aria-live="polite"`
+  region (mirroring `FrequencyToggle`'s pattern) so a success announcement set just
+  before a branch swap still has somewhere to land; `DeleteAllAlertsControl` and
+  `UnsubscribeRecover`'s branch-swap confirmations instead get the `role="status"
+  aria-live="polite"` attributes directly on their already-visible result element
+  (also a standard, AT-supported pattern for newly-inserted live regions) — simpler
+  where the swapped-in content already carries the full message. QA against the
+  PRODUCTION build (`next start`) via `qa-smoke.mjs` on `/alerts/manage` and
+  `/alerts/status`: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at desktop 1280 + mobile 375). Confirmed `aria-live` reached
+  the client bundle (`grep aria-live .next/static/chunks` — present across many
+  chunks). Non-visual cycle — screenshots saved for the audit trail, not read into
+  the QA verdict per convention. Server process confirmed killed, port 3000 free.
+- Screenshots: nightshift/screenshots/alert-manage-forms-aria-live/
+- Next: the standing `[P2][goal]` alert-experience queue now has 2 open items left:
+  the "narrow this alert?" nudge for very-high-volume alerts on `/alerts/manage`, and
+  Digest 👍/👎 feedback vote counts in the Monday admin email. Pick one of those next
+  cycle (tier 3, since tiers 1 & 2 are still empty/blocked-on-human as of this cycle).
+
 ## 20260718T092646Z — PASS — alert-manage-actions-aria-live
 - Pages: /alerts/manage (component-level a11y change, no visual/layout change)
 - What: **Screen-reader users now hear the result of the most-used actions on the

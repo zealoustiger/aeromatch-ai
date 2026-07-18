@@ -2801,7 +2801,7 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   **Slice 2 bonus fix:** `resumeAllAlerts` previously only queried `.eq('status','paused')`, so
   bulk-"Resume all" silently never resumed bounced rows even though the single-row `resumeAlert`
   explicitly supports it — now `.in('status', ['paused','bounced'])`. This closes the item.
-- **[P2][goal] Screen-reader pass on the manage surface — `aria-live` on every async
+~~- **[P2][goal] Screen-reader pass on the manage surface — `aria-live` on every async
   state swap.** The explicitly-named "Next" from `alert-capture-aria-live` (which covered
   only the 3 capture components): zero `aria-live`/`role="status"` exists anywhere under
   `src/app/alerts/` today. Sweep `AlertEditForm` (debounced live match-count preview,
@@ -2809,16 +2809,25 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   the delete-all and export confirmations, and `/alerts/status`'s `UnsubscribeRecover`
   action results. Same treatment as the capture sweep: pure `aria-*`/`role` attribute
   additions (`role="status"` for success, `role="alert"` for errors), no className/
-  layout/copy change — non-visual cycle. No new capture point.
-  ~~**Slice 1: the manage rows' pause/resume/snooze/delete/resend/send-sample feedback
-  (`AlertActions`), `FrequencyToggle`, `TargetPriceEdit`.**~~ ✅ SHIPPED via
+  layout/copy change — non-visual cycle. No new capture point.~~
+  **Slice 1: the manage rows' pause/resume/snooze/delete/resend/send-sample feedback
+  (`AlertActions`), `FrequencyToggle`, `TargetPriceEdit`.** ✅ SHIPPED via
   `alert-manage-actions-aria-live` (2026-07-18) These 3 components — the highest-
   frequency interaction surface on the page — now announce every async result via
   `role="alert"` (errors) or a visually-hidden `role="status" aria-live="polite"` region
   (pause/resume/snooze/delete/resend/send-sample confirmations, frequency-change/revert,
-  target-price saved/removed). Pure attribute additions, no visual change. **Remaining:**
-  `AlertEditForm`, `NewAlertForm`, `UpdateAlertEmailForm`, `DeleteAllAlertsControl`,
-  `DownloadAlertDataLink`, `/alerts/status`'s `UnsubscribeRecover` — pick up next.
+  target-price saved/removed). Pure attribute additions, no visual change.
+  **Slice 2: `AlertEditForm`, `NewAlertForm`, `UpdateAlertEmailForm`,
+  `DeleteAllAlertsControl`, `/alerts/status`'s `UnsubscribeRecover`.** ✅ SHIPPED via
+  `alert-manage-forms-aria-live` (2026-07-18) All 5 now announce their async
+  success/error results — `role="alert"` on every visible error message, a
+  `role="status" aria-live="polite"` region (either a persistent `sr-only` span or
+  the attribute added directly onto the already-visible confirmation/result element)
+  for save/create/delete/cancel confirmations, the debounced live match-count
+  preview, and the reason-chip "Thanks — that helps." swap. `DownloadAlertDataLink`
+  audited and left untouched — it's a plain download `<a>` with no client state to
+  announce. Pure attribute + minimal state-plumbing additions, no visual/behavior
+  change. **This closes the whole item — both slices shipped.**
 - **[P2][goal] "Narrow this alert?" nudge for very-high-volume alerts on
   `/alerts/manage`.** The honest inverse of the widen nudge: a make-only or nationwide
   alert matching hundreds of listings produces bloated digests that read as spam — the

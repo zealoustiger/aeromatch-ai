@@ -24,6 +24,7 @@ export default function UpdateAlertEmailForm({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const [announcement, setAnnouncement] = useState<string | null>(null)
   // Suggest-only "did you mean gmail.com?" — never auto-corrects, never blocks
   // submission of the as-typed address (see lib/suggestEmailFix.ts). Matters more
   // here than most capture points: a typo silently misroutes every future alert.
@@ -35,7 +36,10 @@ export default function UpdateAlertEmailForm({
     startTransition(async () => {
       const result = await requestAlertEmailChange(email, token)
       if (result.error) setError(result.error)
-      else setSent(true)
+      else {
+        setSent(true)
+        setAnnouncement('Confirmation email sent — check your new inbox to finish moving your alerts.')
+      }
     })
   }
 
@@ -44,49 +48,74 @@ export default function UpdateAlertEmailForm({
     startTransition(async () => {
       const result = await cancelAlertEmailChange(token)
       if (result.error) setError(result.error)
+      else setAnnouncement('Email change canceled — your alerts stay at the current address.')
     })
   }
 
+  // A persistent live region wrapping every branch below (rather than one nested
+  // inside a single branch) so a success announcement set just before a branch
+  // swap — e.g. handleCancel clearing `pendingEmail` — still has somewhere to
+  // land, matching FrequencyToggle/AlertActions' pattern.
+  const liveRegion = (
+    <span className="sr-only" role="status" aria-live="polite">
+      {announcement}
+    </span>
+  )
+
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-1 text-xs text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
-      >
-        Change the email these alerts go to
-      </button>
+      <>
+        {liveRegion}
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-1 text-xs text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+        >
+          Change the email these alerts go to
+        </button>
+      </>
     )
   }
 
   if (pendingEmail) {
     return (
-      <div className="mt-2 rounded-lg border border-dashed border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
-        <p>
-          We sent a confirmation to <strong>{pendingEmail}</strong> — click the link there to
-          finish moving your alerts. Until then, everything keeps going to this address.
-        </p>
-        <button
-          onClick={handleCancel}
-          disabled={isPending}
-          className="mt-1.5 font-medium text-amber-700 underline-offset-2 hover:underline disabled:opacity-50"
-        >
-          Cancel this change
-        </button>
-        {error ? <p className="mt-1 text-red-600">{error}</p> : null}
-      </div>
+      <>
+        {liveRegion}
+        <div className="mt-2 rounded-lg border border-dashed border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+          <p>
+            We sent a confirmation to <strong>{pendingEmail}</strong> — click the link there to
+            finish moving your alerts. Until then, everything keeps going to this address.
+          </p>
+          <button
+            onClick={handleCancel}
+            disabled={isPending}
+            className="mt-1.5 font-medium text-amber-700 underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Cancel this change
+          </button>
+          {error ? (
+            <p className="mt-1 text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </>
     )
   }
 
   if (sent) {
     return (
-      <p className="mt-2 text-xs text-emerald-700">
-        Check your new inbox — click the confirmation link there to finish moving your alerts.
-      </p>
+      <>
+        {liveRegion}
+        <p className="mt-2 text-xs text-emerald-700">
+          Check your new inbox — click the confirmation link there to finish moving your alerts.
+        </p>
+      </>
     )
   }
 
   return (
     <div>
+      {liveRegion}
       <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2 sm:flex-row" noValidate>
         <label htmlFor="new-alert-email" className="sr-only">
           New email address
@@ -111,7 +140,11 @@ export default function UpdateAlertEmailForm({
           <Mail className="h-3.5 w-3.5" />
           {isPending ? 'Sending…' : 'Send confirmation'}
         </button>
-        {error ? <p className="text-xs text-red-600 sm:w-full">{error}</p> : null}
+        {error ? (
+          <p className="text-xs text-red-600 sm:w-full" role="alert">
+            {error}
+          </p>
+        ) : null}
       </form>
       {emailSuggestion && (
         <button

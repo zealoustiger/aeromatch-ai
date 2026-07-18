@@ -77,6 +77,7 @@ export default function AlertEditForm({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [announcement, setAnnouncement] = useState<string | null>(null)
 
   const [make, setMake] = useState('')
   const [model, setModel] = useState('')
@@ -142,6 +143,7 @@ export default function AlertEditForm({
 
   function handleRemoveHidden(key: string) {
     if (!target) return
+    const removed = hiddenCriteria.find((c) => c.key === key)
     startTransition(async () => {
       const result = await removeAlertCriteriaParam(id, key, token)
       if (result.error) {
@@ -150,6 +152,7 @@ export default function AlertEditForm({
       }
       setHiddenCriteria((prev) => prev.filter((c) => c.key !== key))
       setSaved(true)
+      setAnnouncement(removed ? `Removed "${removed.label}".` : 'Criterion removed.')
     })
   }
 
@@ -171,11 +174,15 @@ export default function AlertEditForm({
       }
       setOpen(false)
       setSaved(true)
+      setAnnouncement('Alert updated.')
     })
   }
 
   return (
     <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto">
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
       <div className="flex flex-wrap items-center justify-end gap-1.5">
         {sourcePath ? (
           <Link
@@ -354,14 +361,22 @@ export default function AlertEditForm({
           ) : null}
 
           {liveCount !== null ? (
-            <p className={`mt-3 text-xs ${liveCount > 0 ? 'text-slate-500' : 'text-amber-600'}`}>
+            <p
+              className={`mt-3 text-xs ${liveCount > 0 ? 'text-slate-500' : 'text-amber-600'}`}
+              role="status"
+              aria-live="polite"
+            >
               {liveCount > 0
                 ? `${liveCount} ${nounFor(target.type)}${liveCount === 1 ? '' : 's'} match${liveCount === 1 ? 'es' : ''} right now`
                 : "This alert won't match anything today — consider widening"}
             </p>
           ) : null}
 
-          {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+          {error ? (
+            <p className="mt-2 text-xs text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
 
           <div className="mt-3 flex items-center gap-2">
             <button
