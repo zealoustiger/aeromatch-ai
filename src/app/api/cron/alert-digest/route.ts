@@ -27,7 +27,7 @@ import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
 import { SITE_URL } from '@/lib/seo'
 import { matchesModelFilter } from '@/lib/seekerModelFilter'
-import { hasRecentPriceDrop } from '@/lib/priceDrops'
+import { hasRecentPriceDrop, isMeaningfulPriceDrop } from '@/lib/priceDrops'
 import { intervalDaysFor, isDigestDue, normalizeFrequency, shouldOfferDailyUpgrade } from '@/lib/alertFrequency'
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
@@ -529,7 +529,7 @@ async function countRecentAircraftPriceDrops(
     console.error('[alert-digest] price-drop count error:', error.message)
     return 0
   }
-  const dropped = (data ?? []).filter((r) => hasRecentPriceDrop(r, since))
+  const dropped = (data ?? []).filter((r) => hasRecentPriceDrop(r, since) && isMeaningfulPriceDrop(r))
   if (target.dealOnly) {
     const goodDeals = await filterToGoodDeals(supabase, dropped as any[])
     return goodDeals.length
@@ -579,16 +579,14 @@ async function countRecentPartnershipPriceDrops(
     console.error('[alert-digest] partnership price-drop count error:', error.message)
     return 0
   }
-  return (data ?? []).filter((r) =>
-    hasRecentPriceDrop(
-      {
-        previous_price: r.previous_buy_in_price,
-        asking_price: r.buy_in_price,
-        price_changed_at: r.buy_in_price_changed_at,
-      },
-      since
-    )
-  ).length
+  return (data ?? []).filter((r) => {
+    const drop = {
+      previous_price: r.previous_buy_in_price,
+      asking_price: r.buy_in_price,
+      price_changed_at: r.buy_in_price_changed_at,
+    }
+    return hasRecentPriceDrop(drop, since) && isMeaningfulPriceDrop(drop)
+  }).length
 }
 
 async function countNewPartnerships(
@@ -864,7 +862,7 @@ async function fetchAircraftPriceDropSamples(
     console.error('[alert-digest] price-drop sample error:', error.message)
     return []
   }
-  const dropped = (data ?? []).filter((r) => hasRecentPriceDrop(r, since))
+  const dropped = (data ?? []).filter((r) => hasRecentPriceDrop(r, since) && isMeaningfulPriceDrop(r))
   const narrowed = target.dealOnly ? await filterToGoodDeals(supabase, dropped as any[]) : dropped
   return (narrowed as Row[]).slice(0, limit).map((row) => toDigestSample(row, row.previous_price))
 }
@@ -1021,12 +1019,10 @@ async function fetchPartnershipPriceDropSamples(
     return []
   }
   return (data ?? [])
-    .filter((r) =>
-      hasRecentPriceDrop(
-        { previous_price: r.previous_buy_in_price, asking_price: r.buy_in_price, price_changed_at: r.buy_in_price_changed_at },
-        since
-      )
-    )
+    .filter((r) => {
+      const drop = { previous_price: r.previous_buy_in_price, asking_price: r.buy_in_price, price_changed_at: r.buy_in_price_changed_at }
+      return hasRecentPriceDrop(drop, since) && isMeaningfulPriceDrop(drop)
+    })
     .slice(0, limit)
     .map((row) => toPartnershipDigestSample(row, row.previous_buy_in_price))
 }
