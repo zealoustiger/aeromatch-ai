@@ -2629,16 +2629,23 @@ human call; save-search auth wall → `[want]` product call)._
   source_path: "/aircraft?make=Cessna&model=172"}}`. Zero console errors, zero
   horizontal overflow at 375px (screenshots confirm no overlap with the sticky
   Feedback button). Test row deleted immediately after (confirmed 1 row removed).
-- **[P2][goal] "Delete all my alerts & data" self-serve on `/alerts/manage`.** Per-row
-  delete and vacation-mode pause-all exist, but a subscriber who wants ClubHanger to
-  forget them entirely has to delete rows one by one and take our word the email is gone.
-  Add a collapsed "Delete everything" affordance at the bottom of `/alerts/manage`
-  (token- or signed-in-owner-scoped, typed-confirmation gated) that hard-deletes every
-  alert row for that email and says plainly what was removed. Trust/privacy polish that
-  makes the unsubscribe promise credible — and an honest complement to the shipped
-  email-change flow. User-initiated deletion of their own rows only (FREEZE's bulk-delete
-  ban covers agent-initiated data destruction, not a subscriber's own right to leave); no
-  schema change.
+~~- **[P2][goal] "Delete all my alerts & data" self-serve on `/alerts/manage`.**~~ ✅
+  SHIPPED via `alert-delete-all` (2026-07-18). A collapsed "Delete all my alerts & data"
+  link at the bottom of the alerts panel expands into a typed-confirmation-gated box
+  (must type `DELETE`) that hard-deletes every `alerts` row for the owner's email via a
+  new `deleteAllAlerts(token?)` action — same `resolveOwnerEmail` trust boundary as
+  `pauseAllAlerts`/`resumeAllAlerts`, works for both the signed-in and token-scoped
+  (no-account) paths. **Bug found + fixed in the same cycle:** deleting every row also
+  deletes the one alert the token itself was minted from, so the page's automatic
+  post-action refresh re-resolved the (now-gone) token to nothing and would have shown
+  a confusing "this link is no longer valid" wall instead of a confirmation — caught via
+  a real Playwright run against a throwaway `@example.com` test alert, not just the
+  smoke gate. Fixed by having the token-path redirect client-side to
+  `/alerts/manage?deleted=N`, which the page renders as a dedicated "Deleted N alerts.
+  Nothing else is stored for you on ClubHanger." card with browse links, independent of
+  token validity; the signed-in path keeps the simpler inline confirmation (its session
+  isn't affected by the deletion). No schema change; per-row `deleteAlert`/`AlertActions`
+  untouched.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)

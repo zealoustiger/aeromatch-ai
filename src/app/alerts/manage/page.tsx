@@ -31,6 +31,7 @@ import ManageLinkRequestForm from '@/components/ManageLinkRequestForm'
 import AlertSubscriberMarker from '@/components/AlertSubscriberMarker'
 import VacationModeControl from '@/components/VacationModeControl'
 import UpdateAlertEmailForm from '@/components/UpdateAlertEmailForm'
+import DeleteAllAlertsControl from '@/components/DeleteAllAlertsControl'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -51,6 +52,8 @@ export default async function AlertsManagePage({
   const urlToken = Array.isArray(rawToken) ? rawToken[0] : rawToken
   const rawEdit = params.edit
   const editId = Array.isArray(rawEdit) ? rawEdit[0] : rawEdit
+  const rawDeleted = params.deleted
+  const deletedCountParam = Array.isArray(rawDeleted) ? rawDeleted[0] : rawDeleted
 
   const supabase = await createServerSupabaseClient()
   const {
@@ -80,6 +83,54 @@ export default async function AlertsManagePage({
     } else {
       tokenInvalid = true
     }
+  }
+
+  // The "delete all my alerts" flow (DeleteAllAlertsControl) redirects here
+  // with `?deleted=N` for a token-scoped visitor — deleting every row for
+  // that email also deletes the one row the token itself was minted from, so
+  // it can no longer resolve an email below. Without this branch that would
+  // fall straight into the generic "this link is no longer valid" / sign-in
+  // wall right after a deliberate, successful deletion — technically
+  // accurate but a confusing, unearned dead end. Shown regardless of
+  // `tokenInvalid`/session state so it also covers the (currently unused)
+  // case of a signed-in visitor landing here with the same param.
+  if (deletedCountParam) {
+    const deletedCount = Number(deletedCountParam) || 0
+    return (
+      <div className="ch-surface min-h-screen">
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              <Bell className="h-7 w-7 text-sky-600" />
+              Your alerts
+            </h1>
+            <p className="mt-1 text-slate-600">
+              Deleted {deletedCount} alert{deletedCount === 1 ? '' : 's'}. Nothing else is stored for you on
+              ClubHanger.
+            </p>
+          </div>
+          <div className="ch-panel p-6">
+            <p className="text-sm leading-relaxed text-slate-600">
+              You can set up a new alert anytime — no account needed.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/aircraft"
+                className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+              >
+                Browse aircraft for sale
+              </Link>
+              <Link
+                href="/partnerships"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Browse partnerships
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!email) {
@@ -394,6 +445,7 @@ export default async function AlertsManagePage({
             </ul>
           )}
           {crossSell && <ManageAlertCrossSell token={scopeToken} suggestion={crossSell} />}
+          <DeleteAllAlertsControl token={scopeToken} email={email} count={alerts.length} />
         </section>
       </div>
     </div>
