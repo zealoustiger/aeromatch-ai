@@ -2,6 +2,80 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T105932Z — PASS — digest-listing-not-relevant
+- Pages: /alerts/manage, /alerts/status (internal — new-listing/price-drop alert digest
+  emails carry the new link; no other rendered-page UI change)
+- What: **Every sample listing card in an alert digest email now has a tiny, quiet "Not
+  relevant?" link** — previously a subscriber could only vote 👍/👎 on the whole digest, so
+  the loop never learned WHICH specific listing read as noise when an alert was too broad.
+  One click records that one listing (not the whole alert) as not relevant and lands on a
+  friendly "Thanks — noted!" page with a link to manage the alert.
+- Goal: alert-experience (smart, honest alert content pillar — closing the loop on which
+  matches actually miss, GOAL.md's "never spam" + honesty bar) — tier 3 `[goal]`. Tier 1
+  (`[bug]`): most recent CHANGELOG entry (`digest-samples-rank-by-deal`) was a PASS; swept
+  BACKLOG.md, no unstruck `[bug]` line found. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing blocked-on-human set as every recent cycle's
+  audit (save-search auth-wall reconciliation and the collection-layout mosaic redesign
+  both need a human product call/mock; the one-click-save-search item is fully shipped
+  despite the un-struck outer bullet — checked directly, both its slices carry their own
+  ✅ SHIPPED markers; Trade-A-Plane/Controller/AirMart/AeroTrader bot-protection-blocked;
+  Bay-Area coverage benchmark blocked on a real FAA/AirNav denominator; owner-leads dataset
+  needs compliance review; dynamic-location seed personas has no live effect) — none
+  buildable autonomously. Dropped to tier 3: picked the first of the prior cycle's 3 named
+  remaining `[P2]`s (per-listing "not relevant?" feedback link), the most self-contained of
+  the three (reuses the existing digest-feedback route + `feedback` table, no new page).
+  Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T105932Z-digest-listing-not-relevant.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0 clean.
+  Full `node --test` suite (484 tests across `src/lib/*.test.ts`, up from 479 — 5 new tests)
+  passes, 0 failures: new coverage for `sampleCardHtml`'s "Not relevant?" link rendering
+  (HTML + text) in both `buildAlertDigestEmail` and `buildCombinedAlertDigestEmail`, the
+  no-link case when `digestFeedbackBaseUrl` or the sample's `id` is missing, and that the
+  link never nests inside the card's own `<a>` (invalid HTML). Implementation:
+  `AlertDigestSample` gains optional `id`/`type` fields, set by `toDigestSample`/
+  `toPartnershipDigestSample`/`toSeekerDigestSample` in the alert-digest cron (already had
+  the row id in scope for `url`, just wasn't carrying it through); `sampleCardHtml` now
+  renders the card's own `<a>` and an optional sibling "Not relevant?" link inside a
+  wrapping `<div>` (previously the whole card WAS the `<a>` — nesting a second anchor
+  inside it would've been invalid HTML/unreliable across clients) — fixed 3 existing
+  `.map(sampleCardHtml)` call sites to explicit arrow functions in the process, since
+  `.map(fn)` passes `(item, index)` and a bare `notRelevantUrl?` second param would
+  otherwise have silently received the array index. Both digest builders gain an optional
+  `digestFeedbackBaseUrl` opt (built once per send, same token as the existing whole-digest
+  vote links, minus `&vote=...`); a new module-level `notRelevantLink()` helper builds each
+  sample's own link from it + the sample's `id`/`type`/`title`, omitted whenever either is
+  missing (e.g. the pre-confirmation preview in `buildAlertConfirmEmail`, which doesn't
+  pass the opt at all — no token exists yet). `/api/alerts/digest-feedback` now accepts
+  `listing`/`type`/`title` alongside the existing `token`/`vote`: when `listing` is present
+  it takes priority, inserting one `digest_listing_vote` feedback row (message = title,
+  page_path = the listing's real detail path rebuilt server-side from `type` — never a
+  client-supplied URL, closing off an open-redirect-shaped input) and redirecting to a new
+  `digest_listing_feedback` state on `/alerts/status` ("Thanks — noted!" + a link to manage
+  alerts). No schema change — reuses `feedback.type`/`message`/`email`/`page_path`, all
+  pre-existing columns. QA: visual cycle (new rendered link in 2 email templates + a new
+  status-page state) — killed a stale `next-server` process squatting on port 3000 from an
+  earlier, uncleanly-ended cycle before starting this cycle's own production build;
+  `qa-smoke.mjs` on `/alerts/manage`, both dev email-preview routes, and the new
+  `/alerts/status?state=digest_listing_feedback` state: 8/8 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at desktop 1280 + mobile 375); screenshots read
+  into the verdict — the "Not relevant?" link renders as a small, right-aligned, quiet
+  footer link on every sample card in both the single-alert and combined-alert templates,
+  never overlapping or competing with the card's own CTA, correct at both viewports. Live-
+  verified the actual route end-to-end against a throwaway `@example.com` test alert
+  (seeded + deleted via service role): hit `/api/alerts/digest-feedback` with real
+  `listing`/`type`/`title` params, confirmed the 307 redirect to
+  `.../alerts/status?state=digest_listing_feedback&token=...`, confirmed via a direct
+  read-only query that exactly one `feedback` row landed with the correct
+  `type`/`message`/`email`/`page_path`, then deleted both the test alert and feedback row
+  (confirmed 0 remain via a follow-up query). Confirmed port 3000 free before finishing.
+- Screenshots: nightshift/screenshots/digest-listing-not-relevant/
+- Next: 2 `[P2]`s remain open in the plan-pass batch #6 alert-experience queue: tokenized
+  live "view in browser" page for digest emails; "Buying with a partner? Share this alert"
+  line in the digest footer. Also noted this cycle: the "one-click save search" `[P2][want]`
+  bullet (BACKLOG.md ~line 3951) is fully shipped (both slices carry their own ✅ markers)
+  but its outer bullet line was never struck through — a stale audit artifact, not a real
+  open item; worth a cosmetic strike-through pass next time that section is touched.
+
 ## 20260718T104710Z — PASS — digest-samples-rank-by-deal
 - Pages: (internal — new-listing aircraft alert digest emails only; no rendered-page UI change)
 - What: **The alert digest email now leads with the best deal, not just the newest

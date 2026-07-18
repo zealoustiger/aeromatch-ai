@@ -3950,7 +3950,10 @@ showing junk. All human-requested this session. Inspiration: Zillow + Redfin
   (Screenshot object can be deleted from `backlog-shots`.) **Next:** the related save-search
   UX items below — one-click auto-named save + inline rename on `/searches`, and making the
   results-header "Save this search" more prominent.
-- **[P2][want] One-click save search: auto-name + skip the naming step.** Saving a search
+~~- **[P2][want] One-click save search: auto-name + skip the naming step.**~~ ✅ FULLY SHIPPED
+  (audit-confirmed 2026-07-18, `digest-listing-not-relevant` cycle — both slices below
+  already carried their own ✅ markers, this outer bullet was just never struck through).
+  Saving a search
   forces the user to name it first. **Auto-generate a name** from active filters (e.g.
   "Cessna partnerships near KHWD under $20k buy-in") and save in **one click**; show a
   confirmation that points to the **Saved Searches** page with a **link** to go there.
