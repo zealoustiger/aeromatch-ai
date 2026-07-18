@@ -2964,6 +2964,104 @@ view-in-browser or share affordance._
   via the existing `withShareParam` (plain site URL, never a tokenized manage/
   unsubscribe link). No schema change, no new capture point — the receiving page's
   existing share-aware `AlertSignup`/`alert_subscribed` measures conversion.
+---
+
+### Plan-pass batch #7 — 2026-07-18 (Fable)
+_Batch #6 fully drained (all 7 items shipped/struck 2026-07-18; `digest-view-in-browser`
+closed it). Only the two long-standing blocked items remain open above — instant sends
+(Vercel-tier human call) and the save-search auth wall (`[want]` product call) — both
+untouched here. Entry-point capture re-confirmed saturated (no new capture points below),
+so this batch targets the remaining verified gaps: **never-spam correctness, closing
+feedback loops the site already collects but never reads, engagement attribution,
+reliability visibility, and management polish.** All verified un-built by direct code
+read this pass: `priceDropAmount` (`priceDrops.ts:43`) returns a drop for ANY decrease —
+no minimum-meaningful-drop floor exists anywhere; `digest_listing_vote` and
+`instant_alert_interest` are written (`digest-feedback/route.ts`,
+`InstantInterestNudge.tsx`) but appear in neither `alertFunnelWeekly.ts` nor
+`alertScoreboard.ts` (both were batch #6's own named follow-up slices); the Resend
+webhook's `email_engagement_events` insert (`webhooks/resend/route.ts:70`) stores
+`event_type`/`email_type`/`resend_email_id`/`link_url` only — no recipient or alert
+linkage, so per-subscriber engagement is underivable; `alert_cron_runs` is read only by
+`/admin/alerts` (never the Monday email) and records no send-failure count;
+`detectOverlappingAlerts` is imported only by `alerts/manage/page.tsx` — nothing runs at
+subscribe time; `alertFrequency.ts` is elapsed-days only (no day-of-week anywhere:
+`digest_day` greps clean); `AlertEditForm.tsx:262` renders `model` as a single text
+input while `AircraftSaleFilters.tsx:67` treats the same comma-joined `model` param as
+chip multi-select._
+
+- **[P1][goal] Minimum-meaningful-drop floor on price-drop digest sends.** The never-spam
+  pillar cuts against trivial repricing: `priceDropAmount` (`src/lib/priceDrops.ts`)
+  counts ANY decrease, so a $100 nudge on a $150k listing emails every matching
+  price-drop subscriber as if it were news. Add a pure, unit-tested
+  `isMeaningfulPriceDrop` (e.g. ≥1% of previous price OR ≥$500 — pick honest values and
+  document them) and apply it where the digest cron selects search-scoped price-drop
+  matches and samples. Explicitly EXEMPT single-listing watch alerts with an owner-set
+  `target_price` (the subscriber named their own threshold — honor it exactly) and keep
+  the watch path's existing any-drop behavior unless a target is set. Improves: digest
+  email content honesty (fewer noise sends). No new capture point, no schema change.
+- **[P1][goal] Close the two deaf feedback loops in the Monday admin email.** Batch #6
+  shipped per-listing "Not relevant?" votes (`digest_listing_vote` rows) and the
+  instant-interest probe (`instant_alert_interest` rows) — both explicitly deferred
+  their rollup as a follow-up, and today NOTHING reads either. In `alertFunnelWeekly`,
+  add (a) a "least-relevant listings" list — top ~5 `digest_listing_vote` targets this
+  week with counts and page paths — and (b) an "Instant interest" line with this-week /
+  all-time tap counts, so the blocked Vercel-tier call finally accumulates visible
+  demand data. Reuse the existing feedback-table query shapes (`getDigestVoteRollup`
+  precedent in `alertScoreboard.ts`); explicit "no votes yet" empty states, never a
+  fabricated 0/0. Mirror both lines onto `/admin/alerts` if trivial in-cycle. Improves:
+  prove-it-converts pillar (the loop can finally hear the signal it asked for). No new
+  capture point, no schema change.
+- **[P1][goal] Attribute email engagement to the subscriber — `recipient` +
+  `alert_email_type` linkage on `email_engagement_events`.** The webhook stores no "who"
+  (`route.ts:70`), so open/click WoW can never become per-placement or per-subscriber,
+  and any future re-permission/auto-quiet flow (pause alerts nobody reads — the
+  never-spam endgame) is unbuildable. Add additive nullable `recipient` (and, where the
+  Resend payload carries it, the `to` address is already in hand) ⚠️ human-apply
+  fail-soft migration, same as every prior DDL; populate from the webhook; extend
+  `emailEngagement.ts`'s rollup to expose per-`email_type` open/click WITH a
+  distinct-recipient count on `/admin/alerts`. Store nothing beyond the address already
+  in the `alerts` table. Slice: attribution + admin surfacing only — the re-permission
+  email itself is a later cycle once weeks of data exist. No new capture point.
+- **[P2][goal] Digest-cron reliability line in the Monday admin email.** The human reads
+  WoW funnel numbers that silently assume the cron ran every day — `alert_cron_runs`
+  already records per-run stats but only `/admin/alerts` reads it. Add to
+  `alertFunnelWeekly`: runs in the last 7 days (flag "ran 5/7 days" when short), total
+  emails sent this week vs last, and average duration; plus record a per-run
+  `send_failures` count in the cron (additive nullable column on `alert_cron_runs`, ⚠️
+  human-apply fail-soft) and render it when present. Same fail-soft empty state when the
+  table isn't migrated. Improves: honest measurement (a quiet week should be
+  distinguishable from a broken cron). No new capture point.
+- **[P2][goal] "Heads up — this overlaps an alert you already have" on the subscribe
+  success panel.** `detectOverlappingAlerts` runs only on `/alerts/manage`, so a
+  subscriber who sets "Cessna 172 in CA" on top of an existing "Cessna — all states"
+  alert learns about the redundancy only if they ever visit manage — meanwhile they get
+  double-covered digests. After a successful insert on the server subscribe paths, run
+  the existing pure overlap check against the same email's confirmed alerts and, when
+  the new alert is a subset of an existing one, say so in the success/confirmation panel
+  ("your 'Cessna — all states' alert already covers this — manage alerts") with the
+  manage link. UI-hint only, never block or auto-delete. Improves: capture-flow
+  confirmation UX + never-spam. No new capture point (existing `alert_subscribed`
+  events unchanged), no schema change.
+- **[P2][goal] Weekly digests on the day YOU pick.** `weekly` cadence today means
+  "whenever 7 days have elapsed," which drifts across weekdays — best-in-class digest
+  products let a subscriber say "Saturday morning." Add an optional day-of-week choice
+  to `FrequencyToggle` (visible only when `weekly` is selected), stored in an additive
+  nullable `alerts.digest_day` (⚠️ human-apply fail-soft, same as every prior `alerts.*`
+  DDL); the daily cron gates weekly sends on the chosen UTC day when set (elapsed-days
+  fallback when null or unmigrated — never a dropped digest). Honest copy: "we send
+  around 8:00 UTC." Improves: alert management + digest-vs-instant pillar. No new
+  capture point.
+- **[P2][goal] Multi-model chips on the alert edit form — parity with browse.** Browse
+  filters treat `model` as a comma-joined multi-select with toggle chips
+  (`AircraftSaleFilters.tsx`), and alerts created from a multi-model filter set carry
+  `model=172,182` — but `AlertEditForm` renders one bare text input, so editing a
+  two-model alert means hand-typing a comma list (or mangling it). Render the same
+  variant-grouped chip toggles (reuse `groupModelVariants` + the `csvList` helpers) for
+  the alert's make inside `AlertEditForm`, writing the same comma-joined param; keep the
+  text input as fallback when the make has no known chip set. Partnership alerts got
+  this via `partnership-model-multiselect` — this is the aircraft-side parity. Improves:
+  alert management polish. No new capture point, no schema change.
+---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
 The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
