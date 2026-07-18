@@ -28,6 +28,7 @@ export default function TargetPriceEdit({
   const [value, setValue] = useState(initialTargetPrice != null ? String(initialTargetPrice) : '')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [announcement, setAnnouncement] = useState<string | null>(null)
 
   function openEdit() {
     setValue(targetPrice != null ? String(targetPrice) : '')
@@ -45,6 +46,7 @@ export default function TargetPriceEdit({
       }
       setTargetPrice(next)
       setOpen(false)
+      setAnnouncement(next != null ? `Target price saved: ${formatPrice(next)}.` : 'Target price removed.')
     })
   }
 
@@ -66,6 +68,9 @@ export default function TargetPriceEdit({
   if (open) {
     return (
       <form onSubmit={handleSubmit} className="inline-flex flex-wrap items-center gap-1.5">
+        <span className="sr-only" role="status" aria-live="polite">
+          {announcement}
+        </span>
         <input
           type="number"
           min={1}
@@ -102,20 +107,29 @@ export default function TargetPriceEdit({
         >
           <X className="h-3.5 w-3.5" />
         </button>
-        {error ? <span className="w-full text-xs text-red-600">{error}</span> : null}
+        {error ? (
+          <span className="w-full text-xs text-red-600" role="alert">
+            {error}
+          </span>
+        ) : null}
       </form>
     )
   }
 
   return (
-    <button
-      type="button"
-      onClick={openEdit}
-      title={targetPrice != null ? "Edit this watch's target price" : 'Add a target price to this watch'}
-      className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-sky-600 underline-offset-2 hover:underline"
-    >
-      <Pencil className="h-3 w-3" />
-      {targetPrice != null ? `Edit target (${formatPrice(targetPrice)})` : 'Add target price'}
-    </button>
+    <>
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
+      <button
+        type="button"
+        onClick={openEdit}
+        title={targetPrice != null ? "Edit this watch's target price" : 'Add a target price to this watch'}
+        className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-sky-600 underline-offset-2 hover:underline"
+      >
+        <Pencil className="h-3 w-3" />
+        {targetPrice != null ? `Edit target (${formatPrice(targetPrice)})` : 'Add target price'}
+      </button>
+    </>
   )
 }

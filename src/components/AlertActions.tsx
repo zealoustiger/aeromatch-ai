@@ -9,42 +9,59 @@ export default function AlertActions({ id, status, token }: { id: string; status
   const [error, setError] = useState<string | null>(null)
   const [resent, setResent] = useState(false)
   const [sampleSent, setSampleSent] = useState(false)
+  const [announcement, setAnnouncement] = useState<string | null>(null)
 
   function handleSendSample() {
     setError(null)
     setSampleSent(false)
+    setAnnouncement(null)
     startTransition(async () => {
       const result = await sendSampleDigest(id, token)
       if (result.error) setError(result.error)
-      else setSampleSent(true)
+      else {
+        setSampleSent(true)
+        setAnnouncement('Sample digest sent.')
+      }
     })
   }
 
-  function run(action: (id: string, token?: string) => Promise<{ ok?: boolean; error?: string }>) {
+  function run(
+    action: (id: string, token?: string) => Promise<{ ok?: boolean; error?: string }>,
+    successMessage: string
+  ) {
     setError(null)
+    setAnnouncement(null)
     startTransition(async () => {
       const result = await action(id, token)
       if (result.error) setError(result.error)
+      else setAnnouncement(successMessage)
     })
   }
 
   function handleDelete() {
     if (!window.confirm('Delete this alert? You can always set it up again.')) return
-    run(deleteAlert)
+    run(deleteAlert, 'Alert deleted.')
   }
 
   function handleResend() {
     setError(null)
     setResent(false)
+    setAnnouncement(null)
     startTransition(async () => {
       const result = await resendAlertConfirmation(id, token)
       if (result.error) setError(result.error)
-      else setResent(true)
+      else {
+        setResent(true)
+        setAnnouncement('Confirmation email resent.')
+      }
     })
   }
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
       {status === 'pending' ? (
         <button
           onClick={handleResend}
@@ -70,7 +87,7 @@ export default function AlertActions({ id, status, token }: { id: string; status
       {status === 'confirmed' ? (
         <>
           <button
-            onClick={() => run(pauseAlert)}
+            onClick={() => run(pauseAlert, 'Alert paused.')}
             disabled={isPending}
             title="Pause this alert indefinitely"
             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
@@ -79,7 +96,7 @@ export default function AlertActions({ id, status, token }: { id: string; status
             Pause
           </button>
           <button
-            onClick={() => run(snoozeAlert)}
+            onClick={() => run(snoozeAlert, 'Alert snoozed for 30 days.')}
             disabled={isPending}
             title="Snooze this alert for 30 days, then resume automatically"
             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
@@ -90,7 +107,7 @@ export default function AlertActions({ id, status, token }: { id: string; status
         </>
       ) : status === 'paused' || status === 'bounced' ? (
         <button
-          onClick={() => run(resumeAlert)}
+          onClick={() => run(resumeAlert, 'Alert resumed.')}
           disabled={isPending}
           title={status === 'bounced' ? 'Resume now that your email is fixed' : 'Resume this alert'}
           className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 disabled:opacity-50"
@@ -107,7 +124,11 @@ export default function AlertActions({ id, status, token }: { id: string; status
       >
         <Trash2 className="h-4 w-4" />
       </button>
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {error ? (
+        <p className="text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }
