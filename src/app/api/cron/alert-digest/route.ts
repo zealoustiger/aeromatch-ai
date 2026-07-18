@@ -39,6 +39,7 @@ import { parseAvionicsFilter, fetchAvionicsMatchIds } from '@/lib/avionicsClassi
 import { applyPartnershipModelFilter } from '@/lib/partnershipModelFilter'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { dedupeDigestSectionSamples } from '@/lib/alertDigestDedupe'
+import { withShareParam } from '@/lib/shareAlertLink'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -1708,6 +1709,10 @@ export async function GET(req: NextRequest) {
 
       const unsubToken = alert.unsubscribe_token ?? ''
       const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
+      // Plain (non-tokenized) link so a forwarded email can't leak manage/
+      // unsubscribe control — see withShareParam's doc. Omitted when there's
+      // no source_path to share.
+      const shareUrl = alert.source_path ? `${SITE_URL}${withShareParam(alert.source_path)}` : undefined
       // Token-scoped so an email-only subscriber (no account) can actually manage
       // alerts from this link instead of hitting the sign-in wall — see
       // /alerts/manage's token-scoped path. Falls back to the bare URL for the
@@ -1792,6 +1797,7 @@ export async function GET(req: NextRequest) {
             digestFeedbackUpUrl,
             digestFeedbackDownUrl,
             digestFeedbackBaseUrl,
+            shareUrl,
           })
 
       const result = await sendEmail({
@@ -1843,6 +1849,9 @@ export async function GET(req: NextRequest) {
         editUrl: alert.unsubscribe_token
           ? `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}&edit=${alert.id}#alert-${alert.id}`
           : undefined,
+        // Plain (non-tokenized) per-section share link — same precedent as
+        // the single-alert send path above.
+        shareUrl: alert.source_path ? `${SITE_URL}${withShareParam(alert.source_path)}` : undefined,
       }))
     )
 

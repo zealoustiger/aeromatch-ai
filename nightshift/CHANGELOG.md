@@ -2,6 +2,63 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T111144Z — PASS — digest-share-with-partner
+- Pages: (internal — new-listing alert digest emails only, single-alert and combined
+  templates; no rendered-page UI change)
+- What: **Every new-listing alert digest email now has a quiet "Buying with a
+  partner? Share this alert" link** — the on-site share affordance (`ShareAlertButton`
+  on `/alerts/manage`) already let a subscriber hand a search to a co-buyer, but the
+  email itself, where "forward this to my partner" conversations actually happen, had
+  no such link. One click lands the recipient on the live search with the share-aware
+  alert box open.
+- Goal: alert-experience (smart, honest alert content pillar — closing the last named
+  gap in the plan-pass batch #6 alert-experience queue) — tier 3 `[goal]`. Tier 1
+  (`[bug]`): most recent CHANGELOG entry (`digest-listing-not-relevant`) was a PASS;
+  swept BACKLOG.md, no unstruck `[bug]` line found. Tier 2 (`[want]`): re-checked
+  every unstruck `[P1]`/`[P2][want]` line — same standing blocked-on-human set as
+  every recent cycle's audit (save-search auth-wall reconciliation and the collection-
+  layout mosaic redesign both need a human product call/mock; Trade-A-Plane/
+  Controller/AirMart/AeroTrader bot-protection-blocked; Bay-Area coverage benchmark
+  blocked on a real FAA/AirNav denominator; owner-leads dataset needs compliance
+  review; dynamic-location seed personas has no live effect) — none buildable
+  autonomously. Dropped to tier 3: picked the last of the 2 remaining `[P2]`s named in
+  the prior cycle's "Next" note — the smaller, purely-additive one ("one email.ts line
+  + tests" per its own backlog description), leaving the tokenized "view in browser"
+  page (bigger — a new route + page) as the next slice. Checked it off in BACKLOG.md
+  this cycle.
+- Spec: nightshift/specs/20260718T111144Z-digest-share-with-partner.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean. Full `node --test` suite (488 tests, up from 484 — 4 new tests) passes, 0
+  failures: `buildAlertDigestEmail` renders/omits the new line correctly (HTML + text)
+  based on the optional `shareUrl` opt; `buildCombinedAlertDigestEmail`'s per-section
+  `shareUrl` renders/omits a scoped "Share this alert" link distinct from any other
+  section's. Implementation: both digest builders in `src/lib/email.ts` gain the
+  `shareUrl` opt (top-level for the single-alert template, per-`AlertDigestSection`
+  for the combined one, mirroring the existing `editUrl`/`stopUrl` precedent); the
+  alert-digest cron (`src/app/api/cron/alert-digest/route.ts`) computes it on both
+  send paths as `SITE_URL + withShareParam(alert.source_path)` — a plain, non-
+  tokenized link (never carries `unsubscribe_token`), omitted when `source_path` is
+  null. Also updated both dev-only email-preview fixtures
+  (`/api/dev/email-preview/alert-digest{,-combined}`) to pass a real `shareUrl` so the
+  new line is actually visible for visual QA, not silently absent from the preview.
+  QA: visual cycle (new rendered line in 2 email templates) — killed 2 rounds of a
+  stale `next-server` process squatting on port 3000 from an earlier, uncleanly-ended
+  cycle before each production build/serve; `qa-smoke.mjs` on `/alerts/manage` and
+  both dev email-preview routes: 6/6 pass (HTTP 200, zero app-origin console errors,
+  zero horizontal overflow at desktop 1280 + mobile 375); screenshots read into the
+  verdict — the "Share this alert" link renders as a small, quiet, correctly-scoped
+  line/inline-link in both templates and both viewports (the combined template's
+  Cirrus SR22 section, which has no `shareUrl` fixture, correctly renders no link,
+  proving the per-section scoping isn't leaking across sections). Confirmed port 3000
+  free before finishing.
+- Screenshots: nightshift/screenshots/digest-share-with-partner/
+- Next: the plan-pass batch #6 alert-experience `[goal]` queue's last named item is
+  the tokenized live "view in browser" page for digest emails (a new
+  `/alerts/digest/view?token=...` route rendering the alert's CURRENT matches,
+  honestly labeled as a live view since no sent-HTML is ever archived) — a bigger
+  slice than this cycle's (new route + page, not just an email.ts opt), worth its own
+  cycle.
+
 ## 20260718T105932Z — PASS — digest-listing-not-relevant
 - Pages: /alerts/manage, /alerts/status (internal — new-listing/price-drop alert digest
   emails carry the new link; no other rendered-page UI change)

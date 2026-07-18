@@ -320,6 +320,29 @@ test('digest: with frequencyUrl (daily alert), the footer adds a "Get fewer emai
   assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
 })
 
+test('digest: with shareUrl, a "Buying with a partner? Share this alert" line renders (HTML + text)', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    shareUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172&share=alert',
+  })
+  assert.match(
+    html,
+    /Buying with a partner\? <a href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172&amp;share=alert"[^>]*>Share this alert<\/a>/
+  )
+  assert.match(
+    text,
+    /Buying with a partner\? Share this alert: https:\/\/clubhanger\.com\/aircraft\?make=Cessna&model=172&share=alert/
+  )
+})
+
+test('digest: without shareUrl, no "Share this alert" line renders (no source_path to share)', () => {
+  const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
+  assert.doesNotMatch(html, /Share this alert/)
+  assert.doesNotMatch(text, /Share this alert/)
+})
+
 test('digest: without digest-feedback urls, no "Was this digest useful?" row renders', () => {
   const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
   assert.doesNotMatch(html, /Was this digest useful/)
@@ -895,6 +918,43 @@ test('combined: a section with no stopUrl renders no per-section stop link (fail
   })
   assert.doesNotMatch(html, /Stop just this alert/)
   assert.doesNotMatch(text, /Stop just this alert/)
+})
+
+test('combined: a section with its own shareUrl renders a per-section "Share this alert" link', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
+        shareUrl: 'https://clubhanger.com/aircraft?make=Cessna&share=alert',
+      },
+      {
+        context: 'Cirrus SR22',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus',
+      },
+    ],
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;share=alert"[^>]*>Share this alert</)
+  assert.equal((html.match(/Share this alert/g) ?? []).length, 1)
+  assert.match(text, /Share this alert: https:\/\/clubhanger\.com\/aircraft\?make=Cessna&share=alert/)
+})
+
+test('combined: a section with no shareUrl renders no per-section share link', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+    ],
+  })
+  assert.doesNotMatch(html, /Share this alert/)
+  assert.doesNotMatch(text, /Share this alert/)
 })
 
 test('combined: with both digest-feedback urls, one shared "Was this digest useful?" row renders (not per-section)', () => {
