@@ -2753,18 +2753,15 @@ live match count in `AlertEditForm`, cross-alert digest sample dedupe, partnersh
 filled/unavailable watch emails, bounced-status UX on manage, admin subscriber lookup,
 weekly/snooze/pause options in `UnsubscribeRecover`._
 
-- **[P1][goal] "Email me my manage link" — lost-link recovery on `/alerts/manage`.** The
-  no-token/no-session state says "sign in with the same email," but anonymous email-only
-  subscribers have no account — a subscriber who deleted their alert emails has NO path
-  back to pause/edit/delete (the only dead end left in the no-account lifecycle). Add a
-  one-field email form to that state: if any alerts exist for the address, email a manage
-  link (mint from a row's existing `unsubscribe_token` — the exact token
-  `/alerts/manage?token=` already resolves; new small builder in `email.ts`, unit-tested
-  like its siblings); ALWAYS render the same neutral "if we have alerts for that address,
-  a link is on its way" regardless of match (no address enumeration). Rate-limit sends
-  per address (reuse the `last_confirm_sent_at` cooldown pattern; if a new additive
-  nullable `alerts.*` column is needed, ⚠️ human-apply + fail-soft like every prior one).
-  Improves: alert management surface. Not a capture point — no `alert_subscribed`.
+~~- **[P1][goal] "Email me my manage link" — lost-link recovery on `/alerts/manage`.**~~
+  ✅ AUDIT-CONFIRMED ALREADY SHIPPED (`alerts-manage-link-email`, 2026-07-12; found
+  during `alert-unsub-wow-delta` cycle's tier-3 scoping). Batch #5's planner grep
+  missed it — `ManageLinkRequestForm.tsx` + `requestAlertsManageLink` (`actions.ts:1520`)
+  are live on `staging` today: a one-field email form on the no-token/no-session state of
+  `/alerts/manage`, always the same neutral "if that email has alerts... check your
+  inbox" copy (no enumeration), reuses the existing `last_confirm_sent_at` cooldown
+  (no new column), sends via `buildManageLinkEmail` in `email.ts`. Confirmed via direct
+  code read + git log, no code change needed this cycle.
 ~~- **[P1][goal] Right-noun alert cross-sell in the post-success banners
   (`/partnerships/[id]?posted=1` + `/partnerships/seeking/[id]?posted=1`).** The moment
   after posting is peak intent for the counterpart alert, and today's "Your partnership
@@ -2799,6 +2796,18 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   current-totals rendering as the pre-migration fallback (must degrade exactly as now
   until the columns exist). This is the exact "Next" flagged by
   `admin-alert-funnel-weekly`. Measurement pillar; no new capture point.
+  — **slice 1 (`unsubscribed_at`) ✅ SHIPPED via `alert-unsub-wow-delta` (2026-07-18):**
+  additive `alerts.unsubscribed_at` (⚠️ human-apply, fail-soft). Stamped by the one-click
+  unsubscribe route (`applyUnsubscribe`) and the Resend spam-complaint handler
+  (`unsubscribeAlertsForComplainedEmail`); cleared back to `null` by every path that
+  revives an alert away from `'unsubscribed'` — the 3 `UnsubscribeRecover` token actions
+  (`pauseAlertByToken`, `snoozeAlertByToken`, `updateAlertFrequencyByToken`) and
+  `reviveIfUnsubscribed`. `getAlertFunnelWeeklySnapshot` now returns real
+  `unsubscribedThisWeek`/`unsubscribedLastWeek` + `unsubscribedAtMigrated`;
+  `buildAdminAlertFunnelEmail` renders a genuine "Unsubscribed … vs last week" WoW row
+  once migrated, current-totals stock count unchanged either way. **Remaining: slice 2
+  (`paused_at`/`bounced_at`)** — deferred to keep this cycle's diff reviewable; not
+  attempted yet.
 - **[P2][goal] Screen-reader pass on the manage surface — `aria-live` on every async
   state swap.** The explicitly-named "Next" from `alert-capture-aria-live` (which covered
   only the 3 capture components): zero `aria-live`/`role="status"` exists anywhere under

@@ -2,6 +2,43 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T085420Z — PASS — alert-unsub-wow-delta
+- Pages: (internal — Monday admin alert-funnel email + `/alerts/manage`, `/alerts/status` server actions; no rendered-page UI change)
+- What: **The weekly admin email now tells us honestly whether unsubscribes are going up or down, instead of just a running total.** Before this cycle, the Monday "alert funnel" email to admins showed New signups and Confirmed with a real week-over-week delta ("+5 vs last week"), but Unsubscribed only ever showed a flat current total — the table had no timestamp for *when* someone unsubscribed, so it couldn't compute a weekly trend without making one up. It now stamps the moment an alert unsubscribes (one-click link or a spam complaint) and clears that stamp if the person recovers (pause/snooze/"fewer emails" from the recovery page), so the email can show a real "Unsubscribed: 3 (-2 vs last week)" line — an honest churn signal, not a guess.
+- Goal: alert-experience (measurement pillar: "prove it converts," the honesty half — see GOAL.md's "never fabricate" guardrail) — tier 3 `[goal]`. Tier 1 (`[bug]`): most recent CHANGELOG entry (`alert-crosssell-rightnoun`) was a PASS; swept BACKLOG.md, no unstruck `[bug]` line found. Tier 2 (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]` line — same standing blocked-on-human/already-shipped set as recent cycles. Dropped to tier 3 and picked up the "next" P1 named by `alert-crosssell-rightnoun`'s CHANGELOG entry: batch #5's 2 remaining P1s were "lost-link manage-link recovery" and "status-change timestamps for the admin email." Investigated the first and found it **already fully shipped** (`alerts-manage-link-email`, 2026-07-12 — `ManageLinkRequestForm.tsx` + `requestAlertsManageLink` are live on staging today; the batch #5 planner's grep missed it). Struck it off in BACKLOG.md as an audit find (no code change) and built the second, genuinely-open P1 instead — sliced to `unsubscribed_at` only (the headline churn metric); `paused_at`/`bounced_at` explicitly deferred as a follow-up slice to keep this diff reviewable. Checked off slice 1 in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T085420Z-alert-unsub-wow-delta.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean. Full `node --test` suite (462 tests across `src/lib/*.test.ts`) passes, 0
+  failures — extended `email.test.ts`'s existing `buildAdminAlertFunnelEmail` coverage
+  with 2 new tests (real WoW delta once `unsubscribedAtMigrated`; byte-for-byte
+  unchanged current-totals-only fallback when not migrated) and split the old combined
+  "paused/unsubscribed/bounced never get a WoW delta" test since unsubscribed no longer
+  belongs in that set. New additive `alerts.unsubscribed_at` column (⚠️ apply against
+  live Supabase — until then every write path fails soft/retries without it, confirmed
+  by code path: the fallback-loop logic in `alertFunnelWeekly.ts`, `snoozeAlertByToken`,
+  and `updateAlertFrequencyByToken` was written to handle any subset of its 2 optional
+  columns being un-migrated, in either report order, not just the single-column case
+  every prior `alerts.*` migration only had to handle). QA against the PRODUCTION build
+  (`next start`) via `qa-smoke.mjs` on `/alerts/manage`, `/alerts/status`: 4/4 pass
+  (HTTP 200, zero app-origin console errors, zero horizontal overflow at desktop 1280 +
+  mobile 375). Non-visual cycle (email content + server-action/cron logic, no rendered
+  UI change) — screenshots saved for the audit trail, not read into the QA verdict per
+  convention; separately curled `/api/dev/email-preview/admin-alert-funnel` and
+  eyeballed the rendered HTML to confirm the new "Unsubscribed … vs last week" row
+  renders correctly alongside the unchanged current-totals stock count. Server stopped,
+  port 3000 confirmed free.
+- Screenshots: nightshift/screenshots/alert-unsub-wow-delta/
+- Next: **Slice 2 — `paused_at`/`bounced_at`** (same BACKLOG item) is the natural
+  follow-up: stamp `paused_at` at `pauseAlert`/`snoozeAlert`/`pauseAllAlerts`/
+  `pauseAlertByToken`/`snoozeAlertByToken`/the cron's listing-watch auto-pause, clear on
+  every resume path (including the cron's auto-resume-when-`paused_until`-passes);
+  stamp `bounced_at` in `pauseAlertsForBouncedEmail`, clear it in `resumeAlert` (which
+  already accepts a prior `'bounced'` status) — note `resumeAllAlerts` currently only
+  queries `.eq('status','paused')`, so bulk-resume misses bounced rows entirely; worth
+  fixing in the same slice. Also worth a housekeeping pass over BACKLOG.md's other
+  `[P1]`/`[P2][goal]` lines for more planner-grep misses like the manage-link one found
+  this cycle (audit, not necessarily new code).
+
 ## 20260718T084050Z — PASS — alert-crosssell-rightnoun
 - Pages: /partnerships/[id], /partnerships/seeking/[id]
 - What: **The green "Your listing is live!" banner a poster sees right after posting now offers the RIGHT alert — the one that actually helps their listing get seen — instead of the wrong one or none at all.** On `/partnerships/[id]`, the banner already had an alert box, but it was pointed at the poster's own market (other partnerships like theirs) — not useful to them. It now offers "email me when a pilot seeking a {make/model} share appears," the actual demand-side signal a partnership poster wants. On `/partnerships/seeking/[id]`, the banner had no alert box at all; it now offers "email me when a new {make} partnership lists," reusing the same prefilled make/airport the page's other alert box already computes. Both boxes are one-click for the poster since they're always signed in at this point (no email retyping).
