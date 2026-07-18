@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-18T11:23:06Z — digest-share-with-partner — score 5/5
+- Strengths: Hits every acceptance criterion exactly — an optional `shareUrl` on `buildAlertDigestEmail` and a per-section `shareUrl` on `AlertDigestSection`, both rendered in HTML (via `escapeAttr`) and plain text and both cleanly omitted when absent; reuses the existing `withShareParam` helper on the alert's own `source_path` so the forwarded link is plain/non-tokenized (can't leak manage/unsubscribe control) and — because stored `source_path` is already `stripShareParam`'d — can't double-append `share=alert`; comments explain the security rationale in the house style; 4 focused tests cover present/absent in both templates plus per-section scoping (`Share this alert` count === 1) and no new schema/analytics as the spec required.
+- Weaknesses / risks: none material — the route-level wiring (deriving `shareUrl` on both send paths without an `unsubscribe_token`) is only exercised by the dev preview + smoke, not a unit test, but that matches the file's existing precedent for `editUrl`/`stopUrl`.
+- Follow-up: none
+
 ## 2026-07-18T09:51:13Z — admin-digest-vote-counts — score 4/5
 - Strengths: Hits every acceptance criterion cleanly — reuses `getDigestVoteRollup()` (no duplicated query), threads the snapshot's `now` into it so the vote windows align with the funnel's and the rollup becomes unit-testable, kicks the fetch off as a concurrent promise, and renders an honest "No votes yet" state (test asserts no fabricated `👍 0 / 👎 0`) across both HTML and plain-text plus the dev preview fixture.
 - Weaknesses / risks: minor — the HTML WoW-delta line ("+2 vs last week 👍, -1 vs last week 👎") reads a little awkwardly, and the rollup's pre-existing 500-row `limit` means totals would silently understate at high vote volume (not introduced here, low-volume today).
