@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase'
 import type { SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
 import { stripShareParam } from '@/lib/shareAlertLink'
 import { getEmailProviderLink } from '@/lib/emailProviderLink'
+import { suggestEmailFix } from '@/lib/suggestEmailFix'
 
 interface Props {
   /** Human-readable thing being alerted on, e.g. "Cessna 172" or "California".
@@ -144,6 +145,9 @@ export default function AlertSignup({
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // Suggest-only "did you mean gmail.com?" — never auto-corrects, never blocks
+  // submission of the as-typed address (see lib/suggestEmailFix.ts).
+  const emailSuggestion = suggestEmailFix(email)
   const [pending, setPending] = useState(false)
   const [resendState, setResendState] = useState<'idle' | 'pending' | 'sent' | 'error'>('idle')
   const [resendError, setResendError] = useState('')
@@ -604,6 +608,15 @@ export default function AlertSignup({
                 {pending ? 'Saving…' : watchOnly ? `Watch ${watchWord}` : 'Get alerts'}
               </button>
             </form>
+          )}
+          {emailSuggestion && (
+            <button
+              type="button"
+              onClick={() => setEmail(emailSuggestion)}
+              className="mt-1.5 block text-xs font-medium text-sky-700 underline-offset-2 hover:underline"
+            >
+              Did you mean <span className="font-semibold">{emailSuggestion}</span>?
+            </button>
           )}
           {watchOnly && (
             <label htmlFor="alert-target-price" className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
