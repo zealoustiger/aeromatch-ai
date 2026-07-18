@@ -1585,6 +1585,48 @@ export function buildAdminAlertFunnelEmail(
     ? `Email engagement: 👀 ${snapshot.emailOpenedThisWeek} opened (${formatWeekDelta(snapshot.emailOpenedThisWeek, snapshot.emailOpenedLastWeek)}), 🖱️ ${snapshot.emailClickedThisWeek} clicked (${formatWeekDelta(snapshot.emailClickedThisWeek, snapshot.emailClickedLastWeek)})\n`
     : `Email engagement: No engagement events yet\n`
 
+  // Instant-alerts interest — the demand signal accumulating behind the blocked
+  // Vercel-cron-tier call. All-time is the ledger that matters for that decision;
+  // this-week shows momentum. Honest empty state, never a fabricated 0.
+  const hasInstantInterest = snapshot.instantInterestAllTime > 0
+  const instantInterestHtml = hasInstantInterest
+    ? `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Instant-alerts interest (taps)</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">⚡ ${snapshot.instantInterestThisWeek} this week</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${snapshot.instantInterestAllTime} all-time</td></tr>`
+    : `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Instant-alerts interest (taps)</td>
+            <td style="padding:4px 0;text-align:right;font-size:13px;color:#94a3b8;">No interest recorded yet</td>
+          </tr>`
+
+  const instantInterestText = hasInstantInterest
+    ? `Instant-alerts interest: ⚡ ${snapshot.instantInterestThisWeek} this week, ${snapshot.instantInterestAllTime} all-time\n`
+    : `Instant-alerts interest: No interest recorded yet\n`
+
+  // "Least relevant listings this week" — the per-sample "Not relevant?" taps
+  // rolled up by listing (top by count, with the subscriber-shown title). An
+  // empty week is a clean "nothing flagged", not a fabricated row.
+  const notRelevantRowsHtml = snapshot.notRelevantListings
+    .map(
+      (row) => `
+          <tr>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#334155;">${escapeHtml(row.title)}</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#0f172a;text-align:right;font-weight:600;">${row.count} flagged</td>
+          </tr>`
+    )
+    .join('')
+
+  const notRelevantSectionHtml = snapshot.notRelevantListings.length
+    ? `<table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:20px;">
+          ${notRelevantRowsHtml}
+        </table>`
+    : `<p class="ch-muted" style="font-size:13px;color:#94a3b8;margin:0 0 20px;">No listings flagged as off-target this week.</p>`
+
+  const notRelevantSectionText = snapshot.notRelevantListings.length
+    ? snapshot.notRelevantListings.map((row) => `  - ${row.title}: ${row.count} flagged`).join('\n')
+    : '  (no listings flagged as off-target this week)'
+
   const html = `<!doctype html>
 <html>
   <head>${emailColorSchemeHead()}</head>
@@ -1636,6 +1678,7 @@ export function buildAdminAlertFunnelEmail(
           }
           ${digestFeedbackHtml}
           ${emailEngagementHtml}
+          ${instantInterestHtml}
         </table>
 
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Current totals (not weekly)</p>
@@ -1676,6 +1719,9 @@ export function buildAdminAlertFunnelEmail(
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Demand with no supply</p>
         ${demandGapSectionHtml}
 
+        <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Least relevant listings this week</p>
+        ${notRelevantSectionHtml}
+
         <p style="margin:20px 0 0;">
           <a href="${escapeAttr(dashboardUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
@@ -1691,7 +1737,7 @@ export function buildAdminAlertFunnelEmail(
 
 New signups: ${snapshot.createdThisWeek} (${formatWeekDelta(snapshot.createdThisWeek, snapshot.createdLastWeek)})
 Confirmed: ${snapshot.confirmedThisWeek} (${formatWeekDelta(snapshot.confirmedThisWeek, snapshot.confirmedLastWeek)})
-${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}${digestFeedbackText}${emailEngagementText}
+${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}${digestFeedbackText}${emailEngagementText}${instantInterestText}
 Current totals (not weekly):
   Live: ${snapshot.liveTotal}
   Pending confirmation: ${snapshot.pendingTotal}
@@ -1704,6 +1750,9 @@ ${sourceRowsText}
 
 Demand with no supply:
 ${demandGapSectionText}
+
+Least relevant listings this week:
+${notRelevantSectionText}
 
 Full dashboard: ${dashboardUrl}`
 

@@ -76,6 +76,22 @@ export interface DigestVoteRollup {
   recentVotes: RecentDigestVote[]
 }
 
+export interface NotRelevantListing {
+  pagePath: string | null
+  title: string
+  count: number
+}
+
+export interface NotRelevantListingsRollup {
+  topThisWeek: NotRelevantListing[]
+  totalThisWeek: number
+}
+
+export interface InstantInterestRollup {
+  thisWeek: number
+  allTime: number
+}
+
 export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
   const admin = createAdminClient()
   let sourceColumnMigrated = true
@@ -237,4 +253,81 @@ export async function getDigestVoteRollup(now: number = Date.now()): Promise<Dig
   }
 
   return { upTotal, downTotal, upThisWeek, downThisWeek, upLastWeek, downLastWeek, recentVotes }
+}
+
+// The per-sample "Not relevant?" tap in a digest email writes a
+// `digest_listing_vote` feedback row (see api/alerts/digest-feedback/route.ts):
+// `message='Not relevant: <title>'`, `page_path=<listing path>`. Batch #6 shipped
+// that capture but explicitly deferred reading it — this rolls the last 7 days up
+// by `page_path` so the human can finally see which listings subscribers keep
+// flagging as off-target. Real counts only; the title is derived from the stored
+// message, never fabricated.
+const NOT_RELEVANT_PREFIX = 'Not relevant: '
+const TOP_NOT_RELEVANT_LIMIT = 5
+
+export async function getNotRelevantListingsRollup(
+  now: number = Date.now()
+): Promise<NotRelevantListingsRollup> {
+  const admin = createAdminClient()
+  const DAY_MS = 86_400_000
+  const oneWeekAgoIso = new Date(now - 7 * DAY_MS).toISOString()
+  const { data } = await admin
+    .from('feedback')
+    .select('message, page_path, created_at')
+    .eq('type', 'digest_listing_vote')
+    .gte('created_at', oneWeekAgoIso)
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  const rows = data ?? []
+
+  // Group by page_path. Rows arrive newest-first, so the first title seen per
+  // path is the most recent — keep that one.
+  const UNKNOWN_KEY = '(unknown listing)'
+  const byPath = new Map<string, { title: string; count: number }>()
+  for (const row of rows) {
+    const key = row.page_path ?? UNKNOWN_KEY
+    const rawTitle =
+      row.message && row.message.startsWith(NOT_RELEVANT_PREFIX)
+        ? row.message.slice(NOT_RELEVANT_PREFIX.length).trim()
+        : ''
+    const existing = byPath.get(key)
+    if (existing) existing.count++
+    else byPath.set(key, { title: rawTitle || 'this listing', count: 1 })
+  }
+
+  const topThisWeek: NotRelevantListing[] = [...byPath.entries()]
+    .map(([key, v]) => ({
+      pagePath: key === UNKNOWN_KEY ? null : key,
+      title: v.title,
+      count: v.count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, TOP_NOT_RELEVANT_LIMIT)
+
+  return { topThisWeek, totalThisWeek: rows.length }
+}
+
+// The "I'd want instant alerts" tap (recordInstantAlertInterest in actions.ts)
+// writes an `instant_alert_interest` feedback row — the demand signal for the
+// blocked Vercel-cron-tier decision on real instant sends. Real this-week +
+// all-time tap counts only, never a guessed number.
+export async function getInstantInterestRollup(
+  now: number = Date.now()
+): Promise<InstantInterestRollup> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('feedback')
+    .select('created_at')
+    .eq('type', 'instant_alert_interest')
+    .limit(2000)
+
+  const rows = data ?? []
+  const oneWeekAgo = now - 7 * 86_400_000
+  let thisWeek = 0
+  for (const row of rows) {
+    const at = new Date(row.created_at).getTime()
+    if (!Number.isNaN(at) && at >= oneWeekAgo) thisWeek++
+  }
+  return { thisWeek, allTime: rows.length }
 }

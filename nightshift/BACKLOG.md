@@ -3000,7 +3000,7 @@ chip multi-select._
   the watch path's existing any-drop behavior unless a target is set. Improves: digest
   email content honesty (fewer noise sends). No new capture point, no schema change.~~
   ✅ SHIPPED via `price-drop-meaningful-floor` (2026-07-18)
-- **[P1][goal] Close the two deaf feedback loops in the Monday admin email.** Batch #6
+~~- **[P1][goal] Close the two deaf feedback loops in the Monday admin email.** Batch #6
   shipped per-listing "Not relevant?" votes (`digest_listing_vote` rows) and the
   instant-interest probe (`instant_alert_interest` rows) — both explicitly deferred
   their rollup as a follow-up, and today NOTHING reads either. In `alertFunnelWeekly`,
@@ -3011,7 +3011,8 @@ chip multi-select._
   precedent in `alertScoreboard.ts`); explicit "no votes yet" empty states, never a
   fabricated 0/0. Mirror both lines onto `/admin/alerts` if trivial in-cycle. Improves:
   prove-it-converts pillar (the loop can finally hear the signal it asked for). No new
-  capture point, no schema change.
+  capture point, no schema change.~~
+  ✅ SHIPPED via `digest-feedback-loops-rollup` (2026-07-18)
 - **[P1][goal] Attribute email engagement to the subscriber — `recipient` +
   `alert_email_type` linkage on `email_engagement_events`.** The webhook stores no "who"
   (`route.ts:70`), so open/click WoW can never become per-placement or per-subscriber,

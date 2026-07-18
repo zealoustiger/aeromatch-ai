@@ -1,5 +1,10 @@
 import { createAdminClient } from './supabase-admin'
-import { getDigestVoteRollup } from './alertScoreboard'
+import {
+  getDigestVoteRollup,
+  getNotRelevantListingsRollup,
+  getInstantInterestRollup,
+  type NotRelevantListing,
+} from './alertScoreboard'
 import { getEmailEngagementWeeklyRollup } from './emailEngagement'
 import { getAlertMatchCount } from './alertMatchCounts'
 import { describeLocalAlertContext } from './alertEditCriteria'
@@ -74,6 +79,18 @@ export interface AlertFunnelWeeklySnapshot {
   emailClickedLastWeek: number
   emailOpenedTotal: number
   emailClickedTotal: number
+  /** The two "deaf" digest feedback loops batch #6 shipped capture for but
+   *  never surfaced: per-listing "Not relevant?" taps
+   *  (`feedback.type='digest_listing_vote'`) rolled up by listing over the last
+   *  7 days (top by count, with the stored title — never fabricated), and the
+   *  "I'd want instant alerts" tap (`instant_alert_interest`) as real this-week
+   *  + all-time counts. Empty array / 0s mean genuinely none recorded yet, not a
+   *  guessed value. Both read the existing `feedback` table — no new capture
+   *  point, no schema change. */
+  notRelevantListings: NotRelevantListing[]
+  notRelevantTotalThisWeek: number
+  instantInterestThisWeek: number
+  instantInterestAllTime: number
   /** Top confirmed/live alert searches that currently have ZERO matching
    *  listings — a free inventory-acquisition signal ("N subscribers waiting,
    *  nothing to show them"). Computed by live-verifying the top
@@ -111,6 +128,8 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const admin = createAdminClient()
   const voteRollupPromise = getDigestVoteRollup(now)
   const emailEngagementPromise = getEmailEngagementWeeklyRollup(now)
+  const notRelevantPromise = getNotRelevantListingsRollup(now)
+  const instantInterestPromise = getInstantInterestRollup(now)
   // `source`, `unsubscribed_at`, `paused_at`, and `bounced_at` may
   // independently be un-migrated live — retry dropping whichever one the
   // error names, up to once each (order-independent), same graceful-fallback
@@ -248,6 +267,8 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
 
   const voteRollup = await voteRollupPromise
   const emailEngagement = await emailEngagementPromise
+  const notRelevant = await notRelevantPromise
+  const instantInterest = await instantInterestPromise
 
   return {
     weekStart: new Date(oneWeekAgo).toISOString(),
@@ -280,6 +301,10 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     emailClickedLastWeek: emailEngagement.clickedLastWeek,
     emailOpenedTotal: emailEngagement.openedTotal,
     emailClickedTotal: emailEngagement.clickedTotal,
+    notRelevantListings: notRelevant.topThisWeek,
+    notRelevantTotalThisWeek: notRelevant.totalThisWeek,
+    instantInterestThisWeek: instantInterest.thisWeek,
+    instantInterestAllTime: instantInterest.allTime,
     demandWithNoSupply,
     sourceColumnMigrated,
     unsubscribedAtMigrated,
