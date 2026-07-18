@@ -1050,6 +1050,13 @@ export function buildAlertDigestEmail(opts: {
    *  manage/unsubscribe control. Renders as one quiet line above the
    *  footer. Omitted when the alert has no source_path to share. */
   shareUrl?: string
+  /** Token-scoped link to `/alerts/digest/view` — renders the alert's
+   *  CURRENT live matches server-side (never the archived HTML of this
+   *  exact send, since none is stored), the standard "View in browser"
+   *  affordance for image-blocking clients. Renders as one quiet link near
+   *  the top of the email. Omitted whenever the alert has no
+   *  `unsubscribe_token` yet, same graceful-degrade as `manageUrl`. */
+  viewUrl?: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -1057,6 +1064,7 @@ export function buildAlertDigestEmail(opts: {
   const samples = (opts.samples ?? []).map((s) => ({ ...s, url: withUtm(s.url, 'digest') }))
   const listingsUrl = withUtm(opts.listingsUrl, 'digest')
   const manageUrl = withUtm(opts.manageUrl, 'digest')
+  const viewUrl = opts.viewUrl ? withUtm(opts.viewUrl, 'digest') : undefined
   const dropNoun = opts.dropNoun ?? 'price drop'
   const isSample = !!opts.sampleNote
   const isFirstSend = !isSample && !!opts.firstSend
@@ -1130,6 +1138,10 @@ export function buildAlertDigestEmail(opts: {
     ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Buying with a partner? <a href="${escapeAttr(opts.shareUrl)}" style="color:#a89f8e;text-decoration:underline;">Share this alert</a></p>`
     : ''
   const shareText = opts.shareUrl ? `\nBuying with a partner? Share this alert: ${opts.shareUrl}\n` : ''
+  const viewUrlHtml = viewUrl
+    ? `<p style="margin:0 0 14px;text-align:right;"><a href="${escapeAttr(viewUrl)}" style="font-size:11px;color:#a89f8e;text-decoration:underline;">View in browser</a></p>`
+    : ''
+  const viewUrlText = viewUrl ? `View in browser: ${viewUrl}\n\n` : ''
   // Unescaped mirror of `bodyCopy` (same wording, but built from the raw —
   // not HTML-entity-escaped — `countLabelText`/`forThingText`) so
   // `preheaderHtml`'s own `escapeHtml()` call doesn't double-escape entities
@@ -1146,6 +1158,7 @@ export function buildAlertDigestEmail(opts: {
   <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
     ${preheaderHtml(preheaderText)}
     <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      ${viewUrlHtml}
       <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       ${sampleBannerHtml}
       <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
@@ -1209,7 +1222,7 @@ export function buildAlertDigestEmail(opts: {
     ? `\nBusy week for this search — switch to daily digests: ${opts.upgradeUrl}\n`
     : ''
 
-  const text = `${sampleBannerText}${bodyCopyText}
+  const text = `${viewUrlText}${sampleBannerText}${bodyCopyText}
 ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
 ${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}
@@ -1251,6 +1264,11 @@ export type AlertDigestSection = {
    *  alert" link scoped to this section only, distinct from any other
    *  section's link. Omitted when the alert has no source_path to share. */
   shareUrl?: string
+  /** This section's own alert's `/alerts/digest/view` link — see
+   *  `buildAlertDigestEmail`'s `viewUrl` doc. Renders as a "View in browser"
+   *  link scoped to this section only. Omitted under the same no-token
+   *  graceful-degrade as `stopUrl`/`editUrl`. */
+  viewUrl?: string
 }
 
 /**
@@ -1337,6 +1355,9 @@ export function buildCombinedAlertDigestEmail(opts: {
     const shareLinkHtml = s.shareUrl
       ? `<a href="${escapeAttr(s.shareUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Share this alert</a>`
       : ''
+    const viewLinkHtml = s.viewUrl
+      ? `<a href="${escapeAttr(s.viewUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">View in browser</a>`
+      : ''
 
     const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
         <h2 class="ch-heading" style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
@@ -1344,7 +1365,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
-          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${editLinkHtml}${stopLinkHtml}${shareLinkHtml}
+          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${editLinkHtml}${stopLinkHtml}${shareLinkHtml}${viewLinkHtml}
         </p>
       </div>`
 
@@ -1360,7 +1381,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
       })
       .join('\n')
-    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}${s.shareUrl ? `\nShare this alert: ${s.shareUrl}` : ''}`
+    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}${s.shareUrl ? `\nShare this alert: ${s.shareUrl}` : ''}${s.viewUrl ? `\nView in browser: ${s.viewUrl}` : ''}`
 
     return { html, text }
   })
