@@ -1044,6 +1044,12 @@ export function buildAlertDigestEmail(opts: {
    *  no-token graceful-degrade as `digestFeedbackUpUrl` — a sample with no
    *  `id` also never gets the link even when this is set. */
   digestFeedbackBaseUrl?: string
+  /** Plain (non-tokenized) link to the alert's own source_path with the
+   *  existing `share=alert` marker (see `withShareParam`) — lets a
+   *  subscriber forward this exact search to a co-buyer without exposing
+   *  manage/unsubscribe control. Renders as one quiet line above the
+   *  footer. Omitted when the alert has no source_path to share. */
+  shareUrl?: string
 }): { subject: string; html: string; text: string } {
   const thing = (opts.context || '').trim()
   const forThing = thing ? ` ${escapeHtml(thing)}` : ''
@@ -1120,6 +1126,10 @@ export function buildAlertDigestEmail(opts: {
     opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
       ? `\nWas this digest useful? Yes: ${opts.digestFeedbackUpUrl}  No: ${opts.digestFeedbackDownUrl}\n`
       : ''
+  const shareHtml = opts.shareUrl
+    ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Buying with a partner? <a href="${escapeAttr(opts.shareUrl)}" style="color:#a89f8e;text-decoration:underline;">Share this alert</a></p>`
+    : ''
+  const shareText = opts.shareUrl ? `\nBuying with a partner? Share this alert: ${opts.shareUrl}\n` : ''
   // Unescaped mirror of `bodyCopy` (same wording, but built from the raw —
   // not HTML-entity-escaped — `countLabelText`/`forThingText`) so
   // `preheaderHtml`'s own `escapeHtml()` call doesn't double-escape entities
@@ -1155,6 +1165,7 @@ export function buildAlertDigestEmail(opts: {
       ${crossSellHtml}
       ${upgradeNudgeHtml}
       ${digestFeedbackHtml}
+      ${shareHtml}
       <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -1201,7 +1212,7 @@ export function buildAlertDigestEmail(opts: {
   const text = `${sampleBannerText}${bodyCopyText}
 ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
-${crossSellText}${upgradeNudgeText}${digestFeedbackText}
+${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}
 Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
@@ -1235,6 +1246,11 @@ export type AlertDigestSection = {
    *  (GOAL.md: "offer fewer instead of none," applied to relevance). Omitted
    *  under the same no-token graceful-degrade as `stopUrl`. */
   editUrl?: string
+  /** This section's own alert's plain (non-tokenized) share link — see
+   *  `buildAlertDigestEmail`'s `shareUrl` doc. Renders as a "Share this
+   *  alert" link scoped to this section only, distinct from any other
+   *  section's link. Omitted when the alert has no source_path to share. */
+  shareUrl?: string
 }
 
 /**
@@ -1318,6 +1334,9 @@ export function buildCombinedAlertDigestEmail(opts: {
     const stopLinkHtml = s.stopUrl
       ? `<a href="${escapeAttr(s.stopUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Stop just this alert</a>`
       : ''
+    const shareLinkHtml = s.shareUrl
+      ? `<a href="${escapeAttr(s.shareUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Share this alert</a>`
+      : ''
 
     const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
         <h2 class="ch-heading" style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
@@ -1325,7 +1344,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
-          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${editLinkHtml}${stopLinkHtml}
+          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${editLinkHtml}${stopLinkHtml}${shareLinkHtml}
         </p>
       </div>`
 
@@ -1341,7 +1360,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
       })
       .join('\n')
-    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}`
+    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}${s.shareUrl ? `\nShare this alert: ${s.shareUrl}` : ''}`
 
     return { html, text }
   })
