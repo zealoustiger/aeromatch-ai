@@ -2885,7 +2885,8 @@ exist); digest sample queries order `created_at desc` only; `digest-feedback/rou
 records digest-level votes only (no per-listing param); `email.ts` greps clean of any
 view-in-browser or share affordance._
 
-- **[P1][goal] Email open/click week-over-week in the Monday admin email.** The Resend
+~~- **[P1][goal] Email open/click week-over-week in the Monday admin email.**~~ ✅ SHIPPED
+  via `admin-email-engagement-wow` (2026-07-18) The Resend
   webhook has been ingesting `email.opened`/`email.clicked` into `email_engagement_events`
   (with `created_at`), but the Monday funnel email never reads it — the human can see
   created/confirmed WoW yet has no idea whether the digests themselves get opened. Add a

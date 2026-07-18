@@ -50,3 +50,70 @@ export async function getEmailEngagementRollup(): Promise<EmailEngagementRow[]> 
     return []
   }
 }
+
+export interface EmailEngagementWeeklyRollup {
+  openedThisWeek: number
+  openedLastWeek: number
+  clickedThisWeek: number
+  clickedLastWeek: number
+  openedTotal: number
+  clickedTotal: number
+}
+
+const EMPTY_WEEKLY_ROLLUP: EmailEngagementWeeklyRollup = {
+  openedThisWeek: 0,
+  openedLastWeek: 0,
+  clickedThisWeek: 0,
+  clickedLastWeek: 0,
+  openedTotal: 0,
+  clickedTotal: 0,
+}
+
+const DAY_MS = 86_400_000
+
+/**
+ * Week-over-week opened/clicked totals for the Monday admin funnel email's
+ * "Email engagement" row (GOAL.md: "prove it converts" — send is not the
+ * same as read). Aggregate across all `email_type`s, same all-zero fail-soft
+ * convention as `getEmailEngagementRollup` on any error or un-migrated
+ * table — the caller renders an honest "no engagement yet" state rather
+ * than a fabricated 0.
+ */
+export async function getEmailEngagementWeeklyRollup(now: number = Date.now()): Promise<EmailEngagementWeeklyRollup> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('email_engagement_events')
+      .select('event_type, created_at')
+      .order('created_at', { ascending: false })
+      .limit(ROLLUP_ROW_LIMIT)
+    if (error || !data) return EMPTY_WEEKLY_ROLLUP
+
+    const oneWeekAgo = now - 7 * DAY_MS
+    const twoWeeksAgo = now - 14 * DAY_MS
+    const result = { ...EMPTY_WEEKLY_ROLLUP }
+
+    for (const row of data as { event_type: string; created_at: string }[]) {
+      const isOpened = row.event_type === 'opened'
+      const isClicked = row.event_type === 'clicked'
+      if (!isOpened && !isClicked) continue
+
+      if (isOpened) result.openedTotal++
+      else result.clickedTotal++
+
+      const at = new Date(row.created_at).getTime()
+      if (Number.isNaN(at)) continue
+      if (at >= oneWeekAgo) {
+        if (isOpened) result.openedThisWeek++
+        else result.clickedThisWeek++
+      } else if (at >= twoWeeksAgo) {
+        if (isOpened) result.openedLastWeek++
+        else result.clickedLastWeek++
+      }
+    }
+
+    return result
+  } catch {
+    return EMPTY_WEEKLY_ROLLUP
+  }
+}

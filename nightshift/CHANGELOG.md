@@ -2,6 +2,71 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T101728Z — PASS — admin-email-engagement-wow
+- Pages: (internal — Monday admin alert-funnel email only; no rendered-page UI change)
+- What: **The weekly admin email now shows whether the digest/alert emails themselves are
+  getting opened and clicked**, not just whether subscribers created/confirmed/unsubscribed.
+  The Resend webhook has been ingesting `email.opened`/`email.clicked` events into
+  `email_engagement_events` for a while — `/admin/alerts` already shows an all-time,
+  per-email-type rollup — but the Monday summary email never read it, so the loop was blind
+  to the "does anyone actually read these" middle of the funnel. It now shows an "Email
+  engagement (opened/clicked)" row with this week's open/click counts and a week-over-week
+  delta on each, right alongside the existing digest-feedback row.
+- Goal: alert-experience (measurement pillar: "prove it converts" — the send→open→click gap)
+  — tier 3 `[goal]`. Tier 1 (`[bug]`): most recent CHANGELOG entry (`alert-narrow-nudge`) was
+  a PASS; swept BACKLOG.md for any unstruck `[bug]` line — none found (all instances are
+  struck-through/shipped; the one stray un-struck mention at line 4506 is a stale reference
+  inside a PARKED SEO section pointing at an item already shipped at line 4343). Tier 2
+  (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]` line across the file — same
+  standing blocked-on-human set as every recent cycle's audit (save-search auth-wall
+  reconciliation and the collection-layout mosaic redesign both need a human product
+  call/mock; Trade-A-Plane/Controller.com bot-protection-blocked per the standing guardrail;
+  Bay-Area coverage benchmark blocked on a real FAA/AirNav denominator; owner-leads dataset
+  needs compliance review; dynamic-location seed personas has no live effect) — none
+  buildable autonomously. Dropped to tier 3: BACKLOG's alert-experience queue had just been
+  refilled by the prior plan-pass commit (`b61672f6`, "plan-pass batch #6") with 7 new
+  `[goal]` items (3×`[P1]`, 4×`[P2]`). Picked the first `[P1]` — email open/click WoW — over
+  the other two `[P1]`s ("demand with no supply" line, instant-alerts demand probe) as the
+  most contained slice that most directly extends a pattern already proven to land clean
+  last cycle (`admin-digest-vote-counts`: reuse an existing rollup fn, add one row to the
+  same admin email, no schema/UI-surface change). Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260718T101728Z-admin-email-engagement-wow.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0 clean.
+  Full `node --test` suite (470 tests across `src/lib/*.test.ts`, up from 468 — 2 new tests)
+  passes, 0 failures: extended `email.test.ts`'s `ADMIN_FUNNEL_BASE` fixture + added coverage
+  for the new row (real WoW delta on both opened and clicked) and the "no engagement events
+  ever recorded" honest-zero state (never a fabricated 👀 0 / 🖱️ 0). Implementation: new
+  `getEmailEngagementWeeklyRollup(now)` in `emailEngagement.ts` — queries the same
+  `email_engagement_events` table `getEmailEngagementRollup` (the all-time `/admin/alerts`
+  panel) already reads, aggregated across all `email_type`s into this-week/last-week/total
+  opened+clicked counts; same all-zero fail-soft convention on any DB error or un-migrated
+  table (never a fabricated count). `getAlertFunnelWeeklySnapshot` (`alertFunnelWeekly.ts`)
+  now awaits it in parallel with the existing `getDigestVoteRollup` call and adds 6 new
+  fields to `AlertFunnelWeeklySnapshot`. `buildAdminAlertFunnelEmail` (`email.ts`) renders
+  the new "Email engagement (opened/clicked)" row directly below the existing digest-
+  feedback row, same shape (real WoW deltas when anything's ever been recorded, an honest
+  "No engagement events yet" line otherwise). No schema change (table already exists per
+  `schema.sql`, applying it live + ticking Resend's opened/clicked webhook boxes remain the
+  standing human actions noted there, unrelated to this cycle). QA: non-visual, internal-
+  email-only cycle — served the PRODUCTION build (`next start`), `qa-smoke.mjs` on `/` and
+  `/admin/alerts` 4/4 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at desktop 1280 + mobile 375; screenshots saved for the audit trail, not read
+  into the verdict per the non-visual convention), and curled
+  `/api/dev/email-preview/admin-alert-funnel` to confirm the new row renders with the
+  fixture's 👀 27 / 🖱️ 9 counts and correct WoW deltas (+6 opens, +3 clicks). Server log
+  grepped clean of errors; process confirmed stopped, port 3000 free before finishing.
+- Screenshots: nightshift/screenshots/admin-email-engagement-wow/
+- Next: the plan-pass batch #6 alert-experience `[goal]` queue has 6 open items left after
+  this one: 2 more `[P1]`s ("demand with no supply" line in the admin email; an honest
+  "Instant — interested?" demand-probe affordance on `/alerts/manage`'s `FrequencyToggle`)
+  and 4×`[P2]`s (rank digest samples by deal quality; per-listing "not relevant?" feedback
+  link; tokenized live "view in browser" digest page; "share this alert with a partner"
+  digest footer line). Pick the next `[P1]` from that batch next cycle (tier 3, since tiers
+  1 & 2 remain empty/blocked-on-human as of this cycle) — the admin-email pair (this one +
+  "demand with no supply") share the same `alertFunnelWeekly.ts`/`buildAdminAlertFunnelEmail`
+  surface, so doing that one next keeps the admin-email work contiguous before moving to the
+  on-site `/alerts/manage` slice.
+
 ## 2026-07-18T10:07:14Z — DRAIN SUMMARY
 - Cycles this run: 21 (PASS 17 / FAIL 1 / ABORT 3)
 - Models: cycles on sonnet; 1 escalated to opus; 6 quality-judged on opus

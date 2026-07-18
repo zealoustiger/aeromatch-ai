@@ -1,5 +1,6 @@
 import { createAdminClient } from './supabase-admin'
 import { getDigestVoteRollup } from './alertScoreboard'
+import { getEmailEngagementWeeklyRollup } from './emailEngagement'
 
 // The date `alert-source-column` shipped — rows from before this never got a
 // `source` tag at all. Same fallback label `alertScoreboard.ts` uses.
@@ -47,6 +48,18 @@ export interface AlertFunnelWeeklySnapshot {
   digestVotesDownLastWeek: number
   digestVotesUpTotal: number
   digestVotesDownTotal: number
+  /** Week-over-week Resend `email.opened`/`email.clicked` webhook counts,
+   *  aggregated across all email types — the "does anyone actually read
+   *  these" signal `getEmailEngagementRollup` (all-time, per-type) doesn't
+   *  answer on its own. Same honest-zero convention: all-zero means either
+   *  nothing recorded yet or the `email_engagement_events` table isn't
+   *  migrated live, never a fabricated count. */
+  emailOpenedThisWeek: number
+  emailOpenedLastWeek: number
+  emailClickedThisWeek: number
+  emailClickedLastWeek: number
+  emailOpenedTotal: number
+  emailClickedTotal: number
   sourceColumnMigrated: boolean
   /** False until the matching `alerts.*_at` migration is applied live — see
    *  supabase/schema.sql's `alerts_unsubscribed_at` / `alerts_paused_bounced_at`
@@ -73,6 +86,7 @@ const LIVE_STATUSES = new Set(['active', 'confirmed'])
 export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Promise<AlertFunnelWeeklySnapshot> {
   const admin = createAdminClient()
   const voteRollupPromise = getDigestVoteRollup(now)
+  const emailEngagementPromise = getEmailEngagementWeeklyRollup(now)
   // `source`, `unsubscribed_at`, `paused_at`, and `bounced_at` may
   // independently be un-migrated live — retry dropping whichever one the
   // error names, up to once each (order-independent), same graceful-fallback
@@ -187,6 +201,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     .slice(0, TOP_SOURCES_LIMIT)
 
   const voteRollup = await voteRollupPromise
+  const emailEngagement = await emailEngagementPromise
 
   return {
     weekStart: new Date(oneWeekAgo).toISOString(),
@@ -213,6 +228,12 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     digestVotesDownLastWeek: voteRollup.downLastWeek,
     digestVotesUpTotal: voteRollup.upTotal,
     digestVotesDownTotal: voteRollup.downTotal,
+    emailOpenedThisWeek: emailEngagement.openedThisWeek,
+    emailOpenedLastWeek: emailEngagement.openedLastWeek,
+    emailClickedThisWeek: emailEngagement.clickedThisWeek,
+    emailClickedLastWeek: emailEngagement.clickedLastWeek,
+    emailOpenedTotal: emailEngagement.openedTotal,
+    emailClickedTotal: emailEngagement.clickedTotal,
     sourceColumnMigrated,
     unsubscribedAtMigrated,
     pausedAtMigrated,

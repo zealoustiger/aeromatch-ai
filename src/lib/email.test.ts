@@ -1035,6 +1035,12 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   digestVotesDownLastWeek: 2,
   digestVotesUpTotal: 19,
   digestVotesDownTotal: 6,
+  emailOpenedThisWeek: 27,
+  emailOpenedLastWeek: 21,
+  emailClickedThisWeek: 9,
+  emailClickedLastWeek: 6,
+  emailOpenedTotal: 143,
+  emailClickedTotal: 48,
   sourceColumnMigrated: true,
   unsubscribedAtMigrated: true,
   pausedAtMigrated: true,
@@ -1162,6 +1168,31 @@ test('buildAdminAlertFunnelEmail: with zero votes ever recorded, an honest "No v
   assert.match(html, /No votes yet/)
   assert.match(text, /Digest feedback: No votes yet/)
   assert.doesNotMatch(html, /👍 0 \/ 👎 0/)
+})
+
+test('buildAdminAlertFunnelEmail: email engagement renders opened/clicked with a week-over-week delta for both', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Email engagement \(opened\/clicked\)/)
+  assert.match(html, /👀 27 \/ 🖱️ 9/)
+  assert.match(text, /Email engagement: 👀 27 opened \(\+6 vs last week\), 🖱️ 9 clicked \(\+3 vs last week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: with zero engagement events ever recorded, an honest empty line renders instead of a fabricated 0/0', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      emailOpenedThisWeek: 0,
+      emailOpenedLastWeek: 0,
+      emailClickedThisWeek: 0,
+      emailClickedLastWeek: 0,
+      emailOpenedTotal: 0,
+      emailClickedTotal: 0,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No engagement events yet/)
+  assert.match(text, /Email engagement: No engagement events yet/)
+  assert.doesNotMatch(html, /👀 0 \/ 🖱️ 0/)
 })
 
 test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {
