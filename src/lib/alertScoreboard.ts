@@ -191,7 +191,7 @@ function classifyVote(message: string | null): 'up' | 'down' | null {
   return null
 }
 
-export async function getDigestVoteRollup(): Promise<DigestVoteRollup> {
+export async function getDigestVoteRollup(now: number = Date.now()): Promise<DigestVoteRollup> {
   const admin = createAdminClient()
   const { data } = await admin
     .from('feedback')
@@ -202,7 +202,6 @@ export async function getDigestVoteRollup(): Promise<DigestVoteRollup> {
 
   const rows = data ?? []
 
-  const now = Date.now()
   const DAY_MS = 86_400_000
   const oneWeekAgo = now - 7 * DAY_MS
   const twoWeeksAgo = now - 14 * DAY_MS

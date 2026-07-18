@@ -2838,14 +2838,15 @@ weekly/snooze/pause options in `UnsubscribeRecover`._
   via the existing `buildAlertCriteriaUpdate`; only offer a tightener after live-
   verifying it still leaves >0 matches — never a guess, never a dead end. No schema
   change; no new capture point.
-- **[P2][goal] Digest 👍/👎 feedback counts in the Monday admin email.** The
+~~- **[P2][goal] Digest 👍/👎 feedback counts in the Monday admin email.**~~ ✅ SHIPPED
+  via `admin-digest-vote-counts` (2026-07-18) The
   `digest-feedback` route has been inserting votes into the `feedback` table since the
   👍/👎 links shipped, but nothing reads them — the loop is deaf to the one direct
-  quality signal subscribers send back. Add up/down counts (this week vs last, via
-  `feedback.created_at` + the digest-feedback rows' own shape) as a line in
-  `alertFunnelWeekly`'s Monday summary, with an explicit "no votes yet" state — an
-  honest zero, not an omission. No schema change; measurement pillar; no new capture
-  point.
+  quality signal subscribers send back. Added up/down counts (this week vs last) as a
+  "Digest feedback (👍/👎)" line in `alertFunnelWeekly`'s Monday summary, reusing the
+  existing `getDigestVoteRollup()` (`alertScoreboard.ts`, already powers `/admin/alerts`)
+  rather than duplicating the query — no schema change. Explicit "No votes yet" state
+  when zero votes have ever been recorded, so it never shows a fabricated 👍 0 / 👎 0.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
