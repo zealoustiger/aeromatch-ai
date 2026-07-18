@@ -1348,15 +1348,29 @@ async function reviveIfUnsubscribed(
 
   const confirm_token = crypto.randomUUID()
   const unsubscribe_token = crypto.randomUUID()
-  await admin
+  const { error: reviveError } = await admin
     .from('alerts')
     .update({
       status: targetStatus,
       confirm_token,
       unsubscribe_token,
       confirmed_at: targetStatus === 'confirmed' ? new Date().toISOString() : null,
+      unsubscribed_at: null,
     })
     .eq('id', existing.id)
+  // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the revive
+  // itself, same graceful-fallback pattern as every other alerts.* column.
+  if (reviveError?.message?.includes('unsubscribed_at')) {
+    await admin
+      .from('alerts')
+      .update({
+        status: targetStatus,
+        confirm_token,
+        unsubscribe_token,
+        confirmed_at: targetStatus === 'confirmed' ? new Date().toISOString() : null,
+      })
+      .eq('id', existing.id)
+  }
 
   if (targetStatus === 'pending') {
     await sendConfirmationResend(admin, { ...existing, confirm_token, unsubscribe_token, last_confirm_sent_at: null })
@@ -1788,11 +1802,21 @@ export async function pauseAlertByToken(token: string) {
   if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
-  const { data, error } = await admin
+  let { data, error } = await admin
     .from('alerts')
-    .update({ status: 'paused' })
+    .update({ status: 'paused', unsubscribed_at: null })
     .in('unsubscribe_token', tokens)
     .select('id')
+
+  // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the plain
+  // status flip, same graceful-fallback pattern as every other alerts.* write.
+  if (error?.message?.includes('unsubscribed_at')) {
+    ;({ data, error } = await admin
+      .from('alerts')
+      .update({ status: 'paused' })
+      .in('unsubscribe_token', tokens)
+      .select('id'))
+  }
 
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
@@ -1810,27 +1834,26 @@ export async function snoozeAlertByToken(token: string) {
 
   const admin = createAdminClient()
   const pausedUntil = resolveSnoozeUntil(new Date().toISOString())
-  let { data, error } = await admin
-    .from('alerts')
-    .update({ status: 'paused', paused_until: pausedUntil })
-    .in('unsubscribe_token', tokens)
-    .select('id')
-
-  // Column not migrated yet — fall back to a plain indefinite pause, and
-  // don't claim a resume date that was never actually stored.
-  let persistedResumeDate: string | null = pausedUntil
-  if (error?.message?.includes('paused_until')) {
-    persistedResumeDate = null
-    ;({ data, error } = await admin
-      .from('alerts')
-      .update({ status: 'paused' })
-      .in('unsubscribe_token', tokens)
-      .select('id'))
+  // paused_until and unsubscribed_at may independently be un-migrated live —
+  // retry dropping whichever one the error names, up to once each (order-
+  // independent), same graceful-fallback pattern as every alerts.* write above.
+  let payload: Record<string, unknown> = { status: 'paused', paused_until: pausedUntil, unsubscribed_at: null }
+  const optionalKeys = ['paused_until', 'unsubscribed_at']
+  let { data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id'))
   }
 
   if (error) return { error: 'Something went wrong. Please try again.' }
   if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
-  return { ok: true, count: data.length, resumeDate: persistedResumeDate }
+  // Don't claim a resume date that wasn't actually stored.
+  return { ok: true, count: data.length, resumeDate: 'paused_until' in payload ? pausedUntil : null }
 }
 
 // Public, token-scoped "fewer instead of none" recovery — the literal GOAL.md ask
@@ -1846,18 +1869,24 @@ export async function updateAlertFrequencyByToken(token: string) {
   if (!tokens.length) return { error: 'Invalid link.' }
 
   const admin = createAdminClient()
-  let { data, error } = await admin
-    .from('alerts')
-    .update({ status: 'confirmed', frequency: normalizeFrequency('weekly') })
-    .in('unsubscribe_token', tokens)
-    .select('id')
-
-  if (error && error.message?.includes('frequency')) {
-    ;({ data, error } = await admin
-      .from('alerts')
-      .update({ status: 'confirmed' })
-      .in('unsubscribe_token', tokens)
-      .select('id'))
+  // frequency and unsubscribed_at may independently be un-migrated live —
+  // retry dropping whichever one the error names, up to once each (order-
+  // independent), same graceful-fallback pattern as every alerts.* write above.
+  let payload: Record<string, unknown> = {
+    status: 'confirmed',
+    frequency: normalizeFrequency('weekly'),
+    unsubscribed_at: null,
+  }
+  const optionalKeys = ['frequency', 'unsubscribed_at']
+  let { data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id'))
   }
 
   if (error) return { error: 'Something went wrong. Please try again.' }

@@ -27,12 +27,22 @@ export async function pauseAlertsForBouncedEmail(email: string): Promise<{ count
 // further code change. Mirrors `pauseAlertsForBouncedEmail`'s shape.
 export async function unsubscribeAlertsForComplainedEmail(email: string): Promise<{ count: number }> {
   const admin = createAdminClient()
-  const { data, error } = await admin
+  let { data, error } = await admin
     .from('alerts')
-    .update({ status: 'unsubscribed' })
+    .update({ status: 'unsubscribed', unsubscribed_at: new Date().toISOString() })
     .eq('email', email.toLowerCase())
     .in('status', ['pending', 'confirmed', 'paused', 'bounced'])
     .select('id')
+  // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the plain
+  // status flip, same graceful-fallback pattern as every other alerts.* column.
+  if (error?.message?.includes('unsubscribed_at')) {
+    ;({ data, error } = await admin
+      .from('alerts')
+      .update({ status: 'unsubscribed' })
+      .eq('email', email.toLowerCase())
+      .in('status', ['pending', 'confirmed', 'paused', 'bounced'])
+      .select('id'))
+  }
   if (error) return { count: 0 }
   return { count: data?.length ?? 0 }
 }

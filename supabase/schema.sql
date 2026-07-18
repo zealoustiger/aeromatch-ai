@@ -927,3 +927,19 @@ create index if not exists email_engagement_events_created_at_idx on email_engag
 -- digest cron treats every alert as new_listing_opt_out=false — i.e. current
 -- behavior is fully preserved either way.
 alter table alerts add column if not exists new_listing_opt_out boolean not null default false;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_unsubscribed_at
+-- Records WHEN an alert flipped to `status='unsubscribed'` — today only the
+-- status itself is stored, so the Monday admin funnel email can only show a
+-- current-total unsubscribe count, never an honest week-over-week delta (see
+-- alertFunnelWeekly.ts / email.ts's buildAdminAlertFunnelEmail). Nullable, no
+-- default, forward-only — rows unsubscribed before this migration simply have
+-- no timestamp and won't appear in a WoW bucket, same honest-gap posture as
+-- last_confirm_sent_at/paused_until above. Stamped by the one-click unsubscribe
+-- route and the spam-complaint webhook handler; cleared back to null by every
+-- path that revives an alert away from 'unsubscribed' (the 3 UnsubscribeRecover
+-- actions + reviveIfUnsubscribed). Apply in the Supabase SQL editor. Until
+-- applied, every write path fails soft and retries without the column (same
+-- graceful-fallback pattern as every `alerts.*` column above) and the funnel
+-- email keeps rendering unsubscribes as a current-total only, exactly as today.
+alter table alerts add column if not exists unsubscribed_at timestamptz;
