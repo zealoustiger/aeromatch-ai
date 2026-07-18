@@ -32,6 +32,7 @@ import AlertSubscriberMarker from '@/components/AlertSubscriberMarker'
 import VacationModeControl from '@/components/VacationModeControl'
 import UpdateAlertEmailForm from '@/components/UpdateAlertEmailForm'
 import DeleteAllAlertsControl from '@/components/DeleteAllAlertsControl'
+import DownloadAlertDataLink from '@/components/DownloadAlertDataLink'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -445,6 +446,11 @@ export default async function AlertsManagePage({
             </ul>
           )}
           {crossSell && <ManageAlertCrossSell token={scopeToken} suggestion={crossSell} />}
+          {alerts.length > 0 && (
+            <div className="mt-6 flex justify-end">
+              <DownloadAlertDataLink token={scopeToken} count={alerts.length} />
+            </div>
+          )}
           <DeleteAllAlertsControl token={scopeToken} email={email} count={alerts.length} />
         </section>
       </div>

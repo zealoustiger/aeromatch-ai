@@ -2700,15 +2700,13 @@ wall → `[want]` product call)._
   table has no `unsubscribed_at`/`paused_at` timestamp, so an honest weekly delta for those
   statuses isn't derivable without a schema change (flagged as a "Next" follow-up, not built
   this cycle).
-- **[P2][goal] Overlapping-alert hint on `/alerts/manage`.** No subset/overlap logic
-  exists: an owner with `/aircraft?make=Cessna` and `/aircraft?make=Cessna&model=172`
-  double-receives every 172 in both digests forever. New pure, unit-testable
-  target-subset check over the owner's parsed alert targets (same param semantics
-  `parseSourcePath`/`alertMatchCounts` already use); render a quiet per-row hint ("Already
-  covered by your broader Cessna alert") with a one-tap delete of the redundant row via
-  the existing `deleteAlert`. Hint-only — never auto-delete, never block creating
-  overlapping alerts. Improves: `/alerts/manage` management quality + the never-spam
-  guardrail; no new capture point.
+~~- **[P2][goal] Overlapping-alert hint on `/alerts/manage`.**~~ ✅ SHIPPED via
+  `overlapping-alert-nudge` (2026-07-16) — **housekeeping strike-off (2026-07-18): this
+  was already built and merged to staging two cycles before this backlog line was ever
+  added; it never got checked off.** `src/lib/alertOverlap.ts`'s `detectOverlappingAlerts`
+  (pure, unit-tested subset check over parsed alert targets) + `OverlapAlertNudge.tsx`
+  render exactly this hint on `/alerts/manage` today, with one-tap removal via the
+  existing `deleteAlert`. See CHANGELOG 2026-07-16T062732Z.
 - **[P2][goal] Screen-reader pass on the capture components — `aria-live` on every
   async state swap.** Verified zero `aria-live`/`role="status"` in `AlertSignup.tsx`,
   `FooterAlertCapture.tsx`, `MobileStickyAlertBar.tsx` (and the chips they drive): the
@@ -2719,14 +2717,14 @@ wall → `[want]` product call)._
   shared capture components in one sweep. Improves: frictionless capture for AT users on
   every surface at once (all funnels through these components); no new capture point, no
   analytics change.
-- **[P2][goal] "Download my alert data" self-serve export on `/alerts/manage`.** The
-  delete-all cycle shipped "forget me entirely" but there's no way to see what we hold
-  first: add a small "Download my alert data" link beside it that returns the owner's
-  full alert rows (criteria, status, frequency, timestamps) as a JSON file download,
-  behind the exact same `resolveOwnerEmail` trust boundary (works signed-in AND via
-  manage-link token; read-only, no schema change). Improves: `/alerts/manage`
-  self-serve data transparency — the natural sibling of delete-all; no new capture
-  point.
+~~- **[P2][goal] "Download my alert data" self-serve export on `/alerts/manage`.**~~ ✅
+  SHIPPED via `alert-data-export` (2026-07-18) A "Download my alert data" link above the
+  delete-all control returns every alert row tied to the owner's email (including
+  paused/unsubscribed) as a downloadable JSON file, via a new `/api/alerts/export` GET
+  route behind the exact same `resolveOwnerEmail` trust boundary (token or signed-in
+  session) as every other bulk alert action. `confirm_token`/`unsubscribe_token`/
+  `email_change_token` are deliberately never included (bearer secrets, not "data about
+  the user"). No schema change.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)

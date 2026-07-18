@@ -64,6 +64,62 @@ export async function fetchAlertsForEmail(email: string): Promise<AlertRow[]> {
   return data ?? []
 }
 
+export interface AlertExportRow {
+  id: string
+  context: string | null
+  source_path: string | null
+  status: string
+  created_at: string
+  confirmed_at: string | null
+  last_digest_at: string | null
+  price_drop_opt_in?: boolean
+  new_listing_opt_out?: boolean
+  frequency?: string
+  paused_until?: string | null
+  pending_email?: string | null
+  target_price?: number | null
+  source?: string | null
+}
+
+const EXPORT_OPTIONAL_COLS = [...OPTIONAL_COLS, 'source']
+
+// Full self-serve "download my data" export (`/alerts/manage`) — unlike
+// fetchAlertsForEmail above (which hides unsubscribed rows from the live
+// management list), this includes EVERY row tied to the email, since "what do
+// you hold on me" must be complete. Deliberately never selects
+// confirm_token/unsubscribe_token/email_change_token: those are bearer
+// secrets for unauthenticated action links, not "data about the user," and
+// must not appear in a downloadable file.
+export async function fetchAllAlertsForEmail(email: string): Promise<AlertExportRow[]> {
+  const admin = createAdminClient()
+  const baseCols = ['id', 'context', 'source_path', 'status', 'created_at', 'confirmed_at', 'last_digest_at']
+  let cols = [...baseCols, ...EXPORT_OPTIONAL_COLS]
+  let { data, error } = (await admin
+    .from('alerts')
+    .select(cols.join(', '))
+    .eq('email', email)
+    .order('created_at', { ascending: false })) as unknown as {
+    data: AlertExportRow[] | null
+    error: { message: string } | null
+  }
+  for (
+    let i = 0;
+    i < EXPORT_OPTIONAL_COLS.length && error && EXPORT_OPTIONAL_COLS.some((c) => error!.message?.includes(c));
+    i++
+  ) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data, error } = (await admin
+      .from('alerts')
+      .select(cols.join(', '))
+      .eq('email', email)
+      .order('created_at', { ascending: false })) as unknown as {
+      data: AlertExportRow[] | null
+      error: { message: string } | null
+    })
+  }
+  return data ?? []
+}
+
 export interface AdminAlertRow {
   id: string
   context: string | null

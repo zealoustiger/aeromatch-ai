@@ -31,6 +31,7 @@ import {
 } from '@/lib/alertMatchCounts'
 import { describeLocalAlertContext } from '@/lib/alertEditCriteria'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { resolveOwnerEmail } from '@/lib/alertOwner'
 import { isSeedProfile } from '@/lib/seedProfiles'
 import { SITE_URL } from '@/lib/seo'
 import { validateReview } from '@/lib/reviewValidation'
@@ -1079,24 +1080,6 @@ export async function subscribeToAlerts(
   await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
 
   return { ok: true }
-}
-
-// Alerts have no user_id (they're settable with no account), so "ownership" is
-// proven either by the signed-in user's own email, or — for the majority of
-// subscribers who never created an account — by the `unsubscribe_token` their
-// own alert email already carries (same public, token-scoped ownership proof
-// `pauseAlertByToken` below established). Resolving the token's OWN alert to an
-// email then unlocks every alert for that SAME email, exactly like the
-// session path unlocks every alert for the signed-in user's email — neither
-// path is scoped to a single row's id.
-async function resolveOwnerEmail(admin: ReturnType<typeof createAdminClient>, token?: string) {
-  if (token) {
-    const { data } = await admin.from('alerts').select('email').eq('unsubscribe_token', token).maybeSingle()
-    return data?.email?.toLowerCase() ?? null
-  }
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user?.email?.toLowerCase() ?? null
 }
 
 // Anon/authenticated has no SELECT on this PII-holding table (see
