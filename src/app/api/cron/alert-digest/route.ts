@@ -1719,6 +1719,10 @@ export async function GET(req: NextRequest) {
       // rare row with no token yet (pre-migration).
       const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
       const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
+      // Same token, points at the "view in browser" live-matches page — see
+      // buildAlertDigestEmail's `viewUrl` doc. Omitted for a not-yet-migrated
+      // row with no token yet, same graceful-degrade as manageUrl.
+      const viewUrl = unsubToken ? `${SITE_URL}/alerts/digest/view?token=${unsubToken}` : undefined
       // Only offer "fewer emails" for a daily-cadence alert — a weekly one has
       // no lighter cadence left to switch to.
       const frequencyUrl =
@@ -1798,6 +1802,7 @@ export async function GET(req: NextRequest) {
             digestFeedbackDownUrl,
             digestFeedbackBaseUrl,
             shareUrl,
+            viewUrl,
           })
 
       const result = await sendEmail({
@@ -1852,6 +1857,9 @@ export async function GET(req: NextRequest) {
         // Plain (non-tokenized) per-section share link — same precedent as
         // the single-alert send path above.
         shareUrl: alert.source_path ? `${SITE_URL}${withShareParam(alert.source_path)}` : undefined,
+        // Same per-section token-scoped "view in browser" link as the
+        // single-alert send path above.
+        viewUrl: alert.unsubscribe_token ? `${SITE_URL}/alerts/digest/view?token=${alert.unsubscribe_token}` : undefined,
       }))
     )
 

@@ -2,6 +2,76 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260718T112730Z — PASS — digest-view-in-browser
+- Pages: /alerts/digest/view (new), plus the new-listing alert digest emails
+  (single-alert and combined templates)
+- What: **Alert digest emails now have a "View in browser" link that opens a
+  live page showing what actually matches your alert right now** — image-
+  blocking email clients used to render the digest broken with no escape
+  hatch. The link lands on a new page, honestly labeled "Live view — updated
+  since your email was sent" (it shows current matches, never a stored copy
+  of the exact email you got).
+- Goal: alert-experience (smart, honest alert content pillar) — tier 3
+  `[goal]`. Tier 1 (`[bug]`): most recent CHANGELOG entry
+  (`digest-share-with-partner`) was a PASS; swept BACKLOG.md for an unstruck
+  `[bug]` line, found none — every prior `[P1][bug]` entry is already struck
+  through/resolved. Tier 2 (`[want]`): re-checked every unstruck
+  `[P1]`/`[P2][want]` line — same standing blocked-on-human set as every
+  recent cycle (save-search auth-wall reconciliation and the collection-
+  layout mosaic redesign need a human product call/mock; Trade-A-Plane/
+  Controller/AirMart/AeroTrader bot-protection-blocked; Bay-Area coverage
+  benchmark blocked on a real FAA/AirNav denominator; owner-leads dataset
+  needs compliance review) — none buildable autonomously. Dropped to tier 3:
+  picked the last remaining open item in the plan-pass batch #6
+  alert-experience queue (named as the prior cycle's "Next" note). Checked it
+  off in BACKLOG.md this cycle — this closes out batch #6.
+- Spec: nightshift/specs/20260718T112730Z-digest-view-in-browser.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0 clean (`/alerts/digest/view` registered as a dynamic route). Full
+  `node --test` suite (492 tests, up from 488 — 4 new tests) passes, 0
+  failures: `buildAlertDigestEmail` renders/omits the "View in browser" line
+  correctly (HTML + text) based on the optional `viewUrl` opt;
+  `buildCombinedAlertDigestEmail`'s per-section `viewUrl` renders/omits a
+  scoped link distinct from any other section's. Implementation: both digest
+  builders in `src/lib/email.ts` gain `viewUrl` (top-level for the
+  single-alert template, per-`AlertDigestSection` for the combined one,
+  mirroring the existing `shareUrl` precedent); the alert-digest cron
+  computes it on both send paths as `SITE_URL + /alerts/digest/view?token=` +
+  the alert's own `unsubscribe_token`. New `src/app/alerts/digest/view/page.tsx`
+  resolves the alert by token via the admin client (same trust boundary as
+  `/alerts/manage`) and reuses the existing `getAlertDigestPreview`
+  (`src/lib/alertMatchCounts.ts` — already powers the "send me a sample
+  digest" action) for real current matches, rendered as on-site cards (same
+  `ch-card` treatment `AlertsLanding.tsx` already uses for its live sample
+  preview). An invalid/missing token renders the honest "This link is no
+  longer valid" pattern `/alerts/manage` established, never a crash. No raw
+  unsubscribe anchor on the page itself (routes through `/alerts/manage`
+  instead — avoids any link-prefetch risk on a GET unsubscribe route). Also
+  updated both dev-only email-preview fixtures
+  (`/api/dev/email-preview/alert-digest{,-combined}`) to pass a real
+  `viewUrl`. QA: visual cycle (new page + a new line in 2 email templates) —
+  served the PRODUCTION build (`npx next build` + `npx next start` on port
+  3000) and ran `qa-smoke.mjs` against a REAL existing confirmed alert's
+  token (read-only lookup via the service-role key, no test data created —
+  `/alerts/digest/view?token=<real-token>`), an invalid-token case, and both
+  dev email-preview routes: 8/8 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at desktop 1280 + mobile 375).
+  Screenshots read into the verdict: the live-view page renders a real grid
+  of matching listings (photos/prices/locations) with a correct live count
+  and a "Manage this alert" link; the invalid-token case renders the honest
+  fallback; both email previews show the new "View in browser" link, and the
+  combined preview correctly shows it on only the one section (Cessna 172)
+  that set `viewUrl`, omitted on the other (Cirrus SR22) — proving the
+  per-section scoping isn't leaking. Confirmed port 3000 free before
+  finishing.
+- Screenshots: nightshift/screenshots/digest-view-in-browser/
+- Next: the plan-pass batch #6 alert-experience `[goal]` queue is now fully
+  drained (only the two long-standing human-blocked items remain: instant
+  sends → Vercel-tier human call; save-search auth wall → `[want]` product
+  call). The next cycle should sweep for new `[want]`/`[bug]` work first, and
+  if the goal queue is still thin, emit `ABORT — none — plan needed` so the
+  smart-model plan pass generates batch #7.
+
 ## 20260718T111144Z — PASS — digest-share-with-partner
 - Pages: (internal — new-listing alert digest emails only, single-alert and combined
   templates; no rendered-page UI change)
