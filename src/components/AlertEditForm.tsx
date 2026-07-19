@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Pencil, Copy, CheckCircle2, X } from 'lucide-react'
 import { getAlertMatchCountForSourcePath, updateAlertCriteria, removeAlertCriteriaParam } from '@/app/actions'
@@ -12,6 +12,9 @@ import {
   type HiddenCriterion,
 } from '@/lib/alertEditCriteria'
 import { normalizeFrequency } from '@/lib/alertFrequency'
+import type { AircraftFacets } from '@/lib/aircraft-facets'
+import { groupModelVariants } from '@/lib/modelGroups'
+import { toggleCsvItem } from '@/lib/csvList'
 import AlertActions from '@/components/AlertActions'
 import NewAlertForm from '@/components/NewAlertForm'
 
@@ -51,6 +54,10 @@ interface Props {
    *  set by the parent page when this row is the one named by `?edit=<id>`
    *  (the digest email's per-section "Edit this alert" deep link). */
   autoOpen?: boolean
+  /** Make → model options for the aircraft Model chip picker (browse-filter
+   *  parity). Undefined/empty facets, or a `make` the facets set doesn't know,
+   *  falls back to the plain text input — this form must stay usable either way. */
+  facets?: AircraftFacets
 }
 
 /**
@@ -70,6 +77,7 @@ export default function AlertEditForm({
   newListingOptOut,
   token,
   autoOpen,
+  facets,
 }: Props) {
   const [open, setOpen] = useState(false)
   // Mutually exclusive with the Edit form below — only one inline form per row.
@@ -88,6 +96,23 @@ export default function AlertEditForm({
   const [dealOnly, setDealOnly] = useState(false)
   const [hiddenCriteria, setHiddenCriteria] = useState<HiddenCriterion[]>([])
   const [liveCount, setLiveCount] = useState<number | null>(null)
+
+  // Model chip picker (aircraft alerts only) — same variant-grouped multi-select
+  // as `AircraftSaleFilters`, keyed off the live `make` field so switching Make
+  // mid-edit reloads the right option set. Case-insensitive match against the
+  // facets' exact-cased keys since `make` here is free-typed, not a <select>.
+  const modelOptions = useMemo(() => {
+    if (!facets) return []
+    const needle = make.trim().toLowerCase()
+    if (!needle) return []
+    const matchedMake = Object.keys(facets.modelsByMake).find((m) => m.toLowerCase() === needle)
+    return matchedMake ? facets.modelsByMake[matchedMake] : []
+  }, [facets, make])
+  const modelGroups = useMemo(() => groupModelVariants(modelOptions), [modelOptions])
+  const selectedModelSet = useMemo(
+    () => new Set(model.split(',').map((m) => m.trim()).filter(Boolean)),
+    [model]
+  )
 
   // Debounced live "N listings match right now" preview as the form's own fields
   // change — reuses the same real counting logic as the static per-row count
@@ -254,7 +279,52 @@ export default function AlertEditForm({
               />
             </div>
 
-            {target.type !== 'partnership' ? (
+            {target.type === 'aircraft' && modelOptions.length > 0 ? (
+              <div>
+                <label className={labelClass}>
+                  Model
+                  {selectedModelSet.size > 0 && (
+                    <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                      · {selectedModelSet.size} selected
+                    </span>
+                  )}
+                </label>
+                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-md border border-slate-200 p-2">
+                  {modelGroups.map((g) =>
+                    g.members.length === 1 ? (
+                      <label
+                        key={g.key}
+                        className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedModelSet.has(g.members[0])}
+                          onChange={() => setModel((m) => toggleCsvItem(m, g.members[0]))}
+                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                        />
+                        {g.members[0]}
+                      </label>
+                    ) : (
+                      <ModelGroupRow
+                        key={g.key}
+                        groupKey={g.key}
+                        members={g.members}
+                        selected={selectedModelSet}
+                        onToggleGroup={(members, allSelected) =>
+                          setModel((m) => {
+                            const current = new Set(m.split(',').map((x) => x.trim()).filter(Boolean))
+                            if (allSelected) members.forEach((mem) => current.delete(mem))
+                            else members.forEach((mem) => current.add(mem))
+                            return [...current].join(', ')
+                          })
+                        }
+                        onToggleVariant={(v) => setModel((m) => toggleCsvItem(m, v))}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+            ) : target.type !== 'partnership' ? (
               <div>
                 <label className={labelClass}>Model</label>
                 <input
@@ -414,6 +484,72 @@ export default function AlertEditForm({
           </div>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/** Mirrors `AircraftSaleFilters`' `ModelGroupRow` — same "(all)" parent +
+ *  disclosure UX, adapted to toggle local comma-string state instead of a URL
+ *  param. */
+function ModelGroupRow({
+  groupKey,
+  members,
+  selected,
+  onToggleGroup,
+  onToggleVariant,
+}: {
+  groupKey: string
+  members: string[]
+  selected: Set<string>
+  onToggleGroup: (members: string[], allSelected: boolean) => void
+  onToggleVariant: (model: string) => void
+}) {
+  const selectedCount = members.reduce((n, m) => (selected.has(m) ? n + 1 : n), 0)
+  const allSelected = selectedCount === members.length
+  const someSelected = selectedCount > 0 && !allSelected
+  const [open, setOpen] = useState(someSelected)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex flex-1 cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someSelected
+            }}
+            onChange={() => onToggleGroup(members, allSelected)}
+            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+          />
+          <span>
+            {groupKey} <span className="text-slate-400">(all)</span>
+          </span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="shrink-0 text-xs font-medium text-sky-600 transition-colors hover:text-sky-700"
+        >
+          {open ? 'Hide' : `Show ${members.length} variants`}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-1.5 space-y-1.5 border-l border-slate-100 pl-4">
+          {members.map((m) => (
+            <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={selected.has(m)}
+                onChange={() => onToggleVariant(m)}
+                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+              />
+              {m}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

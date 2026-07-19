@@ -4,6 +4,7 @@ import { Bell, LogIn } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
+import { getAircraftFacets } from '@/lib/aircraft-facets'
 import { SITE_NAME } from '@/lib/seo'
 import {
   parseEditableAlertTarget,
@@ -181,6 +182,9 @@ export default async function AlertsManagePage({
   }
 
   const alerts = await fetchAlertsForEmail(email)
+  // For the aircraft Model chip picker in AlertEditForm (browse-filter parity) —
+  // one read-time aggregation, reused across every row's edit form.
+  const aircraftFacets = await getAircraftFacets()
   const activeAlertCount = alerts.filter((a) => a.status === 'confirmed').length
   const pausedAlertCount = alerts.filter((a) => a.status === 'paused').length
   // Every row an owner requests a change for is stamped with the same
@@ -459,6 +463,7 @@ export default async function AlertsManagePage({
                         newListingOptOut={a.new_listing_opt_out}
                         token={scopeToken}
                         autoOpen={!!editId && editId === a.id}
+                        facets={aircraftFacets}
                       />
                     </div>
                   </li>
