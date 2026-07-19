@@ -381,6 +381,35 @@ test('digest: with frequencyUrl + frequencyTarget "monthly" (weekly alert), the 
   assert.match(text, /Get fewer emails \(switch to monthly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz&dir=monthly/)
 })
 
+test('digest: without snoozeUrl, no "Snooze 30 days" link renders', () => {
+  const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
+  assert.doesNotMatch(html, /Snooze 30 days/)
+  assert.doesNotMatch(text, /Snooze 30 days/)
+})
+
+test('digest: with snoozeUrl, the footer adds a "Snooze 30 days" link (HTML + text)', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    snoozeUrl: 'https://clubhanger.com/api/alerts/snooze?token=xyz',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz"[^>]*>Snooze 30 days<\/a>/)
+  assert.match(text, /Snooze 30 days: https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz/)
+})
+
+test('digest: with both frequencyUrl and snoozeUrl, both footer links render alongside each other', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz',
+    snoozeUrl: 'https://clubhanger.com/api/alerts/snooze?token=xyz',
+  })
+  assert.match(html, /Get fewer emails<\/a> &middot; <a href="https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz"[^>]*>Snooze 30 days<\/a>/)
+  assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz\nSnooze 30 days: https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz/)
+})
+
 test('digest: with shareUrl, a "Buying with a partner? Share this alert" line renders (HTML + text)', () => {
   const { html, text } = buildAlertDigestEmail({
     ...DIGEST_BASE,
@@ -1130,6 +1159,32 @@ test('combined: without a frequencyUrl, no "Get fewer emails" link renders (ever
   })
   assert.doesNotMatch(html, /Get fewer emails/)
   assert.doesNotMatch(text, /Get fewer emails/)
+})
+
+test('combined: with a snoozeUrl, a "Snooze 30 days" footer link renders (HTML + text)', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    snoozeUrl: 'https://clubhanger.com/api/alerts/snooze?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=a,b"[^>]*>Snooze 30 days</)
+  assert.match(text, /Snooze 30 days: https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=a,b/)
+})
+
+test('combined: without a snoozeUrl, no "Snooze 30 days" link renders', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+    ],
+  })
+  assert.doesNotMatch(html, /Snooze 30 days/)
+  assert.doesNotMatch(text, /Snooze 30 days/)
 })
 
 test('combined: a section with its own stopUrl renders a per-section "Stop just this alert" link distinct from the shared footer unsubscribe', () => {

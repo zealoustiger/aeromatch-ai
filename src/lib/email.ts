@@ -1308,6 +1308,12 @@ export function buildAlertDigestEmail(opts: {
    *  existed). Pass `'monthly'` for the weekly→monthly link so the text-part
    *  label names the real target instead of always saying "weekly". */
   frequencyTarget?: 'weekly' | 'monthly'
+  /** Token-scoped "snooze 30 days" link (see `/api/alerts/snooze`) — ladder
+   *  parity with `frequencyUrl`, offering a real pause with an end date
+   *  instead of only a lighter cadence. Renders as a fourth quiet footer
+   *  link alongside Manage/Unsubscribe/Get-fewer-emails. Omitted under the
+   *  same no-token graceful-degrade as `frequencyUrl`. */
+  snoozeUrl?: string
   /** Honest cadence framing for the aggregate body/preheader sentence — e.g.
    *  "yesterday" for a daily alert, "this month" for monthly. Default
    *  `'this week'` (byte-exact with every call before this option existed).
@@ -1508,7 +1514,7 @@ export function buildAlertDigestEmail(opts: {
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}${opts.snoozeUrl ? ` &middot; <a href="${escapeAttr(opts.snoozeUrl)}" style="color:#a89f8e;">Snooze 30 days</a>` : ''}.
       </p>
     </div>
   </body>
@@ -1552,7 +1558,7 @@ ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
 ${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}${replyToFooterText}
 Manage alerts: ${manageUrl}
-Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to ${opts.frequencyTarget ?? 'weekly'}): ${opts.frequencyUrl}` : ''}`
+Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to ${opts.frequencyTarget ?? 'weekly'}): ${opts.frequencyUrl}` : ''}${opts.snoozeUrl ? `\nSnooze 30 days: ${opts.snoozeUrl}` : ''}`
 
   return { subject, html, text }
 }
@@ -1623,6 +1629,11 @@ export function buildCombinedAlertDigestEmail(opts: {
    *  already at the lightest (monthly) cadence — same "no lighter rung
    *  left" gate the single-alert `frequencyUrl` already applies. */
   frequencyUrl?: string
+  /** Tokenized "Snooze 30 days" footer link — same `/api/alerts/snooze`
+   *  target as the single-alert digest's `snoozeUrl`, covering every alert
+   *  in the comma-joined token list at once (snoozing has no per-alert
+   *  cadence to conflict over, unlike `frequencyUrl`'s step logic). */
+  snoozeUrl?: string
   /** Same one-click cross-sell as `buildAlertDigestEmail`'s option — exactly
    *  one suggestion for the whole combined email, never one per section
    *  (GOAL.md: "never spam"). */
@@ -1753,7 +1764,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe from these</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe from these</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}${opts.snoozeUrl ? ` &middot; <a href="${escapeAttr(opts.snoozeUrl)}" style="color:#a89f8e;">Snooze 30 days</a>` : ''}.
       </p>
     </div>
   </body>
@@ -1766,7 +1777,7 @@ export function buildCombinedAlertDigestEmail(opts: {
 ${sectionParts.map((s) => s.text).join('\n\n')}
 ${crossSellText}${digestFeedbackText}${replyToFooterText}
 Manage alerts: ${manageUrl}
-Unsubscribe from these: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails: ${opts.frequencyUrl}` : ''}`
+Unsubscribe from these: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails: ${opts.frequencyUrl}` : ''}${opts.snoozeUrl ? `\nSnooze 30 days: ${opts.snoozeUrl}` : ''}`
 
   return { subject, html, text }
 }

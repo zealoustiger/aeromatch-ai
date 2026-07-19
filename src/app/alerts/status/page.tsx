@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CheckCircle2, BellOff, AlertCircle, MailOpen, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { CheckCircle2, BellOff, AlertCircle, MailOpen, Moon, ThumbsUp, ThumbsDown } from 'lucide-react'
 import UnsubscribeRecover from '@/components/UnsubscribeRecover'
 import AlertCrossSell from '@/components/AlertCrossSell'
 import AlertStatusTracker from '@/components/AlertStatusTracker'
+import SnoozeUndo from '@/components/SnoozeUndo'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
+import { formatResumeDate } from '@/lib/alertSnooze'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { isListingWatchPath } from '@/lib/alertWatchStatus'
 import { parseAlertTokens } from '@/lib/alertTokenList'
@@ -64,6 +66,13 @@ const STATES = {
     title: "You're on fewer emails now",
     body: "Every alert covered by this link just stepped down to a lighter cadence — same matches, less often. You're still subscribed, nothing else changed.",
   },
+  snoozed: {
+    icon: Moon,
+    tint: 'text-emerald-600',
+    ring: 'bg-emerald-50',
+    title: "You're snoozed for 30 days",
+    body: "This alert is paused for 30 days — we'll pick back up automatically, no need to come back and resume it yourself.",
+  },
   invalid: {
     icon: AlertCircle,
     tint: 'text-amber-600',
@@ -118,6 +127,7 @@ function resolveState(raw: string | string[] | undefined): StateKey {
     v === 'daily' ||
     v === 'monthly' ||
     v === 'fewer' ||
+    v === 'snoozed' ||
     v === 'cross_sell_added' ||
     v === 'email_changed' ||
     v === 'digest_feedback_up' ||
@@ -248,6 +258,24 @@ export default async function AlertStatusPage({
     }
   }
 
+  // Real resume date for the "snoozed" landing state — never fabricate one.
+  // `token` may cover several alerts (a combined-digest snooze link); they're
+  // all snoozed together by the same click, so any one row's `paused_until`
+  // is representative. `paused_until` may not be migrated live yet, in which
+  // case this stays null and the generic STATES.snoozed copy is used instead.
+  let snoozeResumeDate: string | null = null
+  if (key === 'snoozed' && token) {
+    const tokens = parseAlertTokens(token)
+    const admin = createAdminClient()
+    const { data, error } = (await admin
+      .from('alerts')
+      .select('paused_until')
+      .in('unsubscribe_token', tokens)
+      .limit(1)
+      .maybeSingle()) as unknown as { data: { paused_until: string | null } | null; error: { message: string } | null }
+    if (!error && data) snoozeResumeDate = formatResumeDate(data.paused_until)
+  }
+
   return (
     <div className="ch-surface min-h-screen">
       <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -261,7 +289,9 @@ export default async function AlertStatusPage({
               ? `You're now also getting alerts for ${crossSellContext} — no extra sign-up needed.`
               : key === 'email_changed' && emailChangedTo
                 ? `All of your ClubHanger alerts now go to ${emailChangedTo}.`
-                : confirmedBody ?? body}
+                : key === 'snoozed' && snoozeResumeDate
+                  ? `This alert is paused until ${snoozeResumeDate} — we'll pick back up automatically then, no need to come back and resume it yourself.`
+                  : confirmedBody ?? body}
           </p>
           {key === 'confirmed' && confirmedSourcePath && confirmedMatchCount && confirmedMatchCount.count > 0 && (
             <p className="mt-2">
@@ -340,6 +370,19 @@ export default async function AlertStatusPage({
               {/* `token` may be a combined digest's comma-joined list — any
                   one alert's token resolves the whole email on /alerts/manage
                   (same precedent as the cron's own `firstToken` manageUrl). */}
+              <Link
+                href={`/alerts/manage?token=${parseAlertTokens(token)[0] ?? token}`}
+                className="font-medium text-sky-600 hover:text-sky-700"
+              >
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'snoozed' && token && <SnoozeUndo token={token} />}
+          {key === 'snoozed' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              {/* `token` may be a combined digest's comma-joined list — same
+                  precedent as the 'fewer' state's manage link above. */}
               <Link
                 href={`/alerts/manage?token=${parseAlertTokens(token)[0] ?? token}`}
                 className="font-medium text-sky-600 hover:text-sky-700"

@@ -1951,6 +1951,10 @@ export async function GET(req: NextRequest) {
           ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}${frequency === 'weekly' ? '&dir=monthly' : ''}`
           : undefined
       const frequencyTarget: 'weekly' | 'monthly' = frequency === 'weekly' ? 'monthly' : 'weekly'
+      // Token-scoped "snooze 30 days" link — ladder parity with frequencyUrl,
+      // a real pause with an end date instead of only a lighter cadence. See
+      // /api/alerts/snooze; same no-token graceful-degrade as frequencyUrl.
+      const snoozeUrl = unsubToken ? `${SITE_URL}/api/alerts/snooze?token=${unsubToken}` : undefined
       // One-click "switch to daily" upgrade nudge — only for a genuinely busy
       // weekly digest (see `shouldOfferDailyUpgrade`); never an upsell on a
       // quiet search. Scoped to the aggregate digest template only, same as
@@ -2021,6 +2025,7 @@ export async function GET(req: NextRequest) {
             unsubscribeUrl,
             frequencyUrl,
             frequencyTarget,
+            snoozeUrl,
             upgradeUrl,
             crossSell: crossSellOpt,
             marketPulse: marketPulse ?? undefined,
@@ -2129,12 +2134,16 @@ export async function GET(req: NextRequest) {
       allTokens && group.some((p) => p.frequency !== 'monthly')
         ? `${SITE_URL}/api/alerts/frequency?token=${allTokens}&dir=step`
         : undefined
+    // Snoozing has no per-alert cadence to conflict over (unlike frequencyUrl's
+    // step logic) — one link covers every token in the combined send at once.
+    const snoozeUrl = allTokens ? `${SITE_URL}/api/alerts/snooze?token=${allTokens}` : undefined
 
     const { subject, html, text } = buildCombinedAlertDigestEmail({
       sections,
       manageUrl,
       unsubscribeUrl,
       frequencyUrl,
+      snoozeUrl,
       crossSell: crossSellOpt,
       digestFeedbackUpUrl,
       digestFeedbackDownUrl,

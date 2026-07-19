@@ -2098,6 +2098,50 @@ export async function snoozeAlertByToken(token: string) {
   return { ok: true, count: data.length, resumeDate: 'paused_until' in payload ? pausedUntil : null }
 }
 
+// Public, token-scoped "undo" for snoozeAlertByToken — the one-tap "Undo —
+// resume now" on the new `/alerts/status?state=snoozed` landing page (see the
+// tokenized `/api/alerts/snooze` email-footer link). Only touches rows this
+// token list covers AND that are currently `paused` (never resumes a row a
+// user separately paused indefinitely via a different action after landing
+// here, though in practice this fires within seconds of the snooze itself).
+// Same graceful-degrade precedent as every other `alerts.*` write in this file.
+export async function resumeAlertsByToken(token: string) {
+  const tokens = parseAlertTokens(token)
+  if (!tokens.length) return { error: 'Invalid link.' }
+
+  const admin = createAdminClient()
+  let payload: Record<string, unknown> = {
+    status: 'confirmed',
+    paused_until: null,
+    paused_at: null,
+  }
+  const optionalKeys = ['paused_until', 'paused_at']
+  let { data, error } = await admin
+    .from('alerts')
+    .update(payload)
+    .in('unsubscribe_token', tokens)
+    .eq('status', 'paused')
+    .select('id')
+  for (
+    let i = 0;
+    i < optionalKeys.length && error && optionalKeys.some((k) => k in payload && error!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalKeys.find((k) => k in payload && error!.message?.includes(k))!
+    payload = Object.fromEntries(Object.entries(payload).filter(([k]) => k !== dropKey))
+    ;({ data, error } = await admin
+      .from('alerts')
+      .update(payload)
+      .in('unsubscribe_token', tokens)
+      .eq('status', 'paused')
+      .select('id'))
+  }
+
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
+  return { ok: true, count: data.length }
+}
+
 // Public, token-scoped "fewer instead of none" recovery — the literal GOAL.md ask
 // alongside pauseAlertByToken's "pause instead" option. Revives the alert(s) to
 // `confirmed` (unlike pause, this one should actually keep sending, just at a
