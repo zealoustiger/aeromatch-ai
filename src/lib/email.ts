@@ -1627,6 +1627,37 @@ export function buildAdminAlertFunnelEmail(
     ? snapshot.notRelevantListings.map((row) => `  - ${row.title}: ${row.count} flagged`).join('\n')
     : '  (no listings flagged as off-target this week)'
 
+  // Cron reliability — lets the human tell a genuinely quiet week apart from a silently
+  // broken digest cron. `cronRunsRecorded` is false when `alert_cron_runs` has no rows in
+  // the last 14 days at all (table not migrated live yet, or the cron truly hasn't run).
+  const cronDaysShort = snapshot.cronRunDaysThisWeek < 7
+  const cronReliabilityHtml = snapshot.cronRunsRecorded
+    ? `<table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:20px;">
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Days the cron ran</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:${cronDaysShort ? '#be123c' : '#0f172a'};">${snapshot.cronRunDaysThisWeek}/7</td>
+          </tr>
+          ${
+            cronDaysShort
+              ? `<tr><td colspan="2" style="padding:0 0 6px;font-size:12px;color:#be123c;text-align:right;">⚠️ fewer days than expected — check for silent failures</td></tr>`
+              : ''
+          }
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Emails sent this week</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.cronEmailsSentThisWeek}</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(formatWeekDelta(snapshot.cronEmailsSentThisWeek, snapshot.cronEmailsSentLastWeek))}</td></tr>
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Avg run duration</td>
+            <td style="padding:4px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.cronAvgDurationMsThisWeek !== null ? `${Math.round(snapshot.cronAvgDurationMsThisWeek / 1000)}s` : '—'}</td>
+          </tr>
+        </table>`
+    : `<p class="ch-muted" style="font-size:13px;color:#94a3b8;margin:0 0 20px;">No cron run data yet — either the digest cron hasn&rsquo;t run since this log was added, or the <code>alert_cron_runs</code> table isn&rsquo;t migrated live yet.</p>`
+
+  const cronReliabilityText = snapshot.cronRunsRecorded
+    ? `Cron reliability: ran ${snapshot.cronRunDaysThisWeek}/7 days${cronDaysShort ? ' (⚠️ fewer than expected — check for silent failures)' : ''}, ${snapshot.cronEmailsSentThisWeek} emails sent (${formatWeekDelta(snapshot.cronEmailsSentThisWeek, snapshot.cronEmailsSentLastWeek)}), avg duration ${snapshot.cronAvgDurationMsThisWeek !== null ? `${Math.round(snapshot.cronAvgDurationMsThisWeek / 1000)}s` : '—'}`
+    : 'Cron reliability: No cron run data yet (table not migrated or cron hasn’t run)'
+
   const html = `<!doctype html>
 <html>
   <head>${emailColorSchemeHead()}</head>
@@ -1722,6 +1753,9 @@ export function buildAdminAlertFunnelEmail(
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Least relevant listings this week</p>
         ${notRelevantSectionHtml}
 
+        <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Cron reliability</p>
+        ${cronReliabilityHtml}
+
         <p style="margin:20px 0 0;">
           <a href="${escapeAttr(dashboardUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
@@ -1753,6 +1787,8 @@ ${demandGapSectionText}
 
 Least relevant listings this week:
 ${notRelevantSectionText}
+
+${cronReliabilityText}
 
 Full dashboard: ${dashboardUrl}`
 

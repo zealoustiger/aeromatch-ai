@@ -1313,6 +1313,13 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   unsubscribedAtMigrated: true,
   pausedAtMigrated: true,
   bouncedAtMigrated: true,
+  cronRunDaysThisWeek: 7,
+  cronRunsThisWeek: 7,
+  cronRunsLastWeek: 7,
+  cronEmailsSentThisWeek: 41,
+  cronEmailsSentLastWeek: 33,
+  cronAvgDurationMsThisWeek: 4820,
+  cronRunsRecorded: true,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -1550,6 +1557,49 @@ test('buildAdminAlertFunnelEmail: when the source column is not migrated, an hon
     'https://clubhanger.com/admin/alerts'
   )
   assert.match(html, /alerts\.source.*column isn&rsquo;t migrated live yet/)
+})
+
+test('buildAdminAlertFunnelEmail: cron reliability renders days-ran, emails-sent WoW delta, and avg duration with no warning at 7/7 days', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Cron reliability/)
+  assert.match(html, /Days the cron ran/)
+  assert.match(html, />7\/7</)
+  assert.doesNotMatch(html, /fewer days than expected/)
+  assert.match(html, /Emails sent this week/)
+  assert.match(html, />41</)
+  assert.match(text, /ran 7\/7 days/)
+  assert.doesNotMatch(text, /fewer than expected/)
+  assert.match(text, /41 emails sent/)
+  assert.match(text, /avg duration 5s/)
+})
+
+test('buildAdminAlertFunnelEmail: cron reliability flags a short week when fewer than 7 days ran', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, cronRunDaysThisWeek: 4, cronRunsThisWeek: 4 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, />4\/7</)
+  assert.match(html, /fewer days than expected — check for silent failures/)
+  assert.match(text, /ran 4\/7 days \(⚠️ fewer than expected/)
+})
+
+test('buildAdminAlertFunnelEmail: with no cron run data at all, an honest empty state renders instead of a fabricated 0/7', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      cronRunsRecorded: false,
+      cronRunDaysThisWeek: 0,
+      cronRunsThisWeek: 0,
+      cronRunsLastWeek: 0,
+      cronEmailsSentThisWeek: 0,
+      cronEmailsSentLastWeek: 0,
+      cronAvgDurationMsThisWeek: null,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No cron run data yet/)
+  assert.doesNotMatch(html, /Days the cron ran/)
+  assert.match(text, /No cron run data yet/)
 })
 
 test('buildAdminAlertFunnelEmail: the dashboard link points at the passed-in URL', () => {

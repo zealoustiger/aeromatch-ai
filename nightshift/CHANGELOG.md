@@ -2,6 +2,85 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T062858Z — PASS — digest-cron-reliability-line
+- Pages: (internal — the Monday admin alert-funnel email + its dev preview route only;
+  no public-facing page changed)
+- What: **The Monday admin alert-funnel email can now tell a genuinely quiet week apart
+  from a silently broken digest cron.** A new "Cron reliability" section shows how many
+  of the last 7 days the digest cron actually ran (flagged, e.g. "4/7 ⚠️ fewer days than
+  expected — check for silent failures"), total emails sent this week vs last week, and
+  this week's average run duration — all pulled from `alert_cron_runs`, a table the cron
+  already writes to every run but that previously only `/admin/alerts`'s "Last run" panel
+  read. Honest empty state ("No cron run data yet…") when no runs are recorded at all.
+- Goal: alert-experience (prove-it-converts / honest-measurement pillar) — tier 3
+  `[goal]`, the reliability-line half of the last open plan-pass batch #7 item (the
+  `send_failures` per-run column half is explicitly NOT done — see Next). Tier 1
+  (`[bug]`): most recent CHANGELOG entry (`alert-model-multiselect-chips`) was a PASS;
+  swept BACKLOG.md for any unstruck `[bug]` line via `grep -n '^\- \*\*\[P.\]\[bug\]'` —
+  zero matches, every prior `[P1]/[P2][bug]` entry is already struck through/resolved.
+  Tier 2 (`[want]`): re-checked every unstruck `[P.][want]` line in the file — same
+  standing blocked-on-human set as every recent cycle (save-search auth-wall
+  reconciliation + the collection-layout mosaic redesign explicitly await a human
+  product call/mock per their own text; Trade-A-Plane/Controller/AirMart/AeroTrader are
+  bot-protection-blocked by explicit design choice, not buildable; Bay-Area coverage
+  benchmark needs a real FAA/AirNav denominator; owner-leads needs compliance review;
+  dynamic-location seed personas is P2 with no live-site effect) — none buildable
+  autonomously. Dropped to tier 3: batch #7 had 3 open items (email-engagement recipient
+  attribution, this cron-reliability line, weekly-digest day-of-week) — the other two
+  are fully migration-blocked (need a human-applied `alerts.*`/`email_engagement_events`
+  column before any code has data to read), but re-reading this item's own text showed
+  its "runs in the last 7 days / emails sent / avg duration" half needs NO migration —
+  `alert_cron_runs`'s existing columns already carry that data; only the `send_failures`
+  half needs a new column. Picked the buildable half; partial-slice-shipped in
+  BACKLOG.md (not struck — the `send_failures` half stays open).
+- Spec: nightshift/specs/20260719T062858Z-digest-cron-reliability-line.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean, all routes compile. Full `node --experimental-strip-types --test` suite (511
+  tests, up from 508 — 3 new) passes, 0 failures: new `buildAdminAlertFunnelEmail` tests
+  cover the populated 7/7-days render (no warning), a short-week render (warning flag +
+  text), and the zero-runs-recorded honest empty state. Implementation: new fail-soft
+  `getCronRunsSince(sinceMs)` in `alertCronHealth.ts` (mirrors `getRecentCronRuns`'s
+  try/catch-empty-on-error convention, but date-bounded instead of count-bounded so a
+  WoW comparison stays accurate). `alertFunnelWeekly.ts`'s `getAlertFunnelWeeklySnapshot`
+  fetches the last 14 days of runs via that helper and computes `cronRunDaysThisWeek`
+  (distinct UTC calendar days with ≥1 run), `cronRunsThisWeek/LastWeek`,
+  `cronEmailsSentThisWeek/LastWeek` (summed `emailsSent`), `cronAvgDurationMsThisWeek`
+  (null when zero runs), and `cronRunsRecorded` (false when the last 14 days have zero
+  rows at all — table not migrated live yet or the cron truly hasn't run, same
+  unavoidable ambiguity `/admin/alerts`'s existing "Last run" panel already lives with).
+  `buildAdminAlertFunnelEmail` (`email.ts`) renders a new "Cron reliability" HTML + text
+  section mirroring the file's existing WoW-row patterns (`formatWeekDelta`, honest empty
+  states), with a red flag line when under 7 days. Dev preview fixture
+  (`/api/dev/email-preview/admin-alert-funnel`) updated with 6/7-days fixture data so the
+  warning renders in the audit screenshot. No schema change, no new capture point — every
+  field used already exists on `alert_cron_runs`. QA: visual cycle (new rendered email
+  section) — served the PRODUCTION build (`npx next build` + `npx next start` on port
+  3000). Programmatic gate: `qa-smoke.mjs` against `/admin/alerts` and the dev
+  email-preview route — 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at desktop 1280 + mobile 375). Read both email-preview screenshots
+  into the verdict: the "Cron reliability" section renders cleanly below "Least relevant
+  listings this week" on both viewports, "6/7" in red with the "fewer days than expected"
+  warning line, "Emails sent this week: 41 (+8 vs last week)", "Avg run duration: 5s" —
+  matches the fixture exactly, no layout break. `/admin/alerts` itself renders its
+  existing auth-gate page (behind the admin auth wall, same as every prior admin-page QA
+  in this changelog) — unaffected, confirming no regression. Confirmed port 3000 free
+  and no orphaned `next-server` process after (killed one lingering process left by the
+  QA driver before finishing). No prod DB writes this cycle — every number here is
+  either from a static fixture (dev preview) or read-only against real
+  `alert_cron_runs`/`alerts` rows already there.
+- Screenshots: nightshift/screenshots/digest-cron-reliability-line/
+- Next: the `send_failures` per-run column (the other half of this same backlog item)
+  needs a new additive `alert_cron_runs.send_failures` column AND wiring failure-counting
+  through the alert-digest cron's several distinct send loops (single-alert digest,
+  combined digest, listing-unavailable notices, reminders, widen-suggestions) — a
+  materially bigger and riskier change than this slice, left open. Batch #7's last
+  remaining item (weekly-digest day-of-week) still needs a human-applied
+  `alerts.digest_day` migration first, same standing blocker as recent cycles. Absent a
+  fresh `[want]`/`[bug]`, the next autonomous cycle likely needs either the
+  `send_failures` slice (schema-change-required, same additive-fail-soft precedent as
+  every prior `alerts.*`/`alert_cron_runs.*` column) or a plan-pass refill once batch #7
+  is fully drained.
+
 ## 20260719T061654Z — PASS — alert-model-multiselect-chips
 - Pages: `/alerts/manage` only — the aircraft-alert Edit form's Model field.
 - What: **Editing an aircraft alert with more than one model no longer means

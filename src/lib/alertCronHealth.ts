@@ -80,3 +80,25 @@ export async function getRecentCronRuns(limit = 5): Promise<AlertCronRun[]> {
     return []
   }
 }
+
+/**
+ * Every run since `sinceMs`, for the Monday admin email's week-over-week cron
+ * reliability line (`alertFunnelWeekly.ts`) — unlike `getRecentCronRuns`, this is
+ * date-bounded rather than count-bounded, so a WoW comparison stays accurate
+ * regardless of how many runs happened. Empty on any error, including the table
+ * not being migrated live yet — same fail-soft convention as the others above.
+ */
+export async function getCronRunsSince(sinceMs: number): Promise<AlertCronRun[]> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('alert_cron_runs')
+      .select('*')
+      .gte('created_at', new Date(sinceMs).toISOString())
+      .order('created_at', { ascending: false })
+    if (error || !data) return []
+    return (data as RunRow[]).map(toRun)
+  } catch {
+    return []
+  }
+}

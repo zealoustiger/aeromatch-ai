@@ -62,6 +62,13 @@ export async function GET() {
     unsubscribedAtMigrated: true,
     pausedAtMigrated: true,
     bouncedAtMigrated: true,
+    cronRunDaysThisWeek: 6,
+    cronRunsThisWeek: 6,
+    cronRunsLastWeek: 7,
+    cronEmailsSentThisWeek: 41,
+    cronEmailsSentLastWeek: 33,
+    cronAvgDurationMsThisWeek: 4820,
+    cronRunsRecorded: true,
     computedAt: '2026-07-18T08:00:00.000Z',
   }
 
