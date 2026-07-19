@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-19T10:31:56Z — DRAIN SUMMARY
+- Cycles this run: 24 (PASS 20 / FAIL 1 / ABORT 3)
+- Models: cycles on sonnet; 1 escalated to opus; 5 quality-judged on opus
+- Night spend so far: $96.1403 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260719T060004Z
+
 ## 20260719T102816Z — PASS — alert-dormant-repermission
 - Pages: no user-facing page markup changed — new lib module + a backend addition to the
   existing daily `/api/cron/alert-digest` cron; no route/markup touched.
