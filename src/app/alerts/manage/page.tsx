@@ -454,7 +454,12 @@ export default async function AlertsManagePage({
                         <WidenAlertNudge id={a.id} token={scopeToken} dead={isDead} suggestion={widenSuggestions[i]} />
                       ) : null}
                       {!isDead ? (
-                        <NarrowAlertNudge id={a.id} token={scopeToken} suggestions={narrowSuggestions[i]} />
+                        <NarrowAlertNudge
+                          id={a.id}
+                          token={scopeToken}
+                          suggestions={narrowSuggestions[i]}
+                          frequency={normalizeFrequency(a.frequency)}
+                        />
                       ) : null}
                       {overlap ? (
                         <OverlapAlertNudge id={a.id} token={scopeToken} broaderContext={overlap.broaderContext} />

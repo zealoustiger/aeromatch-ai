@@ -3,24 +3,27 @@
  * path is a single daily cron (`vercel.json`: `0 8 * * *`) gated per-alert by
  * `last_digest_at` — there's no event-driven/real-time trigger, so "instant" isn't
  * a real option today (offering it would be a fabricated capability). Scoped to
- * the two cadences the architecture actually supports: `daily` (send at most once
- * every ~1 day) and `weekly` (send at most once every ~7 days — today's fixed
- * behavior for everyone, still the default).
+ * the three cadences the architecture actually supports: `daily` (send at most
+ * once every ~1 day), `weekly` (send at most once every ~7 days — today's fixed
+ * behavior for everyone, still the default), and `monthly` (send at most once
+ * every ~28 days — an honest low-touch rung for the long-horizon shopper, still
+ * just the same daily cron gated by elapsed days, no new infra).
  *
  * Pure + deterministic: callers pass `nowIso` explicitly (no `Date.now()` inside)
  * so this is testable without the clock — mirrors `priceDrops.ts`.
  */
 
-export type AlertFrequency = 'daily' | 'weekly'
+export type AlertFrequency = 'daily' | 'weekly' | 'monthly'
 
 const INTERVAL_DAYS: Record<AlertFrequency, number> = {
   daily: 1,
   weekly: 7,
+  monthly: 28,
 }
 
 /** Normalizes any stored/fallback value (including an un-migrated `undefined`) to a valid frequency. */
 export function normalizeFrequency(value: string | null | undefined): AlertFrequency {
-  return value === 'daily' ? 'daily' : 'weekly'
+  return value === 'daily' ? 'daily' : value === 'monthly' ? 'monthly' : 'weekly'
 }
 
 const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']

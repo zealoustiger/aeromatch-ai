@@ -15,13 +15,33 @@ const DAY_OPTIONS = [
   { value: 6, label: 'Sat' },
 ]
 
+const CYCLE: Record<AlertFrequency, AlertFrequency> = {
+  daily: 'weekly',
+  weekly: 'monthly',
+  monthly: 'daily',
+}
+
+const LABEL: Record<AlertFrequency, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+}
+
+const CLASSES: Record<AlertFrequency, string> = {
+  daily: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+  weekly: 'bg-slate-50 text-slate-500 hover:bg-slate-100',
+  monthly: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100',
+}
+
 /**
  * Persistent per-alert digest-cadence switch (not hidden behind "Edit"),
  * mirrors AlertModeToggle's pattern — but renders for every alert type (unlike
- * price-drop/new-listing mode, cadence isn't aircraft-only). When cadence is
- * weekly, also offers an optional day-of-week picker so the digest lands on
- * the same day every time instead of drifting with "whenever 7 days have
- * elapsed" (see src/lib/alertFrequency.ts's isDigestDue).
+ * price-drop/new-listing mode, cadence isn't aircraft-only). Clicking cycles
+ * daily → weekly → monthly → daily. When cadence is weekly, also offers an
+ * optional day-of-week picker so the digest lands on the same day every time
+ * instead of drifting with "whenever 7 days have elapsed" (see
+ * src/lib/alertFrequency.ts's isDigestDue) — monthly has no day preference,
+ * same as daily.
  */
 export default function FrequencyToggle({
   id,
@@ -42,7 +62,7 @@ export default function FrequencyToggle({
   const [announcement, setAnnouncement] = useState<string | null>(null)
 
   function toggle() {
-    const next: AlertFrequency = frequency === 'daily' ? 'weekly' : 'daily'
+    const next: AlertFrequency = CYCLE[frequency]
     const previous = frequency
     setFrequency(next)
     setAnnouncement(null)
@@ -84,13 +104,11 @@ export default function FrequencyToggle({
         type="button"
         onClick={toggle}
         disabled={isPending}
-        title={frequency === 'daily' ? 'Switch to a weekly digest' : 'Switch to a daily digest'}
-        className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
-          frequency === 'daily' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-        }`}
+        title={`Switch to a ${CYCLE[frequency]} digest`}
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${CLASSES[frequency]}`}
       >
         <Clock className="h-3.5 w-3.5" />
-        {frequency === 'daily' ? 'Daily' : 'Weekly'}
+        {LABEL[frequency]}
       </button>
       {frequency === 'weekly' ? (
         <label className="inline-flex shrink-0 items-center gap-1.5 text-xs text-slate-500">

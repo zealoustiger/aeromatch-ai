@@ -1789,7 +1789,7 @@ export async function GET(req: NextRequest) {
             frequencyUrl,
             // Honesty: this is a daily/weekly cron send, never real-time —
             // never claim "just dropped".
-            periodLabel: frequency === 'daily' ? 'yesterday' : 'this week',
+            periodLabel: frequency === 'daily' ? 'yesterday' : frequency === 'monthly' ? 'this month' : 'this week',
             dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
             shareType: target.type === 'partnership' ? bestDrop.shareType : undefined,
             marketPulse: marketPulse ?? undefined,

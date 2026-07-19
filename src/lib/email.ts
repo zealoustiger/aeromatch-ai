@@ -12,6 +12,7 @@
 
 import type { CompResult } from '@/lib/aircraftComps'
 import type { AlertFunnelWeeklySnapshot } from '@/lib/alertFunnelWeekly'
+import type { AlertFrequency } from '@/lib/alertFrequency'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
@@ -672,7 +673,7 @@ Unsubscribe: ${opts.unsubscribeUrl}`
  */
 export function buildAlertZeroMatchWelcomeEmail(opts: {
   context: string | null
-  frequency: 'daily' | 'weekly'
+  frequency: AlertFrequency
   manageUrl: string
   unsubscribeUrl: string
   widen?: { description: string; count: number; noun: 'listing' | 'pilot'; url: string } | null

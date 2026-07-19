@@ -1009,3 +1009,22 @@ alter table alerts add column if not exists digest_day smallint
 -- from "genuinely zero failures" until the column lands, same ambiguity
 -- `cronRunsRecorded` already documents for the rest of this health log.
 alter table alert_cron_runs add column if not exists send_failures int not null default 0;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_frequency_monthly
+-- Widens the `frequency` CHECK constraint (added above, migration
+-- `alerts_frequency`) to also allow `'monthly'` — a genuine low-touch cadence
+-- for the long-horizon shopper, still just the same daily cron gated by
+-- elapsed days (≥28) in `isDigestDue`, no new infra or fabricated "instant"
+-- delivery. Additive in effect (only widens the set of accepted values, no
+-- data touched); the column and its default ('weekly') are unchanged. Apply
+-- in the Supabase SQL editor. Until applied, every write path that sets
+-- `frequency: 'monthly'` (capture form, /alerts/manage's FrequencyToggle, the
+-- unsubscribe-recovery "switch to monthly" option, the narrow-alert nudge)
+-- fails the CHECK constraint and retries dropping the `frequency` key —
+-- same graceful-fallback pattern as every `alerts.*` column above (the error
+-- message names the constraint `alerts_frequency_check`, which contains the
+-- string "frequency" just like the column name does, so the existing
+-- drop-and-retry logic already covers this without any app-code change) —
+-- i.e. the row still saves, just keeps whatever cadence it already had.
+alter table alerts drop constraint if exists alerts_frequency_check;
+alter table alerts add constraint alerts_frequency_check check (frequency in ('daily', 'weekly', 'monthly'));

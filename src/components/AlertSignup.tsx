@@ -525,7 +525,7 @@ export default function AlertSignup({
               You&rsquo;re already getting alerts for this.
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              We email {signedInEmail} a {existingAlert.frequency === 'daily' ? 'daily' : 'weekly'} digest when {doneCopy}
+              We email {signedInEmail} a {existingAlert.frequency} digest when {doneCopy}
             </p>
             <Link
               href="/alerts/manage"
@@ -716,6 +716,7 @@ export default function AlertSignup({
             >
               <option value="weekly">Weekly digest</option>
               <option value="daily">Daily digest</option>
+              <option value="monthly">Monthly digest</option>
             </select>
           </label>
           {errorMsg && <p role="alert" className="mt-2 text-xs text-red-600">{errorMsg}</p>}
