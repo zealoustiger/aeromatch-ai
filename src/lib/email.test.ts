@@ -9,6 +9,7 @@ import {
   buildCombinedAlertDigestEmail,
   buildAlertConfirmEmail,
   buildListingUnavailableEmail,
+  buildListingBackOnMarketEmail,
   buildWidenSuggestionEmail,
   buildRepermissionEmail,
   buildAlertZeroMatchWelcomeEmail,
@@ -1435,6 +1436,58 @@ test('buildListingUnavailableEmail: crossSell label is HTML-escaped', () => {
   })
   assert.doesNotMatch(html, /<script>/)
   assert.match(html, /&lt;script&gt;/)
+})
+
+// ─── buildListingBackOnMarketEmail (resumed watch-alert notice) ────────────
+
+const BACK_ON_MARKET_BASE = {
+  title: '2013 Cessna 172S Skyhawk',
+  listingUrl: 'https://clubhanger.com/aircraft/listing/abc123',
+  manageUrl: 'https://clubhanger.com/alerts/manage',
+  unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+}
+
+test('buildListingBackOnMarketEmail: subject names the listing as back on the market', () => {
+  const { subject } = buildListingBackOnMarketEmail(BACK_ON_MARKET_BASE)
+  assert.equal(subject, '2013 Cessna 172S Skyhawk is back on the market')
+})
+
+test('buildListingBackOnMarketEmail: says the watch was resumed, not just "browse similar"', () => {
+  const { html, text } = buildListingBackOnMarketEmail(BACK_ON_MARKET_BASE)
+  assert.match(text, /resumed watching it for you/)
+  assert.match(html, /resumed watching it for you/)
+  assert.doesNotMatch(text, /Browse similar/)
+})
+
+test('buildListingBackOnMarketEmail: listing/manage/unsubscribe links all appear in both html and text', () => {
+  const { html, text } = buildListingBackOnMarketEmail(BACK_ON_MARKET_BASE)
+  for (const url of [BACK_ON_MARKET_BASE.listingUrl, BACK_ON_MARKET_BASE.manageUrl, BACK_ON_MARKET_BASE.unsubscribeUrl]) {
+    assert.ok(text.includes(url), `expected text to include ${url}`)
+    assert.ok(html.includes(url), `expected html to include ${url}`)
+  }
+})
+
+test('buildListingBackOnMarketEmail: listing title is HTML-escaped', () => {
+  const { html } = buildListingBackOnMarketEmail({
+    ...BACK_ON_MARKET_BASE,
+    title: 'Cessna 172 <script>alert(1)</script>',
+  })
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&lt;script&gt;/)
+})
+
+test('buildListingBackOnMarketEmail: noun "partnership" reads buy-in drop, not price drop', () => {
+  const { html, text } = buildListingBackOnMarketEmail({ ...BACK_ON_MARKET_BASE, noun: 'partnership' })
+  assert.match(text, /buy-in drop/)
+  assert.doesNotMatch(text, /price drop/)
+  assert.match(html, /buy-in drop/)
+})
+
+test('buildListingBackOnMarketEmail: omitting noun stays byte-for-byte the original aircraft copy', () => {
+  const withNoun = buildListingBackOnMarketEmail({ ...BACK_ON_MARKET_BASE, noun: 'aircraft' })
+  const withoutNoun = buildListingBackOnMarketEmail(BACK_ON_MARKET_BASE)
+  assert.equal(withNoun.html, withoutNoun.html)
+  assert.equal(withNoun.text, withoutNoun.text)
 })
 
 // ─── buildWidenSuggestionEmail (one-time never-matched-alert nudge) ────────

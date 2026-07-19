@@ -1050,3 +1050,21 @@ alter table alerts add column if not exists digest_sends_count int not null defa
 -- `getDormantSubscribers` fails soft to an empty list (same graceful-fallback pattern as
 -- every `alerts.*` column above) — no re-permission emails send at all, not a duplicate.
 alter table alerts add column if not exists repermission_sent_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_unavailable_notified_at
+-- Distinguishes a listing-watch alert the CRON auto-paused (because its watched
+-- aircraft/partnership went unavailable) from a USER-initiated pause
+-- (pauseAlert/snoozeAlert/pauseAllAlerts) — today both share the same bare
+-- `status='paused'` + `paused_at` stamp, so nothing can tell them apart. Stamped by
+-- the alert-digest cron's existing unavailable-watch auto-pause (alongside its
+-- `paused_at` stamp); cleared (and the alert resumed to `status='confirmed'`) the
+-- moment the same cron notices the watched listing is back to `status='active'` (sale
+-- fell through, owner relisted) — see `sendBackOnMarketNotices` in
+-- api/cron/alert-digest/route.ts. Nullable, no default: null means "not an
+-- auto-pause-for-unavailability," the same honest-gap posture as every timestamp
+-- column above. Never touches a user-initiated pause, since only the cron's own
+-- auto-pause path ever sets it. Apply in the Supabase SQL editor. Until applied, the
+-- auto-pause stamp retries without this column (same graceful-fallback pattern as
+-- every `alerts.*` column above) and the back-on-market check fails soft to a no-op —
+-- a relisted watch simply isn't detected yet, exactly as today.
+alter table alerts add column if not exists unavailable_notified_at timestamptz;

@@ -750,6 +750,78 @@ Unsubscribe: ${opts.unsubscribeUrl}`
 }
 
 /**
+ * "Good news — the listing you were watching is back on the market." Sent
+ * exactly once by the alert-digest cron when a `listingId`-scoped watch alert
+ * it previously auto-paused (via `buildListingUnavailableEmail` above) is
+ * found `status: 'active'` again — a sale falling through, or the owner
+ * relisting. The cron resumes the watch right after this sends, so the
+ * subscriber who proved they wanted exactly this listing keeps hearing about
+ * it, instead of a one-time "sorry, gone" notice being the permanent end of
+ * that relationship.
+ */
+export function buildListingBackOnMarketEmail(opts: {
+  title: string
+  listingUrl: string
+  manageUrl: string
+  unsubscribeUrl: string
+  /** Same aircraft/partnership copy split as `buildListingUnavailableEmail`. */
+  noun?: 'aircraft' | 'partnership'
+}): { subject: string; html: string; text: string } {
+  const subject = `${opts.title} is back on the market`
+  const isPartnership = opts.noun === 'partnership'
+  const statusLine = isPartnership
+    ? "It&rsquo;s available again &mdash; we&rsquo;ve resumed watching it for you, so you&rsquo;ll hear about any buy-in drop."
+    : "It&rsquo;s available again &mdash; we&rsquo;ve resumed watching it for you, so you&rsquo;ll hear about any price drop."
+  const statusLineText = isPartnership
+    ? "It's available again — we've resumed watching it for you, so you'll hear about any buy-in drop."
+    : "It's available again — we've resumed watching it for you, so you'll hear about any price drop."
+
+  const html = `<!doctype html>
+<html>
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <p style="margin:0 0 14px;">
+          <span style="display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;">
+            Back on the market
+          </span>
+        </p>
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 10px;">${escapeHtml(opts.title)}</h1>
+        <p class="ch-text" style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+          ${statusLine}
+        </p>
+        <p style="margin:0;">
+          <a href="${escapeAttr(opts.listingUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            View listing
+          </a>
+        </p>
+      </div>
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this because you had a watch alert set up on ClubHanger.
+        <a href="${escapeAttr(opts.manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
+        &middot;
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `${opts.title} is back on the market
+
+${statusLineText}
+
+View listing: ${opts.listingUrl}
+
+Manage alerts: ${opts.manageUrl}
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
+/**
  * One-time "hasn't matched anything yet, widen it?" email for a confirmed
  * alert that's never matched a single listing since it was created. Caller
  * (the alert-digest cron) has already re-verified BOTH the current 0-match

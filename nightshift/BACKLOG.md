@@ -3448,19 +3448,20 @@ feature shipped dark earlier today with no rollup)._
   capture point: `/alerts/status`'s existing `cross_sell_added` state + tracker already
   fire `alert_subscribed` with `source=digest_sample_watch` for this endpoint's redirect
   — no new page/component needed. No schema change.
-- **[P1][goal] "Back on the market" — relist notice for watch alerts we auto-paused.**
-  The unavailable-watch flow pauses the watch with bare `status='paused'`
-  (`route.ts:~2050`), so if the listing comes back (sale falls through, owner relists —
-  `relistListing` exists in `actions.ts`) the one subscriber who proved they want exactly
-  that aircraft never hears. Stamp auto-pauses with an additive
-  `alerts.unavailable_notified_at` (⚠️ human-apply, fail-soft retry-without-column, same
-  precedent as `paused_at`); each cron run, for stamped-paused watch alerts only, check
-  whether the listing is `active` again and send ONE "It's back on the market" email
-  (reuse the watch email shapes) that resumes the watch — auto-resume is honest ONLY for
-  rows carrying the stamp (we paused them, the user didn't); never touch user-paused
-  rows; clear the stamp on send so it can never double-fire. Ships dark until the column
-  is applied, like every prior `alerts.*` DDL. Improves: watch lifecycle honesty + the
-  highest-intent recovery send in the system. No new capture point.
+~~- **[P1][goal] "Back on the market" — relist notice for watch alerts we auto-paused.**~~
+  ✅ SHIPPED via `watch-back-on-market` (2026-07-19) The unavailable-watch flow paused the
+  watch with bare `status='paused'` (`route.ts:~2050`), so if the listing came back (sale
+  falls through, owner relists) the one subscriber who proved they wanted exactly that
+  aircraft never heard. Stamped auto-pauses with an additive `alerts.unavailable_notified_at`
+  (⚠️ human-apply, fail-soft retry-without-column, same precedent as `paused_at`) — the
+  column that lets a cron-initiated pause be told apart from a user-initiated one (both
+  previously shared the same bare `status='paused'` + `paused_at`). Each cron run, for
+  stamped-paused watch alerts only, checks whether the listing is `active` again and sends
+  ONE "It's back on the market" email (new `buildListingBackOnMarketEmail`, mirroring
+  `buildListingUnavailableEmail`'s aircraft/partnership noun split) that resumes the watch
+  (`status:'confirmed'`, clears the stamp, restamps `last_digest_at`) — never touches a
+  user-paused row, since only the cron's own auto-pause path ever sets the new column.
+  Ships dark until the column is applied, like every prior `alerts.*` DDL.
 - **[P1][goal] "Get fewer emails" rung on the combined digest — ladder parity.** A
   subscriber with multiple alerts gets the combined template, which offers per-alert
   stop, unsubscribe-all, and vote — but NO cadence-down link (its own doc comment says
