@@ -3241,6 +3241,89 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   change.~~ ✅ SHIPPED via `alert-bounced-heads-up` (2026-07-19)
 ---
 
+### Plan-pass batch #9 — 2026-07-19 (Fable)
+_Batch #8 fully drained same-day (all 7 items shipped 2026-07-19; `alert-monthly-cadence`
+closed it). Still untouched here: the two long-blocked items — real instant sends (Vercel
+cron-tier human call) and the save-search auth wall (`[want]` product call). Entry-point
+capture remains saturated (footer capture is site-wide; sold-aircraft landing, 404 page,
+and every hub/tool/guide already carry `AlertSignup`), so this batch closes verified
+correctness/honesty gaps that today's monthly-cadence ship exposed, one dead-end-recovery
+conversion, and one deliverability-protection slice. All verified un-built by direct code
+read this pass: `alert-digest/route.ts:1735` gates the digest footer's `frequencyUrl` to
+daily-cadence alerts only, and `email.ts:530`/`:1246` hardcode the text-part label
+"(switch to weekly)"; `buildAlertDigestEmail`'s aggregate body sentence hardcodes "on
+ClubHanger this week" (`email.ts:1120`/`:1168`) while the price-drop path already computes
+a frequency-aware `periodLabel` (`route.ts:1792`); `AlertSignup`'s success panel ends at
+"check your inbox" with no post-subscribe refinement; `buildListingUnavailableEmail`
+offers only a passive "Browse similar" link — no one-tap alert conversion (while a
+tokenized accept endpoint already exists at `/api/alerts/digest-cross-sell` to model on);
+`resendAlertConfirmationByEmail` lacks the `bouncedHint` the three subscribe paths got
+(flagged in the `alert-bounced-heads-up` cycle's Next); `emailEngagement.ts` records
+per-recipient opened/clicked but nothing reads it per-address for lifecycle decisions._
+
+- **[P1][goal] Weekly→monthly rung on the digest email's "Get fewer emails" ladder.**
+  Today's `alert-monthly-cadence` ship added monthly everywhere on-site, but the digest
+  email footer's `frequencyUrl` is still daily-only (`alert-digest/route.ts:1735` comment:
+  "a weekly one has nowhere lower to go" — no longer true), so a weekly subscriber's only
+  in-email "fewer" path is the unsubscribe link. Offer the link for weekly-cadence sends
+  too (target=monthly via the now target-aware `/api/alerts/frequency`), and fix the
+  hardcoded "(switch to weekly)" text-part labels (`email.ts:530`/`:1246`) to name the
+  actual target cadence. Improves: digest-email surface, never-spam / "fewer instead of
+  none" pillar. No new capture point, no schema change (monthly migration already flagged
+  ⚠️ human-apply; frequency writes already fail soft).
+- **[P1][goal] Cadence-honest digest body framing — stop saying "this week" to daily and
+  monthly subscribers.** `buildAlertDigestEmail`'s aggregate sentence hardcodes "matching
+  your alert on ClubHanger this week" (`email.ts:1120` html, `:1168` text) regardless of
+  the alert's cadence — imprecise for daily sends since forever, and now plainly wrong for
+  monthly ones. The cron already computes an honest per-frequency `periodLabel`
+  ("yesterday" / "this week" / "this month", `route.ts:1792`) for price-drop emails —
+  thread the same into the digest/combined builders' body copy (and any other "this week"
+  strings a subscriber sees, e.g. the "No new alerts this week" empty row if
+  subscriber-facing). Improves: digest email honesty (GOAL's smart-honest-content pillar).
+  No new capture point, no schema change. Unit-test the label plumbing.
+- **[P1][goal] Post-subscribe one-tap refine — optional "max price" in the success
+  panel.** Capture stays one-field, but the moment AFTER subscribe is free real estate:
+  the `AlertSignup` success panel today ends at "check your inbox" + social proof, with no
+  way to tighten the alert you just created — the #1 cause of future irrelevant digests
+  (and the narrow-nudge only catches it *after* weeks of over-broad sends). Offer ONE
+  optional, skippable input ("Cap it at a max price? — optional") that tightens the
+  just-created row's `source_path` criteria via a row-scoped server action (same trust
+  basis as the emailed status link — this browser just created the row; reuse
+  `alertEditCriteria`'s parsing). Never blocks or gates the success state. Improves:
+  frictionless-capture + never-spam (relevance) pillars. No NEW capture point (row already
+  exists — no second `alert_subscribed`), no schema change.
+- **[P1][goal] "Alert me about similar" one-tap conversion in the watched-listing
+  unavailable email.** When a watched listing sells, `buildListingUnavailableEmail` tells
+  the subscriber honestly but only offers a passive "Browse similar" link — the alert
+  relationship dies right at the moment of proven high intent (they watched ONE aircraft
+  to the end). Add a one-tap "Email me when similar {make} {model}s list →" button that
+  converts the dead watch into a family alert for the same double-opted-in address —
+  tokenized accept endpoint modeled on the existing `/api/alerts/digest-cross-sell`
+  pattern (`alertWatchStatus.ts` already exposes the watched row's raw make/model for
+  exactly this kind of caller), idempotent on re-click, landing on `/alerts/status` with
+  the normal confirmation UX. Emits `alert_subscribed` (`source:
+  'watch_unavailable_email'`) — a genuinely new capture point. No schema change.
+- **[P2][goal] Bounced heads-up parity on the confirm-resend path.**
+  `resendAlertConfirmationByEmail` still reports plain success for an address every prior
+  send has hard-bounced — the exact fake-"check your inbox" dead end
+  `alert-bounced-heads-up` just closed on the three subscribe paths (its cycle's Next
+  flagged this sibling). Reuse the same `hasBouncedBefore` read + amber hint copy in the
+  resend flow's success state. Improves: capture/recovery-flow honesty. No new capture
+  point, no schema change.
+- **[P2][goal] Dormant-subscriber re-permission ("still want these?") — one-time, honestly
+  gated.** Deliverability best practice the lifecycle still lacks: an address that keeps
+  receiving digests but never engages quietly erodes sender reputation until it bounces or
+  complains. Using the per-recipient `email_engagement_events` data (opened/clicked per
+  address — recorded today, read by nothing per-address): for confirmed alerts ≥90 days
+  old whose address has ≥8 recorded digest deliveries and ZERO opens/clicks ever, send ONE
+  re-permission email — "Still want these alerts?" with one-tap keep (no-op link), the
+  cadence ladder (weekly/monthly), snooze, and unsubscribe. Strict honesty gates: skip
+  entirely when engagement tracking has no rows for that address (absence of data ≠
+  disengagement); never send twice (fail-soft `repermission_sent_at` column, ⚠️ flag
+  migration human-apply like every `alerts.*` DDL); cap sends per cron run. Improves:
+  never-spam + sender-reputation protection. No new capture point.
+---
+
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
 The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
 pillar item only when the alert queue above is genuinely exhausted, or a `[want]`/`[bug]`
