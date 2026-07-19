@@ -54,6 +54,12 @@ export async function GET() {
     notRelevantTotalThisWeek: 5,
     instantInterestThisWeek: 4,
     instantInterestAllTime: 17,
+    unsubscribeReasons: [
+      { reason: 'not_relevant', label: 'Not relevant', countThisWeek: 2, countAllTime: 9 },
+      { reason: 'too_many_emails', label: 'Too many emails', countThisWeek: 1, countAllTime: 6 },
+      { reason: 'found_aircraft', label: 'Found my aircraft', countThisWeek: 0, countAllTime: 4 },
+    ],
+    unsubscribeReasonColumnMigrated: true,
     demandWithNoSupply: [
       { sourcePath: '/aircraft?make=Mooney&state=OH', label: 'Mooney in Ohio', subscriberCount: 4 },
       { sourcePath: '/partnerships?make=Diamond', label: 'Diamond', subscriberCount: 2 },

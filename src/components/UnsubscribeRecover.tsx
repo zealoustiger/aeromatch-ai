@@ -8,18 +8,13 @@ import {
   snoozeAlertByToken,
   updateAlertFrequencyByToken,
   markAlertFoundAircraftByToken,
+  recordUnsubscribeReasonByToken,
 } from '@/app/actions'
 import { formatResumeDate } from '@/lib/alertSnooze'
 import { track } from '@/lib/analytics'
+import { UNSUBSCRIBE_REASONS } from '@/lib/alertUnsubscribeReasons'
 
 type Action = 'paused' | 'weekly' | 'snoozed' | 'found'
-
-const UNSUB_REASONS = [
-  { key: 'too_many_emails', label: 'Too many emails' },
-  { key: 'not_relevant', label: 'Not relevant' },
-  { key: 'found_aircraft', label: 'Found my aircraft' },
-  { key: 'just_done', label: 'Just done' },
-] as const
 
 export default function UnsubscribeRecover({
   token,
@@ -48,6 +43,10 @@ export default function UnsubscribeRecover({
     if (reason) return
     track('alert_unsubscribe_reason', { reason: key, count: alertCount, source_path: sourcePath ?? undefined })
     setReason(key)
+    // Fire-and-forget: this is a soft, best-effort write (fails silently when
+    // the `unsubscribe_reason` column isn't migrated live yet) — it must
+    // never block or error the "Thanks — that helps" confirmation above.
+    recordUnsubscribeReasonByToken(token, key).catch(() => {})
   }
   // `/alerts/manage` resolves ownership from a SINGLE alert's token (then shows
   // every alert for that email) — a combined-digest `token` here can be a
@@ -184,7 +183,7 @@ export default function UnsubscribeRecover({
           <>
             <p className="text-xs text-slate-500">Mind telling us why?</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {UNSUB_REASONS.map((r) => (
+              {UNSUBSCRIBE_REASONS.map((r) => (
                 <button
                   key={r.key}
                   onClick={() => handleReason(r.key)}

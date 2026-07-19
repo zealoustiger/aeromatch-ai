@@ -1648,6 +1648,34 @@ export function buildAdminAlertFunnelEmail(
     ? snapshot.notRelevantListings.map((row) => `  - ${row.title}: ${row.count} flagged`).join('\n')
     : '  (no listings flagged as off-target this week)'
 
+  // "Why people unsubscribe" — the one-tap reason chips on /alerts/status,
+  // finally read back. An unmigrated column and a genuinely-empty column both
+  // render an honest empty state, distinguished by wording, never a fabricated row.
+  const unsubscribeReasonsRowsHtml = snapshot.unsubscribeReasons
+    .map(
+      (row) => `
+          <tr>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#334155;">${escapeHtml(row.label)}</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#0f172a;text-align:right;font-weight:600;">${row.countThisWeek} this week</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #ece6dc;font-size:13px;color:#94a3b8;text-align:right;">${row.countAllTime} all-time</td>
+          </tr>`
+    )
+    .join('')
+
+  const unsubscribeReasonsEmptyMessage = snapshot.unsubscribeReasonColumnMigrated
+    ? 'No reasons recorded yet.'
+    : 'Not available yet — the `alerts.unsubscribe_reason` column isn’t migrated live.'
+
+  const unsubscribeReasonsSectionHtml = snapshot.unsubscribeReasons.length
+    ? `<table role="presentation" width="100%" style="border-collapse:collapse;margin-bottom:20px;">
+          ${unsubscribeReasonsRowsHtml}
+        </table>`
+    : `<p class="ch-muted" style="font-size:13px;color:#94a3b8;margin:0 0 20px;">${escapeHtml(unsubscribeReasonsEmptyMessage)}</p>`
+
+  const unsubscribeReasonsSectionText = snapshot.unsubscribeReasons.length
+    ? snapshot.unsubscribeReasons.map((row) => `  - ${row.label}: ${row.countThisWeek} this week, ${row.countAllTime} all-time`).join('\n')
+    : `  (${unsubscribeReasonsEmptyMessage})`
+
   // Cron reliability — lets the human tell a genuinely quiet week apart from a silently
   // broken digest cron. `cronRunsRecorded` is false when `alert_cron_runs` has no rows in
   // the last 14 days at all (table not migrated live yet, or the cron truly hasn't run).
@@ -1783,6 +1811,9 @@ export function buildAdminAlertFunnelEmail(
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Least relevant listings this week</p>
         ${notRelevantSectionHtml}
 
+        <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Why people unsubscribe</p>
+        ${unsubscribeReasonsSectionHtml}
+
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Cron reliability</p>
         ${cronReliabilityHtml}
 
@@ -1817,6 +1848,9 @@ ${demandGapSectionText}
 
 Least relevant listings this week:
 ${notRelevantSectionText}
+
+Why people unsubscribe:
+${unsubscribeReasonsSectionText}
 
 ${cronReliabilityText}
 

@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail, MousePointerClick, Flag, Zap } from 'lucide-react'
+import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail, MousePointerClick, Flag, Zap, HelpCircle } from 'lucide-react'
 import {
   getAlertScoreboard,
   getDigestVoteRollup,
   getNotRelevantListingsRollup,
   getInstantInterestRollup,
+  getUnsubscribeReasonRollup,
 } from '@/lib/alertScoreboard'
 import { getLastCronRun } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
@@ -23,13 +24,14 @@ const STALE_RUN_HOURS = 36
 
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes, lastRun, engagement, notRelevant, instantInterest] = await Promise.all([
+  const [snap, votes, lastRun, engagement, notRelevant, instantInterest, unsubscribeReasons] = await Promise.all([
     getAlertScoreboard(),
     getDigestVoteRollup(),
     getLastCronRun(),
     getEmailEngagementRollup(),
     getNotRelevantListingsRollup(),
     getInstantInterestRollup(),
+    getUnsubscribeReasonRollup(),
   ])
   const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
@@ -441,6 +443,36 @@ export default async function AlertScoreboardPage() {
                 </span>
                 <span className="shrink-0 text-slate-500">
                   {row.count} flag{row.count === 1 ? '' : 's'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <HelpCircle className="h-5 w-5 text-slate-400" /> Why people unsubscribe
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          The one-tap reason chips on the unsubscribe page, this week vs. all-time. Real
+          counts only.
+        </p>
+
+        {!unsubscribeReasons.reasonColumnMigrated ? (
+          <p className="text-sm text-slate-400">
+            Not available yet — the <code>alerts.unsubscribe_reason</code> column isn&rsquo;t
+            migrated live.
+          </p>
+        ) : unsubscribeReasons.topReasons.length === 0 ? (
+          <p className="text-sm text-slate-400">No reasons recorded yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {unsubscribeReasons.topReasons.map((row) => (
+              <div key={row.reason} className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate font-medium text-slate-800">{row.label}</span>
+                <span className="shrink-0 text-slate-500">
+                  {row.countThisWeek} this week · {row.countAllTime} all-time
                 </span>
               </div>
             ))}

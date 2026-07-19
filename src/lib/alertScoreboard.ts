@@ -1,6 +1,7 @@
 import { createAdminClient } from './supabase-admin'
 import { classifySourcePath } from './alertSourceFamily'
 import { buildWeeklyTrend, type WeeklyTrendPoint } from './alertWeeklyTrend'
+import { summarizeUnsubscribeReasons, type UnsubscribeReasonRow } from './alertUnsubscribeReasons'
 
 // The `alerts` table carries two live-subscriber vocabularies: newer opt-in
 // paths land on `confirmed` (+ `confirmed_at`), while older/direct rows use
@@ -330,4 +331,50 @@ export async function getInstantInterestRollup(
     if (!Number.isNaN(at) && at >= oneWeekAgo) thisWeek++
   }
   return { thisWeek, allTime: rows.length }
+}
+
+export interface UnsubscribeReasonRollup {
+  topReasons: UnsubscribeReasonRow[]
+  reasonColumnMigrated: boolean
+}
+
+const UNSUB_REASON_OPTIONAL_COLS = ['unsubscribe_reason', 'unsubscribed_at']
+
+// Rolls up the one-tap "mind telling us why?" chips (recordUnsubscribeReasonByToken
+// in actions.ts writes `alerts.unsubscribe_reason`) — the one moment a leaving
+// subscriber tells us why, previously written but never read. `unsubscribe_reason`
+// and `unsubscribed_at` may independently be un-migrated live — retry dropping
+// whichever the error names, same graceful-fallback pattern as every other
+// alerts.* read in this file. `id` is always selected so the query is never empty
+// even if both optional columns are missing.
+export async function getUnsubscribeReasonRollup(now: number = Date.now()): Promise<UnsubscribeReasonRollup> {
+  const admin = createAdminClient()
+  let cols = ['id', ...UNSUB_REASON_OPTIONAL_COLS]
+  let { data, error } = await admin.from('alerts').select(cols.join(', '))
+  for (
+    let i = 0;
+    i < UNSUB_REASON_OPTIONAL_COLS.length &&
+    error &&
+    UNSUB_REASON_OPTIONAL_COLS.some((c) => cols.includes(c) && error!.message?.includes(c));
+    i++
+  ) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data, error } = await admin.from('alerts').select(cols.join(', ')))
+  }
+
+  const reasonColumnMigrated = cols.includes('unsubscribe_reason')
+  if (!reasonColumnMigrated) return { topReasons: [], reasonColumnMigrated: false }
+
+  const unsubscribedAtMigrated = cols.includes('unsubscribed_at')
+  const rows = (data ?? []) as unknown as { unsubscribe_reason?: string | null; unsubscribed_at?: string | null }[]
+
+  const topReasons = summarizeUnsubscribeReasons(
+    rows.map((row) => ({
+      reason: row.unsubscribe_reason ?? null,
+      unsubscribedAt: unsubscribedAtMigrated ? (row.unsubscribed_at ?? null) : null,
+    })),
+    now
+  )
+
+  return { topReasons, reasonColumnMigrated: true }
 }
