@@ -1147,6 +1147,12 @@ export async function subscribeToAlerts(
 
   return {
     ok: true,
+    // The row's own unsubscribe_token — same trust basis as the emailed status
+    // link — lets the just-subscribed browser make ONE follow-up ownership-
+    // proven edit (see refineAlertMaxPrice below) without a session. Omitted
+    // on the idempotent 23505 path above since that branch never generated a
+    // token for the row that actually exists.
+    token: unsubscribeToken,
     overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null),
     bouncedHint: await hasBouncedBefore(clean),
   }
@@ -1812,6 +1818,53 @@ export async function updateAlertCriteria(id: string, fields: AlertCriteriaField
     .from('alerts')
     .update({ source_path: sourcePath, context })
     .eq('id', id)
+  if (error) return { error: 'Failed to update alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// The post-subscribe success-panel "cap it at a max price?" refine (see
+// AlertSignup.tsx) — a lighter-weight sibling of updateAlertCriteria that needs
+// no per-row id, since the caller (the browser that just subscribed) only ever
+// knows the sourcePath it submitted plus either the row's own unsubscribe
+// token (anon/one-tap paths) or its own session (signed-in one-click). Looked
+// up by the same (email, source_path) pair subscribeToAlerts/
+// subscribeSignedInAlert already treat as unique. Reuses
+// parseEditableAlertTarget/buildAlertCriteriaUpdate/targetToFields so every
+// other criterion (make/model/state/min_price/deal) is preserved untouched —
+// only aircraft, modern query-string alerts are editable here, same
+// restriction as updateAlertCriteria.
+export async function refineAlertMaxPrice(sourcePath: string, maxPrice: number, token?: string) {
+  if (!Number.isFinite(maxPrice) || maxPrice <= 0) return { error: 'Enter a valid price.' }
+
+  const admin = createAdminClient()
+  const ownerEmail = await resolveOwnerEmail(admin, token)
+  if (!ownerEmail) return { error: token ? 'This link is no longer valid.' : 'Not authenticated' }
+
+  const cleanSourcePath = stripShareParam(sourcePath)
+  const { data: alert } = await admin
+    .from('alerts')
+    .select('id, source_path')
+    .eq('email', ownerEmail)
+    .eq('source_path', cleanSourcePath)
+    .maybeSingle()
+  if (!alert) return { error: 'Alert not found.' }
+
+  const target = parseEditableAlertTarget(alert.source_path)
+  if (!target || target.type !== 'aircraft') return { error: "This alert's criteria can't be edited here." }
+
+  const min = target.minPrice ? parseInt(target.minPrice, 10) : undefined
+  if (min !== undefined && Number.isFinite(min) && min > maxPrice) {
+    return { error: 'Max price must be more than the minimum you already set.' }
+  }
+
+  const { sourcePath: newSourcePath, context } = buildAlertCriteriaUpdate(
+    'aircraft',
+    alert.source_path,
+    { ...targetToFields(target), maxPrice: String(maxPrice) }
+  )
+
+  const { error } = await admin.from('alerts').update({ source_path: newSourcePath, context }).eq('id', alert.id)
   if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }

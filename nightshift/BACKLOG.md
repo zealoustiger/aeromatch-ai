@@ -3310,7 +3310,7 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   confirmed via the new unit tests. `buildAdminAlertFunnelEmail`'s many "this week" strings are
   a separate internal admin report on its own real weekly cron cadence, not subscriber-facing —
   left untouched (out of scope, noted in the spec).
-- **[P1][goal] Post-subscribe one-tap refine — optional "max price" in the success
+~~- **[P1][goal] Post-subscribe one-tap refine — optional "max price" in the success
   panel.** Capture stays one-field, but the moment AFTER subscribe is free real estate:
   the `AlertSignup` success panel today ends at "check your inbox" + social proof, with no
   way to tighten the alert you just created — the #1 cause of future irrelevant digests
@@ -3320,7 +3320,22 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   basis as the emailed status link — this browser just created the row; reuse
   `alertEditCriteria`'s parsing). Never blocks or gates the success state. Improves:
   frictionless-capture + never-spam (relevance) pillars. No NEW capture point (row already
-  exists — no second `alert_subscribed`), no schema change.
+  exists — no second `alert_subscribed`), no schema change.~~ ✅ SHIPPED via
+  `alert-postsubscribe-max-price-refine` (2026-07-19) `AlertSignup`'s success panel (all
+  three subscribe paths — typed-email, one-tap remembered-email, signed-in one-click) now
+  shows an optional "Cap it at a max price?" input when the just-created alert is
+  aircraft-type on the modern `/aircraft?...` query-string shape with no `max_price`
+  already set. New `refineAlertMaxPrice(sourcePath, maxPrice, token?)` server action —
+  ownership proven by the row's own `unsubscribe_token` (now returned from
+  `subscribeToAlerts` on a genuinely-new insert) for the anon/one-tap paths, or the
+  session for signed-in — reuses `parseEditableAlertTarget`/`buildAlertCriteriaUpdate`/
+  `targetToFields` (the exact helpers `updateAlertCriteria` uses) so every other
+  criterion (make/model/state/min_price/deal) survives untouched. No new capture point,
+  no schema change. Live-verified against the real prod DB with a throwaway
+  `@example.com` test alert + real Playwright interaction: subscribe → refine input
+  appeared → saved `$150,000` → row's `source_path` became
+  `/aircraft?make=Cessna&model=172&max_price=150000` (make/model preserved) with an
+  honestly updated `context`; test row deleted after (0 remain).
 - **[P1][goal] "Alert me about similar" one-tap conversion in the watched-listing
   unavailable email.** When a watched listing sells, `buildListingUnavailableEmail` tells
   the subscriber honestly but only offers a passive "Browse similar" link — the alert

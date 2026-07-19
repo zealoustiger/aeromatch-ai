@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T094355Z — PASS — alert-postsubscribe-max-price-refine
+- Pages: /aircraft, /partnerships, /aircraft/listing/[id], every other page that renders
+  `AlertSignup` for an aircraft alert (make/model/state pages, homepage band, empty
+  states, 404, cost calculator, etc.) — one shared component change.
+- What: **The moment right after you subscribe to an aircraft alert now offers one
+  optional "Cap it at a max price?" field** instead of just ending at "check your
+  inbox." Today that's the #1 source of future irrelevant digests — a visitor sets a
+  broad alert (e.g. "all Cessna 172s"), then over weeks gets bored/annoyed by out-of-
+  budget listings before ever discovering the Edit form on `/alerts/manage`. Now they
+  can narrow it in the same breath they just subscribed in. Typing a number and
+  clicking Save tightens the alert they JUST created (verified live: `make=Cessna&
+  model=172` stayed intact, `max_price=150000` was added, honest context updated to
+  "Cessna 172 under $150,000") — no second `alert_subscribed` event, no page reload.
+  Leaving it blank changes nothing; the alert saves exactly as submitted either way.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s,
+  both standing `[want]` items (save-search auth-wall reconciliation, collection-layout
+  redesign) remain flagged as needing a human product decision, and the blocked-by-bot-
+  protection `[want]` ingestion items (Trade-A-Plane/Controller/AirMart/AeroTrader) and
+  the denominator-blocked Bay-Area coverage benchmark are all still not autonomously
+  buildable — so the highest-value item left was the top open `[P1][goal]` in plan-pass
+  batch #9 (2026-07-19), the exact item the prior `digest-cadence-honest-framing` cycle's
+  own "Next" note named first. Frictionless-capture + never-spam (relevance) pillars:
+  keeps the capture one field while giving the visitor a genuine lever to keep their own
+  future digests relevant.
+- Spec: nightshift/specs/20260719T094355Z-alert-postsubscribe-max-price-refine.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 555/555 pass (no
+  regressions; no new unit tests added this cycle — the logic is a thin composition of
+  already-unit-tested helpers, `parseEditableAlertTarget`/`buildAlertCriteriaUpdate`/
+  `targetToFields`, so real end-to-end verification against the live DB was the
+  higher-signal check here). Visual cycle (new success-panel UI) — served the
+  PRODUCTION build (`npx next start` on port 3000). `qa-smoke.mjs` on `/aircraft`,
+  `/partnerships`, `/alerts` at desktop 1280 + mobile 375: 6/6 checks pass (HTTP 200,
+  zero app-origin console errors, zero horizontal overflow); screenshots read and
+  confirmed the pre-subscribe pages render correctly (the new UI only appears
+  post-subscribe, so screenshots alone couldn't show it — see below). Drove the actual
+  feature live with Playwright against a throwaway `qa-alert-refine-<ts>@example.com`
+  address on `/aircraft?make=Cessna&model=172`: subscribed → the "Cap it at a max
+  price?" input appeared → entered 150000 → clicked Save → "Got it — capped at
+  $150000" confirmation rendered, zero console errors. Verified directly against the
+  real prod DB (service-role read) that the row's `source_path` became
+  `/aircraft?make=Cessna&model=172&max_price=150000` (make/model preserved, not
+  dropped) and `context` became the honest "Cessna 172 under $150,000" — confirming
+  `buildAlertCriteriaUpdate`'s layering behaved correctly against a real row, not just
+  its own unit tests. Test alert row deleted immediately after (verified 0 remain).
+  Server stopped cleanly, no stray `next-server` left running.
+- Screenshots: nightshift/screenshots/alert-postsubscribe-max-price-refine/
+- Next: the remaining open plan-pass batch #9 items are the "alert me about similar"
+  one-tap conversion on the watched-listing unavailable email, bounced-heads-up parity
+  on the confirm-resend path, and the dormant-subscriber re-permission email — in
+  roughly that priority order.
+
 ## 20260719T093218Z — PASS — digest-cadence-honest-framing
 - Pages: no user-facing page changed — this is a server-composed email-body fix behind the
   single-alert digest send path (`/api/cron/alert-digest`); no route/markup touched.
