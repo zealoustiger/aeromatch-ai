@@ -2,6 +2,86 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T060232Z — PASS — alert-overlap-subscribe-hint
+- Pages: /aircraft, /partnerships, and every other page rendering `AlertSignup`
+  (listing detail pages, make/model pages, `/alerts`, state pages, etc.) — the
+  subscribe success panel only, no browse/filter UI changed.
+- What: **Subscribing to a new alert now tells you right away if it's already
+  covered by one of your existing alerts.** Previously that "heads up, this is
+  redundant" nudge only existed on `/alerts/manage`, so a subscriber who never
+  visits that page had no way to know they'd started double-covering the same
+  listings (and would start getting the same aircraft twice in their digest).
+  Now the exact same overlap check runs the moment you subscribe: if your new
+  "Cessna in California" alert is a strict subset of an existing confirmed
+  "Cessna — all states" alert (or any of the other subsumption cases
+  `/alerts/manage` already recognizes), the confirmation panel says so — "Heads
+  up — your 'Cessna' alert already covers this" — with a link to Manage alerts.
+  Informational only: never blocks the subscribe, never merges or deletes
+  anything.
+- Goal: alert-experience (capture-flow confirmation UX + the "never spam"
+  honesty bar from GOAL.md) — tier 3 `[goal]`, one of the two self-contained
+  items flagged by the prior cycle's "Next" note (plan-pass batch #7) as
+  buildable with no migration dependency. Tier 1 (`[bug]`): the most recent
+  actual cycle (`digest-feedback-loops-rollup`) was a PASS; swept BACKLOG.md
+  for any unstruck `[bug]` line — none found. Tier 2 (`[want]`): re-checked
+  every unstruck `[P1]`/`[P2][want]` line — same standing blocked-on-human set
+  as every recent cycle (save-search auth-wall reconciliation + collection-
+  layout mosaic need a human product call/mock; TAP/Controller/AirMart/
+  AeroTrader scraping is bot-blocked by design choice, not buildable; Bay-Area
+  benchmark needs a real FAA denominator; owner-leads needs compliance review)
+  — none buildable autonomously. Dropped to tier 3 and picked this item.
+  Checked it off in BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260719T060232Z-alert-overlap-subscribe-hint.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0 clean, all routes compile. Full `node --experimental-strip-types
+  --test` suite (508 tests, up from 502 — 6 new) passes, 0 failures: new
+  `findBroaderOverlapContext` unit tests in `alertOverlap.test.ts` (covered by
+  a broader alert, honest "your other alert" fallback with no context, no
+  false positive when nothing covers it, a pending existing alert never
+  counts, a hidden-criteria existing alert is excluded, doesn't mutate its
+  input). Implementation: `findBroaderOverlapContext` (`src/lib/alertOverlap.ts`)
+  wraps the existing, untouched `detectOverlappingAlerts` with a synthetic
+  candidate for the just-submitted target; a new `getSubscribeOverlapHint`
+  helper in `actions.ts` parses the new source_path via the existing
+  `parseEditableAlertTarget`/`getHiddenCriteria` (returns null — no hint — on
+  any unparseable/hidden-criteria shape, same honesty gate as `/alerts/manage`),
+  fetches the subscriber's other live alerts via the existing
+  `fetchAlertsForEmail`, and is called from both `subscribeToAlerts` and
+  `subscribeSignedInAlert` right before their success returns, adding
+  `overlapContext: string | null` to the result. `AlertSignup.tsx` stores it
+  in new state and renders one extra line + Manage-alerts link in both success
+  panels (double-opt-in "check your inbox" and the signed-in "alerts are on"
+  state) when non-null. No schema change, no new capture point, no change to
+  `detectOverlappingAlerts`'s existing rules or its `/alerts/manage` caller.
+  QA: visual cycle (new UI text in a rendered panel) — served the PRODUCTION
+  build (`npx next build` + `npx next start` on port 3000). Programmatic gate:
+  `qa-smoke.mjs` against `/aircraft`, `/partnerships`, `/alerts/manage` — 6/6
+  pass (HTTP 200, zero app-origin console errors, zero horizontal overflow at
+  desktop 1280 + mobile 375). Since the smoke gate only loads pages and this
+  feature only appears after a real subscribe, additionally drove the live
+  interactive flow with Playwright against the running production build: (1)
+  seeded one throwaway `@example.com`-email confirmed alert
+  (`/aircraft?make=Cessna`, context "Cessna") via the service-role key: (2)
+  submitted the same email through the real `AlertSignup` box on
+  `/aircraft?make=Cessna&state=CA` (desktop) — the rendered success panel read
+  exactly "Heads up — your 'Cessna' alert already covers this. Manage alerts",
+  zero console errors, screenshot confirms clean on-brand layout, no overflow;
+  (3) submitted the same email on `/partnerships` (mobile 375, a different
+  alert type — genuinely no overlap) — success panel rendered with NO hint
+  line and zero console errors, confirming no false positive. Deleted all 3
+  rows created during this test (the seeded alert + the two live-submitted
+  ones) via the service-role key immediately after, scoped to the exact
+  `@example.com` test address; confirmed 0 rows remain for that email.
+  Confirmed port 3000 free and no orphaned `next-server` process after.
+- Screenshots: nightshift/screenshots/alert-overlap-subscribe-hint/
+- Next: the other self-contained item from the same "Next" note — multi-model
+  chips on `AlertEditForm` for aircraft-alert edit (browse-filter parity,
+  `partnership-model-multiselect` already did the partnership side) — is the
+  next most self-contained `[P2][goal]` slice with no migration dependency.
+  The remaining three items in plan-pass batch #7 (email-engagement recipient
+  attribution, digest-cron reliability line, weekly-digest day-of-week) still
+  each need a human-applied additive migration first.
+
 ## 2026-07-18T12:23:51Z — DRAIN SUMMARY
 - Cycles this run: 12 (PASS 9 / FAIL 1 / ABORT 2)
 - Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus

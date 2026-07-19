@@ -30,6 +30,8 @@ import {
   MAX_NEW_SINCE_PATHS,
 } from '@/lib/alertMatchCounts'
 import { describeLocalAlertContext } from '@/lib/alertEditCriteria'
+import { findBroaderOverlapContext, type OverlapCandidate } from '@/lib/alertOverlap'
+import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { resolveOwnerEmail } from '@/lib/alertOwner'
 import { isSeedProfile } from '@/lib/seedProfiles'
@@ -38,6 +40,7 @@ import { validateReview } from '@/lib/reviewValidation'
 import { assertSafePublicUrl } from '@/lib/urlFetchGuard'
 import {
   parseEditableAlertTarget,
+  getHiddenCriteria,
   buildAlertCriteriaUpdate,
   targetToFields,
   type AlertCriteriaFields,
@@ -984,6 +987,35 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 //
 // Idempotent on (email, source_path): the same email+context twice is a no-op
 // success (and we do NOT re-send the confirmation), never an error.
+// "Heads up — your other alert already covers this" hint for the subscribe
+// success panel (GOAL.md: a subscriber double-covered by two alerts gets a
+// spammier digest without knowing why). Runs the exact same subsumption rule
+// `/alerts/manage` already uses (`alertOverlap.ts`), so the verdict is
+// identical whichever surface a subscriber checks. Returns null — never a
+// false-positive claim — whenever the new source_path isn't a recognized
+// editable shape, carries a hidden (non-form-exposed) criterion, or genuinely
+// isn't covered by an existing CONFIRMED alert for this email.
+async function getSubscribeOverlapHint(email: string, sourcePath: string | null): Promise<string | null> {
+  const newTarget = parseEditableAlertTarget(sourcePath)
+  if (!newTarget) return null
+  if (getHiddenCriteria(newTarget.type, sourcePath).length > 0) return null
+
+  const existingRows = await fetchAlertsForEmail(email)
+  const existing: OverlapCandidate[] = existingRows
+    .filter((row) => row.source_path !== sourcePath)
+    .map((row) => {
+      const target = parseEditableAlertTarget(row.source_path)
+      return {
+        id: row.id,
+        status: row.status,
+        context: row.context,
+        target,
+        hasHiddenCriteria: target ? getHiddenCriteria(target.type, row.source_path).length > 0 : true,
+      }
+    })
+  return findBroaderOverlapContext(newTarget, existing)
+}
+
 export async function subscribeToAlerts(
   email: string,
   context: string,
@@ -1058,7 +1090,7 @@ export async function subscribeToAlerts(
   if (error) {
     if (error.code === '23505') {
       await reviveIfUnsubscribed(createAdminClient(), clean, cleanSourcePath || null, 'pending')
-      return { ok: true }
+      return { ok: true, overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null) }
     }
     return { error: 'Something went wrong. Please try again.' }
   }
@@ -1079,7 +1111,7 @@ export async function subscribeToAlerts(
   })
   await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
 
-  return { ok: true }
+  return { ok: true, overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null) }
 }
 
 // Anon/authenticated has no SELECT on this PII-holding table (see
@@ -2221,7 +2253,11 @@ export async function subscribeSignedInAlert(
       return { error: 'Something went wrong. Please try again.' }
     }
   }
-  return { ok: true, email: user.email }
+  return {
+    ok: true,
+    email: user.email,
+    overlapContext: await getSubscribeOverlapHint(user.email, cleanSourcePath || null),
+  }
 }
 
 // Lets AlertSignup (client component) check, on load, whether the signed-in visitor

@@ -107,3 +107,25 @@ export function detectOverlappingAlerts(candidates: OverlapCandidate[]): Map<str
 
   return overlaps
 }
+
+/**
+ * Single-alert convenience wrapper for the subscribe-time hint (GOAL.md:
+ * "heads up, this overlaps an alert you already have" on the success panel,
+ * not just `/alerts/manage`). Runs the exact same subsumption rule as
+ * `detectOverlappingAlerts` against a synthetic candidate for the
+ * newly-submitted target, so a subscriber sees the identical verdict whether
+ * they check the manage page or read the confirmation panel. Returns the
+ * broader alert's context (never a raw id) when covered, else null — never
+ * itself mutates or excludes anything from `existing`.
+ */
+export function findBroaderOverlapContext(
+  newTarget: EditableAlertTarget,
+  existing: OverlapCandidate[]
+): string | null {
+  const NEW_ID = '__new__'
+  const overlaps = detectOverlappingAlerts([
+    ...existing,
+    { id: NEW_ID, status: 'confirmed', context: null, target: newTarget, hasHiddenCriteria: false },
+  ])
+  return overlaps.get(NEW_ID)?.broaderContext ?? null
+}
