@@ -33,6 +33,7 @@ import { describeLocalAlertContext } from '@/lib/alertEditCriteria'
 import { findBroaderOverlapContext, type OverlapCandidate } from '@/lib/alertOverlap'
 import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
 import { isOverConfirmSendCap, CONFIRM_CAP_WINDOW_MS } from '@/lib/alertConfirmCap'
+import { hasBouncedBefore } from '@/lib/alertBounce'
 import { UNSUBSCRIBE_REASON_KEYS } from '@/lib/alertUnsubscribeReasons'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { resolveOwnerEmail } from '@/lib/alertOwner'
@@ -1112,7 +1113,11 @@ export async function subscribeToAlerts(
   if (error) {
     if (error.code === '23505') {
       await reviveIfUnsubscribed(createAdminClient(), clean, cleanSourcePath || null, 'pending')
-      return { ok: true, overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null) }
+      return {
+        ok: true,
+        overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null),
+        bouncedHint: await hasBouncedBefore(clean),
+      }
     }
     return { error: 'Something went wrong. Please try again.' }
   }
@@ -1140,7 +1145,11 @@ export async function subscribeToAlerts(
     await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
   }
 
-  return { ok: true, overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null) }
+  return {
+    ok: true,
+    overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null),
+    bouncedHint: await hasBouncedBefore(clean),
+  }
 }
 
 // Anon/authenticated has no SELECT on this PII-holding table (see
@@ -2346,6 +2355,7 @@ export async function subscribeSignedInAlert(
     ok: true,
     email: user.email,
     overlapContext: await getSubscribeOverlapHint(user.email, cleanSourcePath || null),
+    bouncedHint: await hasBouncedBefore(user.email),
   }
 }
 

@@ -1,5 +1,23 @@
 import { createAdminClient } from '@/lib/supabase-admin'
 
+// Read-side counterpart to pauseAlertsForBouncedEmail below — lets the capture
+// chokepoint (subscribeToAlerts/subscribeSignedInAlert) warn a subscriber that
+// this exact address has bounced before, instead of showing a fake "check your
+// inbox" success that will silently never arrive (GOAL.md's honesty bar). Anon
+// has no SELECT on this PII table, so this always goes through the admin client
+// — the same trust boundary as the existing overlap hint (only ever shown back
+// to whoever just typed that exact address, never used to enumerate).
+export async function hasBouncedBefore(email: string): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('alerts')
+    .select('id')
+    .eq('email', email.toLowerCase())
+    .eq('status', 'bounced')
+    .limit(1)
+  return !!data && data.length > 0
+}
+
 // A hard bounce means the address is dead — pause every non-unsubscribed
 // alert for it under a distinct 'bounced' status (not reusing 'paused', so
 // `/alerts/manage` can explain *why* and the subscriber isn't left thinking
