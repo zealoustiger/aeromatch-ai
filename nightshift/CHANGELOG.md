@@ -2,6 +2,73 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T112830Z — PASS — combined-digest-fewer-emails
+- Pages: `/alerts/status` (new `fewer` landing state) — plus internal changes to
+  the shared `/api/alerts/frequency` route, the combined-digest email builder
+  in `src/lib/email.ts`, and the `/api/cron/alert-digest` cron. No other
+  route/markup touched.
+- What: **A subscriber getting the combined "several alerts due at once" digest
+  email can now one-click "Get fewer emails" — before, that email had per-alert
+  stop, unsubscribe-all, and a thumbs vote, but no cadence-down option at all,**
+  even though single-alert subscribers already got a daily→weekly→monthly
+  ladder this week. The naive fix (send one literal target frequency to every
+  covered alert) would be dishonest: the digest cron groups due alerts by
+  email, not by cadence, so one combined email can legitimately cover a daily
+  alert AND a weekly alert at once — forcing both to the same target would
+  either skip a rung or push one backwards. Instead the link steps EACH
+  covered alert down ONE rung from its OWN current cadence (daily→weekly,
+  weekly→monthly; a monthly alert is left untouched — no lighter rung exists).
+  `/api/alerts/frequency` gained a `dir=step` mode plus multi-token support
+  (`.in()` instead of `.eq()`, reusing the same `parseAlertTokens` comma-list
+  convention `/api/alerts/unsubscribe` already established for combined
+  sends); the link is offered in the combined digest's footer only when at
+  least one covered alert isn't already monthly. Landing page gets a new
+  generic `/alerts/status?state=fewer` state ("You're on fewer emails now")
+  since the exact per-alert before/after mix varies send to send — its
+  "Manage your alerts" link correctly resolves to just the first token (same
+  precedent as the combined email's own shared `manageUrl`), verified any
+  garbage/partial token list still can't silently claim a fewer-emails
+  success it didn't earn (falls back to `invalid`).
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open
+  `[bug]`s (swept BACKLOG.md), no autonomously-buildable `[want]` (the two
+  standing product-decision items — save-search auth-wall, collection-layout
+  redesign — still need a human call; the bot-protection-blocked ingestion
+  `[want]`s and the denominator-blocked Bay-Area benchmark remain
+  non-buildable). Highest-value remaining `[P1][goal]` in plan-pass batch #10:
+  both of the prior two cycles' own "Next" notes named this first among the
+  batch's open items. Closes the "never spam" gap GOAL.md calls out — the
+  subscribers who get the MOST email (2+ alerts due at once) were the ones
+  with no lighter-cadence escape hatch.
+- Spec: nightshift/specs/20260719T112830Z-combined-digest-fewer-emails.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit
+  0. Full `node --experimental-strip-types --test 'src/**/*.test.ts'` suite:
+  594/594 pass (3 new tests: `nextLighterFrequency`'s daily→weekly/weekly→monthly/
+  monthly→monthly ladder in `alertFrequency.test.ts`; the combined digest's
+  "Get fewer emails" footer link rendering present/omitted in `email.test.ts`).
+  Mixed visual/non-visual cycle — screenshots read into context for the new
+  `/alerts/status?state=fewer` page specifically (a genuinely new rendered
+  page state), while the email-template/route-logic side is covered by the
+  unit tests. Served the PRODUCTION build (`npx next start` on port 3000);
+  `qa-smoke.mjs` on `/alerts`, `/alerts/status`, `/aircraft` at desktop 1280 +
+  mobile 375: 6/6 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow). Additionally screenshotted
+  `/alerts/status?state=fewer&token=abc,def` directly (desktop + 375px) —
+  on-brand cream card, correct icon/copy, no overflow — and curled it to
+  confirm the "Manage your alerts" link resolves to `?token=abc` (first token
+  only), matching the combined email's existing `manageUrl` precedent. No
+  schema change, no new prod DB rows (pure route/template logic — nothing
+  round-tripped through a live signup/alert). Server started/stopped cleanly;
+  no stray `next-server` left running afterward.
+- Screenshots: nightshift/screenshots/combined-digest-fewer-emails/
+- Next: the other two open batch #10 `[P1]`/`[P2]` items — Gmail-clipping
+  byte-budget guard on digest HTML, and the re-permission lifecycle line in
+  the Monday admin email. Also worth a follow-up: `dir=step`'s two sequential
+  `.eq('frequency', from)` updates mean a subscriber who clicks the link
+  twice in quick succession before the first click's write lands could
+  theoretically double-step one alert — low risk (same click-then-redirect
+  window every other tokenized action here already has), but worth a look if
+  it ever becomes a real report.
+
 ## 20260719T111641Z — PASS — watch-back-on-market
 - Pages: no user-facing page markup changed — new columns/logic on the shared
   `alerts` table + `/api/cron/alert-digest` cron and a new email builder in

@@ -3462,17 +3462,20 @@ feature shipped dark earlier today with no rollup)._
   (`status:'confirmed'`, clears the stamp, restamps `last_digest_at`) — never touches a
   user-paused row, since only the cron's own auto-pause path ever sets the new column.
   Ships dark until the column is applied, like every prior `alerts.*` DDL.
-- **[P1][goal] "Get fewer emails" rung on the combined digest — ladder parity.** A
-  subscriber with multiple alerts gets the combined template, which offers per-alert
-  stop, unsubscribe-all, and vote — but NO cadence-down link (its own doc comment says
-  so), while single-alert subscribers got daily→weekly→monthly rungs this week. Add a
-  tokenized "Get fewer emails" footer link that steps down every alert covered by that
-  send via `/api/alerts/frequency` (extend it to accept the combined send's tokens, or
-  an email-scoped variant on the same trust basis as `/alerts/manage?token=` which
-  already exposes all of an address's alerts to any one of its tokens); land on the
-  existing `/alerts/status` cadence states. Improves: never-spam "fewer instead of none"
-  for exactly the subscribers who get the most email. No new capture point, no schema
-  change.
+~~- **[P1][goal] "Get fewer emails" rung on the combined digest — ladder parity.**~~ ✅
+  SHIPPED via `combined-digest-fewer-emails` (2026-07-19) A subscriber with multiple
+  alerts got the combined template, which offered per-alert stop, unsubscribe-all, and
+  vote — but no cadence-down link at all, while single-alert subscribers already had
+  daily→weekly→monthly rungs. New `/api/alerts/frequency?dir=step` extends the existing
+  (now multi-token, `.in()`-scoped) endpoint with a mode that steps EACH covered alert
+  down one rung from its OWN current cadence — not one literal target for all of them,
+  since a combined send can genuinely mix cadences (the cron groups due alerts by
+  email, not by frequency). Wired into `buildCombinedAlertDigestEmail`'s footer next to
+  Unsubscribe, offered only when ≥1 covered alert isn't already monthly; a new
+  `/alerts/status?state=fewer` landing state (generic "fewer emails" copy, honest for a
+  mixed per-alert before/after) forwards to `/alerts/manage` via the first token, same
+  precedent as the existing combined manageUrl. New pure `nextLighterFrequency` helper
+  in `alertFrequency.ts`. No schema change, no new capture point.
 ~~- **[P1][goal] Send-loop resilience — retry with backoff on Resend 429/5xx.**~~ ✅ SHIPPED via `alert-send-retry-backoff` (2026-07-19) `sendEmail`
   (`email.ts:74`) fails permanently on the first non-OK response; the cron's send loops
   fire back-to-back with no pacing, and Resend's default rate limit is ~2 req/s — so as
