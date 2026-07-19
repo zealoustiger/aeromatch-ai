@@ -86,6 +86,10 @@ export interface EngagementEvent {
   resendEmailId: string | null
   /** The clicked URL; always null for an `email.opened` event. */
   link: string | null
+  /** Lowercased recipient address, read the same way bounce/complained events
+   *  read `data.to`; null when absent so a distinct-recipient count never
+   *  silently fabricates a subscriber. */
+  recipient: string | null
 }
 
 interface ResendEngagementEvent {
@@ -94,6 +98,7 @@ interface ResendEngagementEvent {
     email_id?: unknown
     tags?: Array<{ name?: unknown; value?: unknown }>
     click?: { link?: unknown }
+    to?: unknown
   }
 }
 
@@ -113,10 +118,15 @@ export function extractEngagementEvent(body: unknown): EngagementEvent | null {
   const link =
     event.type === 'email.clicked' && typeof event.data?.click?.link === 'string' ? event.data.click.link : null
 
+  const to = event.data?.to
+  const recipient =
+    Array.isArray(to) && typeof to[0] === 'string' && to[0].length > 0 ? to[0].toLowerCase() : null
+
   return {
     eventType: event.type === 'email.opened' ? 'opened' : 'clicked',
     emailType,
     resendEmailId,
     link,
+    recipient,
   }
 }
