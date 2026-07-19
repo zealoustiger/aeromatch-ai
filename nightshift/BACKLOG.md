@@ -3435,17 +3435,19 @@ indistinguishable from a user-initiated pause, and nothing anywhere detects a wa
 listing returning to `active`; `alertFunnelWeekly.ts` has no re-permission line (that
 feature shipped dark earlier today with no rollup)._
 
-- **[P1][goal] One-tap "Watch this listing" on digest sample cards.** A digest sample
-  card is the highest-intent moment in the whole funnel — the subscriber is looking at a
-  specific aircraft we matched for them — yet the card's only actions are "open the
-  listing" and "Not relevant?". Add a small tokenized "Watch this listing →" link per
-  aircraft sample card that one-taps a watch alert on that exact listing (price-drop +
-  availability), reusing the existing `/api/alerts/digest-cross-sell` accept endpoint
-  with `path=/aircraft/listing/{id}` and a new allowlisted `source=digest_sample_watch`
-  (the endpoint's `source` allowlist + idempotent re-click behavior already exist —
-  extend, don't reinvent). De-dupe: no link when the subscriber already watches that
-  listing. NEW capture point → must emit `alert_subscribed` with the distinct source tag
-  (per-placement conversion proof, GOAL's prove-it-converts pillar). No schema change.
+~~- **[P1][goal] One-tap "Watch this listing" on digest sample cards.**~~ ✅ SHIPPED via
+  `digest-sample-watch-link` (2026-07-19) A digest sample card is the highest-intent
+  moment in the whole funnel — the subscriber is looking at a specific aircraft we
+  matched for them — yet the card's only actions were "open the listing" and "Not
+  relevant?". Added a tokenized "Watch this listing →" link on every aircraft-for-sale
+  sample card (new-listing and price-drop), reusing the existing
+  `/api/alerts/digest-cross-sell` accept endpoint with `path=/aircraft/listing/{id}` and
+  a new allowlisted `source=digest_sample_watch` — one query per digest send
+  (`attachWatchLinks` in the cron route) de-dupes against the subscriber's existing
+  confirmed watch alerts so the link never re-offers a watch they already have. NEW
+  capture point: `/alerts/status`'s existing `cross_sell_added` state + tracker already
+  fire `alert_subscribed` with `source=digest_sample_watch` for this endpoint's redirect
+  — no new page/component needed. No schema change.
 - **[P1][goal] "Back on the market" — relist notice for watch alerts we auto-paused.**
   The unavailable-watch flow pauses the watch with bare `status='paused'`
   (`route.ts:~2050`), so if the listing comes back (sale falls through, owner relists —

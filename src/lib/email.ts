@@ -1097,6 +1097,13 @@ export type AlertDigestSample = {
   /** Which table `id` refers to — lets the digest-feedback route rebuild the
    *  listing's real detail path without trusting a client-supplied URL. */
   type?: 'aircraft' | 'partnership' | 'seeker'
+  /** One-tap "Watch this listing" link (see `/api/alerts/digest-cross-sell`'s
+   *  `digest_sample_watch` source) — built by the cron route, which already
+   *  excludes any listing the subscriber has a confirmed watch alert for.
+   *  Aircraft-for-sale new-listing/price-drop samples only; omitted entirely
+   *  means no link renders for this card (no `unsubscribe_token` yet, or the
+   *  subscriber already watches it). */
+  watchUrl?: string
 }
 
 /**
@@ -1172,6 +1179,13 @@ function sampleCardHtml(s: AlertDigestSample, notRelevantUrl?: string): string {
   const notRelevantHtml = notRelevantUrl
     ? `<p style="margin:2px 0 0;text-align:right;"><a href="${escapeAttr(notRelevantUrl)}" style="font-size:10px;color:#c2b8a3;text-decoration:none;">Not relevant?</a></p>`
     : ''
+  // Also a sibling after the card's own <a> (same nested-anchor constraint).
+  // Left-aligned + a touch bolder than "Not relevant?" — this is the
+  // highest-intent moment in the funnel (GOAL.md: "prove it converts"), so
+  // it reads as a real affordance, not a buried footnote.
+  const watchHtml = s.watchUrl
+    ? `<p style="margin:4px 0 0;"><a href="${escapeAttr(s.watchUrl)}" style="font-size:11px;font-weight:600;color:#0284c7;text-decoration:none;">Watch this listing &rarr;</a></p>`
+    : ''
 
   return `<div style="padding:12px 0;border-bottom:1px solid #ece6dc;">
         <a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;">
@@ -1185,6 +1199,7 @@ function sampleCardHtml(s: AlertDigestSample, notRelevantUrl?: string): string {
             ${alsoMatchesNote}
           </div>
         </a>
+        ${watchHtml}
         ${notRelevantHtml}
       </div>`
 }
@@ -1443,7 +1458,7 @@ export function buildAlertDigestEmail(opts: {
         .filter(Boolean)
         .join(' · ')
       const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, s)
-      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}${s.compLabel ? ` [${s.compLabel}]` : ''}\n  ${s.url}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
+      return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}${s.compLabel ? ` [${s.compLabel}]` : ''}\n  ${s.url}${s.watchUrl ? `\n  Watch this listing: ${s.watchUrl}` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
     })
     .join('\n')
 
@@ -1621,7 +1636,7 @@ export function buildCombinedAlertDigestEmail(opts: {
               ? formatUsd(sm.price)
               : ''
         const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, sm)
-        return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
+        return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${sm.watchUrl ? `\n  Watch this listing: ${sm.watchUrl}` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
       })
       .join('\n')
     const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}${s.shareUrl ? `\nShare this alert: ${s.shareUrl}` : ''}${s.viewUrl ? `\nView in browser: ${s.viewUrl}` : ''}`
