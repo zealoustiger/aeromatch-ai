@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T075224Z — PASS — alert-bounced-revive
+- Pages: `/` and every page with an alert signup form (homepage, `/aircraft/browse`,
+  `/alerts/manage`, listing/make/model/state/airport pages, etc.) — the anonymous and
+  signed-in "set an alert" flows. No page markup changed; this is a server-action logic
+  fix behind the shared revive path.
+- What: **A subscriber whose alert address had bounced (full inbox, transient outage,
+  later-fixed typo) can now re-subscribe and get a working alert again**, instead of the
+  row staying `status='bounced'` forever with no way back through any capture form. The
+  shared `reviveIfUnsubscribed` helper (used by every "already subscribed" 23505-conflict
+  path — anon signup, signed-in one-click, saved-search alerts, manage-page cross-sell,
+  the manage-page "+ New alert" builder) only treated `status === 'unsubscribed'` as
+  revivable; any other status, including `bounced`, was a permanent silent no-op. It now
+  also revives `bounced` rows the same way: fresh confirm/unsubscribe tokens, status reset
+  to `pending` (anon path, with a real confirmation email sent) or `confirmed` (signed-in
+  paths, no second opt-in needed — the session already proves the email), and `bounced_at`
+  cleared. The confirmation click (or the signed-in session proof) is the honest
+  re-verification that the address works again, consistent with the site's no-fabrication
+  bar. Fail-soft: if `bounced_at` isn't migrated live on a given environment, the revive
+  still succeeds (status/tokens), same graceful-degrade pattern as every other optional
+  `alerts.*` column in this file.
+- Goal: alert-experience — tier 3 `[goal]`, plan-pass batch #8 (2026-07-19, Fable), top
+  item: "Re-subscribe on a bounced address must revive, not silently no-op." This was also
+  the explicit follow-up flagged in the prior `alert-revive-resend-status-fix` cycle's
+  "Next" note (extend revival to `bounced` rows). No `[bug]` or actionable `[want]` items
+  were open this cycle (the one open `[want]` — reconciling "Save this search" with
+  `AlertSignup` — is explicitly flagged in BACKLOG.md as needing a human product decision,
+  not something to build unilaterally).
+- Spec: nightshift/specs/20260719T075224Z-alert-bounced-revive.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0, `rm -rf .next && npx next build` exit 0 (all
+  routes compile). Non-visual cycle (server-action data-plumbing fix, no rendered change)
+  — served the PRODUCTION build (`next build` + `next start` on :3000, port confirmed free
+  before starting) and ran `qa-smoke.mjs --slug alert-bounced-revive / /aircraft/browse
+  /alerts/manage` → 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at desktop 1280 + mobile 375). Screenshots saved for the audit trail, not read
+  (non-visual). **Logic verified by mechanism/code-read**, same precedent as the prior
+  `alert-revive-resend-status-fix` cycle: the guard now accepts `unsubscribed` OR
+  `bounced`; the update payload/retry loop mirrors the exact fail-soft pattern already used
+  by `resumeAlert`/`resumeAllAlerts`/`/api/alerts/confirm` for the same `bounced_at`
+  column; `sendConfirmationResend`'s override of `status` to the post-update `targetStatus`
+  (fixed by the prior cycle) already makes the resend fire correctly regardless of whether
+  the pre-update status was `unsubscribed` or `bounced`. **Deliberately did NOT do a live
+  email/DB round-trip** — staging has no Resend key configured (sends are a no-op there),
+  and manufacturing a real `bounced` row requires either a live Resend bounce webhook hit
+  or a direct prod-DB write no better than the code-read already gives; no prod test rows
+  were created, so no cleanup was needed. Confirmed port 3000 free / no orphaned
+  `next-server` after.
+- Screenshots: nightshift/screenshots/alert-bounced-revive/
+- Next: the sibling BACKLOG item right below this one — "Bounced rows on `/alerts/manage`
+  should offer the email-change flow, not just Resume" — is the natural next slice (today
+  Resume on a bounced row just re-bounces if the address itself is dead; the existing
+  change-email flow is the actual fix and already works from a dead address).
+
 ## 20260719T073000Z — PASS — alert-revive-resend-status-fix
 - Pages: `/` and every page with an alert signup form (homepage, `/aircraft/browse`,
   `/aircraft/[make]/[model]`, `/saved`, guides, etc.) — the anonymous "set an alert"
