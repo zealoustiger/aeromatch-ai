@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T073000Z — PASS — alert-revive-resend-status-fix
+- Pages: `/` and every page with an alert signup form (homepage, `/aircraft/browse`,
+  `/aircraft/[make]/[model]`, `/saved`, guides, etc.) — the anonymous "set an alert"
+  flow. No page markup changed; this is a server-action logic fix behind the form.
+- What: **Fixed a P0 where re-subscribing to an alert you'd previously unsubscribed
+  from silently never sent the confirmation email.** When an anonymous visitor set an
+  alert with the same email + capture point they'd earlier unsubscribed from, the DB
+  row was correctly flipped back to `pending` with fresh tokens — but the confirmation
+  email was never actually sent, so they saw the "check your email" success panel and
+  nothing ever arrived, leaving the alert stuck unconfirmable. Cause: `reviveIfUnsubscribed`
+  passed the row's *pre-update* status (`unsubscribed`) into `sendConfirmationResend`,
+  whose first guard is `if (status !== 'pending') return` — so it bailed before sending
+  every time. The fix overrides `status` to the post-update value (`pending`) in the
+  object handed to the resend, so the email now actually goes out. The signed-in revive
+  path (`targetStatus === 'confirmed'`) is untouched — it never calls the resend.
+- Goal: alert-experience — tier 1 `[bug]` (uncapped, top of the cascade). A broken
+  re-subscribe/confirm flow is a P0 by the runbook's own definition ("a broken alert /
+  signup flow is a P0 bug"). This bug was surfaced by a prior code-read audit (spec was
+  pre-written but the fix had never been built/landed — it sat uncommitted in the working
+  tree); this cycle completed, verified, and shipped it. No BACKLOG item existed for it
+  (discovered, not planned), so none was checked off and no duplicate was added.
+- Spec: nightshift/specs/20260719T072743Z-alert-revive-resend-status-fix.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0, `rm -rf .next && npx next build` exit 0
+  (all routes compile). Non-visual cycle (server-action data-plumbing fix, no rendered
+  change) — served the PRODUCTION build (`next build` + `next start` on :3000, after
+  killing a stale `next-server` from a prior cycle that was serving an old build and
+  confirming a fresh start). `qa-smoke.mjs --slug alert-revive-resend-status-fix / \
+  /aircraft/browse /saved` → 6/6 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at desktop 1280 + mobile 375). Screenshots saved for the audit
+  trail, not read (non-visual). **Logic verified by mechanism/code-read, which is
+  conclusive for this one-line data fix:** the guard at `sendConfirmationResend`'s first
+  line returns early for any non-`pending` status; before the fix `{...existing}` carried
+  `status:'unsubscribed'` so it always bailed pre-send, after the fix `status:targetStatus`
+  (`pending` on this branch) passes the guard; `last_confirm_sent_at:null` skips the
+  cooldown so a genuine revive always resends; the `confirm_token`/`unsubscribe_token`
+  passed are the same freshly-rotated tokens written to the DB row, so the email's
+  confirm/manage/unsubscribe URLs are valid. **Deliberately did NOT do a live email
+  round-trip** — that would write a real row to the shared prod `auth.users`/`alerts`
+  tables, and staging has no Resend key configured (sends are a no-op there anyway), so
+  a live attempt would neither send a real email nor add signal beyond the code-read; no
+  prod test rows were created, so no cleanup was needed. Confirmed port 3000 free / no
+  orphaned `next-server` after.
+- Screenshots: nightshift/screenshots/alert-revive-resend-status-fix/
+- Next: the sibling gap called out in the spec's Out-of-scope is still open — extend
+  revival to `bounced` rows (a `bounced` alert re-subscribing hits the same 23505 path
+  but `reviveIfUnsubscribed` only revives `status === 'unsubscribed'`, so a bounced
+  address can never re-subscribe). Worth a `[bug]`/`[goal]` BACKLOG item next.
+
 ## 20260719T071636Z — PASS — digest-cron-send-failures
 - Pages: `/admin/alerts` (internal, admin-only — no public-facing page changed; the
   actual surface is the Monday admin funnel email, not a page)
