@@ -2,6 +2,71 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T114308Z — PASS — digest-snooze-link
+- Pages: `/alerts/status` (new `snoozed` landing state) — plus internal changes to a
+  new `/api/alerts/snooze` route, `src/app/actions.ts` (new `resumeAlertsByToken`),
+  `src/lib/email.ts`'s digest builders, and the `/api/cron/alert-digest` cron. No other
+  route/markup touched.
+- What: **The digest email footer now has a one-click "Snooze 30 days" link** — before,
+  the in-email ladder read "Get fewer emails" (lighter cadence) → per-alert "Stop just
+  this alert" → "Unsubscribe," but a real pause with an end date (already available on
+  `/alerts/manage`) had no email path at all, so a subscriber going on vacation or
+  mid-purchase had to click through to manage their alerts, or just unsubscribe
+  outright. New GET-only `/api/alerts/snooze?token=…` mirrors `/api/alerts/frequency`'s
+  pattern (reusing the existing `snoozeAlertByToken` action, also used by
+  `UnsubscribeRecover`'s "Snooze" button, so one token list covers a combined digest's
+  several alerts at once) and lands on a new `/alerts/status?state=snoozed` page. That
+  page names the real resume date when it can read `paused_until` — never fabricates
+  one — and offers a one-tap "Undo — resume now" via a new token-scoped
+  `resumeAlertsByToken` action + `SnoozeUndo` client component, so reversing a snooze
+  is as fast as triggering it. Wired into both `buildAlertDigestEmail`'s and
+  `buildCombinedAlertDigestEmail`'s footers as a fourth quiet link next to
+  Manage/Unsubscribe/Get-fewer-emails (html + text). **Not done, intentionally:**
+  `buildPriceDropEmail`'s footer (the rich single-price-drop template) — the backlog
+  item scoped this to "single-alert and combined digest footers" only; flagged as a
+  follow-up.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s
+  (swept BACKLOG.md), no autonomously-buildable `[want]` (the two standing
+  product-decision items — save-search auth-wall, collection-layout redesign — still
+  need a human call). Highest-value remaining `[P2][goal]` in plan-pass batch #10 (the
+  three P1s in the batch are all shipped; this is the first of the three remaining P2s
+  — the other two, a Gmail-clipping byte-budget guard and a re-permission admin-email
+  line, are next). Closes the one rung in the "never spam" ladder that only existed on
+  the web UI, not in the inbox itself.
+- Spec: nightshift/specs/20260719T114308Z-digest-snooze-link.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 599/599 pass (5 new
+  tests in `email.test.ts`: single-alert digest with/without `snoozeUrl`, both
+  `frequencyUrl`+`snoozeUrl` rendering alongside each other, combined digest
+  with/without `snoozeUrl`). Visual cycle — screenshots read into context for the new
+  `/alerts/status?state=snoozed` page specifically (both viewports): on-brand cream
+  card, moon icon, correct fallback copy (no fabricated date — `paused_until` isn't
+  migrated live, confirmed directly), working "Undo — resume now" button, "Manage your
+  alerts" link, zero overflow. Served the PRODUCTION build (`npx next start` on port
+  3100); `qa-smoke.mjs` on `/alerts/status`, `/alerts`, `/alerts/manage` at desktop 1280
+  + mobile 375: 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow), plus a dedicated pass on the real `?state=snoozed&token=...` URL: 2/2 pass.
+  **Live-verified the full round-trip against the real prod DB** with one throwaway
+  `@example.com` confirmed test alert (service-role insert): GET'd `/api/alerts/snooze`
+  with its token — confirmed the fail-soft path is real, not just reasoned-about
+  (`paused_until`/`paused_at` both still unmigrated live, same as every prior
+  `alerts.*` DDL flagged this batch; the row landed cleanly at `status:'paused'` with
+  no error); a real Playwright `getByRole` button click on "Undo — resume now" (zero
+  console errors) flipped the same row back to `status:'confirmed'`, verified by a
+  follow-up direct read. Also confirmed both the
+  no-token and a bogus-token GET both redirect to `state=invalid`. Test row deleted
+  immediately after, re-confirmed 0 remain. Server started/stopped cleanly this cycle
+  (killed the `next-server` PID directly after `pkill` matched nothing); no stray
+  process left running afterward.
+- Screenshots: nightshift/screenshots/digest-snooze-link/
+- Next: the other two open batch #10 `[P2][goal]` items — a Gmail-clipping byte-budget
+  guard on digest HTML, and the re-permission lifecycle line in the Monday admin email.
+  Also worth a follow-up: extend `snoozeUrl` to `buildPriceDropEmail`'s footer for full
+  ladder parity on the rich single-drop template (skipped this cycle to keep scope to
+  what the backlog item named). Once a human applies the still-outstanding
+  `alerts.paused_until`/`paused_at` migrations (flagged repeatedly this batch), the new
+  landing page's resume-date copy activates automatically with no further code change.
+
 ## 20260719T112830Z — PASS — combined-digest-fewer-emails
 - Pages: `/alerts/status` (new `fewer` landing state) — plus internal changes to
   the shared `/api/alerts/frequency` route, the combined-digest email builder

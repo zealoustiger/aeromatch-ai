@@ -3495,16 +3495,19 @@ feature shipped dark earlier today with no rollup)._
   *gentle inter-send pacing* across the cron send loops — that touches every send loop and
   is a separate, riskier slice; retry (recovery) shipped alone, pacing (prevention) is the
   follow-up.
-- **[P2][goal] Tokenized "Snooze 30 days" rung in digest email footers.** The in-email
-  ladder now reads fewer-cadence → per-alert stop → unsubscribe, but snooze (shipped on
-  `/alerts/manage` as pause-until) has no email path — a subscriber mid-purchase or on
-  vacation must click through to manage or just unsubscribe. Add a token endpoint
-  mirroring `/api/alerts/frequency` (e.g. `/api/alerts/snooze?token=…&days=30`) that
-  sets the existing pause-until state, landing on a new `/alerts/status` snoozed state
-  with the resume date named and a one-tap undo; link it quietly in both the
-  single-alert and combined digest footers. Improves: never-spam / "fewer instead of
-  none" — snooze is the rung that saves the subscriber who'd otherwise churn. No new
-  capture point, no schema change (pause-until columns already exist).
+~~- **[P2][goal] Tokenized "Snooze 30 days" rung in digest email footers.**~~ ✅ SHIPPED
+  via `digest-snooze-link` (2026-07-19) New GET-only `/api/alerts/snooze?token=…` (mirrors
+  `/api/alerts/frequency`, reuses the existing `snoozeAlertByToken` action) sets the
+  30-day pause-until state and redirects to a new `/alerts/status?state=snoozed` landing
+  page — names the real resume date when `paused_until` is readable (still un-migrated
+  live today, so falls back to honest generic "paused for 30 days" copy rather than
+  fabricating a date), plus a one-tap "Undo — resume now" (new token-scoped
+  `resumeAlertsByToken` action + `SnoozeUndo` client component). Wired into both
+  `buildAlertDigestEmail`'s and `buildCombinedAlertDigestEmail`'s footers as a fourth
+  quiet link alongside Manage/Unsubscribe/Get-fewer-emails. **Not done, intentionally
+  (follow-up):** `buildPriceDropEmail`'s footer (the single-drop rich template) — the
+  backlog item named only "single-alert and combined digest footers," kept this cycle
+  scoped to those two.
 - **[P2][goal] Gmail-clipping guard on digest HTML.** Gmail clips messages over ~102KB —
   and a clipped digest hides exactly the footer that carries unsubscribe/manage links
   (a deliverability + compliance risk, and the "View in browser" link only helps if the
