@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-19T08:43:52Z — alert-unsubscribe-reasons — score 5/5
+- Strengths: Meets every acceptance criterion cleanly — a single canonical `alertUnsubscribeReasons` module removes the duplicated chip list and feeds picker, validated token-scoped write, and admin rollups from one source; the write action mirrors `markAlertFoundAircraftByToken`'s trust boundary + missing-column fail-soft and validates `reason` against the key set; `handleReason` fires the write fire-and-forget so it never blocks/errors the UI; the pure `summarizeUnsubscribeReasons` degrades to honest this-week/all-time empty states (null reason skipped, unmigrated timestamp → all-time only, unknown key kept under raw label), `getUnsubscribeReasonRollup` reuses the established optional-column retry, and email/admin both distinguish "unmigrated" from "no data yet" — all backed by 7 focused unit tests.
+- Weaknesses / risks: none material — `getUnsubscribeReasonRollup` does a full `alerts` select into JS to aggregate, but that's the exact convention every sibling rollup in the file already uses, not a regression.
+- Follow-up: none
+
 ## 2026-07-19T08:29:57Z — alert-reply-to — score 4/5
 - Strengths: Meets every acceptance criterion — `sendEmail` reads `ALERTS_REPLY_TO` at the one chokepoint (`|| undefined` + conditional spread → truly omitted, not empty, covering all send types) and both digest builders gate a quiet reply footer on `!!process.env.ALERTS_REPLY_TO` in HTML and text, read per-call for testability; footer styling mirrors the adjacent `shareHtml`/`shareText` exactly, no other builder touched per scope, and 4 focused tests cover present/absent × both builders × both bodies.
 - Weaknesses / risks: minor — the `replyToConfigured`/`replyToFooterHtml`/`replyToFooterText` trio is duplicated verbatim across the two builders (matches the file's inline-snippet convention, so acceptable but a helper would DRY it), and the new doc comment floats detached above `SendEmailInput` where JSDoc would misattach it to that type rather than to `sendEmail`.
