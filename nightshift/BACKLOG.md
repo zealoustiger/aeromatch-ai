@@ -3212,7 +3212,7 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   additive `'monthly'` migration — ⚠️ flag human-apply, fail-soft normalize-to-weekly when
   unmigrated, same as every prior `alerts.*` DDL. Improves: digest-vs-instant pillar +
   never-spam ("fewer, literally"). No new capture point.
-- **[P2][goal] Pre-bounced-address heads-up at capture.** A visitor who subscribes with an
+~~- **[P2][goal] Pre-bounced-address heads-up at capture.** A visitor who subscribes with an
   address we've already hard-bounced (typo'd once, dead mailbox) gets the normal "check
   your email" success and then nothing arrives — a silent failure we can already predict.
   At the `subscribeToAlerts` chokepoint, when the same normalized email has any
@@ -3222,7 +3222,7 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   the actual re-verification). Only ever shown to someone who just typed that exact
   address — no enumeration surface beyond what the manage-by-email flow already exposes.
   Improves: capture-flow honesty (no fake success). No new capture point, no schema
-  change.
+  change.~~ ✅ SHIPPED via `alert-bounced-heads-up` (2026-07-19)
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)

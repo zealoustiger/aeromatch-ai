@@ -151,6 +151,12 @@ export default function AlertSignup({
   // null when there's no overlap. Informational only; never blocks/changes
   // what was just submitted.
   const [overlapContext, setOverlapContext] = useState<string | null>(null)
+  // True when this exact email has hard-bounced before on a different alert
+  // (see lib/alertBounce.ts's hasBouncedBefore) — an honest heads-up so a
+  // typo'd/dead address doesn't get a silent fake "check your inbox" success
+  // that will never arrive (GOAL.md's honesty bar). Never blocks the
+  // subscribe itself; purely informational.
+  const [bouncedHint, setBouncedHint] = useState(false)
   // Suggest-only "did you mean gmail.com?" — never auto-corrects, never blocks
   // submission of the as-typed address (see lib/suggestEmailFix.ts).
   const emailSuggestion = suggestEmailFix(email)
@@ -332,6 +338,7 @@ export default function AlertSignup({
     addLocalSubscription(activeSourcePath)
     setLocalEmail(email)
     setOverlapContext(result.overlapContext ?? null)
+    setBouncedHint(!!result.bouncedHint)
     setSubmitted(true)
   }
 
@@ -371,6 +378,7 @@ export default function AlertSignup({
     addLocalSubscription(activeSourcePath)
     setEmail(rememberedEmail)
     setOverlapContext(result.overlapContext ?? null)
+    setBouncedHint(!!result.bouncedHint)
     setSubmitted(true)
   }
 
@@ -408,6 +416,7 @@ export default function AlertSignup({
     markAlertSubscriber()
     setConfirmedImmediately(true)
     setOverlapContext(result.overlapContext ?? null)
+    setBouncedHint(!!result.bouncedHint)
     setSubmitted(true)
   }
 
@@ -434,6 +443,12 @@ export default function AlertSignup({
             <p className="mt-1 text-sm text-slate-600">
               We&rsquo;ll email {signedInEmail} the moment {doneCopy}
             </p>
+            {bouncedHint && (
+              <p className="mt-2 text-xs font-medium text-amber-700">
+                Heads up — mail to this address has bounced before. Double-check the spelling,
+                or try a different address.
+              </p>
+            )}
             {overlapContext && (
               <p className="mt-2 text-xs text-slate-500">
                 Heads up — your &ldquo;{overlapContext}&rdquo; alert already covers this.{' '}
@@ -486,6 +501,12 @@ export default function AlertSignup({
                 </>
               )}
             </p>
+            {bouncedHint && (
+              <p className="mt-2 text-xs font-medium text-amber-700">
+                Heads up — mail to this address has bounced before. Double-check the spelling,
+                or try a different address.
+              </p>
+            )}
             {overlapContext && (
               <p className="mt-2 text-xs text-slate-500">
                 Heads up — your &ldquo;{overlapContext}&rdquo; alert already covers this.{' '}
