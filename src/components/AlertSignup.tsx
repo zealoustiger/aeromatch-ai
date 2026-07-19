@@ -8,10 +8,12 @@ import {
   subscribeSignedInAlert,
   resendAlertConfirmationByEmail,
   getExistingAlertForSourcePath,
+  refineAlertMaxPrice,
 } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
 import { isLocallySubscribed, addLocalSubscription, getLocalEmail, setLocalEmail } from '@/lib/alertLocalSubscriptions'
+import { parseEditableAlertTarget } from '@/lib/alertEditCriteria'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import { MIN_ALERTS_TO_SHOW } from '@/lib/alertCounts'
 import { createClient } from '@/lib/supabase'
@@ -191,6 +193,19 @@ export default function AlertSignup({
     const n = parseInt(targetPrice, 10)
     return targetPrice.trim() && Number.isFinite(n) && n > 0 ? n : undefined
   })()
+  // The exact sourcePath the just-completed subscribe used (activeSourcePath can
+  // change later via the widen link, but the success panel's refine option must
+  // stay pinned to the alert that actually got created). Set alongside `submitted`
+  // by every subscribe handler below.
+  const [subscribedSourcePath, setSubscribedSourcePath] = useState('')
+  // The just-created row's own unsubscribe_token (see subscribeToAlerts) — proves
+  // ownership for the post-subscribe max-price refine without a session. Only set
+  // by the anon/one-tap paths; the signed-in path needs no token (its own session
+  // already proves ownership to refineAlertMaxPrice).
+  const [refineToken, setRefineToken] = useState<string | null>(null)
+  const [refineMaxPrice, setRefineMaxPrice] = useState('')
+  const [refineState, setRefineState] = useState<'idle' | 'pending' | 'done' | 'error'>('idle')
+  const [refineError, setRefineError] = useState('')
   // A signed-in visitor's email is already verified — skip retyping it and
   // subscribe as already-confirmed (no double-opt-in round trip). Read-only
   // client-side session check, same pattern as Nav.tsx.
@@ -198,6 +213,36 @@ export default function AlertSignup({
   // Distinguishes the confirmed-immediately signed-in path (no "check your
   // inbox" copy — there's nothing pending) from the normal double-opt-in one.
   const [confirmedImmediately, setConfirmedImmediately] = useState(false)
+  // Aircraft, modern query-string alerts only (same restriction as
+  // refineAlertMaxPrice/alertEditCriteria), only when max_price isn't already
+  // part of what was just submitted (redundant otherwise), and only when
+  // ownership is actually provable — either the row's own token (anon/one-tap)
+  // or a proven signed-in session (confirmedImmediately) — so this never
+  // renders for the rare 23505-idempotent-resubmit case where neither exists.
+  const canRefineMaxPrice =
+    !watchOnly &&
+    (!!refineToken || confirmedImmediately) &&
+    (() => {
+      const target = parseEditableAlertTarget(subscribedSourcePath)
+      return !!target && target.type === 'aircraft' && !target.maxPrice
+    })()
+  async function handleRefineMaxPrice() {
+    const n = parseInt(refineMaxPrice, 10)
+    if (!refineMaxPrice.trim() || !Number.isFinite(n) || n <= 0) {
+      setRefineError('Enter a valid price.')
+      setRefineState('error')
+      return
+    }
+    setRefineState('pending')
+    setRefineError('')
+    const result = await refineAlertMaxPrice(subscribedSourcePath, n, refineToken ?? undefined)
+    if (result.error) {
+      setRefineError(result.error)
+      setRefineState('error')
+      return
+    }
+    setRefineState('done')
+  }
   // Whether the signed-in visitor already has a live alert for this exact
   // sourcePath — when set, the one-click button (a silent idempotent no-op
   // per subscribeSignedInAlert's 23505 handling) is replaced with an honest
@@ -339,6 +384,8 @@ export default function AlertSignup({
     setLocalEmail(email)
     setOverlapContext(result.overlapContext ?? null)
     setBouncedHint(!!result.bouncedHint)
+    setSubscribedSourcePath(effectiveSourcePath)
+    setRefineToken(result.token ?? null)
     setSubmitted(true)
   }
 
@@ -379,6 +426,8 @@ export default function AlertSignup({
     setEmail(rememberedEmail)
     setOverlapContext(result.overlapContext ?? null)
     setBouncedHint(!!result.bouncedHint)
+    setSubscribedSourcePath(effectiveSourcePath)
+    setRefineToken(result.token ?? null)
     setSubmitted(true)
   }
 
@@ -417,6 +466,7 @@ export default function AlertSignup({
     setConfirmedImmediately(true)
     setOverlapContext(result.overlapContext ?? null)
     setBouncedHint(!!result.bouncedHint)
+    setSubscribedSourcePath(effectiveSourcePath)
     setSubmitted(true)
   }
 
@@ -432,6 +482,38 @@ export default function AlertSignup({
     }
     setResendState('sent')
   }
+
+  // The optional post-subscribe "cap it at a max price?" refine — rendered
+  // identically in both success panels below (signed-in-confirmed and
+  // double-opt-in-pending), so it's built once here rather than duplicated.
+  const maxPriceRefine = !canRefineMaxPrice ? null : refineState === 'done' ? (
+    <p className="mt-2 text-xs font-medium text-emerald-700">Got it — capped at ${refineMaxPrice}.</p>
+  ) : (
+    <div className="mt-3">
+      <label htmlFor="alert-refine-max-price" className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+        Cap it at a max price? $
+        <input
+          id="alert-refine-max-price"
+          type="number"
+          min={0}
+          inputMode="numeric"
+          value={refineMaxPrice}
+          onChange={(e) => setRefineMaxPrice(e.target.value)}
+          placeholder="optional"
+          className="w-24 rounded border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-100"
+        />
+        <button
+          type="button"
+          onClick={handleRefineMaxPrice}
+          disabled={refineState === 'pending' || !refineMaxPrice.trim()}
+          className="font-medium text-sky-700 underline-offset-2 hover:underline disabled:opacity-60"
+        >
+          {refineState === 'pending' ? 'Saving…' : 'Save'}
+        </button>
+      </label>
+      {refineState === 'error' && <p role="alert" className="mt-1 text-xs text-red-600">{refineError}</p>}
+    </div>
+  )
 
   return (
     <section ref={sectionRef} className={`${className} rounded-xl border border-sky-100 bg-sky-50 p-6 shadow-sm`}>
@@ -457,6 +539,7 @@ export default function AlertSignup({
                 </Link>
               </p>
             )}
+            {maxPriceRefine}
           </div>
         </div>
       ) : submitted ? (
@@ -515,6 +598,7 @@ export default function AlertSignup({
                 </Link>
               </p>
             )}
+            {maxPriceRefine}
           </div>
         </div>
       ) : existingAlert ? (
