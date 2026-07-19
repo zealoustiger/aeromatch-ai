@@ -446,10 +446,15 @@ export function buildPriceDropEmail(opts: {
   listingUrl: string
   manageUrl: string
   unsubscribeUrl: string
-  /** Token-scoped "switch to weekly" link — present only for daily-frequency
-   *  alerts (a weekly alert has no "fewer" cadence to offer). Renders as a
-   *  third footer link alongside Manage/Unsubscribe. */
+  /** Token-scoped "get fewer emails" link — present for daily- or weekly-
+   *  frequency alerts (a monthly alert has no lower cadence to offer).
+   *  Renders as a third footer link alongside Manage/Unsubscribe. */
   frequencyUrl?: string
+  /** Which cadence `frequencyUrl` switches TO — default `'weekly'` (the
+   *  daily→weekly link, byte-exact with every send before this option
+   *  existed). Pass `'monthly'` for the weekly→monthly link so the text-part
+   *  label names the real target instead of always saying "weekly". */
+  frequencyTarget?: 'weekly' | 'monthly'
   periodLabel?: string
   /** Names what kind of drop this is — default "price drop" (aircraft); pass
    *  "buy-in drop" for a partnership whose "price" is a buy-in share, not an
@@ -527,7 +532,7 @@ ${marketPulseText}
 View listing: ${listingUrl}
 
 Manage alerts: ${manageUrl}
-Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
+Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to ${opts.frequencyTarget ?? 'weekly'}): ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
 }
@@ -1003,10 +1008,15 @@ export function buildAlertDigestEmail(opts: {
   listingsUrl: string
   manageUrl: string
   unsubscribeUrl: string
-  /** Token-scoped "switch to weekly" link — present only for daily-frequency
-   *  alerts (a weekly alert has no "fewer" cadence to offer). Renders as a
-   *  third footer link alongside Manage/Unsubscribe. */
+  /** Token-scoped "get fewer emails" link — present for daily- or weekly-
+   *  frequency alerts (a monthly alert has no lower cadence to offer).
+   *  Renders as a third footer link alongside Manage/Unsubscribe. */
   frequencyUrl?: string
+  /** Which cadence `frequencyUrl` switches TO — default `'weekly'` (the
+   *  daily→weekly link, byte-exact with every send before this option
+   *  existed). Pass `'monthly'` for the weekly→monthly link so the text-part
+   *  label names the real target instead of always saying "weekly". */
+  frequencyTarget?: 'weekly' | 'monthly'
   /** Token-scoped "switch to daily" upgrade link — present only when the
    *  caller has already confirmed (via `shouldOfferDailyUpgrade`) this is a
    *  weekly-cadence alert whose send genuinely cleared the volume bar.
@@ -1243,7 +1253,7 @@ ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
 ${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}${replyToFooterText}
 Manage alerts: ${manageUrl}
-Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
+Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to ${opts.frequencyTarget ?? 'weekly'}): ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
 }

@@ -40,16 +40,18 @@ async function applyFrequency(token: string, dir: AlertFrequency): Promise<boole
 
 // GET-only — every digest/price-drop email footer links here directly with
 // the row's `unsubscribe_token`: with no `dir` (or `dir=weekly`) for the
-// daily-only "fewer emails" link, or `dir=daily` for the weekly-only "switch
-// to daily" upgrade nudge. Mirrors `/api/alerts/unsubscribe`'s GET redirect
-// pattern. Defaults to `weekly` so every link already sent before this
-// change keeps working byte-for-byte.
+// daily-only "fewer emails" link, `dir=monthly` for the weekly-only "fewer
+// emails" link, or `dir=daily` for the weekly-only "switch to daily" upgrade
+// nudge. Mirrors `/api/alerts/unsubscribe`'s GET redirect pattern. Defaults
+// to `weekly` so every link already sent before this change keeps working
+// byte-for-byte.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')?.trim()
-  const dir: AlertFrequency = req.nextUrl.searchParams.get('dir') === 'daily' ? 'daily' : 'weekly'
+  const rawDir = req.nextUrl.searchParams.get('dir')
+  const dir: AlertFrequency = rawDir === 'daily' ? 'daily' : rawDir === 'monthly' ? 'monthly' : 'weekly'
   const dest = (state: string) =>
     NextResponse.redirect(
-      `${SITE_URL}/alerts/status?state=${state}${(state === 'weekly' || state === 'daily') && token ? `&token=${encodeURIComponent(token)}` : ''}`
+      `${SITE_URL}/alerts/status?state=${state}${(state === 'weekly' || state === 'daily' || state === 'monthly') && token ? `&token=${encodeURIComponent(token)}` : ''}`
     )
 
   if (!token) return dest('invalid')

@@ -2,6 +2,43 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T092308Z — PASS — digest-monthly-fewer-emails
+- Pages: `/alerts/status` (new `monthly` confirmation state); no visible page change
+  elsewhere — the rest is email-footer/backend only (digest + price-drop alert emails,
+  `/api/alerts/frequency`)
+- What: **Subscribers on weekly alert emails can now one-click "Get fewer emails" straight
+  to monthly** — the footer link in every digest and price-drop alert email offered this
+  before only for daily-cadence subscribers (their one-tap path to weekly); a weekly
+  subscriber's only "fewer" option was unsubscribing entirely. Now weekly subscribers get
+  the same one-tap link, landing on monthly instead. The plain-text version of the email
+  also used to always say "(switch to weekly)" regardless of where the link actually went
+  — now it correctly says "(switch to monthly)" for weekly subscribers.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s,
+  both standing `[want]` items (save-search auth-wall reconciliation, collection-layout
+  redesign) remain flagged as needing a human product decision, so the highest-value item
+  left was the top `[P1][goal]` in the freshest Fable plan-pass batch (#9, 2026-07-19) —
+  the exact follow-up flagged in last cycle's (`alert-monthly-cadence`) own "Next" note.
+  Never-spam / "fewer instead of none" pillar: closes the gap left when monthly cadence
+  shipped everywhere else on-site except this one email footer link.
+- Spec: nightshift/specs/20260719T092308Z-digest-monthly-fewer-emails.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --test src/lib/*.test.ts` suite: 551/551 pass (2 new cases added to `email.test.ts`
+  for the monthly-target footer label, both builders). QA against the PRODUCTION build
+  (`npx next start` on port 3000) via `qa-smoke.mjs` on `/alerts/status?state=monthly`,
+  `?state=weekly`, `?state=daily` at desktop 1280 + mobile 375: 6/6 checks pass (HTTP 200,
+  zero app-origin console errors, zero horizontal overflow). Visual cycle — screenshots
+  read and confirmed correct (new monthly confirmation card renders cleanly, no overflow,
+  on-brand). Functional confidence beyond the smoke gate: created one throwaway
+  `@example.com` confirmed test alert via the service-role client, hit
+  `/api/alerts/frequency?token=...&dir=monthly` directly, confirmed the 307 redirect landed
+  on `state=monthly` (this environment's live `alerts` table predates the `frequency`
+  column, so the graceful-degrade retry path was genuinely exercised, not just theoretical
+  — same precedent as every other frequency write). Test alert row deleted immediately
+  after, confirmed 0 remain via a follow-up query.
+- Screenshots: nightshift/screenshots/digest-monthly-fewer-emails/
+- Next: the dormant-subscriber re-permission email and the digest body's cadence-honest
+  "this week" framing fix are the two remaining open items in the same plan-pass batch #9.
+
 ## 20260719T090000Z — PASS — alert-monthly-cadence
 - Pages: `/alerts` and every other page rendering `AlertSignup`, `/alerts/manage`, `/alerts/status`
 - What: **Subscribers can now choose a "monthly" digest — a genuinely low-touch cadence — everywhere the site already offers daily/weekly.** The "How often?" selector on every alert capture form now offers Monthly alongside Daily/Weekly; the digest-cadence pill on `/alerts/manage` now cycles Daily → Weekly → Monthly → Daily instead of just toggling two options; the "Changed your mind?" unsubscribe-recovery box (shown after clicking an unsubscribe link) now offers "Switch to monthly instead" whenever the alert isn't already monthly; and the "Matching a lot right now — narrow it?" nudge on `/alerts/manage` (shown for very high-volume alerts) now also offers "or switch to monthly instead" as a one-tap alternative to narrowing the search criteria.
