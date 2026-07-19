@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-19T11:55:23Z — DRAIN SUMMARY
+- Cycles this run: 7 (PASS 5 / FAIL 1 / ABORT 1)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $124.1905 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260719T103203Z
+
 ## 20260719T114308Z — PASS — digest-snooze-link
 - Pages: `/alerts/status` (new `snoozed` landing state) — plus internal changes to a
   new `/api/alerts/snooze` route, `src/app/actions.ts` (new `resumeAlertsByToken`),
