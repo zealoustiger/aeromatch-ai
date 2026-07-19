@@ -1315,6 +1315,36 @@ test('buildListingUnavailableEmail: omitting noun stays byte-for-byte the origin
   assert.equal(withNoun.text, withoutNoun.text)
 })
 
+test('buildListingUnavailableEmail: omitting crossSell renders no upgrade CTA', () => {
+  const { html, text } = buildListingUnavailableEmail(UNAVAILABLE_BASE)
+  assert.doesNotMatch(html, /Yes, alert me too/)
+  assert.doesNotMatch(text, /Yes, alert me too/)
+})
+
+test('buildListingUnavailableEmail: crossSell renders the one-tap "similar family" upgrade in both html and text', () => {
+  const { html, text } = buildListingUnavailableEmail({
+    ...UNAVAILABLE_BASE,
+    crossSell: {
+      label: 'Also want alerts for every Cessna 172 listing? 5 matches now.',
+      acceptUrl: 'https://clubhanger.com/api/alerts/digest-cross-sell?token=xyz&context=Cessna+172&path=%2Faircraft%3Fmake%3DCessna&source=watch_unavailable_email',
+    },
+  })
+  assert.match(html, /Yes, alert me too/)
+  assert.match(html, /Also want alerts for every Cessna 172 listing\? 5 matches now\./)
+  assert.ok(html.includes('https://clubhanger.com/api/alerts/digest-cross-sell?token=xyz&amp;context=Cessna+172&amp;path=%2Faircraft%3Fmake%3DCessna&amp;source=watch_unavailable_email'))
+  assert.match(text, /Also want alerts for every Cessna 172 listing\? 5 matches now\./)
+  assert.ok(text.includes('https://clubhanger.com/api/alerts/digest-cross-sell?token=xyz&context=Cessna+172&path=%2Faircraft%3Fmake%3DCessna&source=watch_unavailable_email'))
+})
+
+test('buildListingUnavailableEmail: crossSell label is HTML-escaped', () => {
+  const { html } = buildListingUnavailableEmail({
+    ...UNAVAILABLE_BASE,
+    crossSell: { label: '<script>alert(1)</script>', acceptUrl: 'https://clubhanger.com/api/alerts/digest-cross-sell?token=xyz' },
+  })
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&lt;script&gt;/)
+})
+
 // ─── buildWidenSuggestionEmail (one-time never-matched-alert nudge) ────────
 
 const WIDEN_BASE = {
