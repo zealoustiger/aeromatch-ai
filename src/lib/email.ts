@@ -1608,14 +1608,21 @@ export type AlertDigestSection = {
  * responsible for scoping `unsubscribeUrl` to cover every alert included in
  * `sections` (see the alert-digest cron's multi-token unsubscribe). For
  * exactly one due alert, callers should use `buildAlertDigestEmail` directly
- * instead — this function is for 2+, and doesn't offer a `frequencyUrl`
- * (a per-alert daily→weekly toggle that's ambiguous across multiple alerts
- * in one send; Manage alerts covers it per-alert instead).
+ * instead — this function is for 2+.
  */
 export function buildCombinedAlertDigestEmail(opts: {
   sections: AlertDigestSection[]
   manageUrl: string
   unsubscribeUrl: string
+  /** Tokenized "Get fewer emails" footer link — ladder parity with the
+   *  single-alert digest's `frequencyUrl`, except this steps EVERY covered
+   *  alert down one rung from its OWN current cadence (see
+   *  `/api/alerts/frequency`'s `dir=step`) rather than one literal target,
+   *  since a combined send can cover alerts at different cadences. The
+   *  caller is responsible for omitting this when every covered alert is
+   *  already at the lightest (monthly) cadence — same "no lighter rung
+   *  left" gate the single-alert `frequencyUrl` already applies. */
+  frequencyUrl?: string
   /** Same one-click cross-sell as `buildAlertDigestEmail`'s option — exactly
    *  one suggestion for the whole combined email, never one per section
    *  (GOAL.md: "never spam"). */
@@ -1746,7 +1753,7 @@ export function buildCombinedAlertDigestEmail(opts: {
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe from these</a>.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe from these</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
       </p>
     </div>
   </body>
@@ -1759,7 +1766,7 @@ export function buildCombinedAlertDigestEmail(opts: {
 ${sectionParts.map((s) => s.text).join('\n\n')}
 ${crossSellText}${digestFeedbackText}${replyToFooterText}
 Manage alerts: ${manageUrl}
-Unsubscribe from these: ${opts.unsubscribeUrl}`
+Unsubscribe from these: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails: ${opts.frequencyUrl}` : ''}`
 
   return { subject, html, text }
 }

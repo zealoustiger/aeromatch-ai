@@ -1105,6 +1105,33 @@ test('combined: footer carries the shared Manage/Unsubscribe links (already mult
   assert.match(text, /Unsubscribe from these: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a,b/)
 })
 
+test('combined: with a frequencyUrl, a "Get fewer emails" footer link renders (ladder parity with the single-alert digest)', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=a,b&dir=step',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=a,b&amp;dir=step"[^>]*>Get fewer emails</)
+  assert.match(text, /Get fewer emails: https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=a,b&dir=step/)
+})
+
+test('combined: without a frequencyUrl, no "Get fewer emails" link renders (every covered alert already monthly)', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
+    ],
+  })
+  assert.doesNotMatch(html, /Get fewer emails/)
+  assert.doesNotMatch(text, /Get fewer emails/)
+})
+
 test('combined: a section with its own stopUrl renders a per-section "Stop just this alert" link distinct from the shared footer unsubscribe', () => {
   const { html, text } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
