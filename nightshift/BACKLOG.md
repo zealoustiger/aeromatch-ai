@@ -3098,6 +3098,98 @@ chip multi-select._
   this via `partnership-model-multiselect` — this is the aircraft-side parity. Improves:
   alert management polish. No new capture point, no schema change.~~
   ✅ SHIPPED via `alert-model-multiselect-chips` (2026-07-19)
+
+### Plan-pass batch #8 — 2026-07-19 (Fable)
+_Batch #7 fully drained (all 7 items shipped/struck; `digest-cron-send-failures` closed it
+2026-07-19). Only the two long-standing blocked items remain open above — instant sends
+(Vercel-tier human call) and the save-search auth wall (`[want]` product call) — both
+untouched here. Entry-point capture stays saturated (no new capture points below), so this
+batch closes verified correctness gaps in the bounce/unsubscribe lifecycle, the last deaf
+feedback loop, and deliverability protection. All verified un-built by direct code read
+this pass: `UnsubscribeRecover.tsx:49` fires the reason chips as a PostHog-only
+`alert_unsubscribe_reason` event (the sole DB write of `alerts.unsubscribe_reason` is the
+hardcoded `'found_aircraft'` exit at `actions.ts:2044`, and neither `alertFunnelWeekly.ts`
+nor `alertScoreboard.ts` selects that column); `subscribeToAlerts` sends a confirm email on
+every new insert with no per-address cap (only *resends* are cooldown-limited via
+`last_confirm_sent_at`), so varying `source_path` yields unlimited confirm mail to one
+address; `subscribeToAlerts`'s 23505 branch revives only `previously unsubscribed` rows —
+its own comment says "any other status stays a true no-op," so a `bounced` row is a silent
+permanent dead end on re-subscribe; `/alerts/manage`'s bounced state
+(`page.tsx:437`, `AlertActions.tsx:112`) offers only Resume — no path to the existing
+email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend anywhere;
+`AlertFrequency` (`alertFrequency.ts:14`) is exactly `'daily' | 'weekly'` — no monthly._
+
+- **[P1][goal] Re-subscribe on a bounced address must revive, not silently no-op.**
+  A subscriber whose mailbox bounced (full inbox, transient outage, later-fixed address)
+  who comes back and re-submits the same alert gets an idempotent "success" while the row
+  stays `status='bounced'` forever — the one lifecycle state with no way back through the
+  capture forms. In `subscribeToAlerts`'s 23505 branch (and the sibling insert paths
+  `alert-revive-remaining-paths` already covered for `unsubscribed`), also revive `bounced`
+  rows: fresh tokens, back to `pending`, send a real confirm email — the double-opt-in
+  itself is the honest proof the address works again (clear `bounced_at` on confirm,
+  fail-soft when unmigrated). Improves: capture-flow correctness + never-a-dead-end pillar.
+  No new capture point (existing `alert_subscribed` event), no schema change.
+- **[P1][goal] Bounced rows on `/alerts/manage` should offer the email-change flow, not
+  just Resume.** Today's copy is "Your email bounced — resume once it's fixed," but when
+  the address itself is wrong or dead, Resume just re-bounces — while the existing
+  change-email flow is the actual fix and *already works from a dead address* (its
+  double-opt-in confirm goes to the NEW address). On `bounced` rows, add a "Wrong address?
+  Move these alerts to a new email" link into the existing change-email form, and on
+  email-change confirm restore moved `bounced` rows to `confirmed` + clear `bounced_at`
+  (the confirm click just proved the new mailbox delivers — same honesty logic as the
+  revive item above; keep non-bounced rows' statuses untouched). Improves: alert
+  management / recovery UX. No new capture point, no schema change.
+- **[P1][goal] Cap confirmation emails per address — close the confirm-mail bombing hole.**
+  Every new insert sends a confirm email and only per-row *resends* are rate-limited, so
+  anyone can bomb a victim's inbox by re-submitting the subscribe form with a varying
+  `source_path` (each is a "new" alert → fresh confirm mail), burning our sender
+  reputation with it. Add a server-side per-address cap at the `subscribeToAlerts`
+  chokepoint (e.g. max ~3 confirm sends per address per hour, counted from the address's
+  recent `pending` rows' `created_at`/`last_confirm_sent_at`, fail-soft when unmigrated):
+  over the cap, still insert (or no-op) and show the normal "check your email" panel —
+  never leak to the submitter that sends were suppressed. Unit-test the pure window check.
+  Improves: never-spam pillar + deliverability protection. No new capture point, no schema
+  change.
+- **[P1][goal] Persist the one-tap unsubscribe reasons + Monday rollup — the last deaf
+  feedback loop.** The reason chips on `/alerts/status` fire only a PostHog event, and the
+  `alerts.unsubscribe_reason` column (written today solely by the "Found my aircraft 🎉"
+  exit) is read by nothing — so the one moment a leaving subscriber tells us WHY, the loop
+  can't hear it (same class as the digest-vote/instant-interest loops batch #7 closed).
+  Persist the tapped chip's reason into `unsubscribe_reason` via a token-scoped action
+  (fail-soft when the column is unmigrated, same as the found_aircraft write), then add a
+  "Why people unsubscribe" breakdown (this week + all-time, per reason, honest "no reasons
+  recorded yet" empty state) to `alertFunnelWeekly` and mirror it on `/admin/alerts` if
+  trivial in-cycle. Improves: prove-it-converts / honest-measurement pillar. No new
+  capture point, no schema change beyond the already-flagged `unsubscribe_reason` column.
+- **[P1][goal] Real reply-to on alert emails + a "just reply" line.** `sendEmail` sets no
+  `reply_to`, so replying to any alert email dead-ends at the unmonitored from-address —
+  best-in-class digests (and deliverability heuristics) treat a replyable sender as a
+  feature. Read an optional `ALERTS_REPLY_TO` env var (code change only — human sets the
+  value, per FREEZE), pass it as Resend's `reply_to` on every alert send, and add a quiet
+  "Question about a listing? Just reply to this email." footer line to the digest builders
+  — rendered ONLY when the env var is configured (never invite replies nobody will read).
+  Improves: digest email quality + trust. No new capture point, no schema change.
+- **[P2][goal] Monthly cadence — a real "fewer" rung under weekly.** `AlertFrequency` is
+  exactly daily|weekly, so the unsubscribe-recovery ladder's "fewer emails" offer bottoms
+  out at weekly→snooze→pause — there's no honest low-touch cadence for the long-horizon
+  shopper. Add `'monthly'` (elapsed-days ≥ 28 in `isDigestDue` — honest with the daily
+  cron, no new infra) to `normalizeFrequency`/`AlertSignup`'s "How often?" select/
+  `FrequencyToggle`, and offer "switch to monthly" in `UnsubscribeRecover` + the
+  high-volume "narrow this alert?" nudge. `alerts.frequency`'s CHECK constraint needs an
+  additive `'monthly'` migration — ⚠️ flag human-apply, fail-soft normalize-to-weekly when
+  unmigrated, same as every prior `alerts.*` DDL. Improves: digest-vs-instant pillar +
+  never-spam ("fewer, literally"). No new capture point.
+- **[P2][goal] Pre-bounced-address heads-up at capture.** A visitor who subscribes with an
+  address we've already hard-bounced (typo'd once, dead mailbox) gets the normal "check
+  your email" success and then nothing arrives — a silent failure we can already predict.
+  At the `subscribeToAlerts` chokepoint, when the same normalized email has any
+  `status='bounced'` row (service-role read), return a distinct honest hint rendered in
+  the success panel ("Heads up — mail to this address has bounced before. Double-check the
+  spelling…") while still subscribing normally (the revive item's fresh double-opt-in does
+  the actual re-verification). Only ever shown to someone who just typed that exact
+  address — no enumeration surface beyond what the manage-by-email flow already exposes.
+  Improves: capture-flow honesty (no fake success). No new capture point, no schema
+  change.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
