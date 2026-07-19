@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-19T08:29:57Z — alert-reply-to — score 4/5
+- Strengths: Meets every acceptance criterion — `sendEmail` reads `ALERTS_REPLY_TO` at the one chokepoint (`|| undefined` + conditional spread → truly omitted, not empty, covering all send types) and both digest builders gate a quiet reply footer on `!!process.env.ALERTS_REPLY_TO` in HTML and text, read per-call for testability; footer styling mirrors the adjacent `shareHtml`/`shareText` exactly, no other builder touched per scope, and 4 focused tests cover present/absent × both builders × both bodies.
+- Weaknesses / risks: minor — the `replyToConfigured`/`replyToFooterHtml`/`replyToFooterText` trio is duplicated verbatim across the two builders (matches the file's inline-snippet convention, so acceptable but a helper would DRY it), and the new doc comment floats detached above `SendEmailInput` where JSDoc would misattach it to that type rather than to `sendEmail`.
+- Follow-up: none
+
 ## 2026-07-19T06:37:18Z — digest-cron-reliability-line — score 4/5
 - Strengths: Hits every acceptance criterion — a fail-soft, date-bounded `getCronRunsSince` that mirrors `getRecentCronRuns`' try/catch-empty convention, seven honest snapshot fields (with `cronRunsRecorded` cleanly distinguishing "quiet week" from "no data"), and an HTML+text "Cron reliability" section that flags N<7 days, reuses `formatWeekDelta`/`escapeHtml`, and renders a genuinely distinct empty state; well-scoped (correctly defers the riskier `send_failures` column to a follow-up), house-style comments, and 3 focused tests (populated/short-week/empty) that all pass in the full 144-test suite.
 - Weaknesses / risks: none material — `cronRunsThisWeek`/`cronRunsLastWeek` are computed and stored on the snapshot but never rendered in the email (they are spec-mandated fields available to other consumers, so not dead code, just unused by this slice).
