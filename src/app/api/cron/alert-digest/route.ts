@@ -2118,11 +2118,23 @@ export async function GET(req: NextRequest) {
     const digestFeedbackBaseUrl = firstToken ? `${SITE_URL}/api/alerts/digest-feedback?token=${firstToken}` : undefined
     const digestFeedbackUpUrl = digestFeedbackBaseUrl ? `${digestFeedbackBaseUrl}&vote=up` : undefined
     const digestFeedbackDownUrl = digestFeedbackBaseUrl ? `${digestFeedbackBaseUrl}&vote=down` : undefined
+    // Ladder parity with the single-alert digest's "Get fewer emails" link —
+    // offered whenever at least one covered alert isn't already monthly (a
+    // combined send can mix cadences, so `dir=step` on /api/alerts/frequency
+    // steps each covered row down from its OWN current frequency instead of
+    // one literal target for all of them). Omitted entirely once every
+    // covered alert has already bottomed out at monthly, same "no lighter
+    // rung left" gate the single-alert path applies.
+    const frequencyUrl =
+      allTokens && group.some((p) => p.frequency !== 'monthly')
+        ? `${SITE_URL}/api/alerts/frequency?token=${allTokens}&dir=step`
+        : undefined
 
     const { subject, html, text } = buildCombinedAlertDigestEmail({
       sections,
       manageUrl,
       unsubscribeUrl,
+      frequencyUrl,
       crossSell: crossSellOpt,
       digestFeedbackUpUrl,
       digestFeedbackDownUrl,

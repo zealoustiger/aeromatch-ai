@@ -42,6 +42,21 @@ export function intervalDaysFor(frequency: AlertFrequency): number {
   return INTERVAL_DAYS[frequency]
 }
 
+/**
+ * The next lighter (less frequent) rung on the cadence ladder — daily→weekly,
+ * weekly→monthly. `monthly` has no lighter rung and maps to itself (callers
+ * that want to know whether stepping is possible at all should check
+ * `frequency !== 'monthly'` first, same precedent as the single-alert
+ * `frequencyUrl` gate in the digest cron). Used by the combined-digest "Get
+ * fewer emails" link, which steps every covered alert down from ITS OWN
+ * current cadence rather than applying one literal target to all of them —
+ * a single combined send can legitimately cover alerts at different
+ * cadences.
+ */
+export function nextLighterFrequency(frequency: AlertFrequency): AlertFrequency {
+  return frequency === 'daily' ? 'weekly' : frequency === 'weekly' ? 'monthly' : 'monthly'
+}
+
 /** A weekly digest is "busy" enough to honestly suggest daily cadence at this
  *  many total (new-listing + price-drop) matches in one send. */
 export const DIGEST_UPGRADE_THRESHOLD = 5

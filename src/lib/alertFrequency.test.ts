@@ -7,6 +7,7 @@ import {
   describeLastDigest,
   intervalDaysFor,
   isDigestDue,
+  nextLighterFrequency,
   normalizeDigestDay,
   normalizeFrequency,
   shouldOfferDailyUpgrade,
@@ -24,6 +25,12 @@ test('normalizeFrequency: "daily"/"monthly" pass through, anything else falls ba
   assert.equal(normalizeFrequency(null), 'weekly')
   assert.equal(normalizeFrequency(undefined), 'weekly')
   assert.equal(normalizeFrequency('bogus'), 'weekly')
+})
+
+test('nextLighterFrequency: daily→weekly, weekly→monthly, monthly stays monthly (no lighter rung)', () => {
+  assert.equal(nextLighterFrequency('daily'), 'weekly')
+  assert.equal(nextLighterFrequency('weekly'), 'monthly')
+  assert.equal(nextLighterFrequency('monthly'), 'monthly')
 })
 
 test('intervalDaysFor: daily=1, weekly=7, monthly=28', () => {

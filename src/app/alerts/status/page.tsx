@@ -57,6 +57,13 @@ const STATES = {
     title: "You're on monthly emails now",
     body: "This alert will email you at most once a month instead of weekly — far less often, same matches. You're still subscribed, nothing else changed.",
   },
+  fewer: {
+    icon: MailOpen,
+    tint: 'text-emerald-600',
+    ring: 'bg-emerald-50',
+    title: "You're on fewer emails now",
+    body: "Every alert covered by this link just stepped down to a lighter cadence — same matches, less often. You're still subscribed, nothing else changed.",
+  },
   invalid: {
     icon: AlertCircle,
     tint: 'text-amber-600',
@@ -110,6 +117,7 @@ function resolveState(raw: string | string[] | undefined): StateKey {
     v === 'weekly' ||
     v === 'daily' ||
     v === 'monthly' ||
+    v === 'fewer' ||
     v === 'cross_sell_added' ||
     v === 'email_changed' ||
     v === 'digest_feedback_up' ||
@@ -323,6 +331,19 @@ export default async function AlertStatusPage({
           {key === 'monthly' && token && (
             <p className="mt-4 text-sm text-slate-500">
               <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
+                Manage your alerts
+              </Link>
+            </p>
+          )}
+          {key === 'fewer' && token && (
+            <p className="mt-4 text-sm text-slate-500">
+              {/* `token` may be a combined digest's comma-joined list — any
+                  one alert's token resolves the whole email on /alerts/manage
+                  (same precedent as the cron's own `firstToken` manageUrl). */}
+              <Link
+                href={`/alerts/manage?token=${parseAlertTokens(token)[0] ?? token}`}
+                className="font-medium text-sky-600 hover:text-sky-700"
+              >
                 Manage your alerts
               </Link>
             </p>
