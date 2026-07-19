@@ -125,6 +125,11 @@ export interface AlertFunnelWeeklySnapshot {
   cronEmailsSentLastWeek: number
   cronAvgDurationMsThisWeek: number | null
   cronRunsRecorded: boolean
+  /** Real email-send failures across this week's logged runs (never `null`/fabricated —
+   *  `alertCronHealth.ts` reads `send_failures` as `null` per-row when unmigrated, and a
+   *  `null` row contributes 0 here, same as a genuinely-zero-failure row; `cronRunsRecorded`
+   *  already disambiguates "no data" from "zero" for this whole panel). */
+  cronSendFailuresThisWeek: number
   computedAt: string
 }
 
@@ -298,6 +303,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   ).size
   const cronEmailsSentThisWeek = cronRunsThisWeekList.reduce((sum, r) => sum + r.emailsSent, 0)
   const cronEmailsSentLastWeek = cronRunsLastWeekList.reduce((sum, r) => sum + r.emailsSent, 0)
+  const cronSendFailuresThisWeek = cronRunsThisWeekList.reduce((sum, r) => sum + (r.sendFailures ?? 0), 0)
   const cronAvgDurationMsThisWeek = cronRunsThisWeekList.length
     ? Math.round(cronRunsThisWeekList.reduce((sum, r) => sum + r.durationMs, 0) / cronRunsThisWeekList.length)
     : null
@@ -349,6 +355,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     cronEmailsSentLastWeek,
     cronAvgDurationMsThisWeek,
     cronRunsRecorded: cronRuns.length > 0,
+    cronSendFailuresThisWeek,
     computedAt: new Date(now).toISOString(),
   }
 }

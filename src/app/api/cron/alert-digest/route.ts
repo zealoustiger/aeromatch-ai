@@ -1209,7 +1209,7 @@ type PendingReminderRow = {
 async function sendStrandedPendingReminders(
   supabase: ReturnType<typeof createAdminClient>,
   nowIso: string
-): Promise<number> {
+): Promise<{ sent: number; failed: number }> {
   const { start, end } = reminderWindow(nowIso)
 
   const { data, error } = (await supabase
@@ -1226,10 +1226,11 @@ async function sendStrandedPendingReminders(
     } else {
       console.error('[alert-digest] pending-reminder fetch error:', error.message)
     }
-    return 0
+    return { sent: 0, failed: 0 }
   }
 
   let remindersSent = 0
+  let failed = 0
   for (const row of data ?? []) {
     if (!row.confirm_token || !row.unsubscribe_token) continue
 
@@ -1252,9 +1253,11 @@ async function sendStrandedPendingReminders(
         .update({ confirm_reminder_sent_at: new Date().toISOString() })
         .eq('id', row.id)
       remindersSent++
+    } else {
+      failed++
     }
   }
-  return remindersSent
+  return { sent: remindersSent, failed }
 }
 
 // ─── One-time "widen your alert?" email for never-matched alerts ──────────────
@@ -1287,7 +1290,7 @@ type WidenCandidateRow = {
 async function sendWidenSuggestionEmails(
   supabase: ReturnType<typeof createAdminClient>,
   nowIso: string
-): Promise<number> {
+): Promise<{ sent: number; failed: number }> {
   const cutoff = new Date(new Date(nowIso).getTime() - WIDEN_SUGGESTION_MIN_AGE_MS).toISOString()
 
   const { data, error } = (await supabase
@@ -1304,10 +1307,11 @@ async function sendWidenSuggestionEmails(
     } else {
       console.error('[alert-digest] widen-suggestion fetch error:', error.message)
     }
-    return 0
+    return { sent: 0, failed: 0 }
   }
 
   let widenSuggestionsSent = 0
+  let failed = 0
   for (const row of data ?? []) {
     if (!row.unsubscribe_token) continue
 
@@ -1341,9 +1345,11 @@ async function sendWidenSuggestionEmails(
         .update({ widen_suggested_at: new Date().toISOString() })
         .eq('id', row.id)
       widenSuggestionsSent++
+    } else {
+      failed++
     }
   }
-  return widenSuggestionsSent
+  return { sent: widenSuggestionsSent, failed }
 }
 
 // Digest email cross-sell (GOAL.md's "digest → manage → grow loop" — the same
@@ -1379,26 +1385,28 @@ async function getDigestCrossSell(
  * already been processed, and wrapped in try/catch so a summary-email
  * failure can never turn an otherwise-healthy digest run into a 500.
  */
-async function sendMondayAdminFunnelSummary(nowIso: string): Promise<number> {
-  if (new Date(nowIso).getUTCDay() !== 1) return 0
+async function sendMondayAdminFunnelSummary(nowIso: string): Promise<{ sent: number; failed: number }> {
+  if (new Date(nowIso).getUTCDay() !== 1) return { sent: 0, failed: 0 }
   const adminEmails = (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((e) => e.trim())
     .filter(Boolean)
-  if (adminEmails.length === 0) return 0
+  if (adminEmails.length === 0) return { sent: 0, failed: 0 }
 
   try {
     const snapshot = await getAlertFunnelWeeklySnapshot()
     const { subject, html, text } = buildAdminAlertFunnelEmail(snapshot, `${SITE_URL}/admin/alerts`)
     let sentCount = 0
+    let failed = 0
     for (const to of adminEmails) {
       const result = await sendEmail({ to, subject, html, text, emailType: 'admin-alert-funnel-weekly' })
       if (result.sent || result.reason === 'no-key') sentCount++
+      else failed++
     }
-    return sentCount
+    return { sent: sentCount, failed }
   } catch (err) {
     console.error('[alert-digest] Monday admin funnel summary error:', err)
-    return 0
+    return { sent: 0, failed: 0 }
   }
 }
 
@@ -1443,8 +1451,11 @@ export async function GET(req: NextRequest) {
     console.error('[alert-digest] snooze auto-resume error:', resumeError.message)
   }
 
-  const remindersSent = await sendStrandedPendingReminders(supabase, nowIso)
-  const widenSuggestionsSent = await sendWidenSuggestionEmails(supabase, nowIso)
+  const remindersResult = await sendStrandedPendingReminders(supabase, nowIso)
+  const widenResult = await sendWidenSuggestionEmails(supabase, nowIso)
+  const remindersSent = remindersResult.sent
+  const widenSuggestionsSent = widenResult.sent
+  let sendFailures = remindersResult.failed + widenResult.failed
 
   type DigestAlertRow = {
     id: string
@@ -1914,6 +1925,8 @@ export async function GET(req: NextRequest) {
         )
       sent += group.length
       emailsSent++
+    } else {
+      sendFailures++
     }
   }
 
@@ -1948,20 +1961,26 @@ export async function GET(req: NextRequest) {
       }
       sent++
       emailsSent++
+    } else {
+      sendFailures++
     }
   }
 
-  const adminSummarySent = await sendMondayAdminFunnelSummary(nowIso)
+  const adminSummaryResult = await sendMondayAdminFunnelSummary(nowIso)
+  const adminSummarySent = adminSummaryResult.sent
+  sendFailures += adminSummaryResult.failed
 
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} sendFailures=${sendFailures}`
   )
 
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
   // soft — a not-yet-migrated table (or any other insert error) never affects the real
-  // digest send above, which has already completed by this point.
-  const { error: runLogError } = await supabase.from('alert_cron_runs').insert({
+  // digest send above, which has already completed by this point. `send_failures` may
+  // independently be un-migrated live — retry once without it, same fail-soft pattern as
+  // every other column on this table.
+  const runLogRow: Record<string, number> = {
     processed: total,
     sent,
     emails_sent: emailsSent,
@@ -1971,7 +1990,13 @@ export async function GET(req: NextRequest) {
     reminders_sent: remindersSent,
     widen_suggestions_sent: widenSuggestionsSent,
     duration_ms: Date.now() - runStartMs,
-  })
+    send_failures: sendFailures,
+  }
+  let { error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow)
+  if (runLogError?.message?.includes('send_failures')) {
+    delete runLogRow.send_failures
+    ;({ error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow))
+  }
   if (runLogError && !runLogError.message?.includes('alert_cron_runs')) {
     console.error('[alert-digest] run-log insert error:', runLogError.message)
   }
@@ -1986,5 +2011,6 @@ export async function GET(req: NextRequest) {
     remindersSent,
     widenSuggestionsSent,
     adminSummarySent,
+    sendFailures,
   })
 }

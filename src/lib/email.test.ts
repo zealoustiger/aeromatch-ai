@@ -1320,6 +1320,7 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   cronEmailsSentLastWeek: 33,
   cronAvgDurationMsThisWeek: 4820,
   cronRunsRecorded: true,
+  cronSendFailuresThisWeek: 0,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -1571,6 +1572,22 @@ test('buildAdminAlertFunnelEmail: cron reliability renders days-ran, emails-sent
   assert.doesNotMatch(text, /fewer than expected/)
   assert.match(text, /41 emails sent/)
   assert.match(text, /avg duration 5s/)
+  assert.match(html, /Send failures/)
+  assert.match(html, />0</)
+  assert.doesNotMatch(html, /check the Resend dashboard/)
+  assert.match(text, /0 send failures/)
+  assert.doesNotMatch(text, /check the Resend dashboard/)
+})
+
+test('buildAdminAlertFunnelEmail: cron reliability flags real send failures when > 0', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, cronSendFailuresThisWeek: 3 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /Send failures/)
+  assert.match(html, />3</)
+  assert.match(html, /check the Resend dashboard/)
+  assert.match(text, /3 send failures \(⚠️ check the Resend dashboard\)/)
 })
 
 test('buildAdminAlertFunnelEmail: cron reliability flags a short week when fewer than 7 days ran', () => {

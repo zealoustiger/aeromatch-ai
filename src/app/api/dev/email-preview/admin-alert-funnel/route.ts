@@ -69,6 +69,7 @@ export async function GET() {
     cronEmailsSentLastWeek: 33,
     cronAvgDurationMsThisWeek: 4820,
     cronRunsRecorded: true,
+    cronSendFailuresThisWeek: 1,
     computedAt: '2026-07-18T08:00:00.000Z',
   }
 

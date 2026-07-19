@@ -997,3 +997,15 @@ alter table email_engagement_events add column if not exists recipient text;
 -- elapsed-days — i.e. current behavior is fully preserved either way.
 alter table alerts add column if not exists digest_day smallint
   check (digest_day between 0 and 6);
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alert_cron_runs_send_failures
+-- Lets the "Last run" health panel and the Monday admin funnel email tell a genuinely
+-- quiet week apart from one where emails are silently failing to send (Resend outage,
+-- bad API key, etc.) — today the health log only counts processed/sent/skipped, never a
+-- real send error. Not null, default 0: a fresh cron run with no failures logs an honest
+-- 0, same as every other counter column on this table. Apply in the Supabase SQL editor.
+-- Until applied, the run-log insert retries without this column (same graceful-fallback
+-- pattern as every column above) and the panel/email keep showing 0 — indistinguishable
+-- from "genuinely zero failures" until the column lands, same ambiguity
+-- `cronRunsRecorded` already documents for the rest of this health log.
+alter table alert_cron_runs add column if not exists send_failures int not null default 0;
