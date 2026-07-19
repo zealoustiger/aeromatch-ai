@@ -3261,7 +3261,7 @@ tokenized accept endpoint already exists at `/api/alerts/digest-cross-sell` to m
 (flagged in the `alert-bounced-heads-up` cycle's Next); `emailEngagement.ts` records
 per-recipient opened/clicked but nothing reads it per-address for lifecycle decisions._
 
-- **[P1][goal] Weekly→monthly rung on the digest email's "Get fewer emails" ladder.**
+~~- **[P1][goal] Weekly→monthly rung on the digest email's "Get fewer emails" ladder.**
   Today's `alert-monthly-cadence` ship added monthly everywhere on-site, but the digest
   email footer's `frequencyUrl` is still daily-only (`alert-digest/route.ts:1735` comment:
   "a weekly one has nowhere lower to go" — no longer true), so a weekly subscriber's only
@@ -3270,7 +3270,23 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   hardcoded "(switch to weekly)" text-part labels (`email.ts:530`/`:1246`) to name the
   actual target cadence. Improves: digest-email surface, never-spam / "fewer instead of
   none" pillar. No new capture point, no schema change (monthly migration already flagged
-  ⚠️ human-apply; frequency writes already fail soft).
+  ⚠️ human-apply; frequency writes already fail soft).~~ ✅ SHIPPED via
+  `digest-monthly-fewer-emails` (2026-07-19) `/api/alerts/frequency` now accepts
+  `dir=monthly` (in addition to the existing `dir=daily`/default-weekly), redirecting to a
+  new `monthly` state on `/alerts/status` (mirrors the existing `weekly`/`daily` states).
+  `alert-digest/route.ts`'s single-alert send path now computes `frequencyUrl` for BOTH
+  daily-cadence (→ weekly, unchanged) AND weekly-cadence (→ monthly, new) alerts —
+  monthly-cadence alerts still get no link, nothing lower to switch to. `buildAlertDigestEmail`/
+  `buildPriceDropEmail` gained an optional `frequencyTarget?: 'weekly' | 'monthly'` (default
+  `'weekly'`, so every existing call/test stayed byte-exact) so the plain-text footer's
+  "(switch to weekly)" label now names the real target. The combined-digest template
+  intentionally still offers no `frequencyUrl` at all (pre-existing, unrelated — noted in its
+  own doc comment). Verified live: created a throwaway `@example.com` confirmed alert via the
+  service-role client, hit `/api/alerts/frequency?token=...&dir=monthly`, confirmed the
+  307 redirect landed on `state=monthly` (this DB's `alerts.frequency` column isn't migrated
+  live yet, so the update degrades gracefully exactly as designed, same as every other
+  frequency write path); row deleted immediately after, 0 remain. New unit tests added
+  (`email.test.ts`) for both builders' monthly-target case; full suite 551/551 pass.
 - **[P1][goal] Cadence-honest digest body framing — stop saying "this week" to daily and
   monthly subscribers.** `buildAlertDigestEmail`'s aggregate sentence hardcodes "matching
   your alert on ClubHanger this week" (`email.ts:1120` html, `:1168` text) regardless of
