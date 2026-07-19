@@ -3381,7 +3381,7 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   (0 remain). `/alerts/manage`'s owner-scoped resend button (`AlertActions.tsx`, shares
   `sendConfirmationResend`) is unaffected — it doesn't read the new field, so this is a pure
   additive return-shape change; left out of scope per the prior cycle's own "Next" note.
-- **[P2][goal] Dormant-subscriber re-permission ("still want these?") — one-time, honestly
+~~- **[P2][goal] Dormant-subscriber re-permission ("still want these?") — one-time, honestly
   gated.** Deliverability best practice the lifecycle still lacks: an address that keeps
   receiving digests but never engages quietly erodes sender reputation until it bounces or
   complains. Using the per-recipient `email_engagement_events` data (opened/clicked per
@@ -3392,7 +3392,26 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   entirely when engagement tracking has no rows for that address (absence of data ≠
   disengagement); never send twice (fail-soft `repermission_sent_at` column, ⚠️ flag
   migration human-apply like every `alerts.*` DDL); cap sends per cron run. Improves:
-  never-spam + sender-reputation protection. No new capture point.
+  never-spam + sender-reputation protection. No new capture point.~~ ✅ SHIPPED via
+  `alert-dormant-repermission` (2026-07-19) New additive `alerts.digest_sends_count`
+  (real per-alert digest-send counter, incremented alongside every existing
+  `last_digest_at` stamp via a new `markDigestSent` helper) + `alerts.repermission_sent_at`
+  (⚠️ both human-apply). `getDormantSubscribers` (`src/lib/dormantSubscribers.ts`) flags
+  confirmed/active alerts ≥90 days old with ≥8 real sends and no prior re-permission send,
+  then checks the recipient's real row-count in `email_engagement_events` — honesty gate:
+  if that table has ZERO rows for ANYONE (tracking not live yet), the whole check is
+  skipped rather than calling every subscriber "dormant" with no real signal; once live,
+  a candidate's own zero rows (vs. real rows existing for others) is a genuine signal.
+  New `buildRepermissionEmail` ("Still want alerts for X?" / "Yes, keep sending →") reuses
+  the existing `/alerts/manage` page for the cadence ladder + snooze + unsubscribe instead
+  of a new no-op endpoint. Sent from a new `sendDormantSubscriberRepermissionEmails`
+  wired into the existing daily `alert-digest` cron (no new `vercel.json` entry — Hobby
+  tier's cron-count limit precedent, same reasoning as the existing Monday admin-funnel
+  piggyback). 12 new unit tests (pure age/send-count eligibility + the email builder).
+  Live-verified against the real prod DB (read-only, no rows written): confirmed
+  `digest_sends_count` and `email_engagement_events` both genuinely don't exist yet, so
+  `getDormantSubscribers` provably fails soft to `[]` today — ships fully dark until a
+  human applies both migrations, at which point it activates automatically.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)

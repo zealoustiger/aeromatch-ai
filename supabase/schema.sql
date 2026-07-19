@@ -1028,3 +1028,25 @@ alter table alert_cron_runs add column if not exists send_failures int not null 
 -- i.e. the row still saves, just keeps whatever cadence it already had.
 alter table alerts drop constraint if exists alerts_frequency_check;
 alter table alerts add constraint alerts_frequency_check check (frequency in ('daily', 'weekly', 'monthly'));
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_digest_sends_count
+-- Counts real digest sends per alert (incremented by the cron alongside its existing
+-- `last_digest_at` stamp) — the missing "have we actually mailed this address enough
+-- times to judge engagement" signal the dormant-subscriber re-permission check needs.
+-- Not null, default 0: a fresh row honestly starts at zero, same as every other counter
+-- column on this table (e.g. `alert_cron_runs.send_failures`). Apply in the Supabase SQL
+-- editor. Until applied, the increment update retries without this key (same
+-- graceful-fallback pattern as every `alerts.*` column above) — the pre-existing
+-- `last_digest_at` stamp is unaffected either way — and `getDormantSubscribers` skips
+-- its whole run rather than gate on a count that's always 0.
+alter table alerts add column if not exists digest_sends_count int not null default 0;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_repermission_sent_at
+-- One-time marker so the "still want these alerts?" re-permission email (sent to a
+-- long-confirmed, well-sent, never-opened-or-clicked address — see
+-- `src/lib/dormantSubscribers.ts`) can never repeat for the same alert. Nullable, no
+-- default: null means "never sent," same precedent as `widen_suggested_at`/
+-- `confirm_reminder_sent_at`. Apply in the Supabase SQL editor. Until applied,
+-- `getDormantSubscribers` fails soft to an empty list (same graceful-fallback pattern as
+-- every `alerts.*` column above) — no re-permission emails send at all, not a duplicate.
+alter table alerts add column if not exists repermission_sent_at timestamptz;

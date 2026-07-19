@@ -683,6 +683,67 @@ Unsubscribe: ${opts.unsubscribeUrl}`
 }
 
 /**
+ * One-time "still want these?" re-permission email — sent (at most once per
+ * alert, gated by `repermission_sent_at`) to a long-confirmed, well-sent
+ * address that has never opened or clicked a single ClubHanger email (see
+ * `getDormantSubscribers`). Deliberately does NOT invent a new no-op "keep"
+ * endpoint — the existing `/alerts/manage` page already offers the cadence
+ * ladder, snooze, and unsubscribe, so the one CTA here just points there;
+ * clicking anything in this email (kept or not) is itself the engagement
+ * signal that naturally resets future dormancy checks once Resend
+ * click-tracking is live.
+ */
+export function buildRepermissionEmail(opts: {
+  context: string | null
+  manageUrl: string
+  unsubscribeUrl: string
+}): { subject: string; html: string; text: string } {
+  const label = opts.context?.trim() || 'your alert'
+  const subject = `Still want alerts for ${label}?`
+  const manageUrl = withUtm(opts.manageUrl, 'repermission')
+
+  const html = `<!doctype html>
+<html>
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    ${preheaderHtml(`It's been a while since we've heard from you on ${label} — still want these emails?`)}
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:19px;font-weight:700;margin:0 0 10px;">Still want alerts for ${escapeHtml(label)}?</h1>
+        <p class="ch-text" style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
+          You've been getting these for a while and we haven't seen you open one. Totally fine either way &mdash; just want to make sure your inbox is working for you, not against you.
+        </p>
+        <p style="margin:0 0 14px;">
+          <a href="${escapeAttr(manageUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Yes, keep sending &rarr;
+          </a>
+        </p>
+        <p class="ch-text" style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">
+          Or <a href="${escapeAttr(manageUrl)}" style="color:#0284c7;">get fewer</a> (switch to weekly/monthly) instead of none.
+        </p>
+      </div>
+      <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
+        You&rsquo;re receiving this one-time check-in because you have a long-standing alert on ClubHanger.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>.
+      </p>
+    </div>
+  </body>
+</html>`
+
+  const text = `Still want alerts for ${label}?
+
+You've been getting these for a while and we haven't seen you open one. Totally fine either way — just want to make sure your inbox is working for you, not against you.
+
+Keep sending / manage cadence: ${manageUrl}
+
+Unsubscribe: ${opts.unsubscribeUrl}`
+
+  return { subject, html, text }
+}
+
+/**
  * One-time "you're confirmed, nothing matches yet" welcome email — sent
  * instead of silence when a subscriber double-opt-in confirms an alert that
  * currently has zero live matches (the confirm route used to just return
@@ -849,7 +910,7 @@ function emailColorSchemeHead(): string {
  * links — those tokens must stay byte-exact for the route to resolve them.
  * Falls back to the raw URL if it isn't parseable as an absolute URL.
  */
-function withUtm(url: string, campaign: 'confirm' | 'digest' | 'price_drop' | 'combined' | 'widen'): string {
+function withUtm(url: string, campaign: 'confirm' | 'digest' | 'price_drop' | 'combined' | 'widen' | 'repermission'): string {
   try {
     const u = new URL(url)
     u.searchParams.set('utm_source', 'alert_email')

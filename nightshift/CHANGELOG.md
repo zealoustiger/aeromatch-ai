@@ -2,6 +2,61 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T102816Z — PASS — alert-dormant-repermission
+- Pages: no user-facing page markup changed — new lib module + a backend addition to the
+  existing daily `/api/cron/alert-digest` cron; no route/markup touched.
+- What: **The alert digest cron now protects sender reputation by checking in on genuinely
+  dormant subscribers.** For any confirmed alert that's at least 90 days old, has had at
+  least 8 real digest emails sent to it, and whose address has NEVER opened or clicked a
+  single one, the cron sends exactly one "Still want alerts for X?" email with a "Yes,
+  keep sending →" link — instead of silently mailing an unread inbox forever, which
+  eventually tanks deliverability for every other subscriber too. Never guesses: if the
+  engagement-tracking table is completely empty (meaning nobody's engagement is being
+  tracked yet — the Resend webhook isn't registered in prod), the whole check skips
+  rather than mislabeling every subscriber as "disengaged" with zero real signal.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s
+  (swept BACKLOG.md), no buildable `[want]` (both standing product-decision items —
+  save-search auth-wall, collection-layout redesign — remain flagged for a human call;
+  the bot-protection-blocked ingestion `[want]`s and the denominator-blocked Bay-Area
+  benchmark are still not autonomously buildable) — so the highest-value item left was
+  the last open item in plan-pass batch #9 (2026-07-19), named first in the prior
+  `alert-resend-bounced-heads-up` cycle's own "Next" note. **This fully drains batch #9.**
+  Never-spam / sender-reputation-protection pillar: the one lifecycle gap GOAL.md's batch
+  intro explicitly called out (`emailEngagement.ts` records per-recipient opened/clicked
+  but nothing reads it per-address for lifecycle decisions).
+- Spec: nightshift/specs/20260719T101741Z-alert-dormant-repermission.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 570/570 pass (12 new:
+  7 for the pure `isDormancyAgeAndSendEligible` age/send-count/never-sent-twice logic in
+  the new `dormantEligibility.ts` — split out from the DB-touching `dormantSubscribers.ts`
+  specifically so it's unit-testable without mocking Supabase, same precedent as
+  `alertFrequency.ts` vs. the cron route — and 5 for the new `buildRepermissionEmail`
+  builder). Non-visual cycle (no page markup changed) — served the PRODUCTION build
+  (`npx next start` on port 3000). `qa-smoke.mjs` on `/alerts`, `/aircraft` at desktop
+  1280 + mobile 375: 4/4 checks pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow); per the non-visual convention, screenshots saved for the audit
+  trail but not read into context. **Did not invoke the live cron end-to-end** (would
+  mass-email real dormant subscribers, out of scope for QA) — instead live-verified the
+  fail-soft path directly against the real prod DB with read-only REST calls (service-role
+  key, no rows written): confirmed `alerts.digest_sends_count` genuinely doesn't exist yet
+  (`42703 column ... does not exist`) and `email_engagement_events` genuinely doesn't
+  exist yet either (`PGRST205 relation not found`) — proving `getDormantSubscribers`
+  provably degrades to `[]` today, exactly as designed, rather than assuming the fail-soft
+  branch works from code review alone. No new `vercel.json` cron entry — piggybacks the
+  existing daily `alert-digest` cron, same reasoning as the existing Monday admin-funnel
+  summary (Hobby-tier cron-count limit, already documented in that function's own
+  comment). Server started/stopped cleanly, no stray `next-server` left running; no prod
+  DB rows created (read-only verification only, so no test-row cleanup was needed this
+  cycle).
+- Screenshots: nightshift/screenshots/alert-dormant-repermission/
+- Next: plan-pass batch #9 is now fully drained. The next cycle should generate a fresh
+  goal-task batch (Opus/Fable plan pass) unless a `[bug]`/`[want]` has appeared — the two
+  standing `[want]`s (save-search auth-wall, collection-layout redesign) still need a
+  human product decision before they're buildable, so don't re-pull those without one.
+  Once a human applies the `digest_sends_count`/`repermission_sent_at` migrations, the
+  re-permission email activates automatically on the next daily cron run with no further
+  code change.
+
 ## 20260719T100709Z — PASS — alert-resend-bounced-heads-up
 - Pages: `/alerts` and every other page rendering `AlertSignup` (listing pages, browse
   pages, homepage band, empty-state captures) — same shared component's "Didn't get it?
