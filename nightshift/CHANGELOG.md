@@ -2,6 +2,64 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T081700Z — PASS — alert-confirm-send-cap
+- Pages: no user-facing page changed — this is a server-action logic fix behind every
+  alert signup form (homepage, `/aircraft/browse`, make/model/state pages, `/saved`,
+  `/searches`, the sticky mobile bar, etc.), all of which call the same
+  `subscribeToAlerts` chokepoint.
+- What: **Closed the confirm-mail bombing hole.** Before this, resubmitting the same
+  email address against a different page/filter (a different `source_path`) always
+  looked like a brand-new alert to `subscribeToAlerts`, so it always sent a fresh
+  confirmation email — only *resends* of an existing row were rate-limited. That meant
+  anyone could bomb a victim's inbox with confirm mail just by varying which page they
+  "subscribed" from, burning our sender reputation in the process. Now an address gets
+  at most 3 confirmation emails per rolling hour: the new row is still saved every time
+  (and the visitor still sees the exact same "Almost there — check your inbox" success
+  panel either way, so a capped submitter can never tell sends were suppressed), only
+  the email itself is skipped once the cap is hit.
+- Goal: alert-experience (never-spam pillar) — tier 3 `[goal]`, the next unstruck item
+  in plan-pass batch #8, the exact gap the batch's own scoping note called out
+  ("`subscribeToAlerts` sends a confirm email on every new insert with no per-address
+  cap"). Tier 1 (`[bug]`): most recent CHANGELOG entry (`alert-bounced-email-change`)
+  was a PASS; swept BACKLOG.md for any unstruck `[P.][bug]` line — zero matches. Tier 2
+  (`[want]`): every unstruck `[P.][want]` line is the same standing human-blocked set as
+  the last several cycles (save-search auth-wall reconciliation + collection-layout
+  mosaic await a human mock/decision; owner-leads needs compliance review;
+  Trade-A-Plane/Controller/AirMart/AeroTrader are bot-protection-blocked by design;
+  Bay-Area coverage benchmark needs a real FAA/AirNav denominator; dynamic-location seed
+  personas is P2 with no live-site effect) — none buildable autonomously. Dropped to
+  tier 3 and picked this item (the next item in batch #8 after the two bounce-revive
+  slices shipped earlier tonight).
+- Spec: nightshift/specs/20260719T080942Z-alert-confirm-send-cap.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0. `rm -rf .next && npx next build` exit 0 (all
+  routes compile). Full `node --experimental-strip-types --test 'src/**/*.test.ts'` suite
+  — 532 tests (up from 521 — 11 new in `alertConfirmCap.test.ts`: empty history, under
+  cap, at/over cap, well over cap, outside-window exclusion, exact window-edge boundary
+  (exclusive), mixed in/out-of-window, future-timestamp clock skew, null/undefined/
+  unparseable entries ignored, custom maxSends/windowMs overrides, unparseable `now`) —
+  0 failures. Non-visual cycle (pure backend rate-limit, no rendered change) — served
+  the PRODUCTION build (`next build` + `next start` on :3000, confirmed port free before
+  starting) and ran `qa-smoke.mjs --slug alert-confirm-send-cap / /aircraft/browse
+  /alerts/manage` → 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at desktop 1280 + mobile 375). Screenshots saved for the audit trail, not read
+  (non-visual). **Live-verified the actual cap mechanism**, not just code-read (this
+  slice needed no migration — `alerts.created_at` is a core, always-present column, so a
+  real round-trip was worth doing): seeded 3 throwaway `qa-alert-confirm-send-cap-*@
+  example.com` rows via the service-role key (`created_at` = now), then drove a real 4th
+  form submission through the homepage with Playwright — identical "Almost there — check
+  your inbox" success panel, zero console errors, and a follow-up service-role SELECT
+  confirmed the 4th row was still created (insert path unaffected by the cap). A control
+  submission from a fresh, never-before-seen `@example.com` address (0 prior rows, under
+  cap) also succeeded cleanly, confirming the cap doesn't false-positive on normal
+  signups. All 5 test rows (4 + 1 control) deleted immediately after via the service-role
+  key; confirmed 0 remain via a follow-up SELECT on both addresses. Confirmed port 3000
+  free / no orphaned `next-server` process after (killed one stale leftover from this
+  session's own QA run).
+- Screenshots: nightshift/screenshots/alert-confirm-send-cap/
+- Next: batch #8's remaining open items are "Persist the one-tap unsubscribe reasons +
+  Monday rollup" and "Real reply-to on alert emails + a 'just reply' line" (both
+  `[P1][goal]`, unblocked) — either is a natural next slice.
+
 ## 20260719T080721Z — PASS — alert-bounced-email-change
 - Pages: `/alerts/manage` — the bounced-row helper text and the owner-level "Change the
   email these alerts go to" form; also `/api/alerts/confirm-email-change` (no page, the
