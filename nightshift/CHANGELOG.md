@@ -2,6 +2,49 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T100709Z — PASS — alert-resend-bounced-heads-up
+- Pages: `/alerts` and every other page rendering `AlertSignup` (listing pages, browse
+  pages, homepage band, empty-state captures) — same shared component's "Didn't get it?
+  Resend confirmation email" action, no new route.
+- What: **Resending a confirmation email to an address we already know is dead now says
+  so, instead of a silent "Sent!" that goes nowhere.** The prior `alert-bounced-heads-up`
+  cycle added an honest amber heads-up ("mail to this address has bounced before") to the
+  three original subscribe paths, but explicitly left the "Resend confirmation email"
+  button's own success state unwired (flagged as its own follow-up). Now a resend result
+  also carries the same fresh `hasBouncedBefore` check, so if a bounce becomes known
+  between the original submit and the resend click, the heads-up appears at resend time
+  too — not just frozen at whatever was true a moment earlier.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s
+  (swept BACKLOG.md, only the standing prose and already-shipped entries remain); the one
+  standing `[P1][want]` item (save-search auth-wall reconciliation) remains flagged as
+  needing a human product decision, not autonomously buildable — so the highest-value item
+  left was the top open `[P2][goal]` in plan-pass batch #9 (2026-07-19), the exact sibling
+  follow-up the `alert-bounced-heads-up` cycle's own "Next" note named. Smart/honest-content
+  + recovery-flow-honesty pillar: closes the one asymmetry left in the bounced-address
+  heads-up rollout.
+- Spec: nightshift/specs/20260719T100709Z-alert-resend-bounced-heads-up.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 558/558 pass (no
+  regressions; no new unit tests added — this is a thin, additive return-field change on
+  an already-untested-by-convention helper, same shape as the original `hasBouncedBefore`
+  wiring). Visual cycle (amber hint line in an existing panel) — served the PRODUCTION
+  build (`npx next start` on port 3000). `qa-smoke.mjs` on `/alerts`, `/aircraft` at
+  desktop 1280 + mobile 375: 4/4 checks pass (HTTP 200, zero app-origin console errors,
+  zero horizontal overflow); screenshots confirm the default (no-hint) pages render
+  unchanged. **Live-verified the actual new behavior end-to-end** with Playwright against
+  the real prod DB, not just code review: submitted a throwaway `@example.com` address on
+  `/alerts` with no prior bounce — success panel correctly showed NO hint; then seeded an
+  unrelated `status='bounced'` row for that same email via the service-role client
+  (simulating a bounce landing between submit and resend); clicked "Resend confirmation
+  email" — the amber heads-up now appeared, proving the resend path picks up bounce status
+  the original submit couldn't have known about. Test rows (both the real subscribe insert
+  and the seeded marker) deleted immediately after; a final read confirmed 0 remain for
+  that test email. Server started/stopped cleanly, no stray `next-server` left running;
+  scratch script removed.
+- Screenshots: nightshift/screenshots/alert-resend-bounced-heads-up/
+- Next: the other remaining open plan-pass batch #9 item is the dormant-subscriber
+  re-permission email (new `repermission_sent_at` column + cron logic, larger slice).
+
 ## 20260719T100150Z — PASS — watch-unavailable-similar-alert
 - Pages: no user-facing page markup changed — one shared email-template function
   (`buildListingUnavailableEmail`) plus a backend accept route (`/api/alerts/
