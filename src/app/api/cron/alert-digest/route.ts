@@ -1950,7 +1950,28 @@ export async function GET(req: NextRequest) {
     const unsubToken = alert.unsubscribe_token ?? ''
     const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
-    const { subject, html, text } = buildListingUnavailableEmail({ title, browseUrl, manageUrl, unsubscribeUrl, noun })
+    // The watch relationship is dying right at the moment of proven high
+    // intent (they watched ONE listing to the end) — offer a one-tap upgrade
+    // into a whole-family alert instead of a passive "browse similar" link.
+    // Same honesty-gated suggestion + de-dupe-against-existing-alerts helper
+    // the regular digest's cross-sell uses (`getWatchCrossSell` resolves the
+    // watched listing's real make/model and only suggests when there's a
+    // genuine live match count).
+    const crossSell = unsubToken ? await getDigestCrossSell(supabase, alert.email, [alert.source_path]) : null
+    const crossSellOpt = crossSell
+      ? {
+          label: crossSell.label,
+          acceptUrl: `${SITE_URL}/api/alerts/digest-cross-sell?token=${unsubToken}&context=${encodeURIComponent(crossSell.context)}&path=${encodeURIComponent(crossSell.sourcePath)}&source=watch_unavailable_email`,
+        }
+      : undefined
+    const { subject, html, text } = buildListingUnavailableEmail({
+      title,
+      browseUrl,
+      manageUrl,
+      unsubscribeUrl,
+      noun,
+      crossSell: crossSellOpt,
+    })
 
     const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'listing-unavailable' })
 

@@ -131,6 +131,8 @@ export default async function AlertStatusPage({
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken
   const rawContext = params.context
   const crossSellContext = Array.isArray(rawContext) ? rawContext[0] : rawContext
+  const rawCrossSellSource = params.source
+  const crossSellSource = Array.isArray(rawCrossSellSource) ? rawCrossSellSource[0] : rawCrossSellSource
   const rawNewEmail = params.newEmail
   const emailChangedTo = Array.isArray(rawNewEmail) ? rawNewEmail[0] : rawNewEmail
 
@@ -282,7 +284,7 @@ export default async function AlertStatusPage({
               event="alert_subscribed"
               token={token}
               context={crossSellContext}
-              source="digest_cross_sell"
+              source={crossSellSource || 'digest_cross_sell'}
             />
           )}
           {key === 'unsubscribed' && token && (

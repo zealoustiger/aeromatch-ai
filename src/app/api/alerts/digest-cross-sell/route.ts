@@ -4,19 +4,29 @@ import { SITE_URL } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
-// One-click accept for the digest email's cross-sell suggestion (see
-// alertCrossSell.ts / buildAlertDigestEmail's `crossSell` option) — GET-only,
-// same precedent as `/api/alerts/frequency`, so the link works straight from
-// an email client with no page/JS in between. `token` is the sending alert's
+// One-click accept for a "want this alert too?" suggestion — GET-only, same
+// precedent as `/api/alerts/frequency`, so the link works straight from an
+// email client with no page/JS in between. `token` is the sending alert's
 // own `unsubscribe_token` (already proven safe to embed in digest emails);
 // resolving the owner through it means no second opt-in email is needed —
 // the address is already verified. `path` must be the exact source_path the
-// digest actually offered, so a tampered link can't subscribe someone to an
-// arbitrary path.
+// email actually offered, so a tampered link can't subscribe someone to an
+// arbitrary path. Two callers share this route today (same accept logic,
+// different `source` tag for per-placement analytics — GOAL.md's "prove it
+// converts"): the digest email's cross-sell suggestion (alertCrossSell.ts /
+// buildAlertDigestEmail's `crossSell` option, default `source`) and the
+// watched-listing-unavailable email's "email me when similar ones list"
+// upgrade (`buildListingUnavailableEmail`'s `crossSell` option, via the same
+// `getDigestCrossSell` helper). `source` is allowlisted so the tag can't be
+// spoofed to an arbitrary value.
+const ALLOWED_SOURCES = new Set(['digest_cross_sell', 'watch_unavailable_email'])
+
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')?.trim()
   const context = req.nextUrl.searchParams.get('context')?.trim() ?? ''
   const path = req.nextUrl.searchParams.get('path')?.trim()
+  const rawSource = req.nextUrl.searchParams.get('source')?.trim()
+  const source = rawSource && ALLOWED_SOURCES.has(rawSource) ? rawSource : 'digest_cross_sell'
 
   const invalid = () => NextResponse.redirect(`${SITE_URL}/alerts/status?state=invalid`)
   if (!token || !path) return invalid()
@@ -34,7 +44,7 @@ export async function GET(req: NextRequest) {
       confirmed_at: new Date().toISOString(),
       confirm_token: crypto.randomUUID(),
       unsubscribe_token: crypto.randomUUID(),
-      source: 'digest_cross_sell',
+      source,
     }
     let { error } = await admin.from('alerts').insert(payload)
     if (error && error.code !== '23505' && error.message?.includes('source')) {
@@ -49,7 +59,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.redirect(
-      `${SITE_URL}/alerts/status?state=cross_sell_added&context=${encodeURIComponent(context)}&token=${encodeURIComponent(token)}`
+      `${SITE_URL}/alerts/status?state=cross_sell_added&context=${encodeURIComponent(context)}&token=${encodeURIComponent(token)}&source=${encodeURIComponent(source)}`
     )
   } catch (err) {
     console.error('[alerts/digest-cross-sell] error:', err)

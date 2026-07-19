@@ -555,6 +555,12 @@ export function buildListingUnavailableEmail(opts: {
    *  unchanged. Partnerships use `'closed'` status, not `'sold'`, and their
    *  "price" is a buy-in share — `'partnership'` swaps in copy that matches. */
   noun?: 'aircraft' | 'partnership'
+  /** Optional one-click "email me when similar ones list" upgrade — the dead
+   *  watch converts into a genuine family alert on the same double-opted-in
+   *  address (see `getDigestCrossSell`/`getWatchCrossSell`, honesty-gated on
+   *  a real live match count). Same shape + rendering as `buildAlertDigestEmail`'s
+   *  `crossSell` opt. Omitted whenever no honest suggestion applies. */
+  crossSell?: { label: string; acceptUrl: string }
 }): { subject: string; html: string; text: string } {
   const subject = `${opts.title} is no longer available`
   const isPartnership = opts.noun === 'partnership'
@@ -565,6 +571,16 @@ export function buildListingUnavailableEmail(opts: {
     ? "It's been filled or taken down, so we've stopped watching it for a buy-in drop — this is the last email you'll get about this listing."
     : "It's been sold or taken off the market, so we've stopped watching it for a price drop — this is the last email you'll get about this listing."
   const browseLabel = isPartnership ? 'Browse similar partnerships' : 'Browse similar aircraft'
+  const crossSellHtml = opts.crossSell
+    ? `<div style="margin:16px 0 0;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px 18px;">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#0f172a;">${escapeHtml(opts.crossSell.label)}</p>
+        <a href="${escapeAttr(opts.crossSell.acceptUrl)}"
+           style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:13px;padding:9px 16px;border-radius:8px;">
+          Yes, alert me too &rarr;
+        </a>
+      </div>`
+    : ''
+  const crossSellText = opts.crossSell ? `\n${opts.crossSell.label}\n${opts.crossSell.acceptUrl}\n` : ''
 
   const html = `<!doctype html>
 <html>
@@ -583,6 +599,7 @@ export function buildListingUnavailableEmail(opts: {
             ${browseLabel}
           </a>
         </p>
+        ${crossSellHtml}
       </div>
       <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you had a watch alert set up on ClubHanger.
@@ -599,7 +616,7 @@ export function buildListingUnavailableEmail(opts: {
 ${statusLineText}
 
 ${browseLabel}: ${opts.browseUrl}
-
+${crossSellText}
 Manage alerts: ${opts.manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}`
 
