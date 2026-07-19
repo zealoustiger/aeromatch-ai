@@ -3038,7 +3038,7 @@ chip multi-select._
   beyond the one additive column. **Not done, intentionally:** the re-permission/
   auto-quiet flow this data enables — per the item's own scoping note, that's a later
   cycle once weeks of real recipient data exist.
-- **[P2][goal] Digest-cron reliability line in the Monday admin email.** The human reads
+~~- **[P2][goal] Digest-cron reliability line in the Monday admin email.** The human reads
   WoW funnel numbers that silently assume the cron ran every day — `alert_cron_runs`
   already records per-run stats but only `/admin/alerts` reads it. Add to
   `alertFunnelWeekly`: runs in the last 7 days (flag "ran 5/7 days" when short), total
@@ -3046,16 +3046,25 @@ chip multi-select._
   `send_failures` count in the cron (additive nullable column on `alert_cron_runs`, ⚠️
   human-apply fail-soft) and render it when present. Same fail-soft empty state when the
   table isn't migrated. Improves: honest measurement (a quiet week should be
-  distinguishable from a broken cron). No new capture point. — **reliability-line slice ✅
+  distinguishable from a broken cron). No new capture point.~~ — **reliability-line slice ✅
   SHIPPED via `digest-cron-reliability-line` (2026-07-19)**: the Monday email now has a
   "Cron reliability" section — distinct UTC days the cron ran this week out of 7 (flagged
   when short, e.g. "4/7 ⚠️ fewer days than expected"), emails sent this week vs last week,
   and this week's average run duration — all from `alert_cron_runs` columns that already
   exist, no schema change. Honest empty state ("No cron run data yet…") when the table has
   no rows in the last 14 days, same ambiguity `/admin/alerts`'s existing panel already
-  lives with. **Remaining: the `send_failures` per-run column** — needs a new additive
-  column AND wiring failure-counting through the cron's several send loops; bigger/riskier,
-  left open.
+  lives with. **`send_failures` slice ✅ SHIPPED via `digest-cron-send-failures`
+  (2026-07-19)**: every `sendEmail` call site in the cron (stranded-pending reminders,
+  widen suggestions, the Monday admin summary itself, the combined-digest loop, and the
+  listing-unavailable loop) now counts a real failure whenever `result.sent` is false and
+  `result.reason !== 'no-key'` (the deliberate dev/staging no-key no-op stays excluded, same
+  as every other send-accounting branch in this cron). The total lands in a new additive
+  `alert_cron_runs.send_failures` column (⚠️ human-apply, insert retries without the column
+  when unmigrated — verified live: the table itself isn't migrated yet, confirmed via a
+  direct service-role query, so this insert already fails soft exactly as designed) and
+  renders as a "Send failures" row in the Monday email's "Cron reliability" section,
+  flagged in red when > 0. This closes out the whole "Digest-cron reliability line" item —
+  both slices now shipped.
 ~~- **[P2][goal] "Heads up — this overlaps an alert you already have" on the subscribe
   success panel.** `detectOverlappingAlerts` runs only on `/alerts/manage`, so a
   subscriber who sets "Cessna 172 in CA" on top of an existing "Cessna — all states"

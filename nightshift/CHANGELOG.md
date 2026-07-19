@@ -2,6 +2,74 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T071636Z — PASS — digest-cron-send-failures
+- Pages: `/admin/alerts` (internal, admin-only — no public-facing page changed; the
+  actual surface is the Monday admin funnel email, not a page)
+- What: **The digest cron now counts real email-send failures, not just how many
+  emails it meant to send.** Before this, a Resend outage or bad API key could silently
+  fail every send and the Monday admin email would look identical to a genuinely quiet
+  week — "0 sent" either way. Every `sendEmail` call site in the cron (confirm
+  reminders, widen-alert suggestions, the admin summary itself, the main digest, and
+  listing-unavailable notices) now tallies a real failure whenever the send didn't
+  succeed and wasn't the deliberate "no API key configured" dev/staging no-op. The
+  Monday email's existing "Cron reliability" section gets a new "Send failures" line,
+  shown in red when > 0 with a "check the Resend dashboard" nudge.
+- Goal: alert-experience (prove-it-converts / honest-measurement pillar) — tier 3
+  `[goal]`, the last open slice of the "Digest-cron reliability line" item (its sibling
+  slice shipped earlier tonight as `digest-cron-reliability-line`). Tier 1 (`[bug]`):
+  most recent CHANGELOG entry (`alert-digest-day-picker`) was a PASS; swept BACKLOG.md
+  for any unstruck `[P.][bug]` line — zero matches. Tier 2 (`[want]`): every unstruck
+  `[P.][want]` line remains the same standing blocked-on-human set (save-search auth-
+  wall reconciliation + collection-layout mosaic redesign await a human product call/
+  mock; Trade-A-Plane/Controller/AirMart/AeroTrader are bot-protection-blocked by
+  design; Bay-Area coverage benchmark needs a real FAA/AirNav denominator; owner-leads
+  needs compliance review; dynamic-location seed personas is P2 with no live-site
+  effect) — none buildable autonomously. Dropped to tier 3: swept the 🔔 alert-
+  experience `[goal]` section for any unstruck `[P.][goal]` line — the only two were
+  the "near-instant alerts" item (re-audited 2026-07-14, needs a human Vercel-plan call
+  before a sub-daily cron schedule is safe to attempt) and this `send_failures` slice,
+  explicitly flagged as open/buildable (not human-blocked) in its own item text. Picked
+  this one.
+- Spec: nightshift/specs/20260719T070636Z-digest-cron-send-failures.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean, all routes compile. Full `node --experimental-strip-types --test` suite (521
+  tests, up from 511 — 10 new: 2 new "Send failures" assertions on the existing 7/7-day
+  cron-reliability test + a new dedicated "flags real send failures when > 0" test,
+  plus the day-picker tests already landed earlier tonight) passes, 0 failures.
+  Implementation: additive nullable `alert_cron_runs.send_failures int not null default
+  0` column (⚠️ human-apply, same fail-soft precedent as every prior column on this
+  table — confirmed live via a direct service-role query that `alert_cron_runs` itself
+  isn't migrated onto the live DB yet, so today the whole health-log insert already
+  fails soft on every cron run, this column included). `sendStrandedPendingReminders`/
+  `sendWidenSuggestionEmails`/`sendMondayAdminFunnelSummary` now return `{sent, failed}`
+  instead of a bare count; the main handler sums failures across all 5 send sites into
+  one `sendFailures` local, threaded into the `alert_cron_runs` insert (retries once
+  without the column on a `send_failures`-naming error) and the route's JSON response.
+  `AlertCronRun`/`toRun` in `alertCronHealth.ts` gain `sendFailures: number | null`
+  (null, never a fabricated 0, when the column isn't migrated). `alertFunnelWeekly.ts`
+  sums `sendFailures ?? 0` across this week's logged runs into
+  `cronSendFailuresThisWeek`. QA: non-visual cycle (backend cron accounting + one new
+  email-template row, not a rendered page change) — served the PRODUCTION build
+  (`npx next build` + `npx next start` on port 3000). `qa-smoke.mjs` against
+  `/admin/alerts` — 2/2 pass (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at desktop 1280 + mobile 375) after killing a stale `next-server` process
+  left over from a prior cycle that was serving an out-of-date build (confirmed via a
+  fresh `next start` + re-run). Screenshots saved for the audit trail, not read (non-
+  visual). **Live-verified the cron route itself** against the real running server —
+  `curl /api/cron/alert-digest` returned `{"sent":0,"emailsSent":0,"sendFailures":0,...}`
+  (nothing was due at the time, no real emails sent) and confirmed via a direct
+  service-role query that zero rows exist in `alert_cron_runs` afterward (the table
+  isn't migrated live — the insert failed soft exactly as designed, so no cleanup
+  needed). Confirmed port 3000 free and no orphaned `next-server` process after.
+- Screenshots: nightshift/screenshots/digest-cron-send-failures/
+- Next: this closes the "Digest-cron reliability line" item fully (both slices
+  shipped). The alert-experience `[goal]` queue now has exactly one open item left
+  ("near-instant alerts"), and it's human-blocked (Vercel cron-plan tier). The next
+  autonomous cycle should sweep BACKLOG.md fresh for `[bug]`/`[want]` first per the
+  strict cascade; if both are still empty and "near-instant alerts" is still blocked,
+  the alert-experience `[goal]` queue is effectively drained again and needs a plan-pass
+  refill (batch #8).
+
 ## 20260719T070000Z — PASS — alert-digest-day-picker
 - Pages: `/alerts/manage`, `/searches` (the inline post-subscribe alert controls)
 - What: **A weekly-cadence alert can now be pinned to a specific day** (e.g. "always
