@@ -480,6 +480,10 @@ export default function AlertSignup({
       setResendState('error')
       return
     }
+    // Refresh the bounced heads-up with the resend's own read — a resend can
+    // be the first time this exact address's bounce status is known (e.g. the
+    // original send's bounce webhook lands between submit and resend).
+    setBouncedHint(!!result.bouncedHint)
     setResendState('sent')
   }
 
