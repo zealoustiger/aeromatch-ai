@@ -2,6 +2,69 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T110852Z — PASS — digest-sample-watch-link
+- Pages: no user-facing page markup changed — new field on the shared
+  `AlertDigestSample` type (`src/lib/email.ts`) rendered inside the digest
+  email templates, plus a backend addition to the existing
+  `/api/cron/alert-digest` cron and a new allowlisted source on the existing
+  `/api/alerts/digest-cross-sell` route. No route/markup touched.
+- What: **A digest email's sample cards — the highest-intent moment in the
+  whole alert funnel, since the subscriber is looking at one specific
+  aircraft we matched for them — now offer a one-tap "Watch this listing"
+  action, not just "open the listing" and "Not relevant?".** Clicking it
+  one-taps a confirmed watch alert on that exact aircraft (price-drop +
+  availability), reusing the existing `/api/alerts/digest-cross-sell`
+  accept endpoint with `path=/aircraft/listing/{id}` and a new allowlisted
+  `source=digest_sample_watch` — no second opt-in email, since the address
+  is already verified via the digest's own token. A new `attachWatchLinks`
+  helper runs once per matching alert in the cron loop and skips any
+  listing the subscriber already has a confirmed watch alert for (one query
+  against `alerts.source_path`), so the link never re-offers a watch
+  they've already got. Covers both the single-alert and combined-digest
+  send paths for free, since it's wired in before the two paths split.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no
+  open `[bug]`s (swept BACKLOG.md), no autonomously-buildable `[want]` (the
+  two standing product-decision items — save-search auth-wall, collection-
+  layout redesign — still need a human call; the bot-protection-blocked
+  ingestion `[want]`s remain non-buildable). Highest-value open `[P1][goal]`
+  in plan-pass batch #10: this cycle's own "Next" note named it first among
+  three open items, and GOAL.md's "prove it converts" pillar calls out
+  exactly this gap — a NEW capture point that must (and now does) emit
+  `alert_subscribed` with a distinct source tag for per-placement
+  conversion proof. Reuses `/alerts/status`'s existing `cross_sell_added`
+  state + `AlertStatusTracker`, which already fires that event for this
+  endpoint's redirect — no new page/component needed.
+- Spec: nightshift/specs/20260719T110852Z-digest-sample-watch-link.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit`
+  exit 0. Full `node --experimental-strip-types --test 'src/**/*.test.ts'`
+  suite: 585/585 pass (4 new tests: the watch link renders as a sibling
+  after the card's own `<a>` — never nested, invalid HTML — in both the
+  single-alert and combined-digest HTML/text templates; renders nothing
+  when `watchUrl` is absent). Non-visual cycle (email-template/cron-logic
+  internals, no page markup) — per the RUNBOOK non-visual convention,
+  screenshots saved for the audit trail but not read into context. Served
+  the PRODUCTION build (`npx next start` on port 3000); `qa-smoke.mjs` on
+  `/alerts`, `/aircraft` at desktop 1280 + mobile 375: 4/4 pass (HTTP 200,
+  zero app-origin console errors, zero horizontal overflow). Also curled
+  the existing `/api/dev/email-preview/alert-digest` fixture directly (200
+  OK, "Not relevant" still renders) to confirm the template change didn't
+  break existing card rendering — its static fixture data has no
+  `watchUrl`, so the new link correctly doesn't appear there (expected;
+  `attachWatchLinks` only runs inside the real cron send path). No schema
+  change, no new prod DB rows (no signup/post round-tripped — smoke test
+  only reads `/alerts` and `/aircraft`, no forms submitted). Server
+  started/stopped cleanly; no stray `next-server`.
+- Screenshots: nightshift/screenshots/digest-sample-watch-link/
+- Next: the other two open batch #10 items — "Back on the market" relist
+  notice for auto-paused watch alerts (needs the human-apply
+  `alerts.unavailable_notified_at` migration, ships dark until then) and
+  "Get fewer emails" rung on the combined digest (ladder parity with the
+  single-alert digest). Also worth a follow-up: extend `attachWatchLinks`'s
+  dedupe query to run once per email group instead of once per matching
+  alert — currently a combined-digest subscriber with 3 due aircraft alerts
+  runs the same `alerts` lookup 3×; harmless today (cheap, correct) but a
+  clean small efficiency win if the digest cron's query volume ever matters.
+
 ## 20260719T104636Z — PASS — alert-send-retry-backoff
 - Pages: no user-facing page markup changed — internal change to the shared email
   send helper (`sendEmail` in `src/lib/email.ts`) that every alert/transactional email
