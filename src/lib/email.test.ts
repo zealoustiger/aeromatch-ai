@@ -642,6 +642,90 @@ test('digest: sample cards never nest the "Not relevant?" link inside the card\'
   assert.ok(cardAnchorClose > -1 && notRelevantIndex > cardAnchorClose)
 })
 
+test('digest: sample card renders a "Watch this listing" link when watchUrl is set, never nested in the card\'s own <a>', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+        id: 'abc',
+        type: 'aircraft',
+        watchUrl: 'https://clubhanger.com/api/alerts/digest-cross-sell?token=xyz&path=%2Faircraft%2Flisting%2Fabc&source=digest_sample_watch&context=2015%20Cessna%20172S%20Skyhawk',
+      },
+    ],
+  })
+  const cardAnchorClose = html.indexOf('</a>')
+  const watchIndex = html.indexOf('Watch this listing')
+  assert.ok(cardAnchorClose > -1 && watchIndex > cardAnchorClose)
+  assert.match(html, /https:\/\/clubhanger\.com\/api\/alerts\/digest-cross-sell\?token=xyz&amp;path=%2Faircraft%2Flisting%2Fabc&amp;source=digest_sample_watch/)
+  assert.match(text, /Watch this listing: https:\/\/clubhanger\.com\/api\/alerts\/digest-cross-sell\?token=xyz&path=%2Faircraft%2Flisting%2Fabc&source=digest_sample_watch/)
+})
+
+test('digest: sample card renders no "Watch this listing" link when watchUrl is absent', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: '2015 Cessna 172S Skyhawk',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: 1240,
+        location: 'Austin, TX',
+        price: 219_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+        id: 'abc',
+        type: 'aircraft',
+      },
+    ],
+  })
+  assert.doesNotMatch(html, /Watch this listing/)
+  assert.doesNotMatch(text, /Watch this listing/)
+})
+
+test('combined digest: sample card renders a "Watch this listing" link when a section sample carries watchUrl', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 1,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172',
+        samples: [
+          {
+            title: '2015 Cessna 172S Skyhawk',
+            photoUrl: null,
+            isPlaceholder: false,
+            year: 2015,
+            ttaf: 1240,
+            location: 'Austin, TX',
+            price: 219_000,
+            url: 'https://clubhanger.com/aircraft/listing/abc',
+            id: 'abc',
+            type: 'aircraft',
+            watchUrl: 'https://clubhanger.com/api/alerts/digest-cross-sell?token=a&path=%2Faircraft%2Flisting%2Fabc&source=digest_sample_watch&context=2015%20Cessna%20172S%20Skyhawk',
+          },
+        ],
+      },
+    ],
+  })
+  assert.match(html, /Watch this listing/)
+  assert.match(text, /Watch this listing: https:\/\/clubhanger\.com\/api\/alerts\/digest-cross-sell/)
+})
+
 test('digest: sampleNote prefixes the subject with "Sample:" and renders a sample banner', () => {
   const { subject, html, text } = buildAlertDigestEmail({
     ...DIGEST_BASE,

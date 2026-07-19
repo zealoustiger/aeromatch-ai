@@ -726,6 +726,41 @@ function toDigestSample(
   }
 }
 
+/**
+ * Attaches a one-tap "Watch this listing" link (see `AlertDigestSample.watchUrl`,
+ * `/api/alerts/digest-cross-sell`'s `digest_sample_watch` source) to each
+ * aircraft-for-sale sample this subscriber doesn't already watch — the digest
+ * sample card is the highest-intent moment in the whole funnel (GOAL.md:
+ * "prove it converts"), yet its only prior actions were "open the listing" and
+ * "Not relevant?". Skips any sample the subscriber already has a confirmed
+ * `/aircraft/listing/{id}` alert for (re-offering a watch they already have is
+ * noise, not value) and any non-aircraft sample or one with no `id`
+ * (partnership/seeker samples never get this link). Cheap no-op (no query) for
+ * any group with no aircraft samples, which is most partnership/seeker sends.
+ */
+async function attachWatchLinks(
+  supabase: ReturnType<typeof createAdminClient>,
+  email: string,
+  unsubToken: string | null,
+  samples: AlertDigestSample[]
+): Promise<AlertDigestSample[]> {
+  if (!unsubToken) return samples
+  const aircraftIds = samples.filter((s) => s.type === 'aircraft' && s.id).map((s) => s.id as string)
+  if (aircraftIds.length === 0) return samples
+  const paths = aircraftIds.map((id) => `/aircraft/listing/${id}`)
+  const { data } = await supabase.from('alerts').select('source_path').eq('email', email).eq('status', 'confirmed').in('source_path', paths)
+  const alreadyWatched = new Set((data ?? []).map((r) => r.source_path))
+  return samples.map((s) => {
+    if (s.type !== 'aircraft' || !s.id) return s
+    const path = `/aircraft/listing/${s.id}`
+    if (alreadyWatched.has(path)) return s
+    return {
+      ...s,
+      watchUrl: `${SITE_URL}/api/alerts/digest-cross-sell?token=${unsubToken}&path=${encodeURIComponent(path)}&source=digest_sample_watch&context=${encodeURIComponent(s.title)}`,
+    }
+  })
+}
+
 // Build a make+model FAMILY -> sorted asking-prices map across ALL active,
 // priced aircraft listings, for the digest email's honest "vs market" sample
 // line (`toDigestSample`) — the same read `AircraftSaleList.tsx`'s
@@ -1770,7 +1805,9 @@ export async function GET(req: NextRequest) {
             ? await getPartnershipMarketPulseLine(supabase, target.make)
             : null
 
-    prepared.push({ alert, frequency, target, newCount, dropCount, samples, marketPulse })
+    const samplesWithWatch = await attachWatchLinks(supabase, alert.email, alert.unsubscribe_token ?? null, samples)
+
+    prepared.push({ alert, frequency, target, newCount, dropCount, samples: samplesWithWatch, marketPulse })
   }
 
   // Group by email (lowercased — the same normalization every other alert

@@ -11,15 +11,17 @@ export const dynamic = 'force-dynamic'
 // resolving the owner through it means no second opt-in email is needed —
 // the address is already verified. `path` must be the exact source_path the
 // email actually offered, so a tampered link can't subscribe someone to an
-// arbitrary path. Two callers share this route today (same accept logic,
+// arbitrary path. Three callers share this route today (same accept logic,
 // different `source` tag for per-placement analytics — GOAL.md's "prove it
 // converts"): the digest email's cross-sell suggestion (alertCrossSell.ts /
-// buildAlertDigestEmail's `crossSell` option, default `source`) and the
+// buildAlertDigestEmail's `crossSell` option, default `source`), the
 // watched-listing-unavailable email's "email me when similar ones list"
 // upgrade (`buildListingUnavailableEmail`'s `crossSell` option, via the same
-// `getDigestCrossSell` helper). `source` is allowlisted so the tag can't be
-// spoofed to an arbitrary value.
-const ALLOWED_SOURCES = new Set(['digest_cross_sell', 'watch_unavailable_email'])
+// `getDigestCrossSell` helper), and a digest sample card's one-tap "Watch
+// this listing" link (`attachWatchLinks` in the alert-digest cron route,
+// `path=/aircraft/listing/{id}`). `source` is allowlisted so the tag can't
+// be spoofed to an arbitrary value.
+const ALLOWED_SOURCES = new Set(['digest_cross_sell', 'watch_unavailable_email', 'digest_sample_watch'])
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')?.trim()
