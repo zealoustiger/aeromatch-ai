@@ -1818,6 +1818,9 @@ export async function GET(req: NextRequest) {
             digestFeedbackBaseUrl,
             shareUrl,
             viewUrl,
+            // Honesty: name the real cadence instead of always "this week" —
+            // same expression already used for the sibling bestDrop send above.
+            periodLabel: frequency === 'daily' ? 'yesterday' : frequency === 'monthly' ? 'this month' : 'this week',
           })
 
       const result = await sendEmail({

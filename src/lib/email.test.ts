@@ -145,6 +145,46 @@ test('digest: dropNoun customizes the drop label (partnership buy-in drops)', ()
   assert.match(text, /1 new listing \+ 2 buy-in drops/)
 })
 
+test('digest: without periodLabel, the HTML body copy + hidden preheader both default to "this week" (byte-exact, no regression)', () => {
+  const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 1 })
+  assert.match(html, /There are 2 new listings \+ 1 price drop matching your Cessna 172 alert on ClubHanger this week\./)
+  assert.match(html, /display:none[^>]*>There are 2 new listings \+ 1 price drop matching your Cessna 172 alert on ClubHanger this week\./)
+})
+
+test('digest: periodLabel overrides "this week" in both the visible HTML body copy and the hidden preheader (e.g. "yesterday" for a daily alert)', () => {
+  const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 1, periodLabel: 'yesterday' })
+  assert.match(html, /There are 2 new listings \+ 1 price drop matching your Cessna 172 alert on ClubHanger yesterday\./)
+  assert.match(html, /display:none[^>]*>There are 2 new listings \+ 1 price drop matching your Cessna 172 alert on ClubHanger yesterday\./)
+  assert.doesNotMatch(html, /this week/)
+})
+
+test('digest: periodLabel "this month" for a monthly alert', () => {
+  const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0, periodLabel: 'this month' })
+  assert.match(html, /There is 1 new listing matching your Cessna 172 alert on ClubHanger this month\./)
+})
+
+test('digest: periodLabel is ignored for sample/firstSend framing (those never claim a time window)', () => {
+  const { text: sampleText } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    periodLabel: 'yesterday',
+    sampleNote: 'a preview',
+  })
+  assert.doesNotMatch(sampleText, /yesterday/)
+  assert.match(sampleText, /1 current match/)
+
+  const { text: firstSendText } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    periodLabel: 'yesterday',
+    firstSend: true,
+  })
+  assert.doesNotMatch(firstSendText, /yesterday/)
+  assert.match(firstSendText, /1 match right now/)
+})
+
 test('digest: with no samples, the email still renders cleanly (CTA-only)', () => {
   const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 3, dropCount: 0, samples: [] })
   assert.doesNotMatch(html, /<img/)
