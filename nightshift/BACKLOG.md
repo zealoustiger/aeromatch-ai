@@ -3412,6 +3412,106 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   `digest_sends_count` and `email_engagement_events` both genuinely don't exist yet, so
   `getDormantSubscribers` provably fails soft to `[]` today — ships fully dark until a
   human applies both migrations, at which point it activates automatically.
+
+### Plan-pass batch #10 — 2026-07-19 (Fable)
+_Batch #9 fully drained same-day (all 6 items shipped 2026-07-19; `alert-dormant-repermission`
+closed it). Still untouched above: the two long-blocked items — real instant sends
+(Vercel cron-tier human call) and the save-search auth wall (`[want]` product call).
+Entry-point capture stays saturated (no new on-site capture points below — the one new
+capture point in this batch lives inside the digest email itself). This batch targets
+**in-email conversion, send reliability, ladder parity for combined-digest subscribers,
+and the two loose ends today's ships created.** All verified un-built by direct code read
+this pass: `sampleCardHtml` (`email.ts:~1020`) renders photo + listing link + "Not
+relevant?" only — no one-tap watch/subscribe action on the card; `sendEmail`
+(`email.ts:74`) returns `{sent:false}` on the first non-OK response and no cron send loop
+retries, paces, or honors `Retry-After` (grep `429`/`Retry-After`/`sleep` clean);
+`buildCombinedAlertDigestEmail` carries manage/unsubscribe/vote/cross-sell but its doc
+comment itself notes it offers no `frequencyUrl` at all; snooze exists only via
+`/alerts/manage` (no tokenized email path — grep `snooze` in `email.ts`/`api/alerts`
+finds only the re-permission email's pointer to manage); no digest HTML byte-size guard
+anywhere (grep `102`/`clip`/`byteLength` clean); the unavailable-watch loop
+(`alert-digest/route.ts:~2050`) pauses the watch with plain `status='paused'` —
+indistinguishable from a user-initiated pause, and nothing anywhere detects a watched
+listing returning to `active`; `alertFunnelWeekly.ts` has no re-permission line (that
+feature shipped dark earlier today with no rollup)._
+
+- **[P1][goal] One-tap "Watch this listing" on digest sample cards.** A digest sample
+  card is the highest-intent moment in the whole funnel — the subscriber is looking at a
+  specific aircraft we matched for them — yet the card's only actions are "open the
+  listing" and "Not relevant?". Add a small tokenized "Watch this listing →" link per
+  aircraft sample card that one-taps a watch alert on that exact listing (price-drop +
+  availability), reusing the existing `/api/alerts/digest-cross-sell` accept endpoint
+  with `path=/aircraft/listing/{id}` and a new allowlisted `source=digest_sample_watch`
+  (the endpoint's `source` allowlist + idempotent re-click behavior already exist —
+  extend, don't reinvent). De-dupe: no link when the subscriber already watches that
+  listing. NEW capture point → must emit `alert_subscribed` with the distinct source tag
+  (per-placement conversion proof, GOAL's prove-it-converts pillar). No schema change.
+- **[P1][goal] "Back on the market" — relist notice for watch alerts we auto-paused.**
+  The unavailable-watch flow pauses the watch with bare `status='paused'`
+  (`route.ts:~2050`), so if the listing comes back (sale falls through, owner relists —
+  `relistListing` exists in `actions.ts`) the one subscriber who proved they want exactly
+  that aircraft never hears. Stamp auto-pauses with an additive
+  `alerts.unavailable_notified_at` (⚠️ human-apply, fail-soft retry-without-column, same
+  precedent as `paused_at`); each cron run, for stamped-paused watch alerts only, check
+  whether the listing is `active` again and send ONE "It's back on the market" email
+  (reuse the watch email shapes) that resumes the watch — auto-resume is honest ONLY for
+  rows carrying the stamp (we paused them, the user didn't); never touch user-paused
+  rows; clear the stamp on send so it can never double-fire. Ships dark until the column
+  is applied, like every prior `alerts.*` DDL. Improves: watch lifecycle honesty + the
+  highest-intent recovery send in the system. No new capture point.
+- **[P1][goal] "Get fewer emails" rung on the combined digest — ladder parity.** A
+  subscriber with multiple alerts gets the combined template, which offers per-alert
+  stop, unsubscribe-all, and vote — but NO cadence-down link (its own doc comment says
+  so), while single-alert subscribers got daily→weekly→monthly rungs this week. Add a
+  tokenized "Get fewer emails" footer link that steps down every alert covered by that
+  send via `/api/alerts/frequency` (extend it to accept the combined send's tokens, or
+  an email-scoped variant on the same trust basis as `/alerts/manage?token=` which
+  already exposes all of an address's alerts to any one of its tokens); land on the
+  existing `/alerts/status` cadence states. Improves: never-spam "fewer instead of none"
+  for exactly the subscribers who get the most email. No new capture point, no schema
+  change.
+- **[P1][goal] Send-loop resilience — retry with backoff on Resend 429/5xx.** `sendEmail`
+  (`email.ts:74`) fails permanently on the first non-OK response; the cron's send loops
+  fire back-to-back with no pacing, and Resend's default rate limit is ~2 req/s — so as
+  the subscriber list grows, mid-loop sends will 429 and that subscriber's digest is
+  silently gone for the whole period (now *counted* in `send_failures`, but never
+  retried). Add a small retry-once-or-twice with backoff (honor `Retry-After` when
+  present, jittered fallback otherwise) for 429/5xx inside `sendEmail` or a cron-side
+  wrapper, plus gentle pacing between loop sends; count only final failures in
+  `send_failures`; keep the `no-key` no-op and 4xx-hard-fail (bad address) behavior
+  exactly as-is. Unit-test the retry decision logic as a pure function. Improves: the
+  core promise — an alert that doesn't reliably send isn't an alert. No new capture
+  point, no schema change.
+- **[P2][goal] Tokenized "Snooze 30 days" rung in digest email footers.** The in-email
+  ladder now reads fewer-cadence → per-alert stop → unsubscribe, but snooze (shipped on
+  `/alerts/manage` as pause-until) has no email path — a subscriber mid-purchase or on
+  vacation must click through to manage or just unsubscribe. Add a token endpoint
+  mirroring `/api/alerts/frequency` (e.g. `/api/alerts/snooze?token=…&days=30`) that
+  sets the existing pause-until state, landing on a new `/alerts/status` snoozed state
+  with the resume date named and a one-tap undo; link it quietly in both the
+  single-alert and combined digest footers. Improves: never-spam / "fewer instead of
+  none" — snooze is the rung that saves the subscriber who'd otherwise churn. No new
+  capture point, no schema change (pause-until columns already exist).
+- **[P2][goal] Gmail-clipping guard on digest HTML.** Gmail clips messages over ~102KB —
+  and a clipped digest hides exactly the footer that carries unsubscribe/manage links
+  (a deliverability + compliance risk, and the "View in browser" link only helps if the
+  clip point falls after it). No size guard exists anywhere. Add a byte-budget check in
+  the digest/combined builders (or the cron just before send): while over budget, trim
+  sample cards — the honest "See all N matches" CTA already covers trimmed content —
+  and unit-test the trimming (pure function over the samples array + a rendered-size
+  assertion). Log a cron warning when trimming fires so the admin can see it. Improves:
+  digest email reliability/compliance. No new capture point, no schema change.
+- **[P2][goal] Re-permission lifecycle line in the Monday admin email.** Today's
+  `alert-dormant-repermission` ship sends "still want these?" emails but nothing rolls
+  them up — a brand-new deaf loop (the exact class batch #7 closed for votes/instant
+  interest). In `alertFunnelWeekly`, add a "Re-permission" line: emails sent this week /
+  all-time (from `repermission_sent_at`), and of those alerts how many have since
+  unsubscribed, downshifted cadence, or stayed active — with the same honest "no data
+  yet" empty state while the columns are unmigrated (both are ⚠️ human-apply and
+  currently absent live, so the line must fail soft to its empty state, never fabricate
+  zeros as signal). Mirror onto `/admin/alerts` if trivial in-cycle. Improves:
+  prove-it-converts (the loop can hear whether re-permission helps or hurts). No new
+  capture point, no schema change beyond what the dormant ship already flagged.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
