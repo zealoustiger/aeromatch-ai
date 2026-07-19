@@ -2,6 +2,78 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T061654Z — PASS — alert-model-multiselect-chips
+- Pages: `/alerts/manage` only — the aircraft-alert Edit form's Model field.
+- What: **Editing an aircraft alert with more than one model no longer means
+  hand-typing a comma list.** An alert created from a multi-model browse filter
+  (e.g. "Cessna 172, 182") used to show Model as one bare text box in
+  `/alerts/manage` → Edit — the only place on the site still forcing a manual
+  comma-separated edit. It now renders the same variant-grouped checkbox chips
+  the `/aircraft` browse filters use: single models as plain checkboxes, model
+  families (e.g. all the SR20 variants) as a "{family} (all)" parent checkbox
+  with a "Show N variants" disclosure, mirroring `AircraftSaleFilters.tsx`
+  exactly. Falls back to today's plain text input whenever the alert's make
+  isn't in the known facets set (blank/free-typed/unrecognized make), so the
+  form never gets stuck. Partnership alerts (no Model field) and seeker alerts
+  (no facets source fits them) are unchanged.
+- Goal: alert-experience — tier 3 `[goal]`, the exact item named as the prior
+  cycle's (`alert-overlap-subscribe-hint`) "Next" note (the other self-contained
+  slice from plan-pass batch #7, no migration dependency). Tier 1 (`[bug]`):
+  prior cycle was a PASS; swept BACKLOG.md for any unstruck `[bug]` line — none
+  found. Tier 2 (`[want]`): re-checked every unstruck `[P1]`/`[P2][want]` line —
+  same standing blocked-on-human set as recent cycles (save-search auth-wall
+  reconciliation + collection-layout mosaic need a human product call/mock;
+  TAP/Bay-Area-benchmark/Controller items are bot-blocked or need a real FAA
+  denominator; owner-leads needs compliance review; dynamic-location seed
+  personas is P2 with no live-site effect today) — none buildable
+  autonomously. Dropped to tier 3 and picked this item. Checked it off in
+  BACKLOG.md this cycle.
+- Spec: nightshift/specs/20260719T061654Z-alert-model-multiselect-chips.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both
+  exit 0 clean, all routes compile. Full `node --experimental-strip-types
+  --test` suite (508 tests, unchanged — no new pure-logic helper added, so no
+  new test file) passes, 0 failures. Implementation: `AlertEditForm.tsx` gains
+  an optional `facets?: AircraftFacets` prop; a memoized case-insensitive
+  make→models lookup (`make` here is free-typed, not a `<select>`, unlike
+  `AircraftSaleFilters`) feeds the existing `groupModelVariants` helper; a new
+  local `ModelGroupRow` (byte-for-byte the same UX as `AircraftSaleFilters`'s,
+  adapted to toggle the form's local comma-string `model` state via
+  `toggleCsvItem`/direct Set mutation instead of a URL param) renders the
+  checkboxes. `alerts/manage/page.tsx` calls `getAircraftFacets()` once
+  (already used by `/aircraft`'s browse filters — same read-time aggregation,
+  no new query pattern) and passes it through. No schema change, no new
+  capture point (confirmed: `updateAlertCriteria` in `actions.ts`, the only
+  write path this form calls, has no `track()` call, consistent with every
+  other alert-*edit* — as opposed to *subscribe* — cycle). QA: visual cycle
+  (new chip/checkbox UI) — served the PRODUCTION build (`npx next build` +
+  `npx next start` on port 3000). Programmatic gate: `qa-smoke.mjs` against
+  `/alerts/manage`, `/alerts`, `/aircraft` — 6/6 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow at desktop 1280 +
+  mobile 375). Since the chip UI only renders inside an opened Edit form on a
+  real aircraft alert, additionally drove the live interactive flow with
+  Playwright against the running production build: (1) seeded one throwaway
+  `@example.com`-email confirmed alert for a real Cessna make with two models
+  (`170B`, `150G`) via the service-role key; (2) loaded `/alerts/manage` with
+  that alert's token, opened Edit — screenshot confirms the Model field
+  renders as "2 selected" + a scrollable checkbox list with the real Cessna
+  model catalog (96 checkboxes — confirms live facets data, not a stub),
+  `150G` correctly pre-checked, zero console errors; (3) unchecked `150G`,
+  checked a different model (`170`), clicked Save — confirmed via direct
+  Supabase read that `alerts.source_path` updated to
+  `model=170B%2C+170` (comma-joined, exactly the pre-existing wire format) and
+  `context` updated to match, zero console errors, "Alert updated" toast
+  visible in the after-save screenshot. Deleted the one test alert row via the
+  service-role key immediately after; confirmed 0 rows remain for that id.
+  Confirmed port 3000 free and no orphaned `next-server` process after.
+- Screenshots: nightshift/screenshots/alert-model-multiselect-chips/
+- Next: the remaining plan-pass batch #7 items (email-engagement recipient
+  attribution, digest-cron reliability line, weekly-digest day-of-week) each
+  still need a human-applied additive migration first (`alerts.digest_day`,
+  etc.) before they're buildable — same standing blocker as noted in the prior
+  two cycles. Absent a fresh `[want]`/`[bug]`, the next autonomous cycle will
+  likely need a plan-pass refill (batch #7 down to purely migration-blocked
+  items) to generate the next self-contained `[P1]`/`[P2][goal]` slice.
+
 ## 20260719T060232Z — PASS — alert-overlap-subscribe-hint
 - Pages: /aircraft, /partnerships, and every other page rendering `AlertSignup`
   (listing detail pages, make/model pages, `/alerts`, state pages, etc.) — the

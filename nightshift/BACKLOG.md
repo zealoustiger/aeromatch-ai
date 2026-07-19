@@ -3054,7 +3054,7 @@ chip multi-select._
   fallback when null or unmigrated — never a dropped digest). Honest copy: "we send
   around 8:00 UTC." Improves: alert management + digest-vs-instant pillar. No new
   capture point.
-- **[P2][goal] Multi-model chips on the alert edit form — parity with browse.** Browse
+~~- **[P2][goal] Multi-model chips on the alert edit form — parity with browse.** Browse
   filters treat `model` as a comma-joined multi-select with toggle chips
   (`AircraftSaleFilters.tsx`), and alerts created from a multi-model filter set carry
   `model=172,182` — but `AlertEditForm` renders one bare text input, so editing a
@@ -3063,7 +3063,8 @@ chip multi-select._
   the alert's make inside `AlertEditForm`, writing the same comma-joined param; keep the
   text input as fallback when the make has no known chip set. Partnership alerts got
   this via `partnership-model-multiselect` — this is the aircraft-side parity. Improves:
-  alert management polish. No new capture point, no schema change.
+  alert management polish. No new capture point, no schema change.~~
+  ✅ SHIPPED via `alert-model-multiselect-chips` (2026-07-19)
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
