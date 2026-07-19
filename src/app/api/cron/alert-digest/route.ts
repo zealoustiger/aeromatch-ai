@@ -1732,10 +1732,14 @@ export async function GET(req: NextRequest) {
       // buildAlertDigestEmail's `viewUrl` doc. Omitted for a not-yet-migrated
       // row with no token yet, same graceful-degrade as manageUrl.
       const viewUrl = unsubToken ? `${SITE_URL}/alerts/digest/view?token=${unsubToken}` : undefined
-      // Only offer "fewer emails" for a daily-cadence alert — a weekly one has
-      // no lighter cadence left to switch to.
+      // Offer "fewer emails" for a daily-cadence alert (→ weekly, the default
+      // `dir`) or a weekly-cadence alert (→ monthly) — a monthly one already
+      // has no lighter cadence left to switch to.
       const frequencyUrl =
-        frequency === 'daily' && unsubToken ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}` : undefined
+        unsubToken && frequency !== 'monthly'
+          ? `${SITE_URL}/api/alerts/frequency?token=${unsubToken}${frequency === 'weekly' ? '&dir=monthly' : ''}`
+          : undefined
+      const frequencyTarget: 'weekly' | 'monthly' = frequency === 'weekly' ? 'monthly' : 'weekly'
       // One-click "switch to daily" upgrade nudge — only for a genuinely busy
       // weekly digest (see `shouldOfferDailyUpgrade`); never an upsell on a
       // quiet search. Scoped to the aggregate digest template only, same as
@@ -1787,6 +1791,7 @@ export async function GET(req: NextRequest) {
             manageUrl,
             unsubscribeUrl,
             frequencyUrl,
+            frequencyTarget,
             // Honesty: this is a daily/weekly cron send, never real-time —
             // never claim "just dropped".
             periodLabel: frequency === 'daily' ? 'yesterday' : frequency === 'monthly' ? 'this month' : 'this week',
@@ -1804,6 +1809,7 @@ export async function GET(req: NextRequest) {
             manageUrl,
             unsubscribeUrl,
             frequencyUrl,
+            frequencyTarget,
             upgradeUrl,
             crossSell: crossSellOpt,
             marketPulse: marketPulse ?? undefined,

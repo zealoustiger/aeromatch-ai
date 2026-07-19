@@ -320,6 +320,18 @@ test('digest: with frequencyUrl (daily alert), the footer adds a "Get fewer emai
   assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
 })
 
+test('digest: with frequencyUrl + frequencyTarget "monthly" (weekly alert), the footer names monthly not weekly', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz&dir=monthly',
+    frequencyTarget: 'monthly',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz&amp;dir=monthly"[^>]*>Get fewer emails<\/a>/)
+  assert.match(text, /Get fewer emails \(switch to monthly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz&dir=monthly/)
+})
+
 test('digest: with shareUrl, a "Buying with a partner? Share this alert" line renders (HTML + text)', () => {
   const { html, text } = buildAlertDigestEmail({
     ...DIGEST_BASE,
@@ -811,6 +823,17 @@ test('price drop: with frequencyUrl (daily alert), the footer adds a "Get fewer 
   })
   assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz"[^>]*>Get fewer emails<\/a>/)
   assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz/)
+})
+
+test('price drop: with frequencyUrl + frequencyTarget "monthly" (weekly alert), the footer names monthly not weekly', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz&dir=monthly',
+    frequencyTarget: 'monthly',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz&amp;dir=monthly"[^>]*>Get fewer emails<\/a>/)
+  assert.match(text, /Get fewer emails \(switch to monthly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz&dir=monthly/)
 })
 
 const sample = (overrides: Partial<Parameters<typeof pickBestPriceDropSample>[0][number]>) => ({
