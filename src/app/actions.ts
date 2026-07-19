@@ -1082,11 +1082,11 @@ export async function subscribeToAlerts(
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed.
-  // Idempotent success. If the conflicting row was previously unsubscribed,
-  // revive it (fresh tokens + a real resend) rather than leaving the visitor
-  // in a silent, permanent dead end; any other status stays a true no-op, and
-  // we still skip the email there so a re-submit can't be used to spam an
-  // address with confirmation mail.
+  // Idempotent success. If the conflicting row was previously unsubscribed or
+  // bounced, revive it (fresh tokens + a real resend) rather than leaving the
+  // visitor in a silent, permanent dead end; any other status stays a true
+  // no-op, and we still skip the email there so a re-submit can't be used to
+  // spam an address with confirmation mail.
   if (error) {
     if (error.code === '23505') {
       await reviveIfUnsubscribed(createAdminClient(), clean, cleanSourcePath || null, 'pending')
@@ -1395,15 +1395,19 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
 
 // Shared by subscribeToAlerts/subscribeSignedInAlert: a 23505 conflict on
 // (email, source_path) might be hitting a row the same person PREVIOUSLY
-// unsubscribed from — until now that was treated as an idempotent no-op
-// forever, so re-entering the same email at the same capture point after
-// changing their mind silently never resubscribed them. `targetStatus` is
-// `'pending'` for the anon double-opt-in path (fresh tokens + a real resend,
-// rate-limited by sendConfirmationResend's existing cooldown so a resubmit
-// loop can't spam confirmation mail) or `'confirmed'` for the signed-in path
-// (the session already proves the email — no second opt-in needed, same
-// precedent as that function's initial insert). Any other existing status is
-// left untouched — still a true no-op.
+// unsubscribed from, or one that bounced — until now only 'unsubscribed' was
+// treated as revivable; any other status (including 'bounced') was an
+// idempotent no-op forever, so a subscriber whose mailbox bounced (full
+// inbox, transient outage, later-fixed address) had no way back through the
+// capture forms. `targetStatus` is `'pending'` for the anon double-opt-in
+// path (fresh tokens + a real resend, rate-limited by sendConfirmationResend's
+// existing cooldown so a resubmit loop can't spam confirmation mail) or
+// `'confirmed'` for the signed-in path (the session already proves the email
+// — no second opt-in needed, same precedent as that function's initial
+// insert). For a revived 'bounced' row, the double-opt-in confirm click (or
+// the signed-in path's session proof) IS the honest re-verification that the
+// address works again, so `bounced_at` is cleared here too. Any other
+// existing status is left untouched — still a true no-op.
 async function reviveIfUnsubscribed(
   admin: ReturnType<typeof createAdminClient>,
   email: string,
@@ -1424,38 +1428,41 @@ async function reviveIfUnsubscribed(
       data: ResendableAlert | null
     })
   }
-  if (!existing || existing.status !== 'unsubscribed') return
+  if (!existing || (existing.status !== 'unsubscribed' && existing.status !== 'bounced')) return
 
   const confirm_token = crypto.randomUUID()
   const unsubscribe_token = crypto.randomUUID()
-  const { error: reviveError } = await admin
-    .from('alerts')
-    .update({
-      status: targetStatus,
-      confirm_token,
-      unsubscribe_token,
-      confirmed_at: targetStatus === 'confirmed' ? new Date().toISOString() : null,
-      unsubscribed_at: null,
-    })
-    .eq('id', existing.id)
-  // Not-yet-migrated DB (`unsubscribed_at` column missing) — retry the revive
-  // itself, same graceful-fallback pattern as every other alerts.* column.
-  if (reviveError?.message?.includes('unsubscribed_at')) {
-    await admin
-      .from('alerts')
-      .update({
-        status: targetStatus,
-        confirm_token,
-        unsubscribe_token,
-        confirmed_at: targetStatus === 'confirmed' ? new Date().toISOString() : null,
-      })
-      .eq('id', existing.id)
+  let revivePayload: Record<string, unknown> = {
+    status: targetStatus,
+    confirm_token,
+    unsubscribe_token,
+    confirmed_at: targetStatus === 'confirmed' ? new Date().toISOString() : null,
+    unsubscribed_at: null,
+    bounced_at: null,
+  }
+  const optionalReviveKeys = ['unsubscribed_at', 'bounced_at']
+  let { error: reviveError } = await admin.from('alerts').update(revivePayload).eq('id', existing.id)
+  // Not-yet-migrated DB (`unsubscribed_at`/`bounced_at` columns missing) —
+  // retry dropping whichever one the error names, up to once each
+  // (order-independent), same graceful-fallback pattern used elsewhere in
+  // this file.
+  for (
+    let i = 0;
+    i < optionalReviveKeys.length &&
+    reviveError &&
+    optionalReviveKeys.some((k) => k in revivePayload && reviveError!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = optionalReviveKeys.find((k) => k in revivePayload && reviveError!.message?.includes(k))!
+    revivePayload = Object.fromEntries(Object.entries(revivePayload).filter(([k]) => k !== dropKey))
+    ;({ error: reviveError } = await admin.from('alerts').update(revivePayload).eq('id', existing.id))
   }
 
   if (targetStatus === 'pending') {
-    // `existing.status` is the pre-update value ('unsubscribed') — sendConfirmationResend
-    // requires 'pending' (the value the row was just flipped to above), so it must be
-    // overridden here rather than inherited from the spread.
+    // `existing.status` is the pre-update value ('unsubscribed' or 'bounced') —
+    // sendConfirmationResend requires 'pending' (the value the row was just
+    // flipped to above), so it must be overridden here rather than inherited
+    // from the spread.
     await sendConfirmationResend(admin, {
       ...existing,
       status: targetStatus,
@@ -2098,7 +2105,7 @@ export async function subscribeToConfirmedAlert(originalToken: string, context: 
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed. If that
-  // row was previously unsubscribed, revive it straight to `confirmed` (the
+  // row was previously unsubscribed or bounced, revive it straight to `confirmed` (the
   // originating confirm_token already proved this email once this cycle — same
   // no-second-opt-in precedent as the fresh insert above).
   if (error) {
@@ -2138,7 +2145,7 @@ export async function subscribeManageCrossSell(context: string, sourcePath: stri
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed. If that
-  // row was previously unsubscribed, revive it straight to `confirmed` — ownership is
+  // row was previously unsubscribed or bounced, revive it straight to `confirmed` — ownership is
   // already proven above via resolveOwnerEmail, same no-second-opt-in precedent as
   // the fresh insert.
   if (error) {
@@ -2208,7 +2215,7 @@ export async function createManageAlert(
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed. If that
-  // row was previously unsubscribed, revive it straight to `confirmed` — ownership is
+  // row was previously unsubscribed or bounced, revive it straight to `confirmed` — ownership is
   // already proven above via resolveOwnerEmail, same no-second-opt-in precedent as
   // the fresh insert. `alreadyExisted` still reflects the pre-revive state (a row
   // already existed, dead or not) so the caller's messaging is unchanged.
@@ -2273,7 +2280,7 @@ export async function subscribeSignedInAlert(
   }
 
   // 23505 = unique_violation on (email, source_path) — already subscribed. If
-  // that row was previously unsubscribed, revive it straight to `confirmed` —
+  // that row was previously unsubscribed or bounced, revive it straight to `confirmed` —
   // the session already proves this email, so no second opt-in is needed,
   // same as the fresh-insert path above. Any other status is a true no-op.
   if (error) {
@@ -2404,7 +2411,7 @@ export async function subscribeSavedSearchAlert(searchId: string) {
   const admin = createAdminClient()
 
   // 23505 = unique_violation on (email, source_path) — already subscribed. If that
-  // row was previously unsubscribed, revive it straight to `confirmed` — the signed-in
+  // row was previously unsubscribed or bounced, revive it straight to `confirmed` — the signed-in
   // session already proves this email, same no-second-opt-in precedent as the fresh
   // insert above.
   if (error) {
