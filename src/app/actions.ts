@@ -1453,7 +1453,16 @@ async function reviveIfUnsubscribed(
   }
 
   if (targetStatus === 'pending') {
-    await sendConfirmationResend(admin, { ...existing, confirm_token, unsubscribe_token, last_confirm_sent_at: null })
+    // `existing.status` is the pre-update value ('unsubscribed') — sendConfirmationResend
+    // requires 'pending' (the value the row was just flipped to above), so it must be
+    // overridden here rather than inherited from the spread.
+    await sendConfirmationResend(admin, {
+      ...existing,
+      status: targetStatus,
+      confirm_token,
+      unsubscribe_token,
+      last_confirm_sent_at: null,
+    })
   }
 }
 
