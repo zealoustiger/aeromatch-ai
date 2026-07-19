@@ -3157,7 +3157,7 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   live round-trip — this environment's `alerts` table predates the
   `pending_email`/`email_change_token`/`bounced_at` migrations (confirmed via `select *`),
   so the whole change-email feature already fails soft here independent of this change.
-- **[P1][goal] Cap confirmation emails per address — close the confirm-mail bombing hole.**
+~~- **[P1][goal] Cap confirmation emails per address — close the confirm-mail bombing hole.**
   Every new insert sends a confirm email and only per-row *resends* are rate-limited, so
   anyone can bomb a victim's inbox by re-submitting the subscribe form with a varying
   `source_path` (each is a "new" alert → fresh confirm mail), burning our sender
@@ -3167,7 +3167,20 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   over the cap, still insert (or no-op) and show the normal "check your email" panel —
   never leak to the submitter that sends were suppressed. Unit-test the pure window check.
   Improves: never-spam pillar + deliverability protection. No new capture point, no schema
-  change.
+  change.~~ ✅ SHIPPED via `alert-confirm-send-cap` (2026-07-19) — new pure
+  `isOverConfirmSendCap` (`src/lib/alertConfirmCap.ts`, 11 unit tests) counts an address's
+  `alerts.created_at` rows in the trailing hour; `subscribeToAlerts` computes it (admin
+  client, since anon has no SELECT on this table) *before* its own insert so the new row
+  never counts against itself, then skips only the confirm-email send when at/over cap (3)
+  — the row is still inserted and the response shape is identical either way, so a capped
+  submitter can't tell. No schema/migration needed (`created_at` is a core column). Fails
+  open (still sends) if the count query errors. Live-verified: seeded 3 real
+  `@example.com` rows via service role, then drove a real 4th form submission through the
+  homepage (Playwright) — same "Almost there — check your inbox" success panel, zero
+  console errors, and the DB confirmed a 4th row was still created (insert unaffected); a
+  control submission from a fresh, never-seen `@example.com` address (0 prior rows) also
+  succeeded cleanly. All 5 test rows deleted immediately after, confirmed via a follow-up
+  SELECT. See CHANGELOG.
 - **[P1][goal] Persist the one-tap unsubscribe reasons + Monday rollup — the last deaf
   feedback loop.** The reason chips on `/alerts/status` fire only a PostHog event, and the
   `alerts.unsubscribe_reason` column (written today solely by the "Found my aircraft 🎉"

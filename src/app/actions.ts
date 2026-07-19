@@ -32,6 +32,7 @@ import {
 import { describeLocalAlertContext } from '@/lib/alertEditCriteria'
 import { findBroaderOverlapContext, type OverlapCandidate } from '@/lib/alertOverlap'
 import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
+import { isOverConfirmSendCap, CONFIRM_CAP_WINDOW_MS } from '@/lib/alertConfirmCap'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { resolveOwnerEmail } from '@/lib/alertOwner'
 import { isSeedProfile } from '@/lib/seedProfiles'
@@ -1043,6 +1044,26 @@ export async function subscribeToAlerts(
   // bar), not just the ones that remember to strip client-side.
   const cleanSourcePath = stripShareParam(sourcePath)
 
+  // Anti-abuse cap (GOAL.md never-spam bar): count this address's OTHER confirm
+  // sends in the last hour before we add a new one — a varying source_path makes
+  // every resubmit look like a "new" alert, so per-row resend cooldowns don't
+  // stop someone from bombing an address via this path. Read with the admin
+  // client (anon has no SELECT on this PII table) and computed before the
+  // insert below so the row we're about to create doesn't count against
+  // itself. Fails open (never suppresses) if the count query itself errors —
+  // this is an anti-abuse ceiling, not something a legitimate signup should
+  // ever be blocked by.
+  const confirmCapCutoff = new Date(Date.now() - CONFIRM_CAP_WINDOW_MS).toISOString()
+  const { data: recentConfirmRows } = await createAdminClient()
+    .from('alerts')
+    .select('created_at')
+    .eq('email', clean)
+    .gte('created_at', confirmCapCutoff)
+  const overConfirmCap = isOverConfirmSendCap(
+    (recentConfirmRows ?? []).map((r) => r.created_at),
+    new Date().toISOString()
+  )
+
   // Plain INSERT (not upsert): the `alerts` table is insert-only for anon (no
   // public SELECT, to protect PII), and PostgREST upsert needs SELECT to detect
   // conflicts — so we insert and treat a unique-violation (same email+context)
@@ -1095,21 +1116,28 @@ export async function subscribeToAlerts(
     return { error: 'Something went wrong. Please try again.' }
   }
 
-  // Genuinely new signup → send the double-opt-in confirmation email. Tokens go
-  // in the URL; the confirm/unsubscribe routes look them up with the service
-  // role. Awaited but failure is non-fatal (the row is already saved).
-  const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${confirmToken}`
-  const manageUrl = `${SITE_URL}/alerts/manage?token=${unsubscribeToken}`
-  const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubscribeToken}`
-  const preview = await getAlertDigestPreview(sourcePath)
-  const { subject, html, text } = buildAlertConfirmEmail({
-    context: context || null,
-    confirmUrl,
-    manageUrl,
-    unsubscribeUrl,
-    preview: preview ? { count: preview.count, samples: preview.samples } : null,
-  })
-  await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
+  // Genuinely new signup → send the double-opt-in confirmation email, unless
+  // this address is already over its per-hour confirm-send cap (computed
+  // above) — the row is still saved either way, and the response shape below
+  // is identical, so a suppressed send is never leaked to the submitter (a
+  // capped address can't tell it happened, same as the 23505 no-op above).
+  // Tokens go in the URL; the confirm/unsubscribe routes look them up with
+  // the service role. Awaited but failure is non-fatal (the row is already
+  // saved).
+  if (!overConfirmCap) {
+    const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${confirmToken}`
+    const manageUrl = `${SITE_URL}/alerts/manage?token=${unsubscribeToken}`
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubscribeToken}`
+    const preview = await getAlertDigestPreview(sourcePath)
+    const { subject, html, text } = buildAlertConfirmEmail({
+      context: context || null,
+      confirmUrl,
+      manageUrl,
+      unsubscribeUrl,
+      preview: preview ? { count: preview.count, samples: preview.samples } : null,
+    })
+    await sendEmail({ to: clean, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
+  }
 
   return { ok: true, overlapContext: await getSubscribeOverlapHint(clean, cleanSourcePath || null) }
 }
