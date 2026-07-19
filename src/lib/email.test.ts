@@ -21,6 +21,13 @@ import {
   buildMatchAlertEmail,
   buildAdminAlertFunnelEmail,
   compLabel,
+  isRetriableStatus,
+  parseRetryAfterMs,
+  planEmailRetry,
+  withEmailRetry,
+  MAX_SEND_ATTEMPTS,
+  RETRY_BASE_MS,
+  RETRY_MAX_MS,
 } from './email.ts'
 import type { AlertFunnelWeeklySnapshot } from './alertFunnelWeekly.ts'
 
@@ -2160,4 +2167,111 @@ test('the text part of every builder is unaffected by the dark-mode head (HTML-o
   const { text } = buildAlertConfirmEmail(CONFIRM_BASE)
   assert.doesNotMatch(text, /color-scheme/)
   assert.doesNotMatch(text, /ch-body/)
+})
+
+// --- Send retry policy (429/5xx backoff) -------------------------------------
+
+test('isRetriableStatus: 429 and 5xx retry; other statuses do not', () => {
+  for (const s of [429, 500, 502, 503, 599]) assert.equal(isRetriableStatus(s), true)
+  for (const s of [200, 301, 400, 401, 403, 404, 422, 600]) assert.equal(isRetriableStatus(s), false)
+})
+
+test('parseRetryAfterMs: delta-seconds → ms', () => {
+  assert.equal(parseRetryAfterMs('0'), 0)
+  assert.equal(parseRetryAfterMs('120'), 120_000)
+  assert.equal(parseRetryAfterMs('  30  '), 30_000)
+})
+
+test('parseRetryAfterMs: HTTP-date → ms remaining, clamped non-negative', () => {
+  const now = Date.UTC(2026, 6, 19, 12, 0, 0)
+  assert.equal(parseRetryAfterMs(new Date(now + 45_000).toUTCString(), now), 45_000)
+  assert.equal(parseRetryAfterMs(new Date(now - 45_000).toUTCString(), now), 0)
+})
+
+test('parseRetryAfterMs: absent / empty / garbage → null', () => {
+  for (const h of [null, undefined, '', '   ', 'soon']) assert.equal(parseRetryAfterMs(h), null)
+})
+
+test('planEmailRetry: non-retriable status never retries (bad address hard-fails)', () => {
+  assert.deepEqual(planEmailRetry({ status: 400, attempt: 1 }), { retry: false, delayMs: 0 })
+  assert.deepEqual(planEmailRetry({ status: 422, attempt: 1 }), { retry: false, delayMs: 0 })
+})
+
+test('planEmailRetry: retries a 429/5xx until attempts are exhausted', () => {
+  assert.equal(planEmailRetry({ status: 429, attempt: 1, rand: 0 }).retry, true)
+  assert.equal(planEmailRetry({ status: 503, attempt: MAX_SEND_ATTEMPTS - 1, rand: 0 }).retry, true)
+  assert.deepEqual(planEmailRetry({ status: 429, attempt: MAX_SEND_ATTEMPTS }), { retry: false, delayMs: 0 })
+})
+
+test('planEmailRetry: honors Retry-After (clamped) else exponential backoff + bounded jitter', () => {
+  assert.equal(planEmailRetry({ status: 429, attempt: 1, retryAfter: '2' }).delayMs, 2000)
+  assert.equal(planEmailRetry({ status: 503, attempt: 1, retryAfter: '3600' }).delayMs, RETRY_MAX_MS)
+  assert.deepEqual(planEmailRetry({ status: 429, attempt: 1, retryAfter: '0' }), { retry: true, delayMs: 0 })
+  assert.equal(planEmailRetry({ status: 500, attempt: 1, rand: 0 }).delayMs, RETRY_BASE_MS)
+  assert.equal(planEmailRetry({ status: 500, attempt: 2, rand: 0 }).delayMs, RETRY_BASE_MS * 2)
+  assert.equal(planEmailRetry({ status: 500, attempt: 1, rand: 1 }).delayMs, Math.round(RETRY_BASE_MS * 1.5))
+  assert.equal(planEmailRetry({ status: 500, attempt: 20, maxAttempts: 99, rand: 1 }).delayMs, RETRY_MAX_MS)
+})
+
+function recordingSleep() {
+  const delays: number[] = []
+  return { sleep: async (ms: number) => { delays.push(ms) }, delays }
+}
+const rand0 = () => 0
+
+test('withEmailRetry: terminal on first attempt returns immediately, never sleeps', async () => {
+  const { sleep, delays } = recordingSleep()
+  let calls = 0
+  const result = await withEmailRetry(async () => { calls++; return { value: 'ok' } }, { sleep, rand: rand0 })
+  assert.equal(result, 'ok')
+  assert.equal(calls, 1)
+  assert.deepEqual(delays, [])
+})
+
+test('withEmailRetry: retriable failure then success returns success, sleeps once', async () => {
+  const { sleep, delays } = recordingSleep()
+  let calls = 0
+  const result = await withEmailRetry(async (attempt) => {
+    calls++
+    if (attempt === 1) return { retriable: true, status: 429, retryAfter: '0', value: 'fail' }
+    return { value: 'sent' }
+  }, { sleep, rand: rand0 })
+  assert.equal(result, 'sent')
+  assert.equal(calls, 2)
+  assert.deepEqual(delays, [0])
+})
+
+test('withEmailRetry: persistent retriable failure stops at MAX_SEND_ATTEMPTS, returns last value', async () => {
+  const { sleep, delays } = recordingSleep()
+  let calls = 0
+  const result = await withEmailRetry(async () => {
+    calls++
+    return { retriable: true, status: 503, retryAfter: '0', value: `fail-${calls}` }
+  }, { sleep, rand: rand0 })
+  assert.equal(result, `fail-${MAX_SEND_ATTEMPTS}`)
+  assert.equal(calls, MAX_SEND_ATTEMPTS)
+  assert.equal(delays.length, MAX_SEND_ATTEMPTS - 1)
+})
+
+test('withEmailRetry: a retriable flag with a non-retriable status does not retry', async () => {
+  const { sleep, delays } = recordingSleep()
+  let calls = 0
+  const result = await withEmailRetry(async () => {
+    calls++
+    return { retriable: true, status: 400, retryAfter: null, value: 'hard-fail' }
+  }, { sleep, rand: rand0 })
+  assert.equal(result, 'hard-fail')
+  assert.equal(calls, 1)
+  assert.deepEqual(delays, [])
+})
+
+test('withEmailRetry: custom maxAttempts is honored and Retry-After drives the sleep', async () => {
+  const { sleep, delays } = recordingSleep()
+  let calls = 0
+  await withEmailRetry(async () => {
+    calls++
+    return { retriable: true, status: 429, retryAfter: '2', value: 'x' }
+  }, { sleep, rand: rand0, maxAttempts: 2 })
+  assert.equal(calls, 2)
+  assert.deepEqual(delays, [2000])
 })

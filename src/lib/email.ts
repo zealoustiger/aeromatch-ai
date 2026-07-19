@@ -67,6 +67,119 @@ export function buildListUnsubscribeHeaders(
   }
 }
 
+// --- Send retry policy -------------------------------------------------------
+//
+// Retry only a *transient* Resend failure — HTTP 429 (rate limit, default ~2 req/s)
+// or a 5xx — with backoff, so one mid-loop rate-limit doesn't silently lose a
+// subscriber's email for the whole period. A 4xx (bad address, auth) hard-fails
+// on the first try and a thrown network error returns immediately, both exactly
+// as before. Kept in this file (not a separate module) because `email.ts` is
+// deliberately import-free so its unit test can load it under `node --test`.
+
+/** Initial attempt + up to this-many-minus-one retries. */
+export const MAX_SEND_ATTEMPTS = 3
+/** Base backoff for the first retry when there's no `Retry-After` to honor. */
+export const RETRY_BASE_MS = 400
+/** Hard ceiling on any single backoff wait, so one bad `Retry-After` can't hang a loop. */
+export const RETRY_MAX_MS = 8_000
+
+/** A 429 (rate limit) or any 5xx is worth retrying; a 4xx (bad address, auth) is not. */
+export function isRetriableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status <= 599)
+}
+
+/**
+ * Parse an HTTP `Retry-After` header into milliseconds. Supports both forms:
+ * delta-seconds (`"120"`) and an HTTP-date. Returns `null` when absent or
+ * unparseable so the caller falls back to computed backoff. Never negative.
+ */
+export function parseRetryAfterMs(
+  header: string | null | undefined,
+  nowMs: number = Date.now()
+): number | null {
+  if (header == null) return null
+  const trimmed = header.trim()
+  if (trimmed === '') return null
+  if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1000 // delta-seconds
+  const dateMs = Date.parse(trimmed) // HTTP-date
+  if (!Number.isNaN(dateMs)) return Math.max(0, dateMs - nowMs)
+  return null
+}
+
+/**
+ * Decide whether a failed attempt should retry and, if so, after how long.
+ * `attempt` is the 1-based number of the attempt that just failed. `rand` and
+ * `nowMs` are injectable so tests are deterministic.
+ */
+export function planEmailRetry(opts: {
+  status: number
+  attempt: number
+  retryAfter?: string | null
+  maxAttempts?: number
+  nowMs?: number
+  rand?: number
+}): { retry: boolean; delayMs: number } {
+  const maxAttempts = opts.maxAttempts ?? MAX_SEND_ATTEMPTS
+  if (!isRetriableStatus(opts.status)) return { retry: false, delayMs: 0 }
+  if (opts.attempt >= maxAttempts) return { retry: false, delayMs: 0 }
+
+  const retryAfterMs = parseRetryAfterMs(opts.retryAfter, opts.nowMs ?? Date.now())
+  if (retryAfterMs != null) {
+    return { retry: true, delayMs: Math.min(RETRY_MAX_MS, Math.max(0, retryAfterMs)) }
+  }
+
+  const rand = opts.rand ?? Math.random()
+  const base = RETRY_BASE_MS * Math.pow(2, opts.attempt - 1)
+  const jitter = base * 0.5 * rand // 0 .. +50%
+  return { retry: true, delayMs: Math.min(RETRY_MAX_MS, Math.round(base + jitter)) }
+}
+
+/** Default awaitable delay; injectable so tests run instantly. */
+function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * The outcome of one send attempt, as reported to `withEmailRetry`:
+ * - `{ value }` — terminal (a success, or a non-retriable hard failure); return it.
+ * - `{ retriable: true, status, retryAfter, value }` — a transient failure (429/5xx);
+ *   retry per `planEmailRetry`, and if attempts are exhausted return `value`.
+ */
+export type EmailAttemptOutcome<T> =
+  | { retriable?: false; value: T }
+  | { retriable: true; status: number; retryAfter: string | null; value: T }
+
+/**
+ * Run `attemptFn` (1-based attempt number) up to `MAX_SEND_ATTEMPTS` times,
+ * sleeping the backoff `planEmailRetry` computes between transient failures.
+ * Generic and side-effect-free apart from the injected `sleep`, so the whole
+ * retry loop is unit-testable — `sendEmail` is a thin adapter over it.
+ */
+export async function withEmailRetry<T>(
+  attemptFn: (attempt: number) => Promise<EmailAttemptOutcome<T>>,
+  deps?: {
+    sleep?: (ms: number) => Promise<void>
+    maxAttempts?: number
+    rand?: () => number
+  }
+): Promise<T> {
+  const maxAttempts = deps?.maxAttempts ?? MAX_SEND_ATTEMPTS
+  const sleep = deps?.sleep ?? defaultSleep
+  for (let attempt = 1; ; attempt++) {
+    const outcome = await attemptFn(attempt)
+    if (!outcome.retriable) return outcome.value
+    const plan = planEmailRetry({
+      status: outcome.status,
+      attempt,
+      retryAfter: outcome.retryAfter,
+      maxAttempts,
+      rand: deps?.rand?.(),
+    })
+    if (!plan.retry) return outcome.value
+    await sleep(plan.delayMs)
+  }
+}
+
 /**
  * Send one transactional email. Resolves (never throws) so a caller in a
  * server action / route handler can fire-and-forget without risking a 500.
@@ -81,37 +194,50 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { sent: false, reason: 'no-key' }
   }
 
-  try {
-    const listUnsubscribeHeaders = buildListUnsubscribeHeaders(input.unsubscribeUrl)
-    const replyTo = process.env.ALERTS_REPLY_TO || undefined
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: FROM,
-        to: input.to,
-        subject: input.subject,
-        html: input.html,
-        ...(input.text ? { text: input.text } : {}),
-        ...(replyTo ? { reply_to: replyTo } : {}),
-        ...(listUnsubscribeHeaders ? { headers: listUnsubscribeHeaders } : {}),
-        ...(input.emailType ? { tags: [{ name: 'type', value: input.emailType }] } : {}),
-      }),
-    })
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      console.error(`[email] Resend ${res.status}: ${detail.slice(0, 300)}`)
-      return { sent: false, reason: 'error', detail: `${res.status}` }
+  const listUnsubscribeHeaders = buildListUnsubscribeHeaders(input.unsubscribeUrl)
+  const replyTo = process.env.ALERTS_REPLY_TO || undefined
+  const body = JSON.stringify({
+    from: FROM,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    ...(input.text ? { text: input.text } : {}),
+    ...(replyTo ? { reply_to: replyTo } : {}),
+    ...(listUnsubscribeHeaders ? { headers: listUnsubscribeHeaders } : {}),
+    ...(input.emailType ? { tags: [{ name: 'type', value: input.emailType }] } : {}),
+  })
+
+  // Retry only transient failures (429 rate-limit / 5xx) with backoff, so one
+  // mid-loop rate-limit doesn't silently lose a subscriber's email for the whole
+  // period. A 4xx (bad address) hard-fails on the first try, and a thrown network
+  // error returns immediately — both exactly as before.
+  return withEmailRetry<SendEmailResult>(async (attempt) => {
+    try {
+      const res = await fetch(RESEND_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'content-type': 'application/json',
+        },
+        body,
+      })
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '')
+        const value: SendEmailResult = { sent: false, reason: 'error', detail: `${res.status}` }
+        if (isRetriableStatus(res.status)) {
+          console.warn(`[email] Resend ${res.status} on attempt ${attempt}; will retry if attempts remain`)
+          return { retriable: true, status: res.status, retryAfter: res.headers.get('retry-after'), value }
+        }
+        console.error(`[email] Resend ${res.status}: ${detail.slice(0, 300)}`)
+        return { value }
+      }
+      const json = (await res.json().catch(() => null)) as { id?: string } | null
+      return { value: { sent: true, id: json?.id ?? null } }
+    } catch (err) {
+      console.error('[email] Resend request failed:', err)
+      return { value: { sent: false, reason: 'error', detail: String(err) } }
     }
-    const json = (await res.json().catch(() => null)) as { id?: string } | null
-    return { sent: true, id: json?.id ?? null }
-  } catch (err) {
-    console.error('[email] Resend request failed:', err)
-    return { sent: false, reason: 'error', detail: String(err) }
-  }
+  })
 }
 
 /**
