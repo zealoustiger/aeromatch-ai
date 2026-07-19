@@ -23,6 +23,18 @@ export function normalizeFrequency(value: string | null | undefined): AlertFrequ
   return value === 'daily' ? 'daily' : 'weekly'
 }
 
+const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']
+
+/** Normalizes a stored `digest_day` value to a valid 0(Sun)–6(Sat) weekday, or
+ *  `null` for "no preference" (unset, unmigrated column, or a garbage value). */
+export function normalizeDigestDay(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 6 ? value : null
+}
+
+export function digestDayName(digestDay: number | null): string | null {
+  return digestDay === null ? null : DAY_NAMES[digestDay]
+}
+
 export function intervalDaysFor(frequency: AlertFrequency): number {
   return INTERVAL_DAYS[frequency]
 }
@@ -44,11 +56,19 @@ export function shouldOfferDailyUpgrade(frequency: AlertFrequency, totalMatches:
 /**
  * True when an alert with the given `frequency` and `lastDigestAt` (null if
  * never sent) is due for another send as of `nowIso`.
+ *
+ * `digestDay` (0=Sun..6=Sat) is an optional weekly-only preference — when set,
+ * a weekly alert is due only on its chosen UTC weekday (so sends land on the
+ * same day every time instead of drifting), gated by a 6-day-elapsed floor so
+ * a cron re-run within the same day never double-sends. `null`/`undefined`
+ * (no preference, or the column isn't migrated yet) falls back to the plain
+ * elapsed-days check — a weekly alert is never silently skipped either way.
  */
 export function isDigestDue(
   lastDigestAt: string | null,
   frequency: AlertFrequency,
-  nowIso: string
+  nowIso: string,
+  digestDay?: number | null
 ): boolean {
   if (!lastDigestAt) return true
 
@@ -56,8 +76,15 @@ export function isDigestDue(
   const nowMs = new Date(nowIso).getTime()
   if (Number.isNaN(lastMs) || Number.isNaN(nowMs)) return true
 
+  const elapsedMs = nowMs - lastMs
+  const normalizedDay = normalizeDigestDay(digestDay)
+  if (frequency === 'weekly' && normalizedDay !== null) {
+    const minElapsedMs = 6 * 24 * 60 * 60 * 1000
+    return elapsedMs >= minElapsedMs && new Date(nowIso).getUTCDay() === normalizedDay
+  }
+
   const intervalMs = intervalDaysFor(frequency) * 24 * 60 * 60 * 1000
-  return nowMs - lastMs >= intervalMs
+  return elapsedMs >= intervalMs
 }
 
 /**
@@ -66,8 +93,13 @@ export function isDigestDue(
  * sending themselves a sample digest). `last_digest_at` is written by the
  * digest cron but was never surfaced anywhere before this.
  */
-export function describeLastDigest(lastDigestAt: string | null, frequency: AlertFrequency): string {
-  const cadence = `checks ${frequency}`
+export function describeLastDigest(
+  lastDigestAt: string | null,
+  frequency: AlertFrequency,
+  digestDay?: number | null
+): string {
+  const dayName = frequency === 'weekly' ? digestDayName(normalizeDigestDay(digestDay)) : null
+  const cadence = dayName ? `checks weekly, ${dayName}` : `checks ${frequency}`
   if (!lastDigestAt) return `Nothing sent yet — ${cadence}`
 
   const sentDate = new Date(lastDigestAt)

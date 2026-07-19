@@ -1458,6 +1458,7 @@ export async function GET(req: NextRequest) {
     new_listing_opt_out?: boolean
     frequency?: string
     target_price?: number | null
+    digest_day?: number | null
   }
 
   // Coarse pre-filter: any alert that could possibly be due, at ANY chosen
@@ -1472,7 +1473,7 @@ export async function GET(req: NextRequest) {
   // subscribers on legacy rows from every digest, forever.
   const LIVE_ALERT_STATUSES = ['confirmed', 'active']
   const baseCols = 'id, email, context, source_path, created_at, last_digest_at, unsubscribe_token'
-  const DIGEST_OPTIONAL_COLS = ['price_drop_opt_in', 'new_listing_opt_out', 'frequency', 'target_price']
+  const DIGEST_OPTIONAL_COLS = ['price_drop_opt_in', 'new_listing_opt_out', 'frequency', 'target_price', 'digest_day']
   let cols = `${baseCols}, ${DIGEST_OPTIONAL_COLS.join(', ')}`
   let { data: alerts, error: fetchError } = (await supabase
     .from('alerts')
@@ -1483,11 +1484,12 @@ export async function GET(req: NextRequest) {
     error: { message: string } | null
   }
 
-  // Any subset of price_drop_opt_in/new_listing_opt_out/frequency/target_price
-  // may not be migrated live yet — retry without whichever column(s) the error
-  // names (PostgREST reports one unknown column per error, so this can take up
-  // to four passes) rather than breaking the whole send run; every alert is
-  // then treated as opted-in / not-opted-out / weekly / no-target below, each
+  // Any subset of price_drop_opt_in/new_listing_opt_out/frequency/target_price/
+  // digest_day may not be migrated live yet — retry without whichever column(s)
+  // the error names (PostgREST reports one unknown column per error, so this
+  // can take up to five passes) rather than breaking the whole send run; every
+  // alert is then treated as opted-in / not-opted-out / weekly / no-target /
+  // no-day-preference below, each
   // column's own default (current behavior).
   for (
     let i = 0;
@@ -1543,7 +1545,7 @@ export async function GET(req: NextRequest) {
 
   for (const alert of alerts ?? []) {
     const frequency = normalizeFrequency(alert.frequency)
-    if (!isDigestDue(alert.last_digest_at, frequency, nowIso)) {
+    if (!isDigestDue(alert.last_digest_at, frequency, nowIso, alert.digest_day)) {
       notDue++
       continue
     }
