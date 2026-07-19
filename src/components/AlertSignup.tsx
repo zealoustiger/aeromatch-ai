@@ -145,6 +145,12 @@ export default function AlertSignup({
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // Set from the subscribe result when this exact alert is a strict subset of
+  // one the subscriber already has confirmed (see lib/alertOverlap.ts's
+  // findBroaderOverlapContext) — the broader alert's own context string, or
+  // null when there's no overlap. Informational only; never blocks/changes
+  // what was just submitted.
+  const [overlapContext, setOverlapContext] = useState<string | null>(null)
   // Suggest-only "did you mean gmail.com?" — never auto-corrects, never blocks
   // submission of the as-typed address (see lib/suggestEmailFix.ts).
   const emailSuggestion = suggestEmailFix(email)
@@ -325,6 +331,7 @@ export default function AlertSignup({
     // is keyed — the deal-only checkbox doesn't change which capture point this is.
     addLocalSubscription(activeSourcePath)
     setLocalEmail(email)
+    setOverlapContext(result.overlapContext ?? null)
     setSubmitted(true)
   }
 
@@ -363,6 +370,7 @@ export default function AlertSignup({
     markAlertSubscriber()
     addLocalSubscription(activeSourcePath)
     setEmail(rememberedEmail)
+    setOverlapContext(result.overlapContext ?? null)
     setSubmitted(true)
   }
 
@@ -399,6 +407,7 @@ export default function AlertSignup({
     })
     markAlertSubscriber()
     setConfirmedImmediately(true)
+    setOverlapContext(result.overlapContext ?? null)
     setSubmitted(true)
   }
 
@@ -425,6 +434,14 @@ export default function AlertSignup({
             <p className="mt-1 text-sm text-slate-600">
               We&rsquo;ll email {signedInEmail} the moment {doneCopy}
             </p>
+            {overlapContext && (
+              <p className="mt-2 text-xs text-slate-500">
+                Heads up — your &ldquo;{overlapContext}&rdquo; alert already covers this.{' '}
+                <Link href="/alerts/manage" className="font-medium text-sky-700 underline-offset-2 hover:underline">
+                  Manage alerts
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       ) : submitted ? (
@@ -469,6 +486,14 @@ export default function AlertSignup({
                 </>
               )}
             </p>
+            {overlapContext && (
+              <p className="mt-2 text-xs text-slate-500">
+                Heads up — your &ldquo;{overlapContext}&rdquo; alert already covers this.{' '}
+                <Link href="/alerts/manage" className="font-medium text-sky-700 underline-offset-2 hover:underline">
+                  Manage alerts
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       ) : existingAlert ? (

@@ -3033,7 +3033,7 @@ chip multi-select._
   human-apply fail-soft) and render it when present. Same fail-soft empty state when the
   table isn't migrated. Improves: honest measurement (a quiet week should be
   distinguishable from a broken cron). No new capture point.
-- **[P2][goal] "Heads up — this overlaps an alert you already have" on the subscribe
+~~- **[P2][goal] "Heads up — this overlaps an alert you already have" on the subscribe
   success panel.** `detectOverlappingAlerts` runs only on `/alerts/manage`, so a
   subscriber who sets "Cessna 172 in CA" on top of an existing "Cessna — all states"
   alert learns about the redundancy only if they ever visit manage — meanwhile they get
@@ -3043,7 +3043,8 @@ chip multi-select._
   ("your 'Cessna — all states' alert already covers this — manage alerts") with the
   manage link. UI-hint only, never block or auto-delete. Improves: capture-flow
   confirmation UX + never-spam. No new capture point (existing `alert_subscribed`
-  events unchanged), no schema change.
+  events unchanged), no schema change.~~
+  ✅ SHIPPED via `alert-overlap-subscribe-hint` (2026-07-19)
 - **[P2][goal] Weekly digests on the day YOU pick.** `weekly` cadence today means
   "whenever 7 days have elapsed," which drifts across weekdays — best-in-class digest
   products let a subscriber say "Saturday morning." Add an optional day-of-week choice

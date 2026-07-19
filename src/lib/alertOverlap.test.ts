@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectOverlappingAlerts, type OverlapCandidate } from './alertOverlap.ts'
+import { detectOverlappingAlerts, findBroaderOverlapContext, type OverlapCandidate } from './alertOverlap.ts'
 
 function aircraft(over: Partial<{ make: string; model: string; state: string; minPrice: string; maxPrice: string; dealOnly: boolean }> = {}) {
   return {
@@ -127,4 +127,43 @@ test('partnership airport narrows a make+state alert', () => {
   const broad = candidate({ id: 'a', target: partnership({ make: 'Cessna', state: 'CA' }), context: 'Cessna in CA' })
   const narrow = candidate({ id: 'b', target: partnership({ make: 'Cessna', state: 'CA', airport: 'KHWD' }) })
   assert.equal(detectOverlappingAlerts([broad, narrow]).get('b')?.broaderId, 'a')
+})
+
+test('findBroaderOverlapContext: new alert covered by an existing broader confirmed alert', () => {
+  const existing = [candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), context: 'Cessna — all states' })]
+  const context = findBroaderOverlapContext(aircraft({ make: 'Cessna', state: 'CA' }), existing)
+  assert.equal(context, 'Cessna — all states')
+})
+
+test('findBroaderOverlapContext: falls back to "your other alert" when the broader alert has no context', () => {
+  const existing = [candidate({ id: 'a', target: aircraft(), context: null })]
+  const context = findBroaderOverlapContext(aircraft({ make: 'Cessna' }), existing)
+  assert.equal(context, 'your other alert')
+})
+
+test('findBroaderOverlapContext: no covering alert => null', () => {
+  const existing = [candidate({ id: 'a', target: aircraft({ make: 'Piper' }), context: 'Piper' })]
+  const context = findBroaderOverlapContext(aircraft({ make: 'Cessna' }), existing)
+  assert.equal(context, null)
+})
+
+test('findBroaderOverlapContext: a pending existing alert is never used as a broader candidate', () => {
+  const existing = [candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), context: 'Cessna', status: 'pending' })]
+  const context = findBroaderOverlapContext(aircraft({ make: 'Cessna', state: 'CA' }), existing)
+  assert.equal(context, null)
+})
+
+test('findBroaderOverlapContext: a hidden criterion on the existing alert excludes it', () => {
+  const existing = [
+    candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), context: 'Cessna', hasHiddenCriteria: true }),
+  ]
+  const context = findBroaderOverlapContext(aircraft({ make: 'Cessna', state: 'CA' }), existing)
+  assert.equal(context, null)
+})
+
+test('findBroaderOverlapContext: does not mutate the existing candidates array', () => {
+  const existing = [candidate({ id: 'a', target: aircraft({ make: 'Cessna' }), context: 'Cessna' })]
+  const before = JSON.stringify(existing)
+  findBroaderOverlapContext(aircraft({ make: 'Cessna', state: 'CA' }), existing)
+  assert.equal(JSON.stringify(existing), before)
 })
