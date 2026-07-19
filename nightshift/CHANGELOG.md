@@ -2,6 +2,61 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T063957Z — PASS — email-engagement-recipient-attribution
+- Pages: `/admin/alerts` (internal, admin-only — no public-facing page changed)
+- What: **The admin "Email engagement" panel can now tell how many actual people opened/
+  clicked an alert email, not just how many times.** Each row now shows a distinct-
+  recipient count alongside the existing opened/clicked totals (e.g. "14 opened · 6
+  clicked · 9 people") — before this, one person opening the same digest 5 times looked
+  identical to 5 different subscribers opening it once.
+- Goal: alert-experience (prove-it-converts / honest-measurement pillar) — tier 3
+  `[goal]`, plan-pass batch #7's last remaining item. Tier 1 (`[bug]`): most recent
+  CHANGELOG entry (`digest-cron-reliability-line`) was a PASS; swept BACKLOG.md for any
+  unstruck `[P.][bug]` line — zero matches. Tier 2 (`[want]`): re-checked every unstruck
+  `[P.][want]` line — same standing blocked-on-human set as every recent cycle (save-
+  search auth-wall reconciliation + collection-layout mosaic redesign await a human
+  product call/mock; Trade-A-Plane/Controller/AirMart/AeroTrader are bot-protection-
+  blocked by design; Bay-Area coverage benchmark needs a real FAA/AirNav denominator;
+  owner-leads needs compliance review; dynamic-location seed personas is P2 with no
+  live-site effect) — none buildable autonomously. Dropped to tier 3: batch #7 had one
+  open, unblocked item left — this one (the other two, weekly-digest day-of-week and the
+  `send_failures` cron column, both need a human-applied migration before there's data to
+  read/wire, so this was the only fully-buildable slice remaining).
+- Spec: nightshift/specs/20260719T063957Z-email-engagement-recipient-attribution.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean, all routes compile. Full `node --experimental-strip-types --test` suite (511
+  tests, same count — extended existing `extractEngagementEvent` assertions rather than
+  adding new test blocks) passes, 0 failures. Implementation: additive nullable
+  `email_engagement_events.recipient` column (⚠️ human-apply, same fail-soft precedent as
+  every other `alerts.*`/table column in `schema.sql`); `extractEngagementEvent`
+  (`resendWebhook.ts`) now reads the first address off `data.to` (same shape
+  bounce/complained events already parse) into a lowercased `recipient`; the webhook
+  insert (`webhooks/resend/route.ts`) retries once without the column on a
+  `42703`/`PGRST204` error, mirroring the `contact_phone` retry precedent in
+  `actions.ts`, so a real open/click event is never dropped pre-migration.
+  `getEmailEngagementRollup` (`emailEngagement.ts`) now returns a `recipients` count per
+  email type — a `Set` of distinct non-null recipients, not raw event volume — with the
+  same select-retry fallback (falls back to `recipients: 0` pre-migration, opened/clicked
+  totals unaffected either way). QA: non-visual/data cycle by the RUNBOOK's own
+  definition (admin data panel, no design change) — served the PRODUCTION build (`npx
+  next build` + `npx next start` on port 3000). `qa-smoke.mjs` against `/admin/alerts` —
+  2/2 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow at desktop
+  1280 + mobile 375). Screenshots read anyway to sanity-check: page renders its existing
+  admin auth-gate (no session available to this loop), unchanged from every prior
+  `/admin/alerts` QA in this changelog — confirms no regression, though the actual panel
+  UI (behind the auth wall) wasn't visually inspectable this cycle, consistent with every
+  prior admin-page cycle. Confirmed port 3000 free and no orphaned `next-server` process
+  after. No prod DB writes this cycle — no test data created (this change touches only a
+  webhook-populated log table and an admin read).
+- Screenshots: nightshift/screenshots/email-engagement-recipient-attribution/
+- Next: the two other batch #7 items (weekly-digest day-of-week, `alert_cron_runs.
+  send_failures`) both still need a human-applied migration before any code has real data
+  to read — same standing blocker. The re-permission/auto-quiet flow this recipient data
+  unlocks (pause alerts nobody reads) is a natural follow-up once weeks of real
+  `recipient` rows accumulate post-migration. Absent a fresh `[want]`/`[bug]`, batch #7 is
+  now fully drained (every item either shipped or migration-blocked) — the next
+  autonomous cycle likely needs a plan-pass refill (batch #8).
+
 ## 20260719T062858Z — PASS — digest-cron-reliability-line
 - Pages: (internal — the Monday admin alert-funnel email + its dev preview route only;
   no public-facing page changed)
