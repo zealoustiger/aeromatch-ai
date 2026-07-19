@@ -190,6 +190,10 @@ export default async function AlertsManagePage({
   // Every row an owner requests a change for is stamped with the same
   // pending_email — any one of them is enough to show the banner.
   const pendingEmailChange = alerts.find((a) => a.pending_email)?.pending_email ?? null
+  // A bounced row's "move these alerts to a new email" link scrolls to the
+  // change-email form below — pre-open it so the link doesn't land on
+  // something that still needs an extra click.
+  const hasBouncedAlert = alerts.some((a) => a.status === 'bounced')
 
   // Real, server-computed "how many listings match this alert right now" per
   // row (GOAL.md: helps a subscriber tell if their alert is well-scoped or
@@ -285,7 +289,9 @@ export default async function AlertsManagePage({
           <p className="mt-1 text-slate-600">
             Every new-listing alert subscribed with <strong>{email}</strong>.
           </p>
-          <UpdateAlertEmailForm token={scopeToken} pendingEmail={pendingEmailChange} />
+          <div id="update-alert-email" className="scroll-mt-24">
+            <UpdateAlertEmailForm token={scopeToken} pendingEmail={pendingEmailChange} defaultOpen={hasBouncedAlert} />
+          </div>
         </div>
 
         <section className="ch-panel p-6">
@@ -434,7 +440,14 @@ export default async function AlertsManagePage({
                       ) : null}
                       {a.status === 'bounced' ? (
                         <p className="mt-0.5 text-xs text-red-600">
-                          Your email bounced — resume once it&apos;s fixed.
+                          Your email bounced — resume once it&apos;s fixed, or{' '}
+                          <a
+                            href="#update-alert-email"
+                            className="font-medium underline underline-offset-2 hover:text-red-700"
+                          >
+                            move these alerts to a new email
+                          </a>
+                          .
                         </p>
                       ) : null}
                       {widenEligible ? (
