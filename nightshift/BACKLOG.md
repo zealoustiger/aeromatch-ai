@@ -3133,7 +3133,7 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   `unsubscribed` OR `bounced`; revive payload clears `bounced_at` (fail-soft retry, same
   pattern as `resumeAlert`/`/api/alerts/confirm`). All 6 call sites' comments updated for
   accuracy. See CHANGELOG.
-- **[P1][goal] Bounced rows on `/alerts/manage` should offer the email-change flow, not
+~~- **[P1][goal] Bounced rows on `/alerts/manage` should offer the email-change flow, not
   just Resume.** Today's copy is "Your email bounced — resume once it's fixed," but when
   the address itself is wrong or dead, Resume just re-bounces — while the existing
   change-email flow is the actual fix and *already works from a dead address* (its
@@ -3142,7 +3142,21 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   email-change confirm restore moved `bounced` rows to `confirmed` + clear `bounced_at`
   (the confirm click just proved the new mailbox delivers — same honesty logic as the
   revive item above; keep non-bounced rows' statuses untouched). Improves: alert
-  management / recovery UX. No new capture point, no schema change.
+  management / recovery UX. No new capture point, no schema change.~~ ✅ SHIPPED via
+  `alert-bounced-email-change` (2026-07-19) A bounced row's helper text now links "move
+  these alerts to a new email" to the page's existing owner-level change-email form
+  (`#update-alert-email`), which auto-opens whenever any alert is `bounced` (no extra
+  click needed to expand it). `confirm-email-change/route.ts` now flips any row that was
+  `bounced` before the move to `confirmed` + clears `bounced_at` once it lands on the new
+  address (fail-soft retry without `bounced_at` when unmigrated, same pattern as
+  `alertBounce.ts`); rows that lose the per-row 23505 retry (stay on the old email) are
+  excluded from the revive so a row that DIDN'T move never gets marked confirmed. Verified
+  live with a throwaway `@example.com` bounced test alert (deleted after): the link +
+  pre-opened form render correctly at desktop 1280 + mobile 375, clicking the link scrolls
+  to the open form. The confirm-route revive logic itself was verified by code-read, not a
+  live round-trip — this environment's `alerts` table predates the
+  `pending_email`/`email_change_token`/`bounced_at` migrations (confirmed via `select *`),
+  so the whole change-email feature already fails soft here independent of this change.
 - **[P1][goal] Cap confirmation emails per address — close the confirm-mail bombing hole.**
   Every new insert sends a confirm email and only per-row *resends* are rate-limited, so
   anyone can bomb a victim's inbox by re-submitting the subscribe form with a varying

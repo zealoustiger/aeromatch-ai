@@ -2,6 +2,68 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T080721Z — PASS — alert-bounced-email-change
+- Pages: `/alerts/manage` — the bounced-row helper text and the owner-level "Change the
+  email these alerts go to" form; also `/api/alerts/confirm-email-change` (no page, the
+  server-side confirm-click endpoint the change-email email links to).
+- What: **A bounced alert now points straight at the fix, and using it actually revives
+  the alert.** Previously a bounced row only offered "Resume," which just re-bounces if
+  the address itself is dead — the real fix (the existing "change email" flow, which
+  proves the new mailbox via its own double-opt-in) was buried behind a generic link at
+  the top of the page with no connection drawn to the bounced row. Now a bounced row's
+  text reads "...or move these alerts to a new email," linking straight to that form,
+  which auto-opens (no extra click) whenever any alert on the page is bounced. And on the
+  server side, confirming an email change now flips any row that was `bounced` back to
+  `confirmed` and clears `bounced_at` once it lands on the new address — before, a moved
+  bounced row silently stayed stuck as `bounced` forever even though the new address had
+  just proven itself.
+- Goal: alert-experience — tier 3 `[goal]`, the exact "Next" follow-up flagged by the
+  prior `alert-bounced-revive` cycle, and the matching `[P1][goal]` BACKLOG item ("Bounced
+  rows on `/alerts/manage` should offer the email-change flow, not just Resume"), now
+  checked off. Tier 1 (`[bug]`): swept BACKLOG.md for any unstruck `[P.][bug]` line —
+  none open (the last two, `FeedbackWidget` overlap and the manage-page row overflow, are
+  both already shipped). Tier 2 (`[want]`): every unstruck `[P.][want]` line is the same
+  standing human-blocked set as the last several cycles (save-search auth-wall
+  reconciliation + collection-layout mosaic await a human mock/decision; owner-leads needs
+  compliance review; Trade-A-Plane/Controller/AirMart/AeroTrader are bot-protection-
+  blocked by design; Bay-Area coverage benchmark needs a real FAA/AirNav denominator;
+  dynamic-location seed personas is P2 with no live-site effect) — none buildable
+  autonomously. Dropped to tier 3 and picked this item.
+- Spec: nightshift/specs/20260719T080037Z-alert-bounced-email-change.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0, `rm -rf .next && npx next build` exit 0 (all
+  routes compile). Visual cycle (new link text + form default-open behavior on
+  `/alerts/manage`) — served the PRODUCTION build (`next build` + `next start` on :3000;
+  found and killed a stale `next-server` left listening from an earlier session before
+  starting fresh) and ran `qa-smoke.mjs --slug alert-bounced-email-change /alerts/manage
+  /` → 4/4 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow at
+  desktop 1280 + mobile 375). Screenshots read: the smoke-test screenshots only show the
+  logged-out page (no token in that run), so **live-verified the actual bounced-row UI**
+  with a throwaway `qa-alert-bounced-email-change-*@example.com` alert (`status:
+  'bounced'`, inserted via service role, deleted immediately after each check — confirmed
+  gone via a follow-up SELECT both times): the row renders "Your email bounced — resume
+  once it's fixed, or move these alerts to a new email," the change-email form above is
+  already expanded (email input present in the served HTML, not just the collapsed
+  toggle), and a real click on the link scrolls the page to that open form — all
+  confirmed via Playwright screenshots at desktop 1280 and mobile 375, no overflow, form
+  content unclipped. **The confirm-email-change route's revive logic (bounced → confirmed
+  + `bounced_at` cleared) was verified by code-read, not a live round-trip:** this
+  environment's `alerts` table predates the `pending_email`/`email_change_token`/
+  `bounced_at` migrations (confirmed directly via `select *` — only
+  id/email/context/source_path/status/created_at/confirm_token/confirmed_at/
+  unsubscribe_token/last_digest_at exist), so the whole change-email feature already
+  fails soft here ("Changing your alert email isn't available yet") independent of this
+  cycle's change, same precedent as the `digest-cron-send-failures` cycle hitting an
+  unmigrated table. The new logic mirrors the exact fail-soft retry pattern already used
+  by `alertBounce.ts`/`reviveIfUnsubscribed` for the same column, and only revives rows
+  present in the tracked `movedIds` set (excludes any row that lost the 23505 per-row
+  retry and stayed on the old email) — reviewed against the route's existing conflict-
+  retry branch line by line. Confirmed port 3000 free / no orphaned `next-server` after.
+- Screenshots: nightshift/screenshots/alert-bounced-email-change/
+- Next: the sibling item still open in the 🔔 queue — "Cap confirmation emails per address
+  — close the confirm-mail bombing hole" (a real deliverability/abuse gap, no capture-flow
+  change) — or "Persist the one-tap unsubscribe reasons + Monday rollup," both `[P1][goal]`
+  and unblocked.
+
 ## 20260719T075224Z — PASS — alert-bounced-revive
 - Pages: `/` and every page with an alert signup form (homepage, `/aircraft/browse`,
   `/alerts/manage`, listing/make/model/state/airport pages, etc.) — the anonymous and

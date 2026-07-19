@@ -9,6 +9,7 @@ type PendingRow = {
   email: string
   pending_email: string | null
   unsubscribe_token: string | null
+  status: string
 }
 
 // Confirmation link from `buildAlertEmailChangeConfirmEmail`, sent to the NEW
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     const { data: rows, error: fetchError } = await admin
       .from('alerts')
-      .select('id, email, pending_email, unsubscribe_token')
+      .select('id, email, pending_email, unsubscribe_token, status')
       .eq('email_change_token', token)
       .neq('status', 'unsubscribed')
 
@@ -43,6 +44,11 @@ export async function GET(req: NextRequest) {
 
     const newEmail = target.pending_email
     const manageToken = matched.find((r) => r.unsubscribe_token)?.unsubscribe_token ?? undefined
+    const movingRows = matched.filter((r) => r.pending_email)
+    // Tracks which rows actually landed on the new address, so a row that
+    // conflicts in the per-row retry below (stays on the OLD email) never
+    // gets its bounced status cleared alongside rows that genuinely moved.
+    const movedIds = new Set<string>()
 
     const { error: bulkError } = await admin
       .from('alerts')
@@ -55,19 +61,42 @@ export async function GET(req: NextRequest) {
     // that itself conflicts just has its pending fields cleared and stays on
     // the OLD email (never dropped, never silently duplicated).
     if (bulkError?.code === '23505') {
-      for (const row of matched) {
-        if (!row.pending_email) continue
+      for (const row of movingRows) {
         const { error: rowError } = await admin
           .from('alerts')
           .update({ email: newEmail, pending_email: null, email_change_token: null })
           .eq('id', row.id)
         if (rowError) {
           await admin.from('alerts').update({ pending_email: null, email_change_token: null }).eq('id', row.id)
+        } else {
+          movedIds.add(row.id)
         }
       }
     } else if (bulkError) {
       console.error('[alerts/confirm-email-change] update failed:', bulkError.message)
       return dest('invalid')
+    } else {
+      movingRows.forEach((row) => movedIds.add(row.id))
+    }
+
+    // A bounced row that just moved to a new address gets revived to
+    // 'confirmed' — the double-opt-in confirm click on the NEW address is the
+    // same honest re-verification `reviveIfUnsubscribed`/`alert-bounced-revive`
+    // already use, so a dead-address alert doesn't stay stuck as 'bounced'
+    // forever after the subscriber fixes it via the change-email path. Only
+    // rows that actually moved (not conflict-retry losers) qualify.
+    const revivedBouncedIds = movingRows
+      .filter((row) => row.status === 'bounced' && movedIds.has(row.id))
+      .map((row) => row.id)
+    if (revivedBouncedIds.length > 0) {
+      let revivePayload: Record<string, unknown> = { status: 'confirmed', bounced_at: null }
+      const { error: reviveError } = await admin.from('alerts').update(revivePayload).in('id', revivedBouncedIds)
+      // Not-yet-migrated DB (`bounced_at` column missing) — retry the plain
+      // status flip, same graceful-fallback pattern as `alertBounce.ts`.
+      if (reviveError?.message?.includes('bounced_at')) {
+        revivePayload = { status: 'confirmed' }
+        await admin.from('alerts').update(revivePayload).in('id', revivedBouncedIds)
+      }
     }
 
     return dest('email_changed', {

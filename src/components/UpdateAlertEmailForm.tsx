@@ -15,11 +15,16 @@ import { suggestEmailFix } from '@/lib/suggestEmailFix'
 export default function UpdateAlertEmailForm({
   token,
   pendingEmail,
+  defaultOpen = false,
 }: {
   token?: string
   pendingEmail: string | null
+  /** Opens the form immediately — e.g. a bounced row's "move these alerts to
+   * a new email" link lands on an already-expanded form, not a collapsed one
+   * that still needs a click. */
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(!!pendingEmail)
+  const [open, setOpen] = useState(!!pendingEmail || defaultOpen)
   const [email, setEmail] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
