@@ -46,7 +46,7 @@ import {
   type AlertCriteriaFields,
   type EditableAlertTarget,
 } from '@/lib/alertEditCriteria'
-import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
+import { normalizeFrequency, normalizeDigestDay, type AlertFrequency } from '@/lib/alertFrequency'
 import { resolveSnoozeUntil } from '@/lib/alertSnooze'
 import { parseAlertTokens } from '@/lib/alertTokenList'
 import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
@@ -1840,6 +1840,27 @@ export async function updateAlertFrequency(id: string, frequency: AlertFrequency
   // Not-yet-migrated DB (`frequency` column missing) — no-op rather than
   // surfacing a scary error for what is, until the migration lands, an inert toggle.
   if (error && error.message?.includes('frequency')) return { ok: true }
+  if (error) return { error: 'Failed to update alert.' }
+  revalidatePath('/alerts/manage')
+  return { ok: true }
+}
+
+// Sets the weekly-digest day-of-week preference (0=Sun..6=Sat) for one alert;
+// `null` clears it back to "no preference" (plain elapsed-days behavior). Same
+// ownership proof and fail-soft-on-unmigrated-column pattern as
+// updateAlertFrequency above. Meaningless for `daily` alerts — the UI only
+// renders this control when the alert's cadence is weekly.
+export async function updateAlertDigestDay(id: string, digestDay: number | null, token?: string) {
+  const owned = await loadOwnedAlert(id, token)
+  if ('error' in owned) return { error: owned.error }
+
+  const { error } = await owned.admin
+    .from('alerts')
+    .update({ digest_day: normalizeDigestDay(digestDay) })
+    .eq('id', id)
+  // Not-yet-migrated DB (`digest_day` column missing) — no-op rather than
+  // surfacing a scary error for what is, until the migration lands, an inert toggle.
+  if (error && error.message?.includes('digest_day')) return { ok: true }
   if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
   return { ok: true }

@@ -379,7 +379,12 @@ export default async function AlertsManagePage({
                             token={scopeToken}
                           />
                         ) : null}
-                        <FrequencyToggle id={a.id} frequency={normalizeFrequency(a.frequency)} token={scopeToken} />
+                        <FrequencyToggle
+                          id={a.id}
+                          frequency={normalizeFrequency(a.frequency)}
+                          digestDay={a.digest_day}
+                          token={scopeToken}
+                        />
                         <InstantInterestNudge id={a.id} token={scopeToken} />
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
@@ -447,7 +452,7 @@ export default async function AlertsManagePage({
                           claim a schedule that isn't actually running. */}
                       {a.status === 'confirmed' ? (
                         <p className="mt-0.5 text-xs text-slate-400">
-                          {describeLastDigest(a.last_digest_at, normalizeFrequency(a.frequency))}
+                          {describeLastDigest(a.last_digest_at, normalizeFrequency(a.frequency), a.digest_day)}
                         </p>
                       ) : null}
                     </div>

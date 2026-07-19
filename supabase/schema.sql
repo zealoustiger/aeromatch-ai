@@ -982,3 +982,18 @@ alter table alerts add column if not exists bounced_at timestamptz;
 -- column above), and the admin panel keeps rendering opened/clicked totals
 -- exactly as today with the new distinct-recipient count reading 0.
 alter table email_engagement_events add column if not exists recipient text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_digest_day
+-- Lets a weekly-cadence subscriber pick which day their digest lands on
+-- (0=Sun..6=Sat) instead of the current "whenever 7 days have elapsed since
+-- the last send" drift — best-in-class digest products let you say "Saturday
+-- morning." Nullable, no default: null means "no preference," which keeps
+-- today's plain elapsed-days behavior exactly as-is (see
+-- src/lib/alertFrequency.ts's isDigestDue). Only meaningful for `weekly`
+-- alerts; ignored for `daily`. Apply in the Supabase SQL editor. Until
+-- applied, the /alerts/manage day picker fails soft (update retries without
+-- the column, same graceful-fallback pattern as every `alerts.*` column
+-- above) and the digest cron keeps gating every weekly alert on plain
+-- elapsed-days — i.e. current behavior is fully preserved either way.
+alter table alerts add column if not exists digest_day smallint
+  check (digest_day between 0 and 6);

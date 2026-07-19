@@ -3068,7 +3068,7 @@ chip multi-select._
   confirmation UX + never-spam. No new capture point (existing `alert_subscribed`
   events unchanged), no schema change.~~
   ✅ SHIPPED via `alert-overlap-subscribe-hint` (2026-07-19)
-- **[P2][goal] Weekly digests on the day YOU pick.** `weekly` cadence today means
+~~- **[P2][goal] Weekly digests on the day YOU pick.** `weekly` cadence today means
   "whenever 7 days have elapsed," which drifts across weekdays — best-in-class digest
   products let a subscriber say "Saturday morning." Add an optional day-of-week choice
   to `FrequencyToggle` (visible only when `weekly` is selected), stored in an additive
@@ -3076,7 +3076,8 @@ chip multi-select._
   DDL); the daily cron gates weekly sends on the chosen UTC day when set (elapsed-days
   fallback when null or unmigrated — never a dropped digest). Honest copy: "we send
   around 8:00 UTC." Improves: alert management + digest-vs-instant pillar. No new
-  capture point.
+  capture point.~~
+  ✅ SHIPPED via `alert-digest-day-picker` (2026-07-19)
 ~~- **[P2][goal] Multi-model chips on the alert edit form — parity with browse.** Browse
   filters treat `model` as a comma-joined multi-select with toggle chips
   (`AircraftSaleFilters.tsx`), and alerts created from a multi-model filter set carry

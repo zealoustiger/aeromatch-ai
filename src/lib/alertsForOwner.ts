@@ -14,6 +14,7 @@ export interface AlertRow {
   paused_until?: string | null
   pending_email?: string | null
   target_price?: number | null
+  digest_day?: number | null
 }
 
 const OPTIONAL_COLS = [
@@ -23,6 +24,7 @@ const OPTIONAL_COLS = [
   'paused_until',
   'pending_email',
   'target_price',
+  'digest_day',
 ]
 
 // Email-keyed, not user_id-keyed (alerts require no account). Anon/authenticated
@@ -78,6 +80,7 @@ export interface AlertExportRow {
   paused_until?: string | null
   pending_email?: string | null
   target_price?: number | null
+  digest_day?: number | null
   source?: string | null
 }
 

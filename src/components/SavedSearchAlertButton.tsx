@@ -13,6 +13,7 @@ interface AlertDetail {
   frequency: AlertFrequency
   priceDropOptIn: boolean
   newListingOptOut: boolean
+  digestDay: number | null
 }
 
 interface Props {
@@ -57,6 +58,9 @@ export default function SavedSearchAlertButton({ searchId, alert: initialAlert, 
         // is a manage-time-only choice (see updateAlertMode), never set at
         // subscribe time.
         newListingOptOut: false,
+        // Same story for digest day — no day picker at subscribe time (see
+        // updateAlertDigestDay), always starts unset ("any day").
+        digestDay: null,
       })
     }
   }
@@ -79,7 +83,7 @@ export default function SavedSearchAlertButton({ searchId, alert: initialAlert, 
         {isAircraft ? (
           <AlertModeToggle id={alert.id} priceDropOptIn={alert.priceDropOptIn} newListingOptOut={alert.newListingOptOut} />
         ) : null}
-        <FrequencyToggle id={alert.id} frequency={alert.frequency} />
+        <FrequencyToggle id={alert.id} frequency={alert.frequency} digestDay={alert.digestDay} />
         <button
           onClick={handleTurnOff}
           disabled={isTurningOff}

@@ -2,6 +2,74 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T070000Z — PASS — alert-digest-day-picker
+- Pages: `/alerts/manage`, `/searches` (the inline post-subscribe alert controls)
+- What: **A weekly-cadence alert can now be pinned to a specific day** (e.g. "always
+  Saturday") instead of drifting on "whenever 7 days have elapsed since the last send."
+  The existing Weekly/Daily toggle on `/alerts/manage` (and the matching inline controls
+  on `/searches`) now shows a small day-of-week dropdown — "Any day" by default — right
+  next to it whenever the alert is set to Weekly, with honest copy ("around 8:00 UTC")
+  next to it. Switching to Daily hides the picker without discarding the saved
+  preference. Never a dropped digest: with no day chosen (or before the migration
+  lands), the cron falls straight back to today's plain elapsed-days check.
+- Goal: alert-experience (alert management + digest-vs-instant pillar) — tier 3
+  `[goal]`, the last remaining unstruck item in plan-pass batch #7. Tier 1 (`[bug]`):
+  most recent CHANGELOG entry (`email-engagement-recipient-attribution`) was a PASS;
+  swept BACKLOG.md for any unstruck `[P.][bug]` line — zero matches. Tier 2 (`[want]`):
+  re-checked every unstruck `[P.][want]` line — same standing blocked-on-human set as
+  every recent cycle (save-search auth-wall reconciliation + collection-layout mosaic
+  redesign await a human product call/mock; Trade-A-Plane/Controller/AirMart/AeroTrader
+  are bot-protection-blocked by design; Bay-Area coverage benchmark needs a real
+  FAA/AirNav denominator; owner-leads needs compliance review; dynamic-location seed
+  personas is P2 with no live-site effect) — none buildable autonomously. Dropped to
+  tier 3: this was the one remaining unstruck item in plan-pass batch #7 (every other
+  item was already shipped or is fully migration-blocked) — batch #7 is now fully
+  drained.
+- Spec: nightshift/specs/20260719T070000Z-alert-digest-day-picker.md
+- Verdict: PASS. `npx tsc --noEmit` and `rm -rf .next && npx next build` both exit 0
+  clean, all routes compile. Full `node --experimental-strip-types --test` suite (520
+  tests, up from 511 — 9 new) passes, 0 failures: new `isDigestDue`/`normalizeDigestDay`/
+  `describeLastDigest` day-gating cases in `alertFrequency.test.ts` (day-match-required
+  gating, the 6-day-elapsed floor against same-week double-sends, exact-boundary due,
+  digestDay ignored for daily cadence, never-sent-yet always due, null/unmigrated
+  fallback to plain elapsed-days). Implementation: additive nullable
+  `alerts.digest_day smallint check (between 0 and 6)` column (⚠️ human-apply, same
+  fail-soft/retry convention as every prior `alerts.*` column in `schema.sql`).
+  `isDigestDue` gains an optional 4th `digestDay` param — when weekly + a valid day is
+  set, due only when today's UTC weekday matches AND ≥6 days have elapsed since the last
+  send (prevents drift AND same-week double-sends); `null`/`undefined` (no preference,
+  or the column isn't migrated) falls back to the existing plain 7-day elapsed check —
+  never a silently skipped weekly alert. New `updateAlertDigestDay` server action mirrors
+  `updateAlertFrequency`'s ownership proof + single-column fail-soft no-op-on-error.
+  `digest_day` threaded through the retry-loop `OPTIONAL_COLS` arrays in
+  `alertsForOwner.ts`, `savedSearchAlerts.ts`, and the cron's `DIGEST_OPTIONAL_COLS` in
+  `alert-digest/route.ts` (now up to 5 graceful-degrade passes), and into the cron's one
+  `isDigestDue` call site. `FrequencyToggle.tsx` renders the new day `<select>` only
+  when cadence is Weekly (both its `/alerts/manage` and `/searches` render sites).
+  `describeLastDigest` now says "checks weekly, Saturdays" etc. when a day is set. QA:
+  visual cycle (new dropdown control) — served the PRODUCTION build (`npx next build` +
+  `npx next start` on port 3000). `qa-smoke.mjs` against `/alerts/manage` (plain +
+  token-scoped) and `/searches` — 6/6 pass (HTTP 200, zero app-origin console errors,
+  zero horizontal overflow at desktop 1280 + mobile 375). Screenshots read: the day
+  picker renders cleanly next to the Weekly toggle with "Any day · around 8:00 UTC," no
+  overlap with the other row controls at either viewport. **Live interaction verified**
+  (not covered by the default smoke run): created one throwaway `@example.com` confirmed
+  alert via the service-role key (no `frequency`/`digest_day` set — this live DB has
+  neither column migrated yet, confirmed by a direct column read), loaded
+  `/alerts/manage?token=...`, selected "Sat" from the day dropdown — UI updates
+  immediately, zero console errors, zero error toast (confirms the fail-soft
+  column-missing retry path returns `{ ok: true }` silently, exactly as designed);
+  switching back to Daily correctly hides the day picker without erroring. Deleted the
+  one test alert row via the service-role key immediately after; confirmed 0 rows
+  remain for that id. Confirmed port 3000 free and no orphaned `next-server` process
+  after.
+- Screenshots: nightshift/screenshots/alert-digest-day-picker/
+- Next: batch #7 is now fully drained (every item shipped or migration-blocked — the
+  `send_failures` cron column and the weekly-digest day-of-week's own live activation
+  both still need a human-applied migration before the new behavior actually fires in
+  prod). Absent a fresh `[want]`/`[bug]`, the next autonomous cycle needs a plan-pass
+  refill (batch #8) to generate the next alert-experience `[goal]` slice.
+
 ## 20260719T063957Z — PASS — email-engagement-recipient-attribution
 - Pages: `/admin/alerts` (internal, admin-only — no public-facing page changed)
 - What: **The admin "Email engagement" panel can now tell how many actual people opened/
