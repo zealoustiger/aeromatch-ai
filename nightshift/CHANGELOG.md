@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T084626Z — PASS — alert-bounced-heads-up
+- Pages: `/alerts` and every other page rendering `AlertSignup` (listing pages, browse
+  pages, homepage band, empty-state captures) — same shared component, no new route.
+- What: **Subscribing with an email address we already know is dead now tells you so,
+  instead of a fake "check your inbox" success that silently goes nowhere.** Before this,
+  a visitor who mistyped their address (or whose mailbox previously bounced) got the exact
+  same "Almost there — check your inbox" success message as everyone else, then nothing
+  ever arrived — a predictable, silent failure. Now, whenever the submitted email has ANY
+  prior `alerts` row with `status='bounced'`, the success panel adds an amber "Heads up —
+  mail to this address has bounced before. Double-check the spelling, or try a different
+  address." line. The subscription itself is unaffected — it still saves/revives exactly as
+  before; this is a pure honesty add-on, never a blocker. Wired into all three subscribe
+  paths (`subscribeToAlerts`'s fresh-insert, its 23505 idempotent/revive path, and the
+  signed-in one-click `subscribeSignedInAlert`), so the one-tap and remembered-email
+  shortcuts get the same honest heads-up as the typed-email form.
+- Goal: alert-experience — tier 3 `[goal]`, "Pre-bounced-address heads-up at capture" (the
+  standing `[P2]` item in BACKLOG.md's 🔔 GOAL section). Tier 1 (`[bug]`): most recent
+  CHANGELOG entry (`alert-unsubscribe-reasons`) was a PASS; swept BACKLOG.md for any
+  unstruck `[bug]` line — the only hits are the allocation-policy prose itself and one
+  stale forward-reference to "real aircraft photos missing," already confirmed shipped
+  2026-06-25 by two prior cycles' audits. Tier 2 (`[want]`): the two open `[P1][want]`
+  items (save-search auth-wall reconciliation, dynamic-location seed personas) remain the
+  same standing human-product-call / no-live-effect items flagged by every recent cycle —
+  not autonomously buildable. Dropped to tier 3: both open `[P1][goal]` items in the alert
+  queue ("real instant alerts" variants) are explicitly flagged as needing a human call
+  (Vercel cron-tier confirmation) per the `alert-edit-hidden-criteria` cycle's re-audit —
+  picked the next open item, this `[P2]`, instead.
+- Spec: nightshift/specs/20260719T084626Z-alert-bounced-heads-up.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0. `rm -rf .next && npx next build` exit 0 (all
+  routes compile). Full `node --experimental-strip-types --test 'src/**/*.test.ts'` — 546
+  tests, 0 failures (no new unit tests added — the new `hasBouncedBefore` helper is a
+  direct DB read, same untested-by-convention shape as this file's sibling
+  `pauseAlertsForBouncedEmail`/`unsubscribeAlertsForComplainedEmail`). Visual cycle — served
+  the PRODUCTION build (`next build` + `next start` on :3000) and ran `qa-smoke.mjs --slug
+  alert-bounced-heads-up /alerts` → 2/2 pass (HTTP 200, zero app-origin console errors,
+  zero horizontal overflow at desktop 1280 + mobile 375); screenshots confirm the default
+  (no-hint) `/alerts` page renders unchanged. **Live-verified the actual bounced-hint path
+  end-to-end**, not just code review: seeded one throwaway `@example.com` `alerts` row
+  directly as `status: 'bounced'` via the service-role key, then drove a real Playwright
+  form submit on the live `/alerts` page with that exact email (a different `source_path`
+  than the seeded row, exercising the fresh-insert branch) — the success panel rendered the
+  new amber heads-up line verbatim, zero console errors. Both the seeded row and the new
+  row the test created were deleted via the service-role key immediately after; a final
+  read confirmed 0 rows remain for that test email. Server started/stopped cleanly, no
+  stray `next-server` left running; all scratch scripts removed.
+- Screenshots: nightshift/screenshots/alert-bounced-heads-up/
+- Next: the same `bouncedHint` plumbing could extend to `resendAlertConfirmationByEmail`
+  (the "Didn't get it? Resend" button) so a resend attempt on a known-bad address gets the
+  same honest heads-up instead of a silent resend into the void — small follow-up, left
+  out of this slice to keep the change scoped to the primary subscribe chokepoint the
+  backlog item named.
+
 ## 20260719T083327Z — PASS — alert-unsubscribe-reasons
 - Pages: `/alerts/status`, `/admin/alerts`, plus the Monday admin alert-funnel email
   (internal admin surfaces + one public utility page — no SEO/marketing page changed).
