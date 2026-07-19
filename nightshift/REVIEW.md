@@ -1,3 +1,20 @@
+## 2026-07-19T11:55:23Z — Night Shift run: 7 cycles (PASS 5 / FAIL 1) — night budget cap ($120)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $124.1905 of $120 cap
+
+- ABORT — none — plan needed`
+- cycle produced no verdict (exit 0)
+- PASS — alert-send-retry-backoff — sendEmail now retries a transient Resend 429/5xx with backoff (honoring Retry-After) instead of silently dropping a subscriber's email on the 
+- PASS — digest-sample-watch-link — added a one-tap Watch this listing link to aircraft digest sample cards (reuses the digest-cross-sell endpoint, de-dupes against listings alre
+- PASS — watch-back-on-market — auto-paused watch this listing alerts now resume and email the subscriber the moment their listing comes back on the market (sale fell through / r
+- PASS — combined-digest-fewer-emails — combined several alerts due at once digest emails now get a one-click Get fewer emails footer link (new `/api/alerts/frequency?dir=step`),
+- PASS — digest-snooze-link — Added a one-click Snooze 30 days link to the digest email footer (single-alert + combined), landing on a new /alerts/status page with a real resume 
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.6 on 2 cores, sustained ~23 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container neared its memory cap: peak 3.2 GB of 3.2 GB (100%) — raise --memory in the env file before it OOM-kills a build
+
+
 ## 2026-07-19T10:31:56Z — Night Shift run: 24 cycles (PASS 20 / FAIL 1) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 1 escalated to opus; 5 quality-judged on opus
 - Night spend so far: $96.1403 of $120 cap
