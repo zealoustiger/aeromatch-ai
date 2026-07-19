@@ -2041,13 +2041,16 @@ export async function snoozeAlertByToken(token: string) {
 
 // Public, token-scoped "fewer instead of none" recovery — the literal GOAL.md ask
 // alongside pauseAlertByToken's "pause instead" option. Revives the alert(s) to
-// `confirmed` (unlike pause, this one should actually keep sending, just at the
-// least-frequent cadence) with `frequency: 'weekly'`. Same graceful-degrade
-// precedent as every other `alerts.frequency` write: if the column isn't
-// migrated live yet, retry with just the status flip so the visitor still gets
-// un-unsubscribed instead of a scary error (today's un-migrated default cadence
-// is already weekly-ish, so the outcome matches what "weekly" promises).
-export async function updateAlertFrequencyByToken(token: string) {
+// `confirmed` (unlike pause, this one should actually keep sending, just at a
+// less-frequent cadence) with the requested `frequency` (defaults to 'weekly',
+// the original one-rung-down behavior; 'monthly' is the newer, even-lower-touch
+// rung). Same graceful-degrade precedent as every other `alerts.frequency`
+// write: if the column (or the CHECK constraint, before its migration lands)
+// rejects the value, retry with just the status flip so the visitor still gets
+// un-unsubscribed instead of a scary error (the un-migrated default cadence is
+// already weekly-ish, so the outcome still matches what was promised closely
+// enough).
+export async function updateAlertFrequencyByToken(token: string, frequency: AlertFrequency = 'weekly') {
   const tokens = parseAlertTokens(token)
   if (!tokens.length) return { error: 'Invalid link.' }
 
@@ -2060,7 +2063,7 @@ export async function updateAlertFrequencyByToken(token: string) {
   // clear both status-timestamp columns alongside unsubscribed_at.
   let payload: Record<string, unknown> = {
     status: 'confirmed',
-    frequency: normalizeFrequency('weekly'),
+    frequency: normalizeFrequency(frequency),
     unsubscribed_at: null,
     paused_at: null,
     bounced_at: null,

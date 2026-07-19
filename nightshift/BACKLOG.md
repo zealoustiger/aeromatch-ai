@@ -3202,7 +3202,7 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   — rendered ONLY when the env var is configured (never invite replies nobody will read).
   Improves: digest email quality + trust. No new capture point, no schema change.~~
   ✅ SHIPPED via `alert-reply-to` (2026-07-19)
-- **[P2][goal] Monthly cadence — a real "fewer" rung under weekly.** `AlertFrequency` is
+~~- **[P2][goal] Monthly cadence — a real "fewer" rung under weekly.** `AlertFrequency` is
   exactly daily|weekly, so the unsubscribe-recovery ladder's "fewer emails" offer bottoms
   out at weekly→snooze→pause — there's no honest low-touch cadence for the long-horizon
   shopper. Add `'monthly'` (elapsed-days ≥ 28 in `isDigestDue` — honest with the daily
@@ -3211,7 +3211,23 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   high-volume "narrow this alert?" nudge. `alerts.frequency`'s CHECK constraint needs an
   additive `'monthly'` migration — ⚠️ flag human-apply, fail-soft normalize-to-weekly when
   unmigrated, same as every prior `alerts.*` DDL. Improves: digest-vs-instant pillar +
-  never-spam ("fewer, literally"). No new capture point.
+  never-spam ("fewer, literally"). No new capture point.~~ ✅ SHIPPED via
+  `alert-monthly-cadence` (2026-07-19) — `AlertFrequency` widened to
+  `'daily' | 'weekly' | 'monthly'` (`isDigestDue` treats monthly as due at ≥28 elapsed
+  days); `AlertSignup`'s "How often?" select gained a Monthly option;
+  `FrequencyToggle` now cycles daily→weekly→monthly→daily; `UnsubscribeRecover` +
+  `updateAlertFrequencyByToken` (now takes a target frequency, default weekly) offer
+  "Switch to monthly instead" whenever at least one covered alert isn't already
+  monthly; `NarrowAlertNudge` (the high-volume nudge on `/alerts/manage`) now also
+  offers "or switch to monthly instead" alongside its narrow-criteria suggestions.
+  Also fixed 3 cadence-label spots that would have silently mislabeled a monthly
+  alert as weekly (`AlertSignup`'s "already getting alerts" line, `/alerts/status`'s
+  confirmed-cadence sentence, the price-drop email's `periodLabel`). Additive
+  `alerts_frequency_monthly` migration appended to `supabase/schema.sql` (⚠️
+  human-apply) widens the CHECK constraint; until applied, every write path already
+  retries dropping the `frequency` key when the error names it (the constraint-
+  violation message contains "frequency" too), so this is fail-soft with zero new
+  code, verified live against a throwaway `@example.com` alert (deleted after).
 ~~- **[P2][goal] Pre-bounced-address heads-up at capture.** A visitor who subscribes with an
   address we've already hard-bounced (typo'd once, dead mailbox) gets the normal "check
   your email" success and then nothing arrives — a silent failure we can already predict.

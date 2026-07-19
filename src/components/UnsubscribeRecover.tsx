@@ -14,16 +14,20 @@ import { formatResumeDate } from '@/lib/alertSnooze'
 import { track } from '@/lib/analytics'
 import { UNSUBSCRIBE_REASONS } from '@/lib/alertUnsubscribeReasons'
 
-type Action = 'paused' | 'weekly' | 'snoozed' | 'found'
+type Action = 'paused' | 'weekly' | 'monthly' | 'snoozed' | 'found'
 
 export default function UnsubscribeRecover({
   token,
   showWeeklyOption = false,
+  showMonthlyOption = false,
   alertCount = 1,
   sourcePath = null,
 }: {
   token: string
   showWeeklyOption?: boolean
+  /** Whether at least one covered alert isn't already `monthly` — the same
+   *  "would this actually change anything" gate as showWeeklyOption. */
+  showMonthlyOption?: boolean
   /** How many alerts this token (or comma-separated token list, from a
    *  combined-digest unsubscribe) covers — drives honest "all N" copy. */
   alertCount?: number
@@ -62,7 +66,9 @@ export default function UnsubscribeRecover({
           ? await snoozeAlertByToken(token)
           : action === 'found'
             ? await markAlertFoundAircraftByToken(token)
-            : await updateAlertFrequencyByToken(token)
+            : action === 'monthly'
+              ? await updateAlertFrequencyByToken(token, 'monthly')
+              : await updateAlertFrequencyByToken(token, 'weekly')
     if (result.error) {
       setStatus('error')
       setErrorMsg(result.error)
@@ -101,7 +107,9 @@ export default function UnsubscribeRecover({
     const message =
       doneAction === 'weekly'
         ? `${subject} on weekly emails now, not gone — you'll still hear about new matches, just less often.`
-        : doneAction === 'snoozed' && resumeDate
+        : doneAction === 'monthly'
+          ? `${subject} on monthly emails now, not gone — you'll still hear about new matches, just far less often.`
+          : doneAction === 'snoozed' && resumeDate
           ? `${subject} snoozed until ${resumeDate}, not gone — we'll pick back up automatically then.`
           : `${subject} paused, not gone — we'll hold off until you resume from any aircraft page.`
     return (
@@ -120,7 +128,15 @@ export default function UnsubscribeRecover({
     <div className="mt-6 w-full max-w-sm rounded-lg border border-[#ece6dc] bg-[#f4efe7] px-4 py-4 text-left">
       <p className="text-sm font-medium text-slate-900">Changed your mind?</p>
       <p className="mt-1 text-sm text-slate-600">
-        Get fewer emails instead of none — {showWeeklyOption ? 'switch to weekly, snooze, or pause' : 'snooze or pause'}{' '}
+        Get fewer emails instead of none —{' '}
+        {[
+          showWeeklyOption && 'switch to weekly',
+          showMonthlyOption && 'switch to monthly',
+          'snooze',
+          'pause',
+        ]
+          .filter(Boolean)
+          .join(', ')}{' '}
         {many ? `all ${alertCount} of your alerts` : 'this alert'} instead of unsubscribing completely.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -132,6 +148,16 @@ export default function UnsubscribeRecover({
           >
             <Calendar className="h-4 w-4" />
             {status === 'sending' ? 'Switching…' : 'Switch to weekly instead'}
+          </button>
+        )}
+        {showMonthlyOption && (
+          <button
+            onClick={() => handleRecover('monthly')}
+            disabled={status === 'sending'}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40"
+          >
+            <Calendar className="h-4 w-4" />
+            {status === 'sending' ? 'Switching…' : 'Switch to monthly instead'}
           </button>
         )}
         <button

@@ -17,22 +17,37 @@ const NOW = Date.UTC(2026, 6, 11) // fixed "now" so the math is deterministic
 const nowIso = new Date(NOW).toISOString()
 const daysAgo = (d: number) => new Date(NOW - d * DAY_MS).toISOString()
 
-test('normalizeFrequency: "daily" stays daily, anything else falls back to weekly', () => {
+test('normalizeFrequency: "daily"/"monthly" pass through, anything else falls back to weekly', () => {
   assert.equal(normalizeFrequency('daily'), 'daily')
   assert.equal(normalizeFrequency('weekly'), 'weekly')
+  assert.equal(normalizeFrequency('monthly'), 'monthly')
   assert.equal(normalizeFrequency(null), 'weekly')
   assert.equal(normalizeFrequency(undefined), 'weekly')
   assert.equal(normalizeFrequency('bogus'), 'weekly')
 })
 
-test('intervalDaysFor: daily=1, weekly=7', () => {
+test('intervalDaysFor: daily=1, weekly=7, monthly=28', () => {
   assert.equal(intervalDaysFor('daily'), 1)
   assert.equal(intervalDaysFor('weekly'), 7)
+  assert.equal(intervalDaysFor('monthly'), 28)
 })
 
 test('never sent before (null last_digest_at) → always due, regardless of frequency', () => {
   assert.equal(isDigestDue(null, 'daily', nowIso), true)
   assert.equal(isDigestDue(null, 'weekly', nowIso), true)
+  assert.equal(isDigestDue(null, 'monthly', nowIso), true)
+})
+
+test('monthly alert sent 20 days ago → not due yet', () => {
+  assert.equal(isDigestDue(daysAgo(20), 'monthly', nowIso), false)
+})
+
+test('monthly alert sent 28 days ago → due (exact boundary counts)', () => {
+  assert.equal(isDigestDue(daysAgo(28), 'monthly', nowIso), true)
+})
+
+test('monthly alert sent 40 days ago → due', () => {
+  assert.equal(isDigestDue(daysAgo(40), 'monthly', nowIso), true)
 })
 
 test('daily alert sent 2 days ago → due', () => {
@@ -105,9 +120,10 @@ test('isDigestDue: never sent before → always due even with a digestDay set', 
   assert.equal(isDigestDue(null, 'weekly', nowIso, 1), true)
 })
 
-test('describeLastDigest: never sent → honest "nothing sent yet" for either cadence', () => {
+test('describeLastDigest: never sent → honest "nothing sent yet" for any cadence', () => {
   assert.equal(describeLastDigest(null, 'weekly'), 'Nothing sent yet — checks weekly')
   assert.equal(describeLastDigest(null, 'daily'), 'Nothing sent yet — checks daily')
+  assert.equal(describeLastDigest(null, 'monthly'), 'Nothing sent yet — checks monthly')
 })
 
 test('describeLastDigest: sent → short date + cadence', () => {

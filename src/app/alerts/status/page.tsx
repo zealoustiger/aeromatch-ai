@@ -174,7 +174,7 @@ export default async function AlertStatusPage({
       const cadence = normalizeFrequency((data as { frequency?: string }).frequency)
       const match = await getAlertMatchCount(data.source_path)
       confirmedMatchCount = match
-      const cadenceLabel = cadence === 'daily' ? 'a daily digest' : 'a weekly digest'
+      const cadenceLabel = cadence === 'daily' ? 'a daily digest' : cadence === 'monthly' ? 'a monthly digest' : 'a weekly digest'
       let sentence = `You're confirmed — we'll send ${cadenceLabel} whenever there's a new match, and nothing else.`
       if (match) {
         const nounLabel = match.noun === 'pilot' ? (match.count === 1 ? 'pilot matches' : 'pilots match') : (match.count === 1 ? 'listing matches' : 'listings match')
@@ -189,11 +189,14 @@ export default async function AlertStatusPage({
   // The recovery box's "Switch to weekly instead" option only makes sense if AT
   // LEAST ONE covered alert was firing daily — for a weekly (or not-yet-migrated)
   // alert, the resulting cadence would be identical to what it already was.
-  // `token` is the same value the unsubscribe link forwards here — usually one
-  // alert's `unsubscribe_token`, but a combined-digest unsubscribe forwards every
-  // covered alert's token comma-separated, so this looks up ALL of them (not just
-  // one) to compute an honest recovery-box count + cadence.
+  // Same logic for "Switch to monthly instead": only offered if at least one
+  // covered alert isn't already monthly. `token` is the same value the
+  // unsubscribe link forwards here — usually one alert's `unsubscribe_token`,
+  // but a combined-digest unsubscribe forwards every covered alert's token
+  // comma-separated, so this looks up ALL of them (not just one) to compute an
+  // honest recovery-box count + cadence.
   let unsubFrequency: AlertFrequency = 'weekly'
+  let unsubHasNonMonthly = false
   let unsubSourcePath: string | null = null
   let unsubCount = 0
   if (key === 'unsubscribed' && token) {
@@ -222,6 +225,7 @@ export default async function AlertStatusPage({
     if (!error && data) {
       unsubCount = data.length
       unsubFrequency = data.some((row) => normalizeFrequency(row.frequency) === 'daily') ? 'daily' : 'weekly'
+      unsubHasNonMonthly = data.some((row) => normalizeFrequency(row.frequency) !== 'monthly')
       unsubSourcePath = data[0]?.source_path ?? null
     }
   }
@@ -277,6 +281,7 @@ export default async function AlertStatusPage({
             <UnsubscribeRecover
               token={token}
               showWeeklyOption={unsubFrequency === 'daily'}
+              showMonthlyOption={unsubHasNonMonthly}
               alertCount={Math.max(unsubCount, 1)}
               sourcePath={unsubSourcePath}
             />
