@@ -10,6 +10,7 @@ import {
   buildAlertConfirmEmail,
   buildListingUnavailableEmail,
   buildWidenSuggestionEmail,
+  buildRepermissionEmail,
   buildAlertZeroMatchWelcomeEmail,
   buildListUnsubscribeHeaders,
   pickBestPriceDropSample,
@@ -1397,6 +1398,47 @@ test('buildWidenSuggestionEmail: manage and unsubscribe links appear in both htm
 test('buildWidenSuggestionEmail: context and widen description are HTML-escaped', () => {
   const { html } = buildWidenSuggestionEmail({
     ...WIDEN_BASE,
+    context: 'Cessna <script>alert(1)</script>',
+  })
+  assert.doesNotMatch(html, /<script>/)
+  assert.match(html, /&lt;script&gt;/)
+})
+
+// ─── buildRepermissionEmail (one-time dormant-address re-permission) ───────
+
+const REPERMISSION_BASE = {
+  context: 'Cessna 172 in California',
+  manageUrl: 'https://clubhanger.com/alerts/manage?token=xyz',
+  unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=xyz',
+}
+
+test('buildRepermissionEmail: subject names the alert context', () => {
+  const { subject } = buildRepermissionEmail(REPERMISSION_BASE)
+  assert.equal(subject, 'Still want alerts for Cessna 172 in California?')
+})
+
+test('buildRepermissionEmail: falls back to generic "your alert" subject when context is null/empty', () => {
+  assert.equal(buildRepermissionEmail({ ...REPERMISSION_BASE, context: null }).subject, 'Still want alerts for your alert?')
+  assert.equal(buildRepermissionEmail({ ...REPERMISSION_BASE, context: '  ' }).subject, 'Still want alerts for your alert?')
+})
+
+test('buildRepermissionEmail: manage and unsubscribe links appear in both html and text; unsubscribeUrl stays byte-exact', () => {
+  const { html, text } = buildRepermissionEmail(REPERMISSION_BASE)
+  assert.ok(text.includes(REPERMISSION_BASE.unsubscribeUrl))
+  assert.ok(html.includes(REPERMISSION_BASE.unsubscribeUrl))
+  assert.match(html, /alerts\/manage\?token=xyz&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=repermission/)
+  assert.match(text, /alerts\/manage\?token=xyz&utm_source=alert_email&utm_medium=email&utm_campaign=repermission/)
+})
+
+test('buildRepermissionEmail: offers a "keep sending" CTA, not a fabricated auto-unsubscribe', () => {
+  const { html, text } = buildRepermissionEmail(REPERMISSION_BASE)
+  assert.match(html, /Yes, keep sending/)
+  assert.match(text, /Unsubscribe:/)
+})
+
+test('buildRepermissionEmail: context is HTML-escaped', () => {
+  const { html } = buildRepermissionEmail({
+    ...REPERMISSION_BASE,
     context: 'Cessna <script>alert(1)</script>',
   })
   assert.doesNotMatch(html, /<script>/)

@@ -8,6 +8,7 @@ import {
   buildPriceDropEmail,
   buildListingUnavailableEmail,
   buildWidenSuggestionEmail,
+  buildRepermissionEmail,
   buildAdminAlertFunnelEmail,
   pickBestPriceDropSample,
   compLabel,
@@ -40,6 +41,7 @@ import { applyPartnershipModelFilter } from '@/lib/partnershipModelFilter'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { dedupeDigestSectionSamples } from '@/lib/alertDigestDedupe'
 import { withShareParam } from '@/lib/shareAlertLink'
+import { getDormantSubscribers } from '@/lib/dormantSubscribers'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -1260,6 +1262,38 @@ async function sendStrandedPendingReminders(
   return { sent: remindersSent, failed }
 }
 
+// ─── Digest-sent bookkeeping ────────────────────────────────────────────────
+
+/**
+ * Stamps `last_digest_at` AND increments each row's own `digest_sends_count`
+ * (the real-send counter `getDormantSubscribers` gates on) in one update per
+ * row — can't bulk-increment a per-row counter via a single `.in('id', ...)`
+ * update, since each row starts from a different current count. If
+ * `digest_sends_count` isn't migrated live yet, retries without it so the
+ * pre-existing `last_digest_at` stamp is never blocked by the new column
+ * (same graceful-fallback precedent as every other `alerts.*` column).
+ */
+async function markDigestSent(
+  supabase: ReturnType<typeof createAdminClient>,
+  rows: { id: string; digest_sends_count?: number }[],
+  nowIso: string
+): Promise<void> {
+  for (const row of rows) {
+    const payload: Record<string, unknown> = {
+      last_digest_at: nowIso,
+      digest_sends_count: (row.digest_sends_count ?? 0) + 1,
+    }
+    let { error } = await supabase.from('alerts').update(payload).eq('id', row.id)
+    if (error?.message?.includes('digest_sends_count')) {
+      delete payload.digest_sends_count
+      ;({ error } = await supabase.from('alerts').update(payload).eq('id', row.id))
+    }
+    if (error) {
+      console.error('[alert-digest] markDigestSent update error:', error.message)
+    }
+  }
+}
+
 // ─── One-time "widen your alert?" email for never-matched alerts ──────────────
 
 const WIDEN_SUGGESTION_MIN_AGE_MS = 21 * 24 * 60 * 60 * 1000
@@ -1374,6 +1408,41 @@ async function getDigestCrossSell(
   return null
 }
 
+// ─── One-time "still want these?" re-permission email for dormant addresses ──
+
+/**
+ * Sends `buildRepermissionEmail` to each address `getDormantSubscribers`
+ * flags (long-confirmed, well-sent, never opened/clicked), stamping
+ * `repermission_sent_at` on success so it can never repeat. Mirrors
+ * `sendWidenSuggestionEmails`'s shape/fail-soft posture; the eligibility
+ * query itself already returns `[]` whenever the gating columns or the
+ * engagement table aren't migrated/live yet.
+ */
+async function sendDormantSubscriberRepermissionEmails(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowIso: string
+): Promise<{ sent: number; failed: number }> {
+  const candidates = await getDormantSubscribers(nowIso)
+  let sentCount = 0
+  let failed = 0
+  for (const row of candidates) {
+    if (!row.unsubscribe_token) continue
+    const manageUrl = `${SITE_URL}/alerts/manage?token=${row.unsubscribe_token}`
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${row.unsubscribe_token}`
+    const { subject, html, text } = buildRepermissionEmail({ context: row.context, manageUrl, unsubscribeUrl })
+
+    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'repermission' })
+    if (result.sent || result.reason === 'no-key') {
+      let { error } = await supabase.from('alerts').update({ repermission_sent_at: nowIso }).eq('id', row.id)
+      if (error) console.error('[alert-digest] repermission_sent_at stamp error:', error.message)
+      sentCount++
+    } else {
+      failed++
+    }
+  }
+  return { sent: sentCount, failed }
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 /**
@@ -1470,6 +1539,7 @@ export async function GET(req: NextRequest) {
     frequency?: string
     target_price?: number | null
     digest_day?: number | null
+    digest_sends_count?: number
   }
 
   // Coarse pre-filter: any alert that could possibly be due, at ANY chosen
@@ -1484,7 +1554,14 @@ export async function GET(req: NextRequest) {
   // subscribers on legacy rows from every digest, forever.
   const LIVE_ALERT_STATUSES = ['confirmed', 'active']
   const baseCols = 'id, email, context, source_path, created_at, last_digest_at, unsubscribe_token'
-  const DIGEST_OPTIONAL_COLS = ['price_drop_opt_in', 'new_listing_opt_out', 'frequency', 'target_price', 'digest_day']
+  const DIGEST_OPTIONAL_COLS = [
+    'price_drop_opt_in',
+    'new_listing_opt_out',
+    'frequency',
+    'target_price',
+    'digest_day',
+    'digest_sends_count',
+  ]
   let cols = `${baseCols}, ${DIGEST_OPTIONAL_COLS.join(', ')}`
   let { data: alerts, error: fetchError } = (await supabase
     .from('alerts')
@@ -1833,11 +1910,8 @@ export async function GET(req: NextRequest) {
       })
 
       if (result.sent || result.reason === 'no-key') {
-        // Update last_digest_at so we don't re-send for the same window.
-        await supabase
-          .from('alerts')
-          .update({ last_digest_at: new Date().toISOString() })
-          .eq('id', alert.id)
+        // Update last_digest_at (+ digest_sends_count) so we don't re-send for the same window.
+        await markDigestSent(supabase, [{ id: alert.id, digest_sends_count: alert.digest_sends_count }], new Date().toISOString())
         sent++
         emailsSent++
       }
@@ -1925,13 +1999,11 @@ export async function GET(req: NextRequest) {
 
     if (result.sent || result.reason === 'no-key') {
       const nowStamp = new Date().toISOString()
-      await supabase
-        .from('alerts')
-        .update({ last_digest_at: nowStamp })
-        .in(
-          'id',
-          group.map((p) => p.alert.id)
-        )
+      await markDigestSent(
+        supabase,
+        group.map((p) => ({ id: p.alert.id, digest_sends_count: p.alert.digest_sends_count })),
+        nowStamp
+      )
       sent += group.length
       emailsSent++
     } else {
@@ -2000,9 +2072,13 @@ export async function GET(req: NextRequest) {
   const adminSummarySent = adminSummaryResult.sent
   sendFailures += adminSummaryResult.failed
 
+  const repermissionResult = await sendDormantSubscriberRepermissionEmails(supabase, nowIso)
+  const repermissionsSent = repermissionResult.sent
+  sendFailures += repermissionResult.failed
+
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} sendFailures=${sendFailures}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} repermissionsSent=${repermissionsSent} sendFailures=${sendFailures}`
   )
 
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
@@ -2041,6 +2117,7 @@ export async function GET(req: NextRequest) {
     remindersSent,
     widenSuggestionsSent,
     adminSummarySent,
+    repermissionsSent,
     sendFailures,
   })
 }
