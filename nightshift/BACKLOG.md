@@ -3336,17 +3336,31 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   appeared → saved `$150,000` → row's `source_path` became
   `/aircraft?make=Cessna&model=172&max_price=150000` (make/model preserved) with an
   honestly updated `context`; test row deleted after (0 remain).
-- **[P1][goal] "Alert me about similar" one-tap conversion in the watched-listing
-  unavailable email.** When a watched listing sells, `buildListingUnavailableEmail` tells
-  the subscriber honestly but only offers a passive "Browse similar" link — the alert
-  relationship dies right at the moment of proven high intent (they watched ONE aircraft
-  to the end). Add a one-tap "Email me when similar {make} {model}s list →" button that
-  converts the dead watch into a family alert for the same double-opted-in address —
-  tokenized accept endpoint modeled on the existing `/api/alerts/digest-cross-sell`
-  pattern (`alertWatchStatus.ts` already exposes the watched row's raw make/model for
-  exactly this kind of caller), idempotent on re-click, landing on `/alerts/status` with
-  the normal confirmation UX. Emits `alert_subscribed` (`source:
-  'watch_unavailable_email'`) — a genuinely new capture point. No schema change.
+~~- **[P1][goal] "Alert me about similar" one-tap conversion in the watched-listing
+  unavailable email.**~~ ✅ SHIPPED via `watch-unavailable-similar-alert` (2026-07-19)
+  `buildListingUnavailableEmail` gained an optional `crossSell?: { label, acceptUrl }`
+  opt, rendered with the exact same "Yes, alert me too →" block `buildAlertDigestEmail`'s
+  own `crossSell` option already uses (reused, not reinvented) — appears alongside the
+  existing passive "Browse similar" link in both HTML and text. The cron's
+  `unavailableWatches` send loop now computes the suggestion via the existing
+  `getDigestCrossSell` helper (already used by the regular digest path — internally
+  resolves the watched listing's real make/model via `getWatchCrossSell`, honesty-gated
+  on a genuine live match count, de-duped against alerts the subscriber already has —
+  never a weak/fabricated suggestion). `/api/alerts/digest-cross-sell` generalized to
+  accept an allowlisted `source` query param (`digest_cross_sell` default or
+  `watch_unavailable_email`) so this placement gets its own `alert_subscribed` analytics
+  tag distinct from the existing digest cross-sell — GOAL.md's "prove it converts"
+  per-placement measurement; `/alerts/status`'s `AlertStatusTracker` now threads that
+  `source` through instead of hardcoding it. Live-verified end-to-end against the real
+  prod DB (not just unit tests): seeded a throwaway `@example.com` confirmed alert,
+  hit the accept route with `source=watch_unavailable_email`, confirmed the 307 landed
+  on `state=cross_sell_added&source=watch_unavailable_email`, the new row was created
+  with the correct `source_path`/`context`/`status: confirmed` (this DB's `alerts.source`
+  column isn't migrated live yet, so the pre-existing retry-without-`source` path was
+  genuinely exercised), a re-click stayed idempotent (still 1 row), and `/alerts/status`
+  rendered the correct "You're all set" confirmation copy. Test rows deleted immediately
+  after, 0 remain. No schema change, no cron/live-send invoked (would mass-email real
+  subscribers).
 - **[P2][goal] Bounced heads-up parity on the confirm-resend path.**
   `resendAlertConfirmationByEmail` still reports plain success for an address every prior
   send has hard-bounced — the exact fake-"check your inbox" dead end

@@ -2,6 +2,66 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T100150Z — PASS — watch-unavailable-similar-alert
+- Pages: no user-facing page markup changed — one shared email-template function
+  (`buildListingUnavailableEmail`) plus a backend accept route (`/api/alerts/
+  digest-cross-sell`) and one prop-threading change on `/alerts/status` (same
+  rendered copy, just a different analytics `source` tag on the tracker).
+- What: **The "this listing you were watching is no longer available" email now offers
+  a one-tap "Yes, alert me too →" button** that upgrades the dead single-listing watch
+  into a genuine whole-family alert (e.g. every Cessna 172) on the same already-verified
+  address — instead of ending at a passive "Browse similar" link that most people never
+  click. This fires at the exact moment of proven high intent: the subscriber watched
+  ONE aircraft all the way to it selling. The suggestion only appears when there's a
+  real, live, non-zero match count for that family and the subscriber isn't already
+  subscribed to it (never a weak or fabricated suggestion) — reusing the exact same
+  honesty-gated helper (`getDigestCrossSell`/`getWatchCrossSell`) the regular digest
+  email's own cross-sell already relies on, so this is composition, not new logic.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s
+  (swept BACKLOG.md, only the `alert-postsubscribe-max-price-refine`-confirmed-shipped
+  entries and standing prose remain); both standing `[P1][want]` items (save-search
+  auth-wall reconciliation, collection-layout redesign) remain flagged as needing a
+  human product decision, and the bot-protection-blocked ingestion `[want]`s
+  (Trade-A-Plane/Controller) plus the denominator-blocked Bay-Area coverage benchmark
+  are still not autonomously buildable — so the highest-value item left was the top
+  open `[P1][goal]` in plan-pass batch #9 (2026-07-19), the exact item the prior
+  `alert-postsubscribe-max-price-refine` cycle's own "Next" note named first.
+  Prove-it-converts / never-a-dead-end pillar: converts a funnel-ending "sorry, gone"
+  moment into a genuinely new capture point, distinctly tagged for analytics.
+- Spec: nightshift/specs/20260719T100150Z-watch-unavailable-similar-alert.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 558/558 pass (3 new
+  cases added to `email.test.ts` covering the `crossSell` option rendering in both
+  html/text, HTML-escaping of the label, and that omitting it keeps the email exactly
+  as before — the pre-existing byte-for-byte golden-master test for the no-`crossSell`
+  case still passes unchanged). Non-visual cycle (no page markup changed — email-body +
+  backend route logic) — served the PRODUCTION build (`npx next start` on port 3000).
+  `qa-smoke.mjs` on `/alerts/status`, `/alerts` at desktop 1280 + mobile 375: 4/4 checks
+  pass (HTTP 200, zero app-origin console errors, zero horizontal overflow); per the
+  non-visual convention, screenshots saved for the audit trail but not read into
+  context. Went beyond the smoke gate + unit tests: **live-verified the generalized
+  accept route end-to-end against the real prod DB** — seeded one throwaway
+  `@example.com` confirmed alert via the service-role client (standing in for the
+  "sending" watch alert's own `unsubscribe_token`), hit `/api/alerts/digest-cross-sell`
+  with the new `source=watch_unavailable_email` param exactly as the email CTA would,
+  confirmed the 307 redirect landed on `state=cross_sell_added&source=
+  watch_unavailable_email`, confirmed via a direct service-role read that a new
+  `alerts` row was created with the correct `source_path`/`context`/`status: confirmed`
+  (this DB's `alerts.source` column isn't migrated live yet, so the pre-existing
+  retry-without-`source` degrade path was genuinely exercised, not just theoretical —
+  same precedent as every other `source`-tagged alert write), a re-click of the same
+  link stayed idempotent (still exactly 1 row, no duplicate/error), and a direct curl of
+  `/alerts/status` with that redirect URL rendered the correct "You're all set" / "now
+  also getting alerts" confirmation copy. **Did not invoke the real cron** — that would
+  fan out and send real emails to live subscribers, out of scope for a QA verification.
+  Test alert rows deleted immediately after; a follow-up read confirmed 0 remain.
+  Server started/stopped cleanly, no stray `next-server` left running; scratch script
+  removed.
+- Screenshots: nightshift/screenshots/watch-unavailable-similar-alert/
+- Next: the remaining open plan-pass batch #9 items are bounced-heads-up parity on the
+  confirm-resend path (`resendAlertConfirmationByEmail`) and the dormant-subscriber
+  re-permission email — in that priority order.
+
 ## 20260719T094355Z — PASS — alert-postsubscribe-max-price-refine
 - Pages: /aircraft, /partnerships, /aircraft/listing/[id], every other page that renders
   `AlertSignup` for an aircraft alert (make/model/state pages, homepage band, empty
