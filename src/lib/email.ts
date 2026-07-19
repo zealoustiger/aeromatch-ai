@@ -1651,11 +1651,20 @@ export function buildAdminAlertFunnelEmail(
             <td style="padding:4px 0;font-size:14px;color:#334155;">Avg run duration</td>
             <td style="padding:4px 0;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">${snapshot.cronAvgDurationMsThisWeek !== null ? `${Math.round(snapshot.cronAvgDurationMsThisWeek / 1000)}s` : '—'}</td>
           </tr>
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Send failures</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:${snapshot.cronSendFailuresThisWeek > 0 ? '#be123c' : '#0f172a'};">${snapshot.cronSendFailuresThisWeek}</td>
+          </tr>
+          ${
+            snapshot.cronSendFailuresThisWeek > 0
+              ? `<tr><td colspan="2" style="padding:0 0 6px;font-size:12px;color:#be123c;text-align:right;">⚠️ real sendEmail errors this week — check the Resend dashboard</td></tr>`
+              : ''
+          }
         </table>`
     : `<p class="ch-muted" style="font-size:13px;color:#94a3b8;margin:0 0 20px;">No cron run data yet — either the digest cron hasn&rsquo;t run since this log was added, or the <code>alert_cron_runs</code> table isn&rsquo;t migrated live yet.</p>`
 
   const cronReliabilityText = snapshot.cronRunsRecorded
-    ? `Cron reliability: ran ${snapshot.cronRunDaysThisWeek}/7 days${cronDaysShort ? ' (⚠️ fewer than expected — check for silent failures)' : ''}, ${snapshot.cronEmailsSentThisWeek} emails sent (${formatWeekDelta(snapshot.cronEmailsSentThisWeek, snapshot.cronEmailsSentLastWeek)}), avg duration ${snapshot.cronAvgDurationMsThisWeek !== null ? `${Math.round(snapshot.cronAvgDurationMsThisWeek / 1000)}s` : '—'}`
+    ? `Cron reliability: ran ${snapshot.cronRunDaysThisWeek}/7 days${cronDaysShort ? ' (⚠️ fewer than expected — check for silent failures)' : ''}, ${snapshot.cronEmailsSentThisWeek} emails sent (${formatWeekDelta(snapshot.cronEmailsSentThisWeek, snapshot.cronEmailsSentLastWeek)}), avg duration ${snapshot.cronAvgDurationMsThisWeek !== null ? `${Math.round(snapshot.cronAvgDurationMsThisWeek / 1000)}s` : '—'}, ${snapshot.cronSendFailuresThisWeek} send failures${snapshot.cronSendFailuresThisWeek > 0 ? ' (⚠️ check the Resend dashboard)' : ''}`
     : 'Cron reliability: No cron run data yet (table not migrated or cron hasn’t run)'
 
   const html = `<!doctype html>

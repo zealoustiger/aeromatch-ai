@@ -12,6 +12,10 @@ export interface AlertCronRun {
   remindersSent: number
   widenSuggestionsSent: number
   durationMs: number
+  /** Real email-send failures this run (any `sendEmail` result that wasn't `sent` and
+   *  wasn't the deliberate `no-key` dev/staging no-op), summed across every send loop.
+   *  Null when `send_failures` isn't migrated live yet — never fabricated as 0. */
+  sendFailures: number | null
 }
 
 type RunRow = {
@@ -26,6 +30,7 @@ type RunRow = {
   reminders_sent: number
   widen_suggestions_sent: number
   duration_ms: number
+  send_failures?: number
 }
 
 function toRun(row: RunRow): AlertCronRun {
@@ -41,6 +46,7 @@ function toRun(row: RunRow): AlertCronRun {
     remindersSent: row.reminders_sent,
     widenSuggestionsSent: row.widen_suggestions_sent,
     durationMs: row.duration_ms,
+    sendFailures: row.send_failures ?? null,
   }
 }
 
