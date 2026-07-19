@@ -3181,7 +3181,7 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   control submission from a fresh, never-seen `@example.com` address (0 prior rows) also
   succeeded cleanly. All 5 test rows deleted immediately after, confirmed via a follow-up
   SELECT. See CHANGELOG.
-- **[P1][goal] Persist the one-tap unsubscribe reasons + Monday rollup — the last deaf
+~~- **[P1][goal] Persist the one-tap unsubscribe reasons + Monday rollup — the last deaf
   feedback loop.** The reason chips on `/alerts/status` fire only a PostHog event, and the
   `alerts.unsubscribe_reason` column (written today solely by the "Found my aircraft 🎉"
   exit) is read by nothing — so the one moment a leaving subscriber tells us WHY, the loop
@@ -3191,7 +3191,8 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   "Why people unsubscribe" breakdown (this week + all-time, per reason, honest "no reasons
   recorded yet" empty state) to `alertFunnelWeekly` and mirror it on `/admin/alerts` if
   trivial in-cycle. Improves: prove-it-converts / honest-measurement pillar. No new
-  capture point, no schema change beyond the already-flagged `unsubscribe_reason` column.
+  capture point, no schema change beyond the already-flagged `unsubscribe_reason` column.~~
+  ✅ SHIPPED via `alert-unsubscribe-reasons` (2026-07-19)
 ~~- **[P1][goal] Real reply-to on alert emails + a "just reply" line.** `sendEmail` sets no
   `reply_to`, so replying to any alert email dead-ends at the unmonitored from-address —
   best-in-class digests (and deliverability heuristics) treat a replyable sender as a

@@ -2,6 +2,72 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T083327Z — PASS — alert-unsubscribe-reasons
+- Pages: `/alerts/status`, `/admin/alerts`, plus the Monday admin alert-funnel email
+  (internal admin surfaces + one public utility page — no SEO/marketing page changed).
+- What: **The one-tap "mind telling us why?" reason chips on the unsubscribe page now
+  actually get heard.** Before this, tapping a chip ("Too many emails" / "Not relevant" /
+  "Found my aircraft" / "Just done") only fired a PostHog event — the `alerts.unsubscribe_reason`
+  column existed but was written by nothing except the separate "🎉 Found my aircraft" exit
+  button, and read by nothing at all. Tapping a chip now also persists that reason to the row
+  (fail-soft, same pattern as the found-aircraft write — never a user-facing error even before
+  a human applies the still-pending migration). A new "Why people unsubscribe" breakdown (per
+  reason, this week + all-time, honest empty state) now renders in the Monday admin alert-funnel
+  email and on `/admin/alerts`, so the one moment a leaving subscriber tells us why is finally
+  visible.
+- Goal: alert-experience (prove-it-converts / honest-measurement pillar) — tier 3 `[goal]`,
+  the standing `[P1]` item flagged as a follow-up by the prior `alert-reply-to` cycle (both are
+  siblings under the "last deaf feedback loop" umbrella from plan-pass batch #8). Tier 1
+  (`[bug]`): most recent CHANGELOG entry (`alert-reply-to`) was a PASS; swept BACKLOG.md for any
+  unstruck `[P.][bug]` line — zero matches. Tier 2 (`[want]`): every unstruck `[P.][want]` line
+  is the same standing human-blocked set as the last several cycles (save-search auth-wall
+  reconciliation + collection-layout mosaic await a human mock/decision; owner-leads needs
+  compliance review; dynamic-location seed personas is P2 with no live-site effect) — none
+  buildable autonomously. Dropped to tier 3 and picked this item.
+- Spec: nightshift/specs/20260719T083327Z-alert-unsubscribe-reasons.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0. `rm -rf .next && npx next build` exit 0 (all routes
+  compile). Full `node --experimental-strip-types --test 'src/**/*.test.ts'` — 546 tests (up
+  from 536 — 10 new: 7 in a new `alertUnsubscribeReasons.test.ts` for the pure
+  `summarizeUnsubscribeReasons` bucketer, 3 new `buildAdminAlertFunnelEmail` cases for the
+  rendered section + both honest-empty-states) — 0 failures. Implementation: new
+  `src/lib/alertUnsubscribeReasons.ts` (canonical reason list shared by the client chip picker,
+  the write action, and the rollups — no more duplicated key/label spelling) plus a new
+  `recordUnsubscribeReasonByToken` server action (validates `reason` against that canonical list
+  server-side) wired into `UnsubscribeRecover.tsx`'s `handleReason` as a fire-and-forget call
+  (never blocks or errors the "Thanks — that helps" UI). New `getUnsubscribeReasonRollup` in
+  `alertScoreboard.ts` (same optional-column retry/fallback convention as every other
+  `alerts.*` reader in that file) feeds both `alertFunnelWeekly.ts`'s new snapshot fields and a
+  direct call from `/admin/alerts`. Visual cycle — served the PRODUCTION build (`next build` +
+  `next start` on :3000) and ran `qa-smoke.mjs --slug alert-unsubscribe-reasons /alerts/status
+  /admin/alerts` → 4/4 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow
+  at desktop 1280 + mobile 375), plus a separate smoke pass on the dev-only
+  `/api/dev/email-preview/admin-alert-funnel` fixture route → 2/2 pass. `/admin/alerts` sits
+  behind the (untouched) admin auth gate, so headless QA there renders the "Admin only — sign
+  in" page (still 200/clean) rather than the dashboard — same documented limitation as the prior
+  `digest-feedback-loops-rollup` cycle; **read the email-preview screenshot into the verdict**
+  instead: the new "Why people unsubscribe" table renders cleanly between "Least relevant
+  listings this week" and "Cron reliability" with the fixture's 3 reasons + this-week/all-time
+  counts, matching the surrounding sections' exact style. **Went further than the static
+  fixture** — live-verified the real write + read paths end-to-end against the actual (not-yet-
+  migrated) prod DB: seeded one throwaway `@example.com` `alerts` row directly as
+  `status: 'unsubscribed'` with a real token via the service-role key, drove a **real Playwright
+  click** (not `.click()`) on the "Not relevant" chip on the live `/alerts/status?state=
+  unsubscribed&token=...` page — zero console errors, "Thanks — that helps" rendered — then
+  confirmed via a direct service-role read that the write attempted and failed soft exactly as
+  designed (`42703: column alerts.unsubscribe_reason does not exist`, the row otherwise
+  untouched), proving the graceful-degrade path actually executes today, not just in theory; also
+  called `getUnsubscribeReasonRollup()` directly against the real DB and confirmed it returns
+  `{ topReasons: [], reasonColumnMigrated: false }` with no throw — the exact honest "not
+  available yet" state the admin page and email both render. Test row + all scratch scripts
+  deleted immediately after; re-confirmed 0 rows remain. Server started/stopped cleanly, no
+  stray `next-server` left running.
+- Screenshots: nightshift/screenshots/alert-unsubscribe-reasons/,
+  nightshift/screenshots/alert-unsubscribe-reasons-preview/
+- Next: once a human applies the still-pending `alerts.unsubscribe_reason`/`unsubscribed_at`
+  migrations live, this cycle's rollup starts showing real data immediately — no further code
+  change needed. `alertFunnelWeekly`'s plan-pass batch #8 queue also still has the `[P2]`
+  monthly-cadence and pre-bounced-address-heads-up items open.
+
 ## 20260719T082119Z — PASS — alert-reply-to
 - Pages: no user-facing page changed — this is a server-side change to the shared
   `sendEmail` chokepoint and the two digest-email builders (`buildAlertDigestEmail`,

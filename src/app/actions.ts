@@ -33,6 +33,7 @@ import { describeLocalAlertContext } from '@/lib/alertEditCriteria'
 import { findBroaderOverlapContext, type OverlapCandidate } from '@/lib/alertOverlap'
 import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
 import { isOverConfirmSendCap, CONFIRM_CAP_WINDOW_MS } from '@/lib/alertConfirmCap'
+import { UNSUBSCRIBE_REASON_KEYS } from '@/lib/alertUnsubscribeReasons'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { resolveOwnerEmail } from '@/lib/alertOwner'
 import { isSeedProfile } from '@/lib/seedProfiles'
@@ -2086,6 +2087,29 @@ export async function markAlertFoundAircraftByToken(token: string) {
   const { data, error } = await admin
     .from('alerts')
     .update({ unsubscribe_reason: 'found_aircraft' })
+    .in('unsubscribe_token', tokens)
+    .select('id')
+
+  if (error?.message?.includes('unsubscribe_reason')) return { ok: true, count: tokens.length }
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  if (!data || data.length === 0) return { error: 'This link is no longer valid.' }
+  return { ok: true, count: data.length }
+}
+
+// Public, token-scoped write for the one-tap "mind telling us why?" chips on
+// `/alerts/status` (UnsubscribeRecover) — same trust boundary and missing-
+// column fail-soft as markAlertFoundAircraftByToken above. `reason` is
+// validated against the canonical chip list so this column can never be
+// filled with arbitrary client-supplied text.
+export async function recordUnsubscribeReasonByToken(token: string, reason: string) {
+  const tokens = parseAlertTokens(token)
+  if (!tokens.length) return { error: 'Invalid link.' }
+  if (!UNSUBSCRIBE_REASON_KEYS.has(reason)) return { error: 'Unrecognized reason.' }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('alerts')
+    .update({ unsubscribe_reason: reason })
     .in('unsubscribe_token', tokens)
     .select('id')
 

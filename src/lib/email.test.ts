@@ -1353,6 +1353,11 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   notRelevantTotalThisWeek: 5,
   instantInterestThisWeek: 4,
   instantInterestAllTime: 17,
+  unsubscribeReasons: [
+    { reason: 'not_relevant', label: 'Not relevant', countThisWeek: 2, countAllTime: 9 },
+    { reason: 'too_many_emails', label: 'Too many emails', countThisWeek: 1, countAllTime: 6 },
+  ],
+  unsubscribeReasonColumnMigrated: true,
   demandWithNoSupply: [
     { sourcePath: '/aircraft?make=Mooney&state=OH', label: 'Mooney in Ohio', subscriberCount: 4 },
     { sourcePath: '/partnerships?make=Diamond', label: 'Diamond', subscriberCount: 2 },
@@ -1555,6 +1560,35 @@ test('buildAdminAlertFunnelEmail: with no "not relevant" votes this week, an hon
   assert.match(html, /Least relevant listings this week/)
   assert.match(html, /No listings flagged as off-target this week/)
   assert.match(text, /\(no listings flagged as off-target this week\)/)
+})
+
+test('buildAdminAlertFunnelEmail: unsubscribe reasons render label + this-week/all-time counts', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Why people unsubscribe/)
+  assert.match(html, /Not relevant/)
+  assert.match(html, /2 this week/)
+  assert.match(html, /9 all-time/)
+  assert.match(text, /Why people unsubscribe:/)
+  assert.match(text, /Not relevant: 2 this week, 9 all-time/)
+})
+
+test('buildAdminAlertFunnelEmail: with no reasons recorded, an honest empty line renders instead of a blank table', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, unsubscribeReasons: [] },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No reasons recorded yet/)
+  assert.match(text, /\(No reasons recorded yet\.\)/)
+})
+
+test('buildAdminAlertFunnelEmail: when the unsubscribe_reason column is not migrated live, a distinct honest message renders (not "no reasons yet")', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, unsubscribeReasons: [], unsubscribeReasonColumnMigrated: false },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /isn.t migrated live/)
+  assert.match(text, /isn.t migrated live/)
+  assert.doesNotMatch(html, /No reasons recorded yet/)
 })
 
 test('buildAdminAlertFunnelEmail: top-sources table renders this-week and last-week counts per source', () => {

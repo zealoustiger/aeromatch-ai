@@ -3,12 +3,14 @@ import {
   getDigestVoteRollup,
   getNotRelevantListingsRollup,
   getInstantInterestRollup,
+  getUnsubscribeReasonRollup,
   type NotRelevantListing,
 } from './alertScoreboard'
 import { getEmailEngagementWeeklyRollup } from './emailEngagement'
 import { getAlertMatchCount } from './alertMatchCounts'
 import { describeLocalAlertContext } from './alertEditCriteria'
 import { getCronRunsSince } from './alertCronHealth'
+import type { UnsubscribeReasonRow } from './alertUnsubscribeReasons'
 
 // The date `alert-source-column` shipped — rows from before this never got a
 // `source` tag at all. Same fallback label `alertScoreboard.ts` uses.
@@ -130,6 +132,13 @@ export interface AlertFunnelWeeklySnapshot {
    *  `null` row contributes 0 here, same as a genuinely-zero-failure row; `cronRunsRecorded`
    *  already disambiguates "no data" from "zero" for this whole panel). */
   cronSendFailuresThisWeek: number
+  /** "Why people unsubscribe" — the tapped reason chips on `/alerts/status`,
+   *  persisted via recordUnsubscribeReasonByToken (see UnsubscribeRecover.tsx).
+   *  Empty array means genuinely no reasons recorded yet OR the column isn't
+   *  migrated live — `unsubscribeReasonColumnMigrated` disambiguates the two,
+   *  same honest-empty-state convention as the other rollups above. */
+  unsubscribeReasons: UnsubscribeReasonRow[]
+  unsubscribeReasonColumnMigrated: boolean
   computedAt: string
 }
 
@@ -151,6 +160,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const emailEngagementPromise = getEmailEngagementWeeklyRollup(now)
   const notRelevantPromise = getNotRelevantListingsRollup(now)
   const instantInterestPromise = getInstantInterestRollup(now)
+  const unsubscribeReasonsPromise = getUnsubscribeReasonRollup(now)
   const cronRunsPromise = getCronRunsSince(now - 14 * DAY_MS)
   // `source`, `unsubscribed_at`, `paused_at`, and `bounced_at` may
   // independently be un-migrated live — retry dropping whichever one the
@@ -291,6 +301,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const emailEngagement = await emailEngagementPromise
   const notRelevant = await notRelevantPromise
   const instantInterest = await instantInterestPromise
+  const unsubscribeReasons = await unsubscribeReasonsPromise
   const cronRuns = await cronRunsPromise
 
   const cronRunsThisWeekList = cronRuns.filter((r) => new Date(r.createdAt).getTime() >= oneWeekAgo)
@@ -356,6 +367,8 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     cronAvgDurationMsThisWeek,
     cronRunsRecorded: cronRuns.length > 0,
     cronSendFailuresThisWeek,
+    unsubscribeReasons: unsubscribeReasons.topReasons,
+    unsubscribeReasonColumnMigrated: unsubscribeReasons.reasonColumnMigrated,
     computedAt: new Date(now).toISOString(),
   }
 }
