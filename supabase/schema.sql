@@ -966,3 +966,19 @@ alter table alerts add column if not exists unsubscribed_at timestamptz;
 -- as current-totals only, exactly as today.
 alter table alerts add column if not exists paused_at timestamptz;
 alter table alerts add column if not exists bounced_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: email_engagement_events_recipient
+-- Adds the "who" to email_engagement_events (the email.opened/email.clicked
+-- webhook log created above) — today it stores event_type/email_type/
+-- resend_email_id/link_url only, so the /admin/alerts "Email engagement"
+-- panel can show total opens/clicks per template but never how many DISTINCT
+-- subscribers that represents (one person opening 5 times looks identical to
+-- 5 different people opening once). Nullable, no FK (mirrors the table's own
+-- no-FK precedent above — we don't have a reliable join back to a specific
+-- `alerts` row from a Resend send id today), populated from the same `to`
+-- field the bounce/complained webhook handlers already read. Apply in the
+-- Supabase SQL editor. Until applied, the webhook insert fails soft and
+-- retries without this column (same graceful-fallback pattern as every
+-- column above), and the admin panel keeps rendering opened/clicked totals
+-- exactly as today with the new distinct-recipient count reading 0.
+alter table email_engagement_events add column if not exists recipient text;

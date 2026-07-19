@@ -399,6 +399,7 @@ export default async function AlertScoreboardPage() {
                   <span className="font-medium text-slate-800">{row.emailType}</span>
                   <span className="text-slate-500">
                     {row.opened} opened · {row.clicked} clicked
+                    {row.recipients > 0 ? ` · ${row.recipients} people` : ''}
                   </span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">

@@ -145,13 +145,14 @@ test('extractComplainedEmails is defensive against malformed/partial payloads', 
 test('extractEngagementEvent parses an email.opened event and reads the type tag', () => {
   const body = {
     type: 'email.opened',
-    data: { email_id: 'abc-123', tags: [{ name: 'type', value: 'alert-digest' }] },
+    data: { email_id: 'abc-123', tags: [{ name: 'type', value: 'alert-digest' }], to: ['Buyer@Example.com'] },
   }
   assert.deepEqual(extractEngagementEvent(body), {
     eventType: 'opened',
     emailType: 'alert-digest',
     resendEmailId: 'abc-123',
     link: null,
+    recipient: 'buyer@example.com',
   })
 })
 
@@ -162,6 +163,7 @@ test('extractEngagementEvent parses an email.clicked event including the clicked
       email_id: 'abc-456',
       tags: [{ name: 'type', value: 'price-drop' }],
       click: { link: 'https://clubhanger.com/aircraft/listing/1' },
+      to: ['buyer@example.com'],
     },
   }
   assert.deepEqual(extractEngagementEvent(body), {
@@ -169,6 +171,7 @@ test('extractEngagementEvent parses an email.clicked event including the clicked
     emailType: 'price-drop',
     resendEmailId: 'abc-456',
     link: 'https://clubhanger.com/aircraft/listing/1',
+    recipient: 'buyer@example.com',
   })
 })
 
@@ -179,6 +182,7 @@ test('extractEngagementEvent buckets an untagged send as null emailType, not a c
     emailType: null,
     resendEmailId: 'abc-789',
     link: null,
+    recipient: null,
   })
 })
 
@@ -197,11 +201,27 @@ test('extractEngagementEvent is defensive against malformed/partial payloads', (
     emailType: null,
     resendEmailId: null,
     link: null,
+    recipient: null,
   })
   assert.deepEqual(extractEngagementEvent({ type: 'email.opened', data: { tags: 'not-an-array' } }), {
     eventType: 'opened',
     emailType: null,
     resendEmailId: null,
     link: null,
+    recipient: null,
+  })
+  assert.deepEqual(extractEngagementEvent({ type: 'email.opened', data: { to: 'not-an-array' } }), {
+    eventType: 'opened',
+    emailType: null,
+    resendEmailId: null,
+    link: null,
+    recipient: null,
+  })
+  assert.deepEqual(extractEngagementEvent({ type: 'email.opened', data: { to: [] } }), {
+    eventType: 'opened',
+    emailType: null,
+    resendEmailId: null,
+    link: null,
+    recipient: null,
   })
 })

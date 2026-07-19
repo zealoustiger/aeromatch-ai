@@ -67,12 +67,21 @@ export async function POST(request: NextRequest) {
       // emailEngagement.ts). Fails soft — a not-yet-migrated
       // `email_engagement_events` table never turns into a 500 here.
       const admin = createAdminClient()
-      const { error } = await admin.from('email_engagement_events').insert({
+      const engagementRow = {
         event_type: engagementEvent.eventType,
         email_type: engagementEvent.emailType,
         resend_email_id: engagementEvent.resendEmailId,
         link_url: engagementEvent.link,
-      })
+        recipient: engagementEvent.recipient,
+      }
+      let { error } = await admin.from('email_engagement_events').insert(engagementRow)
+      if (error?.code === '42703' || error?.code === 'PGRST204') {
+        // `recipient` isn't migrated on every environment yet — retry without
+        // it so the open/click still logs (same retry-on-missing-column
+        // precedent as aircraft_for_sale.contact_phone in actions.ts).
+        const { recipient: _recipient, ...withoutRecipient } = engagementRow
+        ;({ error } = await admin.from('email_engagement_events').insert(withoutRecipient))
+      }
       if (error && !error.message?.includes('email_engagement_events')) {
         console.error('[webhooks/resend] engagement-log insert error:', error.message)
       }
