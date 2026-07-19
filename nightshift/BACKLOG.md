@@ -3287,7 +3287,7 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   live yet, so the update degrades gracefully exactly as designed, same as every other
   frequency write path); row deleted immediately after, 0 remain. New unit tests added
   (`email.test.ts`) for both builders' monthly-target case; full suite 551/551 pass.
-- **[P1][goal] Cadence-honest digest body framing — stop saying "this week" to daily and
+~~- **[P1][goal] Cadence-honest digest body framing — stop saying "this week" to daily and
   monthly subscribers.** `buildAlertDigestEmail`'s aggregate sentence hardcodes "matching
   your alert on ClubHanger this week" (`email.ts:1120` html, `:1168` text) regardless of
   the alert's cadence — imprecise for daily sends since forever, and now plainly wrong for
@@ -3296,7 +3296,20 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   thread the same into the digest/combined builders' body copy (and any other "this week"
   strings a subscriber sees, e.g. the "No new alerts this week" empty row if
   subscriber-facing). Improves: digest email honesty (GOAL's smart-honest-content pillar).
-  No new capture point, no schema change. Unit-test the label plumbing.
+  No new capture point, no schema change. Unit-test the label plumbing.~~ ✅ SHIPPED via
+  `digest-cadence-honest-framing` (2026-07-19) `buildAlertDigestEmail` gained an optional
+  `periodLabel?: string` (default `'this week'`, byte-exact with every existing call), threaded
+  into the HTML visible body copy and the hidden preheader text — the exact two hardcoded
+  spots the item named. The cron's single-alert send path now passes the same frequency-aware
+  expression already used for the sibling `buildPriceDropEmail` call
+  (`daily → "yesterday"`, `monthly → "this month"`, else `"this week"`). **Scoped down from the
+  item's parenthetical:** `buildCombinedAlertDigestEmail`'s per-section copy was verified by
+  direct code read to never say "this week" (or any period word) at all today, so there was
+  nothing to fix there; the plain-text body (`bodyCopyText`) also never carried this framing
+  to begin with (already generic/timeless) — only the HTML body + preheader needed the fix,
+  confirmed via the new unit tests. `buildAdminAlertFunnelEmail`'s many "this week" strings are
+  a separate internal admin report on its own real weekly cron cadence, not subscriber-facing —
+  left untouched (out of scope, noted in the spec).
 - **[P1][goal] Post-subscribe one-tap refine — optional "max price" in the success
   panel.** Capture stays one-field, but the moment AFTER subscribe is free real estate:
   the `AlertSignup` success panel today ends at "check your inbox" + social proof, with no

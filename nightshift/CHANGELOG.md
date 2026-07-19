@@ -2,6 +2,44 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T093218Z — PASS — digest-cadence-honest-framing
+- Pages: no user-facing page changed — this is a server-composed email-body fix behind the
+  single-alert digest send path (`/api/cron/alert-digest`); no route/markup touched.
+- What: **The weekly digest email's wording used to say "this week" no matter what cadence
+  you'd actually picked** — a daily subscriber's email claimed matches were "this week" when
+  it had only been a day, and a monthly subscriber (the cadence shipped earlier tonight) got
+  the same "this week" line even though a month had passed. The email now says "yesterday"
+  for daily subscribers, "this week" for weekly (unchanged), and "this month" for monthly —
+  matching the honest per-frequency label the price-drop email already used.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s, both
+  standing `[want]` items (save-search auth-wall reconciliation, collection-layout redesign)
+  remain flagged as needing a human product decision, so the highest-value item left was the
+  top open `[P1][goal]` in plan-pass batch #9 (2026-07-19) — the exact follow-up flagged in
+  the prior `digest-monthly-fewer-emails` cycle's own "Next" note. Smart/honest-content pillar:
+  closes an honesty gap the monthly-cadence ship exposed (a monthly subscriber's email
+  literally said "this week").
+- Spec: nightshift/specs/20260719T093218Z-digest-cadence-honest-framing.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 555/555 pass (5 new
+  cases added to `email.test.ts` covering the default "this week", the "yesterday"/"this
+  month" overrides in both the visible HTML body and the hidden preheader, and that
+  sample/first-send framing correctly ignores `periodLabel` since those never claim a time
+  window). Non-visual cycle (no page markup changed — pure email-body copy) — served the
+  PRODUCTION build (`npx next start` on port 3000) and confirmed via the existing dev-only
+  `/api/dev/email-preview/alert-digest` fixture route (no DB read, no send) that the default
+  fixture still renders "this week" (byte-exact, no regression). QA via `qa-smoke.mjs` on
+  `/`, `/aircraft/browse`, `/alerts/manage` at desktop 1280 + mobile 375: 6/6 checks pass
+  (HTTP 200, zero app-origin console errors, zero horizontal overflow) — per the non-visual
+  convention, screenshots were saved for the audit trail but not read into context; the smoke
+  gate plus the unit tests are the sufficient bar here. Server stopped cleanly after, no
+  stray `next-server` left running. No prod DB rows created or needed this cycle (no live
+  send, no signup/post round-trip required to verify a pure string-formatting change).
+- Screenshots: nightshift/screenshots/digest-cadence-honest-framing/
+- Next: the remaining open plan-pass batch #9 items are the post-subscribe one-tap
+  max-price refine, the "alert me about similar" conversion on the watched-listing
+  unavailable email, bounced-heads-up parity on the confirm-resend path, and the
+  dormant-subscriber re-permission email — all still open, in roughly that priority order.
+
 ## 20260719T092308Z — PASS — digest-monthly-fewer-emails
 - Pages: `/alerts/status` (new `monthly` confirmation state); no visible page change
   elsewhere — the rest is email-footer/backend only (digest + price-drop alert emails,
