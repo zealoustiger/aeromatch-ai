@@ -3470,7 +3470,7 @@ feature shipped dark earlier today with no rollup)._
   existing `/alerts/status` cadence states. Improves: never-spam "fewer instead of none"
   for exactly the subscribers who get the most email. No new capture point, no schema
   change.
-- **[P1][goal] Send-loop resilience — retry with backoff on Resend 429/5xx.** `sendEmail`
+~~- **[P1][goal] Send-loop resilience — retry with backoff on Resend 429/5xx.**~~ ✅ SHIPPED via `alert-send-retry-backoff` (2026-07-19) `sendEmail`
   (`email.ts:74`) fails permanently on the first non-OK response; the cron's send loops
   fire back-to-back with no pacing, and Resend's default rate limit is ~2 req/s — so as
   the subscriber list grows, mid-loop sends will 429 and that subscriber's digest is
@@ -3481,7 +3481,14 @@ feature shipped dark earlier today with no rollup)._
   `send_failures`; keep the `no-key` no-op and 4xx-hard-fail (bad address) behavior
   exactly as-is. Unit-test the retry decision logic as a pure function. Improves: the
   core promise — an alert that doesn't reliably send isn't an alert. No new capture
-  point, no schema change.
+  point, no schema change. **SHIPPED:** retry loop added inside `sendEmail` (429/5xx only,
+  honor `Retry-After` clamped to 8s else exp-backoff+jitter, bounded to 3 attempts); the
+  retry policy + orchestration (`planEmailRetry`/`withEmailRetry`) live in `email.ts`
+  (kept import-free so its `node --test` unit test still loads) and are fully unit-tested
+  (13 new tests). **Not done, intentionally (next slice):** the batch item also asked for
+  *gentle inter-send pacing* across the cron send loops — that touches every send loop and
+  is a separate, riskier slice; retry (recovery) shipped alone, pacing (prevention) is the
+  follow-up.
 - **[P2][goal] Tokenized "Snooze 30 days" rung in digest email footers.** The in-email
   ladder now reads fewer-cadence → per-alert stop → unsubscribe, but snooze (shipped on
   `/alerts/manage` as pause-until) has no email path — a subscriber mid-purchase or on

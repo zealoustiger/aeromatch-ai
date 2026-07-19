@@ -2,6 +2,57 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T104636Z — PASS — alert-send-retry-backoff
+- Pages: no user-facing page markup changed — internal change to the shared email
+  send helper (`sendEmail` in `src/lib/email.ts`) that every alert/transactional email
+  flows through (alert digests, confirmations, price-drop, listing-unavailable,
+  re-permission, new-message, match-alert). No route/markup touched.
+- What: **A transient Resend rate-limit or server hiccup no longer silently loses a
+  subscriber's email.** Until now `sendEmail` gave up permanently the instant Resend
+  returned a non-OK response, and the digest cron fires sends back-to-back — so once the
+  list is big enough to trip Resend's ~2/sec rate limit, whichever subscriber's send
+  happened to hit the 429 just never got their digest that day (it was *counted* as a
+  failure but never retried). Now a 429 or 5xx is retried up to twice with backoff — it
+  waits the exact time Resend's `Retry-After` header asks for (capped at 8s), or an
+  exponential jittered delay if there's no header. A genuine bad-address 4xx still fails
+  on the first try (we don't hammer Resend for a permanent error), the no-API-key no-op
+  is untouched, and a subscriber is only ever counted as a real failure if *every* retry
+  is exhausted — so the admin failure metric stays honest.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s
+  (swept BACKLOG.md), no autonomously-buildable `[want]` (the two standing product-decision
+  items — save-search auth-wall, collection-layout redesign — still need a human call; the
+  bot-protection-blocked ingestion `[want]`s and the denominator-blocked Bay-Area benchmark
+  remain non-buildable). Highest-value `[P1][goal]` in the fresh plan-pass batch #10
+  (2026-07-19): the smart/honest-content "never-spam / reliable delivery" pillar — GOAL.md's
+  "an alert that doesn't reliably send isn't an alert." Reliability under every other alert
+  surface the loop has built.
+- Spec: nightshift/specs/20260719T104636Z-alert-send-retry-backoff.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 582/582 pass (13 new
+  retry tests added to the existing `email.test.ts`: `isRetriableStatus`/`parseRetryAfterMs`/
+  `planEmailRetry` decision math + `withEmailRetry` orchestration — retriable-then-success
+  sleeps once & returns success, persistent-failure stops at exactly MAX_SEND_ATTEMPTS and
+  returns the last error value, non-retriable status returns immediately with no sleep,
+  custom maxAttempts + Retry-After-driven sleep). Non-visual cycle (email-library internals,
+  no page markup) — per the RUNBOOK non-visual convention, screenshots saved for the audit
+  trail but not read into context. Served the PRODUCTION build (`npx next start` on port
+  3000); `qa-smoke.mjs` on `/alerts`, `/aircraft` at desktop 1280 + mobile 375: 4/4 pass
+  (HTTP 200, zero app-origin console errors, zero horizontal overflow). **Design note:** the
+  retry policy + orchestration were deliberately kept INSIDE `email.ts` rather than a new
+  `emailRetry.ts` module — `email.ts` is import-free by design (only `import type`), which is
+  exactly what lets its `node --test` unit test load it; a runtime relative import would need
+  a `.ts` extension (breaks `tsc`) or be unresolvable extensionless (breaks the test), so
+  folding it in keeps both the build and the existing test green while staying fully tested.
+  No schema change, no new prod DB rows (pure library change — no signup/post round-tripped,
+  so no test-data cleanup needed). Server started/stopped cleanly; no stray `next-server`.
+- Screenshots: nightshift/screenshots/alert-send-retry-backoff/
+- Next: the sibling half of this batch #10 item — **gentle inter-send pacing** between
+  successive cron sends (a small delay in the digest/confirm/match send loops so we stay
+  under Resend's rate limit *proactively*, not just recover from 429s reactively). Left out
+  this cycle to keep scope tight (touches every send loop). Other open batch #10 `[P1]`s:
+  one-tap "Watch this listing" on digest sample cards; "Back on the market" relist notice
+  (needs `alerts.unavailable_notified_at`); "Get fewer emails" rung on the combined digest.
+
 ## 2026-07-19T10:31:56Z — DRAIN SUMMARY
 - Cycles this run: 24 (PASS 20 / FAIL 1 / ABORT 3)
 - Models: cycles on sonnet; 1 escalated to opus; 5 quality-judged on opus
