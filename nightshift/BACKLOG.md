@@ -3361,13 +3361,26 @@ per-recipient opened/clicked but nothing reads it per-address for lifecycle deci
   rendered the correct "You're all set" confirmation copy. Test rows deleted immediately
   after, 0 remain. No schema change, no cron/live-send invoked (would mass-email real
   subscribers).
-- **[P2][goal] Bounced heads-up parity on the confirm-resend path.**
+~~- **[P2][goal] Bounced heads-up parity on the confirm-resend path.**
   `resendAlertConfirmationByEmail` still reports plain success for an address every prior
   send has hard-bounced — the exact fake-"check your inbox" dead end
   `alert-bounced-heads-up` just closed on the three subscribe paths (its cycle's Next
   flagged this sibling). Reuse the same `hasBouncedBefore` read + amber hint copy in the
   resend flow's success state. Improves: capture/recovery-flow honesty. No new capture
-  point, no schema change.
+  point, no schema change.~~ ✅ SHIPPED via `alert-resend-bounced-heads-up` (2026-07-19)
+  `sendConfirmationResend` (shared by `resendAlertConfirmation`/`resendAlertConfirmationByEmail`)
+  now returns `bouncedHint: await hasBouncedBefore(alert.email)` alongside `{ ok: true }`, and
+  `AlertSignup`'s `handleResend` calls `setBouncedHint(!!result.bouncedHint)` on a successful
+  resend — the existing amber "mail to this address has bounced before" line (already rendered
+  in the pending-state success panel) now reflects the freshest bounce status after a resend,
+  not just the original submit's. Live-verified end-to-end: submitted a throwaway
+  `@example.com` address with no prior bounce (no hint shown, correct), then seeded an
+  unrelated `status='bounced'` row for that same email via the service-role client (simulating
+  a bounce landing between submit and resend), clicked "Resend confirmation email" — the amber
+  heads-up now appeared where it previously wouldn't have. Test rows deleted immediately after
+  (0 remain). `/alerts/manage`'s owner-scoped resend button (`AlertActions.tsx`, shares
+  `sendConfirmationResend`) is unaffected — it doesn't read the new field, so this is a pure
+  additive return-shape change; left out of scope per the prior cycle's own "Next" note.
 - **[P2][goal] Dormant-subscriber re-permission ("still want these?") — one-time, honestly
   gated.** Deliverability best practice the lifecycle still lacks: an address that keeps
   receiving digests but never engages quietly erodes sender reputation until it bounces or

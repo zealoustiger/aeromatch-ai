@@ -1434,7 +1434,13 @@ async function sendConfirmationResend(admin: ReturnType<typeof createAdminClient
   // already sent; a failed bookkeeping update just means the next resend can't
   // be rate-limited until the migration lands, same graceful-fallback pattern
   // as price_drop_opt_in/frequency.
-  return { ok: true }
+  return {
+    ok: true,
+    // Same honesty heads-up the three subscribe paths already surface (see
+    // `hasBouncedBefore` above) — a resend to a known-dead address shouldn't
+    // look like a normal success either.
+    bouncedHint: await hasBouncedBefore(alert.email),
+  }
 }
 
 // Shared by subscribeToAlerts/subscribeSignedInAlert: a 23505 conflict on
