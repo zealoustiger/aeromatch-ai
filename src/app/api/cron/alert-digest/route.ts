@@ -7,6 +7,7 @@ import {
   buildAlertConfirmEmail,
   buildPriceDropEmail,
   buildListingUnavailableEmail,
+  buildListingBackOnMarketEmail,
   buildWidenSuggestionEmail,
   buildRepermissionEmail,
   buildAdminAlertFunnelEmail,
@@ -1478,6 +1479,102 @@ async function sendDormantSubscriberRepermissionEmails(
   return { sent: sentCount, failed }
 }
 
+// ─── "Back on the market" resume for auto-paused listing-watch alerts ────────
+
+type BackOnMarketCandidateRow = {
+  id: string
+  email: string
+  source_path: string | null
+  unsubscribe_token: string | null
+}
+
+/**
+ * Paused watch alerts the cron itself auto-paused because their target went
+ * unavailable — `unavailable_notified_at IS NOT NULL` is exactly what tells
+ * those apart from a user-initiated pause (pauseAlert/snoozeAlert never set
+ * this column). Fails soft to `[]` if the column isn't migrated live yet,
+ * same graceful-fallback convention as every other `alerts.*` column.
+ */
+async function getBackOnMarketCandidates(supabase: ReturnType<typeof createAdminClient>): Promise<BackOnMarketCandidateRow[]> {
+  const { data, error } = (await supabase
+    .from('alerts')
+    .select('id, email, source_path, unsubscribe_token')
+    .eq('status', 'paused')
+    .not('unavailable_notified_at', 'is', null)) as {
+    data: BackOnMarketCandidateRow[] | null
+    error: { message: string } | null
+  }
+  if (error) {
+    if (!error.message?.includes('unavailable_notified_at')) {
+      console.error('[alert-digest] back-on-market fetch error:', error.message)
+    }
+    return []
+  }
+  return data ?? []
+}
+
+/** Is this specific aircraft/partnership row `status: 'active'` again? Never
+ *  guesses on a query error or a missing row — both simply mean "not
+ *  confirmed active," so the caller correctly leaves the watch paused. */
+async function resolveBackOnMarket(
+  supabase: ReturnType<typeof createAdminClient>,
+  noun: 'aircraft' | 'partnership',
+  listingId: string
+): Promise<{ title: string; url: string } | null> {
+  const table = noun === 'aircraft' ? 'aircraft_for_sale' : 'partnerships'
+  const { data, error } = await supabase.from(table).select('id, make, model, year, status').eq('id', listingId).maybeSingle()
+  if (error || !data || data.status !== 'active') return null
+  const fallbackTitle = noun === 'aircraft' ? 'This aircraft' : 'This partnership'
+  const title = [data.year, data.make, data.model].filter(Boolean).join(' ') || fallbackTitle
+  const url = noun === 'aircraft' ? `${SITE_URL}/aircraft/listing/${listingId}` : `${SITE_URL}/partnerships/${listingId}`
+  return { title, url }
+}
+
+/**
+ * Sends `buildListingBackOnMarketEmail` to every auto-paused watch alert
+ * whose target listing is confirmed active again, then resumes the alert
+ * (`status: 'confirmed'`, clears `unavailable_notified_at`, stamps
+ * `last_digest_at` so the next due-check starts fresh from now). A
+ * user-initiated pause is never touched — `getBackOnMarketCandidates` only
+ * ever returns rows the cron itself auto-paused.
+ */
+async function sendBackOnMarketNotices(supabase: ReturnType<typeof createAdminClient>, nowIso: string): Promise<{ sent: number; failed: number }> {
+  const candidates = await getBackOnMarketCandidates(supabase)
+  let sentCount = 0
+  let failed = 0
+  for (const row of candidates) {
+    const target = parseSourcePath(row.source_path)
+    if (!target || (target.type !== 'aircraft' && target.type !== 'partnership') || !target.listingId) continue
+    const noun = target.type
+    const resolved = await resolveBackOnMarket(supabase, noun, target.listingId)
+    if (!resolved) continue
+
+    const unsubToken = row.unsubscribe_token ?? ''
+    const manageUrl = unsubToken ? `${SITE_URL}/alerts/manage?token=${unsubToken}` : `${SITE_URL}/alerts/manage`
+    const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${unsubToken}`
+    const { subject, html, text } = buildListingBackOnMarketEmail({
+      title: resolved.title,
+      listingUrl: resolved.url,
+      manageUrl,
+      unsubscribeUrl,
+      noun,
+    })
+
+    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'listing-back-on-market' })
+    if (result.sent || result.reason === 'no-key') {
+      const { error } = await supabase
+        .from('alerts')
+        .update({ status: 'confirmed', unavailable_notified_at: null, last_digest_at: nowIso })
+        .eq('id', row.id)
+      if (error) console.error('[alert-digest] back-on-market resume error:', error.message)
+      sentCount++
+    } else {
+      failed++
+    }
+  }
+  return { sent: sentCount, failed }
+}
+
 // ─── Cron handler ─────────────────────────────────────────────────────────────
 
 /**
@@ -2085,18 +2182,32 @@ export async function GET(req: NextRequest) {
     const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'listing-unavailable' })
 
     if (result.sent || result.reason === 'no-key') {
-      const { error: watchPauseError } = await supabase
-        .from('alerts')
-        .update({ status: 'paused', last_digest_at: new Date().toISOString(), paused_at: new Date().toISOString() })
-        .eq('id', alert.id)
-      // Not-yet-migrated DB (`paused_at` column missing) — retry the update
-      // without it rather than leaving the alert stuck un-paused after the
+      const nowStamp = new Date().toISOString()
+      // `unavailable_notified_at` is what lets sendBackOnMarketNotices (below)
+      // tell this auto-pause apart from a user-initiated one — never dropped
+      // silently, only retried away if genuinely unmigrated.
+      let pausePayload: Record<string, unknown> = {
+        status: 'paused',
+        last_digest_at: nowStamp,
+        paused_at: nowStamp,
+        unavailable_notified_at: nowStamp,
+      }
+      const watchPauseOptionalKeys = ['paused_at', 'unavailable_notified_at']
+      let { error: watchPauseError } = await supabase.from('alerts').update(pausePayload).eq('id', alert.id)
+      // Not-yet-migrated DB (`paused_at`/`unavailable_notified_at` column missing) —
+      // retry dropping whichever one the error names (order-independent, up to
+      // once each) rather than leaving the alert stuck un-paused after the
       // one-time notice already sent.
-      if (watchPauseError?.message?.includes('paused_at')) {
-        await supabase
-          .from('alerts')
-          .update({ status: 'paused', last_digest_at: new Date().toISOString() })
-          .eq('id', alert.id)
+      for (
+        let i = 0;
+        i < watchPauseOptionalKeys.length &&
+        watchPauseError &&
+        watchPauseOptionalKeys.some((k) => k in pausePayload && watchPauseError!.message?.includes(k));
+        i++
+      ) {
+        const dropKey = watchPauseOptionalKeys.find((k) => k in pausePayload && watchPauseError!.message?.includes(k))!
+        pausePayload = Object.fromEntries(Object.entries(pausePayload).filter(([k]) => k !== dropKey))
+        ;({ error: watchPauseError } = await supabase.from('alerts').update(pausePayload).eq('id', alert.id))
       }
       sent++
       emailsSent++
@@ -2113,9 +2224,13 @@ export async function GET(req: NextRequest) {
   const repermissionsSent = repermissionResult.sent
   sendFailures += repermissionResult.failed
 
+  const backOnMarketResult = await sendBackOnMarketNotices(supabase, nowIso)
+  const backOnMarketSent = backOnMarketResult.sent
+  sendFailures += backOnMarketResult.failed
+
   const total = (alerts ?? []).length
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} repermissionsSent=${repermissionsSent} sendFailures=${sendFailures}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} repermissionsSent=${repermissionsSent} backOnMarketSent=${backOnMarketSent} sendFailures=${sendFailures}`
   )
 
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails

@@ -2,6 +2,77 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T111641Z — PASS — watch-back-on-market
+- Pages: no user-facing page markup changed — new columns/logic on the shared
+  `alerts` table + `/api/cron/alert-digest` cron and a new email builder in
+  `src/lib/email.ts`. No route/markup touched.
+- What: **A watch alert we auto-paused because the listing sold or was pulled now
+  resumes itself — and tells the subscriber — the moment that same listing comes
+  back on the market.** Before, the one-time "no longer available" notice was a
+  dead end: if the sale fell through or the owner relisted, the subscriber who
+  proved they wanted exactly that aircraft (they watched it all the way to
+  removal) never heard, because a cron-initiated auto-pause and a user's own
+  manual pause were indistinguishable (`status='paused'` + `paused_at`, set by
+  both). A new `alerts.unavailable_notified_at` stamp marks ONLY the cron's own
+  auto-pauses; each run, the cron checks every stamped-paused watch alert against
+  its target aircraft/partnership row, and the instant it's `status: 'active'`
+  again sends a new "It's back on the market" email (`buildListingBackOnMarketEmail`,
+  mirroring the aircraft/partnership noun split of the original unavailable notice)
+  and flips the alert back to `status: 'confirmed'` — no click required, since this
+  is resuming a subscription the person already double-opted into, not a new one.
+  A user-initiated pause/snooze never sets the new column, so this logic can never
+  touch it.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open
+  `[bug]`s (swept BACKLOG.md), no autonomously-buildable `[want]` (the two standing
+  product-decision items — save-search auth-wall, collection-layout redesign —
+  still need a human call). Highest-value remaining `[P1][goal]` in plan-pass batch
+  #10: the prior two cycles' own "Next" notes named this first among the batch's
+  open items. Closes the one lifecycle gap left in the watch-alert honesty flow —
+  "we told you it's gone" now has a matching "we noticed it's back," instead of a
+  one-way door.
+- Spec: nightshift/specs/20260719T111641Z-watch-back-on-market.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0.
+  Full `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 591/591
+  pass (7 new tests for `buildListingBackOnMarketEmail`: subject copy, "resumed
+  watching" language instead of "browse similar," listing/manage/unsubscribe links
+  present in html+text, title HTML-escaping, aircraft/partnership noun-split copy,
+  and byte-for-byte parity when `noun` is omitted vs. explicitly `'aircraft'`).
+  Non-visual cycle (cron/email-library internals, no page markup) — screenshots
+  saved for the audit trail but not read into context, per the RUNBOOK convention.
+  **Mutation/fail-soft correctness verified directly against the real prod DB**
+  (no test-alert credentials for a real authenticated Playwright session, same
+  precedent as `alert-dormant-repermission`): confirmed `alerts.unavailable_notified_at`
+  genuinely doesn't exist live yet (`column alerts.unavailable_notified_at does not
+  exist`) — and, notably, that `paused_at` itself is *also* still unmigrated live
+  today (`column alerts.paused_at does not exist`), so this ships into a DB where
+  several prior `alerts.*` migrations remain pending; created a throwaway
+  `@example.com` alert row and replayed the exact auto-pause update payload — the
+  drop-missing-column retry loop correctly dropped `paused_at` then
+  `unavailable_notified_at` in turn and landed the row at `status:'paused'`,
+  proving the fail-soft path is real, not just reasoned-about; replayed the exact
+  `getBackOnMarketCandidates` query and confirmed it errors on the missing column
+  (which the real code catches and turns into `[]`, i.e. a clean no-op until the
+  migration lands). All test rows deleted immediately after each check; a final
+  read confirmed 0 remain for each test email. Served the PRODUCTION build
+  (`npx next start` on port 3900; a stray `next-server` from an earlier, unrelated
+  session was found already running on port 3000 and killed as hygiene cleanup —
+  it was not part of this cycle's own server lifecycle). `qa-smoke.mjs` on
+  `/alerts`, `/aircraft` at desktop 1280 + mobile 375: 4/4 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow). Server started/stopped
+  cleanly this cycle; no stray `next-server` left running afterward. No prod DB
+  rows left behind (all throwaway `@example.com` rows deleted, verified by re-read).
+- Screenshots: nightshift/screenshots/watch-back-on-market/
+- Next: once a human applies the `alerts.unavailable_notified_at` migration (and
+  the still-outstanding `paused_at`/`digest_sends_count`/`repermission_sent_at`
+  migrations flagged in prior cycles), this activates automatically on the next
+  daily cron run with no further code change. Remaining open batch #10 `[P1]`:
+  "Get fewer emails" rung on the combined digest (ladder parity with the
+  single-alert digest) — no schema change needed, fully active the moment it
+  ships. Also worth a periodic sweep: several `alerts.*` migrations from earlier
+  batches (`paused_at`, `digest_sends_count`, `repermission_sent_at`, etc.) are
+  still unapplied in the live DB per this cycle's direct probe — worth flagging to
+  the human as a batch to apply together rather than one at a time.
+
 ## 20260719T110852Z — PASS — digest-sample-watch-link
 - Pages: no user-facing page markup changed — new field on the shared
   `AlertDigestSample` type (`src/lib/email.ts`) rendered inside the digest
