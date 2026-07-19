@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260719T082119Z — PASS — alert-reply-to
+- Pages: no user-facing page changed — this is a server-side change to the shared
+  `sendEmail` chokepoint and the two digest-email builders (`buildAlertDigestEmail`,
+  `buildCombinedAlertDigestEmail`) behind every alert digest send.
+- What: **Alert emails can now be replied to.** Before this, every alert email went out
+  from an unmonitored `alerts@clubhanger.com` from-address with no `reply_to`, so hitting
+  "Reply" in Gmail/Outlook dead-ended. `sendEmail` now reads an optional `ALERTS_REPLY_TO`
+  env var and passes it to Resend as `reply_to` on every alert send (one chokepoint, every
+  email type — confirm, digest, combined digest, price-drop, etc.). The two digest
+  builders also render a quiet new footer line — "Question about a listing? Just reply to
+  this email." — but **only when the env var is set**, so nothing ever invites a reply
+  into a mailbox nobody's watching. No value is set here (per FREEZE, `.env*` is never
+  edited); until a human sets `ALERTS_REPLY_TO`, every send/render is byte-identical to
+  before this cycle.
+- Goal: alert-experience (digest email quality + trust pillar) — tier 3 `[goal]`, plan-pass
+  batch #8's item "Real reply-to on alert emails + a 'just reply' line," the sibling
+  follow-up flagged by the prior `alert-confirm-send-cap` cycle's "Next" note. Tier 1
+  (`[bug]`): most recent CHANGELOG entry (`alert-confirm-send-cap`) was a PASS; swept
+  BACKLOG.md for any unstruck `[P.][bug]` line — zero matches. Tier 2 (`[want]`): every
+  unstruck `[P.][want]` line is the same standing human-blocked set as the last several
+  cycles (save-search auth-wall reconciliation + collection-layout mosaic await a human
+  mock/decision; owner-leads needs compliance review; Trade-A-Plane/Controller/AirMart/
+  AeroTrader are bot-protection-blocked by design; Bay-Area coverage benchmark needs a real
+  FAA/AirNav denominator; dynamic-location seed personas is P2 with no live-site effect) —
+  none buildable autonomously. Dropped to tier 3 and picked this item (batch #8's other
+  remaining open item, "Persist the one-tap unsubscribe reasons + Monday rollup," touches
+  an admin rollup surface and is a larger slice — left for a future cycle).
+- Spec: nightshift/specs/20260719T082119Z-alert-reply-to.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0. `rm -rf .next && npx next build` exit 0 (all
+  routes compile). Full `node --experimental-strip-types --test 'src/**/*.test.ts'` suite
+  — 536 tests (up from 532 — 4 new in `email.test.ts`: single-digest footer absent/present,
+  combined-digest footer absent/present, each asserted in both HTML and text) — 0
+  failures. Non-visual cycle (server-composed email body, no rendered UI change) — served
+  the PRODUCTION build (`next build` + `next start` on :3000; had to clean up a
+  stale/duplicate `next-server` left listening from an earlier attempt before a clean
+  restart) and ran `qa-smoke.mjs --slug alert-reply-to / /aircraft/browse /alerts/manage`
+  → 6/6 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow at
+  desktop 1280 + mobile 375), run twice — once with `ALERTS_REPLY_TO` unset, once with it
+  set — confirming the page-level gate is unaffected either way. **Live-verified the
+  actual footer-line gating**, not just code-read: hit the existing dev-only, DB-free
+  `/api/dev/email-preview/alert-digest` and `/api/dev/email-preview/alert-digest-combined`
+  routes (static fixtures, no send, no DB write) with the server running unset — zero
+  matches for the footer text in either — then restarted the server with
+  `ALERTS_REPLY_TO=support@clubhanger.com` and re-hit both — footer line present in both.
+  No `.env*` file was touched (env var passed inline to the `next start` process only, per
+  FREEZE); no prod DB rows created or needed for this cycle (no live send, no signup/post
+  round-trip). Confirmed port 3000 free / no orphaned `next-server` after.
+- Screenshots: nightshift/screenshots/alert-reply-to/
+- Next: the sibling batch #8 item, "Persist the one-tap unsubscribe reasons + Monday
+  rollup — the last deaf feedback loop" (`[P1][goal]`), is the natural next slice; also
+  open: "Monthly cadence" and "Pre-bounced-address heads-up at capture" (`[P2][goal]`).
+
 ## 20260719T081700Z — PASS — alert-confirm-send-cap
 - Pages: no user-facing page changed — this is a server-action logic fix behind every
   alert signup form (homepage, `/aircraft/browse`, make/model/state pages, `/saved`,

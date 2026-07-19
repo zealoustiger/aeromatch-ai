@@ -3192,14 +3192,15 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   recorded yet" empty state) to `alertFunnelWeekly` and mirror it on `/admin/alerts` if
   trivial in-cycle. Improves: prove-it-converts / honest-measurement pillar. No new
   capture point, no schema change beyond the already-flagged `unsubscribe_reason` column.
-- **[P1][goal] Real reply-to on alert emails + a "just reply" line.** `sendEmail` sets no
+~~- **[P1][goal] Real reply-to on alert emails + a "just reply" line.** `sendEmail` sets no
   `reply_to`, so replying to any alert email dead-ends at the unmonitored from-address —
   best-in-class digests (and deliverability heuristics) treat a replyable sender as a
   feature. Read an optional `ALERTS_REPLY_TO` env var (code change only — human sets the
   value, per FREEZE), pass it as Resend's `reply_to` on every alert send, and add a quiet
   "Question about a listing? Just reply to this email." footer line to the digest builders
   — rendered ONLY when the env var is configured (never invite replies nobody will read).
-  Improves: digest email quality + trust. No new capture point, no schema change.
+  Improves: digest email quality + trust. No new capture point, no schema change.~~
+  ✅ SHIPPED via `alert-reply-to` (2026-07-19)
 - **[P2][goal] Monthly cadence — a real "fewer" rung under weekly.** `AlertFrequency` is
   exactly daily|weekly, so the unsubscribe-recovery ladder's "fewer emails" offer bottoms
   out at weekly→snooze→pause — there's no honest low-touch cadence for the long-horizon

@@ -508,6 +508,54 @@ test('combined digest: with digestFeedbackBaseUrl, each section\'s sample gets i
   assert.match(text, /Not relevant\? https:\/\/clubhanger\.com\/api\/alerts\/digest-feedback\?token=a&listing=abc&type=aircraft/)
 })
 
+test('digest: no "just reply" footer line when ALERTS_REPLY_TO is unset', () => {
+  delete process.env.ALERTS_REPLY_TO
+  const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
+  assert.doesNotMatch(html, /Just reply to this email/)
+  assert.doesNotMatch(text, /Just reply to this email/)
+})
+
+test('digest: "just reply" footer line renders in both HTML and text when ALERTS_REPLY_TO is set', () => {
+  process.env.ALERTS_REPLY_TO = 'support@clubhanger.com'
+  try {
+    const { html, text } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 1, dropCount: 0 })
+    assert.match(html, /Question about a listing\? Just reply to this email\./)
+    assert.match(text, /Question about a listing\? Just reply to this email\./)
+  } finally {
+    delete process.env.ALERTS_REPLY_TO
+  }
+})
+
+test('combined digest: no "just reply" footer line when ALERTS_REPLY_TO is unset', () => {
+  delete process.env.ALERTS_REPLY_TO
+  const { html, text } = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172' },
+    ],
+  })
+  assert.doesNotMatch(html, /Just reply to this email/)
+  assert.doesNotMatch(text, /Just reply to this email/)
+})
+
+test('combined digest: "just reply" footer line renders in both HTML and text when ALERTS_REPLY_TO is set', () => {
+  process.env.ALERTS_REPLY_TO = 'support@clubhanger.com'
+  try {
+    const { html, text } = buildCombinedAlertDigestEmail({
+      manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
+      unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+      sections: [
+        { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172' },
+      ],
+    })
+    assert.match(html, /Question about a listing\? Just reply to this email\./)
+    assert.match(text, /Question about a listing\? Just reply to this email\./)
+  } finally {
+    delete process.env.ALERTS_REPLY_TO
+  }
+})
+
 test('digest: sample cards never nest the "Not relevant?" link inside the card\'s own <a> (invalid HTML)', () => {
   const { html } = buildAlertDigestEmail({
     ...DIGEST_BASE,

@@ -18,6 +18,13 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 /** Sender identity. Override with ALERTS_FROM_EMAIL once a domain is verified. */
 const FROM = process.env.ALERTS_FROM_EMAIL || 'ClubHanger <alerts@clubhanger.com>'
 
+/**
+ * Optional monitored reply-to address for alert emails. Unset by default (every
+ * send stays exactly as today); once a human sets `ALERTS_REPLY_TO`, `sendEmail`
+ * passes it to Resend on every send and the digest builders below add a quiet
+ * "just reply" footer line — never invite a reply nobody will read.
+ */
+
 export type SendEmailInput = {
   to: string
   subject: string
@@ -75,6 +82,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   try {
     const listUnsubscribeHeaders = buildListUnsubscribeHeaders(input.unsubscribeUrl)
+    const replyTo = process.env.ALERTS_REPLY_TO || undefined
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -87,6 +95,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         subject: input.subject,
         html: input.html,
         ...(input.text ? { text: input.text } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
         ...(listUnsubscribeHeaders ? { headers: listUnsubscribeHeaders } : {}),
         ...(input.emailType ? { tags: [{ name: 'type', value: input.emailType }] } : {}),
       }),
@@ -1138,6 +1147,11 @@ export function buildAlertDigestEmail(opts: {
     ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Buying with a partner? <a href="${escapeAttr(opts.shareUrl)}" style="color:#a89f8e;text-decoration:underline;">Share this alert</a></p>`
     : ''
   const shareText = opts.shareUrl ? `\nBuying with a partner? Share this alert: ${opts.shareUrl}\n` : ''
+  const replyToConfigured = !!process.env.ALERTS_REPLY_TO
+  const replyToFooterHtml = replyToConfigured
+    ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Question about a listing? Just reply to this email.</p>`
+    : ''
+  const replyToFooterText = replyToConfigured ? '\nQuestion about a listing? Just reply to this email.\n' : ''
   const viewUrlHtml = viewUrl
     ? `<p style="margin:0 0 14px;text-align:right;"><a href="${escapeAttr(viewUrl)}" style="font-size:11px;color:#a89f8e;text-decoration:underline;">View in browser</a></p>`
     : ''
@@ -1179,6 +1193,7 @@ export function buildAlertDigestEmail(opts: {
       ${upgradeNudgeHtml}
       ${digestFeedbackHtml}
       ${shareHtml}
+      ${replyToFooterHtml}
       <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up${forThing} alerts on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -1225,7 +1240,7 @@ export function buildAlertDigestEmail(opts: {
   const text = `${viewUrlText}${sampleBannerText}${bodyCopyText}
 ${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
-${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}
+${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}${replyToFooterText}
 Manage alerts: ${manageUrl}
 Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to weekly): ${opts.frequencyUrl}` : ''}`
 
@@ -1318,6 +1333,11 @@ export function buildCombinedAlertDigestEmail(opts: {
     opts.digestFeedbackUpUrl && opts.digestFeedbackDownUrl
       ? `\nWas this digest useful? Yes: ${opts.digestFeedbackUpUrl}  No: ${opts.digestFeedbackDownUrl}\n`
       : ''
+  const replyToConfigured = !!process.env.ALERTS_REPLY_TO
+  const replyToFooterHtml = replyToConfigured
+    ? `<p style="font-size:12px;line-height:1.6;color:#a89f8e;margin:16px 4px 0;">Question about a listing? Just reply to this email.</p>`
+    : ''
+  const replyToFooterText = replyToConfigured ? '\nQuestion about a listing? Just reply to this email.\n' : ''
 
   const overallParts: string[] = []
   if (totalNew > 0) overallParts.push(totalNew === 1 ? '1 new listing' : `${totalNew} new listings`)
@@ -1411,6 +1431,7 @@ export function buildCombinedAlertDigestEmail(opts: {
           : ''
       }
       ${digestFeedbackHtml}
+      ${replyToFooterHtml}
       <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#a89f8e;margin:20px 4px 0;">
         You&rsquo;re receiving this because you set up these alerts on ClubHanger &mdash; combined into one email since more than one had new matches.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
@@ -1426,7 +1447,7 @@ export function buildCombinedAlertDigestEmail(opts: {
   const text = `${overallLabel} across your ${sections.length} alerts on ClubHanger.
 
 ${sectionParts.map((s) => s.text).join('\n\n')}
-${crossSellText}${digestFeedbackText}
+${crossSellText}${digestFeedbackText}${replyToFooterText}
 Manage alerts: ${manageUrl}
 Unsubscribe from these: ${opts.unsubscribeUrl}`
 
