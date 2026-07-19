@@ -1,3 +1,37 @@
+## 2026-07-19T10:31:56Z — Night Shift run: 24 cycles (PASS 20 / FAIL 1) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 1 escalated to opus; 5 quality-judged on opus
+- Night spend so far: $96.1403 of $120 cap
+
+- PASS — alert-overlap-subscribe-hint — subscribing to a new alert now shows a heads up, your other alert already covers this hint right in the confirmation panel (not just on /a
+- PASS — alert-model-multiselect-chips — the aircraft alert edit form's Model field on /alerts/manage now renders variant-grouped checkbox chips (matching /aircraft browse filter
+- PASS — digest-cron-reliability-line — Monday admin alert-funnel email now shows a Cron reliability section (days the digest cron ran this week out of 7, flagged when short; ema
+- PASS — email-engagement-recipient-attribution — Resend `email.opened`/`email.clicked` webhook events now get attributed to the recipient address, so `/admin/alerts`'s Email eng
+- PASS — alert-digest-day-picker — weekly alert digests can now be pinned to a specific UTC day (e.g. always Saturday) via a new picker on `/alerts/manage` and `/searches`, with 
+- PASS — digest-cron-send-failures — the alert-digest cron now counts real email-send failures (Resend errors, not the deliberate no-key dev no-op) across every send loop and sur
+- ABORT — none — plan needed
+- cycle produced no verdict (exit 124)
+- PASS — alert-revive-resend-status-fix — re-subscribing to a previously-unsubscribed alert now actually sends the confirmation email again (the anon revive path was silently ski
+- PASS — alert-bounced-revive — Fixed the alert system so re-subscribing with an email whose alert had previously bounced now revives it (fresh tokens, confirmation email, `bounc
+- PASS — alert-bounced-email-change — bounced alert rows on /alerts/manage now link straight to the change-email form (auto-opened), and confirming an email change revives a boun
+- PASS — alert-confirm-send-cap — capped confirmation emails to 3/address/hour at the `subscribeToAlerts` chokepoint, closing the confirm-mail bombing hole (varying `source_path`
+- PASS — alert-reply-to — Alert emails can now be replied to: added an optional `ALERTS_REPLY_TO` env-var passthrough on every Resend send plus a just reply footer line on the di
+- PASS — alert-unsubscribe-reasons — Unsubscribe reason chips on `/alerts/status` now persist to the DB and a new Why people unsubscribe breakdown shows in the Monday admin funne
+- PASS — alert-bounced-heads-up — subscribing to an alert with an email address that's already hard-bounced before now shows an honest heads up, this address has bounced before n
+- PASS — alert-monthly-cadence — Added a real monthly alert digest cadence (capture form, /alerts/manage toggle, unsubscribe-recovery, and the high-volume narrow nudge), with an 
+- ABORT — none — plan needed`
+- PASS — digest-monthly-fewer-emails — weekly-cadence subscribers can now one-click get fewer emails straight to monthly in every digest/price-drop email footer (previously daily
+- PASS — digest-cadence-honest-framing — the alert digest email now says yesterday/this week/this month per the subscriber's real cadence instead of always hardcoding this week`
+- PASS — alert-postsubscribe-max-price-refine — added an optional Cap it at a max price? field to AlertSignup's post-subscribe success panel (all 3 subscribe paths), letting a vi
+- PASS — watch-unavailable-similar-alert — the listing you were watching is no longer available email now offers a one-tap Yes, alert me too → button that upgrades the dead wat
+- PASS — alert-resend-bounced-heads-up — the Resend confirmation email button on AlertSignup now shows the same honest this address has bounced before heads-up the original subsc
+- PASS — alert-dormant-repermission — added an honesty-gated, one-time still want these alerts? re-permission email for confirmed alerts ≥90 days old with ≥8 real digest send
+- ABORT — none — plan needed
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 8.0 on 2 cores, sustained ~42 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 1 of 24 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-18T12:23:51Z — Night Shift run: 12 cycles (PASS 9 / FAIL 1) — night budget cap ($120)
 - Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
 - Night spend so far: $124.6348 of $120 cap
