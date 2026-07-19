@@ -1017,6 +1017,13 @@ export function buildAlertDigestEmail(opts: {
    *  existed). Pass `'monthly'` for the weekly→monthly link so the text-part
    *  label names the real target instead of always saying "weekly". */
   frequencyTarget?: 'weekly' | 'monthly'
+  /** Honest cadence framing for the aggregate body/preheader sentence — e.g.
+   *  "yesterday" for a daily alert, "this month" for monthly. Default
+   *  `'this week'` (byte-exact with every call before this option existed).
+   *  Same convention as `buildPriceDropEmail`'s `periodLabel`. Only affects
+   *  the real-send framing (`isSample`/`isFirstSend` copy already avoids
+   *  claiming a time window). */
+  periodLabel?: string
   /** Token-scoped "switch to daily" upgrade link — present only when the
    *  caller has already confirmed (via `shouldOfferDailyUpgrade`) this is a
    *  weekly-cadence alert whose send genuinely cleared the volume bar.
@@ -1089,6 +1096,7 @@ export function buildAlertDigestEmail(opts: {
   const isSample = !!opts.sampleNote
   const isFirstSend = !isSample && !!opts.firstSend
   const total = opts.newCount + opts.dropCount
+  const periodLabel = opts.periodLabel ?? 'this week'
 
   let countLabel: string
   if (isSample) {
@@ -1127,7 +1135,7 @@ export function buildAlertDigestEmail(opts: {
     ? `${countLabel} for your${forThing} alert right now.`
     : isFirstSend
       ? `${countLabel} for your${forThing} alert — here's what's live the moment you confirmed. We'll email again automatically when something new matches.`
-      : `There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger this week.`
+      : `There ${total === 1 ? 'is' : 'are'} ${countLabel} matching your${forThing} alert on ClubHanger ${periodLabel}.`
   const sampleBannerHtml = isSample
     ? `<p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;">Sample email &mdash; ${escapeHtml(opts.sampleNote!)}</p>`
     : ''
@@ -1175,7 +1183,7 @@ export function buildAlertDigestEmail(opts: {
     ? `${countLabelText} for your${forThingText} alert right now.`
     : isFirstSend
       ? `${countLabelText} for your${forThingText} alert — here's what's live the moment you confirmed. We'll email again automatically when something new matches.`
-      : `There ${total === 1 ? 'is' : 'are'} ${countLabelText} matching your${forThingText} alert on ClubHanger this week.`
+      : `There ${total === 1 ? 'is' : 'are'} ${countLabelText} matching your${forThingText} alert on ClubHanger ${periodLabel}.`
 
   const html = `<!doctype html>
 <html>
