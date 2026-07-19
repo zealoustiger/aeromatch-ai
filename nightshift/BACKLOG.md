@@ -3119,7 +3119,7 @@ permanent dead end on re-subscribe; `/alerts/manage`'s bounced state
 email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend anywhere;
 `AlertFrequency` (`alertFrequency.ts:14`) is exactly `'daily' | 'weekly'` — no monthly._
 
-- **[P1][goal] Re-subscribe on a bounced address must revive, not silently no-op.**
+~~- **[P1][goal] Re-subscribe on a bounced address must revive, not silently no-op.**
   A subscriber whose mailbox bounced (full inbox, transient outage, later-fixed address)
   who comes back and re-submits the same alert gets an idempotent "success" while the row
   stays `status='bounced'` forever — the one lifecycle state with no way back through the
@@ -3128,7 +3128,11 @@ email-change flow; `sendEmail` (`email.ts`) posts no `reply_to` field to Resend 
   rows: fresh tokens, back to `pending`, send a real confirm email — the double-opt-in
   itself is the honest proof the address works again (clear `bounced_at` on confirm,
   fail-soft when unmigrated). Improves: capture-flow correctness + never-a-dead-end pillar.
-  No new capture point (existing `alert_subscribed` event), no schema change.
+  No new capture point (existing `alert_subscribed` event), no schema change.~~ ✅ SHIPPED
+  via `alert-bounced-revive` (2026-07-19) — `reviveIfUnsubscribed`'s guard now accepts
+  `unsubscribed` OR `bounced`; revive payload clears `bounced_at` (fail-soft retry, same
+  pattern as `resumeAlert`/`/api/alerts/confirm`). All 6 call sites' comments updated for
+  accuracy. See CHANGELOG.
 - **[P1][goal] Bounced rows on `/alerts/manage` should offer the email-change flow, not
   just Resume.** Today's copy is "Your email bounced — resume once it's fixed," but when
   the address itself is wrong or dead, Resume just re-bounces — while the existing
