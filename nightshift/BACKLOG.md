@@ -3013,7 +3013,7 @@ chip multi-select._
   prove-it-converts pillar (the loop can finally hear the signal it asked for). No new
   capture point, no schema change.~~
   ✅ SHIPPED via `digest-feedback-loops-rollup` (2026-07-18)
-- **[P1][goal] Attribute email engagement to the subscriber — `recipient` +
+~~- **[P1][goal] Attribute email engagement to the subscriber — `recipient` +
   `alert_email_type` linkage on `email_engagement_events`.** The webhook stores no "who"
   (`route.ts:70`), so open/click WoW can never become per-placement or per-subscriber,
   and any future re-permission/auto-quiet flow (pause alerts nobody reads — the
@@ -3023,7 +3023,21 @@ chip multi-select._
   `emailEngagement.ts`'s rollup to expose per-`email_type` open/click WITH a
   distinct-recipient count on `/admin/alerts`. Store nothing beyond the address already
   in the `alerts` table. Slice: attribution + admin surfacing only — the re-permission
-  email itself is a later cycle once weeks of data exist. No new capture point.
+  email itself is a later cycle once weeks of data exist. No new capture point.~~
+  ✅ SHIPPED via `email-engagement-recipient-attribution` (2026-07-19) Added additive
+  nullable `email_engagement_events.recipient` (⚠️ human-apply, same fail-soft/retry
+  precedent as every other `alerts.*`/table column). `extractEngagementEvent`
+  (`resendWebhook.ts`) now reads the first address off `data.to` (same shape
+  bounce/complained events already parse) into a lowercased `recipient`; the webhook
+  insert retries without the column on a `42703`/`PGRST204` error, same as the
+  `contact_phone` precedent in `actions.ts`. `getEmailEngagementRollup` now returns a
+  `recipients` count per email type — the number of *distinct* non-null recipients, not
+  raw event volume — with the same select-retry fallback (recipients: 0 pre-migration,
+  opened/clicked unaffected). `/admin/alerts`'s "Email engagement" panel renders it
+  inline ("14 opened · 6 clicked · 9 people"). No new capture point, no schema change
+  beyond the one additive column. **Not done, intentionally:** the re-permission/
+  auto-quiet flow this data enables — per the item's own scoping note, that's a later
+  cycle once weeks of real recipient data exist.
 - **[P2][goal] Digest-cron reliability line in the Monday admin email.** The human reads
   WoW funnel numbers that silently assume the cron ran every day — `alert_cron_runs`
   already records per-run stats but only `/admin/alerts` reads it. Add to
