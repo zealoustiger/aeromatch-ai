@@ -3032,7 +3032,16 @@ chip multi-select._
   `send_failures` count in the cron (additive nullable column on `alert_cron_runs`, ⚠️
   human-apply fail-soft) and render it when present. Same fail-soft empty state when the
   table isn't migrated. Improves: honest measurement (a quiet week should be
-  distinguishable from a broken cron). No new capture point.
+  distinguishable from a broken cron). No new capture point. — **reliability-line slice ✅
+  SHIPPED via `digest-cron-reliability-line` (2026-07-19)**: the Monday email now has a
+  "Cron reliability" section — distinct UTC days the cron ran this week out of 7 (flagged
+  when short, e.g. "4/7 ⚠️ fewer days than expected"), emails sent this week vs last week,
+  and this week's average run duration — all from `alert_cron_runs` columns that already
+  exist, no schema change. Honest empty state ("No cron run data yet…") when the table has
+  no rows in the last 14 days, same ambiguity `/admin/alerts`'s existing panel already
+  lives with. **Remaining: the `send_failures` per-run column** — needs a new additive
+  column AND wiring failure-counting through the cron's several send loops; bigger/riskier,
+  left open.
 ~~- **[P2][goal] "Heads up — this overlaps an alert you already have" on the subscribe
   success panel.** `detectOverlappingAlerts` runs only on `/alerts/manage`, so a
   subscriber who sets "Cessna 172 in CA" on top of an existing "Cessna — all states"

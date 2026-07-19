@@ -8,6 +8,7 @@ import {
 import { getEmailEngagementWeeklyRollup } from './emailEngagement'
 import { getAlertMatchCount } from './alertMatchCounts'
 import { describeLocalAlertContext } from './alertEditCriteria'
+import { getCronRunsSince } from './alertCronHealth'
 
 // The date `alert-source-column` shipped — rows from before this never got a
 // `source` tag at all. Same fallback label `alertScoreboard.ts` uses.
@@ -109,6 +110,21 @@ export interface AlertFunnelWeeklySnapshot {
   unsubscribedAtMigrated: boolean
   pausedAtMigrated: boolean
   bouncedAtMigrated: boolean
+  /** Digest-cron reliability, from `alert_cron_runs` (`alertCronHealth.ts`) — lets the
+   *  human tell a genuinely quiet week apart from a silently broken cron. Distinct UTC
+   *  calendar days with at least one logged run this week (out of 7, cron runs daily),
+   *  total emails sent this week vs. last week, and this week's average run duration.
+   *  `cronRunsRecorded` is false when zero rows exist at all in the last 14 days —
+   *  either the table isn't migrated live yet or the cron simply hasn't logged a run,
+   *  same ambiguity `/admin/alerts`'s existing "Last run" panel already lives with;
+   *  every numeric field is an honest 0/null in that case, never fabricated. */
+  cronRunDaysThisWeek: number
+  cronRunsThisWeek: number
+  cronRunsLastWeek: number
+  cronEmailsSentThisWeek: number
+  cronEmailsSentLastWeek: number
+  cronAvgDurationMsThisWeek: number | null
+  cronRunsRecorded: boolean
   computedAt: string
 }
 
@@ -130,6 +146,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const emailEngagementPromise = getEmailEngagementWeeklyRollup(now)
   const notRelevantPromise = getNotRelevantListingsRollup(now)
   const instantInterestPromise = getInstantInterestRollup(now)
+  const cronRunsPromise = getCronRunsSince(now - 14 * DAY_MS)
   // `source`, `unsubscribed_at`, `paused_at`, and `bounced_at` may
   // independently be un-migrated live — retry dropping whichever one the
   // error names, up to once each (order-independent), same graceful-fallback
@@ -269,6 +286,21 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const emailEngagement = await emailEngagementPromise
   const notRelevant = await notRelevantPromise
   const instantInterest = await instantInterestPromise
+  const cronRuns = await cronRunsPromise
+
+  const cronRunsThisWeekList = cronRuns.filter((r) => new Date(r.createdAt).getTime() >= oneWeekAgo)
+  const cronRunsLastWeekList = cronRuns.filter((r) => {
+    const t = new Date(r.createdAt).getTime()
+    return t >= twoWeeksAgo && t < oneWeekAgo
+  })
+  const cronRunDaysThisWeek = new Set(
+    cronRunsThisWeekList.map((r) => new Date(r.createdAt).toISOString().slice(0, 10))
+  ).size
+  const cronEmailsSentThisWeek = cronRunsThisWeekList.reduce((sum, r) => sum + r.emailsSent, 0)
+  const cronEmailsSentLastWeek = cronRunsLastWeekList.reduce((sum, r) => sum + r.emailsSent, 0)
+  const cronAvgDurationMsThisWeek = cronRunsThisWeekList.length
+    ? Math.round(cronRunsThisWeekList.reduce((sum, r) => sum + r.durationMs, 0) / cronRunsThisWeekList.length)
+    : null
 
   return {
     weekStart: new Date(oneWeekAgo).toISOString(),
@@ -310,6 +342,13 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     unsubscribedAtMigrated,
     pausedAtMigrated,
     bouncedAtMigrated,
+    cronRunDaysThisWeek,
+    cronRunsThisWeek: cronRunsThisWeekList.length,
+    cronRunsLastWeek: cronRunsLastWeekList.length,
+    cronEmailsSentThisWeek,
+    cronEmailsSentLastWeek,
+    cronAvgDurationMsThisWeek,
+    cronRunsRecorded: cronRuns.length > 0,
     computedAt: new Date(now).toISOString(),
   }
 }
