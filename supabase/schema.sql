@@ -1068,3 +1068,17 @@ alter table alerts add column if not exists repermission_sent_at timestamptz;
 -- every `alerts.*` column above) and the back-on-market check fails soft to a no-op —
 -- a relisted watch simply isn't detected yet, exactly as today.
 alter table alerts add column if not exists unavailable_notified_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alert_cron_runs_deferred_sends
+-- Counts sends the cron's own `SendPacer` (src/lib/alertSendPacing.ts) deferred this
+-- run because the route was approaching its `maxDuration = 60` time budget — lets the
+-- "Last run" health panel tell "a growing list started outrunning the cron window"
+-- apart from a genuinely quiet run, before it becomes a silently-dropped-tail problem.
+-- Not null, default 0: a fresh run with nothing deferred logs an honest 0, same as
+-- `send_failures`. A deferred send is never a lost one — the alert/reminder it belongs
+-- to is left un-stamped, so the very next cron run picks it up. Apply in the Supabase
+-- SQL editor. Until applied, the run-log insert retries without this column (same
+-- graceful-fallback pattern as every column above) and the panel keeps showing 0 —
+-- indistinguishable from "genuinely never deferred" until the column lands, same
+-- ambiguity every other health-log column already documents.
+alter table alert_cron_runs add column if not exists deferred_sends int not null default 0;
