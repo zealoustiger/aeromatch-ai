@@ -3614,15 +3614,15 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   (column-not-migrated / zero / real counts) — reuse the funnel module's helpers where
   importable rather than duplicating the query. Improves: honest-measurement pillar,
   admin surface. No new capture point, no schema change.
-- **[P2][goal] Deliverability micro-copy in the double-opt-in confirm email.** GOAL.md:
-  "make the double-opt-in email itself excellent" — yet `buildAlertConfirmEmail` contains
-  no deliverability nudge and the word "spam" appears nowhere in `email.ts` output. Add
+~~- **[P2][goal] Deliverability micro-copy in the double-opt-in confirm email.**~~ ✅
+  SHIPPED via `alert-confirm-deliverability-copy` (2026-07-20) GOAL.md: "make the
+  double-opt-in email itself excellent" — yet `buildAlertConfirmEmail` contained no
+  deliverability nudge and the word "spam" appeared nowhere in `email.ts` output. Added
   one quiet, honest line under the confirm CTA ("Can't find our emails later? Drag this
   one to your Primary tab or add us to your contacts so your alerts always arrive") in
-  HTML + text — the one moment the subscriber is provably reading us in their inbox is
-  the only moment that ask works. Keep it one sentence, no images, no new links.
-  Improves: digest deliverability + the confirm-email surface itself. No new capture
-  point, no schema change.
+  both HTML and text — the one moment the subscriber is provably reading us in their
+  inbox is the only moment that ask works. One sentence, no images, no new links, no
+  schema change.
 - **[P2][goal] Daily capture-funnel self-check, reported in the Monday admin email.** No
   synthetic check exists anywhere (grep clean): if the subscribe chokepoint or confirm
   route silently breaks (bad deploy, schema drift), the first signal today is a

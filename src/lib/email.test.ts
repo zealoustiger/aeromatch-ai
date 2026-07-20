@@ -1523,6 +1523,15 @@ test('confirm: a real, confirmed zero-match preview renders the honest "None mat
   assert.match(text, /None match right now — you'll be first to know when one does\./)
 })
 
+test('confirm: renders the deliverability nudge (Primary tab / add to contacts) in both html and text, below the confirm button', () => {
+  const { html, text } = buildAlertConfirmEmail(CONFIRM_BASE)
+  assert.match(html, /Drag this one to your Primary tab or add us to your\s*\n?\s*contacts/)
+  const confirmIdx = html.indexOf('Confirm my alerts')
+  const nudgeIdx = html.indexOf('Primary tab')
+  assert.ok(nudgeIdx > confirmIdx, 'deliverability nudge renders below the confirm button')
+  assert.match(text, /Can't find our emails later\? Drag this one to your Primary tab/)
+})
+
 // ─── buildListUnsubscribeHeaders (RFC 8058) ────────────────────────────────
 
 test('buildListUnsubscribeHeaders: wraps the URL in angle brackets and sets the one-click marker', () => {
