@@ -3761,15 +3761,16 @@ test guarding it._
   (seeded + deleted via service role): rendered "Last email Jul 15 · checks weekly ·
   Next digest: ~Thursday" correctly on both desktop and 375px, zero overflow/console
   errors.
-- **[P2][goal] Cadence-mix tile on `/admin/alerts`.** No frequency-distribution read
-  exists anywhere in `alertScoreboard.ts` — the admin can't see how many live alerts are
-  daily vs weekly vs monthly, nor how many are currently snoozed/paused, so
-  fewer-emails-ladder adoption (frequency steps, snooze, vacation) is unmeasurable
-  mid-week. Add one tile with the live-alert frequency split + snoozed/paused counts,
-  same three honest states (unmigrated column / zero / real) per figure. Also real demand
-  data beside the existing instant-interest tally for the still-blocked Vercel
-  instant-cron human call. Improves: honest-measurement pillar, admin surface. No new
-  capture point, no schema change.
+~~- **[P2][goal] Cadence-mix tile on `/admin/alerts`.**~~ ✅ SHIPPED via
+  `admin-alerts-cadence-mix-tile` (2026-07-20) No frequency-distribution read existed
+  anywhere in `alertScoreboard.ts` — the admin couldn't see how many live alerts are
+  daily vs weekly vs monthly, nor how many are currently snoozed/paused. New
+  `getCadenceMixRollup()` (OPTIONAL_COLS retry pattern on `alerts.frequency`, buckets via
+  the exact `normalizeFrequency` the real digest cron uses) + a new "Cadence mix" tile on
+  `/admin/alerts` render the live daily/weekly/monthly split + paused count, with an
+  honest caveat when `alerts.frequency` isn't migrated live (every row then reads as
+  weekly — the same fallback the cron itself uses, not a guess). No new capture point,
+  no schema change.
 ~~- **[P2][goal] Capture-attribution contract test — every `<AlertSignup>` call site must
   pass `source`.**~~ ✅ SHIPPED via `alertsignup-source-contract-test` (2026-07-20) New
   `findAlertSignupUsagesMissingSource()` (`src/lib/alertSignupSourceContract.ts`) strips
