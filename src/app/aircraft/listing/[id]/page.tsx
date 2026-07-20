@@ -589,12 +589,18 @@ export default async function AircraftListingDetailPage({
   // load right after publishing, so never computed otherwise.
   const matchingSubscriberCount = justPosted
     ? await countMatchingAircraftSubscribers({
+        id: p.id,
         make: p.make,
         model: p.model,
         state: p.state,
         asking_price: p.asking_price,
         year: p.year,
         ttaf: p.ttaf,
+        smoh: p.smoh,
+        title: p.title,
+        description: p.description,
+        quality_score: p.quality_score,
+        avionics: p.avionics,
       })
     : null
 
