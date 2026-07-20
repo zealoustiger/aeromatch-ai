@@ -11,6 +11,7 @@ import {
   Zap,
   HelpCircle,
   RotateCcw,
+  Target,
 } from 'lucide-react'
 import {
   getAlertScoreboard,
@@ -19,6 +20,7 @@ import {
   getInstantInterestRollup,
   getUnsubscribeReasonRollup,
   getRepermissionRollup,
+  getDemandSupplyRollup,
 } from '@/lib/alertScoreboard'
 import { getLastCronRun, getRecentCronRuns } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
@@ -37,18 +39,29 @@ const STALE_RUN_HOURS = 36
 
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes, lastRun, recentRuns, engagement, notRelevant, instantInterest, unsubscribeReasons, repermission] =
-    await Promise.all([
-      getAlertScoreboard(),
-      getDigestVoteRollup(),
-      getLastCronRun(),
-      getRecentCronRuns(7),
-      getEmailEngagementRollup(),
-      getNotRelevantListingsRollup(),
-      getInstantInterestRollup(),
-      getUnsubscribeReasonRollup(),
-      getRepermissionRollup(),
-    ])
+  const [
+    snap,
+    votes,
+    lastRun,
+    recentRuns,
+    engagement,
+    notRelevant,
+    instantInterest,
+    unsubscribeReasons,
+    repermission,
+    demandSupply,
+  ] = await Promise.all([
+    getAlertScoreboard(),
+    getDigestVoteRollup(),
+    getLastCronRun(),
+    getRecentCronRuns(7),
+    getEmailEngagementRollup(),
+    getNotRelevantListingsRollup(),
+    getInstantInterestRollup(),
+    getUnsubscribeReasonRollup(),
+    getRepermissionRollup(),
+    getDemandSupplyRollup(),
+  ])
   const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
   const isStale = hoursSinceLastRun === null || hoursSinceLastRun > STALE_RUN_HOURS
@@ -624,6 +637,38 @@ export default async function AlertScoreboardPage() {
               <div className="text-2xl font-bold text-slate-400">{instantInterest.allTime}</div>
               <div className="text-xs text-slate-500">all time</div>
             </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <Target className="h-5 w-5 text-indigo-500" /> Demand vs. supply (&quot;most wanted&quot;)
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Live (active/confirmed) alert subscribers grouped by curated make+model family, paired
+          with that family&apos;s real live listing count — sorted least-supply-first, then
+          most-demand-first. This is the outreach-targeting list for owner acquisition: a family
+          with subscribers waiting and few or no live listings is where new supply matters most.
+          Only alerts targeting one specific curated model are counted; real small numbers
+          (including 0) always render as-is.
+        </p>
+
+        {demandSupply.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            No live subscribers targeting a specific curated make/model yet — not enough data.
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {demandSupply.map((row) => (
+              <div key={row.key} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                <span className="font-medium text-slate-800">{row.label}</span>
+                <span className={row.liveListingCount === 0 ? 'font-medium text-rose-600' : 'text-slate-500'}>
+                  {row.subscriberCount} subscriber{row.subscriberCount === 1 ? '' : 's'} waiting ·{' '}
+                  {row.liveListingCount} live listing{row.liveListingCount === 1 ? '' : 's'}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </section>
