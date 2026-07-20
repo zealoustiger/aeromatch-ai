@@ -11,6 +11,8 @@ import { getEmailEngagementWeeklyRollup } from './emailEngagement'
 import { getAlertMatchCount } from './alertMatchCounts'
 import { describeLocalAlertContext } from './alertEditCriteria'
 import { getCronRunsSince } from './alertCronHealth'
+import { CAPTURE_SELFCHECK_EMAIL } from './alertCaptureSelfCheck'
+import { summarizeSelfCheckHistory } from './alertCaptureSelfCheckHistory'
 import type { UnsubscribeReasonRow } from './alertUnsubscribeReasons'
 
 // The date `alert-source-column` shipped — rows from before this never got a
@@ -164,6 +166,15 @@ export interface AlertFunnelWeeklySnapshot {
    *  false — never fabricated from a column that isn't live yet. */
   repermissionDowngradedCadenceCount: number
   frequencyChangedAtMigrated: boolean
+  /** The daily synthetic subscribe→confirm→delete probe (`alertCaptureSelfCheck.ts`) —
+   *  did the subscribe/confirm chokepoint actually work as of the most recent cron run?
+   *  `captureSelfCheckMigrated` is false until `alert_cron_runs.self_check_ok` is
+   *  migrated live, same honest-gap posture as every other cron-log column above. */
+  captureSelfCheckMigrated: boolean
+  captureSelfCheckLastOk: boolean | null
+  captureSelfCheckLastStep: string | null
+  captureSelfCheckFailuresLast7: number
+  captureSelfCheckRunsConsidered: number
   computedAt: string
 }
 
@@ -195,14 +206,18 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const baseCols = ['status', 'created_at', 'confirmed_at', 'source_path']
   const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at']
   let cols = [...baseCols, ...optionalCols]
-  let { data, error } = await admin.from('alerts').select(cols.join(', '))
+  // Excludes the capture-funnel self-check's own reserved row (alertCaptureSelfCheck.ts)
+  // — it deletes itself within the same cron run, but this guards the tiny window it
+  // exists, and a leftover row from a failed cleanup, from ever inflating a subscriber
+  // count.
+  let { data, error } = await admin.from('alerts').select(cols.join(', ')).neq('email', CAPTURE_SELFCHECK_EMAIL)
   for (
     let i = 0;
     i < optionalCols.length && error && optionalCols.some((c) => cols.includes(c) && error!.message?.includes(c));
     i++
   ) {
     cols = cols.filter((c) => !error!.message.includes(c))
-    ;({ data, error } = await admin.from('alerts').select(cols.join(', ')))
+    ;({ data, error } = await admin.from('alerts').select(cols.join(', ')).neq('email', CAPTURE_SELFCHECK_EMAIL))
   }
   const sourceColumnMigrated = cols.includes('source')
   const unsubscribedAtMigrated = cols.includes('unsubscribed_at')
@@ -345,6 +360,10 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const cronAvgDurationMsThisWeek = cronRunsThisWeekList.length
     ? Math.round(cronRunsThisWeekList.reduce((sum, r) => sum + r.durationMs, 0) / cronRunsThisWeekList.length)
     : null
+  // `cronRuns` is already sorted newest-first (getCronRunsSince) and covers 14 days —
+  // more than enough to always have the most recent 7 runs available once the cron has
+  // run for a week.
+  const selfCheckHistory = summarizeSelfCheckHistory(cronRuns)
 
   return {
     weekStart: new Date(oneWeekAgo).toISOString(),
@@ -405,6 +424,11 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     repermissionSentAtMigrated: repermissionRollup.sentAtMigrated,
     repermissionDowngradedCadenceCount: repermissionRollup.downgradedCadenceCount,
     frequencyChangedAtMigrated: repermissionRollup.frequencyChangedAtMigrated,
+    captureSelfCheckMigrated: selfCheckHistory.migrated,
+    captureSelfCheckLastOk: selfCheckHistory.lastOk,
+    captureSelfCheckLastStep: selfCheckHistory.lastStep,
+    captureSelfCheckFailuresLast7: selfCheckHistory.failuresConsidered,
+    captureSelfCheckRunsConsidered: selfCheckHistory.runsConsidered,
     computedAt: new Date(now).toISOString(),
   }
 }

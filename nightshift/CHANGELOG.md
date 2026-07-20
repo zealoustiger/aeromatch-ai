@@ -2,6 +2,47 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T074102Z — PASS — alert-capture-selfcheck
+- Pages: /admin/alerts (admin-only Monday funnel email + on-demand scoreboard, behind the
+  FREEZE'd admin gate); the daily `/api/cron/alert-digest` cron; email preview at
+  `/api/dev/email-preview/admin-alert-funnel` (dev-only render surface)
+- What: **The daily alert-digest cron now runs a synthetic subscribe→confirm→delete probe
+  of the real capture chokepoint, so if the subscribe/confirm path silently breaks (bad
+  deploy, schema drift) it surfaces as a red "Capture self-check: FAILED at <step>" line in
+  the Monday admin funnel email the same day — instead of only showing up as an unexplained
+  zero-signup week noticed late.** The probe inserts a reserved `capture-selfcheck@example.com`
+  row (pending + tokens), flips it to confirmed, deletes it, and asserts every step, using
+  the admin client directly against the same `alerts` columns the live subscribe/confirm
+  routes write — so it never calls `sendEmail` and never touches user-facing code. It
+  self-heals a leftover row from a prior failed run, and the reserved address is excluded
+  from the funnel + scoreboard subscriber-count queries so it can never inflate a metric.
+- Goal: alert-experience `[goal]` tier — "Daily capture-funnel self-check, reported in the
+  Monday admin email" (the flagged `[goal]` item, checked off in BACKLOG.md this cycle).
+  Friction/reliability slice: adds an honest daily health signal for the single chokepoint
+  every other alert surface depends on. Completes an interrupted prior cycle whose spec +
+  implementation were already on-disk (branch head == staging); QA + land finished here.
+- Spec: nightshift/specs/20260720T074102Z-alert-capture-selfcheck.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 631/631 pass (11 new —
+  6 covering `summarizeSelfCheckHistory`'s not-migrated/pass/fail/limit/empty states with no
+  DB dependency, 3 covering the email's PASS / FAILED-at-step / not-migrated states, plus
+  fixture updates). Non-visual cycle (cron/data/email logic) — served the PRODUCTION build
+  (`npx next start` on 3000) and ran `qa-smoke.mjs --slug alert-capture-selfcheck
+  /api/dev/email-preview/admin-alert-funnel`: 2/2 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at 1280 + 375px); confirmed the live preview renders the
+  new "Capture self-check: PASS (0 of last 7 runs failed)" line. Per RUNBOOK, screenshots not
+  read (non-visual). Fail-soft everywhere: a probe throw never affects the digest send that
+  already completed, and the run-log insert retries without the two new columns when
+  unmigrated (same graceful-degrade pattern as `send_failures`/`deferred_sends`).
+- ⚠️ Schema: two additive nullable columns `alert_cron_runs.self_check_ok boolean` +
+  `self_check_step text` (`supabase/schema.sql`, `add column if not exists`) need a HUMAN
+  apply in the Supabase SQL editor. Until applied, the cron logs fail-soft and the email
+  shows the honest "Not available yet" state — never a fabricated PASS/FAIL.
+- Screenshots: nightshift/screenshots/alert-capture-selfcheck/
+- Next: after a week of live runs (columns migrated), consider a follow-up slice to page/
+  alert on K consecutive self-check failures beyond the passive email line (explicitly
+  out-of-scope this cycle).
+
 ## 20260720T072002Z — PASS — admin-alerts-repermission-block
 - Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
   /alerts (baseline QA touch only)

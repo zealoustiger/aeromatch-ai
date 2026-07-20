@@ -1100,3 +1100,20 @@ alter table alert_cron_runs add column if not exists deferred_sends int not null
 -- graceful-fallback pattern as every column above) and the funnel snapshot
 -- reports the "not migrated" state rather than a fabricated zero.
 alter table alerts add column if not exists frequency_changed_at timestamptz;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alert_cron_runs_self_check
+-- Lets the Monday admin funnel email tell "the subscribe/confirm chokepoint is
+-- genuinely broken" apart from "genuinely no signups this week" — today there is no
+-- synthetic check anywhere, so the first signal of a schema-drift or bad-deploy
+-- outage on that path is an unexplained zero-signup week noticed late. The
+-- alert-digest cron now runs a daily synthetic subscribe→confirm→delete probe
+-- (src/lib/alertCaptureSelfCheck.ts) against a reserved `capture-selfcheck@example.com`
+-- row, never emailed, always deleted before the run ends. `self_check_ok`/
+-- `self_check_step` are nullable, no default: null means "not migrated yet," same
+-- honest-gap posture as `send_failures`/`deferred_sends` above — never a fabricated
+-- pass. Apply in the Supabase SQL editor. Until applied, the run-log insert retries
+-- without these two columns (same graceful-fallback pattern as every column above)
+-- and the funnel email shows the "not available yet" state instead of a fabricated
+-- PASS/FAIL.
+alter table alert_cron_runs add column if not exists self_check_ok boolean;
+alter table alert_cron_runs add column if not exists self_check_step text;

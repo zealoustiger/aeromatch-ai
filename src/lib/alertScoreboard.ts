@@ -2,6 +2,7 @@ import { createAdminClient } from './supabase-admin'
 import { classifySourcePath } from './alertSourceFamily'
 import { buildWeeklyTrend, type WeeklyTrendPoint } from './alertWeeklyTrend'
 import { summarizeUnsubscribeReasons, type UnsubscribeReasonRow } from './alertUnsubscribeReasons'
+import { CAPTURE_SELFCHECK_EMAIL } from './alertCaptureSelfCheck'
 
 // The `alerts` table carries two live-subscriber vocabularies: newer opt-in
 // paths land on `confirmed` (+ `confirmed_at`), while older/direct rows use
@@ -96,12 +97,20 @@ export interface InstantInterestRollup {
 export async function getAlertScoreboard(): Promise<AlertScoreboardSnapshot> {
   const admin = createAdminClient()
   let sourceColumnMigrated = true
+  // Excludes the capture-funnel self-check's own reserved row (alertCaptureSelfCheck.ts)
+  // — it deletes itself within the same cron run, but this guards the tiny window it
+  // exists from ever inflating a subscriber count on this on-demand page.
   let { data, error } = await admin
     .from('alerts')
     .select('status, source_path, confirmed_at, created_at, source')
+    .neq('email', CAPTURE_SELFCHECK_EMAIL)
   if (error?.message?.includes('source')) {
     sourceColumnMigrated = false
-    ;({ data } = await admin.from('alerts').select('status, source_path, confirmed_at, created_at'))
+    const fallback = await admin
+      .from('alerts')
+      .select('status, source_path, confirmed_at, created_at')
+      .neq('email', CAPTURE_SELFCHECK_EMAIL)
+    data = fallback.data as typeof data
   }
   const rows = data ?? []
 

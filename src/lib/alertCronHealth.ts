@@ -21,6 +21,13 @@ export interface AlertCronRun {
    *  not-yet-sent one (see `alertSendPacing.ts`). Null when `deferred_sends` isn't
    *  migrated live yet — never fabricated as 0. */
   deferredSends: number | null
+  /** Result of this run's synthetic subscribe→confirm→delete probe (see
+   *  `alertCaptureSelfCheck.ts`). Null when `self_check_ok` isn't migrated live yet —
+   *  never fabricated as pass or fail. */
+  captureSelfCheckOk: boolean | null
+  /** Which step the probe failed at ('subscribe' | 'confirm' | 'cleanup'), or null on
+   *  a pass or when unmigrated. */
+  captureSelfCheckStep: string | null
 }
 
 type RunRow = {
@@ -37,6 +44,8 @@ type RunRow = {
   duration_ms: number
   send_failures?: number
   deferred_sends?: number
+  self_check_ok?: boolean
+  self_check_step?: string
 }
 
 function toRun(row: RunRow): AlertCronRun {
@@ -54,6 +63,8 @@ function toRun(row: RunRow): AlertCronRun {
     durationMs: row.duration_ms,
     sendFailures: row.send_failures ?? null,
     deferredSends: row.deferred_sends ?? null,
+    captureSelfCheckOk: row.self_check_ok ?? null,
+    captureSelfCheckStep: row.self_check_step ?? null,
   }
 }
 

@@ -85,6 +85,11 @@ export async function GET() {
     repermissionSentAtMigrated: true,
     repermissionDowngradedCadenceCount: 3,
     frequencyChangedAtMigrated: true,
+    captureSelfCheckMigrated: true,
+    captureSelfCheckLastOk: true,
+    captureSelfCheckLastStep: null,
+    captureSelfCheckFailuresLast7: 0,
+    captureSelfCheckRunsConsidered: 7,
     computedAt: '2026-07-18T08:00:00.000Z',
   }
 

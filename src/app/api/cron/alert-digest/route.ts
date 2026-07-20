@@ -44,6 +44,7 @@ import { dedupeDigestSectionSamples } from '@/lib/alertDigestDedupe'
 import { withShareParam } from '@/lib/shareAlertLink'
 import { getDormantSubscribers } from '@/lib/dormantSubscribers'
 import { SendPacer } from '@/lib/alertSendPacing'
+import { runCaptureFunnelSelfCheck } from '@/lib/alertCaptureSelfCheck'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -2305,13 +2306,31 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  // Synthetic subscribe→confirm→delete probe (see alertCaptureSelfCheck.ts) — run last,
+  // after every real send above, so it can never affect this run's own counts/metrics.
+  // Never lets a probe failure (or throw) affect the digest send that already completed.
+  let captureSelfCheckOk: boolean = true
+  let captureSelfCheckStep: string | null = null
+  try {
+    const selfCheckResult = await runCaptureFunnelSelfCheck()
+    captureSelfCheckOk = selfCheckResult.ok
+    captureSelfCheckStep = selfCheckResult.ok ? null : selfCheckResult.step
+    if (!selfCheckResult.ok) {
+      console.error(`[alert-digest] capture self-check FAILED at ${selfCheckResult.step}: ${selfCheckResult.detail}`)
+    }
+  } catch (err) {
+    captureSelfCheckOk = false
+    captureSelfCheckStep = 'unexpected-error'
+    console.error('[alert-digest] capture self-check threw:', err)
+  }
+
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
   // soft — a not-yet-migrated table (or any other insert error) never affects the real
   // digest send above, which has already completed by this point. `send_failures`/
-  // `deferred_sends` may independently be un-migrated live — retry once without
-  // whichever column the error names, same fail-soft pattern as every other column
-  // on this table.
-  const runLogRow: Record<string, number> = {
+  // `deferred_sends`/`self_check_ok`/`self_check_step` may independently be un-migrated
+  // live — retry once without whichever column the error names, same fail-soft pattern
+  // as every other column on this table.
+  const runLogRow: Record<string, number | boolean | string | null> = {
     processed: total,
     sent,
     emails_sent: emailsSent,
@@ -2323,8 +2342,10 @@ export async function GET(req: NextRequest) {
     duration_ms: Date.now() - runStartMs,
     send_failures: sendFailures,
     deferred_sends: deferredSends,
+    self_check_ok: captureSelfCheckOk,
+    self_check_step: captureSelfCheckStep,
   }
-  const runLogOptionalKeys = ['send_failures', 'deferred_sends']
+  const runLogOptionalKeys = ['send_failures', 'deferred_sends', 'self_check_ok', 'self_check_step']
   let { error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow)
   for (
     let i = 0;
