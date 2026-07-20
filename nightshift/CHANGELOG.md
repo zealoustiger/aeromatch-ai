@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T091500Z — PASS — partnership-post-subscriber-count
+- Pages: /partnerships/[id] (the post-success `?posted=1` "Your partnership is live!"
+  confirmation block); /partnerships (baseline QA touch only)
+- What: **After you publish a partnership, the success screen now tells you how many
+  real alert subscribers will hear about it** — a single honest line, "N subscribers
+  with matching alerts will hear about this listing in their next digest" (singular
+  "1 subscriber …" when it's one). It runs the same criteria-match the alert digest cron
+  uses, in reverse (this one new listing → confirmed subscribers), so the number is real.
+  It renders **nothing** when the count is 0 or the lookup errors — never a fabricated or
+  vague "many" — closing the loop for sellers by showing the alert system is already
+  working for them, right above the subscribe CTA.
+- Goal: alert-experience `[goal]` tier — BACKLOG's `[P1][goal] "N matching subscribers
+  will be notified" on the post-success screens` (partnerships slice; checked off in
+  BACKLOG.md this cycle, aircraft `/post` left as the noted follow-up slice). Module
+  shipped: a reverse-match subscriber count that turns the seller's post-success moment
+  into honest proof the alert system converts — no new capture friction, no schema change.
+  Tier 1 (`[bug]`): none open — last cycle PASSed, no known bug/broken page/console
+  error/CWV-mobile regression. Tier 2 (`[want]`): open `[P1][want]` items remain
+  human-blocked (awaiting a product call/mock per their own BACKLOG text). Dropped to tier 3.
+- Spec: nightshift/specs/20260720T090124Z-partnership-post-subscriber-count.md
+- Verdict: PASS. New pure DI module `src/lib/alertSubscriberMatch.ts`
+  (`parsePartnershipAlertSourcePath` parses `/`, bare `/partnerships`, `?make/model/state/
+  airport/radius`, `/partnerships/near/[icao]`, `/partnerships/make/[slug]`,
+  `/partnerships/state/[xx]` → a match target, unrecognized/aircraft/seeker paths → null;
+  `matchesPartnershipListing` mirrors the digest cron's make-substring/model-multiselect/
+  state-exact/icao-in-radius-list semantics against a single row) with 18 new unit tests;
+  async `countMatchingPartnershipSubscribers()` in `alertMatchCounts.ts` fetches live
+  (active/confirmed, self-check email excluded) alerts, evaluates the predicate, returns
+  the count or `null` on any error (never a fabricated 0). No schema/DB change, no new
+  capture point. `npx tsc --noEmit` exit 0; `npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'`: 669/669 pass (was 651; +18
+  new, no regressions). Visual cycle — served the PRODUCTION build (`npx next start`);
+  `qa-smoke.mjs --slug partnership-post-subscriber-count /partnerships /partnerships/[id]
+  /partnerships/[id]?posted=1`: 6/6 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at 1280 + 375px). Screenshot read confirmed the 0-count honesty path
+  first (real listing, no matching live alert → success block renders with NO extra line).
+  Then verified the ≥1 render end-to-end: inserted ONE throwaway `confirmed` alert
+  (`qa-partnership-post-subscriber-count-20260720@example.com`, `source_path=/partnerships`
+  = matches all) via the service-role key, reloaded `?posted=1` → the line rendered
+  correctly ("1 subscriber with a matching alert will hear about this listing in their next
+  digest"), then DELETED the test alert (verified 0 rows remain) and removed the throwaway
+  script. No other prod DB writes.
+- Screenshots: nightshift/screenshots/partnership-post-subscriber-count/ (0-count path +
+  smoke) and nightshift/screenshots/partnership-post-subscriber-count-live/ (≥1 render with
+  the throwaway alert, since deleted)
+- Next: the noted follow-up slice — the same honest reverse-match count on the aircraft
+  `/post` success screen (`/aircraft/[slug]?posted=1`), matching against aircraft alert
+  `source_path`s (`/aircraft`, `/aircraft?make=…`, make/model/state hubs).
+
 ## 20260720T083315Z — PASS — admin-alerts-demand-supply
 - Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
   /alerts (baseline QA touch only)

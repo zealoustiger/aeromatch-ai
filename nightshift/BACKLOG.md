@@ -3728,7 +3728,14 @@ test guarding it._
   filter (admin/public numbers always agree), sorted least-supply-first then
   most-demand-first, 0-listing families flagged rose. Honest empty state, no floored
   numbers, no capture point, no schema change.
-- **[P1][goal] "N matching subscribers will be notified" on the post-success screens.**
+- ~~**[P1][goal] "N matching subscribers will be notified" on the post-success screens.**~~
+  ✅ SHIPPED (partnerships slice) via `partnership-post-subscriber-count` (2026-07-20) —
+  `/partnerships/[id]?posted=1` now shows an honest "N subscribers with matching alerts
+  will hear about this listing in their next digest" line (pure, unit-tested
+  `alertSubscriberMatch.ts` reverse-match + `countMatchingPartnershipSubscribers()`;
+  renders nothing at 0 or on a query error). **Remaining follow-up slice:** the aircraft
+  `/post` (`/aircraft/[slug]?posted=1`) success screen — same reverse-match against
+  aircraft alert `source_path`s. Original text below.
   Close the loop for *sellers*: after a listing/partnership is published, run the same
   criteria-match the digest cron uses (in reverse: one listing → confirmed alerts) and,
   when ≥1 matches, add one honest line to the existing success/cross-sell surface —
