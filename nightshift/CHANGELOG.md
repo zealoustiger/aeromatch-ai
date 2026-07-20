@@ -2,6 +2,44 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T071139Z — PASS — alert-confirm-deliverability-copy
+- Pages: /alerts (baseline QA touch only — this is an email-builder change, no
+  user-facing page)
+- What: **The double-opt-in "confirm your alerts" email now nudges subscribers to keep
+  ClubHanger out of spam/Promotions** — the one moment they're provably reading us in
+  their inbox. A quiet line under the "Confirm my alerts" button ("Can't find our emails
+  later? Drag this one to your Primary tab or add us to your contacts so your alerts
+  always arrive"), in both the HTML and plain-text versions of `buildAlertConfirmEmail`.
+- Goal: alert-experience `[goal]` — directly closes a GOAL.md ask ("make the double-opt-in
+  email itself excellent") that was still open: `email.ts` had no deliverability copy
+  anywhere and the word "spam" appeared nowhere in its output. Picked from the queue the
+  prior cycle (`price-drop-snooze-parity`) explicitly named as next up, after re-verifying
+  the `[bug]` tier was empty and the `[want]` tier's two open items (save-search auth wall,
+  dynamic-location seed personas) are both still blocked on a human product call, same as
+  every recent cycle.
+- Spec: nightshift/specs/20260720T071139Z-alert-confirm-deliverability-copy.md
+- Verdict: PASS. `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test src/lib/email.test.ts` suite: 207/207 pass (1 new
+  test asserting the nudge renders in both html/text, below the confirm button; all
+  pre-existing preview/no-preview/zero-match confirm-email tests unchanged and still green).
+  Non-visual cycle (email-builder copy only, no page markup) — screenshots saved for the
+  audit trail but not read into context per RUNBOOK convention; the programmatic smoke gate
+  is the PASS bar. Served the PRODUCTION build (`npx next start` on port 3300);
+  `qa-smoke.mjs --base http://localhost:3300` on `/alerts`, `/aircraft`: 4/4 pass (HTTP 200,
+  zero app-origin console errors, zero horizontal overflow at 1280 + 375px). Server stopped
+  cleanly after. No prod DB rows touched — pure copy change to an email builder, no
+  signup/alert round-tripped through a live send. Also killed a stray leftover
+  `next-server` process (pid 5814, flagged for two consecutive prior cycles as serving a
+  stale/500ing build on port 3000) as pre-cycle hygiene — confirmed gone before this
+  cycle's own QA server started, so it can no longer cause a false FAIL for a future cycle
+  that forgets to pass `--base`.
+- Screenshots: nightshift/screenshots/alert-confirm-deliverability-copy/
+- Next: the remaining two `[P2][goal]` items from the same batch — the re-permission
+  lifecycle block on `/admin/alerts` (mirror `alertScoreboard.ts` reads onto the on-demand
+  admin page) and the daily capture-funnel self-check (synthetic subscribe→confirm→delete
+  probe in the existing cron, no new `vercel.json` entry) — are next in the alert-experience
+  queue.
+
 ## 20260720T070233Z — PASS — price-drop-snooze-parity
 - Pages: /alerts (baseline QA touch only — this is a backend/email-builder change, no
   user-facing page)

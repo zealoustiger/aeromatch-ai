@@ -305,7 +305,11 @@ export function buildAlertConfirmEmail(opts: {
             Confirm my alerts
           </a>
         </p>
-        <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+        <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:16px 0 0;">
+          Can&rsquo;t find our emails later? Drag this one to your Primary tab or add us to your
+          contacts so your alerts always arrive.
+        </p>
+        <p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:8px 0 0;">
           Didn&rsquo;t request this? No action needed — you won&rsquo;t hear from us again.
         </p>
       </div>
@@ -333,6 +337,9 @@ export function buildAlertConfirmEmail(opts: {
 Almost there — confirm your alerts${forThingText}.
 
 ${previewLines}Confirm your email: ${opts.confirmUrl}
+
+Can't find our emails later? Drag this one to your Primary tab or add us to your contacts
+so your alerts always arrive.
 
 Didn't request this? No action needed — you won't hear from us again.
 Manage alerts: ${manageUrl}
