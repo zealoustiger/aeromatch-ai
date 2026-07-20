@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T060234Z — PASS — digest-gmail-clip-guard
+- Pages: no user-facing page markup changed — internal change to the shared digest email
+  builders (`buildAlertDigestEmail`/`buildCombinedAlertDigestEmail` in `src/lib/email.ts`)
+  and the `/api/cron/alert-digest` cron. No route/markup touched.
+- What: **A digest email can no longer silently lose its unsubscribe/manage footer to
+  Gmail's clip point.** Gmail clips any message body over ~102KB, and that clip point
+  falls exactly where the footer lives — a deliverability/compliance risk with no guard
+  anywhere in the code before this. Both digest builders now wrap their existing render
+  logic in a trim-and-rebuild loop: while the rendered HTML is over a 100KB budget (a
+  safety margin under Gmail's real clip point), drop the last sample card and re-render.
+  The combined digest trims from whichever section currently has the most sample cards
+  each pass, so a subscriber's several due alerts get a fair cut instead of one section
+  losing everything first. Neither builder's count/CTA copy is affected by trimming — "See
+  all N matches" reads the real `newCount`/`dropCount`, never `samples.length` — so a
+  trimmed card never makes the email dishonest about how much actually matched. A digest
+  that's already under budget (every real send today — cron sends cap at 3 samples) is
+  byte-identical to before this change; the loop is a true no-op until the day sample
+  counts grow. Both builders gain an optional `trimmedSamples` field (cards removed) on
+  their return value; the cron logs a `console.warn` naming the alert id/email (or email +
+  alert count for a combined send) whenever a real send actually trims.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open `[bug]`s
+  (swept BACKLOG.md), no autonomously-buildable `[want]` (the two standing
+  product-decision items — save-search auth-wall, collection-layout redesign — still need
+  a human call). Highest-value remaining `[P2][goal]` in plan-pass batch #10 — the prior
+  cycle's own "Next" note named this first among the batch's two remaining P2s (this one,
+  and the re-permission admin-email line). Closes the one deliverability/compliance gap
+  GOAL.md's "never spam" + honesty framing implies but the code never actually guarded —
+  infrastructure for whenever real sample volume grows, not a today-visible fix.
+- Spec: nightshift/specs/20260720T060234Z-digest-gmail-clip-guard.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 602/602 pass (3 new
+  tests in `email.test.ts`: a normal-size digest never trims and stays under budget; an
+  80-sample oversized digest trims until under the 100KB budget while the honest total
+  count/CTA still names the real 80; an oversized combined-digest section trims fairly —
+  the heavier 80-sample section loses cards, the lighter 5-sample section keeps all 5).
+  Non-visual cycle (email-builder/cron-logic internals, no page markup) — per the RUNBOOK
+  convention, screenshots saved for the audit trail but not read into context; the
+  programmatic smoke gate is the PASS bar here. Served the PRODUCTION build (`npx next
+  start` on port 3200); `qa-smoke.mjs` on `/alerts`, `/aircraft` at desktop 1280 + mobile
+  375: 4/4 pass (HTTP 200, zero app-origin console errors, zero horizontal overflow). Also
+  curled both existing dev email-preview fixtures (`/api/dev/email-preview/alert-digest`,
+  `/api/dev/email-preview/alert-digest-combined`) — both still 200, confirming the
+  refactor (renaming the un-trimmed render logic to `*Core` and wrapping it) didn't change
+  behavior for real (small, un-trimmed) fixture data. No schema change, no new prod DB
+  rows — pure function/route-logic change, nothing round-tripped through a live
+  signup/alert. Server started/stopped cleanly; no stray `next-server` left running
+  afterward.
+- Screenshots: nightshift/screenshots/digest-gmail-clip-guard/
+- Next: the other open batch #10 `[P2][goal]` item — the re-permission lifecycle line in
+  the Monday admin email (`alertFunnelWeekly`), fail-soft to "no data yet" while its
+  backing columns remain unmigrated live, same as every prior `alerts.*` DDL this batch.
+
 ## 2026-07-19T11:55:23Z — DRAIN SUMMARY
 - Cycles this run: 7 (PASS 5 / FAIL 1 / ABORT 1)
 - Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
