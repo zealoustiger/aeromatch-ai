@@ -48,8 +48,10 @@ import { SendPacer } from '@/lib/alertSendPacing'
 import { runCaptureFunnelSelfCheck } from '@/lib/alertCaptureSelfCheck'
 import { getRecentCronRuns } from '@/lib/alertCronHealth'
 import { shouldSendCaptureSelfCheckAlert } from '@/lib/alertCaptureSelfCheckHistory'
+import { isSweepableTestAlertEmail, sweepCutoffIso } from '@/lib/testAlertSweep'
 
 const MAX_DIGEST_SAMPLES = 3
+const TEST_ALERT_SWEEP_MAX_ROWS = 500
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -1249,6 +1251,53 @@ type PendingReminderRow = {
  * yet, this skips sending entirely — there'd be no way to mark a row
  * already-reminded, and risking a duplicate later beats not reminding at all.
  */
+// ─── Orphan test-alert sweep (safety net) ──────────────────────────────────
+// `sweep_test_accounts()` (called nightly by the frozen `check-listings-health.mjs`)
+// deletes @example.com rows cascading from a matching `auth.users` row — but alerts
+// are an email-only, no-account-required capture, so a QA cycle's throwaway
+// `qa-<slug>@example.com` alert with no signup is never reached by that sweep. This
+// closes that one gap: delete `alerts` rows whose email matches @example.com AND are
+// older than 24h (the same age floor as the account sweep, so an in-flight QA run is
+// never touched), independent of any `auth.users` join. Tightly scoped, capped, and
+// every deleted row is logged. Never blocks the real digest send below if it errors.
+async function sweepOrphanTestAlerts(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<{ swept: number }> {
+  try {
+    const cutoff = sweepCutoffIso(Date.now())
+    const { data, error } = await supabase
+      .from('alerts')
+      .select('id, email')
+      .ilike('email', '%@example.com')
+      .lt('created_at', cutoff)
+      .limit(TEST_ALERT_SWEEP_MAX_ROWS)
+    if (error) {
+      console.error('[alert-digest] test-alert sweep select error:', error.message)
+      return { swept: 0 }
+    }
+    // Defense in depth: never trust the DB-side `ilike` alone — re-check every
+    // candidate row against the exact pure matcher before deleting anything.
+    const sweepable = (data ?? []).filter((row) => isSweepableTestAlertEmail(row.email))
+    if (sweepable.length === 0) return { swept: 0 }
+
+    const ids = sweepable.map((row) => row.id)
+    const { error: deleteError } = await supabase.from('alerts').delete().in('id', ids)
+    if (deleteError) {
+      console.error('[alert-digest] test-alert sweep delete error:', deleteError.message)
+      return { swept: 0 }
+    }
+    console.log(
+      `[alert-digest] swept ${sweepable.length} stale @example.com alert row(s): ${sweepable
+        .map((row) => `${row.id}:${row.email}`)
+        .join(', ')}`
+    )
+    return { swept: sweepable.length }
+  } catch (err) {
+    console.error('[alert-digest] test-alert sweep threw:', err)
+    return { swept: 0 }
+  }
+}
+
 async function sendStrandedPendingReminders(
   supabase: ReturnType<typeof createAdminClient>,
   nowIso: string,
@@ -1730,6 +1779,8 @@ export async function GET(req: NextRequest) {
   if (resumeError && !resumeError.message?.includes('paused_until') && !resumeError.message?.includes('paused_at')) {
     console.error('[alert-digest] snooze auto-resume error:', resumeError.message)
   }
+
+  const sweepResult = await sweepOrphanTestAlerts(supabase)
 
   const remindersResult = await sendStrandedPendingReminders(supabase, nowIso, pacer)
   const widenResult = await sendWidenSuggestionEmails(supabase, nowIso, pacer)
@@ -2409,8 +2460,9 @@ export async function GET(req: NextRequest) {
     deferred_sends: deferredSends,
     self_check_ok: captureSelfCheckOk,
     self_check_step: captureSelfCheckStep,
+    swept_test_alerts: sweepResult.swept,
   }
-  const runLogOptionalKeys = ['send_failures', 'deferred_sends', 'self_check_ok', 'self_check_step']
+  const runLogOptionalKeys = ['send_failures', 'deferred_sends', 'self_check_ok', 'self_check_step', 'swept_test_alerts']
   let { error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow)
   for (
     let i = 0;
@@ -2438,5 +2490,6 @@ export async function GET(req: NextRequest) {
     repermissionsSent,
     sendFailures,
     deferredSends,
+    sweptTestAlerts: sweepResult.swept,
   })
 }

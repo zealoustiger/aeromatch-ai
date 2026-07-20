@@ -1117,3 +1117,18 @@ alter table alerts add column if not exists frequency_changed_at timestamptz;
 -- PASS/FAIL.
 alter table alert_cron_runs add column if not exists self_check_ok boolean;
 alter table alert_cron_runs add column if not exists self_check_step text;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alert_cron_runs_swept_test_alerts
+-- Records how many stale `@example.com` `alerts` rows the cron's new orphan
+-- test-alert sweep deleted this run (see src/lib/testAlertSweep.ts +
+-- sweepOrphanTestAlerts in alert-digest/route.ts). Closes the one gap in the
+-- existing `sweep_test_accounts()` safety net: that function only deletes
+-- `alerts` rows cascading from a matching `auth.users` row, but alerts are an
+-- email-only, no-account-required capture, so a QA cycle's throwaway
+-- `qa-<slug>@example.com` alert with no signup was never swept. Nullable, no
+-- default: null means "not migrated yet," same honest-gap posture as every
+-- column above — never a fabricated zero. Apply in the Supabase SQL editor.
+-- Until applied, the run-log insert retries without this column (same
+-- graceful-fallback pattern as every column above); the sweep itself is
+-- unaffected either way since it never depends on this column existing.
+alter table alert_cron_runs add column if not exists swept_test_alerts int;
