@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T083315Z — PASS — admin-alerts-demand-supply
+- Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
+  /alerts (baseline QA touch only)
+- What: **`/admin/alerts` now has a "Demand vs. supply (most wanted)" section** — live
+  (active/confirmed) alert subscribers grouped by curated make+model family (e.g. "Cirrus
+  SR22"), each paired with that family's real live listing count, sorted so the biggest
+  gaps show first ("4 subscribers waiting on Mooney M20 · 0 live listings," 0-listing rows
+  flagged in rose). It's the outreach-targeting list for owner acquisition: which aircraft
+  people want that we don't have enough of. Real small numbers (including 0) show as-is.
+- Goal: alert-experience `[goal]` tier — "Demand-vs-supply (most wanted) block on
+  `/admin/alerts`" ([P1][goal], checked off in BACKLOG.md this cycle). Module shipped:
+  a demand↔supply honest-measurement readout that turns alert data into an acquisition
+  signal, no new capture friction. Tier 1 (`[bug]`): none open — last cycle PASSed, no
+  known bug / broken page / console error / CWV-mobile regression. Tier 2 (`[want]`): the
+  open `[P1][want]` items remain human-blocked (awaiting a product call / mock per their
+  own BACKLOG text). Dropped to tier 3.
+- Spec: nightshift/specs/20260720T083315Z-admin-alerts-demand-supply.md
+- Verdict: PASS. New pure DI module `src/lib/alertDemandFamily.ts`
+  (`familyForSourcePath(sourcePath, entries)` buckets an alert's `source_path` into a
+  curated `SEO_MAKE_MODELS` family or null) with 12 new unit tests; `getDemandSupplyRollup()`
+  in `alertScoreboard.ts` counts live subscribers per family and reuses `countMakeModel`'s
+  exact filter (status/price-floor/has-photos/make+model ilike, incl. `notModelPattern`) so
+  the admin listing count always agrees with the public `/aircraft/[make]/[model]` page. No
+  schema/DB change, no new capture point. `npx tsc --noEmit` exit 0; `npx next build` exit 0.
+  Full `node --experimental-strip-types --test 'src/**/*.test.ts'`: 651/651 pass (was 639;
+  +12 new, no regressions). Visual cycle (new section markup on an existing page) — served
+  the PRODUCTION build (`npx next start` on port 3300); `qa-smoke.mjs --slug
+  admin-alerts-demand-supply /admin/alerts /alerts`: 4/4 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at 1280 + 375px); screenshot read confirms the
+  anonymous crawl still shows the FREEZE'd "Admin only" gate at both viewports — zero
+  regression for signed-out visitors. Since the new section is unreachable by an anonymous
+  crawl (same precedent as the last three `/admin/alerts` cycles), independently verified the
+  underlying read against the real (read-only) prod DB via a throwaway, uncommitted `tsx`
+  script (deleted after use): `getDemandSupplyRollup()` returns cleanly (no crash), and the
+  honest empty-state path is correct right now — of 11 alerts (4 live), all 4 live ones are
+  make-only/state/price/partnership (`/aircraft?make=Cirrus&state=CA`, `/partnerships?airport=KHWD`,
+  `/aircraft`, `/aircraft?max_price=1000000`) so `familyForSourcePath` correctly returns null
+  for every one (none target a single curated model) → the section renders its "not enough
+  data" copy, not a fabricated table. The `aircraft_for_sale` half executes too (Cirrus SR22
+  = 181, SR22T = 45 via `notModelPattern`, Mooney M20 = 68, Beechcraft Bonanza = 113 — no
+  query error). No prod DB writes made (read-only queries only); no test accounts created.
+  Server stopped cleanly after (port 3300 connection-refused on follow-up curl).
+- Screenshots: nightshift/screenshots/admin-alerts-demand-supply/
+- Next: once ≥1 live alert resolves to a curated model, add its subscriber emails to a
+  copy-to-clipboard outreach helper; or surface the same demand↔supply pairing on the Monday
+  admin email so the acquisition gap reaches the human without opening `/admin/alerts`.
+
 ## 20260720T082008Z — PASS — admin-alerts-send-health-table
 - Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
   /alerts (baseline QA touch only)

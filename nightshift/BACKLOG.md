@@ -3712,7 +3712,7 @@ test guarding it._
   both correctly return empty/null against the real prod DB right now, so the table is
   inert until that pre-existing migration is applied, same honest-degrade posture as
   every sibling metric on this page).
-- **[P1][goal] Demand-vs-supply ("most wanted") block on `/admin/alerts`.** The scoreboard
+- ~~**[P1][goal] Demand-vs-supply ("most wanted") block on `/admin/alerts`.** The scoreboard
   proves which *placements* convert but says nothing about *what* subscribers are waiting
   for. Aggregate live (confirmed, unpaused) alerts by criteria family — reuse
   `classifySourcePath` + the existing criteria parsing the digest matcher uses — and show
@@ -3721,7 +3721,13 @@ test guarding it._
   numbers are honest — show real zeros, never a floor. This is the outreach-targeting
   list for owner acquisition (feeds the parked growth lane with alert data, not new SEO
   surface). Improves: honest-measurement pillar, admin surface. No new capture point, no
-  schema change.
+  schema change.~~ ✅ SHIPPED via `admin-alerts-demand-supply` (2026-07-20) New "Demand vs.
+  supply (most wanted)" section on `/admin/alerts`: live (active/confirmed) subscribers
+  bucketed by curated make+model family (new pure DI module `alertDemandFamily.ts`,
+  +12 unit tests), each paired with its real live-listing count via `countMakeModel`'s exact
+  filter (admin/public numbers always agree), sorted least-supply-first then
+  most-demand-first, 0-listing families flagged rose. Honest empty state, no floored
+  numbers, no capture point, no schema change.
 - **[P1][goal] "N matching subscribers will be notified" on the post-success screens.**
   Close the loop for *sellers*: after a listing/partnership is published, run the same
   criteria-match the digest cron uses (in reverse: one listing → confirmed alerts) and,
