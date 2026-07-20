@@ -3805,19 +3805,24 @@ embeds a live 3-listing preview (`buildAlertConfirmEmail.preview`), sold/removed
 closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1499`),
 404 page carries `AlertSignup`. Genuinely open gaps below._
 
-- **[P1][goal] Aged-QA-row sweep for email-only alert tables — keep every honest count
-  honest.** The just-shipped `aircraft-post-subscriber-count` cycle proved the harm: a
-  seller-facing "N subscribers" line counted a 6-day-old `qa-…@example.com` row the 24h
-  auto-sweep can never reach (it sweeps off `auth.users`; email-only `alerts` rows have
-  no user to cascade from), and its CHANGELOG "Next" note explicitly asks for this.
-  Teach the daily digest cron (or the 07:30 health check) a pattern+age-gated sweep:
-  delete `alerts` rows (and other email-only tables like `feedback` votes keyed to them)
-  where email matches `%@example.com` AND created >24h ago — tightly scoped WHERE, log
-  every deleted row id/email to the cron output, cap per-run row count as a tripwire.
-  This is test-data cleanup of rows prior cycles leaked, not user-data deletion (FREEZE's
-  bulk-delete ban is about real listings/users); still, keep the pattern-match exact and
-  add unit tests on the matcher. Why: every subscriber-facing and admin count (post-success
-  lines, demand/supply, scoreboard) silently inflates while these rows sit there.
+~~- **[P1][goal] Aged-QA-row sweep for email-only alert tables — keep every honest count
+  honest.**~~ ✅ SHIPPED via `alert-test-row-sweep` (2026-07-20) The just-shipped
+  `aircraft-post-subscriber-count` cycle proved the harm: a seller-facing "N subscribers"
+  line counted a 6-day-old `qa-…@example.com` row the 24h auto-sweep can never reach (it
+  sweeps off `auth.users`; email-only `alerts` rows have no user to cascade from). New
+  `sweepOrphanTestAlerts` step in the `alert-digest` cron (`src/lib/testAlertSweep.ts` +
+  `route.ts`) deletes `alerts` rows matching `%@example.com` AND older than 24h,
+  independent of any `auth.users` join; every deleted row is logged, capped at 500/run,
+  defensively re-checked in JS against the exact pure matcher (never trusts the DB-side
+  `ilike` alone). Live-verified against the real prod DB: a backdated throwaway row was
+  swept, a <24h-old control row was left untouched (then cleaned up); the run also swept
+  **5 real leaked test rows** from earlier QA cycles it found sitting in the table. 8 new
+  unit tests on the matcher/cutoff math. ⚠️ SCHEMA: additive `alert_cron_runs
+  .swept_test_alerts` column (human-apply, same fail-soft pattern as every other column
+  on this table) records the swept count per run — the sweep itself works either way.
+  **Not done, intentionally:** the `feedback`-table sweep mentioned in the original
+  item — no email-only `feedback` rows keyed only by email (no user/alert FK) were found
+  during this cycle's scoping; `alerts` was the one confirmed gap.
 ~~- **[P1][goal] Close the seller-count overcount: honor `avionics`/`grade`/`deal=good`/`q`
   in the aircraft reverse-match.**~~ ✅ SHIPPED via `aircraft-alert-honest-narrowing`
   (2026-07-20) `aircraft-post-subscriber-count` shipped with these four filters documented

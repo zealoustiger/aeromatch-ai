@@ -2,6 +2,42 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T123051Z — PASS — alert-test-row-sweep
+- Pages: /admin/alerts (no visible UI change — verifies no regression to the cron's
+  health-log surface); the real change is server-side in the `alert-digest` cron.
+- What: The nightly cleanup that removes leftover `@example.com` QA test rows never
+  reached email-only "alert me" subscriptions (only accounts), so throwaway alerts from
+  past testing cycles were quietly piling up in the database and inflating the "N people
+  are subscribed" counts shown to sellers. The overnight cron now also sweeps those
+  stale test alert rows (older than a day, matching the QA email pattern) every night,
+  and logs exactly what it removed.
+- Goal: alert-experience `[goal]`, batch #13's top P1 — data-integrity floor under
+  GOAL.md's "never spam" pillar (every subscriber-facing/admin count must stay honest).
+  Closes the one gap in the existing `sweep_test_accounts()` account-sweep safety net.
+- Spec: nightshift/specs/20260720T123051Z-alert-test-row-sweep.md
+- Verdict: PASS. `next build` + typecheck clean; 8 new unit tests on the email
+  matcher/cutoff math (`testAlertSweep.test.ts`). Live-verified against the real
+  (shared) Supabase DB: seeded a backdated (>24h) throwaway `@example.com` alert row +
+  a fresh (<24h) control row, invoked the cron route on the production build — the old
+  row was deleted, the fresh control was left untouched (then cleaned up manually). The
+  same run also swept **5 real leaked `@example.com` alert rows** from earlier QA
+  cycles that were already sitting in the table, confirming the gap this closes was
+  real, not hypothetical. qa-smoke PASS (200 / no console errors / no overflow) at
+  1280 + 375px on `/admin/alerts`. Non-visual/backend cycle — screenshots saved for the
+  audit trail but not read into review per RUNBOOK.
+- ⚠️ SCHEMA (human action needed): additive `alert_cron_runs.swept_test_alerts` column
+  (nullable int) records the swept-row count per run — same fail-soft, human-apply
+  pattern as every other pending `alerts.*`/`alert_cron_runs.*` column already flagged
+  on `/admin/alerts`'s pending-migrations box. The sweep itself works whether or not
+  this column is applied; only the run-log's swept-count field is affected.
+- Screenshots: nightshift/screenshots/alert-test-row-sweep/
+- Next: the original backlog item also mentioned sweeping `feedback`-table rows keyed
+  to alerts — none were found (no email-only `feedback` rows with no user/alert FK), so
+  `alerts` was the one confirmed gap; no further slice needed there today. Batch #13's
+  remaining open items are `[P2][goal]`s (real listing cards in the widen-suggestion
+  email; "Join N others" social proof — sequence after this ships; a "send to my inbox"
+  test-send button on the admin email-preview page).
+
 ## 20260720T121824Z — PASS — alerts-pending-migrations-box
 - Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate)
 - What: **`/admin/alerts` now shows one "Pending migrations" checklist at the very top**
