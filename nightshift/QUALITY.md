@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-20T10:51:50Z — seeker-post-subscriber-count — score 5/5
+- Strengths: Closes the trilogy exactly on-spec — `matchesSeekerListing` mirrors the cron's `countNewSeekers` semantics precisely (make = case-insensitive array membership NOT substring, model = exact-token reuse of `matchesModelFilter` semantics, state exact, icao home_airport OR additional_airports, no radius), and the deliberate divergence (bare `/` "all" returns null so a homepage alert never counts a seeker) is documented against the real `route.ts` countNew branch and asserted in tests; clean pure/IO split identical to the two sibling counters, honest null/≥1 render gate, justPosted-only DB touch, and thorough unit tests covering every dimension incl. substring non-match, empty preferred_models, icao-null, and cross-type path rejection.
+- Weaknesses / risks: `matchesSeekerModelFilter` is a local re-implementation of `seekerModelFilter.ts`'s `matchesModelFilter` (behavior-identical, justified & documented by the node-test-runner import constraint that governs the whole file); the shared full-`alerts`-table-scan-then-filter-in-JS pattern persists across all three counters (pre-existing, not introduced here).
+- Follow-up: none
+
 ## 2026-07-20T09:28:50Z — partnership-post-subscriber-count — score 4/5
 - Strengths: Reversed match predicate exactly mirrors the digest cron's ilike/eq/in/radius query semantics (verified against the real query); honest null/zero gate never fabricates a count; clean pure/IO split with thorough unit tests covering every spec dimension incl. non-match + null home_airport.
 - Weaknesses / risks: `PARTNERSHIP_MAKE_SLUGS` is a hand-maintained local duplicate of `seo.ts`'s make table — if a curated make is added there, this drifts and that make's alert path silently returns null (undercount); also fetches all `alerts` rows and filters LIVE_STATUSES in JS rather than a DB `.in`.
