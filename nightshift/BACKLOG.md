@@ -3792,6 +3792,92 @@ test guarding it._
   sites already pass `source` today. Guards every future placement from silently landing
   in the admin scoreboard's "untagged" bucket.
 
+### Plan-pass batch #13 — 2026-07-20 (Fable)
+_Batch #12 fully drained (all 7 items shipped same-day). Still parked: the two
+Vercel-cron-tier "instant sends" items (human call, ~line 1285/1589) and the blocked
+`[want]` items. Every item below verified un-built by direct code read this pass. Dead
+ends checked so they don't reappear: digest photos + "not actual plane photo" caption
+exist (`email.ts`), admin email-preview page exists (`/admin/alerts/emails`) but has NO
+send button (grep clean), resend-confirmation exists (`AlertSignup.tsx:474`), bounce
+recovery banner exists (`manage/page.tsx:196`), per-alert `price_drop_opt_in` toggle
+exists, weekly `digest_day` picker exists (`FrequencyToggle`), confirm email already
+embeds a live 3-listing preview (`buildAlertConfirmEmail.preview`), sold/removed watch
+closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1499`),
+404 page carries `AlertSignup`. Genuinely open gaps below._
+
+- **[P1][goal] Aged-QA-row sweep for email-only alert tables — keep every honest count
+  honest.** The just-shipped `aircraft-post-subscriber-count` cycle proved the harm: a
+  seller-facing "N subscribers" line counted a 6-day-old `qa-…@example.com` row the 24h
+  auto-sweep can never reach (it sweeps off `auth.users`; email-only `alerts` rows have
+  no user to cascade from), and its CHANGELOG "Next" note explicitly asks for this.
+  Teach the daily digest cron (or the 07:30 health check) a pattern+age-gated sweep:
+  delete `alerts` rows (and other email-only tables like `feedback` votes keyed to them)
+  where email matches `%@example.com` AND created >24h ago — tightly scoped WHERE, log
+  every deleted row id/email to the cron output, cap per-run row count as a tripwire.
+  This is test-data cleanup of rows prior cycles leaked, not user-data deletion (FREEZE's
+  bulk-delete ban is about real listings/users); still, keep the pattern-match exact and
+  add unit tests on the matcher. Why: every subscriber-facing and admin count (post-success
+  lines, demand/supply, scoreboard) silently inflates while these rows sit there.
+- **[P1][goal] Close the seller-count overcount: honor `avionics`/`grade`/`deal=good`/`q`
+  in the aircraft reverse-match.** `aircraft-post-subscriber-count` shipped with these
+  four filters documented as not-covered — alerts carrying them are counted by prefix
+  fallback, so the seller-facing "N subscribers with matching alerts" line can OVERCOUNT
+  (an alert for "glass-panel Cessnas" counts against a steam-gauge listing). Extend
+  `matchesAircraftListing` (`alertSubscriberMatch.ts`) + `countMatchingAircraftSubscribers`
+  to either honor each param (reuse shared `avionicsClassify.ts` exports + the digest
+  cron's own deal/grade/q semantics) or provably EXCLUDE that alert from the count —
+  never count a subscriber the digest wouldn't actually email. Unit-test each param both
+  directions. Why: the honesty gate on an already-live seller surface; no new capture
+  point, no schema change.
+- **[P1][goal] Undo for alert delete on `/alerts/manage`.** `deleteAlert`
+  (`src/app/actions.ts`) is a hard DB delete with no recovery — one mistap on the
+  management page and a confirmed alert (plus its `last_digest_at` history) is
+  irretrievably gone; no soft-delete/restore exists anywhere (grep clean). Have the
+  delete action return the deleted row's full field snapshot; show a toast/inline "Alert
+  deleted — Undo" that re-inserts it verbatim (same criteria, status, frequency,
+  `last_digest_at` so the next digest neither double-sends nor resets cadence) via a new
+  guarded action reusing the page's existing `resolveOwnerEmail` trust boundary. No
+  schema change (snapshot round-trip, not a tombstone column). Why: GOAL.md's
+  management pillar — forgiving delete is table stakes for "effortless" management.
+- **[P1][goal] One-tap unsubscribe reason capture on the post-unsubscribe page.** The
+  unsubscribe flow lands on `/alerts/status`'s recovery box ("fewer emails instead")
+  but captures zero signal about WHY people leave (no reason/survey code anywhere —
+  grep clean). Add optional one-tap chips under the confirmation: "Too many emails /
+  Listings weren't relevant / Found my aircraft / Just tidying up" → write to the
+  existing `feedback` table (`type='unsubscribe_reason'`, alert context attached),
+  thank-you state, zero extra friction on the unsubscribe itself (fires AFTER the
+  unsubscribe is already done — never gate it). Small rollup on `/admin/alerts` beside
+  the digest-vote section: raw counts only (no percentages at n<10, same flooring
+  convention). Why: the never-spam pillar needs a learning loop; "found my aircraft"
+  is also the marketplace's first success-story signal.
+- **[P2][goal] Real listing cards in the widen-suggestion email.** `buildWidenSuggestionEmail`
+  (`email.ts:845`) tells a never-matched subscriber "17 listings match the wider search"
+  but shows none of them — the digest builders' proven sample-card renderer
+  (`AlertDigestSample`) sits unused one file over. Fetch 2–3 real samples from the
+  widened `source_path` (reuse the digest cron's sample fetchers) and render them in the
+  email with the existing card partial, count line unchanged; keep the builder honest
+  (samples come from the same query as `widenCount` — never pad). Why: showing the
+  actual planes is the difference between "widen it?" being ignored and clicked; email
+  quality is a named GOAL.md pillar.
+- **[P2][goal] Honest "Join N others" social proof on `AlertSignup`.** No capture surface
+  shows that other real people subscribe (grep clean). Compute N = live confirmed alerts
+  in the same criteria family (reuse `familyForSourcePath` from `alertDemandFamily.ts`,
+  already unit-tested) and render one quiet line — "Join N others getting alerts like
+  this" — ONLY when N ≥ 3; below the floor render nothing (cold-start honesty: never
+  "Join 0 others", never a fabricated floor). Sequence AFTER the QA-row sweep item above
+  ships, so N never counts leaked test rows. Existing `alert_subscribed`/impression
+  events unchanged (same capture point, richer copy). Why: GOAL.md's frictionless-capture
+  pillar — social proof is the classic conversion lever, and we can do it without lying.
+- **[P2][goal] "Send to my inbox" test-send on `/admin/alerts/emails`.** The preview page
+  renders every builder in-browser, but browser rendering can't prove what Gmail clipping,
+  dark-mode inversion, or image proxying will do to a real send — and there's no send
+  affordance anywhere on the page (grep clean). Add a per-preview "Send this to my inbox"
+  button (server action, recipient hard-locked to the signed-in admin's own email via the
+  existing `getAdminRecipientEmails()`/`ADMIN_EMAILS` gate — never a free-text recipient),
+  reusing the existing Resend send helper + `SendPacer`. Why: the "best listing alert
+  email in aviation" bar requires seeing the email where subscribers do; admin-only, no
+  capture point, no schema change.
+
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
