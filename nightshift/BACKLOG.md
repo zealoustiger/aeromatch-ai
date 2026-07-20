@@ -3528,17 +3528,19 @@ feature shipped dark earlier today with no rollup)._
   practice today, but the guard is real infrastructure for whenever that changes) —
   confirms output lands back under budget, the honest CTA count survives, and a
   lighter co-section never loses a card to a heavier one.
-- **[P2][goal] Re-permission lifecycle line in the Monday admin email.** Today's
-  `alert-dormant-repermission` ship sends "still want these?" emails but nothing rolls
-  them up — a brand-new deaf loop (the exact class batch #7 closed for votes/instant
-  interest). In `alertFunnelWeekly`, add a "Re-permission" line: emails sent this week /
-  all-time (from `repermission_sent_at`), and of those alerts how many have since
-  unsubscribed, downshifted cadence, or stayed active — with the same honest "no data
-  yet" empty state while the columns are unmigrated (both are ⚠️ human-apply and
-  currently absent live, so the line must fail soft to its empty state, never fabricate
-  zeros as signal). Mirror onto `/admin/alerts` if trivial in-cycle. Improves:
-  prove-it-converts (the loop can hear whether re-permission helps or hurts). No new
-  capture point, no schema change beyond what the dormant ship already flagged.
+~~- **[P2][goal] Re-permission lifecycle line in the Monday admin email.**~~ ✅ SHIPPED
+  via `alert-funnel-repermission-line` (2026-07-20) `alertFunnelWeekly` now reads the
+  optional `repermission_sent_at` column (same graceful-degrade precedent as
+  `paused_at`/`unsubscribed_at`) and computes emails sent this week/last week/all-time,
+  plus a current-status breakdown (unsubscribed / paused / still live) among alerts that
+  ever got one. `buildAdminAlertFunnelEmail` renders a new "Re-permission emails sent"
+  line (HTML + text) with three honest states: column not migrated, migrated-but-zero,
+  and real counts. **Not done, intentionally:** the "downshifted cadence" breakdown the
+  item asked for — there's no `frequency_changed_at` history, only the current
+  `frequency` value, so attributing a cadence change to "since the repermission email"
+  isn't honestly computable without guessing at causation; scoped out per the honesty
+  gate rather than fabricated. Also not done: mirroring onto `/admin/alerts` (different
+  data source, `alertScoreboard.ts` — a separate slice, not merely "trivial").
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)

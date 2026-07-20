@@ -2,6 +2,70 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T061712Z — PASS — alert-funnel-repermission-line
+- Pages: no user-facing page markup changed — internal change to
+  `getAlertFunnelWeeklySnapshot` (`src/lib/alertFunnelWeekly.ts`) and the Monday
+  admin funnel email builder (`buildAdminAlertFunnelEmail` in `src/lib/email.ts`).
+  No route/markup touched.
+- What: **The Monday admin "alert funnel" email now reports whether the
+  "still want these?" re-permission emails are actually working, instead of
+  sending into a deaf loop with no rollup.** Earlier today's
+  `alert-dormant-repermission` ship started emailing dormant subscribers but
+  nothing read the results back — the exact "deaf loop" class batch #7 already
+  closed for votes/instant-interest, reopened. `alertFunnelWeekly` now reads the
+  optional `repermission_sent_at` column (graceful degrade if unmigrated, same
+  precedent as `paused_at`/`unsubscribed_at`) and reports emails sent this
+  week/last week/all-time, plus a current-status breakdown (how many of those
+  alerts are now unsubscribed, paused, or still live) so the human can tell if
+  re-permission is winning back attention or just annoying people into leaving.
+  New "Re-permission emails sent" line in both the HTML and text email, three
+  honest states: column-not-migrated, migrated-but-zero, real counts — never a
+  fabricated 0. **Not done, intentionally:** the backlog item also asked for a
+  "downshifted cadence" breakdown, but there's no `frequency_changed_at` history
+  anywhere in the schema — only the alert's *current* `frequency` — so
+  attributing a cadence change to "since the repermission email" would be
+  guessing at causation, not reading real data. Per GOAL.md's honesty rule
+  (never fabricate a signal), that piece was scoped out rather than faked; a
+  future `frequency_changed_at` column would unlock it honestly. Also
+  intentionally not done: mirroring the line onto `/admin/alerts` — that page
+  reads a different module (`alertScoreboard.ts`), so it's a separate slice, not
+  the "if trivial" case RUNBOOK allows for.
+- Goal: alert-experience `[goal]` lane, tier 3 of the strict cascade — no open
+  `[bug]`s (swept BACKLOG.md), no autonomously-buildable `[want]` (the two
+  standing product-decision items — save-search auth-wall, collection-layout
+  redesign — both still need a human call, confirmed by direct read this
+  cycle). This was the last open item in plan-pass batch #10 (the prior cycle's
+  own "Next" note named it directly); batch #10 is now fully drained.
+- Spec: nightshift/specs/20260720T061712Z-alert-funnel-repermission-line.md
+- Verdict: PASS — `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit
+  0. Full `node --experimental-strip-types --test 'src/**/*.test.ts'` suite:
+  605/605 pass (3 new tests in `email.test.ts`: real this-week/all-time counts
+  + status breakdown render; a zero-sends-but-migrated snapshot renders an
+  honest "No re-permission emails sent yet" instead of a fabricated 0; an
+  unmigrated-column snapshot renders a distinctly-worded "not migrated live"
+  message, not the zero-sends copy). Non-visual cycle (internal
+  snapshot/email-builder logic, no page markup) — screenshots saved for the
+  audit trail but not read into context per RUNBOOK; the programmatic smoke
+  gate is the PASS bar. Served the PRODUCTION build (`npx next start` on port
+  3000); `qa-smoke.mjs` on `/alerts`, `/aircraft`: 4/4 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow). Also curled the
+  existing dev fixture (`/api/dev/email-preview/admin-alert-funnel`, updated
+  with the new fields) — 200, and grepped the rendered HTML/text to confirm the
+  new line renders real fixture numbers ("6 this week", "22 all-time", "5
+  unsubscribed, 2 paused, 15 still active"). No schema change, no prod DB rows
+  touched — pure function/email-builder logic, nothing round-tripped through a
+  live signup/alert. Server started/stopped cleanly (killed the actual
+  `next-server` PID directly, not just `pkill`); confirmed via `ps aux` no
+  stray process remained afterward.
+- Screenshots: nightshift/screenshots/alert-funnel-repermission-line/
+- Next: plan-pass batch #10 is now fully drained (this was its last open item)
+  — the two long-blocked items (real instant sends: Vercel cron-tier human
+  call; save-search auth wall: `[want]` product call) remain untouched, as
+  does an honest `frequency_changed_at` column if the human ever wants the
+  cadence-downshift breakdown this cycle scoped out. Next cycle needs a fresh
+  plan-pass batch #11 (smart-model ideation) unless a `[bug]`/`[want]` shows up
+  first.
+
 ## 20260720T060234Z — PASS — digest-gmail-clip-guard
 - Pages: no user-facing page markup changed — internal change to the shared digest email
   builders (`buildAlertDigestEmail`/`buildCombinedAlertDigestEmail` in `src/lib/email.ts`)
