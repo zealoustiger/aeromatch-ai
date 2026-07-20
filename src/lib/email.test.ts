@@ -1815,6 +1815,13 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   cronAvgDurationMsThisWeek: 4820,
   cronRunsRecorded: true,
   cronSendFailuresThisWeek: 0,
+  repermissionSentThisWeek: 6,
+  repermissionSentLastWeek: 4,
+  repermissionSentAllTime: 22,
+  repermissionUnsubscribedCount: 5,
+  repermissionPausedCount: 2,
+  repermissionStillLiveCount: 15,
+  repermissionSentAtMigrated: true,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -1982,6 +1989,52 @@ test('buildAdminAlertFunnelEmail: with zero instant-interest taps ever, an hones
   assert.match(html, /No interest recorded yet/)
   assert.match(text, /Instant-alerts interest: No interest recorded yet/)
   assert.doesNotMatch(html, /⚡ 0 this week/)
+})
+
+test('buildAdminAlertFunnelEmail: re-permission renders this-week/all-time sends plus the unsubscribed/paused/still-active breakdown', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Re-permission emails sent/)
+  assert.match(html, /6 this week/)
+  assert.match(html, /22 all-time/)
+  assert.match(html, /5 unsubscribed, 2 paused, 15 still active/)
+  assert.match(text, /Re-permission emails sent: 6 this week, 22 all-time \(of those: 5 unsubscribed, 2 paused, 15 still active\)/)
+})
+
+test('buildAdminAlertFunnelEmail: with zero re-permission emails ever sent (column migrated), an honest empty line renders instead of a fabricated 0', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      repermissionSentThisWeek: 0,
+      repermissionSentLastWeek: 0,
+      repermissionSentAllTime: 0,
+      repermissionUnsubscribedCount: 0,
+      repermissionPausedCount: 0,
+      repermissionStillLiveCount: 0,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /No re-permission emails sent yet\./)
+  assert.match(text, /Re-permission emails sent: No re-permission emails sent yet\./)
+  assert.doesNotMatch(html, /0 this week/)
+})
+
+test('buildAdminAlertFunnelEmail: when repermission_sent_at is not migrated live, a distinct honest message renders (not "no emails sent yet")', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      repermissionSentThisWeek: 0,
+      repermissionSentLastWeek: 0,
+      repermissionSentAllTime: 0,
+      repermissionUnsubscribedCount: 0,
+      repermissionPausedCount: 0,
+      repermissionStillLiveCount: 0,
+      repermissionSentAtMigrated: false,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /isn.t migrated live/)
+  assert.match(text, /isn.t migrated live/)
+  assert.doesNotMatch(html, /No re-permission emails sent yet\./)
 })
 
 test('buildAdminAlertFunnelEmail: least-relevant listings render their stored titles and flag counts', () => {
