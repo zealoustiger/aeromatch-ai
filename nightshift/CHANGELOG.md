@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T070233Z — PASS — price-drop-snooze-parity
+- Pages: /alerts (baseline QA touch only — this is a backend/email-builder change, no
+  user-facing page)
+- What: **The rich single-listing price-drop email — the one you get when a plane you're
+  watching just got cheaper — now offers the same "Snooze 30 days" option every other
+  ClubHanger alert email already has.** Before, that template's footer only had
+  Manage/Unsubscribe/Get-fewer-emails; a subscriber who wanted a real pause with an end
+  date (rather than only switching to a lighter cadence or unsubscribing outright) had no
+  way to do that from this specific email, even though the exact same option already
+  existed on the aggregate digest and combined-digest templates. `buildPriceDropEmail`
+  gets the same optional `snoozeUrl` param, rendered as a fourth quiet footer link in both
+  HTML and text, byte-identical in style to the sibling builders. The alert-digest cron
+  already computed a `snoozeUrl` for its digest send a few lines above the price-drop
+  send path — it just wasn't threaded through; now it is.
+- Goal: alert-experience `[goal]` — the explicitly flagged follow-up of `digest-snooze-link`
+  (batch #10), closing the one remaining subscriber-facing email that lacked the "fewer
+  instead of none" snooze rung. Last open item in the current `[goal]` queue tier after
+  both `[P1]` items (real-instant-alerts, save-search-auth-wall) confirmed still blocked on
+  a human call (Vercel plan tier / product decision) — re-verified by direct code read
+  this cycle before dropping to this `[P2]`.
+- Spec: nightshift/specs/20260720T070233Z-price-drop-snooze-parity.md
+- Verdict: PASS. `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 621/621 pass (3 new
+  cases in `email.test.ts`: no snooze link without the opt, a real snooze link renders
+  with it, and both frequencyUrl + snoozeUrl render alongside each other — same coverage
+  shape as the existing digest-builder snooze tests). Non-visual cycle (email-builder +
+  one cron call-site change, no page markup) — screenshots saved for the audit trail but
+  not read into context per RUNBOOK convention; the programmatic smoke gate is the PASS
+  bar. Served the PRODUCTION build (`npx next start` on port 3300); `qa-smoke.mjs --base
+  http://localhost:3300` on `/alerts`, `/aircraft`: 4/4 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at 1280 + 375px) — note the smoke tool's
+  default base is `localhost:3000`, which is occupied by the pre-existing stray
+  `next-server` (pid 5814, flagged in the prior cycle's entry, not started by this cycle)
+  serving a stale build that 500'd on `/aircraft`; passing `--base` explicitly avoided a
+  false FAIL from that unrelated leftover process. This cycle's own server (port 3300)
+  was stopped cleanly afterward. No prod DB rows touched — pure function/write-path logic,
+  nothing round-tripped through a live signup/alert.
+- Screenshots: nightshift/screenshots/price-drop-snooze-parity/
+- Next: the remaining open `[P2][goal]` items in this batch — the re-permission lifecycle
+  block on `/admin/alerts`, deliverability micro-copy in the confirm email, and the daily
+  capture-funnel self-check — are next in the alert-experience queue. Separately: the
+  stray `next-server` process on port 3000 (pid 5814, running since 2026-07-19 23:58, well
+  before this cycle) is STILL running — flagged for a second consecutive cycle now; a
+  human should `ps aux | grep next-server` and kill it, since it's now confirmed to serve
+  stale/500ing responses that could produce a false FAIL for any future cycle that forgets
+  to pass `--base` to `qa-smoke.mjs`.
+
 ## 20260720T065029Z — PASS — alert-frequency-changed-at
 - Pages: /alerts (baseline QA touch only — this is a backend/email-builder change, no
   user-facing page)
