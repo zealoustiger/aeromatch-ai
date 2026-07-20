@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   describeLastDigest,
+  describeNextDigest,
   intervalDaysFor,
   isDigestDue,
   nextLighterFrequency,
@@ -165,4 +166,30 @@ test('shouldOfferDailyUpgrade: weekly alert below the threshold → false', () =
 test('shouldOfferDailyUpgrade: daily alert never offered (no faster cadence to switch to)', () => {
   assert.equal(shouldOfferDailyUpgrade('daily', 10), false)
   assert.equal(shouldOfferDailyUpgrade('daily', 0), false)
+})
+
+test('describeNextDigest: never sent → next cron run, regardless of frequency', () => {
+  assert.equal(describeNextDigest(null, 'daily', nowIso), 'Next digest: ~tomorrow morning')
+  assert.equal(describeNextDigest(null, 'weekly', nowIso), 'Next digest: ~tomorrow morning')
+  assert.equal(describeNextDigest(null, 'monthly', nowIso), 'Next digest: ~tomorrow morning')
+})
+
+test('describeNextDigest: daily cadence resolves to "tomorrow morning" (its interval is one cron run)', () => {
+  assert.equal(describeNextDigest(daysAgo(1), 'daily', nowIso), 'Next digest: ~tomorrow morning')
+})
+
+test('describeNextDigest: weekly, no digestDay, sent 5 days ago → next due date names the weekday', () => {
+  assert.equal(describeNextDigest(daysAgo(5), 'weekly', nowIso), 'Next digest: ~Monday')
+})
+
+test('describeNextDigest: weekly with a digestDay preference → next occurrence of that weekday', () => {
+  assert.equal(describeNextDigest(daysAgo(8), 'weekly', nowIso, 2), 'Next digest: ~Tuesday')
+})
+
+test('describeNextDigest: monthly, sent 20 days ago → more than 6 days out, uses a calendar date', () => {
+  assert.equal(describeNextDigest(daysAgo(20), 'monthly', nowIso), 'Next digest: ~Jul 19')
+})
+
+test('describeNextDigest: malformed nowIso falls back to a plain cadence line', () => {
+  assert.equal(describeNextDigest(daysAgo(2), 'weekly', 'not-a-date'), 'Next digest: ~weekly')
 })

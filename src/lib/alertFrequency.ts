@@ -130,3 +130,41 @@ export function describeLastDigest(
   const formatted = sentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   return `Last email ${formatted} · ${cadence}`
 }
+
+/**
+ * "Next digest expected ~<when>" forward-looking counterpart to
+ * `describeLastDigest` (GOAL.md: subscribers managing cadence should know
+ * what's coming, not just what already happened). Scans forward day-by-day
+ * from `nowIso`, at the daily cron's fixed run hour (`vercel.json`: `0 8 * *
+ * *` UTC), reusing `isDigestDue` — the EXACT predicate the cron itself gates
+ * sends on — so this can never claim a date the cron wouldn't actually send
+ * on. Bounded to 40 days (past the longest `monthly` interval) so a
+ * malformed/garbage timestamp can't loop forever; falls back to a plain
+ * cadence-only line in that case.
+ */
+export function describeNextDigest(
+  lastDigestAt: string | null,
+  frequency: AlertFrequency,
+  nowIso: string,
+  digestDay?: number | null
+): string {
+  const now = new Date(nowIso)
+  if (Number.isNaN(now.getTime())) return `Next digest: ~${frequency}`
+
+  for (let days = 1; days <= 40; days++) {
+    const candidate = new Date(now)
+    candidate.setUTCDate(candidate.getUTCDate() + days)
+    candidate.setUTCHours(8, 0, 0, 0)
+    const candidateIso = candidate.toISOString()
+    if (isDigestDue(lastDigestAt, frequency, candidateIso, digestDay)) {
+      if (days === 1) return 'Next digest: ~tomorrow morning'
+      if (days <= 6) {
+        const weekday = candidate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+        return `Next digest: ~${weekday}`
+      }
+      const formatted = candidate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+      return `Next digest: ~${formatted}`
+    }
+  }
+  return `Next digest: ~${frequency}`
+}
