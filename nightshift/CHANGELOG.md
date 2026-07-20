@@ -2,6 +2,35 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T111144Z — PASS — aircraft-owner-seeker-alert
+- Pages: /aircraft/listing/[id]
+- What: **An aircraft-listing owner can now ask to be told when a pilot starts looking for
+  a partnership in their aircraft, right from their own listing page.** Previously the only
+  owner-facing module on that page was the "Improve your listing" trust nudge — there was no
+  way for an owner to say "tell me when a pilot starts seeking a Beechcraft Bonanza G36" short
+  of navigating to `/partnerships/seeking` and subscribing manually. A new alert box now
+  renders directly below that nudge (owner-only, only when the listing has a `make`), prefilled
+  to the listing's own make (+state when present) as a matchable `/partnerships/seeking?make=…`
+  alert the digest cron already understands.
+- Goal: alert experience (🔔 GOAL section) — new capture point closing the demand→supply loop:
+  the post-success subscriber-count trilogy (aircraft/partnership/seeker) shipped earlier today
+  told sellers "N buyers are already watching," this tells them "get told the next time one
+  shows up," persistently, every time they revisit their own listing (not just once at
+  post-time). Reused the exact `AlertSignup`/`isOwner` patterns already proven elsewhere on
+  this same page — no new component, no schema change. New `source: "owner_listing_seeker"`
+  value for future scoreboard attribution (not wired this cycle).
+- Spec: nightshift/specs/20260720T111144Z-aircraft-owner-seeker-alert.md
+- Verdict: PASS. `npx next build` clean. QA smoke (desktop 1280 + mobile 375) passed twice —
+  once as an anonymous visitor (confirms the box stays hidden, no regressions to the existing
+  page) and once with a temporary local `isOwner` override to visually verify the new box
+  renders correctly (screenshots below), then reverted before the real gate run that actually
+  shipped. Zero console errors, zero horizontal overflow either viewport either pass.
+- Screenshots: nightshift/screenshots/aircraft-owner-seeker-alert/ (real, unowned view — gate
+  run); nightshift/screenshots/aircraft-owner-seeker-alert-ownerview/ (temp-override owner view,
+  visual verification only, not part of the shipped diff)
+- Next: the partnerships-listing-page slice (owner of a partnership listing asking to be
+  alerted about new seekers) — deferred this cycle to keep the diff to one page.
+
 ## 20260720T110532Z — PASS — aircraft-alert-honest-narrowing
 - Pages: /aircraft/listing/[id] (post-success subscriber-count line, `?posted=1`); /aircraft
   (baseline QA touch only)
