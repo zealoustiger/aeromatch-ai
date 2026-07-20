@@ -2,6 +2,46 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T081158Z — PASS — selfcheck-failure-alert
+- Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate,
+  linked from the new email); /alerts, /aircraft (baseline QA touch only — this is a
+  cron/email-builder change, no new user-facing page)
+- What: **If the daily alert-capture self-check (added last cycle) fails, admins now get
+  an immediate dedicated email naming the failing step — instead of only a passive line
+  in Monday's funnel summary, which could leave a mid-week breakage of the single capture
+  chokepoint every alert surface depends on sitting undetected for up to 6 days.** The
+  send is transition-gated (fires the moment a previously-healthy run turns red), goes
+  quiet through a persistent failure so it doesn't spam daily, then gently re-sends every
+  3rd consecutive red day as a "still broken" nudge.
+- Goal: alert-experience `[goal]` tier — the explicitly flagged follow-up of
+  `alert-capture-selfcheck` (plan-pass batch #12's top `[P1]`, checked off in BACKLOG.md
+  this cycle). Tier 1 (`[bug]`): none open — last cycle PASSed and no known bug/broken
+  page/console error/CWV-mobile regression found. Tier 2 (`[want]`): the two open
+  `[P1][want]` items (save-search auth wall, collection-layout redesign) remain flagged
+  "needs a human product call" by their own BACKLOG.md text, re-verified this cycle before
+  dropping to tier 3.
+- Spec: nightshift/specs/20260720T081158Z-selfcheck-failure-alert.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 639/639 pass (9 new
+  cases in `alertCaptureSelfCheckHistory.test.ts` covering the new
+  `shouldSendCaptureSelfCheckAlert` helper — day-1 fresh failure, transition from a
+  passing/unmigrated prior run, quiet 2nd/4th/5th consecutive red days, re-send on the
+  3rd/6th, a recovery breaking the streak so the next failure re-sends as fresh, and
+  never-sends-on-a-pass). Non-visual cycle (cron/email-builder logic, no page markup) —
+  served the PRODUCTION build (`npx next start` on port 3300); `qa-smoke.mjs --slug
+  selfcheck-failure-alert /alerts /aircraft`: 4/4 pass (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at 1280 + 375px); also curled the existing
+  `/api/dev/email-preview/admin-alert-funnel` dev fixture (200) as a sanity check that the
+  `email.ts` addition didn't break the sibling admin email. Per RUNBOOK, screenshots not
+  read (non-visual). Server stopped cleanly after (verified via a follow-up curl to port
+  3300 returning connection-refused). No prod DB rows created or touched — this cycle's
+  new send path is only exercised in the real cron run itself, never invoked directly
+  during QA (would require a real `alert_cron_runs` history + `ADMIN_EMAILS` set to fire).
+- Screenshots: nightshift/screenshots/selfcheck-failure-alert/
+- Next: the sibling `[P1][goal]` items in the same batch — "Send-health block on
+  `/admin/alerts` — last-7-runs table" and "Demand-vs-supply ('most wanted') block on
+  `/admin/alerts`" — are next in the alert-experience queue.
+
 ## 20260720T074102Z — PASS — alert-capture-selfcheck
 - Pages: /admin/alerts (admin-only Monday funnel email + on-demand scoreboard, behind the
   FREEZE'd admin gate); the daily `/api/cron/alert-digest` cron; email preview at

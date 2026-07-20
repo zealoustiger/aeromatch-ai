@@ -3671,19 +3671,23 @@ matching subscribers (grep clean across `/post`, `aircraft/new`, `partnerships/n
 "next digest" line on `/alerts/manage`; `AlertSignup.source` is optional with no contract
 test guarding it._
 
-- **[P1][goal] Immediate admin heads-up email when the daily capture self-check fails.**
-  The explicitly flagged follow-up of `alert-capture-selfcheck`: today a failure is only
-  `console.error` (`alert-digest/route.ts:2319`) + a passive line in Monday's funnel
-  email — a Tuesday breakage sits red for up to 6 days. In the same cron run, on the
-  *transition* into failure (previous run OK or unknown → this run FAILED, via the
-  existing `alert_cron_runs` history read / `summarizeSelfCheckHistory`), send a short
-  dedicated admin email naming the failing step — transition-only so a persistent failure
-  doesn't re-email daily (at most a gentle re-send after ~3 consecutive red days).
-  Fail-soft everywhere: the heads-up send can never affect the digest sends that already
-  completed, and it degrades to the current behavior when the `self_check_*` columns
-  aren't migrated. Reuse the Monday admin email plumbing + admin recipient logic; goes
-  through `SendPacer` like every other send. Improves: reliability of the single capture
-  chokepoint every alert surface depends on. No new capture point, no schema change.
+~~- **[P1][goal] Immediate admin heads-up email when the daily capture self-check fails.**~~
+  ✅ SHIPPED via `selfcheck-failure-alert` (2026-07-20) New `shouldSendCaptureSelfCheckAlert`
+  (`alertCaptureSelfCheckHistory.ts`, pure/import-free like `summarizeSelfCheckHistory`)
+  decides send-or-not from the runs immediately preceding today's (fetched via
+  `getRecentCronRuns(7)` BEFORE this run's own row is inserted, so history is genuinely
+  prior): sends on the transition into failure (prior run passed/unmigrated → today
+  failed), stays quiet through a persistent failure, then re-sends every 3rd consecutive
+  red day. New `buildAdminCaptureSelfCheckFailureEmail` (short, internal-only, mirrors
+  `buildManageLinkEmail`'s single-CTA style) names the failing step + detail, links to
+  `/admin/alerts`. Wired into `alert-digest/route.ts` right after the existing self-check
+  block (before the run-log insert) via a new `sendCaptureSelfCheckFailureAlert`, reusing
+  `SendPacer`/`ADMIN_EMAILS` — extracted the previously-inline `ADMIN_EMAILS` parsing into
+  one shared `getAdminRecipientEmails()` used by both this and the Monday summary sender.
+  Fail-soft: wrapped in try/catch, a failed send never affects the digest sends already
+  completed, and its own failures fold into the run's existing `sendFailures` tally. 9 new
+  unit tests cover day-1/2/3/4/5/6 streak transitions, the null/unmigrated-history case,
+  the recovery-then-refail case, and the always-quiet-on-pass case.
 - **[P1][goal] Send-health block on `/admin/alerts` — last-7-runs table.** Both flagged
   gaps in one honest read: `send_failures` is surfaced on `AlertCronRun` but rendered
   nowhere, and `deferred_sends` (added by `alert-cron-send-pacing`) was explicitly left
