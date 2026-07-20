@@ -2,6 +2,63 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T072002Z — PASS — admin-alerts-repermission-block
+- Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
+  /alerts (baseline QA touch only)
+- What: **The on-demand `/admin/alerts` scoreboard can now show whether the "still want
+  these?" re-permission emails are working, instead of a human having to wait until Monday's
+  summary email.** Before, only the weekly admin email reported re-permission sends +
+  outcomes (`alertFunnelWeekly.ts`); the always-on scoreboard (`alertScoreboard.ts`, a
+  different data source) had no equivalent read at all. New "Re-permission lifecycle"
+  section on `/admin/alerts` shows sends this week/last week/all-time, the
+  unsubscribed/paused/still-live breakdown, and the cadence-downshift count — same three
+  honest states (column-not-migrated / zero-sent / real counts) as every sibling metric on
+  the page.
+- Goal: alert-experience `[goal]` tier — the explicitly flagged remaining `[P2][goal]` item
+  from plan-pass batch #11 ("Re-permission lifecycle block on `/admin/alerts`"), named as
+  "next in the queue" by the prior three cycles' Next notes. Tier 1 (`[bug]`): none open —
+  swept BACKLOG.md, both prior `[bug]` lines already struck/shipped. Tier 2 (`[want]`):
+  re-verified — the two open `[P1][want]` items (save-search auth wall, collection-layout
+  redesign) remain explicitly flagged "still open, needs a human product call" by their own
+  BACKLOG.md text; the larger `[want]` items (Trade-A-Plane ingestion, Bay-Area coverage
+  benchmark, owner-leads list) remain flagged too-large/ToS-sensitive for one cycle, per
+  many prior cycles' audits. Dropped to tier 3.
+- Spec: nightshift/specs/20260720T072002Z-admin-alerts-repermission-block.md
+- Verdict: PASS. Refactored the repermission computation out of `alertFunnelWeekly.ts`'s
+  inline per-row loop into a new shared `getRepermissionRollup()` in `alertScoreboard.ts`
+  (same graceful-degrade-on-missing-column pattern as `getUnsubscribeReasonRollup` in the
+  same file) — both the Monday email snapshot and the new admin-page section now read from
+  one function instead of two independent copies. `npx tsc --noEmit` exit 0; `rm -rf .next
+  && npx next build` exit 0 (`/admin/alerts` compiles as ƒ dynamic). Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 622/622 pass (no
+  regressions — `email.test.ts`'s existing `buildAdminAlertFunnelEmail` fixture tests, which
+  cover the exact fields this refactor touches, are unchanged and still green, confirming
+  the refactor preserved behavior). Non-visual-for-anon cycle (the new panel only renders
+  for authenticated admins) — same precedent as every prior `/admin/alerts` cycle: served
+  the PRODUCTION build (`npx next start` on port 3300); `qa-smoke.mjs --slug
+  admin-alerts-repermission-block /admin/alerts /alerts`: 4/4 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow at 1280 + 375px); screenshot read
+  confirms the anonymous crawl correctly still shows the FREEZE'd "Admin only" gate at both
+  viewports, zero regression for signed-out visitors. Since the new section itself is
+  unreachable by an anonymous crawl, independently verified `getRepermissionRollup()`
+  against the real (read-only) prod DB via a throwaway, uncommitted `tsx` script (deleted
+  after use): returned cleanly with `sentAtMigrated: false` and all-zero counts — confirms
+  the honest-degrade path (the `repermission_sent_at`/`frequency_changed_at` columns are
+  still unmigrated live, as flagged) rather than a crash or a fabricated number. No prod DB
+  writes made (read-only query only). Killed a stray leftover `next-server` process (pid
+  9634, running since 00:14, predating this cycle, cause unknown) found bound to port 3300
+  before this cycle's own QA server could start — same class of hygiene issue flagged in the
+  last two changelog entries; gone cleanly before this cycle's server started and this
+  cycle's own server (port 3300) was stopped cleanly afterward (verified via `ps aux`, no
+  stray process remained).
+- Screenshots: nightshift/screenshots/admin-alerts-repermission-block/
+- Next: the sibling `[P2][goal]` item — a daily capture-funnel self-check (synthetic
+  subscribe→confirm→delete probe in the existing cron, reported in the Monday admin email) —
+  is the last open item in plan-pass batch #11. Once a human applies the
+  `repermission_sent_at`/`frequency_changed_at` migrations live, both this new admin-page
+  section and the Monday email will start showing real counts instead of the
+  "not migrated yet" state.
+
 ## 20260720T071139Z — PASS — alert-confirm-deliverability-copy
 - Pages: /alerts (baseline QA touch only — this is an email-builder change, no
   user-facing page)

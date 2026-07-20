@@ -3604,7 +3604,7 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   already-computed `snoozeUrl` into the `bestDrop` → `buildPriceDropEmail` send path
   (`alert-digest/route.ts`), and added 3 new unit tests (presence, absence, alongside
   `frequencyUrl`). No new capture point, no schema change.
-- **[P2][goal] Re-permission lifecycle block on `/admin/alerts`.** The separate slice
+~~- **[P2][goal] Re-permission lifecycle block on `/admin/alerts`.** The separate slice
   flagged by both `alert-unsubscribe-reasons` and `alert-funnel-repermission-line`:
   the Monday email now reports re-permission sends + status breakdown, but the on-demand
   `/admin/alerts` scoreboard (different data source, `alertScoreboard.ts`) still can't
@@ -3613,7 +3613,15 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   plus the unsubscribed/paused/still-live breakdown with the same three honest states
   (column-not-migrated / zero / real counts) — reuse the funnel module's helpers where
   importable rather than duplicating the query. Improves: honest-measurement pillar,
-  admin surface. No new capture point, no schema change.
+  admin surface. No new capture point, no schema change.~~ ✅ SHIPPED via
+  `admin-alerts-repermission-block` (2026-07-20) New shared `getRepermissionRollup()` in
+  `alertScoreboard.ts` (both `alertFunnelWeekly.ts` and the new `/admin/alerts` section now
+  read from it, replacing the funnel module's inline duplicate). New "Re-permission
+  lifecycle" section on `/admin/alerts` shows sent this-week/last-week/all-time, the
+  unsubscribed/paused/still-live breakdown, and the cadence-downshift count, same three
+  honest states as every sibling metric. Live-verified against the real (read-only) prod DB
+  via a throwaway script — degrades honestly (`sentAtMigrated: false`, the column isn't
+  migrated live yet) rather than crashing or fabricating a number.
 ~~- **[P2][goal] Deliverability micro-copy in the double-opt-in confirm email.**~~ ✅
   SHIPPED via `alert-confirm-deliverability-copy` (2026-07-20) GOAL.md: "make the
   double-opt-in email itself excellent" — yet `buildAlertConfirmEmail` contained no
