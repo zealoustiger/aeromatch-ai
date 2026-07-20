@@ -3508,15 +3508,26 @@ feature shipped dark earlier today with no rollup)._
   (follow-up):** `buildPriceDropEmail`'s footer (the single-drop rich template) — the
   backlog item named only "single-alert and combined digest footers," kept this cycle
   scoped to those two.
-- **[P2][goal] Gmail-clipping guard on digest HTML.** Gmail clips messages over ~102KB —
-  and a clipped digest hides exactly the footer that carries unsubscribe/manage links
-  (a deliverability + compliance risk, and the "View in browser" link only helps if the
-  clip point falls after it). No size guard exists anywhere. Add a byte-budget check in
-  the digest/combined builders (or the cron just before send): while over budget, trim
-  sample cards — the honest "See all N matches" CTA already covers trimmed content —
-  and unit-test the trimming (pure function over the samples array + a rendered-size
-  assertion). Log a cron warning when trimming fires so the admin can see it. Improves:
-  digest email reliability/compliance. No new capture point, no schema change.
+~~- **[P2][goal] Gmail-clipping guard on digest HTML.**~~ ✅ SHIPPED via
+  `digest-gmail-clip-guard` (2026-07-20) Gmail clips messages over ~102KB — and a clipped
+  digest hides exactly the footer that carries unsubscribe/manage links. Added a shared
+  `DIGEST_HTML_BYTE_BUDGET` (100KB, a safety margin under the ~102KB clip point) guard:
+  `buildAlertDigestEmail` now wraps its existing render logic (renamed
+  `buildAlertDigestEmailCore`) in a trim-and-rebuild loop that drops the last sample card
+  and re-renders while over budget; `buildCombinedAlertDigestEmail` does the same but
+  trims from whichever section currently has the most sample cards each pass, spreading
+  the cut fairly across a subscriber's due alerts instead of gutting one section first.
+  Both are pure no-ops (byte-identical output) when already under budget — verified via
+  the full existing test suite passing unmodified. The honest "See all N matches" CTA
+  count is untouched by trimming (it reads the real `newCount`/`dropCount`, not
+  `samples.length`), so a trimmed card never makes the count dishonest. Both builders gain
+  an optional `trimmedSamples` field (count of cards removed) on their return value; the
+  cron (`/api/cron/alert-digest/route.ts`) logs a `console.warn` with the alert id/email
+  (or email + alert count for combined) whenever a real send trims. Unit-tested with a
+  synthetic 80-sample digest/section (real cron sends cap at 3, so this never fires in
+  practice today, but the guard is real infrastructure for whenever that changes) —
+  confirms output lands back under budget, the honest CTA count survives, and a
+  lighter co-section never loses a card to a heavier one.
 - **[P2][goal] Re-permission lifecycle line in the Monday admin email.** Today's
   `alert-dormant-repermission` ship sends "still want these?" emails but nothing rolls
   them up — a brand-new deaf loop (the exact class batch #7 closed for votes/instant

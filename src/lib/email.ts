@@ -1291,7 +1291,7 @@ function sampleCardHtml(s: AlertDigestSample, notRelevantUrl?: string): string {
  * partnership alerts pass "buy-in drop" since their "price" is a buy-in
  * share, not an asking price.
  */
-export function buildAlertDigestEmail(opts: {
+function buildAlertDigestEmailCore(opts: {
   context: string | null
   newCount: number
   dropCount: number
@@ -1563,6 +1563,40 @@ Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (sw
   return { subject, html, text }
 }
 
+/**
+ * Gmail clips a message body over ~102KB — and the clipped part is exactly
+ * where the unsubscribe/manage footer lives, a deliverability + compliance
+ * risk. 100KB leaves a safety margin under that clip point for whatever
+ * email-client chrome (quoted-printable overhead, wrapping) inflates the
+ * transmitted size beyond this raw UTF-8 byte count.
+ */
+const DIGEST_HTML_BYTE_BUDGET = 100 * 1024
+
+/**
+ * Wraps {@link buildAlertDigestEmailCore}: while the rendered HTML is over
+ * `DIGEST_HTML_BYTE_BUDGET`, drops the last sample card and rebuilds — the
+ * honest "See all N matches" CTA already covers whatever gets trimmed, so
+ * cutting cards (not counts/copy) keeps the email truthful. A digest that
+ * never crosses the budget renders byte-identical output to the un-trimmed
+ * core (the loop is a no-op). `trimmedSamples` (count of cards removed) is
+ * set on the result only when trimming actually fired, so callers (the
+ * digest cron) can log it.
+ */
+export function buildAlertDigestEmail(
+  opts: Parameters<typeof buildAlertDigestEmailCore>[0]
+): { subject: string; html: string; text: string; trimmedSamples?: number } {
+  let samples = opts.samples ?? []
+  let trimmedSamples = 0
+  for (;;) {
+    const result = buildAlertDigestEmailCore({ ...opts, samples })
+    if (Buffer.byteLength(result.html, 'utf8') <= DIGEST_HTML_BYTE_BUDGET || samples.length === 0) {
+      return trimmedSamples > 0 ? { ...result, trimmedSamples } : result
+    }
+    samples = samples.slice(0, -1)
+    trimmedSamples++
+  }
+}
+
 /** One alert's contribution to a combined digest email — the same
  *  context/counts/dropNoun/samples/listingsUrl fields `buildAlertDigestEmail`
  *  takes for a single alert, minus the manage/unsubscribe/frequency links
@@ -1616,7 +1650,7 @@ export type AlertDigestSection = {
  * exactly one due alert, callers should use `buildAlertDigestEmail` directly
  * instead — this function is for 2+.
  */
-export function buildCombinedAlertDigestEmail(opts: {
+function buildCombinedAlertDigestEmailCore(opts: {
   sections: AlertDigestSection[]
   manageUrl: string
   unsubscribeUrl: string
@@ -1780,6 +1814,44 @@ Manage alerts: ${manageUrl}
 Unsubscribe from these: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails: ${opts.frequencyUrl}` : ''}${opts.snoozeUrl ? `\nSnooze 30 days: ${opts.snoozeUrl}` : ''}`
 
   return { subject, html, text }
+}
+
+/**
+ * Wraps {@link buildCombinedAlertDigestEmailCore} with the same
+ * `DIGEST_HTML_BYTE_BUDGET` guard as {@link buildAlertDigestEmail}. Trims
+ * from whichever section currently has the most sample cards (rebuilding and
+ * re-checking each time), so a heavy section doesn't get gutted first while a
+ * lighter one keeps all its cards — the cut is spread fairly across the
+ * subscriber's due alerts. Stops once every section is out of samples to
+ * trim, even if still over budget (an all-text combined digest is already as
+ * small as this function can make it). `trimmedSamples` (total cards
+ * removed, across every section) is set only when trimming actually fired.
+ */
+export function buildCombinedAlertDigestEmail(
+  opts: Parameters<typeof buildCombinedAlertDigestEmailCore>[0]
+): { subject: string; html: string; text: string; trimmedSamples?: number } {
+  let sections = opts.sections
+  let trimmedSamples = 0
+  for (;;) {
+    const result = buildCombinedAlertDigestEmailCore({ ...opts, sections })
+    if (Buffer.byteLength(result.html, 'utf8') <= DIGEST_HTML_BYTE_BUDGET) {
+      return trimmedSamples > 0 ? { ...result, trimmedSamples } : result
+    }
+    let heaviestIdx = -1
+    let heaviestLen = 0
+    sections.forEach((s, i) => {
+      const len = s.samples?.length ?? 0
+      if (len > heaviestLen) {
+        heaviestLen = len
+        heaviestIdx = i
+      }
+    })
+    if (heaviestIdx === -1) {
+      return trimmedSamples > 0 ? { ...result, trimmedSamples } : result
+    }
+    sections = sections.map((s, i) => (i === heaviestIdx ? { ...s, samples: (s.samples ?? []).slice(0, -1) } : s))
+    trimmedSamples++
+  }
 }
 
 /**
