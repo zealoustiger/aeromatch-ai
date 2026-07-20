@@ -2,6 +2,55 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T101501Z — PASS — aircraft-post-subscriber-count
+- Pages: /aircraft/listing/[id] (post-success screen, `?posted=1`)
+- What: **Sellers posting an aircraft now see an honest "N subscribers with matching
+  alerts will hear about this listing in their next digest" line**, the same social-proof
+  line the partnership post-success screen got earlier today (`partnership-post-subscriber-count`)
+  — this was that item's explicitly flagged remaining follow-up slice. New
+  `parseAircraftAlertSourcePath`/`matchesAircraftListing` in `alertSubscriberMatch.ts` (22 new
+  unit tests, 36/36 total pass) reverse-match a brand-new listing against every confirmed
+  alert's `source_path`, covering make/model/state/airport/price/year/hours-time filters on
+  the bare `/aircraft` query string, `/aircraft/[make]`, `/aircraft/[make]/[model]`,
+  `/aircraft/for-sale/[state]`, and the homepage `/` "all" shape — mirrored into
+  `countMatchingAircraftSubscribers()` in `alertMatchCounts.ts`. Renders nothing at 0 or on a
+  query error (never fabricated), same honesty gate as the partnership line.
+- Goal: `[goal]` alert experience — closing the loop for sellers by showcasing the alert
+  system at their own post-listing moment (motivates the secondary posting pillar via
+  alerts). Tier 1 (`[bug]`): none open. Tier 2 (`[want]`): the remaining open `[want]` items
+  are either flagged "needs a human decision" (save-search auth-wall reconciliation,
+  collection-layout redesign awaiting a mock) or out of policy scope (bot-evasion ingestion
+  targets) — none pickable this cycle. Tier 3 (`[goal]`): picked this item, the one clearly
+  scoped, unblocked, non-SEO alert-experience task left in BACKLOG.md (verified by direct
+  read — the alert-experience `[goal]` queue's other two open items, "real instant alerts"
+  and its re-scope, are both explicitly flagged as needing a human call on Vercel cron-tier
+  before a future cycle can attempt them).
+- Spec: nightshift/specs/20260720T100501Z-aircraft-post-subscriber-count.md
+- Verdict: PASS. `npx next build` + typecheck clean. 36/36 unit tests pass
+  (`node --experimental-strip-types --test src/lib/alertSubscriberMatch.test.ts`). QA smoke
+  exit 0 on `/aircraft/listing/[id]` + `/aircraft` at desktop 1280 + mobile 375 (HTTP 200,
+  zero console errors, zero overflow). Live-verified end-to-end against a real active listing
+  (`Beechcraft Bonanza G36`, id `dad01288-…`) + a throwaway `@example.com` confirmed alert
+  (seeded + deleted via service role): `?posted=1` correctly showed "2 subscribers…" (my
+  test row + one genuine real subscriber already matching that make), then correctly
+  rendered nothing once the count dropped back to 0 after cleanup. Screenshots confirm the
+  line renders on-brand inside the existing emerald confirmation card, no overflow at 375px.
+  **Bonus DB-hygiene fix:** found and deleted an orphaned `@example.com` alert row
+  (`qa-alert-spam-complaint-…`) left behind by a prior cycle (`alert-spam-complaint`,
+  2026-07-14) — 6 days old, past the 24h auto-sweep window (the sweep runs off `auth.users`,
+  which this email-only `alerts` row was never tied to, so it was never swept). Not a full
+  DB sweep — a few other old `@example.com` rows from unrelated prior cycles remain (see Next).
+- Screenshots: nightshift/screenshots/aircraft-post-subscriber-count/
+- Next: a handful of leftover `@example.com` rows from earlier, unrelated cycles are still
+  sitting in `alerts` (e.g. `qa-unsubscribe-recovery-weekly-…`, `qa-alert-refine-…`,
+  `qa-compare-alert-cessna-…` ×3) — worth a dedicated cleanup pass (or teaching the 07:30
+  health check to sweep `alerts`/`saved_listings`/etc. by email pattern + age, not just
+  `auth.users`, since email-only tables like `alerts` have no user row to cascade from).
+  On the goal side: with this item now fully shipped both directions, the alert-experience
+  `[goal]` queue is down to the two Vercel-cron-blocked "instant alerts" items (need a human
+  call on the Hobby-vs-Pro plan tier) — next cycle should check for a fresh planner refill
+  or scope a new non-blocked slice.
+
 ## 20260720T095311Z — PASS — admin-alerts-cadence-mix-tile
 - Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
   /alerts (baseline QA touch only)
