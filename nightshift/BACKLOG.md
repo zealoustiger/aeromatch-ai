@@ -3953,19 +3953,15 @@ the confirm email. Genuinely open gaps below._
   render nothing at 0 or on query error. Unit-test each filter both directions. Why: the
   one post flow whose poster gets no alert-system payoff; no new capture point, no schema
   change.
-- **[P1][goal] Owner-side seeker-alert capture on the owner's own listing page.** The cron
-  fully supports filtered seeker alerts (make/model/state/icao) and `/post` already
-  captures a bare seeker alert (`source="post_chooser"`), but an aircraft/partnership
-  OWNER viewing their own listing has no way to say "tell me when a pilot starts looking
-  for my aircraft" — no prefilled seeker capture exists on any owner-gated surface (the
-  only owner module is the trust-signal nudge, `AircraftListingOwnerNudge`). Render an
-  `AlertSignup` (`noun="seeker"`) beside that nudge, gated on the same `poster_id` check,
-  with `sourcePath` prefilled from the listing's real make (+state when present) —
-  matchable `/partnerships/seeking?make=…` shapes only — and a new `source` value (e.g.
-  `owner_listing_seeker`) so the scoreboard attributes it; emits the standard
-  `alert_subscribed`. Slice: aircraft listing pages first; partnerships if it fits. Why:
-  a brand-new capture point on a surface every seller revisits, and it closes the
-  demand→supply loop the post-success counts opened.
+~~- **[P1][goal] Owner-side seeker-alert capture on the owner's own listing page.**~~ ✅
+  SHIPPED via `aircraft-owner-seeker-alert` (2026-07-20) `/aircraft/listing/[id]` now
+  renders an `AlertSignup` (`noun="seeker"`) beside `AircraftListingOwnerNudge`, gated on
+  the same `isOwner`/`p.make` check, with `sourcePath` prefilled to the matchable
+  `/partnerships/seeking?make=…` (+`state=…` when present) shape `parseSeekerAlertSourcePath`
+  already understands, and a new `source: "owner_listing_seeker"` value for attribution.
+  Emits the standard `alert_subscribed`. No schema change. **Not done, intentionally:** the
+  partnerships-listing-page slice ("if it fits" in the original text) — deferred to keep
+  this cycle's diff to one page; a natural next slice.
 - **[P1][goal] Pending-migrations action box on `/admin/alerts`.** At least seven features
   currently degrade behind "isn't migrated live" caveats scattered across the page
   (`alert_cron_runs`, `alerts.source`, `alerts.frequency`, `frequency_changed_at`,
