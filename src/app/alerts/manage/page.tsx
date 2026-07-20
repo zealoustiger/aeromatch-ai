@@ -14,7 +14,7 @@ import {
 } from '@/lib/alertEditCriteria'
 import { getAlertMatchCount, getNarrowSuggestions } from '@/lib/alertMatchCounts'
 import { detectOverlappingAlerts } from '@/lib/alertOverlap'
-import { describeLastDigest, normalizeFrequency } from '@/lib/alertFrequency'
+import { describeLastDigest, describeNextDigest, normalizeFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
 import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { getWatchedListingStatus } from '@/lib/alertWatchStatus'
@@ -187,6 +187,9 @@ export default async function AlertsManagePage({
   const aircraftFacets = await getAircraftFacets()
   const activeAlertCount = alerts.filter((a) => a.status === 'confirmed').length
   const pausedAlertCount = alerts.filter((a) => a.status === 'paused').length
+  // Single read-time "now" for describeNextDigest below — one value for the
+  // whole render pass rather than a fresh Date per row.
+  const nowIso = new Date().toISOString()
   // Every row an owner requests a change for is stamped with the same
   // pending_email — any one of them is enough to show the banner.
   const pendingEmailChange = alerts.find((a) => a.pending_email)?.pending_email ?? null
@@ -471,6 +474,8 @@ export default async function AlertsManagePage({
                       {a.status === 'confirmed' ? (
                         <p className="mt-0.5 text-xs text-slate-400">
                           {describeLastDigest(a.last_digest_at, normalizeFrequency(a.frequency), a.digest_day)}
+                          {' · '}
+                          {describeNextDigest(a.last_digest_at, normalizeFrequency(a.frequency), nowIso, a.digest_day)}
                         </p>
                       ) : null}
                     </div>
