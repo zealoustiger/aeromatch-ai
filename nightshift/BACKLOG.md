@@ -3847,16 +3847,13 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   (documented, narrow, unused-today gap):** the site-wide `LISTING_GRADE_FLOOR` env-based
   grade-band clipping the real digest query applies — this reverse-match uses raw grade
   cutoffs.
-- **[P1][goal] Undo for alert delete on `/alerts/manage`.** `deleteAlert`
-  (`src/app/actions.ts`) is a hard DB delete with no recovery — one mistap on the
-  management page and a confirmed alert (plus its `last_digest_at` history) is
-  irretrievably gone; no soft-delete/restore exists anywhere (grep clean). Have the
-  delete action return the deleted row's full field snapshot; show a toast/inline "Alert
-  deleted — Undo" that re-inserts it verbatim (same criteria, status, frequency,
-  `last_digest_at` so the next digest neither double-sends nor resets cadence) via a new
-  guarded action reusing the page's existing `resolveOwnerEmail` trust boundary. No
-  schema change (snapshot round-trip, not a tombstone column). Why: GOAL.md's
-  management pillar — forgiving delete is table stakes for "effortless" management.
+~~- **[P1][goal] Undo for alert delete on `/alerts/manage`.**~~ ✅ SHIPPED via
+  `alert-delete-undo` (2026-07-20) `deleteAlert` (`src/app/actions.ts`) was a hard DB
+  delete with no recovery — now returns the deleted row's full field snapshot and the
+  UI shows an "…alert deleted — Undo" toast (~8s) that re-inserts it verbatim (same
+  criteria, status, frequency, digest history) via a new guarded `restoreAlert` action
+  reusing the page's `resolveOwnerEmail` trust boundary (falls back to it when the
+  direct token compare fails, e.g. undoing a non-anchor alert). No schema change.
 - ~~**[P1][goal] One-tap unsubscribe reason capture on the post-unsubscribe page.**~~
   ❌ FILED IN ERROR — ALREADY BUILT (planner verification 2026-07-20, batch #14 pass):
   this exists in the tree today — `UnsubscribeRecover.tsx:48` tracks

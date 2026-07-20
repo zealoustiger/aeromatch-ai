@@ -110,7 +110,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
           ? { make, model, state, minPrice, maxPrice }
           : type === 'partnership'
             ? { make, state, airport }
-            : { make, model }
+            : { make, model, state, airport }
       const result = await createManageAlert(type, fields, token, {
         frequency: initial?.frequency,
         priceDropOptIn: initial?.priceDropOptIn,
@@ -188,21 +188,19 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
               </div>
             ) : null}
 
-            {type !== 'seeker' ? (
-              <div>
-                <label className={labelClass}>State</label>
-                <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
-                  <option value="">Any state</option>
-                  {US_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
+            <div>
+              <label className={labelClass}>State</label>
+              <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
+                <option value="">Any state</option>
+                {US_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {type === 'partnership' ? (
+            {type === 'partnership' || type === 'seeker' ? (
               <div>
                 <label className={labelClass}>Home airport</label>
                 <input

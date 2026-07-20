@@ -26,7 +26,7 @@ import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClas
 export type EditableAlertTarget =
   | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; dealOnly: boolean }
   | { type: 'partnership'; make: string; state: string; airport: string }
-  | { type: 'seeker'; make: string; model: string }
+  | { type: 'seeker'; make: string; model: string; state: string; airport: string }
 
 export interface AlertCriteriaFields {
   make?: string
@@ -61,7 +61,13 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
     }
   }
   if (p === '/partnerships/seeking') {
-    return { type: 'seeker', make: g('make'), model: g('model') }
+    return {
+      type: 'seeker',
+      make: g('make'),
+      model: g('model'),
+      state: g('state').toUpperCase(),
+      airport: g('airport').toUpperCase(),
+    }
   }
   return { type: 'partnership', make: g('make'), state: g('state').toUpperCase(), airport: g('airport').toUpperCase() }
 }
@@ -109,6 +115,8 @@ export function buildAlertCriteriaUpdate(
   } else {
     set('make', fields.make?.trim())
     set('model', fields.model?.trim())
+    set('state', fields.state?.trim().toUpperCase())
+    set('airport', fields.airport?.trim().toUpperCase())
   }
 
   const qsOut = params.toString()
@@ -205,14 +213,18 @@ function describeContext(type: EditableAlertTarget['type'], params: URLSearchPar
   // seeker
   const make = params.get('make')?.trim() || undefined
   const model = params.get('model')?.trim() || undefined
-  return [make, model].filter(Boolean).join(' ') || null
+  const airport = params.get('airport')?.trim().toUpperCase() || undefined
+  const stateCode = params.get('state')?.trim().toUpperCase()
+  const stateName = stateCode ? STATE_NAMES[stateCode] : undefined
+  const locationClause = airport ? `near ${airport}` : stateName ? `in ${stateName}` : undefined
+  return [make, model, locationClause].filter(Boolean).join(' ') || null
 }
 
 /** The form-exposed query-param keys per type — everything else on `source_path` is "hidden." */
 const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
   aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'deal']),
   partnership: new Set(['make', 'state', 'airport']),
-  seeker: new Set(['make', 'model']),
+  seeker: new Set(['make', 'model', 'state', 'airport']),
 }
 
 /** Rebuilds the `AlertCriteriaFields` the edit form would submit for an UNCHANGED target — used to round-trip its own exposed fields when only a hidden param is being removed. */
@@ -223,7 +235,7 @@ export function targetToFields(target: EditableAlertTarget): AlertCriteriaFields
   if (target.type === 'partnership') {
     return { make: target.make, state: target.state, airport: target.airport }
   }
-  return { make: target.make, model: target.model }
+  return { make: target.make, model: target.model, state: target.state, airport: target.airport }
 }
 
 export interface HiddenCriterion {
