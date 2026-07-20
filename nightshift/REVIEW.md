@@ -1,3 +1,24 @@
+## 2026-07-20T13:00:22Z — Night Shift run: 11 cycles (PASS 7 / FAIL 2) — night budget cap ($120)
+- Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $125.3617 of $120 cap
+
+- ABORT — none — plan needed`
+- ABORT — none — plan needed
+- PASS — seeker-post-subscriber-count — /partnerships/seeking/[id]?posted=1 now shows an honest N subscribers with matching alerts will hear about your search line, completing th
+- PASS — aircraft-alert-honest-narrowing — the aircraft post-success N subscribers line no longer overcounts subscribers whose alert was scoped by avionics, grade, good deals onl
+- PASS — aircraft-owner-seeker-alert — Added an owner-only get alerts for new seekers capture box to `/aircraft/listing/[id]`, so a seller can ask to be told when a pilot starts 
+- cycle produced no verdict (exit 124)
+- PASS — alert-delete-undo — Deleting an alert on /alerts/manage now shows an Undo toast that restores the exact row within ~8s (works for signed-in and token-scoped owners, incl
+- PASS — seeker-alert-location-edit — seeker alerts on /alerts/manage can now edit (not just delete-and-recreate) their state/home-airport location filter, matching what the dige
+- PASS — alerts-pending-migrations-box — new Pending migrations checklist on /admin/alerts lists exactly which of 6 unapplied alerts.* columns still block a built alert feature, 
+- PASS — alert-test-row-sweep — the nightly alert cron now also sweeps stale `@example.com` test-alert rows (email-only subscriptions the existing account sweep never reached), c
+- cycle produced no verdict (exit 124)
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 6.7 on 2 cores, sustained ~71 min — parallel drains are contending; consider more cores or lower --cpus per container
+- 2 of 11 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-20T10:18:47Z — Night Shift run: 22 cycles (PASS 15 / FAIL 3) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus
 - Night spend so far: $81.3537 of $120 cap
