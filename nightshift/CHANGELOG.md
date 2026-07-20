@@ -2,6 +2,36 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T112920Z — PASS — alert-delete-undo
+- Pages: /alerts/manage
+- What: **Deleting an alert on "My alerts" is no longer a one-way trapdoor — a mistap now
+  shows an "…alert deleted — Undo" toast for ~8 seconds, and clicking Undo brings the exact
+  same alert back** (same criteria, status, frequency, digest history), with no new
+  confirmation email. Before this, the Delete button hard-deleted the row from the database
+  with zero recovery; the only path back was setting the whole alert up again from scratch.
+  The toast sits in the bottom-left corner (deliberately clear of the bottom-right Feedback
+  widget), auto-dismisses on its own, and can be dismissed early with an ✕.
+- Goal: `[goal]` alert experience — a safety/recovery slice in the lineage of `alert-pause-delete`
+  and `alert-unsubscribe-recover`: makes the most destructive control on the alert-management
+  page reversible, lowering the risk of managing alerts (friction removed: "delete is scary /
+  irreversible"). No new capture point, no schema change.
+- Spec: nightshift/specs/20260720T112920Z-alert-delete-undo.md
+- Verdict: PASS. `npx next build` + `tsc --noEmit` clean. QA smoke (desktop 1280 + mobile 375)
+  exit 0 on /alerts/manage: HTTP 200, zero horizontal overflow, zero app console errors.
+  Because the real delete→undo round-trip needs an authenticated alert list, also drove the
+  full flow in a real browser against the production build with two real `@example.com` test
+  alerts under one email (token-scoped visit): verified for BOTH viewports that (a) deleting a
+  NON-anchor alert shows the toast, hides the row instantly, removes the DB row, and Undo
+  restores it identically, and (b) the trickier edge case — deleting the very alert whose own
+  `?token=` authenticated the page — also fully restores. Both round-trips left status/criteria/
+  token unchanged; all test rows deleted after (0 remain). **Fix made this cycle:** restoreAlert
+  originally authorized only via a direct token compare, which silently failed ("Not authorized")
+  when a token visitor undid a non-anchor alert even though its delete had succeeded — now falls
+  back to resolveOwnerEmail, matching deleteAlert's own ownership model.
+- Screenshots: nightshift/screenshots/alert-delete-undo/
+- Next: extend the same undo pattern to the "Delete all my alerts & data" control (bigger blast
+  radius, currently irreversible) — deferred this cycle to keep the diff to one action.
+
 ## 20260720T111144Z — PASS — aircraft-owner-seeker-alert
 - Pages: /aircraft/listing/[id]
 - What: **An aircraft-listing owner can now ask to be told when a pilot starts looking for
