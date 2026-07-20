@@ -22,7 +22,10 @@ import { LIVE_STATUSES } from './alertScoreboard'
 import {
   parsePartnershipAlertSourcePath,
   matchesPartnershipListing,
+  parseAircraftAlertSourcePath,
+  matchesAircraftListing,
   type PartnershipListingFields,
+  type AircraftListingFields,
 } from './alertSubscriberMatch'
 
 /**
@@ -990,6 +993,56 @@ export async function countMatchingPartnershipSubscribers(
     return count
   } catch (err) {
     console.error('[alertMatchCounts] subscriber-match count error:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+/**
+ * Count confirmed/active alert subscribers whose search would match this
+ * brand-new aircraft-for-sale listing right now — the aircraft counterpart of
+ * `countMatchingPartnershipSubscribers` above, for the post-success "N
+ * subscribers with matching alerts will hear about this listing" line on
+ * `/aircraft/listing/[id]?posted=1`. Returns `null` (never a fabricated `0`)
+ * on any query error.
+ */
+export async function countMatchingAircraftSubscribers(
+  listing: AircraftListingFields
+): Promise<number | null> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('alerts')
+      .select('status, source_path')
+      .neq('email', CAPTURE_SELFCHECK_EMAIL)
+    if (error) throw new Error(error.message)
+
+    const airportStateCache = new Map<string, string | null>()
+    let count = 0
+    for (const row of data ?? []) {
+      if (!LIVE_STATUSES.has(row.status)) continue
+      const parsed = parseAircraftAlertSourcePath(row.source_path)
+      if (!parsed) continue
+      if (parsed.kind === 'all') {
+        count++
+        continue
+      }
+      const { target } = parsed
+      let airportState: string | null = null
+      if (target.icao) {
+        const cached = airportStateCache.get(target.icao)
+        if (cached !== undefined) {
+          airportState = cached
+        } else {
+          const { data: airport } = await admin.from('airports').select('state').eq('icao', target.icao).maybeSingle()
+          airportState = airport?.state ?? null
+          airportStateCache.set(target.icao, airportState)
+        }
+      }
+      if (matchesAircraftListing(target, listing, airportState)) count++
+    }
+    return count
+  } catch (err) {
+    console.error('[alertMatchCounts] aircraft subscriber-match count error:', err instanceof Error ? err.message : err)
     return null
   }
 }

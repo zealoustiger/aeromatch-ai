@@ -62,7 +62,7 @@ import ShareCostPanel from '@/components/ShareCostPanel'
 import AlertSignup from '@/components/AlertSignup'
 import RecentlyViewedTracker from '@/components/RecentlyViewedTracker'
 import { getAlertCounts } from '@/lib/alertCounts'
-import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { getAlertMatchCount, countMatchingAircraftSubscribers } from '@/lib/alertMatchCounts'
 import MonetizationIntent from '@/components/MonetizationIntent'
 import PosterAttribution from '@/components/PosterAttribution'
 import { getPublicProfile } from '@/lib/publicProfile'
@@ -584,6 +584,20 @@ export default async function AircraftListingDetailPage({
   const matchResult = await getAlertMatchCount(alertSourcePath)
   const matchCount = matchResult?.count
 
+  // Post-success-only: how many confirmed alert subscribers this brand-new
+  // listing would notify in their next digest — only relevant on the one page
+  // load right after publishing, so never computed otherwise.
+  const matchingSubscriberCount = justPosted
+    ? await countMatchingAircraftSubscribers({
+        make: p.make,
+        model: p.model,
+        state: p.state,
+        asking_price: p.asking_price,
+        year: p.year,
+        ttaf: p.ttaf,
+      })
+    : null
+
   // "Watch this listing" — a distinct, listing-scoped alert (own source_path
   // carrying `?watch=price`) for a buyer eyeing THIS specific aircraft, not
   // the whole make/model family the box above alerts on. The alert-digest
@@ -800,6 +814,17 @@ export default async function AircraftListingDetailPage({
                 View all my listings →
               </a>
             </p>
+            {/* Honest, real-count-only line — never rendered on a null (query
+                error) or zero count, per GOAL.md's honesty gate. Closes the
+                loop for sellers by showcasing the alert system, same as the
+                partnership post-success screen. */}
+            {matchingSubscriberCount !== null && matchingSubscriberCount >= 1 && (
+              <p className="mt-1.5 text-sm text-emerald-700">
+                {matchingSubscriberCount === 1
+                  ? '1 subscriber with a matching alert will hear about this listing in their next digest.'
+                  : `${matchingSubscriberCount} subscribers with matching alerts will hear about this listing in their next digest.`}
+              </p>
+            )}
             {/* Know-your-market alert — the poster is signed in by definition, so
                 this is the one-click confirmed subscribe path (AlertSignup detects
                 the session itself); same make/model family scope as the page's own
