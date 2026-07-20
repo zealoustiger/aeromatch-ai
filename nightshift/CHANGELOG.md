@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-20T10:18:47Z — DRAIN SUMMARY
+- Cycles this run: 22 (PASS 15 / FAIL 3 / ABORT 4)
+- Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $81.3537 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260720T060008Z
+
 ## 20260720T101501Z — PASS — aircraft-post-subscriber-count
 - Pages: /aircraft/listing/[id] (post-success screen, `?posted=1`)
 - What: **Sellers posting an aircraft now see an honest "N subscribers with matching
