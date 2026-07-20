@@ -25,9 +25,9 @@ Newest first. One entry per cycle. The loop appends here; you read it over coffe
   page) and once with a temporary local `isOwner` override to visually verify the new box
   renders correctly (screenshots below), then reverted before the real gate run that actually
   shipped. Zero console errors, zero horizontal overflow either viewport either pass.
-- Screenshots: nightshift/screenshots/aircraft-owner-seeker-alert/ (real, unowned view — gate
-  run); nightshift/screenshots/aircraft-owner-seeker-alert-ownerview/ (temp-override owner view,
-  visual verification only, not part of the shipped diff)
+- Screenshots: nightshift/screenshots/aircraft-owner-seeker-alert/ (anonymous-visitor view —
+  the real gate run against the shipped diff; the owner-view screenshots from the temporary
+  local override used to visually verify the new box were scratch-only and not saved)
 - Next: the partnerships-listing-page slice (owner of a partnership listing asking to be
   alerted about new seekers) — deferred this cycle to keep the diff to one page.
 
