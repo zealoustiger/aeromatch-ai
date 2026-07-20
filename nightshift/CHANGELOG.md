@@ -2,6 +2,68 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T110532Z — PASS — aircraft-alert-honest-narrowing
+- Pages: /aircraft/listing/[id] (post-success subscriber-count line, `?posted=1`); /aircraft
+  (baseline QA touch only)
+- What: **The seller-facing "N subscribers with matching alerts will hear about this
+  listing" line on a just-posted aircraft listing no longer overcounts subscribers whose
+  alert was actually scoped by avionics, listing-quality grade, "good deals only", or a
+  keyword search** — e.g. an alert for "glass-panel Cessnas" no longer counts against a
+  steam-gauge Cessna. `aircraft-post-subscriber-count` (shipped earlier today) explicitly
+  documented these four params as not-covered; this closes that honesty gap. Extended
+  `AircraftSubscriberTarget`/`AircraftListingFields` (`alertSubscriberMatch.ts`) to parse
+  `q`/`grade`/`min_grade`/`avionics` off the bare `/aircraft?...` shape and `deal=good` off
+  EVERY recognized aircraft source_path shape — both exactly mirroring the real digest
+  cron's own `resolveTarget`/post-resolve patch. `matchesAircraftListing` now checks keyword
+  (title/description substring) and grade (against `quality_score`, a local duplicate of
+  `listingQuality.ts`'s bands, same file-header precedent as the existing make-slug/state
+  duplicates) synchronously; `dealOnly`/`avionics` are taken as caller-injected verdicts
+  since honoring them needs a real DB comp query (`filterToGoodDeals`) or the real
+  `avionicsMatch` classifier — neither importable into this file (confirmed empirically:
+  Node's plain test runner can't resolve ANY extensionless relative import, not just
+  transitive ones, so even `avionicsClassify.ts`'s own zero-import purity doesn't save it).
+  `countMatchingAircraftSubscribers` (`alertMatchCounts.ts`) now lazily (memoized, at most
+  once per listing) runs `filterToGoodDeals` only when a live alert actually has
+  `dealOnly=true`, and calls `avionicsMatch` per-alert when one has `avionics` set. Both
+  undefined/false fail a target closed — never counts a subscriber the digest wouldn't
+  actually email.
+- Goal: `[goal]` alert experience — honesty-gate follow-up from
+  `aircraft-post-subscriber-count`'s explicitly-documented scope gap, picked from BACKLOG's
+  plan-pass batch #13 (checked off in BACKLOG.md this cycle). Tier 1 (`[bug]`): none open —
+  last cycle (`seeker-post-subscriber-count`) PASSed. Tier 2 (`[want]`): re-verified by
+  direct read — both open `[P1][want]` lines (save-search auth-wall reconciliation,
+  collection-layout mosaic redesign) remain explicitly flagged "needs a human product
+  call/mock"; none newly actionable. Dropped to tier 3: picked this over the batch's other
+  open `[P1][goal]` items (aged-QA-row cron sweep, alert-delete undo, owner-side seeker
+  capture, pending-migrations admin box, deliverability DNS self-check) as the most directly
+  scoped — a pure code-correctness fix to a feature shipped the same day, no cron/DB-sweep
+  risk, no new UI surface.
+- Spec: nightshift/specs/20260720T110532Z-aircraft-alert-honest-narrowing.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'`: 719/719 pass (15 new tests in
+  `alertSubscriberMatch.test.ts`, no regressions). Treated as a visual-adjacent cycle (touches
+  a rendered page's line): served the PRODUCTION build (`npx next start -p 3301`);
+  `qa-smoke.mjs --slug aircraft-alert-honest-narrowing --base http://localhost:3301
+  /aircraft/listing/02488256-b1b7-4226-93d4-09cbd00e3878
+  /aircraft/listing/02488256-b1b7-4226-93d4-09cbd00e3878?posted=1 /aircraft`: 6/6 pass (HTTP
+  200, zero app-origin console errors, zero horizontal overflow at 1280 + 375px);
+  screenshots read and confirm the existing subscriber-count line still renders cleanly
+  (real listing, real subscriber count, "1 subscriber…"), no layout regression at either
+  viewport. No test data created or needed — verified read-only against a real, already-live
+  listing and its real existing alert subscribers (no throwaway `@example.com` accounts
+  required for this cycle). Server stopped cleanly after (killed the `next-server` process;
+  also found and cleaned up one unrelated stray `next-server` process left running from an
+  earlier cycle in this same drain).
+- Screenshots: nightshift/screenshots/aircraft-alert-honest-narrowing/
+- Next: the remaining BACKLOG plan-pass batch #13/#14 `[P1][goal]` items: aged-QA-row sweep
+  for email-only alert tables, undo for alert delete on `/alerts/manage`, owner-side
+  seeker-alert capture on the owner's own listing page, a pending-migrations action box on
+  `/admin/alerts`, and a deliverability DNS self-check in the daily cron. Also noted but not
+  fixed (pre-existing, out of this cycle's scope): a stray `next-server` process from an
+  earlier cycle was found still running on this container and had to be killed manually —
+  worth a harness-level check that cycles always stop their dev server before exiting.
+
+
 ## 20260720T104049Z — PASS — seeker-post-subscriber-count
 - Pages: /partnerships/seeking/[id] (post-success screen, `?posted=1`); /partnerships/seeking
   (baseline QA touch only)
