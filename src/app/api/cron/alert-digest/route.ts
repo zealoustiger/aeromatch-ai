@@ -2032,6 +2032,7 @@ export async function GET(req: NextRequest) {
             unsubscribeUrl,
             frequencyUrl,
             frequencyTarget,
+            snoozeUrl,
             // Honesty: this is a daily/weekly cron send, never real-time —
             // never claim "just dropped".
             periodLabel: frequency === 'daily' ? 'yesterday' : frequency === 'monthly' ? 'this month' : 'this week',

@@ -3594,14 +3594,16 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   renders a new "N downshifted cadence since the re-permission email" line with the same
   three honest states (not-migrated / zero / real count) as every sibling metric. 3 new
   unit tests in `email.test.ts` (real count, honest zero, not-migrated message).
-- **[P2][goal] Snooze-link parity on the price-drop email footer.** The explicitly flagged
-  follow-up of `digest-snooze-link` (batch #10): both digest builders' footers now carry
-  the tokenized "Snooze 30 days" rung, but `buildPriceDropEmail` (the rich single-drop
-  template, `email.ts:567`) still offers only Manage/Unsubscribe/Get-fewer-emails — no
-  snooze, HTML or text. Wire the same optional `snoozeUrl` opt + `/api/alerts/snooze`
-  token link the sibling builders use, pass it from the cron's price-drop send path, and
-  unit-test presence/absence. Improves: "fewer instead of none" ladder parity across every
-  subscriber-facing email. No new capture point, no schema change.
+~~- **[P2][goal] Snooze-link parity on the price-drop email footer.**~~ ✅ SHIPPED via
+  `price-drop-snooze-parity` (2026-07-20) The explicitly flagged follow-up of
+  `digest-snooze-link` (batch #10): both digest builders' footers now carry the tokenized
+  "Snooze 30 days" rung, but `buildPriceDropEmail` (the rich single-drop template,
+  `email.ts:567`) still offers only Manage/Unsubscribe/Get-fewer-emails — no snooze, HTML
+  or text. Added the same optional `snoozeUrl` opt + `/api/alerts/snooze` token link the
+  sibling builders use (identical footer rendering, HTML + text), wired the cron's
+  already-computed `snoozeUrl` into the `bestDrop` → `buildPriceDropEmail` send path
+  (`alert-digest/route.ts`), and added 3 new unit tests (presence, absence, alongside
+  `frequencyUrl`). No new capture point, no schema change.
 - **[P2][goal] Re-permission lifecycle block on `/admin/alerts`.** The separate slice
   flagged by both `alert-unsubscribe-reasons` and `alert-funnel-repermission-line`:
   the Monday email now reports re-permission sends + status breakdown, but the on-demand

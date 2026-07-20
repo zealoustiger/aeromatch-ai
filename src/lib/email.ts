@@ -581,6 +581,13 @@ export function buildPriceDropEmail(opts: {
    *  existed). Pass `'monthly'` for the weekly→monthly link so the text-part
    *  label names the real target instead of always saying "weekly". */
   frequencyTarget?: 'weekly' | 'monthly'
+  /** Token-scoped "snooze 30 days" link (see `/api/alerts/snooze`) — ladder
+   *  parity with `frequencyUrl`, offering a real pause with an end date
+   *  instead of only a lighter cadence. Renders as a fourth quiet footer
+   *  link alongside Manage/Unsubscribe/Get-fewer-emails. Same convention as
+   *  `buildAlertDigestEmail`'s `snoozeUrl`. Omitted under the same no-token
+   *  graceful-degrade. */
+  snoozeUrl?: string
   periodLabel?: string
   /** Names what kind of drop this is — default "price drop" (aircraft); pass
    *  "buy-in drop" for a partnership whose "price" is a buy-in share, not an
@@ -644,7 +651,7 @@ export function buildPriceDropEmail(opts: {
         You&rsquo;re receiving this because you have an alert set up on ClubHanger.
         <a href="${escapeAttr(manageUrl)}" style="color:#a89f8e;">Manage alerts</a>
         &middot;
-        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}.
+        <a href="${escapeAttr(opts.unsubscribeUrl)}" style="color:#a89f8e;">Unsubscribe</a>${opts.frequencyUrl ? ` &middot; <a href="${escapeAttr(opts.frequencyUrl)}" style="color:#a89f8e;">Get fewer emails</a>` : ''}${opts.snoozeUrl ? ` &middot; <a href="${escapeAttr(opts.snoozeUrl)}" style="color:#a89f8e;">Snooze 30 days</a>` : ''}.
       </p>
     </div>
   </body>
@@ -658,7 +665,7 @@ ${marketPulseText}
 View listing: ${listingUrl}
 
 Manage alerts: ${manageUrl}
-Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to ${opts.frequencyTarget ?? 'weekly'}): ${opts.frequencyUrl}` : ''}`
+Unsubscribe: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails (switch to ${opts.frequencyTarget ?? 'weekly'}): ${opts.frequencyUrl}` : ''}${opts.snoozeUrl ? `\nSnooze 30 days: ${opts.snoozeUrl}` : ''}`
 
   return { subject, html, text }
 }
