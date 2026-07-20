@@ -3959,19 +3959,30 @@ the confirm email. Genuinely open gaps below._
   Emits the standard `alert_subscribed`. No schema change. **Not done, intentionally:** the
   partnerships-listing-page slice ("if it fits" in the original text) — deferred to keep
   this cycle's diff to one page; a natural next slice.
-- **[P1][goal] Pending-migrations action box on `/admin/alerts`.** At least seven features
-  currently degrade behind "isn't migrated live" caveats scattered across the page
-  (`alert_cron_runs`, `alerts.source`, `alerts.frequency`, `frequency_changed_at`,
-  `unsubscribe_reason`/`unsubscribed_at`, `email_engagement_events`,
-  `confirm_reminder_sent_at`, plus the `alerts_owner_select` RLS policy) — each visible
-  only as an inline footnote in its own section, so the human keeps not applying them.
-  Add one box at the top: probe each optional column/table at runtime (reuse the exact
-  OPTIONAL_COLS probes the data helpers already run — never a hardcoded guess), list only
-  the ones still missing, with a one-line "what it unlocks" and the exact copy-paste SQL
-  from `schema.sql`. Renders nothing when all are live. Why: every pending migration is a
-  built-but-dark alert feature; this converts scattered console.warns into a morning
-  checklist. Admin-only, read-only probes, no capture point, no schema change (it only
-  reports).
+~~- **[P1][goal] Pending-migrations action box on `/admin/alerts`.**~~ ✅ SHIPPED via
+  `alerts-pending-migrations-box` (2026-07-20) At least seven features currently degrade
+  behind "isn't migrated live" caveats scattered across the page (`alert_cron_runs`,
+  `alerts.source`, `alerts.frequency`, `frequency_changed_at`, `unsubscribe_reason`/
+  `unsubscribed_at`, `email_engagement_events`, `confirm_reminder_sent_at`, plus the
+  `alerts_owner_select` RLS policy) — each visible only as an inline footnote in its own
+  section, so the human keeps not applying them. New box at the top of `/admin/alerts`
+  probes each optional column/table at runtime (new `getPendingAlertMigrations()` in
+  `pendingAlertMigrations.ts`, reusing the exact "check `error.message` for the missing
+  column/table name" convention every other probe in `alertScoreboard.ts`/
+  `alert-digest/route.ts`/`webhooks/resend/route.ts` already uses — 5 of the 8 flags reuse
+  already-computed rollup values, 3 are new lightweight dedicated probes for
+  `alert_cron_runs`, `email_engagement_events`, `confirm_reminder_sent_at` since no
+  existing helper distinguished "table missing" from "genuinely empty"), lists only the
+  ones still missing with a one-line "what it unlocks" and the exact copy-paste SQL from
+  `schema.sql`. Renders nothing when all are live. Live-verified against the real prod DB
+  via a throwaway, uncommitted `tsx` script (deleted after use, no writes): confirmed
+  `alert_cron_runs`/`email_engagement_events` tables already exist, all 6 `alerts.*`
+  columns (`source`/`frequency`/`frequency_changed_at`/`unsubscribe_reason`/
+  `unsubscribed_at`/`confirm_reminder_sent_at`) are still unmigrated — matching every
+  prior cycle's audit notes. **Not done, intentionally:** the `alerts_owner_select` RLS
+  policy — confirmed unprobeable from application code (the admin client uses the
+  service-role key, which bypasses RLS entirely, so it can never tell "policy applied"
+  from "policy missing"); left out of the automated box rather than fake a signal.
 - **[P1][goal] Deliverability DNS self-check — SPF/DKIM/DMARC in the daily cron.** Nothing
   anywhere monitors the send domain's email-auth DNS (grep clean for SPF/DKIM/DMARC); a
   silently broken or human-edited record would tank inbox placement of every digest while
