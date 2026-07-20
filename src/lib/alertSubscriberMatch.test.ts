@@ -153,8 +153,36 @@ test('parseAircraftAlertSourcePath: query-string shape', () => {
       maxYear: 2010,
       minTt: 0,
       maxTt: 3000,
+      keyword: undefined,
+      grades: [],
+      dealOnly: false,
+      avionics: undefined,
     },
   })
+})
+
+test('parseAircraftAlertSourcePath: q/grade/deal/avionics on the bare /aircraft?... shape', () => {
+  const parsed = parseAircraftAlertSourcePath('/aircraft?q=glass+panel&grade=A,B&deal=good&avionics=glass,waas')
+  assert.equal(parsed?.kind, 'aircraft')
+  const target = (parsed as { target: any }).target
+  assert.equal(target.keyword, 'glass panel')
+  assert.deepEqual(target.grades, ['A', 'B'])
+  assert.equal(target.dealOnly, true)
+  assert.deepEqual(target.avionics, ['glass', 'waas'])
+})
+
+test('parseAircraftAlertSourcePath: legacy min_grade still resolves a grade set', () => {
+  const parsed = parseAircraftAlertSourcePath('/aircraft?min_grade=B')
+  assert.deepEqual((parsed as { target: any }).target.grades, ['A', 'B'])
+})
+
+test('parseAircraftAlertSourcePath: deal=good rides on curated SEO shapes too', () => {
+  const makeModel = parseAircraftAlertSourcePath('/aircraft/cessna/172?deal=good')
+  assert.equal((makeModel as { target: any }).target.dealOnly, true)
+  const makeOnly = parseAircraftAlertSourcePath('/aircraft/cessna?deal=good')
+  assert.equal((makeOnly as { target: any }).target.dealOnly, true)
+  const forSaleState = parseAircraftAlertSourcePath('/aircraft/for-sale/california?deal=good')
+  assert.equal((forSaleState as { target: any }).target.dealOnly, true)
 })
 
 test('parseAircraftAlertSourcePath: /aircraft/for-sale/[state]', () => {
@@ -249,6 +277,48 @@ test('matchesAircraftListing: a null bounded field never matches a range filter 
 test('matchesAircraftListing: combined criteria all must hold', () => {
   assert.equal(matchesAircraftListing({ make: 'Cessna', modelPattern: '172%', state: 'CA' }, AIRCRAFT_LISTING), true)
   assert.equal(matchesAircraftListing({ make: 'Cessna', modelPattern: '172%', state: 'TX' }, AIRCRAFT_LISTING), false)
+})
+
+test('matchesAircraftListing: keyword matches title OR description, case-insensitively', () => {
+  const listing = { ...AIRCRAFT_LISTING, title: 'Clean Cessna 172 Skyhawk', description: 'Fresh annual, glass panel.' }
+  assert.equal(matchesAircraftListing({ keyword: 'skyhawk' }, listing), true)
+  assert.equal(matchesAircraftListing({ keyword: 'GLASS PANEL' }, listing), true)
+  assert.equal(matchesAircraftListing({ keyword: 'floats' }, listing), false)
+  // Empty title/description never fabricate a match.
+  assert.equal(matchesAircraftListing({ keyword: 'skyhawk' }, AIRCRAFT_LISTING), false)
+})
+
+test('matchesAircraftListing: grade multi-select checks quality_score against the selected bands', () => {
+  const gradeA = { ...AIRCRAFT_LISTING, quality_score: 90 }
+  const gradeB = { ...AIRCRAFT_LISTING, quality_score: 60 }
+  const gradeC = { ...AIRCRAFT_LISTING, quality_score: 20 }
+  assert.equal(matchesAircraftListing({ grades: ['A'] }, gradeA), true)
+  assert.equal(matchesAircraftListing({ grades: ['A'] }, gradeB), false)
+  assert.equal(matchesAircraftListing({ grades: ['A', 'C'] }, gradeB), false)
+  assert.equal(matchesAircraftListing({ grades: ['A', 'C'] }, gradeC), true)
+  // Empty or all-three selected = no restriction.
+  assert.equal(matchesAircraftListing({ grades: [] }, gradeC), true)
+  assert.equal(matchesAircraftListing({ grades: ['A', 'B', 'C'] }, gradeC), true)
+  // A missing quality_score never fabricates a grade match.
+  assert.equal(matchesAircraftListing({ grades: ['A'] }, AIRCRAFT_LISTING), false)
+})
+
+test('matchesAircraftListing: avionics filter requires the caller-resolved avionicsOk verdict (real classifier lives in avionicsClassify.ts/its own tests)', () => {
+  assert.equal(matchesAircraftListing({ avionics: ['glass'] }, AIRCRAFT_LISTING, undefined, undefined, true), true)
+  assert.equal(matchesAircraftListing({ avionics: ['glass'] }, AIRCRAFT_LISTING, undefined, undefined, false), false)
+  // Never count before the verdict is actually known — undefined fails closed.
+  assert.equal(matchesAircraftListing({ avionics: ['glass'] }, AIRCRAFT_LISTING, undefined, undefined, undefined), false)
+  // A target with no avionics filter ignores avionicsOk entirely.
+  assert.equal(matchesAircraftListing({}, AIRCRAFT_LISTING, undefined, undefined, false), true)
+})
+
+test('matchesAircraftListing: dealOnly requires the caller-resolved isGoodDeal verdict', () => {
+  assert.equal(matchesAircraftListing({ dealOnly: true }, AIRCRAFT_LISTING, undefined, true), true)
+  assert.equal(matchesAircraftListing({ dealOnly: true }, AIRCRAFT_LISTING, undefined, false), false)
+  // Never count before the verdict is actually known — undefined fails closed.
+  assert.equal(matchesAircraftListing({ dealOnly: true }, AIRCRAFT_LISTING, undefined, undefined), false)
+  // A non-dealOnly target ignores isGoodDeal entirely.
+  assert.equal(matchesAircraftListing({}, AIRCRAFT_LISTING, undefined, false), true)
 })
 
 // ─── Seeker reverse-match ───────────────────────────────────────────────────

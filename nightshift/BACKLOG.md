@@ -3818,17 +3818,35 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   bulk-delete ban is about real listings/users); still, keep the pattern-match exact and
   add unit tests on the matcher. Why: every subscriber-facing and admin count (post-success
   lines, demand/supply, scoreboard) silently inflates while these rows sit there.
-- **[P1][goal] Close the seller-count overcount: honor `avionics`/`grade`/`deal=good`/`q`
-  in the aircraft reverse-match.** `aircraft-post-subscriber-count` shipped with these
-  four filters documented as not-covered — alerts carrying them are counted by prefix
-  fallback, so the seller-facing "N subscribers with matching alerts" line can OVERCOUNT
-  (an alert for "glass-panel Cessnas" counts against a steam-gauge listing). Extend
-  `matchesAircraftListing` (`alertSubscriberMatch.ts`) + `countMatchingAircraftSubscribers`
-  to either honor each param (reuse shared `avionicsClassify.ts` exports + the digest
-  cron's own deal/grade/q semantics) or provably EXCLUDE that alert from the count —
-  never count a subscriber the digest wouldn't actually email. Unit-test each param both
-  directions. Why: the honesty gate on an already-live seller surface; no new capture
-  point, no schema change.
+~~- **[P1][goal] Close the seller-count overcount: honor `avionics`/`grade`/`deal=good`/`q`
+  in the aircraft reverse-match.**~~ ✅ SHIPPED via `aircraft-alert-honest-narrowing`
+  (2026-07-20) `aircraft-post-subscriber-count` shipped with these four filters documented
+  as not-covered — alerts carrying them were counted by prefix fallback, so the
+  seller-facing "N subscribers with matching alerts" line could OVERCOUNT (an alert for
+  "glass-panel Cessnas" counting against a steam-gauge listing). `AircraftSubscriberTarget`/
+  `AircraftListingFields` (`alertSubscriberMatch.ts`) now carry `keyword`/`grades`/
+  `dealOnly`/`avionics`, parsed off the bare `/aircraft?...` shape exactly like the digest
+  cron's own `resolveTarget` (plus the cron's universal `deal=good` override, honored on
+  every recognized aircraft shape, not just the bare one). `matchesAircraftListing` checks
+  `keyword` (title/description substring) and `grades` (against `quality_score`, local
+  duplicate of `listingQuality.ts`'s bands — see file header for why) synchronously;
+  `dealOnly`/`avionics` are taken as caller-injected verdicts (`isGoodDeal`/`avionicsOk`)
+  since honoring them needs a real DB comp query (`filterToGoodDeals`) or the real
+  `avionicsMatch` classifier, neither importable into this zero-non-trivial-import pure
+  module (`avionicsClassify.ts` itself has zero imports but Node's plain test runner still
+  can't resolve ANY extensionless relative import, verified empirically — not just the
+  transitive-import case the file's header originally warned about). `countMatchingAircraftSubscribers`
+  (`alertMatchCounts.ts`) lazily (memoized, at most once) calls `filterToGoodDeals` only
+  when a live alert actually has `dealOnly`, and calls `avionicsMatch` per-alert when one
+  has `avionics`. Both undefined/false fail a target closed — never count a subscriber the
+  digest wouldn't actually email. 15 new unit tests (55/55 in this file, 719/719 repo-wide).
+  Live-verified: served the real listing `02488256-…` (Zenith 750SD) at `?posted=1` against
+  the real prod DB — rendered "1 subscriber…" correctly, no overflow/console errors at
+  1280 + 375px. No test data created (read-only verification against an existing real
+  listing + existing real alert), no schema change, no new capture point. **Not covered
+  (documented, narrow, unused-today gap):** the site-wide `LISTING_GRADE_FLOOR` env-based
+  grade-band clipping the real digest query applies — this reverse-match uses raw grade
+  cutoffs.
 - **[P1][goal] Undo for alert delete on `/alerts/manage`.** `deleteAlert`
   (`src/app/actions.ts`) is a hard DB delete with no recovery — one mistap on the
   management page and a confirmed alert (plus its `last_digest_at` history) is

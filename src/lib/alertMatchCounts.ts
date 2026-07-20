@@ -2,7 +2,7 @@ import { createAdminClient } from './supabase-admin'
 import { getStateBySlug, getMakeBySlug, getMakeModel, STATE_NAMES, SITE_URL } from './seo'
 import { matchesModelFilter } from './seekerModelFilter'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from './listingQuality'
-import { parseAvionicsFilter, fetchAvionicsMatchIds } from './avionicsClassify'
+import { parseAvionicsFilter, fetchAvionicsMatchIds, avionicsMatch } from './avionicsClassify'
 import { applyPartnershipModelFilter } from './partnershipModelFilter'
 import { getAirportsWithinRadius } from './airports'
 import { pickRealPhoto, getPlaceholderPhoto } from './aircraftPhotos'
@@ -15,7 +15,7 @@ import {
   type EditableAlertTarget,
   type AlertCriteriaFields,
 } from './alertEditCriteria'
-import { priceStats } from './aircraftComps'
+import { priceStats, filterToGoodDeals } from './aircraftComps'
 import type { AlertDigestSample } from './email'
 import { CAPTURE_SELFCHECK_EMAIL } from './alertCaptureSelfCheck'
 import { LIVE_STATUSES } from './alertScoreboard'
@@ -1020,6 +1020,32 @@ export async function countMatchingAircraftSubscribers(
     if (error) throw new Error(error.message)
 
     const airportStateCache = new Map<string, string | null>()
+    // Lazy, memoized — the real `filterToGoodDeals` comp query only runs (at
+    // most once) if some live alert actually carries `deal=good`; every other
+    // listing never pays for it. `undefined` = not yet resolved.
+    let goodDealResult: boolean | undefined
+    const resolveGoodDeal = async (): Promise<boolean> => {
+      if (goodDealResult === undefined) {
+        if (!listing.id) {
+          goodDealResult = false
+        } else {
+          const kept = await filterToGoodDeals(admin, [
+            {
+              id: listing.id,
+              make: listing.make,
+              model: listing.model,
+              asking_price: listing.asking_price,
+              year: listing.year,
+              ttaf: listing.ttaf,
+              smoh: listing.smoh ?? null,
+            },
+          ])
+          goodDealResult = kept.length > 0
+        }
+      }
+      return goodDealResult
+    }
+
     let count = 0
     for (const row of data ?? []) {
       if (!LIVE_STATUSES.has(row.status)) continue
@@ -1041,7 +1067,10 @@ export async function countMatchingAircraftSubscribers(
           airportStateCache.set(target.icao, airportState)
         }
       }
-      if (matchesAircraftListing(target, listing, airportState)) count++
+      const isGoodDeal = target.dealOnly ? await resolveGoodDeal() : undefined
+      const avionicsOk =
+        target.avionics && target.avionics.length > 0 ? avionicsMatch(listing.avionics ?? null, target.avionics) : undefined
+      if (matchesAircraftListing(target, listing, airportState, isGoodDeal, avionicsOk)) count++
     }
     return count
   } catch (err) {
