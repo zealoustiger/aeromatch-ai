@@ -128,7 +128,7 @@ export default function AlertEditForm({
           ? { make, model, state, minPrice, maxPrice, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airport }
-            : { make, model }
+            : { make, model, state, airport }
       const { sourcePath: candidatePath } = buildAlertCriteriaUpdate(target.type, sourcePath, fields)
       getAlertMatchCountForSourcePath(candidatePath).then((count) => {
         if (!cancelled) setLiveCount(count)
@@ -191,7 +191,7 @@ export default function AlertEditForm({
           ? { make, model, state, minPrice, maxPrice, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airport }
-            : { make, model }
+            : { make, model, state, airport }
       const result = await updateAlertCriteria(id, fields, token)
       if (result.error) {
         setError(result.error)
@@ -337,21 +337,19 @@ export default function AlertEditForm({
               </div>
             ) : null}
 
-            {target.type !== 'seeker' ? (
-              <div>
-                <label className={labelClass}>State</label>
-                <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
-                  <option value="">Any state</option>
-                  {US_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
+            <div>
+              <label className={labelClass}>State</label>
+              <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
+                <option value="">Any state</option>
+                {US_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {target.type === 'partnership' ? (
+            {target.type === 'partnership' || target.type === 'seeker' ? (
               <div>
                 <label className={labelClass}>Home airport</label>
                 <input
