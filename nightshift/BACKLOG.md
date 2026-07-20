@@ -3543,6 +3543,97 @@ feature shipped dark earlier today with no rollup)._
   data source, `alertScoreboard.ts` — a separate slice, not merely "trivial").
 ---
 
+### Plan-pass batch #11 — 2026-07-19 (Fable)
+_Batch #10 fully drained (all 7 items shipped; `alert-funnel-repermission-line` closed it
+2026-07-20 UTC). Still untouched here: the two long-blocked items — real instant sends
+(Vercel cron-tier human call, line ~1589) and the save-search auth wall (`[want]` product
+call). Entry-point capture stays saturated — this pass verified by direct code read that
+nav/footer/homepage/sticky-bar/404/hubs/cards/detail-page watches, typo suggestion
+(`suggestEmailFix.ts`), live match counts, List-Unsubscribe headers, dark-mode email head,
+view-in-browser, snooze auto-resume, pending-confirm reminders, vacation mode, complained-
+webhook handling, and combined-digest dedupe ALL already exist, so none reappear below.
+This batch is the flagged follow-ups from batches #8–#10 plus two verified gaps. All
+verified un-built by direct code read this pass: the digest cron's send loops fire
+back-to-back with zero pacing (grep `sleep`/`pace`/`delay` clean in
+`alert-digest/route.ts`, which also carries `maxDuration = 60`); no `frequency_changed_at`
+anywhere in `supabase/schema.sql` (both `alertFunnelWeekly.ts:149` and `email.ts:2029`
+carry comments naming it as the blocked unlock); `buildPriceDropEmail`'s footer
+(`email.ts:567`) renders manage/unsubscribe/`frequencyUrl` but no `snoozeUrl` (both digest
+builders have it); `alertScoreboard.ts` has no `repermission` read (`unsubscribe_reason`
+is already there — only the re-permission block is missing); `buildAlertConfirmEmail` and
+the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
+`self-check`/`smoke`/`synthetic` clean across the cron + funnel/health libs._
+
+- **[P1][goal] Gentle inter-send pacing + a 60-second time-budget guard in the cron send
+  loops.** The explicitly flagged "next slice" of `alert-send-retry-backoff` (batch #10):
+  retry (recovery) shipped, pacing (prevention) didn't. The cron's send loops still fire
+  back-to-back against Resend's ~2 req/s limit, and the route's `maxDuration = 60` means a
+  grown list would one day hit the wall mid-loop and silently drop the tail *every day*.
+  Add a small shared pacer (~350–500ms between sends) plus an elapsed-time budget check:
+  when the run approaches the 60s deadline, stop sending cleanly, log an honest deferred
+  count in the run summary (`alert_cron_runs` if a column fits fail-soft, else
+  `console.warn`) — deferral is self-healing because un-stamped alerts stay due
+  (`last_digest_at` / `isDigestDue` elapsed-days). Unit-test the pacing/budget decision as
+  a pure function; keep the retry/`Retry-After` behavior exactly as-is. Improves: the core
+  promise — an alert that doesn't reliably send isn't an alert. No new capture point, no
+  schema change required.
+- **[P1][goal] `frequency_changed_at` stamping — make cadence downshifts honestly
+  measurable.** `alert-funnel-repermission-line` (batch #10) had to scope OUT the
+  "downshifted cadence" breakdown because only the *current* `frequency` is stored — its
+  own comments (`alertFunnelWeekly.ts:149`, `email.ts:2029`) name a `frequency_changed_at`
+  column as the honest unlock. Add the additive column (⚠️ human-apply, fail-soft
+  retry-without-column, same precedent as every prior `alerts.*` DDL) and stamp it in
+  every frequency write path (`updateAlertFrequencyByToken`, `/api/alerts/frequency`
+  incl. `dir=step`, the manage-page `FrequencyToggle` action, `UnsubscribeRecover`,
+  `NarrowAlertNudge`'s monthly switch). Then complete the scoped-out piece: the Monday
+  funnel email's re-permission block gains a "downshifted cadence since the re-permission
+  email" count (only for alerts whose `frequency_changed_at` postdates their
+  `repermission_sent_at` — real attribution, not guessing), with the same three honest
+  states (unmigrated / zero / real). Improves: prove-it-converts / honest-measurement
+  pillar. No new capture point.
+- **[P2][goal] Snooze-link parity on the price-drop email footer.** The explicitly flagged
+  follow-up of `digest-snooze-link` (batch #10): both digest builders' footers now carry
+  the tokenized "Snooze 30 days" rung, but `buildPriceDropEmail` (the rich single-drop
+  template, `email.ts:567`) still offers only Manage/Unsubscribe/Get-fewer-emails — no
+  snooze, HTML or text. Wire the same optional `snoozeUrl` opt + `/api/alerts/snooze`
+  token link the sibling builders use, pass it from the cron's price-drop send path, and
+  unit-test presence/absence. Improves: "fewer instead of none" ladder parity across every
+  subscriber-facing email. No new capture point, no schema change.
+- **[P2][goal] Re-permission lifecycle block on `/admin/alerts`.** The separate slice
+  flagged by both `alert-unsubscribe-reasons` and `alert-funnel-repermission-line`:
+  the Monday email now reports re-permission sends + status breakdown, but the on-demand
+  `/admin/alerts` scoreboard (different data source, `alertScoreboard.ts`) still can't
+  show it — an admin checking mid-week is blind until Monday. Mirror the same read
+  (optional `repermission_sent_at`, graceful degrade) and render sent this-week/all-time
+  plus the unsubscribed/paused/still-live breakdown with the same three honest states
+  (column-not-migrated / zero / real counts) — reuse the funnel module's helpers where
+  importable rather than duplicating the query. Improves: honest-measurement pillar,
+  admin surface. No new capture point, no schema change.
+- **[P2][goal] Deliverability micro-copy in the double-opt-in confirm email.** GOAL.md:
+  "make the double-opt-in email itself excellent" — yet `buildAlertConfirmEmail` contains
+  no deliverability nudge and the word "spam" appears nowhere in `email.ts` output. Add
+  one quiet, honest line under the confirm CTA ("Can't find our emails later? Drag this
+  one to your Primary tab or add us to your contacts so your alerts always arrive") in
+  HTML + text — the one moment the subscriber is provably reading us in their inbox is
+  the only moment that ask works. Keep it one sentence, no images, no new links.
+  Improves: digest deliverability + the confirm-email surface itself. No new capture
+  point, no schema change.
+- **[P2][goal] Daily capture-funnel self-check, reported in the Monday admin email.** No
+  synthetic check exists anywhere (grep clean): if the subscribe chokepoint or confirm
+  route silently breaks (bad deploy, schema drift), the first signal today is a
+  zero-signup week the human notices late. Add a small self-check pass inside the
+  existing daily cron (no new `vercel.json` entry — Hobby-tier precedent): exercise
+  `subscribeToAlerts` with a reserved `@example.com` address (Resend never sends to it /
+  send explicitly skipped for the reserved address), assert the row + tokens exist,
+  hit the confirm route, assert `status='confirmed'`, then delete the row and assert 0
+  remain — record PASS/FAIL (+ failing step) in the run log fail-soft, and surface a
+  one-line "Capture self-check: PASS / FAILED at <step> (N of last 7 runs failed)" in
+  `alertFunnelWeekly` + the Monday email with the usual three honest states. Never
+  counted in funnel/subscriber metrics (exclude the reserved address everywhere it
+  could leak). Improves: the whole funnel's reliability — every other alert surface
+  depends on this chokepoint working. No new capture point.
+---
+
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
 The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
 pillar item only when the alert queue above is genuinely exhausted, or a `[want]`/`[bug]`
