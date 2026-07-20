@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-20T09:28:50Z — partnership-post-subscriber-count — score 4/5
+- Strengths: Reversed match predicate exactly mirrors the digest cron's ilike/eq/in/radius query semantics (verified against the real query); honest null/zero gate never fabricates a count; clean pure/IO split with thorough unit tests covering every spec dimension incl. non-match + null home_airport.
+- Weaknesses / risks: `PARTNERSHIP_MAKE_SLUGS` is a hand-maintained local duplicate of `seo.ts`'s make table — if a curated make is added there, this drifts and that make's alert path silently returns null (undercount); also fetches all `alerts` rows and filters LIVE_STATUSES in JS rather than a DB `.in`.
+- Follow-up: none
+
 ## 2026-07-20T07:35:20Z — admin-alerts-repermission-block — score 4/5
 - Strengths: On-spec and cleanly scoped — new `getRepermissionRollup` faithfully lifts the inline funnel computation into a shared helper (identical `row.status || 'unknown'` normalization and `LIVE_STATUSES` set, so funnel field shapes/values are provably unchanged), reuses the exact optional-col retry-drop degrade pattern with honest `sentAtMigrated`/`frequencyChangedAtMigrated` flags, a clear JSDoc on the never-fabricate contract, and a three-honest-states admin panel (unmigrated / zero-sent / real counts) that mirrors the email copy and wraps for mobile.
 - Weaknesses / risks: The weekly funnel path now issues two full `alerts` table scans (its own + the helper's) where it previously fetched those columns in one query — the price of sharing logic-not-query; runs in parallel so latency is unaffected, only DB load. `LIVE_STATUSES` remains duplicated across the two files (pre-existing).
