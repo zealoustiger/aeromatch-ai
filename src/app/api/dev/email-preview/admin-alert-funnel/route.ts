@@ -76,6 +76,13 @@ export async function GET() {
     cronAvgDurationMsThisWeek: 4820,
     cronRunsRecorded: true,
     cronSendFailuresThisWeek: 1,
+    repermissionSentThisWeek: 6,
+    repermissionSentLastWeek: 4,
+    repermissionSentAllTime: 22,
+    repermissionUnsubscribedCount: 5,
+    repermissionPausedCount: 2,
+    repermissionStillLiveCount: 15,
+    repermissionSentAtMigrated: true,
     computedAt: '2026-07-18T08:00:00.000Z',
   }
 

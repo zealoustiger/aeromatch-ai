@@ -2025,6 +2025,31 @@ export function buildAdminAlertFunnelEmail(
     ? `Instant-alerts interest: ⚡ ${snapshot.instantInterestThisWeek} this week, ${snapshot.instantInterestAllTime} all-time\n`
     : `Instant-alerts interest: No interest recorded yet\n`
 
+  // Re-permission ("still want these?") lifecycle — did the dormant-subscriber
+  // email work? Status breakdown is current-state-only (no `frequency_changed_at`
+  // history exists, so a cadence-downshift count isn't honestly computable — see
+  // alertFunnelWeekly.ts). Three honest states: column not migrated, migrated but
+  // zero sent, migrated with real counts.
+  const repermissionEmptyMessage = !snapshot.repermissionSentAtMigrated
+    ? 'Not available yet — the `alerts.repermission_sent_at` column isn’t migrated live.'
+    : 'No re-permission emails sent yet.'
+  const hasRepermissionSends = snapshot.repermissionSentAtMigrated && snapshot.repermissionSentAllTime > 0
+  const repermissionHtml = hasRepermissionSends
+    ? `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Re-permission emails sent</td>
+            <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.repermissionSentThisWeek} this week</td>
+          </tr>
+          <tr><td colspan="2" style="padding:0 0 4px;font-size:12px;color:#94a3b8;text-align:right;">${snapshot.repermissionSentAllTime} all-time</td></tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">of those: ${snapshot.repermissionUnsubscribedCount} unsubscribed, ${snapshot.repermissionPausedCount} paused, ${snapshot.repermissionStillLiveCount} still active</td></tr>`
+    : `<tr>
+            <td style="padding:4px 0;font-size:14px;color:#334155;">Re-permission emails sent</td>
+            <td style="padding:4px 0;text-align:right;font-size:13px;color:#94a3b8;">${escapeHtml(repermissionEmptyMessage)}</td>
+          </tr>`
+
+  const repermissionText = hasRepermissionSends
+    ? `Re-permission emails sent: ${snapshot.repermissionSentThisWeek} this week, ${snapshot.repermissionSentAllTime} all-time (of those: ${snapshot.repermissionUnsubscribedCount} unsubscribed, ${snapshot.repermissionPausedCount} paused, ${snapshot.repermissionStillLiveCount} still active)\n`
+    : `Re-permission emails sent: ${repermissionEmptyMessage}\n`
+
   // "Least relevant listings this week" — the per-sample "Not relevant?" taps
   // rolled up by listing (top by count, with the subscriber-shown title). An
   // empty week is a clean "nothing flagged", not a fabricated row.
@@ -2168,6 +2193,7 @@ export function buildAdminAlertFunnelEmail(
           ${digestFeedbackHtml}
           ${emailEngagementHtml}
           ${instantInterestHtml}
+          ${repermissionHtml}
         </table>
 
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Current totals (not weekly)</p>
@@ -2232,7 +2258,7 @@ export function buildAdminAlertFunnelEmail(
 
 New signups: ${snapshot.createdThisWeek} (${formatWeekDelta(snapshot.createdThisWeek, snapshot.createdLastWeek)})
 Confirmed: ${snapshot.confirmedThisWeek} (${formatWeekDelta(snapshot.confirmedThisWeek, snapshot.confirmedLastWeek)})
-${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}${digestFeedbackText}${emailEngagementText}${instantInterestText}
+${snapshot.unsubscribedAtMigrated ? `Unsubscribed: ${snapshot.unsubscribedThisWeek} (${formatWeekDelta(snapshot.unsubscribedThisWeek, snapshot.unsubscribedLastWeek)})\n` : ''}${snapshot.pausedAtMigrated ? `Paused: ${snapshot.pausedThisWeek} (${formatWeekDelta(snapshot.pausedThisWeek, snapshot.pausedLastWeek)})\n` : ''}${snapshot.bouncedAtMigrated ? `Bounced: ${snapshot.bouncedThisWeek} (${formatWeekDelta(snapshot.bouncedThisWeek, snapshot.bouncedLastWeek)})\n` : ''}${digestFeedbackText}${emailEngagementText}${instantInterestText}${repermissionText}
 Current totals (not weekly):
   Live: ${snapshot.liveTotal}
   Pending confirmation: ${snapshot.pendingTotal}

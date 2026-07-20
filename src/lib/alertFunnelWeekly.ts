@@ -139,6 +139,22 @@ export interface AlertFunnelWeeklySnapshot {
    *  same honest-empty-state convention as the other rollups above. */
   unsubscribeReasons: UnsubscribeReasonRow[]
   unsubscribeReasonColumnMigrated: boolean
+  /** The `alert-dormant-repermission` "still want these?" email — sent once per
+   *  alert (stamped `repermission_sent_at`, ⚠️ human-apply, unmigrated live as of
+   *  this writing) to a subscriber who's gone quiet. Counts are real sends, never
+   *  fabricated; `repermissionSentAtMigrated` disambiguates "column not live yet"
+   *  from "genuinely zero sent" the same way every other `alerts.*_at` field
+   *  above does. The three status-breakdown counts answer "did it work?" using
+   *  ONLY the current `status` of every alert that ever got one — there's no
+   *  `frequency_changed_at` history, so a cadence-downshift breakdown isn't
+   *  honestly computable and is intentionally not included here. */
+  repermissionSentThisWeek: number
+  repermissionSentLastWeek: number
+  repermissionSentAllTime: number
+  repermissionUnsubscribedCount: number
+  repermissionPausedCount: number
+  repermissionStillLiveCount: number
+  repermissionSentAtMigrated: boolean
   computedAt: string
 }
 
@@ -167,7 +183,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   // error names, up to once each (order-independent), same graceful-fallback
   // pattern as alertsForOwner.ts's OPTIONAL_COLS loop.
   const baseCols = ['status', 'created_at', 'confirmed_at', 'source_path']
-  const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at']
+  const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at', 'repermission_sent_at']
   let cols = [...baseCols, ...optionalCols]
   let { data, error } = await admin.from('alerts').select(cols.join(', '))
   for (
@@ -182,6 +198,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const unsubscribedAtMigrated = cols.includes('unsubscribed_at')
   const pausedAtMigrated = cols.includes('paused_at')
   const bouncedAtMigrated = cols.includes('bounced_at')
+  const repermissionSentAtMigrated = cols.includes('repermission_sent_at')
   const rows = (data ?? []) as unknown as {
     status: string | null
     source?: string | null
@@ -191,6 +208,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     unsubscribed_at?: string | null
     paused_at?: string | null
     bounced_at?: string | null
+    repermission_sent_at?: string | null
   }[]
 
   const oneWeekAgo = now - 7 * DAY_MS
@@ -211,6 +229,12 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   let pausedTotal = 0
   let unsubscribedTotal = 0
   let bouncedTotal = 0
+  let repermissionSentThisWeek = 0
+  let repermissionSentLastWeek = 0
+  let repermissionSentAllTime = 0
+  let repermissionUnsubscribedCount = 0
+  let repermissionPausedCount = 0
+  let repermissionStillLiveCount = 0
 
   const sourceThisWeek = new Map<string, number>()
   const sourceLastWeek = new Map<string, number>()
@@ -268,6 +292,19 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
       if (!Number.isNaN(bouncedAt)) {
         if (bouncedAt >= oneWeekAgo) bouncedThisWeek++
         else if (bouncedAt >= twoWeeksAgo) bouncedLastWeek++
+      }
+    }
+
+    if (repermissionSentAtMigrated && row.repermission_sent_at) {
+      const repermissionSentAt = new Date(row.repermission_sent_at).getTime()
+      if (!Number.isNaN(repermissionSentAt)) {
+        repermissionSentAllTime++
+        if (repermissionSentAt >= oneWeekAgo) repermissionSentThisWeek++
+        else if (repermissionSentAt >= twoWeeksAgo) repermissionSentLastWeek++
+
+        if (status === 'unsubscribed') repermissionUnsubscribedCount++
+        else if (status === 'paused') repermissionPausedCount++
+        else if (LIVE_STATUSES.has(status)) repermissionStillLiveCount++
       }
     }
   }
@@ -369,6 +406,13 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     cronSendFailuresThisWeek,
     unsubscribeReasons: unsubscribeReasons.topReasons,
     unsubscribeReasonColumnMigrated: unsubscribeReasons.reasonColumnMigrated,
+    repermissionSentThisWeek,
+    repermissionSentLastWeek,
+    repermissionSentAllTime,
+    repermissionUnsubscribedCount,
+    repermissionPausedCount,
+    repermissionStillLiveCount,
+    repermissionSentAtMigrated,
     computedAt: new Date(now).toISOString(),
   }
 }
