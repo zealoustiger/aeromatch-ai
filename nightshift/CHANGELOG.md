@@ -2,6 +2,73 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T121824Z — PASS — alerts-pending-migrations-box
+- Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate)
+- What: **`/admin/alerts` now shows one "Pending migrations" checklist at the very top**
+  instead of the same warning being scattered as a separate inline footnote in eight
+  different sections of the page. Each of the six alert-related database columns still
+  not applied on the live Supabase project — `alerts.source`, `alerts.frequency`,
+  `alerts.frequency_changed_at`, `alerts.unsubscribe_reason`, `alerts.unsubscribed_at`,
+  `alerts.confirm_reminder_sent_at` — now gets one card naming exactly what feature it
+  unlocks plus the literal SQL to paste into the Supabase SQL editor. The `alert_cron_runs`
+  and `email_engagement_events` tables were confirmed already live, so they correctly
+  don't appear. The whole box disappears entirely once every column is applied.
+- Goal: `[goal]` alert experience, honest-measurement pillar. Tier 1 (`[bug]`): none open
+  — last cycle (`seeker-alert-location-edit`) PASSed, no known bug/broken page/console
+  error/CWV-mobile regression. Tier 2 (`[want]`): re-verified this cycle by direct read —
+  every open `[P1]`/`[P2][want]` line (save-search auth-wall reconciliation and
+  collection-layout mosaic redesign both need a human product call/mock; Trade-A-Plane/
+  Controller/AirMart/AeroTrader are bot-protection-blocked by design; Bay-Area coverage
+  benchmark needs a real FAA/AirNav denominator; owner-leads dataset needs a compliance
+  review; dynamic-location seed personas is explicitly "not a build target" per its own
+  audit note) — none newly actionable. Dropped to tier 3: picked this `[P1][goal]` item
+  from Plan-pass batch #14 over the sibling `[P1][goal]` deliverability DNS self-check
+  (a bigger, riskier cron change touching DNS-over-HTTPS lookups) as the cleaner,
+  lower-risk, purely-additive admin-visibility slice; also over the `[P1][goal]`
+  aged-QA-row sweep (that item's own text proposes a DELETE-based cron job, which
+  conflicts with FREEZE.md's "Never do: destructive SQL / data deletes" guardrail as
+  written — not attempted this cycle; flagged below for a human decision rather than
+  silently building a delete path).
+- Spec: nightshift/specs/20260720T121824Z-alerts-pending-migrations-box.md
+- Verdict: PASS. New `getPendingAlertMigrations()` in `src/lib/pendingAlertMigrations.ts`
+  reuses 5 already-computed migration flags from existing rollups
+  (`sourceColumnMigrated`/`frequencyMigrated`/`frequencyChangedAtMigrated`/
+  `reasonColumnMigrated`/new `unsubscribedAtMigrated`, the last one a small additive
+  addition to `alertScoreboard.ts`'s `UnsubscribeReasonRollup` return type — it was
+  already computed internally, just never returned, so no new query) plus 3 new
+  lightweight dedicated probes (table-exists checks for `alert_cron_runs` and
+  `email_engagement_events`, a column-exists check for `confirm_reminder_sent_at`) using
+  the exact same "select and check `error.message` for the missing name" convention
+  already used throughout this codebase's optional-column handling. `npx tsc --noEmit`
+  exit 0; `rm -rf .next && npx next build` exit 0 (376 pages). Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'`: 719/719 pass, no
+  regressions. Visual cycle — served the PRODUCTION build (`npx next start -p 3711`);
+  `qa-smoke.mjs --slug alerts-pending-migrations-box --base http://localhost:3711
+  /admin/alerts /alerts`: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at 1280 + 375px); screenshots read and confirm the anonymous crawl
+  still shows the FREEZE'd "Admin only" gate at both viewports — same precedent as every
+  prior `/admin/alerts` cycle. Since the new box is unreachable by an anonymous crawl,
+  independently verified `getPendingAlertMigrations()`'s underlying probes against the
+  real (read-only) prod DB via a throwaway, uncommitted `tsx` script (deleted after use,
+  zero writes): confirmed `alert_cron_runs`/`email_engagement_events` both already exist
+  live, and all 6 `alerts.*` columns are still unmigrated — consistent with every prior
+  cycle's audit notes on these exact columns. **Not done, intentionally:** the
+  `alerts_owner_select` RLS policy — confirmed unprobeable from application code (the
+  admin client uses the service-role key, bypassing RLS entirely, so it can never tell
+  "policy applied" from "policy missing"); deliberately excluded rather than fake a
+  hardcoded signal. No schema change, no new capture point, read-only probes only.
+- Screenshots: nightshift/screenshots/alerts-pending-migrations-box/
+- Next: the sibling `[P1][goal]` deliverability DNS self-check (SPF/DKIM/DMARC checks in
+  the daily cron, surfaced on `/admin/alerts`) is the next cleanly-buildable alert-
+  experience item. Separately, the `[P1][goal]` "aged-QA-row sweep for email-only alert
+  tables" item as currently written proposes an automated DELETE against `alerts`/
+  `feedback` rows matching `%@example.com` — this reads as reasonable test-data hygiene in
+  its own text, but it conflicts with FREEZE.md's blanket "Never do: destructive SQL
+  (`drop`, `delete`, `truncate`, ..., data deletes)" as literally written. A human should
+  either explicitly carve out an exception for this narrowly-scoped pattern+age-gated
+  case, or the item should be rewritten to flag-and-report instead of auto-delete, before
+  a future cycle attempts it.
+
 ## 20260720T120350Z — PASS — seeker-alert-location-edit
 - Pages: /alerts/manage
 - What: **A "pilot seeking a partnership" alert's location filter (state and/or home

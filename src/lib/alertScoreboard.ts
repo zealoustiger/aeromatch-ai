@@ -412,6 +412,7 @@ export async function getCadenceMixRollup(): Promise<CadenceMixRollup> {
 export interface UnsubscribeReasonRollup {
   topReasons: UnsubscribeReasonRow[]
   reasonColumnMigrated: boolean
+  unsubscribedAtMigrated: boolean
 }
 
 const UNSUB_REASON_OPTIONAL_COLS = ['unsubscribe_reason', 'unsubscribed_at']
@@ -439,9 +440,9 @@ export async function getUnsubscribeReasonRollup(now: number = Date.now()): Prom
   }
 
   const reasonColumnMigrated = cols.includes('unsubscribe_reason')
-  if (!reasonColumnMigrated) return { topReasons: [], reasonColumnMigrated: false }
-
   const unsubscribedAtMigrated = cols.includes('unsubscribed_at')
+  if (!reasonColumnMigrated) return { topReasons: [], reasonColumnMigrated: false, unsubscribedAtMigrated }
+
   const rows = (data ?? []) as unknown as { unsubscribe_reason?: string | null; unsubscribed_at?: string | null }[]
 
   const topReasons = summarizeUnsubscribeReasons(
@@ -452,7 +453,7 @@ export async function getUnsubscribeReasonRollup(now: number = Date.now()): Prom
     now
   )
 
-  return { topReasons, reasonColumnMigrated: true }
+  return { topReasons, reasonColumnMigrated: true, unsubscribedAtMigrated }
 }
 
 export interface RepermissionRollup {
