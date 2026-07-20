@@ -3733,9 +3733,20 @@ test guarding it._
   `/partnerships/[id]?posted=1` now shows an honest "N subscribers with matching alerts
   will hear about this listing in their next digest" line (pure, unit-tested
   `alertSubscriberMatch.ts` reverse-match + `countMatchingPartnershipSubscribers()`;
-  renders nothing at 0 or on a query error). **Remaining follow-up slice:** the aircraft
-  `/post` (`/aircraft/[slug]?posted=1`) success screen — same reverse-match against
-  aircraft alert `source_path`s. Original text below.
+  renders nothing at 0 or on a query error). **Aircraft slice ✅ SHIPPED via
+  `aircraft-post-subscriber-count` (2026-07-20)** — `/aircraft/listing/[id]?posted=1` now
+  shows the same honest line via new `parseAircraftAlertSourcePath`/`matchesAircraftListing`
+  (`alertSubscriberMatch.ts`, 22 new unit tests) + `countMatchingAircraftSubscribers()`
+  (`alertMatchCounts.ts`), covering make/model/state/airport/price/year/hours-time filters
+  on the `/aircraft` query-string, `/aircraft/[make]`, `/aircraft/[make]/[model]`,
+  `/aircraft/for-sale/[state]`, and homepage-`/` "all" shapes. **Not covered this slice**
+  (documented in-code): `q`/keyword, `grades`, `avionics`, `deal=good` filters, and curated
+  `notModelPattern` exclusions (uses the same `${modelSlug}%` prefix fallback the digest
+  cron itself uses for uncurated combos). Live-verified end-to-end against a real active
+  listing + a throwaway `@example.com` confirmed alert (seeded + deleted via service role):
+  the line correctly read "N subscribers…" including a genuine pre-existing real subscriber
+  match, then correctly rendered nothing once the count dropped back to 0. This item is now
+  fully complete both directions (partnerships + aircraft). Original text below.
   Close the loop for *sellers*: after a listing/partnership is published, run the same
   criteria-match the digest cron uses (in reverse: one listing → confirmed alerts) and,
   when ≥1 matches, add one honest line to the existing success/cross-sell surface —
