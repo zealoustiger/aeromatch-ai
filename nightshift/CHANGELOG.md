@@ -2,6 +2,65 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T095311Z — PASS — admin-alerts-cadence-mix-tile
+- Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
+  /alerts (baseline QA touch only)
+- What: **`/admin/alerts` now has a "Cadence mix" tile** showing how live alert
+  subscribers split across the daily/weekly/monthly cadence ladder, plus a count of
+  currently paused/snoozed alerts — no such read existed anywhere before this, so
+  fewer-emails-ladder and snooze/vacation-mode adoption was invisible mid-week without a
+  raw DB query.
+- Goal: `[goal]` alert experience, honest-measurement pillar (checked off in BACKLOG.md
+  this cycle). Tier 1 (`[bug]`): none open — last cycle (`alertsignup-source-contract-test`)
+  PASSed, no known bug/broken page/console error/CWV-mobile regression. Tier 2 (`[want]`):
+  re-verified this cycle by direct read of every open `[P1]`/`[P2][want]` line — same
+  standing set as dozens of prior sweeps (save-search auth-wall reconciliation and
+  collection-layout mosaic redesign both explicitly flagged "needs a human product
+  call/mock"; Trade-A-Plane ingestion, Bay-Area coverage benchmark, and the owner-leads
+  dataset all remain audited-blocked on bot-protection guardrails / an honest denominator
+  source / a compliance review respectively) — none newly actionable. Dropped to tier 3:
+  this was the explicit "Next" pick named by the prior two changelog entries — the last
+  remaining small, cleanly-buildable alert-experience `[goal]` item, over the two open
+  `[P1][goal]` "instant alerts" items (both re-confirmed blocked on a human call on the
+  Vercel cron-tier plan / re-scoping the real publish trigger).
+- Spec: nightshift/specs/20260720T095311Z-admin-alerts-cadence-mix-tile.md
+- Verdict: PASS. New `getCadenceMixRollup()` in `alertScoreboard.ts` reads `alerts.status`
+  (base-schema, always present) and `alerts.frequency` (optional, may be unmigrated live)
+  using the same `OPTIONAL_COLS` retry-and-drop pattern as the file's existing
+  `getRepermissionRollup`/`getUnsubscribeReasonRollup`; buckets live (`LIVE_STATUSES`) rows
+  via `normalizeFrequency` from `alertFrequency.ts` — the exact function the real
+  `alert-digest` cron uses to resolve a row's cadence, confirmed via grep
+  (`route.ts:1846`), so an unmigrated column reads as "weekly" here for the same reason
+  the cron would actually treat it as weekly, not a guessed number. New tile on
+  `/admin/alerts` (same `<section>` shell as every sibling tile) shows the three-bucket
+  split + paused count, with an honest caveat when `frequency` isn't migrated. `npx tsc
+  --noEmit` exit 0; `rm -rf .next && npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'`: 682/682 pass (no
+  regressions; no new unit tests added — this is a straight read/render, same precedent as
+  the file's other simple rollups with no dedicated test file). Visual cycle — served the
+  PRODUCTION build (`npx next start -p 3300`); `qa-smoke.mjs --slug
+  admin-alerts-cadence-mix-tile --base http://localhost:3300 /admin/alerts /alerts`: 4/4
+  pass (HTTP 200, zero app-origin console errors, zero horizontal overflow at 1280 + 375px);
+  screenshots read and confirm the anonymous crawl still shows the FREEZE'd "Admin only"
+  gate at both viewports — zero regression for signed-out visitors, same precedent as the
+  last four `/admin/alerts` cycles. Since the new tile is unreachable by an anonymous
+  crawl, independently verified `getCadenceMixRollup()` against the real (read-only) prod
+  DB via a throwaway, uncommitted `tsx` script (deleted after use): returned cleanly (no
+  crash) — `{ liveTotal: 4, daily: 0, weekly: 4, monthly: 0, pausedCount: 0,
+  frequencyMigrated: false }`, consistent with the 4 live alerts found by the
+  `admin-alerts-demand-supply` cycle's independent verification, and correctly all-weekly
+  given `alerts.frequency` is confirmed still unmigrated live. No prod DB writes made
+  (read-only queries only); no test accounts created. Server stopped cleanly after
+  (`ps aux` + a follow-up curl confirmed no orphaned process, connection refused on port
+  3300).
+- Screenshots: nightshift/screenshots/admin-alerts-cadence-mix-tile/
+- Next: the two remaining `[P1][goal]` "instant alerts" items stay blocked pending a human
+  call on the Vercel cron-tier plan. With the alert-experience `[goal]` queue now fully
+  drained of buildable items (every remaining `[goal]` line is either SEO-parked or
+  human-blocked), the next cycle should emit `ABORT — none — plan needed` unless a fresh
+  `[bug]`/`[want]` has appeared, so the loop's plan pass (Opus/Fable) generates the next
+  alert-experience `[goal]` batch.
+
 ## 20260720T094308Z — PASS — alertsignup-source-contract-test
 - Pages: none (no page/UI change — a test-only contract added to guard existing capture points; `/alerts`, `/aircraft`, `/partnerships` used only as a baseline-regression QA smoke touch)
 - What: **A new automated test now guards that every "get alerted" box on the site is properly tagged so we can see which page it converted from.** Every `<AlertSignup>` email-capture box across the site already passes a `source` label (e.g. "browse_hub", "make_model_page") so the admin dashboard can show which placement converts best. That label was optional in the code, meaning a future new alert box could silently forget it and get lumped into an "untagged" bucket, making it invisible to that reporting. A new automated check now fails the build if that ever happens, confirmed today that all 63 existing alert boxes are correctly tagged.
