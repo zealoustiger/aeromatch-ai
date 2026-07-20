@@ -32,6 +32,7 @@ import TrustBadge from '@/components/TrustBadge'
 import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
 import { countMatchingSeekersForPartnership, seekerBrowseHrefForPartnership } from '@/lib/matchingQuery'
+import { countMatchingPartnershipSubscribers } from '@/lib/alertMatchCounts'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
 import AircraftRailCard from '@/components/AircraftRailCard'
@@ -276,6 +277,17 @@ export default async function PartnershipDetailPage({
   const buyInPriceDrop = buyInDrop(p)
   // Owner-only compatibility count — never computed for a visitor's page load.
   const matchingSeekerCount = isOwner ? await countMatchingSeekersForPartnership(p) : 0
+  // Post-success-only: how many confirmed alert subscribers this brand-new
+  // listing would notify in their next digest — only relevant on the one page
+  // load right after publishing, so never computed otherwise.
+  const matchingSubscriberCount = justPosted
+    ? await countMatchingPartnershipSubscribers({
+        make: p.make,
+        model: p.model,
+        state: p.state,
+        home_airport: p.home_airport,
+      })
+    : null
 
   // Seed/demo persona (e.g. "Marcus T.") — owned by the concierge house account,
   // so it gets the on-site "Message {name}" flow + a member profile link instead
@@ -584,6 +596,17 @@ export default async function PartnershipDetailPage({
                 View all my listings →
               </Link>
             </p>
+            {/* Honest, real-count-only line — never rendered on a null (query
+                error) or zero count, per GOAL.md's honesty gate. Closes the
+                loop for sellers by showcasing the alert system they can also
+                subscribe to just below. */}
+            {matchingSubscriberCount !== null && matchingSubscriberCount >= 1 && (
+              <p className="mt-1.5 text-sm text-emerald-700">
+                {matchingSubscriberCount === 1
+                  ? '1 subscriber with a matching alert will hear about this listing in their next digest.'
+                  : `${matchingSubscriberCount} subscribers with matching alerts will hear about this listing in their next digest.`}
+              </p>
+            )}
             {/* Right-noun cross-sell — the poster's own market (other
                 partnerships like theirs) isn't what they need next; the
                 counterpart is demand: pilots seeking a share. The poster is
