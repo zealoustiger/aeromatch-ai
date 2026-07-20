@@ -3652,6 +3652,100 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   pattern.
 ---
 
+### Plan-pass batch #12 — 2026-07-20 (Fable)
+_Batch #11 fully drained (all 6 items shipped; `alert-capture-selfcheck` closed it
+2026-07-20 UTC). Still untouched: the two long-blocked items — real instant sends (Vercel
+cron-tier human call, line ~1589) and the save-search auth wall (`[want]` product call).
+Entry-point capture stays saturated — this pass re-verified by direct code read that even
+guides/tools/compare pages carry `AlertSignup`, the digest footer already steps
+weekly→monthly (`dir=monthly`, `alert-digest/route.ts:1972`), period labels are already
+cadence-honest (`periodLabel`, route.ts:2039), `/alerts` landing already renders live
+sample previews (`getAlertDigestPreview`), email-change already double-confirms via
+`/api/alerts/confirm-email-change`, and `/alerts/digest/view` already links to manage —
+so none of those reappear below. Every item below was verified un-built by direct code
+read this pass: the self-check failure path is `console.error` + wait-for-Monday only
+(route.ts:2319); `/admin/alerts/page.tsx` renders neither `send_failures` nor
+`deferred_sends` nor self-check status anywhere (grep clean); `alertScoreboard.ts` has no
+criteria-demand aggregation and no frequency-mix read; no post-success surface mentions
+matching subscribers (grep clean across `/post`, `aircraft/new`, `partnerships/new`); no
+"next digest" line on `/alerts/manage`; `AlertSignup.source` is optional with no contract
+test guarding it._
+
+- **[P1][goal] Immediate admin heads-up email when the daily capture self-check fails.**
+  The explicitly flagged follow-up of `alert-capture-selfcheck`: today a failure is only
+  `console.error` (`alert-digest/route.ts:2319`) + a passive line in Monday's funnel
+  email — a Tuesday breakage sits red for up to 6 days. In the same cron run, on the
+  *transition* into failure (previous run OK or unknown → this run FAILED, via the
+  existing `alert_cron_runs` history read / `summarizeSelfCheckHistory`), send a short
+  dedicated admin email naming the failing step — transition-only so a persistent failure
+  doesn't re-email daily (at most a gentle re-send after ~3 consecutive red days).
+  Fail-soft everywhere: the heads-up send can never affect the digest sends that already
+  completed, and it degrades to the current behavior when the `self_check_*` columns
+  aren't migrated. Reuse the Monday admin email plumbing + admin recipient logic; goes
+  through `SendPacer` like every other send. Improves: reliability of the single capture
+  chokepoint every alert surface depends on. No new capture point, no schema change.
+- **[P1][goal] Send-health block on `/admin/alerts` — last-7-runs table.** Both flagged
+  gaps in one honest read: `send_failures` is surfaced on `AlertCronRun` but rendered
+  nowhere, and `deferred_sends` (added by `alert-cron-send-pacing`) was explicitly left
+  "for future admin-panel use." Render a compact table of the last ~7 `alert_cron_runs`:
+  date, emails sent, send failures, deferred sends, capture self-check PASS/FAIL — with
+  per-column graceful degrade when an optional column isn't migrated (same three honest
+  states as every sibling metric; never render a fabricated 0 for an unmigrated column).
+  Extends the existing cron-health box on the page rather than adding a rival section.
+  Improves: honest-measurement pillar, admin surface. No new capture point, no schema
+  change.
+- **[P1][goal] Demand-vs-supply ("most wanted") block on `/admin/alerts`.** The scoreboard
+  proves which *placements* convert but says nothing about *what* subscribers are waiting
+  for. Aggregate live (confirmed, unpaused) alerts by criteria family — reuse
+  `classifySourcePath` + the existing criteria parsing the digest matcher uses — and show
+  each family alongside its current live listing count, sorted by demand-with-least-supply
+  ("4 subscribers waiting on Mooney M20, 0 live listings"). Admin-only, so small real
+  numbers are honest — show real zeros, never a floor. This is the outreach-targeting
+  list for owner acquisition (feeds the parked growth lane with alert data, not new SEO
+  surface). Improves: honest-measurement pillar, admin surface. No new capture point, no
+  schema change.
+- **[P1][goal] "N matching subscribers will be notified" on the post-success screens.**
+  Close the loop for *sellers*: after a listing/partnership is published, run the same
+  criteria-match the digest cron uses (in reverse: one listing → confirmed alerts) and,
+  when ≥1 matches, add one honest line to the existing success/cross-sell surface —
+  "2 subscribers with matching alerts will hear about this listing in their next digest."
+  Render nothing at 0 (never fabricate, never a vague "many"). Slice: partnerships
+  (`partnerships/new` + `seeking/new` success states) first since that's the native
+  supply flow; aircraft `/post` if it fits the cycle. Motivates posting (secondary
+  pillar) *by showcasing alerts*; keep the existing post-success alert cross-sell
+  untouched beside it. No new capture point (the cross-sell already emits), no schema
+  change.
+- **[P2][goal] "Next digest expected ~<day>" line on `/alerts/manage` rows.**
+  `alerts-manage-last-sent-line` shipped the backward-looking half; the forward-looking
+  half is absent (grep "next digest" clean). Compute from frequency + `last_digest_at` +
+  the digest-day picker + snooze/pause state as a pure, unit-tested helper (no DB
+  dependency, `alertSendPacing.ts` testability pattern): "Next digest: ~tomorrow morning"
+  / "~Tuesday" / "resumes Aug 3 (snoozed)" — approximate copy ("~") because the cron hour
+  can drift; paused rows say paused, never a fake date. Sets honest expectations right
+  where subscribers manage cadence. Improves: alert-management surface. No new capture
+  point, no schema change.
+- **[P2][goal] Cadence-mix tile on `/admin/alerts`.** No frequency-distribution read
+  exists anywhere in `alertScoreboard.ts` — the admin can't see how many live alerts are
+  daily vs weekly vs monthly, nor how many are currently snoozed/paused, so
+  fewer-emails-ladder adoption (frequency steps, snooze, vacation) is unmeasurable
+  mid-week. Add one tile with the live-alert frequency split + snoozed/paused counts,
+  same three honest states (unmigrated column / zero / real) per figure. Also real demand
+  data beside the existing instant-interest tally for the still-blocked Vercel
+  instant-cron human call. Improves: honest-measurement pillar, admin surface. No new
+  capture point, no schema change.
+- **[P2][goal] Capture-attribution contract test — every `<AlertSignup>` call site must
+  pass `source`.** `AlertSignup.source` is optional (`AlertSignup.tsx:59`), so a future
+  placement can silently land in the scoreboard's "untagged" bucket and quietly erode
+  "prove it converts." Add a `node --test` unit test (file-content scan of
+  `src/**/*.tsx`, same style as the existing token-sweep tests) that fails when any
+  `<AlertSignup` usage omits an explicit `source` prop, with a named allowlist for any
+  deliberate legacy exceptions found during the sweep. Guards every past *and future*
+  capture point's attribution; pairs with the `alert_subscribed` analytics requirement.
+  Improves: honest-measurement pillar. No runtime change, no new capture point, no
+  schema change.
+
+---
+
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
 The three earlier pillars still carry value, but are **below the alert goal** now. Pull a
 pillar item only when the alert queue above is genuinely exhausted, or a `[want]`/`[bug]`
