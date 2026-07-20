@@ -128,6 +128,33 @@ test('price-drop: without marketPulse, no market-context line renders (honesty g
   assert.doesNotMatch(text, /listed right now, median asking/)
 })
 
+test('price-drop: without snoozeUrl, no "Snooze 30 days" link renders', () => {
+  const { html, text } = buildPriceDropEmail({ ...BASE, photoUrl: null })
+  assert.doesNotMatch(html, /Snooze 30 days/)
+  assert.doesNotMatch(text, /Snooze 30 days/)
+})
+
+test('price-drop: with snoozeUrl, the footer adds a "Snooze 30 days" link (HTML + text)', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    snoozeUrl: 'https://clubhanger.com/api/alerts/snooze?token=xyz',
+  })
+  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz"[^>]*>Snooze 30 days<\/a>/)
+  assert.match(text, /Snooze 30 days: https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz/)
+})
+
+test('price-drop: with both frequencyUrl and snoozeUrl, both footer links render alongside each other', () => {
+  const { html, text } = buildPriceDropEmail({
+    ...BASE,
+    photoUrl: null,
+    frequencyUrl: 'https://clubhanger.com/api/alerts/frequency?token=xyz',
+    snoozeUrl: 'https://clubhanger.com/api/alerts/snooze?token=xyz',
+  })
+  assert.match(html, /Get fewer emails<\/a> &middot; <a href="https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz"[^>]*>Snooze 30 days<\/a>/)
+  assert.match(text, /Get fewer emails \(switch to weekly\): https:\/\/clubhanger\.com\/api\/alerts\/frequency\?token=xyz\nSnooze 30 days: https:\/\/clubhanger\.com\/api\/alerts\/snooze\?token=xyz/)
+})
+
 // ─── buildAlertDigestEmail ──────────────────────────────────────────────────
 
 const DIGEST_BASE = {
