@@ -1,11 +1,24 @@
 import Link from 'next/link'
-import { Bell, ThumbsUp, ThumbsDown, Activity, AlertTriangle, Mail, MousePointerClick, Flag, Zap, HelpCircle } from 'lucide-react'
+import {
+  Bell,
+  ThumbsUp,
+  ThumbsDown,
+  Activity,
+  AlertTriangle,
+  Mail,
+  MousePointerClick,
+  Flag,
+  Zap,
+  HelpCircle,
+  RotateCcw,
+} from 'lucide-react'
 import {
   getAlertScoreboard,
   getDigestVoteRollup,
   getNotRelevantListingsRollup,
   getInstantInterestRollup,
   getUnsubscribeReasonRollup,
+  getRepermissionRollup,
 } from '@/lib/alertScoreboard'
 import { getLastCronRun } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
@@ -24,15 +37,17 @@ const STALE_RUN_HOURS = 36
 
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes, lastRun, engagement, notRelevant, instantInterest, unsubscribeReasons] = await Promise.all([
-    getAlertScoreboard(),
-    getDigestVoteRollup(),
-    getLastCronRun(),
-    getEmailEngagementRollup(),
-    getNotRelevantListingsRollup(),
-    getInstantInterestRollup(),
-    getUnsubscribeReasonRollup(),
-  ])
+  const [snap, votes, lastRun, engagement, notRelevant, instantInterest, unsubscribeReasons, repermission] =
+    await Promise.all([
+      getAlertScoreboard(),
+      getDigestVoteRollup(),
+      getLastCronRun(),
+      getEmailEngagementRollup(),
+      getNotRelevantListingsRollup(),
+      getInstantInterestRollup(),
+      getUnsubscribeReasonRollup(),
+      getRepermissionRollup(),
+    ])
   const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
   const isStale = hoursSinceLastRun === null || hoursSinceLastRun > STALE_RUN_HOURS
@@ -47,6 +62,11 @@ export default async function AlertScoreboardPage() {
   const voteTotal = votes.upTotal + votes.downTotal
   const voteWeekDelta = votes.upThisWeek + votes.downThisWeek - (votes.upLastWeek + votes.downLastWeek)
   const upRate = voteTotal >= MIN_VOTES_FOR_RATE ? Math.round((votes.upTotal / voteTotal) * 100) : null
+
+  const hasRepermissionSends = repermission.sentAtMigrated && repermission.sentAllTime > 0
+  const downgradedCadenceMessage = !repermission.frequencyChangedAtMigrated
+    ? 'Cadence-downshift data not available yet — alerts.frequency_changed_at isn’t migrated live.'
+    : `${repermission.downgradedCadenceCount} downshifted cadence since the re-permission email.`
 
   return (
     <div className="space-y-6">
@@ -477,6 +497,51 @@ export default async function AlertScoreboardPage() {
               </div>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <RotateCcw className="h-5 w-5 text-sky-500" /> Re-permission lifecycle
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          The &quot;still want these?&quot; email sent to dormant subscribers — did it win
+          them back or push them out? Same read the Monday admin email uses, on demand.
+        </p>
+
+        {!repermission.sentAtMigrated ? (
+          <p className="text-sm text-slate-400">
+            Not available yet — the <code>alerts.repermission_sent_at</code> column isn&rsquo;t
+            migrated live.
+          </p>
+        ) : !hasRepermissionSends ? (
+          <p className="text-sm text-slate-400">No re-permission emails sent yet.</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-end gap-6">
+              <div>
+                <div className="text-2xl font-bold text-slate-900">{repermission.sentThisWeek}</div>
+                <div className="text-xs text-slate-500">sent this week</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-slate-400">{repermission.sentLastWeek}</div>
+                <div className="text-xs text-slate-500">last week</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-slate-900">{repermission.sentAllTime}</div>
+                <div className="text-xs text-slate-500">all time</div>
+              </div>
+            </div>
+            <div className="mt-4 space-y-1 border-t border-slate-100 pt-4 text-sm text-slate-500">
+              <div>
+                Of those: <span className="font-medium text-slate-800">{repermission.unsubscribedCount}</span>{' '}
+                unsubscribed, <span className="font-medium text-slate-800">{repermission.pausedCount}</span>{' '}
+                paused, <span className="font-medium text-slate-800">{repermission.stillLiveCount}</span> still
+                active.
+              </div>
+              <div>{downgradedCadenceMessage}</div>
+            </div>
+          </>
         )}
       </section>
 

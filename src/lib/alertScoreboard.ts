@@ -378,3 +378,108 @@ export async function getUnsubscribeReasonRollup(now: number = Date.now()): Prom
 
   return { topReasons, reasonColumnMigrated: true }
 }
+
+export interface RepermissionRollup {
+  sentThisWeek: number
+  sentLastWeek: number
+  sentAllTime: number
+  unsubscribedCount: number
+  pausedCount: number
+  stillLiveCount: number
+  sentAtMigrated: boolean
+  /** Count of repermission sends whose `frequency_changed_at` postdates the send — i.e.
+   *  the subscriber downshifted cadence instead of unsubscribing/pausing. Always 0 when
+   *  `frequencyChangedAtMigrated` is false — never fabricated from an unmigrated column. */
+  downgradedCadenceCount: number
+  frequencyChangedAtMigrated: boolean
+}
+
+const REPERMISSION_OPTIONAL_COLS = ['repermission_sent_at', 'frequency_changed_at']
+
+// Rolls up the `alert-dormant-repermission` "still want these?" email (sent once per
+// dormant alert, stamped `repermission_sent_at`) — did it win subscribers back or push
+// them out? Shared by the Monday admin funnel email (`alertFunnelWeekly.ts`) and the
+// on-demand `/admin/alerts` scoreboard, so a human checking mid-week isn't blind until
+// Monday. `repermission_sent_at`/`frequency_changed_at` may independently be un-migrated
+// live — same graceful-fallback pattern as every other alerts.* read in this file.
+export async function getRepermissionRollup(now: number = Date.now()): Promise<RepermissionRollup> {
+  const admin = createAdminClient()
+  let cols = ['status', ...REPERMISSION_OPTIONAL_COLS]
+  let { data, error } = await admin.from('alerts').select(cols.join(', '))
+  for (
+    let i = 0;
+    i < REPERMISSION_OPTIONAL_COLS.length &&
+    error &&
+    REPERMISSION_OPTIONAL_COLS.some((c) => cols.includes(c) && error!.message?.includes(c));
+    i++
+  ) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data, error } = await admin.from('alerts').select(cols.join(', ')))
+  }
+
+  const sentAtMigrated = cols.includes('repermission_sent_at')
+  const frequencyChangedAtMigrated = cols.includes('frequency_changed_at')
+
+  const empty: RepermissionRollup = {
+    sentThisWeek: 0,
+    sentLastWeek: 0,
+    sentAllTime: 0,
+    unsubscribedCount: 0,
+    pausedCount: 0,
+    stillLiveCount: 0,
+    sentAtMigrated,
+    downgradedCadenceCount: 0,
+    frequencyChangedAtMigrated,
+  }
+  if (!sentAtMigrated) return empty
+
+  const rows = (data ?? []) as unknown as {
+    status: string | null
+    repermission_sent_at?: string | null
+    frequency_changed_at?: string | null
+  }[]
+
+  const DAY_MS = 86_400_000
+  const oneWeekAgo = now - 7 * DAY_MS
+  const twoWeeksAgo = now - 14 * DAY_MS
+
+  let sentThisWeek = 0
+  let sentLastWeek = 0
+  let sentAllTime = 0
+  let unsubscribedCount = 0
+  let pausedCount = 0
+  let stillLiveCount = 0
+  let downgradedCadenceCount = 0
+
+  for (const row of rows) {
+    if (!row.repermission_sent_at) continue
+    const sentAt = new Date(row.repermission_sent_at).getTime()
+    if (Number.isNaN(sentAt)) continue
+
+    sentAllTime++
+    if (sentAt >= oneWeekAgo) sentThisWeek++
+    else if (sentAt >= twoWeeksAgo) sentLastWeek++
+
+    const status = row.status || 'unknown'
+    if (status === 'unsubscribed') unsubscribedCount++
+    else if (status === 'paused') pausedCount++
+    else if (LIVE_STATUSES.has(status)) stillLiveCount++
+
+    if (frequencyChangedAtMigrated && row.frequency_changed_at) {
+      const changedAt = new Date(row.frequency_changed_at).getTime()
+      if (!Number.isNaN(changedAt) && changedAt > sentAt) downgradedCadenceCount++
+    }
+  }
+
+  return {
+    sentThisWeek,
+    sentLastWeek,
+    sentAllTime,
+    unsubscribedCount,
+    pausedCount,
+    stillLiveCount,
+    sentAtMigrated,
+    downgradedCadenceCount,
+    frequencyChangedAtMigrated,
+  }
+}
