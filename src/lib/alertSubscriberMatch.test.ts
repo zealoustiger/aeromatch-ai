@@ -8,8 +8,11 @@ import {
   matchesPartnershipListing,
   parseAircraftAlertSourcePath,
   matchesAircraftListing,
+  parseSeekerAlertSourcePath,
+  matchesSeekerListing,
   type PartnershipListingFields,
   type AircraftListingFields,
+  type SeekerListingFields,
 } from './alertSubscriberMatch.ts'
 
 test('parsePartnershipAlertSourcePath: null/empty resolves like the homepage ("all")', () => {
@@ -246,4 +249,83 @@ test('matchesAircraftListing: a null bounded field never matches a range filter 
 test('matchesAircraftListing: combined criteria all must hold', () => {
   assert.equal(matchesAircraftListing({ make: 'Cessna', modelPattern: '172%', state: 'CA' }, AIRCRAFT_LISTING), true)
   assert.equal(matchesAircraftListing({ make: 'Cessna', modelPattern: '172%', state: 'TX' }, AIRCRAFT_LISTING), false)
+})
+
+// ─── Seeker reverse-match ───────────────────────────────────────────────────
+
+test('parseSeekerAlertSourcePath: null/empty/homepage all resolve to null (unlike partnership/aircraft, "all" never matches a seeker)', () => {
+  assert.equal(parseSeekerAlertSourcePath(null), null)
+  assert.equal(parseSeekerAlertSourcePath(undefined), null)
+  assert.equal(parseSeekerAlertSourcePath(''), null)
+  assert.equal(parseSeekerAlertSourcePath('/'), null)
+})
+
+test('parseSeekerAlertSourcePath: bare /partnerships/seeking has no filter', () => {
+  assert.deepEqual(parseSeekerAlertSourcePath('/partnerships/seeking'), { kind: 'seeker', target: {} })
+})
+
+test('parseSeekerAlertSourcePath: query-string shape', () => {
+  const parsed = parseSeekerAlertSourcePath('/partnerships/seeking?make=Cessna&model=172&state=ca&airport=khwd')
+  assert.deepEqual(parsed, {
+    kind: 'seeker',
+    target: { make: 'Cessna', model: '172', state: 'CA', icao: 'KHWD' },
+  })
+})
+
+test('parseSeekerAlertSourcePath: aircraft/partnership paths are not seeker-relevant', () => {
+  assert.equal(parseSeekerAlertSourcePath('/aircraft?make=Cessna'), null)
+  assert.equal(parseSeekerAlertSourcePath('/partnerships'), null)
+  assert.equal(parseSeekerAlertSourcePath('/partnerships/make/cessna'), null)
+})
+
+const SEEKER_LISTING: SeekerListingFields = {
+  preferred_makes: ['Cessna', 'Piper'],
+  preferred_models: '172, 182',
+  state: 'CA',
+  home_airport: 'KHWD',
+  additional_airports: ['KOAK'],
+}
+
+test('matchesSeekerListing: empty target matches anything', () => {
+  assert.equal(matchesSeekerListing({}, SEEKER_LISTING), true)
+})
+
+test('matchesSeekerListing: make is case-insensitive array membership, not substring', () => {
+  assert.equal(matchesSeekerListing({ make: 'cessna' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ make: 'Beechcraft' }, SEEKER_LISTING), false)
+  assert.equal(matchesSeekerListing({ make: 'Cess' }, SEEKER_LISTING), false)
+})
+
+test('matchesSeekerListing: model is a free-text token match, case-insensitive, exact token', () => {
+  assert.equal(matchesSeekerListing({ model: '172' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ model: '150,172' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ model: '150' }, SEEKER_LISTING), false)
+  assert.equal(matchesSeekerListing({ model: '17' }, SEEKER_LISTING), false)
+})
+
+test('matchesSeekerListing: model filter never matches an empty preferred_models', () => {
+  assert.equal(matchesSeekerListing({ model: '172' }, { ...SEEKER_LISTING, preferred_models: null }), false)
+})
+
+test('matchesSeekerListing: state is exact', () => {
+  assert.equal(matchesSeekerListing({ state: 'CA' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ state: 'TX' }, SEEKER_LISTING), false)
+})
+
+test('matchesSeekerListing: icao matches home_airport OR additional_airports', () => {
+  assert.equal(matchesSeekerListing({ icao: 'KHWD' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ icao: 'KOAK' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ icao: 'KSQL' }, SEEKER_LISTING), false)
+})
+
+test('matchesSeekerListing: icao with no home_airport/additional_airports never matches', () => {
+  assert.equal(
+    matchesSeekerListing({ icao: 'KHWD' }, { ...SEEKER_LISTING, home_airport: null, additional_airports: null }),
+    false
+  )
+})
+
+test('matchesSeekerListing: combined criteria all must hold', () => {
+  assert.equal(matchesSeekerListing({ make: 'Cessna', model: '172', state: 'CA' }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ make: 'Cessna', model: '172', state: 'TX' }, SEEKER_LISTING), false)
 })
