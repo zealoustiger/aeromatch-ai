@@ -1082,3 +1082,21 @@ alter table alerts add column if not exists unavailable_notified_at timestamptz;
 -- indistinguishable from "genuinely never deferred" until the column lands, same
 -- ambiguity every other health-log column already documents.
 alter table alert_cron_runs add column if not exists deferred_sends int not null default 0;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_frequency_changed_at
+-- Stamps the last time an alert's `frequency` was actually written by a real
+-- cadence decision (manage-page toggle, digest/price-drop email "get fewer
+-- emails"/"switch to daily" links, the combined-digest step-down link, the
+-- unsubscribe-recovery "switch to weekly/monthly" buttons, or the
+-- narrow-alert monthly-switch nudge) — every one of those write paths, not
+-- incidental writes. Unlocks honest cadence-downshift attribution: the
+-- Monday admin funnel email can now report how many `repermission_sent_at`
+-- recipients actually downshifted their cadence *after* that email, instead
+-- of the "not honestly computable" gap `alert-funnel-repermission-line`
+-- (batch #10) explicitly scoped out. Nullable, no default: null means "never
+-- changed since this column existed," same honest-gap posture as every
+-- other `alerts.*_at` column above. Apply in the Supabase SQL editor. Until
+-- applied, every stamp write retries without this column (same
+-- graceful-fallback pattern as every column above) and the funnel snapshot
+-- reports the "not migrated" state rather than a fabricated zero.
+alter table alerts add column if not exists frequency_changed_at timestamptz;

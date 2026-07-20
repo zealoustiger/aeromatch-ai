@@ -2026,28 +2026,32 @@ export function buildAdminAlertFunnelEmail(
     : `Instant-alerts interest: No interest recorded yet\n`
 
   // Re-permission ("still want these?") lifecycle — did the dormant-subscriber
-  // email work? Status breakdown is current-state-only (no `frequency_changed_at`
-  // history exists, so a cadence-downshift count isn't honestly computable — see
-  // alertFunnelWeekly.ts). Three honest states: column not migrated, migrated but
-  // zero sent, migrated with real counts.
+  // email work? Status breakdown is current-state-only. The cadence-downshift count
+  // reads the separate `frequency_changed_at` column (alertFunnelWeekly.ts) — real
+  // attribution (only counts a frequency change that postdates the send), three honest
+  // states of its own: column not migrated, migrated but zero, migrated with a real count.
   const repermissionEmptyMessage = !snapshot.repermissionSentAtMigrated
     ? 'Not available yet — the `alerts.repermission_sent_at` column isn’t migrated live.'
     : 'No re-permission emails sent yet.'
   const hasRepermissionSends = snapshot.repermissionSentAtMigrated && snapshot.repermissionSentAllTime > 0
+  const downgradedCadenceMessage = !snapshot.frequencyChangedAtMigrated
+    ? 'cadence-downshift data not available yet — `alerts.frequency_changed_at` isn’t migrated live'
+    : `${snapshot.repermissionDowngradedCadenceCount} downshifted cadence since the re-permission email`
   const repermissionHtml = hasRepermissionSends
     ? `<tr>
             <td style="padding:4px 0;font-size:14px;color:#334155;">Re-permission emails sent</td>
             <td style="padding:4px 0;text-align:right;font-size:18px;font-weight:700;color:#0f172a;">${snapshot.repermissionSentThisWeek} this week</td>
           </tr>
           <tr><td colspan="2" style="padding:0 0 4px;font-size:12px;color:#94a3b8;text-align:right;">${snapshot.repermissionSentAllTime} all-time</td></tr>
-          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">of those: ${snapshot.repermissionUnsubscribedCount} unsubscribed, ${snapshot.repermissionPausedCount} paused, ${snapshot.repermissionStillLiveCount} still active</td></tr>`
+          <tr><td colspan="2" style="padding:0 0 4px;font-size:12px;color:#94a3b8;text-align:right;">of those: ${snapshot.repermissionUnsubscribedCount} unsubscribed, ${snapshot.repermissionPausedCount} paused, ${snapshot.repermissionStillLiveCount} still active</td></tr>
+          <tr><td colspan="2" style="padding:0 0 10px;font-size:12px;color:#94a3b8;text-align:right;">${escapeHtml(downgradedCadenceMessage)}</td></tr>`
     : `<tr>
             <td style="padding:4px 0;font-size:14px;color:#334155;">Re-permission emails sent</td>
             <td style="padding:4px 0;text-align:right;font-size:13px;color:#94a3b8;">${escapeHtml(repermissionEmptyMessage)}</td>
           </tr>`
 
   const repermissionText = hasRepermissionSends
-    ? `Re-permission emails sent: ${snapshot.repermissionSentThisWeek} this week, ${snapshot.repermissionSentAllTime} all-time (of those: ${snapshot.repermissionUnsubscribedCount} unsubscribed, ${snapshot.repermissionPausedCount} paused, ${snapshot.repermissionStillLiveCount} still active)\n`
+    ? `Re-permission emails sent: ${snapshot.repermissionSentThisWeek} this week, ${snapshot.repermissionSentAllTime} all-time (of those: ${snapshot.repermissionUnsubscribedCount} unsubscribed, ${snapshot.repermissionPausedCount} paused, ${snapshot.repermissionStillLiveCount} still active; ${downgradedCadenceMessage})\n`
     : `Re-permission emails sent: ${repermissionEmptyMessage}\n`
 
   // "Least relevant listings this week" — the per-sample "Not relevant?" taps

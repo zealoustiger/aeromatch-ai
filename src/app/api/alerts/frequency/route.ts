@@ -24,9 +24,17 @@ async function applyFrequency(token: string, dir: AlertFrequency): Promise<boole
     const supabase = createAdminClient()
     let { data, error } = await supabase
       .from('alerts')
-      .update({ frequency: normalizeFrequency(dir) })
+      .update({ frequency: normalizeFrequency(dir), frequency_changed_at: new Date().toISOString() })
       .in('unsubscribe_token', tokens)
       .select('id')
+
+    if (error && error.message?.includes('frequency_changed_at')) {
+      ;({ data, error } = await supabase
+        .from('alerts')
+        .update({ frequency: normalizeFrequency(dir) })
+        .in('unsubscribe_token', tokens)
+        .select('id'))
+    }
 
     if (error && error.message?.includes('frequency')) {
       ;({ data, error } = await supabase.from('alerts').select('id').in('unsubscribe_token', tokens))
@@ -61,12 +69,21 @@ async function applyFrequencyStep(token: string): Promise<boolean> {
     let steppedAny = false
     for (const from of ['daily', 'weekly'] as const) {
       const to = nextLighterFrequency(from)
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('alerts')
-        .update({ frequency: to })
+        .update({ frequency: to, frequency_changed_at: new Date().toISOString() })
         .in('unsubscribe_token', tokens)
         .eq('frequency', from)
         .select('id')
+
+      if (error && error.message?.includes('frequency_changed_at')) {
+        ;({ data, error } = await supabase
+          .from('alerts')
+          .update({ frequency: to })
+          .in('unsubscribe_token', tokens)
+          .eq('frequency', from)
+          .select('id'))
+      }
 
       if (error) {
         if (error.message?.includes('frequency')) continue

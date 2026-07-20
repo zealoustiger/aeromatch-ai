@@ -145,9 +145,11 @@ export interface AlertFunnelWeeklySnapshot {
    *  fabricated; `repermissionSentAtMigrated` disambiguates "column not live yet"
    *  from "genuinely zero sent" the same way every other `alerts.*_at` field
    *  above does. The three status-breakdown counts answer "did it work?" using
-   *  ONLY the current `status` of every alert that ever got one — there's no
-   *  `frequency_changed_at` history, so a cadence-downshift breakdown isn't
-   *  honestly computable and is intentionally not included here. */
+   *  ONLY the current `status` of every alert that ever got one. `frequency_changed_at`
+   *  (see `frequencyChangedAtMigrated` below) now separately covers the cadence-downshift
+   *  breakdown: `repermissionDowngradedCadenceCount` counts only alerts whose
+   *  `frequency_changed_at` is a real timestamp that postdates their own
+   *  `repermission_sent_at` — genuine attribution, never a guess. */
   repermissionSentThisWeek: number
   repermissionSentLastWeek: number
   repermissionSentAllTime: number
@@ -155,6 +157,12 @@ export interface AlertFunnelWeeklySnapshot {
   repermissionPausedCount: number
   repermissionStillLiveCount: number
   repermissionSentAtMigrated: boolean
+  /** Count of `repermission_sent_at` alerts whose `frequency_changed_at` postdates that
+   *  send — i.e. the subscriber downshifted cadence (rather than unsubscribing/pausing)
+   *  after the "still want these?" email. Always 0 when `frequencyChangedAtMigrated` is
+   *  false — never fabricated from a column that isn't live yet. */
+  repermissionDowngradedCadenceCount: number
+  frequencyChangedAtMigrated: boolean
   computedAt: string
 }
 
@@ -183,7 +191,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   // error names, up to once each (order-independent), same graceful-fallback
   // pattern as alertsForOwner.ts's OPTIONAL_COLS loop.
   const baseCols = ['status', 'created_at', 'confirmed_at', 'source_path']
-  const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at', 'repermission_sent_at']
+  const optionalCols = ['source', 'unsubscribed_at', 'paused_at', 'bounced_at', 'repermission_sent_at', 'frequency_changed_at']
   let cols = [...baseCols, ...optionalCols]
   let { data, error } = await admin.from('alerts').select(cols.join(', '))
   for (
@@ -199,6 +207,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   const pausedAtMigrated = cols.includes('paused_at')
   const bouncedAtMigrated = cols.includes('bounced_at')
   const repermissionSentAtMigrated = cols.includes('repermission_sent_at')
+  const frequencyChangedAtMigrated = cols.includes('frequency_changed_at')
   const rows = (data ?? []) as unknown as {
     status: string | null
     source?: string | null
@@ -209,6 +218,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     paused_at?: string | null
     bounced_at?: string | null
     repermission_sent_at?: string | null
+    frequency_changed_at?: string | null
   }[]
 
   const oneWeekAgo = now - 7 * DAY_MS
@@ -235,6 +245,7 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
   let repermissionUnsubscribedCount = 0
   let repermissionPausedCount = 0
   let repermissionStillLiveCount = 0
+  let repermissionDowngradedCadenceCount = 0
 
   const sourceThisWeek = new Map<string, number>()
   const sourceLastWeek = new Map<string, number>()
@@ -305,6 +316,13 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
         if (status === 'unsubscribed') repermissionUnsubscribedCount++
         else if (status === 'paused') repermissionPausedCount++
         else if (LIVE_STATUSES.has(status)) repermissionStillLiveCount++
+
+        if (frequencyChangedAtMigrated && row.frequency_changed_at) {
+          const frequencyChangedAt = new Date(row.frequency_changed_at).getTime()
+          if (!Number.isNaN(frequencyChangedAt) && frequencyChangedAt > repermissionSentAt) {
+            repermissionDowngradedCadenceCount++
+          }
+        }
       }
     }
   }
@@ -413,6 +431,8 @@ export async function getAlertFunnelWeeklySnapshot(now: number = Date.now()): Pr
     repermissionPausedCount,
     repermissionStillLiveCount,
     repermissionSentAtMigrated,
+    repermissionDowngradedCadenceCount,
+    frequencyChangedAtMigrated,
     computedAt: new Date(now).toISOString(),
   }
 }

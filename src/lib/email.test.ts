@@ -1822,6 +1822,8 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   repermissionPausedCount: 2,
   repermissionStillLiveCount: 15,
   repermissionSentAtMigrated: true,
+  repermissionDowngradedCadenceCount: 3,
+  frequencyChangedAtMigrated: true,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -1997,7 +1999,35 @@ test('buildAdminAlertFunnelEmail: re-permission renders this-week/all-time sends
   assert.match(html, /6 this week/)
   assert.match(html, /22 all-time/)
   assert.match(html, /5 unsubscribed, 2 paused, 15 still active/)
-  assert.match(text, /Re-permission emails sent: 6 this week, 22 all-time \(of those: 5 unsubscribed, 2 paused, 15 still active\)/)
+  assert.match(
+    text,
+    /Re-permission emails sent: 6 this week, 22 all-time \(of those: 5 unsubscribed, 2 paused, 15 still active; 3 downshifted cadence since the re-permission email\)/
+  )
+})
+
+test('buildAdminAlertFunnelEmail: downshifted-cadence count renders a real number once frequencyChangedAtMigrated is true', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /3 downshifted cadence since the re-permission email/)
+  assert.match(text, /3 downshifted cadence since the re-permission email/)
+})
+
+test('buildAdminAlertFunnelEmail: downshifted-cadence renders an honest 0, not a fabricated number, when migrated but genuinely zero', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, repermissionDowngradedCadenceCount: 0 },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /0 downshifted cadence since the re-permission email/)
+  assert.match(text, /0 downshifted cadence since the re-permission email/)
+})
+
+test('buildAdminAlertFunnelEmail: downshifted-cadence renders a distinct not-migrated message when frequency_changed_at is not migrated live', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    { ...ADMIN_FUNNEL_BASE, frequencyChangedAtMigrated: false },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /cadence-downshift data not available yet/)
+  assert.match(text, /cadence-downshift data not available yet/)
+  assert.doesNotMatch(html, /downshifted cadence since the re-permission email/)
 })
 
 test('buildAdminAlertFunnelEmail: with zero re-permission emails ever sent (column migrated), an honest empty line renders instead of a fabricated 0', () => {
