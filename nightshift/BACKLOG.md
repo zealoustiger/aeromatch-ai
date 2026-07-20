@@ -3688,7 +3688,7 @@ test guarding it._
   completed, and its own failures fold into the run's existing `sendFailures` tally. 9 new
   unit tests cover day-1/2/3/4/5/6 streak transitions, the null/unmigrated-history case,
   the recovery-then-refail case, and the always-quiet-on-pass case.
-- **[P1][goal] Send-health block on `/admin/alerts` — last-7-runs table.** Both flagged
+~~- **[P1][goal] Send-health block on `/admin/alerts` — last-7-runs table.** Both flagged
   gaps in one honest read: `send_failures` is surfaced on `AlertCronRun` but rendered
   nowhere, and `deferred_sends` (added by `alert-cron-send-pacing`) was explicitly left
   "for future admin-panel use." Render a compact table of the last ~7 `alert_cron_runs`:
@@ -3697,7 +3697,21 @@ test guarding it._
   states as every sibling metric; never render a fabricated 0 for an unmigrated column).
   Extends the existing cron-health box on the page rather than adding a rival section.
   Improves: honest-measurement pillar, admin surface. No new capture point, no schema
-  change.
+  change.~~ ✅ SHIPPED via `admin-alerts-send-health-table` (2026-07-20) New last-7-runs
+  table inside the existing "Cron health" section on `/admin/alerts`, fed by the
+  already-exported (previously unused) `getRecentCronRuns(7)` from `alertCronHealth.ts` —
+  no changes to that data helper. Columns: date, emails sent, send failures, deferred
+  sends, capture self-check outcome. `sendFailures`/`deferredSends` render `—` (not a
+  fabricated 0) when `null` (column unmigrated); self-check renders
+  PASS / `FAILED at <step>` / `—`, mirroring `email.ts`'s `selfCheckMessage` three-state
+  convention. A run with real `sendFailures > 0` or a real self-check FAIL is flagged in
+  rose text, same convention as the page's existing stale-run banner. Table only renders
+  when `recentRuns.length > 0`; the existing "No cron run data yet" copy still covers the
+  unmigrated/empty case (verified live: `alert_cron_runs` itself is still the
+  human-pending migration flagged in `schema.sql` — `getRecentCronRuns`/`getLastCronRun`
+  both correctly return empty/null against the real prod DB right now, so the table is
+  inert until that pre-existing migration is applied, same honest-degrade posture as
+  every sibling metric on this page).
 - **[P1][goal] Demand-vs-supply ("most wanted") block on `/admin/alerts`.** The scoreboard
   proves which *placements* convert but says nothing about *what* subscribers are waiting
   for. Aggregate live (confirmed, unpaused) alerts by criteria family — reuse

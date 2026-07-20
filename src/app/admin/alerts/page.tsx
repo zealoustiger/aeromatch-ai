@@ -20,7 +20,7 @@ import {
   getUnsubscribeReasonRollup,
   getRepermissionRollup,
 } from '@/lib/alertScoreboard'
-import { getLastCronRun } from '@/lib/alertCronHealth'
+import { getLastCronRun, getRecentCronRuns } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
 import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
 
@@ -37,11 +37,12 @@ const STALE_RUN_HOURS = 36
 
 // Admin gate is enforced by src/app/admin/layout.tsx.
 export default async function AlertScoreboardPage() {
-  const [snap, votes, lastRun, engagement, notRelevant, instantInterest, unsubscribeReasons, repermission] =
+  const [snap, votes, lastRun, recentRuns, engagement, notRelevant, instantInterest, unsubscribeReasons, repermission] =
     await Promise.all([
       getAlertScoreboard(),
       getDigestVoteRollup(),
       getLastCronRun(),
+      getRecentCronRuns(7),
       getEmailEngagementRollup(),
       getNotRelevantListingsRollup(),
       getInstantInterestRollup(),
@@ -143,6 +144,62 @@ export default async function AlertScoreboardPage() {
                 <div className="text-xs text-slate-500">widen suggestions</div>
               </div>
             </div>
+
+            {recentRuns.length > 0 && (
+              <div className="mt-2">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Last {recentRuns.length} runs
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[480px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-xs text-slate-400">
+                        <th className="pb-2 pr-3 font-medium">Date</th>
+                        <th className="pb-2 pr-3 font-medium">Emails sent</th>
+                        <th className="pb-2 pr-3 font-medium">Send failures</th>
+                        <th className="pb-2 pr-3 font-medium">Deferred sends</th>
+                        <th className="pb-2 font-medium">Capture self-check</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentRuns.map((run) => {
+                        const hasFailures = run.sendFailures !== null && run.sendFailures > 0
+                        const selfCheckLabel =
+                          run.captureSelfCheckOk === null
+                            ? '—'
+                            : run.captureSelfCheckOk
+                              ? 'PASS'
+                              : `FAILED at ${run.captureSelfCheckStep ?? 'unknown step'}`
+                        return (
+                          <tr key={run.id} className="border-b border-slate-50 last:border-0">
+                            <td className="py-2 pr-3 text-slate-600">
+                              {new Date(run.createdAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </td>
+                            <td className="py-2 pr-3 text-slate-800">{run.emailsSent}</td>
+                            <td className={`py-2 pr-3 ${hasFailures ? 'font-semibold text-rose-600' : 'text-slate-800'}`}>
+                              {run.sendFailures ?? '—'}
+                            </td>
+                            <td className="py-2 pr-3 text-slate-800">{run.deferredSends ?? '—'}</td>
+                            <td
+                              className={
+                                run.captureSelfCheckOk === false
+                                  ? 'py-2 font-semibold text-rose-600'
+                                  : 'py-2 text-slate-800'
+                              }
+                            >
+                              {selfCheckLabel}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>

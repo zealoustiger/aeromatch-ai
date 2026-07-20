@@ -2,6 +2,52 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T082008Z — PASS — admin-alerts-send-health-table
+- Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate);
+  /alerts (baseline QA touch only)
+- What: **`/admin/alerts`'s cron-health box now shows a last-7-runs table** (date, emails
+  sent, send failures, deferred sends, capture self-check outcome) instead of only the
+  single most-recent run — so an admin checking mid-week can spot a bad trend (a run with
+  real send failures, or a self-check that just started failing) without waiting for
+  Monday's summary email.
+- Goal: alert-experience `[goal]` tier — "Send-health block on `/admin/alerts` — last-7-runs
+  table," the explicitly flagged next item from plan-pass batch #12 (checked off in
+  BACKLOG.md this cycle). Tier 1 (`[bug]`): none open — last cycle PASSed, no known
+  bug/broken page/console error/CWV-mobile regression found. Tier 2 (`[want]`): the two
+  open `[P1][want]` items (save-search auth wall, collection-layout redesign) re-verified
+  this cycle by direct read — both still explicitly flagged "needs a human product call /
+  awaiting a mock" by their own BACKLOG.md text. Dropped to tier 3.
+- Spec: nightshift/specs/20260720T082008Z-admin-alerts-send-health-table.md
+- Verdict: PASS. Built on the already-exported (previously unused) `getRecentCronRuns(7)`
+  in `src/lib/alertCronHealth.ts` — no changes to that data helper, no schema change.
+  `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 639/639 pass (no
+  regressions — this cycle added only page markup, no new lib logic to unit-test).
+  Visual cycle (new table markup on an existing page) — served the PRODUCTION build
+  (`npx next start` on port 3300); `qa-smoke.mjs --slug admin-alerts-send-health-table
+  /admin/alerts /alerts`: 4/4 pass (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at 1280 + 375px); screenshot read confirms the anonymous crawl still
+  shows the FREEZE'd "Admin only" gate at both viewports — zero regression for signed-out
+  visitors. Since the new table itself is unreachable by an anonymous crawl (same
+  precedent as the last two `/admin/alerts` cycles), independently verified the underlying
+  read against the real (read-only) prod DB via a throwaway, uncommitted `tsx` script
+  (deleted after use): confirmed `alert_cron_runs` is still the pre-existing
+  human-pending migration flagged in `schema.sql` (`PGRST205`, table not in the live
+  schema cache) — so `getRecentCronRuns`/`getLastCronRun` both honestly return `[]`/`null`
+  right now, meaning the new table is correctly inert (hidden, not zero-fabricated) behind
+  the page's existing "No cron run data yet" copy until a human applies that migration.
+  Wrapped the table in the same `overflow-x-auto` pattern already used 20+ times elsewhere
+  in the codebase to keep a wide 5-column table from causing page-level horizontal
+  overflow at 375px once real rows exist. No prod DB writes made (read-only query only).
+  Server stopped cleanly after (verified via a follow-up curl to port 3300 returning
+  connection-refused).
+- Screenshots: nightshift/screenshots/admin-alerts-send-health-table/
+- Next: the sibling `[P1][goal]` item in the same batch — "Demand-vs-supply ('most
+  wanted') block on `/admin/alerts`" — is next in the alert-experience queue. Also: once a
+  human applies the long-pending `alert_cron_runs` migration, this new table (and the
+  existing last-run stats above it) will start showing real data instead of the honest
+  empty state.
+
 ## 20260720T081158Z — PASS — selfcheck-failure-alert
 - Pages: /admin/alerts (admin-only, `noindex`, behind the existing FREEZE'd admin gate,
   linked from the new email); /alerts, /aircraft (baseline QA touch only — this is a
