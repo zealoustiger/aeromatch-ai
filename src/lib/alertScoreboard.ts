@@ -3,6 +3,8 @@ import { classifySourcePath } from './alertSourceFamily'
 import { buildWeeklyTrend, type WeeklyTrendPoint } from './alertWeeklyTrend'
 import { summarizeUnsubscribeReasons, type UnsubscribeReasonRow } from './alertUnsubscribeReasons'
 import { CAPTURE_SELFCHECK_EMAIL } from './alertCaptureSelfCheck'
+import { familyForSourcePath } from './alertDemandFamily'
+import { SEO_MAKE_MODELS } from './seo'
 
 // The `alerts` table carries two live-subscriber vocabularies: newer opt-in
 // paths land on `confirmed` (+ `confirmed_at`), while older/direct rows use
@@ -18,7 +20,9 @@ const STATUS_LABELS: Record<string, string> = {
   unsubscribed: 'Unsubscribed',
 }
 
-const LIVE_STATUSES = new Set(['active', 'confirmed'])
+// Exported for alertDemandFamily's caller (below) — same "opted-in subscriber
+// who should receive digests" semantic as everywhere else in this file.
+export const LIVE_STATUSES = new Set(['active', 'confirmed'])
 
 // The date `alert-source-column` shipped — rows from before this never got a
 // `source` tag at all (not a graceful-degrade gap, the column didn't exist).
@@ -491,4 +495,90 @@ export async function getRepermissionRollup(now: number = Date.now()): Promise<R
     downgradedCadenceCount,
     frequencyChangedAtMigrated,
   }
+}
+
+export interface DemandSupplyRow {
+  key: string
+  label: string
+  subscriberCount: number
+  liveListingCount: number
+}
+
+// Same buyer-facing floor `countMakeModel` (src/components/AircraftSaleList.tsx)
+// applies — kept as a local constant rather than importing that function so
+// this admin-only rollup queries via the admin client directly (no RLS
+// dependency) and stays a plain lib-to-lib import graph.
+const BUYER_PRICE_FLOOR = 50_000
+
+// Mirrors `countMakeModel`'s exact filter (status/price floor/has-photos/
+// make+model ilike match) so this admin figure always agrees with what the
+// public `/aircraft/[make]/[model]` page would show for the same family.
+async function countLiveListings(
+  admin: ReturnType<typeof createAdminClient>,
+  make: string,
+  modelPattern: string,
+  notModelPattern?: string
+): Promise<number> {
+  let query = admin
+    .from('aircraft_for_sale')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .gte('asking_price', BUYER_PRICE_FLOOR)
+    .not('images', 'eq', '[]')
+    .ilike('make', `%${make}%`)
+    .ilike('model', modelPattern)
+  if (notModelPattern) query = query.not('model', 'ilike', notModelPattern)
+  const { count, error } = await query
+  return error ? 0 : (count ?? 0)
+}
+
+// "Most wanted" — pairs live (active/confirmed) alert demand with real supply
+// per curated make+model family, sorted least-supply-first then
+// most-demand-first, so a human scanning top-to-bottom sees the biggest
+// acquisition gaps first. Only alerts that resolve to a curated
+// SEO_MAKE_MODELS family are counted (see alertDemandFamily.ts). No floor:
+// real 0s/1s render as-is (GOAL.md's honesty rule) — this list exists
+// specifically to surface small numbers.
+export async function getDemandSupplyRollup(): Promise<DemandSupplyRow[]> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('alerts')
+    .select('status, source_path')
+    .neq('email', CAPTURE_SELFCHECK_EMAIL)
+  const rows = data ?? []
+
+  const bucketed = new Map<
+    string,
+    { label: string; make: string; modelPattern: string; notModelPattern?: string; subscriberCount: number }
+  >()
+  for (const row of rows) {
+    if (!LIVE_STATUSES.has(row.status)) continue
+    const family = familyForSourcePath(row.source_path, SEO_MAKE_MODELS)
+    if (!family) continue
+    const existing = bucketed.get(family.key)
+    if (existing) existing.subscriberCount++
+    else {
+      bucketed.set(family.key, {
+        label: family.label,
+        make: family.make,
+        modelPattern: family.modelPattern,
+        notModelPattern: family.notModelPattern,
+        subscriberCount: 1,
+      })
+    }
+  }
+
+  const families = [...bucketed.entries()]
+  const liveListingCounts = await Promise.all(
+    families.map(([, f]) => countLiveListings(admin, f.make, f.modelPattern, f.notModelPattern))
+  )
+
+  return families
+    .map(([key, f], i) => ({
+      key,
+      label: f.label,
+      subscriberCount: f.subscriberCount,
+      liveListingCount: liveListingCounts[i],
+    }))
+    .sort((a, b) => a.liveListingCount - b.liveListingCount || b.subscriberCount - a.subscriberCount)
 }
