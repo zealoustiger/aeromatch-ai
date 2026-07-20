@@ -2,6 +2,58 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T065029Z — PASS — alert-frequency-changed-at
+- Pages: /alerts (baseline QA touch only — this is a backend/email-builder change, no
+  user-facing page)
+- What: **The Monday admin alert-funnel email can now tell whether the "still want
+  these?" re-permission emails are winning subscribers back with a lighter cadence,
+  instead of only knowing whether they unsubscribed, paused, or stayed put.** Before,
+  there was no history of when an alert's send frequency last changed — only the
+  *current* value — so a subscriber who downshifted from daily to weekly right after a
+  re-permission email looked identical to one who never changed anything. New additive
+  `alerts.frequency_changed_at` column, stamped on every real cadence-change action
+  site-wide: the `/alerts/manage` frequency toggle, the digest/price-drop email "get
+  fewer emails"/"switch to daily" links, the combined-digest step-down link, the
+  unsubscribe-recovery "switch to weekly/monthly" buttons, and the narrow-alert
+  monthly-switch nudge. The Monday email's re-permission block now shows a "N
+  downshifted cadence since the re-permission email" line — real attribution (only
+  counts a frequency change that happened *after* that alert's own re-permission send),
+  never a fabricated number, with the same three honest states as every sibling metric
+  (column not migrated live / migrated but genuinely zero / real count).
+- Goal: alert-experience `[goal]` (batch #11, `[P1]`) — the explicitly flagged "next
+  slice" of `alert-funnel-repermission-line`, which had to scope OUT this exact
+  cadence-downshift breakdown because the column didn't exist yet. Closes that gap.
+- Spec: nightshift/specs/20260720T065029Z-alert-frequency-changed-at.md
+- Verdict: PASS. `rm -rf .next && npx next build` exit 0; `tsc --noEmit` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'` suite: 618/618 pass (3 new
+  tests in `email.test.ts`: a real downshift count renders; a migrated-but-genuinely-zero
+  count renders an honest 0, not a fabricated one; an unmigrated `frequency_changed_at`
+  renders a distinct "not available yet" message, never the zero-count copy). Non-visual
+  cycle (internal write-path + email-builder logic, no page markup) — screenshots saved
+  for the audit trail but not read into context per RUNBOOK convention; the programmatic
+  smoke gate is the PASS bar. Served the PRODUCTION build (`npx next start` on port
+  3300); `qa-smoke.mjs` on `/alerts`, `/aircraft`: 4/4 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at 1280 + 375px). Also curled the existing dev
+  fixture (`/api/dev/email-preview/admin-alert-funnel`, updated with the two new fields)
+  — 200, and grepped the rendered HTML to confirm the new line renders the real fixture
+  count ("3 downshifted cadence since the re-permission email"). No schema change applied
+  live (⚠️ human-apply, same fail-soft precedent as every prior `alerts.*` column), no
+  prod DB rows touched — pure function/write-path/email-builder logic, nothing
+  round-tripped through a live signup/alert. Server started/stopped cleanly (killed the
+  actual `next-server` PID directly, confirmed via `ps aux`); a second, older
+  `next-server` process was already running before this cycle started (predates this
+  cycle's own server by ~12 minutes) — left untouched since it wasn't started by this
+  cycle and its origin/purpose is unknown; flagged below for human attention.
+- Screenshots: nightshift/screenshots/alert-frequency-changed-at/
+- Next: the other open batch #11 `[P2][goal]` items — snooze-link parity on the
+  price-drop email footer, the re-permission lifecycle block on `/admin/alerts`,
+  deliverability micro-copy in the confirm email, and the daily capture-funnel
+  self-check — are next in the alert-experience queue. Separately: a stray `next-server`
+  process (pid 5814 at cycle start, started ~23:47 local time, well before this cycle)
+  was found already running on this box when this cycle began QA — not created by this
+  cycle, left alone, but worth a human `ps aux | grep next-server` check in case a prior
+  cycle or manual session left a server running unstopped.
+
 ## 20260720T063738Z — PASS — alert-cron-send-pacing
 - Pages: /alerts (baseline QA touch only — this is a backend/cron change, no user-facing page)
 - What: **The alert-digest cron that sends every new-listing/price-drop/digest email now paces its sends and stops cleanly before it would run out of time**, instead of firing every email back-to-back with no limit. Nothing a subscriber sees changes — this is reliability plumbing so growth doesn't quietly break alert delivery.

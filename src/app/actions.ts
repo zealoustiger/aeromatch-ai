@@ -1946,12 +1946,19 @@ export async function updateAlertFrequency(id: string, frequency: AlertFrequency
   const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
-  const { error } = await owned.admin
-    .from('alerts')
-    .update({ frequency: normalizeFrequency(frequency) })
-    .eq('id', id)
-  // Not-yet-migrated DB (`frequency` column missing) — no-op rather than
-  // surfacing a scary error for what is, until the migration lands, an inert toggle.
+  let payload: Record<string, unknown> = {
+    frequency: normalizeFrequency(frequency),
+    frequency_changed_at: new Date().toISOString(),
+  }
+  let { error } = await owned.admin.from('alerts').update(payload).eq('id', id)
+  // Not-yet-migrated DB (`frequency` or `frequency_changed_at` column missing) — retry
+  // dropping whichever one the error names, same graceful-fallback pattern as every
+  // other alerts.* write, rather than surfacing a scary error for what is, until the
+  // migration lands, an inert toggle.
+  if (error && error.message?.includes('frequency_changed_at')) {
+    payload = { frequency: payload.frequency }
+    ;({ error } = await owned.admin.from('alerts').update(payload).eq('id', id))
+  }
   if (error && error.message?.includes('frequency')) return { ok: true }
   if (error) return { error: 'Failed to update alert.' }
   revalidatePath('/alerts/manage')
@@ -2167,11 +2174,12 @@ export async function updateAlertFrequencyByToken(token: string, frequency: Aler
   let payload: Record<string, unknown> = {
     status: 'confirmed',
     frequency: normalizeFrequency(frequency),
+    frequency_changed_at: new Date().toISOString(),
     unsubscribed_at: null,
     paused_at: null,
     bounced_at: null,
   }
-  const optionalKeys = ['frequency', 'unsubscribed_at', 'paused_at', 'bounced_at']
+  const optionalKeys = ['frequency', 'frequency_changed_at', 'unsubscribed_at', 'paused_at', 'bounced_at']
   let { data, error } = await admin.from('alerts').update(payload).in('unsubscribe_token', tokens).select('id')
   for (
     let i = 0;

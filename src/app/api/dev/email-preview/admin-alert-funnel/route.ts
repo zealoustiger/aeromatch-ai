@@ -83,6 +83,8 @@ export async function GET() {
     repermissionPausedCount: 2,
     repermissionStillLiveCount: 15,
     repermissionSentAtMigrated: true,
+    repermissionDowngradedCadenceCount: 3,
+    frequencyChangedAtMigrated: true,
     computedAt: '2026-07-18T08:00:00.000Z',
   }
 

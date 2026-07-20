@@ -3579,20 +3579,21 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   fail-soft retry-without-column precedent as `send_failures`) + surfaced it on
   `AlertCronRun`/`alertCronHealth.ts` for future admin-panel use. 10 new unit tests for
   `shouldDeferSend`/`SendPacer` (deterministic injected clock/sleep).
-- **[P1][goal] `frequency_changed_at` stamping — make cadence downshifts honestly
-  measurable.** `alert-funnel-repermission-line` (batch #10) had to scope OUT the
-  "downshifted cadence" breakdown because only the *current* `frequency` is stored — its
-  own comments (`alertFunnelWeekly.ts:149`, `email.ts:2029`) name a `frequency_changed_at`
-  column as the honest unlock. Add the additive column (⚠️ human-apply, fail-soft
-  retry-without-column, same precedent as every prior `alerts.*` DDL) and stamp it in
-  every frequency write path (`updateAlertFrequencyByToken`, `/api/alerts/frequency`
-  incl. `dir=step`, the manage-page `FrequencyToggle` action, `UnsubscribeRecover`,
-  `NarrowAlertNudge`'s monthly switch). Then complete the scoped-out piece: the Monday
-  funnel email's re-permission block gains a "downshifted cadence since the re-permission
-  email" count (only for alerts whose `frequency_changed_at` postdates their
-  `repermission_sent_at` — real attribution, not guessing), with the same three honest
-  states (unmigrated / zero / real). Improves: prove-it-converts / honest-measurement
-  pillar. No new capture point.
+~~- **[P1][goal] `frequency_changed_at` stamping — make cadence downshifts honestly
+  measurable.**~~ ✅ SHIPPED via `alert-frequency-changed-at` (2026-07-20). Additive
+  `alerts.frequency_changed_at timestamptz` column (⚠️ human-apply, fail-soft
+  retry-without-column, same precedent as every prior `alerts.*` DDL). Stamped on every
+  real frequency write: `updateAlertFrequency`/`updateAlertFrequencyByToken` (`actions.ts`),
+  `applyFrequency`/`applyFrequencyStep` (`/api/alerts/frequency`, incl. `dir=step`, which
+  stamps only the rows that actually stepped) — covering the manage-page
+  `FrequencyToggle`, `UnsubscribeRecover`, and `NarrowAlertNudge`'s monthly switch, all of
+  which call through those functions. `alertFunnelWeekly.ts` now computes
+  `repermissionDowngradedCadenceCount` (real attribution: only counts a
+  `frequency_changed_at` that postdates the alert's own `repermission_sent_at`) +
+  `frequencyChangedAtMigrated`. The Monday admin funnel email's re-permission block
+  renders a new "N downshifted cadence since the re-permission email" line with the same
+  three honest states (not-migrated / zero / real count) as every sibling metric. 3 new
+  unit tests in `email.test.ts` (real count, honest zero, not-migrated message).
 - **[P2][goal] Snooze-link parity on the price-drop email footer.** The explicitly flagged
   follow-up of `digest-snooze-link` (batch #10): both digest builders' footers now carry
   the tokenized "Snooze 30 days" rung, but `buildPriceDropEmail` (the rich single-drop
