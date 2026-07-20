@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Pause, Play, Trash2, Send, Mail, Moon } from 'lucide-react'
 import { pauseAlert, resumeAlert, snoozeAlert, deleteAlert, resendAlertConfirmation, sendSampleDigest } from '@/app/actions'
+import { useAlertUndo } from './AlertUndoProvider'
 
 export default function AlertActions({ id, status, token }: { id: string; status: string; token?: string }) {
   const [isPending, startTransition] = useTransition()
@@ -10,6 +11,7 @@ export default function AlertActions({ id, status, token }: { id: string; status
   const [resent, setResent] = useState(false)
   const [sampleSent, setSampleSent] = useState(false)
   const [announcement, setAnnouncement] = useState<string | null>(null)
+  const { notifyDeleted } = useAlertUndo()
 
   function handleSendSample() {
     setError(null)
@@ -40,7 +42,17 @@ export default function AlertActions({ id, status, token }: { id: string; status
 
   function handleDelete() {
     if (!window.confirm('Delete this alert? You can always set it up again.')) return
-    run(deleteAlert, 'Alert deleted.')
+    setError(null)
+    setAnnouncement(null)
+    startTransition(async () => {
+      const result = await deleteAlert(id, token)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setAnnouncement('Alert deleted.')
+      if (result.alert) notifyDeleted(result.alert, token)
+    })
   }
 
   function handleResend() {

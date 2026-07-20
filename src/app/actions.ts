@@ -1376,12 +1376,62 @@ export async function deleteAllAlerts(token?: string) {
 
 // Deletes the alert row outright (the management page's own delete affordance,
 // distinct from the one-click email `unsubscribe` link, which just flips status).
+// Snapshots the full row first and returns it so the caller can offer an
+// "Undo" (see restoreAlert below) — a mistap shouldn't be irreversible.
+//
+// Deliberately does NOT revalidatePath here (unlike every other action in this
+// file). A token-scoped visit resolves its owner by looking up the alert whose
+// unsubscribe_token matches the URL token (see resolveOwnerEmail) — if the
+// deleted row was that visit's OWN anchor (e.g. their only alert), an
+// immediate revalidate would re-run that lookup, find nothing, and swap the
+// whole page to the "this link is no longer valid" sign-in wall — unmounting
+// the very Undo toast this action exists to offer, before the visitor could
+// ever click it. The row hides instantly on the client instead (AlertRowVisibility
+// via AlertUndoProvider); the server list catches up on the next real
+// navigation or the next action that itself revalidates (e.g. a successful
+// restoreAlert, which is always safe to revalidate since the row exists again).
 export async function deleteAlert(id: string, token?: string) {
   const owned = await loadOwnedAlert(id, token)
   if ('error' in owned) return { error: owned.error }
 
+  const { data: snapshot } = await owned.admin.from('alerts').select('*').eq('id', id).maybeSingle()
+
   const { error } = await owned.admin.from('alerts').delete().eq('id', id)
   if (error) return { error: 'Failed to delete alert.' }
+  return { ok: true, alert: snapshot ?? null }
+}
+
+// Re-inserts a just-deleted alert row verbatim (same id/criteria/status/
+// frequency/digest history) — the "Undo" half of deleteAlert. Ownership is
+// proven two ways, mirroring resolveOwnerEmail's model plus one case it can't
+// cover: (1) a direct compare of the snapshot's own unsubscribe_token against
+// the URL token — the ONLY thing that works when a token visitor deleted their
+// OWN anchor row, since that row is gone and resolveOwnerEmail's DB lookup on
+// the token would now resolve nothing; (2) otherwise, normal resolveOwnerEmail
+// resolution (the signed-in user's email, or a still-existing sibling alert
+// under the same token) matched against the snapshot's email — this covers a
+// signed-in owner AND a token visitor deleting a NON-anchor alert (whose delete
+// resolveOwnerEmail already authorized, so its undo must too).
+export async function restoreAlert(alert: Record<string, unknown>, token?: string) {
+  const email = typeof alert?.email === 'string' ? alert.email.toLowerCase() : ''
+  if (!email || !alert?.id) return { error: 'Failed to restore alert.' }
+
+  const admin = createAdminClient()
+
+  let authorized = token != null && alert.unsubscribe_token === token
+  if (!authorized) {
+    const ownerEmail = await resolveOwnerEmail(admin, token)
+    authorized = ownerEmail === email
+  }
+  if (!authorized) return { error: 'Not authorized to restore this alert.' }
+
+  const { error } = await admin.from('alerts').insert(alert)
+  if (error) {
+    if (error.code === '23505') {
+      return { error: 'Could not restore — an alert with the same criteria already exists.' }
+    }
+    return { error: 'Failed to restore alert.' }
+  }
   revalidatePath('/alerts/manage')
   return { ok: true }
 }

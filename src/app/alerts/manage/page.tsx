@@ -36,6 +36,7 @@ import VacationModeControl from '@/components/VacationModeControl'
 import UpdateAlertEmailForm from '@/components/UpdateAlertEmailForm'
 import DeleteAllAlertsControl from '@/components/DeleteAllAlertsControl'
 import DownloadAlertDataLink from '@/components/DownloadAlertDataLink'
+import AlertUndoProvider, { AlertRowVisibility } from '@/components/AlertUndoProvider'
 
 // Private, per-user utility page — no SEO value.
 export const metadata: Metadata = {
@@ -298,6 +299,7 @@ export default async function AlertsManagePage({
         </div>
 
         <section className="ch-panel p-6">
+          <AlertUndoProvider>
           <NewAlertForm token={scopeToken} />
           {alerts.length >= 2 ? (
             <VacationModeControl
@@ -346,8 +348,8 @@ export default async function AlertsManagePage({
                 // a 0-match alert is broadening it, not deleting it).
                 const overlap = !isDead ? overlaps.get(a.id) : undefined
                 return (
+                  <AlertRowVisibility key={a.id} id={a.id}>
                   <li
-                    key={a.id}
                     id={`alert-${a.id}`}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 scroll-mt-24"
                   >
@@ -495,6 +497,7 @@ export default async function AlertsManagePage({
                       />
                     </div>
                   </li>
+                  </AlertRowVisibility>
                 )
               })}
             </ul>
@@ -506,6 +509,7 @@ export default async function AlertsManagePage({
             </div>
           )}
           <DeleteAllAlertsControl token={scopeToken} email={email} count={alerts.length} />
+          </AlertUndoProvider>
         </section>
       </div>
     </div>
