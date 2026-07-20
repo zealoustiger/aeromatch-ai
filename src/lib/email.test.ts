@@ -1011,6 +1011,86 @@ const sample = (overrides: Partial<Parameters<typeof pickBestPriceDropSample>[0]
   ...overrides,
 })
 
+// ─── Gmail-clipping byte-budget guard ──────────────────────────────────────
+
+const DIGEST_BUDGET_BYTES = 100 * 1024 // matches email.ts's DIGEST_HTML_BYTE_BUDGET
+
+const bigDigestSamples = (n: number, prefix = 'a') =>
+  Array.from({ length: n }, (_, i) => ({
+    title: `2015 Cessna 172S Skyhawk #${prefix}-${i} — a long descriptive title padding the card out`,
+    photoUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/ae/Cessna-photo-url-padding-example.jpg',
+    isPlaceholder: false,
+    year: 2015,
+    ttaf: 1240,
+    location: 'Austin, TX',
+    price: 219_000,
+    url: `https://clubhanger.com/aircraft/listing/${prefix}-${i}`,
+    compLabel: '~12% below avg · $52k median · 8 comps',
+    compBelowAvg: true,
+  }))
+
+test('digest: a normal-size digest never trims (byte-identical to the un-guarded core)', () => {
+  const { html, trimmedSamples } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 3,
+    dropCount: 0,
+    samples: bigDigestSamples(1),
+  })
+  assert.equal(trimmedSamples, undefined)
+  assert.ok(Buffer.byteLength(html, 'utf8') < DIGEST_BUDGET_BYTES)
+})
+
+test('digest: an oversized sample set is trimmed until the HTML fits under the Gmail clip budget', () => {
+  const total = 80
+  const { html, text, trimmedSamples } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: total,
+    dropCount: 0,
+    samples: bigDigestSamples(total),
+  })
+  assert.ok(
+    Buffer.byteLength(html, 'utf8') <= DIGEST_BUDGET_BYTES,
+    `expected html <= ${DIGEST_BUDGET_BYTES} bytes, got ${Buffer.byteLength(html, 'utf8')}`
+  )
+  assert.ok(typeof trimmedSamples === 'number' && trimmedSamples > 0)
+  // The count/CTA stay honest to the real total even though fewer cards render.
+  assert.match(html, />\s*See all Cessna 172 matches\s*</)
+  assert.match(text, /80 new listings/)
+})
+
+test('combined: an oversized section is trimmed fairly (heaviest section first), other sections untouched', () => {
+  const { html, trimmedSamples } = buildCombinedAlertDigestEmail({
+    sections: [
+      {
+        context: 'Cessna 172',
+        newCount: 80,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172',
+        samples: bigDigestSamples(80, 'a'),
+      },
+      {
+        context: 'Cirrus SR22',
+        newCount: 5,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus&model=SR22',
+        samples: bigDigestSamples(5, 'b'),
+      },
+    ],
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+  })
+  assert.ok(
+    Buffer.byteLength(html, 'utf8') <= DIGEST_BUDGET_BYTES,
+    `expected html <= ${DIGEST_BUDGET_BYTES} bytes, got ${Buffer.byteLength(html, 'utf8')}`
+  )
+  assert.ok(typeof trimmedSamples === 'number' && trimmedSamples > 0)
+  // Both sections' honest totals still name the real count, and the lighter
+  // Cirrus section (5 samples) never lost a card to the heavier Cessna one.
+  assert.match(html, /Cirrus SR22/)
+  const cirrusCards = html.match(/listing\/b-\d+/g) ?? []
+  assert.equal(cirrusCards.length, 5)
+})
+
 // ─── buildCombinedAlertDigestEmail ─────────────────────────────────────────
 
 test('combined: subject states an honest total across all sections, never a single alert\'s count', () => {

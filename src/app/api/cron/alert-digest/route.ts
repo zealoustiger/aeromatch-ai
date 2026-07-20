@@ -1996,7 +1996,7 @@ export async function GET(req: NextRequest) {
           }
         : undefined
 
-      const { subject, html, text } = bestDrop
+      const digestEmail = bestDrop
         ? buildPriceDropEmail({
             title: bestDrop.title,
             photoUrl: bestDrop.photoUrl,
@@ -2038,6 +2038,13 @@ export async function GET(req: NextRequest) {
             // same expression already used for the sibling bestDrop send above.
             periodLabel: frequency === 'daily' ? 'yesterday' : frequency === 'monthly' ? 'this month' : 'this week',
           })
+      const { subject, html, text } = digestEmail
+
+      if ('trimmedSamples' in digestEmail && digestEmail.trimmedSamples) {
+        console.warn(
+          `[alert-digest] digest HTML exceeded the Gmail-clip byte budget for alert ${alert.id} (${alert.email}) — trimmed ${digestEmail.trimmedSamples} sample card(s)`
+        )
+      }
 
       const result = await sendEmail({
         to: alert.email,
@@ -2138,7 +2145,7 @@ export async function GET(req: NextRequest) {
     // step logic) — one link covers every token in the combined send at once.
     const snoozeUrl = allTokens ? `${SITE_URL}/api/alerts/snooze?token=${allTokens}` : undefined
 
-    const { subject, html, text } = buildCombinedAlertDigestEmail({
+    const { subject, html, text, trimmedSamples } = buildCombinedAlertDigestEmail({
       sections,
       manageUrl,
       unsubscribeUrl,
@@ -2149,6 +2156,12 @@ export async function GET(req: NextRequest) {
       digestFeedbackDownUrl,
       digestFeedbackBaseUrl,
     })
+
+    if (trimmedSamples) {
+      console.warn(
+        `[alert-digest] combined digest HTML exceeded the Gmail-clip byte budget for ${email} (${group.length} alerts) — trimmed ${trimmedSamples} sample card(s)`
+      )
+    }
 
     const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl, emailType: 'combined-digest' })
 
