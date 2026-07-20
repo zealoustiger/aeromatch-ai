@@ -2,6 +2,40 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T120350Z — PASS — seeker-alert-location-edit
+- Pages: /alerts/manage
+- What: **A "pilot seeking a partnership" alert's location filter (state and/or home
+  airport) can now be edited directly on "My alerts," instead of only being deletable.**
+  The digest cron has always matched these alerts on state/airport, but the edit form
+  only showed Make and Model — a location-filtered seeker alert displayed its state/
+  airport as a locked, remove-only "hidden criteria" chip. Wanting to *change* (not
+  drop) the location meant deleting the whole alert and recreating it from scratch. The
+  same State dropdown and Home-airport field aircraft/partnership alerts already use now
+  also appear on seeker alerts, both in the inline Edit form and in "Duplicate."
+- Goal: `[goal]` alert experience — management-pillar parity slice (in the lineage of
+  `alert-edit-hidden-criteria`): closes the last capture-vs-edit gap for the seeker alert
+  type. No new capture point, no schema change.
+- Spec: nightshift/specs/20260720T120350Z-seeker-alert-location-edit.md
+- Verdict: PASS. `npx next build` + `tsc --noEmit` clean. Standalone `tsx` script exercised
+  10 cases against `alertEditCriteria.ts`'s parse/build/context/hidden-criteria functions
+  (seeker with state+airport, airport-only clear-to-state fallback, no-location case,
+  aircraft/partnership unaffected) — all passed (same untestable-via-node-test-runner class
+  as the file's prior `alert-edit-hidden-criteria` cycle, same verification precedent).
+  QA smoke (desktop 1280 + mobile 375) exit 0 on /alerts/manage: HTTP 200, zero overflow,
+  zero app console errors. Because the real edit/duplicate round-trip needs an authenticated
+  alert with location criteria, also drove it live against the production build with one
+  throwaway `@example.com` seeker alert (`state=CA&airport=KHWD`, token-scoped visit):
+  the Edit form correctly prefilled State=CA/Airport=KHWD; changing the airport to KPAO and
+  saving updated both `source_path` and `context` in the DB (verified via a direct read);
+  a full reload showed the new "near KPAO" context; Duplicate correctly carried the edited
+  location into the new-alert form. Zero console errors either viewport. Test row deleted
+  after (0 remain).
+- Screenshots: nightshift/screenshots/seeker-alert-location-edit/
+- Next: `computeWidenCandidate`'s seeker branch still only drops `model` when suggesting a
+  widen — extending the cascade to also drop airport/state (mirroring the partnership
+  branch) would make widen-suggestion emails smarter for dead, location-scoped seeker
+  alerts. Deferred to keep this cycle to pure edit-parity.
+
 ## 20260720T112920Z — PASS — alert-delete-undo
 - Pages: /alerts/manage
 - What: **Deleting an alert on "My alerts" is no longer a one-way trapdoor — a mistap now

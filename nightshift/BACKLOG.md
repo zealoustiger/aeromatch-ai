@@ -3995,17 +3995,25 @@ the confirm email. Genuinely open gaps below._
   indicator of "do our alerts feel dead?" on a cold-start marketplace — it tells the
   human whether the next lever is inventory, not more capture points. No capture point,
   no schema change.
-- **[P2][goal] Seeker location parity in the manage-page edit form.** The digest cron
-  matches seeker alerts on make/model/state/`icao` (`alert-digest/route.ts:216`), and the
-  seeking page's capture flows those filters into `source_path` — but
-  `alertEditCriteria.ts` only recognizes `make`/`model` for seekers
-  (`EDITABLE_FIELDS.seeker`, line 215), so a location-filtered seeker alert shows its
-  state/airport as locked "hidden criteria" on `/alerts/manage` and can't be edited
-  without delete-and-recreate. Extend `parseEditableAlertTarget` + `EDITABLE_FIELDS` +
-  `AlertEditForm` with the seeker `state`/`icao` fields, reusing the aircraft target's
-  existing state select + airport input patterns (and keep `buildAlertCriteriaUpdate`
-  round-trip tests green both directions). Why: GOAL.md's management pillar — edit
-  parity with what capture can create; no new capture point, no schema change.
+~~- **[P2][goal] Seeker location parity in the manage-page edit form.**~~ ✅ SHIPPED via
+  `seeker-alert-location-edit` (2026-07-20) The digest cron matches seeker alerts on
+  make/model/state/`icao`, but `alertEditCriteria.ts` only recognized make/model for
+  seekers, so a location-filtered seeker alert showed its state/airport as locked
+  "hidden criteria" chips — no way to change them without delete-and-recreate.
+  `EditableAlertTarget`'s seeker variant now carries `state`/`airport`; parsed in
+  `parseEditableAlertTarget`, round-tripped in `buildAlertCriteriaUpdate`/
+  `targetToFields`, and moved from `EXPOSED_KEYS.seeker` (no longer hidden). Both
+  `AlertEditForm` and `NewAlertForm` now show the existing State select + Home-airport
+  input for seeker rows too (previously gated to non-seeker/partnership-only) — also
+  fixes the "Duplicate" button, which would otherwise have silently dropped a location-
+  scoped seeker alert's criteria when prefilling the new-alert form from the same
+  `targetToFields` data. The row's `context` summary line now includes the location
+  (mirrors partnership's "near {airport}" / "in {state}" phrasing). No schema change,
+  no new capture point. Live-verified end-to-end against a throwaway `@example.com` row
+  (seeded + deleted via service role): state/airport prefilled correctly (CA/KHWD),
+  editing the airport saved the new `source_path`/`context` to the DB, the live match-
+  count preview updated, and Duplicate carried the edited location into the new-alert
+  form. Zero console errors, zero horizontal overflow at 1280 + 375px.
 
 ---
 
