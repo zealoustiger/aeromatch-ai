@@ -1860,6 +1860,11 @@ const ADMIN_FUNNEL_BASE: AlertFunnelWeeklySnapshot = {
   repermissionSentAtMigrated: true,
   repermissionDowngradedCadenceCount: 3,
   frequencyChangedAtMigrated: true,
+  captureSelfCheckMigrated: true,
+  captureSelfCheckLastOk: true,
+  captureSelfCheckLastStep: null,
+  captureSelfCheckFailuresLast7: 0,
+  captureSelfCheckRunsConsidered: 7,
   computedAt: '2026-07-18T08:00:00.000Z',
 }
 
@@ -2259,6 +2264,44 @@ test('buildAdminAlertFunnelEmail: with no cron run data at all, an honest empty 
   assert.match(html, /No cron run data yet/)
   assert.doesNotMatch(html, /Days the cron ran/)
   assert.match(text, /No cron run data yet/)
+})
+
+test('buildAdminAlertFunnelEmail: capture self-check renders PASS with the last-7-runs failure count', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(ADMIN_FUNNEL_BASE, 'https://clubhanger.com/admin/alerts')
+  assert.match(html, /Capture self-check/)
+  assert.match(html, /PASS \(0 of last 7 runs failed\)/)
+  assert.match(text, /Capture self-check: PASS \(0 of last 7 runs failed\)/)
+})
+
+test('buildAdminAlertFunnelEmail: capture self-check renders FAILED with the failing step, never a fabricated PASS', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      captureSelfCheckLastOk: false,
+      captureSelfCheckLastStep: 'confirm',
+      captureSelfCheckFailuresLast7: 2,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /FAILED at confirm \(2 of last 7 runs failed\)/)
+  assert.match(text, /Capture self-check: FAILED at confirm \(2 of last 7 runs failed\)/)
+})
+
+test('buildAdminAlertFunnelEmail: capture self-check renders an honest "not migrated" state, never a fabricated pass', () => {
+  const { html, text } = buildAdminAlertFunnelEmail(
+    {
+      ...ADMIN_FUNNEL_BASE,
+      captureSelfCheckMigrated: false,
+      captureSelfCheckLastOk: null,
+      captureSelfCheckLastStep: null,
+      captureSelfCheckFailuresLast7: 0,
+      captureSelfCheckRunsConsidered: 0,
+    },
+    'https://clubhanger.com/admin/alerts'
+  )
+  assert.match(html, /Not available yet — the `alert_cron_runs.self_check_ok` column isn’t migrated live\./)
+  assert.doesNotMatch(html, /PASS|FAILED/)
+  assert.match(text, /Capture self-check: Not available yet/)
 })
 
 test('buildAdminAlertFunnelEmail: the dashboard link points at the passed-in URL', () => {

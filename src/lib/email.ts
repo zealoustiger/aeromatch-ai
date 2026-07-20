@@ -2159,6 +2159,21 @@ export function buildAdminAlertFunnelEmail(
     ? `Cron reliability: ran ${snapshot.cronRunDaysThisWeek}/7 days${cronDaysShort ? ' (⚠️ fewer than expected — check for silent failures)' : ''}, ${snapshot.cronEmailsSentThisWeek} emails sent (${formatWeekDelta(snapshot.cronEmailsSentThisWeek, snapshot.cronEmailsSentLastWeek)}), avg duration ${snapshot.cronAvgDurationMsThisWeek !== null ? `${Math.round(snapshot.cronAvgDurationMsThisWeek / 1000)}s` : '—'}, ${snapshot.cronSendFailuresThisWeek} send failures${snapshot.cronSendFailuresThisWeek > 0 ? ' (⚠️ check the Resend dashboard)' : ''}`
     : 'Cron reliability: No cron run data yet (table not migrated or cron hasn’t run)'
 
+  // Capture-funnel self-check — a daily synthetic subscribe→confirm→delete probe
+  // (alertCaptureSelfCheck.ts) against the real chokepoint, so a broken deploy or
+  // schema drift shows up here the same day rather than as an unexplained quiet week.
+  // Three honest states: column not migrated, migrated + PASS, migrated + FAILED at
+  // the specific step — never a fabricated pass.
+  const selfCheckMessage = !snapshot.captureSelfCheckMigrated
+    ? 'Not available yet — the `alert_cron_runs.self_check_ok` column isn’t migrated live.'
+    : snapshot.captureSelfCheckLastOk
+      ? `PASS (${snapshot.captureSelfCheckFailuresLast7} of last ${snapshot.captureSelfCheckRunsConsidered} runs failed)`
+      : `FAILED at ${snapshot.captureSelfCheckLastStep ?? 'unknown step'} (${snapshot.captureSelfCheckFailuresLast7} of last ${snapshot.captureSelfCheckRunsConsidered} runs failed)`
+  const selfCheckFailing = snapshot.captureSelfCheckMigrated && snapshot.captureSelfCheckLastOk === false
+  const selfCheckHtml = `<p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Capture self-check</p>
+        <p style="font-size:13px;margin:0 0 20px;color:${selfCheckFailing ? '#be123c' : '#334155'};">${selfCheckFailing ? '⚠️ ' : ''}${escapeHtml(selfCheckMessage)}</p>`
+  const selfCheckText = `Capture self-check: ${selfCheckMessage}`
+
   const html = `<!doctype html>
 <html>
   <head>${emailColorSchemeHead()}</head>
@@ -2261,6 +2276,8 @@ export function buildAdminAlertFunnelEmail(
         <p class="ch-text" style="font-size:12px;font-weight:600;color:#64748b;margin:20px 0 6px;text-transform:uppercase;letter-spacing:0.03em;">Cron reliability</p>
         ${cronReliabilityHtml}
 
+        ${selfCheckHtml}
+
         <p style="margin:20px 0 0;">
           <a href="${escapeAttr(dashboardUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
@@ -2297,6 +2314,8 @@ Why people unsubscribe:
 ${unsubscribeReasonsSectionText}
 
 ${cronReliabilityText}
+
+${selfCheckText}
 
 Full dashboard: ${dashboardUrl}`
 

@@ -3631,20 +3631,25 @@ the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
   both HTML and text — the one moment the subscriber is provably reading us in their
   inbox is the only moment that ask works. One sentence, no images, no new links, no
   schema change.
-- **[P2][goal] Daily capture-funnel self-check, reported in the Monday admin email.** No
-  synthetic check exists anywhere (grep clean): if the subscribe chokepoint or confirm
-  route silently breaks (bad deploy, schema drift), the first signal today is a
-  zero-signup week the human notices late. Add a small self-check pass inside the
-  existing daily cron (no new `vercel.json` entry — Hobby-tier precedent): exercise
-  `subscribeToAlerts` with a reserved `@example.com` address (Resend never sends to it /
-  send explicitly skipped for the reserved address), assert the row + tokens exist,
-  hit the confirm route, assert `status='confirmed'`, then delete the row and assert 0
-  remain — record PASS/FAIL (+ failing step) in the run log fail-soft, and surface a
-  one-line "Capture self-check: PASS / FAILED at <step> (N of last 7 runs failed)" in
-  `alertFunnelWeekly` + the Monday email with the usual three honest states. Never
-  counted in funnel/subscriber metrics (exclude the reserved address everywhere it
-  could leak). Improves: the whole funnel's reliability — every other alert surface
-  depends on this chokepoint working. No new capture point.
+~~- **[P2][goal] Daily capture-funnel self-check, reported in the Monday admin email.**~~
+  ✅ SHIPPED via `alert-capture-selfcheck` (2026-07-20) New `runCaptureFunnelSelfCheck()`
+  (`src/lib/alertCaptureSelfCheck.ts`) runs once at the end of every `alert-digest` cron
+  run: inserts a reserved `capture-selfcheck@example.com` row (pending + tokens), flips it
+  to confirmed, deletes it, and asserts every step — using the admin client directly
+  against the same `alerts` columns the real subscribe/confirm chokepoints write (rather
+  than calling those functions themselves), so it never touches `sendEmail`/the live
+  user-facing routes and can never send a real email. Self-heals a leftover row from a
+  prior failed run before each attempt. Result (+ failing step) is logged fail-soft on
+  two new additive `alert_cron_runs` columns (⚠️ human-apply, same graceful-degrade
+  precedent as `send_failures`/`deferred_sends`); the Monday admin funnel email renders a
+  new "Capture self-check: PASS (N of last 7 runs failed) / FAILED at \<step\> / Not
+  available yet" line, three honest states, never a fabricated pass. Added a defensive
+  `.neq('email', ...)` guard on `alertFunnelWeekly`'s and `alertScoreboard`'s main
+  subscriber-count queries so the reserved address can never inflate a count even if a
+  cleanup step fails mid-run. The pure last-7-runs rollup
+  (`summarizeSelfCheckHistory`, `alertCaptureSelfCheckHistory.ts`) is import-free and
+  unit-tested with no DB dependency, mirroring `alertSendPacing.ts`'s testability
+  pattern.
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
