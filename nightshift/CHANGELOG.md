@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-20T13:00:22Z — DRAIN SUMMARY
+- Cycles this run: 11 (PASS 7 / FAIL 2 / ABORT 2)
+- Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
+- Night spend so far: $125.3617 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260720T101852Z
+
 ## 20260720T123051Z — PASS — alert-test-row-sweep
 - Pages: /admin/alerts (no visible UI change — verifies no regression to the cron's
   health-log surface); the real change is server-side in the `alert-digest` cron.
