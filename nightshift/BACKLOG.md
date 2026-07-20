@@ -3770,16 +3770,15 @@ test guarding it._
   data beside the existing instant-interest tally for the still-blocked Vercel
   instant-cron human call. Improves: honest-measurement pillar, admin surface. No new
   capture point, no schema change.
-- **[P2][goal] Capture-attribution contract test — every `<AlertSignup>` call site must
-  pass `source`.** `AlertSignup.source` is optional (`AlertSignup.tsx:59`), so a future
-  placement can silently land in the scoreboard's "untagged" bucket and quietly erode
-  "prove it converts." Add a `node --test` unit test (file-content scan of
-  `src/**/*.tsx`, same style as the existing token-sweep tests) that fails when any
-  `<AlertSignup` usage omits an explicit `source` prop, with a named allowlist for any
-  deliberate legacy exceptions found during the sweep. Guards every past *and future*
-  capture point's attribution; pairs with the `alert_subscribed` analytics requirement.
-  Improves: honest-measurement pillar. No runtime change, no new capture point, no
-  schema change.
+~~- **[P2][goal] Capture-attribution contract test — every `<AlertSignup>` call site must
+  pass `source`.**~~ ✅ SHIPPED via `alertsignup-source-contract-test` (2026-07-20) New
+  `findAlertSignupUsagesMissingSource()` (`src/lib/alertSignupSourceContract.ts`) strips
+  block comments then scans for `<AlertSignup ... />` tags missing `source=` (or a
+  `{...spread}`), with an empty `ALERT_SIGNUP_SOURCE_ALLOWLIST` for future deliberate
+  exceptions. A repo-wide `node --test` in `alertSignupSourceContract.test.ts` globs
+  every real `src/**/*.tsx` file and asserts zero matches — confirmed all 63 real call
+  sites already pass `source` today. Guards every future placement from silently landing
+  in the admin scoreboard's "untagged" bucket.
 
 ---
 
