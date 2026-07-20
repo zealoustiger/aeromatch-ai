@@ -17,6 +17,13 @@ import {
 } from './alertEditCriteria'
 import { priceStats } from './aircraftComps'
 import type { AlertDigestSample } from './email'
+import { CAPTURE_SELFCHECK_EMAIL } from './alertCaptureSelfCheck'
+import { LIVE_STATUSES } from './alertScoreboard'
+import {
+  parsePartnershipAlertSourcePath,
+  matchesPartnershipListing,
+  type PartnershipListingFields,
+} from './alertSubscriberMatch'
 
 /**
  * "How many listings match this alert right now" for `/alerts/manage`.
@@ -927,4 +934,62 @@ export async function getAircraftMakePulseLine(
   if (!stats) return null
   const noun = stats.count === 1 ? make : `${make}s`
   return `${stats.count} ${noun} listed right now, median asking ${formatPriceK(stats.median)}.`
+}
+
+/**
+ * Count confirmed/active alert subscribers whose search would match this
+ * brand-new partnership listing right now — the reverse of the digest cron's
+ * per-alert match, for the post-success "N subscribers with matching alerts
+ * will hear about this listing" line (BACKLOG.md's alert-experience `[goal]`
+ * item). Parsing/matching logic lives in the pure, unit-tested
+ * `alertSubscriberMatch.ts`; this wrapper is the untested I/O glue, same
+ * split (and same reason — the plain Node test runner used for this repo's
+ * unit tests can't resolve extensionless relative imports) as
+ * `alertDemandFamily.ts`/`alertScoreboard.ts`. Returns `null` (never a
+ * fabricated `0`) on any query error.
+ */
+export async function countMatchingPartnershipSubscribers(
+  listing: PartnershipListingFields
+): Promise<number | null> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('alerts')
+      .select('status, source_path')
+      .neq('email', CAPTURE_SELFCHECK_EMAIL)
+    if (error) throw new Error(error.message)
+
+    const icaoListCache = new Map<string, string[]>()
+    let count = 0
+    for (const row of data ?? []) {
+      if (!LIVE_STATUSES.has(row.status)) continue
+      const parsed = parsePartnershipAlertSourcePath(row.source_path)
+      if (!parsed) continue
+      if (parsed.kind === 'all') {
+        count++
+        continue
+      }
+      const { target } = parsed
+      let icaoList: string[] | undefined
+      if (target.icao) {
+        if (target.radius && target.radius > 0) {
+          const cacheKey = `${target.icao}:${target.radius}`
+          const cached = icaoListCache.get(cacheKey)
+          if (cached) {
+            icaoList = cached
+          } else {
+            icaoList = await getAirportsWithinRadius(target.icao, target.radius)
+            icaoListCache.set(cacheKey, icaoList)
+          }
+        } else {
+          icaoList = [target.icao]
+        }
+      }
+      if (matchesPartnershipListing(target, listing, icaoList)) count++
+    }
+    return count
+  } catch (err) {
+    console.error('[alertMatchCounts] subscriber-match count error:', err instanceof Error ? err.message : err)
+    return null
+  }
 }
