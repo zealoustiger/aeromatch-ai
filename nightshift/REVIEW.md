@@ -1,3 +1,36 @@
+## 2026-07-20T10:18:47Z — Night Shift run: 22 cycles (PASS 15 / FAIL 3) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $81.3537 of $120 cap
+
+- PASS — digest-gmail-clip-guard — digest emails now trim sample cards to stay under Gmail's ~102KB clip point, protecting the unsubscribe/manage footer, with a cron warning logg
+- PASS — alert-funnel-repermission-line — Monday admin funnel email now reports whether the dormant-subscriber still want these? re-permission emails are working (this-week/all-t
+- ABORT — none — plan needed
+- PASS — alert-cron-send-pacing — Added gentle inter-send pacing + a time-budget guard to the alert-digest cron so it paces email sends (~400ms apart) and defers new sends before
+- PASS — alert-frequency-changed-at — Added a `frequency_changed_at` timestamp to alerts, stamped it on every cadence-change action (manage-page toggle, email footer links, unsub
+- PASS — price-drop-snooze-parity — Added the Snooze 30 days footer link to the price-drop email template (`buildPriceDropEmail`), matching the sibling digest emails, and wired i
+- PASS — alert-confirm-deliverability-copy — added a quiet deliverability nudge (drag to Primary / add us to your contacts) under the confirm button in the double-opt-in alert co
+- PASS — admin-alerts-repermission-block — the on-demand /admin/alerts scoreboard now shows the still want these? re-permission email's outcomes (sends + unsubscribed/paused/stil
+- cycle produced no verdict (exit 124)
+- PASS — alert-capture-selfcheck — the daily alert-digest cron now runs a synthetic subscribe→confirm→delete probe and surfaces a Capture self-check: PASS/FAILED at <step> li
+- ABORT — none — plan needed`
+- PASS — selfcheck-failure-alert — daily alert-capture self-check failures now trigger an immediate admin email naming the failing step (transition-gated, gentle 3-day re-send), 
+- PASS — admin-alerts-send-health-table — /admin/alerts now shows a last-7-runs table (emails sent, send failures, deferred sends, capture self-check outcome) instead of just the
+- cycle produced no verdict (exit 124)
+- PASS — admin-alerts-demand-supply — new Demand vs. supply (most wanted) section on /admin/alerts pairing live alert demand with real listing supply per curated make+model famil
+- cycle produced no verdict (exit 124)
+- PASS — partnership-post-subscriber-count — partnership post-success screen now shows an honest count of alert subscribers who'll be notified about the new listing
+- ABORT — alert-manage-next-digest-line — added a forward-looking Next digest: ~Thursday line beside the existing Last email… line on `/alerts/manage`, reusing the cron's own d
+- PASS — alertsignup-source-contract-test — Added a `node --test` contract test (`src/lib/alertSignupSourceContract.ts`) that scans every `<AlertSignup>` call site in `src/**/*.t
+- PASS — admin-alerts-cadence-mix-tile — Added a Cadence mix tile to `/admin/alerts` showing the live-alert daily/weekly/monthly split plus paused/snoozed count, closing the last
+- PASS — aircraft-post-subscriber-count — Aircraft post-success screen (`/aircraft/listing/[id]?posted=1`) now shows an honest N subscribers with matching alerts will hear about 
+- ABORT — none — plan needed`
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 7.1 on 2 cores, sustained ~19 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ host memory ran low: free memory bottomed at 0.8 GB of 7.8 GB — build spikes from parallel drains may OOM; raise box RAM or stagger the heavy phases
+- 3 of 22 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-19T11:55:23Z — Night Shift run: 7 cycles (PASS 5 / FAIL 1) — night budget cap ($120)
 - Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
 - Night spend so far: $124.1905 of $120 cap
