@@ -1928,6 +1928,68 @@ function formatWeekRange(startIso: string, endIso: string): string {
 }
 
 /**
+ * Immediate admin heads-up when the daily capture-funnel self-check
+ * (`alertCaptureSelfCheck.ts`) fails — the explicit follow-up to
+ * `alert-capture-selfcheck`: before this, a failure was only a passive line in
+ * Monday's funnel email, so a mid-week break could sit red for up to 6 days.
+ * Internal-only, no unsubscribe link (not a subscriber-facing email). Sent at
+ * most on the transition into failure, then every 3rd consecutive red day (see
+ * `shouldSendCaptureSelfCheckAlert`) — never once per run of a persistent outage.
+ */
+export function buildAdminCaptureSelfCheckFailureEmail(opts: {
+  step: string
+  detail?: string
+  dashboardUrl: string
+}): { subject: string; html: string; text: string } {
+  const subject = `⚠️ Alert capture self-check FAILED at "${opts.step}"`
+  const detailHtml = opts.detail
+    ? `<p class="ch-muted" style="font-size:13px;line-height:1.6;color:#94a3b8;margin:0 0 22px;font-family:monospace;">${escapeHtml(opts.detail)}</p>`
+    : ''
+  const detailText = opts.detail ? `\n${opts.detail}\n` : ''
+
+  const html = `<!doctype html>
+<html>
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">Alert capture self-check failed</h1>
+        <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 12px;">
+          Today's synthetic subscribe → confirm → delete probe of the alert capture chokepoint
+          failed at the <strong>${escapeHtml(opts.step)}</strong> step. This is the same path every
+          real alert signup and confirmation depends on.
+        </p>
+        ${detailHtml}
+        <p style="margin:0 0 4px;">
+          <a href="${escapeAttr(opts.dashboardUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Open /admin/alerts
+          </a>
+        </p>
+        <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+          You'll get this again after 3 consecutive failed days if it isn't fixed — not on
+          every run.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`
+
+  const text = `ClubHanger — Alert capture self-check failed
+
+Today's synthetic subscribe → confirm → delete probe of the alert capture chokepoint
+failed at the "${opts.step}" step. This is the same path every real alert signup and
+confirmation depends on.
+${detailText}
+Open ${opts.dashboardUrl}
+
+You'll get this again after 3 consecutive failed days if it isn't fixed — not on every run.`
+
+  return { subject, html, text }
+}
+
+/**
  * The Monday admin alert-funnel week-over-week summary (GOAL.md: "judge
  * alerts week-over-week"). DB-derived from `getAlertFunnelWeeklySnapshot`.
  * created/confirmed/unsubscribed/paused/bounced all have real timestamps, so

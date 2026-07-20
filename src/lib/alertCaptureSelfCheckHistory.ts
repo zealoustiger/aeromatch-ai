@@ -36,3 +36,24 @@ export function summarizeSelfCheckHistory(runs: SelfCheckHistoryRun[], limit = 7
     runsConsidered: considered.length,
   }
 }
+
+/**
+ * Decide whether TODAY's capture self-check failure warrants a dedicated admin
+ * heads-up email, given the runs immediately preceding it (`priorRuns`, newest
+ * first, NOT including today — a not-yet-inserted row). A passing self-check never
+ * sends (Monday's funnel summary already covers recovery). Transition-only
+ * otherwise: sends the moment a prior-ok/unmigrated run is followed by a failure,
+ * then stays quiet through a persistent failure so it doesn't re-email daily —
+ * except every 3rd consecutive red day, as a gentle reminder the outage is still
+ * live.
+ */
+export function shouldSendCaptureSelfCheckAlert(priorRuns: SelfCheckHistoryRun[], todayOk: boolean): boolean {
+  if (todayOk) return false
+  let priorStreak = 0
+  for (const run of priorRuns) {
+    if (run.captureSelfCheckOk !== false) break
+    priorStreak++
+  }
+  if (priorStreak === 0) return true
+  return (priorStreak + 1) % 3 === 0
+}

@@ -11,6 +11,7 @@ import {
   buildWidenSuggestionEmail,
   buildRepermissionEmail,
   buildAdminAlertFunnelEmail,
+  buildAdminCaptureSelfCheckFailureEmail,
   pickBestPriceDropSample,
   compLabel,
   type AlertDigestSample,
@@ -45,6 +46,8 @@ import { withShareParam } from '@/lib/shareAlertLink'
 import { getDormantSubscribers } from '@/lib/dormantSubscribers'
 import { SendPacer } from '@/lib/alertSendPacing'
 import { runCaptureFunnelSelfCheck } from '@/lib/alertCaptureSelfCheck'
+import { getRecentCronRuns } from '@/lib/alertCronHealth'
+import { shouldSendCaptureSelfCheckAlert } from '@/lib/alertCaptureSelfCheckHistory'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -1607,12 +1610,16 @@ async function sendBackOnMarketNotices(
  * already been processed, and wrapped in try/catch so a summary-email
  * failure can never turn an otherwise-healthy digest run into a 500.
  */
-async function sendMondayAdminFunnelSummary(nowIso: string, pacer: SendPacer): Promise<{ sent: number; failed: number }> {
-  if (new Date(nowIso).getUTCDay() !== 1) return { sent: 0, failed: 0 }
-  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+function getAdminRecipientEmails(): string[] {
+  return (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((e) => e.trim())
     .filter(Boolean)
+}
+
+async function sendMondayAdminFunnelSummary(nowIso: string, pacer: SendPacer): Promise<{ sent: number; failed: number }> {
+  if (new Date(nowIso).getUTCDay() !== 1) return { sent: 0, failed: 0 }
+  const adminEmails = getAdminRecipientEmails()
   if (adminEmails.length === 0) return { sent: 0, failed: 0 }
 
   try {
@@ -1629,6 +1636,52 @@ async function sendMondayAdminFunnelSummary(nowIso: string, pacer: SendPacer): P
     return { sent: sentCount, failed }
   } catch (err) {
     console.error('[alert-digest] Monday admin funnel summary error:', err)
+    return { sent: 0, failed: 0 }
+  }
+}
+
+/**
+ * Immediate admin heads-up when TODAY's capture self-check
+ * (`runCaptureFunnelSelfCheck`, run just above) failed — the explicit flagged
+ * follow-up of `alert-capture-selfcheck`. Reads the last 7 `alert_cron_runs` via
+ * `getRecentCronRuns` BEFORE this run's own row is inserted (a few lines below),
+ * so that history is genuinely "prior" to today. `shouldSendCaptureSelfCheckAlert`
+ * decides whether today's failure is a fresh transition or a persistent one due a
+ * gentle 3-day reminder — never a send on every red run. Wrapped in try/catch so
+ * a failure here can never affect the digest sends that already completed.
+ */
+async function sendCaptureSelfCheckFailureAlert(
+  step: string,
+  detail: string,
+  pacer: SendPacer
+): Promise<{ sent: number; failed: number }> {
+  const adminEmails = getAdminRecipientEmails()
+  if (adminEmails.length === 0) return { sent: 0, failed: 0 }
+
+  try {
+    const priorRuns = await getRecentCronRuns(7)
+    const priorHistory = priorRuns.map((r) => ({
+      captureSelfCheckOk: r.captureSelfCheckOk,
+      captureSelfCheckStep: r.captureSelfCheckStep,
+    }))
+    if (!shouldSendCaptureSelfCheckAlert(priorHistory, false)) return { sent: 0, failed: 0 }
+
+    const { subject, html, text } = buildAdminCaptureSelfCheckFailureEmail({
+      step,
+      detail,
+      dashboardUrl: `${SITE_URL}/admin/alerts`,
+    })
+    let sentCount = 0
+    let failed = 0
+    for (const to of adminEmails) {
+      const gate = await pacer.send(() => sendEmail({ to, subject, html, text, emailType: 'admin-alert-selfcheck-failure' }))
+      if (!gate.attempted) continue
+      if (gate.value.sent || gate.value.reason === 'no-key') sentCount++
+      else failed++
+    }
+    return { sent: sentCount, failed }
+  } catch (err) {
+    console.error('[alert-digest] capture self-check admin alert error:', err)
     return { sent: 0, failed: 0 }
   }
 }
@@ -2311,17 +2364,29 @@ export async function GET(req: NextRequest) {
   // Never lets a probe failure (or throw) affect the digest send that already completed.
   let captureSelfCheckOk: boolean = true
   let captureSelfCheckStep: string | null = null
+  let captureSelfCheckDetail: string = ''
   try {
     const selfCheckResult = await runCaptureFunnelSelfCheck()
     captureSelfCheckOk = selfCheckResult.ok
     captureSelfCheckStep = selfCheckResult.ok ? null : selfCheckResult.step
     if (!selfCheckResult.ok) {
+      captureSelfCheckDetail = selfCheckResult.detail
       console.error(`[alert-digest] capture self-check FAILED at ${selfCheckResult.step}: ${selfCheckResult.detail}`)
     }
   } catch (err) {
     captureSelfCheckOk = false
     captureSelfCheckStep = 'unexpected-error'
+    captureSelfCheckDetail = err instanceof Error ? err.message : String(err)
     console.error('[alert-digest] capture self-check threw:', err)
+  }
+
+  // Immediate admin heads-up on a self-check failure (see
+  // sendCaptureSelfCheckFailureAlert) — the explicit follow-up of
+  // alert-capture-selfcheck. Must run BEFORE the run-log insert below, since it
+  // reads history via getRecentCronRuns and needs that to exclude today's own row.
+  if (!captureSelfCheckOk && captureSelfCheckStep) {
+    const selfCheckAlertResult = await sendCaptureSelfCheckFailureAlert(captureSelfCheckStep, captureSelfCheckDetail, pacer)
+    sendFailures += selfCheckAlertResult.failed
   }
 
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails

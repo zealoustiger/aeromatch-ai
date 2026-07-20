@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { summarizeSelfCheckHistory } from './alertCaptureSelfCheckHistory.ts'
+import { summarizeSelfCheckHistory, shouldSendCaptureSelfCheckAlert } from './alertCaptureSelfCheckHistory.ts'
 
 function run(ok: boolean | null, step: string | null = null) {
   return { captureSelfCheckOk: ok, captureSelfCheckStep: step }
@@ -56,4 +56,42 @@ test('summarizeSelfCheckHistory: empty history is a safe, honest not-migrated/ze
   assert.equal(result.migrated, false)
   assert.equal(result.lastOk, null)
   assert.equal(result.runsConsidered, 0)
+})
+
+test('shouldSendCaptureSelfCheckAlert: a pass never sends, regardless of history', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(false), run(false)], true), false)
+  assert.equal(shouldSendCaptureSelfCheckAlert([], true), false)
+})
+
+test('shouldSendCaptureSelfCheckAlert: fresh failure with no history sends (day 1)', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([], false), true)
+})
+
+test('shouldSendCaptureSelfCheckAlert: transition from a passing run sends', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(true), run(true)], false), true)
+})
+
+test('shouldSendCaptureSelfCheckAlert: transition from an unmigrated (null) run sends', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(null), run(null)], false), true)
+})
+
+test('shouldSendCaptureSelfCheckAlert: 2nd consecutive red day stays quiet', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(false, 'confirm')], false), false)
+})
+
+test('shouldSendCaptureSelfCheckAlert: 3rd consecutive red day re-sends', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(false), run(false)], false), true)
+})
+
+test('shouldSendCaptureSelfCheckAlert: 4th and 5th consecutive red days stay quiet, 6th re-sends', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(false), run(false), run(false)], false), false)
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(false), run(false), run(false), run(false)], false), false)
+  assert.equal(
+    shouldSendCaptureSelfCheckAlert([run(false), run(false), run(false), run(false), run(false)], false),
+    true
+  )
+})
+
+test('shouldSendCaptureSelfCheckAlert: a recovery breaks the streak — the next failure re-sends as fresh', () => {
+  assert.equal(shouldSendCaptureSelfCheckAlert([run(true), run(false), run(false)], false), true)
 })
