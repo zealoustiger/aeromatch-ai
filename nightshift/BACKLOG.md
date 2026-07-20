@@ -3910,7 +3910,18 @@ nav already swaps to "My alerts · N new" for recognized subscribers, homepage c
 a real match count, spam-folder + drag-to-Primary hints exist in both the pending state and
 the confirm email. Genuinely open gaps below._
 
-- **[P1][goal] Seeker slice of the post-success subscriber count — complete the trilogy.**
+~~- **[P1][goal] Seeker slice of the post-success subscriber count — complete the trilogy.**~~
+  ✅ SHIPPED via `seeker-post-subscriber-count` (2026-07-20). `/partnerships/seeking/[id]?posted=1`
+  now shows the same honest "N subscribers with matching alerts will hear about your search
+  in their next digest" line the partnership/aircraft post-success screens already had.
+  New `parseSeekerAlertSourcePath`/`matchesSeekerListing` in `alertSubscriberMatch.ts` +
+  `countMatchingSeekerSubscribers()` in `alertMatchCounts.ts`, mirroring the digest cron's
+  real `countNewSeekers` semantics (make = array membership, model = free-text token match,
+  state = exact, icao = `home_airport` OR `additional_airports`). One intentional divergence
+  from the partnership/aircraft parsers: a bare `/` ("all") alert never counts as a seeker
+  match, since the live cron's own `countNew` never routes an `'all'` target through
+  `countNewSeekers` either — this reverse-matcher stays exactly as honest as the real send.
+  Original text below.
   Partnerships (`partnership-post-subscriber-count`) and aircraft
   (`aircraft-post-subscriber-count`) shipped 2026-07-20; the third post flow has nothing:
   `/partnerships/seeking/[id]?posted=1` (`justPosted`, `page.tsx:155`) shows no

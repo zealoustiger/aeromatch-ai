@@ -25,6 +25,7 @@ import SeekerTrustBadge from '@/components/SeekerTrustBadge'
 import SeekerListingOwnerNudge from '@/components/SeekerListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
 import { countMatchingPartnershipsForSeeker, partnershipBrowseHrefForSeeker } from '@/lib/matchingQuery'
+import { countMatchingSeekerSubscribers } from '@/lib/alertMatchCounts'
 import AlertSignup from '@/components/AlertSignup'
 import SimilarSeekers from '@/components/SimilarSeekers'
 
@@ -207,6 +208,20 @@ export default async function SeekerDetailPage({
   // Owner-only compatibility count — never computed for a visitor's page load.
   const matchingPartnershipCount = isOwner ? await countMatchingPartnershipsForSeeker(s) : 0
 
+  // Post-success-only: how many confirmed alert subscribers this brand-new
+  // seeking listing would notify in their next digest — the seeker leg of the
+  // same trilogy as the aircraft/partnership post-success subscriber counts.
+  // Only relevant on the one page load right after publishing.
+  const matchingSubscriberCount = justPosted
+    ? await countMatchingSeekerSubscribers({
+        preferred_makes: s.preferred_makes,
+        preferred_models: s.preferred_models,
+        state: s.state,
+        home_airport: s.home_airport,
+        additional_airports: s.additional_airports,
+      })
+    : null
+
   // Owner-only "alert me for new matches" — same `/partnerships?make=&airport=`
   // query-string shape alert-digest's existing parseSourcePath already understands
   // (mirrors the /partnerships hub's alertMake/alertAirport/alertSourcePath pattern),
@@ -268,6 +283,17 @@ export default async function SeekerDetailPage({
               View all my listings →
             </Link>
           </p>
+          {/* Honest, real-count-only line — never rendered on a null (query
+              error) or zero count, per GOAL.md's honesty gate. Closes the loop
+              for seekers by showing the alert system is already working for
+              them, same as the partnership/aircraft post-success screens. */}
+          {matchingSubscriberCount !== null && matchingSubscriberCount >= 1 && (
+            <p className="mt-1.5 text-sm text-emerald-700">
+              {matchingSubscriberCount === 1
+                ? '1 subscriber with a matching alert will hear about your search in their next digest.'
+                : `${matchingSubscriberCount} subscribers with matching alerts will hear about your search in their next digest.`}
+            </p>
+          )}
           {/* Right-noun cross-sell — this poster wants an owner to list a
               matching share, not another seeker like themselves. Reuses the
               same alertContext/alertSourcePath the isOwner box below already

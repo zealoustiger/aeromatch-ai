@@ -323,3 +323,110 @@ export function matchesAircraftListing(
 
   return true
 }
+
+// ─── Seeker reverse-match ───────────────────────────────────────────────────
+// Powers the seeker post-success "N subscribers with matching alerts will hear
+// about your search" line — the third leg of the trilogy alongside the
+// partnership/aircraft reverse-matchers above (see BACKLOG.md's "complete the
+// trilogy" item).
+
+export interface SeekerSubscriberTarget {
+  make?: string
+  model?: string
+  state?: string
+  icao?: string
+}
+
+/**
+ * Unlike `ParsedPartnershipAlert`/`ParsedAircraftAlert`, this type has NO
+ * `'all'` variant. The real alert-digest cron's `countNew` treats a bare `/`
+ * ("all") alert as aircraft ∪ partnerships ONLY — it never calls
+ * `countNewSeekers` for an `'all'` target (`route.ts`) — so a homepage/footer
+ * alert must never be counted as a match for a brand-new seeker listing.
+ * `parseSeekerAlertSourcePath('/')` returns `null` on purpose to keep that
+ * true here too.
+ */
+export type ParsedSeekerAlert = { kind: 'seeker'; target: SeekerSubscriberTarget } | null
+
+/**
+ * Parses a seeker-relevant alert `source_path` into a match target, or `null`
+ * when the path isn't a recognized `/partnerships/seeking` shape (aircraft/
+ * partnership paths, the homepage "all" shape, or unrecognized paths all
+ * return `null`). Recognizes the shapes `AlertSignup` actually generates for
+ * seekers: bare `/partnerships/seeking` and
+ * `/partnerships/seeking?make=&model=&state=&airport=`.
+ */
+export function parseSeekerAlertSourcePath(raw: string | null | undefined): ParsedSeekerAlert {
+  const [pathOnly, qs] = (raw ?? '').split('?')
+  const p = pathOnly.toLowerCase().replace(/\/$/, '') || '/'
+
+  if (p !== '/partnerships/seeking') return null
+  if (!qs) return { kind: 'seeker', target: {} }
+
+  const params = new URLSearchParams(qs)
+  const g = (k: string) => params.get(k)?.trim() || undefined
+  return {
+    kind: 'seeker',
+    target: {
+      make: g('make'),
+      model: g('model'),
+      state: g('state')?.toUpperCase(),
+      icao: g('airport')?.toUpperCase(),
+    },
+  }
+}
+
+export interface SeekerListingFields {
+  preferred_makes: string[] | null
+  preferred_models: string | null
+  state: string | null
+  home_airport: string | null
+  additional_airports?: string[] | null
+}
+
+/** Local duplicate of `matchesModelFilter` (`seekerModelFilter.ts`) — see this
+ *  file's header comment for why this can't be a direct import. Same
+ *  case-insensitive, exact-token (not substring) semantics: does the
+ *  listing's free-text `preferred_models` share ANY token with the (possibly
+ *  comma-joined multi-select) wanted model string? */
+function matchesSeekerModelFilter(preferredModels: string | null, wantedModel: string): boolean {
+  const wanted = new Set(
+    wantedModel
+      .split(',')
+      .map((v) => v.trim().toLowerCase())
+      .filter(Boolean)
+  )
+  if (!wanted.size) return true
+  const tokens = (preferredModels ?? '')
+    .split(',')
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean)
+  return tokens.some((m) => wanted.has(m))
+}
+
+/**
+ * Does this one seeker listing satisfy an alert's target filters right now?
+ * Mirrors the digest cron's `countNewSeekers` (`route.ts`) query semantics:
+ * make = case-insensitive array membership (`.overlaps`), model = free-text
+ * token match (same semantics as `matchesModelFilter`), state = exact, icao =
+ * `home_airport` OR `additional_airports` array membership (no radius — the
+ * cron's own seeker target has none either).
+ */
+export function matchesSeekerListing(target: SeekerSubscriberTarget, listing: SeekerListingFields): boolean {
+  if (target.make) {
+    const wanted = target.make.toLowerCase()
+    if (!(listing.preferred_makes ?? []).some((m) => m.toLowerCase() === wanted)) return false
+  }
+
+  if (target.model && !matchesSeekerModelFilter(listing.preferred_models, target.model)) return false
+
+  if (target.state && listing.state !== target.state) return false
+
+  if (target.icao) {
+    const matchesHome = listing.home_airport === target.icao
+    const matchesAdditional = (listing.additional_airports ?? []).includes(target.icao)
+    if (!matchesHome && !matchesAdditional) return false
+  }
+
+  return true
+}

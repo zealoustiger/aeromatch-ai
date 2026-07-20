@@ -2,6 +2,64 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260720T104049Z — PASS — seeker-post-subscriber-count
+- Pages: /partnerships/seeking/[id] (post-success screen, `?posted=1`); /partnerships/seeking
+  (baseline QA touch only)
+- What: **Pilots posting a "seeking a partnership" listing now see an honest "N subscribers
+  with matching alerts will hear about your search" line** — the same social-proof line the
+  partnership and aircraft post-success screens got earlier today
+  (`partnership-post-subscriber-count`, `aircraft-post-subscriber-count`), completing the
+  trilogy across all three post flows. New `parseSeekerAlertSourcePath`/`matchesSeekerListing`
+  in `alertSubscriberMatch.ts` (18 new unit tests, 712/712 total pass) reverse-match a
+  brand-new seeking listing against every confirmed alert's `source_path`, covering
+  make/model/state/icao filters on the bare `/partnerships/seeking` query string — mirrored
+  into `countMatchingSeekerSubscribers()` in `alertMatchCounts.ts`. Renders nothing at 0 or
+  on a query error (never fabricated), same honesty gate as the other two lines. One
+  deliberate divergence from the partnership/aircraft matchers: a bare `/` ("all") alert
+  never counts here, because the live alert-digest cron's own `countNew` never routes an
+  `'all'` target through `countNewSeekers` either — this reverse-matcher stays exactly as
+  honest as what the cron would actually send.
+- Goal: `[goal]` alert experience — closing the loop for seekers by showcasing the alert
+  system at their own post-listing moment, the explicitly-flagged next slice from the prior
+  two cycles' "Next" notes (checked off in BACKLOG.md this cycle). Tier 1 (`[bug]`): none
+  open. Tier 2 (`[want]`): re-verified this cycle by direct read of every open
+  `[P1]`/`[P2][want]` line — save-search auth-wall reconciliation and collection-layout
+  mosaic redesign both remain explicitly flagged "needs a human product call/mock";
+  Trade-A-Plane ingestion, Bay-Area coverage benchmark, Controller.com, and the owner-leads
+  dataset all remain audited-blocked on bot-protection guardrails / an honest denominator
+  source / an explicit no-Cloudflare-evasion directive / a compliance review respectively —
+  none newly actionable. Dropped to tier 3: two fresh plan-pass batches (#13, #14) landed
+  since the last drain, both explicitly naming this item as the natural next slice after
+  the partnership/aircraft counts; picked it over the sibling `[P1][goal]` items (aged-QA-row
+  cron sweep, delete-undo, owner-side seeker capture, pending-migrations admin box,
+  deliverability DNS self-check) as the smallest, most directly-precedented slice — same
+  file, same pattern, same honesty gate, already twice-proven this same day.
+- Spec: nightshift/specs/20260720T104049Z-seeker-post-subscriber-count.md
+- Verdict: PASS. `npx tsc --noEmit` exit 0; `rm -rf .next && npx next build` exit 0. Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'`: 712/712 pass (30 new tests,
+  no regressions). Non-visual-adjacent but touches a rendered page, so treated as a visual
+  cycle: served the PRODUCTION build (`npx next start -p 3300`); `qa-smoke.mjs --slug
+  seeker-post-subscriber-count --base http://localhost:3300 /partnerships/seeking
+  /partnerships/seeking/[id] /partnerships/seeking/[id]?posted=1`: 6/6 pass (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow at 1280 + 375px); screenshots read and
+  confirm the new line renders cleanly directly under the confirmation banner, no overlap,
+  no overflow, at both viewports. Independently verified against the real (shared) prod DB:
+  inserted one throwaway `qa-seeker-post-subscriber-count-<ts>@example.com` confirmed alert
+  scoped to a real live seeker's make/model/state/airport
+  (`/partnerships/seeking?make=Cirrus&model=SR20&state=ms&airport=kglh`), loaded that
+  seeker's own `?posted=1` page — served HTML showed the exact string "1 subscriber with a
+  matching alert will hear about your search in their next digest.", and a second,
+  non-matching seeker (different make) correctly showed nothing. Test alert row deleted
+  immediately after (verified 0 remain via a follow-up query). No other prod writes. Server
+  stopped cleanly after (curl to port 3300 confirmed connection-refused).
+- Screenshots: nightshift/screenshots/seeker-post-subscriber-count/
+- Next: the remaining `[P1][goal]` items from plan-pass batches #13/#14: aged-QA-row sweep
+  for email-only alert tables (cron/health-check change), closing the aircraft reverse-match's
+  documented avionics/grade/deal/q gaps, undo for alert delete on `/alerts/manage`, owner-side
+  seeker-alert capture on the owner's own listing page, a pending-migrations action box on
+  `/admin/alerts`, and a deliverability DNS self-check in the daily cron. All verified
+  un-built and un-blocked as of this cycle.
+
 ## 2026-07-20T10:18:47Z — DRAIN SUMMARY
 - Cycles this run: 22 (PASS 15 / FAIL 3 / ABORT 4)
 - Models: cycles on sonnet; 3 escalated to opus; 4 quality-judged on opus

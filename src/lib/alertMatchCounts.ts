@@ -24,8 +24,11 @@ import {
   matchesPartnershipListing,
   parseAircraftAlertSourcePath,
   matchesAircraftListing,
+  parseSeekerAlertSourcePath,
+  matchesSeekerListing,
   type PartnershipListingFields,
   type AircraftListingFields,
+  type SeekerListingFields,
 } from './alertSubscriberMatch'
 
 /**
@@ -1043,6 +1046,39 @@ export async function countMatchingAircraftSubscribers(
     return count
   } catch (err) {
     console.error('[alertMatchCounts] aircraft subscriber-match count error:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+/**
+ * Count confirmed/active alert subscribers whose search would match this
+ * brand-new seeker (pilot-seeking-a-partnership) listing right now — the
+ * third leg of the reverse-match trilogy alongside
+ * `countMatchingPartnershipSubscribers`/`countMatchingAircraftSubscribers`,
+ * for the post-success "N subscribers with matching alerts will hear about
+ * your search" line on `/partnerships/seeking/[id]?posted=1`. Returns `null`
+ * (never a fabricated `0`) on any query error. Unlike the other two, a bare
+ * `/` ("all") alert never counts here — see `ParsedSeekerAlert`'s doc comment.
+ */
+export async function countMatchingSeekerSubscribers(listing: SeekerListingFields): Promise<number | null> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('alerts')
+      .select('status, source_path')
+      .neq('email', CAPTURE_SELFCHECK_EMAIL)
+    if (error) throw new Error(error.message)
+
+    let count = 0
+    for (const row of data ?? []) {
+      if (!LIVE_STATUSES.has(row.status)) continue
+      const parsed = parseSeekerAlertSourcePath(row.source_path)
+      if (!parsed) continue
+      if (matchesSeekerListing(parsed.target, listing)) count++
+    }
+    return count
+  } catch (err) {
+    console.error('[alertMatchCounts] seeker subscriber-match count error:', err instanceof Error ? err.message : err)
     return null
   }
 }
