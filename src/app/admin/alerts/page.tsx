@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Target,
   Gauge,
+  Wrench,
 } from 'lucide-react'
 import {
   getAlertScoreboard,
@@ -26,6 +27,7 @@ import {
 } from '@/lib/alertScoreboard'
 import { getLastCronRun, getRecentCronRuns } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
+import { getPendingAlertMigrations } from '@/lib/pendingAlertMigrations'
 import AdminAlertSubscriberLookup from '@/components/AdminAlertSubscriberLookup'
 
 export const metadata = { title: 'Alert Scoreboard', robots: { index: false } }
@@ -81,6 +83,14 @@ export default async function AlertScoreboardPage() {
   const voteWeekDelta = votes.upThisWeek + votes.downThisWeek - (votes.upLastWeek + votes.downLastWeek)
   const upRate = voteTotal >= MIN_VOTES_FOR_RATE ? Math.round((votes.upTotal / voteTotal) * 100) : null
 
+  const pendingMigrations = await getPendingAlertMigrations({
+    sourceColumnMigrated: snap.sourceColumnMigrated,
+    frequencyMigrated: cadenceMix.frequencyMigrated,
+    frequencyChangedAtMigrated: repermission.frequencyChangedAtMigrated,
+    reasonColumnMigrated: unsubscribeReasons.reasonColumnMigrated,
+    unsubscribedAtMigrated: unsubscribeReasons.unsubscribedAtMigrated,
+  })
+
   const hasRepermissionSends = repermission.sentAtMigrated && repermission.sentAllTime > 0
   const maxCadence = Math.max(1, cadenceMix.daily, cadenceMix.weekly, cadenceMix.monthly)
   const downgradedCadenceMessage = !repermission.frequencyChangedAtMigrated
@@ -89,6 +99,30 @@ export default async function AlertScoreboardPage() {
 
   return (
     <div className="space-y-6">
+      {pendingMigrations.length > 0 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+          <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-amber-900">
+            <Wrench className="h-5 w-5 text-amber-600" /> Pending migrations ({pendingMigrations.length})
+          </h2>
+          <p className="mb-4 text-sm text-amber-800">
+            These alert features already have graceful-fallback code in place and won&apos;t
+            break anything while unapplied — but each stays dark until this SQL runs in the
+            Supabase SQL editor.
+          </p>
+          <div className="space-y-4">
+            {pendingMigrations.map((m) => (
+              <div key={m.key} className="rounded-lg border border-amber-200 bg-white p-4">
+                <div className="mb-1 font-medium text-slate-900">{m.label}</div>
+                <p className="mb-2 text-sm text-slate-600">{m.unlocks}</p>
+                <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">
+                  <code>{m.sql}</code>
+                </pre>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Link
         href="/admin/alerts/emails"
         className="flex w-fit items-center gap-1.5 text-sm font-medium text-sky-700 hover:underline"
