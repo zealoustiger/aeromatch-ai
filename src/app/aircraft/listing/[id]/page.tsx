@@ -1154,6 +1154,25 @@ export default async function AircraftListingDetailPage({
               <AircraftListingOwnerNudge p={p} editHref={`/aircraft/listing/${p.id}/edit`} />
             )}
 
+            {/* Owner-facing demand-side capture — the buyer-facing AlertSignup
+                above tells visitors about new aircraft; this tells the OWNER
+                when a pilot starts looking for one like theirs. Same
+                `parseSeekerAlertSourcePath` matchable shape the digest cron
+                already understands (mirrors the post-success partnership
+                capture in /partnerships/[id]/page.tsx, but persistent here
+                instead of one-time). */}
+            {isOwner && p.make && (
+              <AlertSignup
+                context={[p.make, p.model].filter(Boolean).join(' ')}
+                sourcePath={`/partnerships/seeking?${new URLSearchParams({
+                  make: p.make,
+                  ...(p.state ? { state: p.state } : {}),
+                }).toString()}`}
+                noun="seeker"
+                source="owner_listing_seeker"
+              />
+            )}
+
             {/* Trust / completeness — slice 1 of the listing trust layer, same
                 canonical signals as the browse-card compact chip. */}
             <AircraftTrustBadge p={p} variant="checklist" />
