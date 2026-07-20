@@ -43,6 +43,7 @@ import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { dedupeDigestSectionSamples } from '@/lib/alertDigestDedupe'
 import { withShareParam } from '@/lib/shareAlertLink'
 import { getDormantSubscribers } from '@/lib/dormantSubscribers'
+import { SendPacer } from '@/lib/alertSendPacing'
 
 const MAX_DIGEST_SAMPLES = 3
 
@@ -1246,7 +1247,8 @@ type PendingReminderRow = {
  */
 async function sendStrandedPendingReminders(
   supabase: ReturnType<typeof createAdminClient>,
-  nowIso: string
+  nowIso: string,
+  pacer: SendPacer
 ): Promise<{ sent: number; failed: number }> {
   const { start, end } = reminderWindow(nowIso)
 
@@ -1284,8 +1286,11 @@ async function sendStrandedPendingReminders(
       preview: preview ? { count: preview.count, samples: preview.samples } : null,
     })
 
-    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
-    if (result.sent || result.reason === 'no-key') {
+    const gate = await pacer.send(() =>
+      sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
+    )
+    if (!gate.attempted) continue
+    if (gate.value.sent || gate.value.reason === 'no-key') {
       await supabase
         .from('alerts')
         .update({ confirm_reminder_sent_at: new Date().toISOString() })
@@ -1359,7 +1364,8 @@ type WidenCandidateRow = {
  */
 async function sendWidenSuggestionEmails(
   supabase: ReturnType<typeof createAdminClient>,
-  nowIso: string
+  nowIso: string,
+  pacer: SendPacer
 ): Promise<{ sent: number; failed: number }> {
   const cutoff = new Date(new Date(nowIso).getTime() - WIDEN_SUGGESTION_MIN_AGE_MS).toISOString()
 
@@ -1408,8 +1414,11 @@ async function sendWidenSuggestionEmails(
       unsubscribeUrl,
     })
 
-    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'widen-suggestion' })
-    if (result.sent || result.reason === 'no-key') {
+    const gate = await pacer.send(() =>
+      sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'widen-suggestion' })
+    )
+    if (!gate.attempted) continue
+    if (gate.value.sent || gate.value.reason === 'no-key') {
       await supabase
         .from('alerts')
         .update({ widen_suggested_at: new Date().toISOString() })
@@ -1456,7 +1465,8 @@ async function getDigestCrossSell(
  */
 async function sendDormantSubscriberRepermissionEmails(
   supabase: ReturnType<typeof createAdminClient>,
-  nowIso: string
+  nowIso: string,
+  pacer: SendPacer
 ): Promise<{ sent: number; failed: number }> {
   const candidates = await getDormantSubscribers(nowIso)
   let sentCount = 0
@@ -1467,8 +1477,11 @@ async function sendDormantSubscriberRepermissionEmails(
     const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=${row.unsubscribe_token}`
     const { subject, html, text } = buildRepermissionEmail({ context: row.context, manageUrl, unsubscribeUrl })
 
-    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'repermission' })
-    if (result.sent || result.reason === 'no-key') {
+    const gate = await pacer.send(() =>
+      sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'repermission' })
+    )
+    if (!gate.attempted) continue
+    if (gate.value.sent || gate.value.reason === 'no-key') {
       let { error } = await supabase.from('alerts').update({ repermission_sent_at: nowIso }).eq('id', row.id)
       if (error) console.error('[alert-digest] repermission_sent_at stamp error:', error.message)
       sentCount++
@@ -1538,7 +1551,11 @@ async function resolveBackOnMarket(
  * user-initiated pause is never touched — `getBackOnMarketCandidates` only
  * ever returns rows the cron itself auto-paused.
  */
-async function sendBackOnMarketNotices(supabase: ReturnType<typeof createAdminClient>, nowIso: string): Promise<{ sent: number; failed: number }> {
+async function sendBackOnMarketNotices(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowIso: string,
+  pacer: SendPacer
+): Promise<{ sent: number; failed: number }> {
   const candidates = await getBackOnMarketCandidates(supabase)
   let sentCount = 0
   let failed = 0
@@ -1560,8 +1577,11 @@ async function sendBackOnMarketNotices(supabase: ReturnType<typeof createAdminCl
       noun,
     })
 
-    const result = await sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'listing-back-on-market' })
-    if (result.sent || result.reason === 'no-key') {
+    const gate = await pacer.send(() =>
+      sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'listing-back-on-market' })
+    )
+    if (!gate.attempted) continue
+    if (gate.value.sent || gate.value.reason === 'no-key') {
       const { error } = await supabase
         .from('alerts')
         .update({ status: 'confirmed', unavailable_notified_at: null, last_digest_at: nowIso })
@@ -1586,7 +1606,7 @@ async function sendBackOnMarketNotices(supabase: ReturnType<typeof createAdminCl
  * already been processed, and wrapped in try/catch so a summary-email
  * failure can never turn an otherwise-healthy digest run into a 500.
  */
-async function sendMondayAdminFunnelSummary(nowIso: string): Promise<{ sent: number; failed: number }> {
+async function sendMondayAdminFunnelSummary(nowIso: string, pacer: SendPacer): Promise<{ sent: number; failed: number }> {
   if (new Date(nowIso).getUTCDay() !== 1) return { sent: 0, failed: 0 }
   const adminEmails = (process.env.ADMIN_EMAILS ?? '')
     .split(',')
@@ -1600,8 +1620,9 @@ async function sendMondayAdminFunnelSummary(nowIso: string): Promise<{ sent: num
     let sentCount = 0
     let failed = 0
     for (const to of adminEmails) {
-      const result = await sendEmail({ to, subject, html, text, emailType: 'admin-alert-funnel-weekly' })
-      if (result.sent || result.reason === 'no-key') sentCount++
+      const gate = await pacer.send(() => sendEmail({ to, subject, html, text, emailType: 'admin-alert-funnel-weekly' }))
+      if (!gate.attempted) continue
+      if (gate.value.sent || gate.value.reason === 'no-key') sentCount++
       else failed++
     }
     return { sent: sentCount, failed }
@@ -1633,6 +1654,10 @@ export async function GET(req: NextRequest) {
   // new-listing alerts most days.
   const getFamilyPriceMap = familyPriceMapGetter(supabase)
   const runStartMs = Date.now()
+  // ONE pacer shared by every send loop below — its elapsed-time clock (and
+  // therefore its stop point) spans the whole run, not just one loop, so it
+  // actually protects the route's `maxDuration = 60` ceiling.
+  const pacer = new SendPacer(runStartMs)
   const nowIso = new Date().toISOString()
   const minWindowStart = new Date(Date.now() - MIN_DIGEST_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
@@ -1652,8 +1677,8 @@ export async function GET(req: NextRequest) {
     console.error('[alert-digest] snooze auto-resume error:', resumeError.message)
   }
 
-  const remindersResult = await sendStrandedPendingReminders(supabase, nowIso)
-  const widenResult = await sendWidenSuggestionEmails(supabase, nowIso)
+  const remindersResult = await sendStrandedPendingReminders(supabase, nowIso, pacer)
+  const widenResult = await sendWidenSuggestionEmails(supabase, nowIso, pacer)
   const remindersSent = remindersResult.sent
   const widenSuggestionsSent = widenResult.sent
   let sendFailures = remindersResult.failed + widenResult.failed
@@ -2046,16 +2071,18 @@ export async function GET(req: NextRequest) {
         )
       }
 
-      const result = await sendEmail({
-        to: alert.email,
-        subject,
-        html,
-        text,
-        unsubscribeUrl,
-        emailType: bestDrop ? 'price-drop' : 'alert-digest',
-      })
+      const gate = await pacer.send(() =>
+        sendEmail({
+          to: alert.email,
+          subject,
+          html,
+          text,
+          unsubscribeUrl,
+          emailType: bestDrop ? 'price-drop' : 'alert-digest',
+        })
+      )
 
-      if (result.sent || result.reason === 'no-key') {
+      if (gate.attempted && (gate.value.sent || gate.value.reason === 'no-key')) {
         // Update last_digest_at (+ digest_sends_count) so we don't re-send for the same window.
         await markDigestSent(supabase, [{ id: alert.id, digest_sends_count: alert.digest_sends_count }], new Date().toISOString())
         sent++
@@ -2163,9 +2190,10 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const result = await sendEmail({ to: email, subject, html, text, unsubscribeUrl, emailType: 'combined-digest' })
+    const gate = await pacer.send(() => sendEmail({ to: email, subject, html, text, unsubscribeUrl, emailType: 'combined-digest' }))
 
-    if (result.sent || result.reason === 'no-key') {
+    if (!gate.attempted) continue
+    if (gate.value.sent || gate.value.reason === 'no-key') {
       const nowStamp = new Date().toISOString()
       await markDigestSent(
         supabase,
@@ -2213,9 +2241,12 @@ export async function GET(req: NextRequest) {
       crossSell: crossSellOpt,
     })
 
-    const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'listing-unavailable' })
+    const gate = await pacer.send(() =>
+      sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'listing-unavailable' })
+    )
 
-    if (result.sent || result.reason === 'no-key') {
+    if (!gate.attempted) continue
+    if (gate.value.sent || gate.value.reason === 'no-key') {
       const nowStamp = new Date().toISOString()
       // `unavailable_notified_at` is what lets sendBackOnMarketNotices (below)
       // tell this auto-pause apart from a user-initiated one — never dropped
@@ -2250,28 +2281,35 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const adminSummaryResult = await sendMondayAdminFunnelSummary(nowIso)
+  const adminSummaryResult = await sendMondayAdminFunnelSummary(nowIso, pacer)
   const adminSummarySent = adminSummaryResult.sent
   sendFailures += adminSummaryResult.failed
 
-  const repermissionResult = await sendDormantSubscriberRepermissionEmails(supabase, nowIso)
+  const repermissionResult = await sendDormantSubscriberRepermissionEmails(supabase, nowIso, pacer)
   const repermissionsSent = repermissionResult.sent
   sendFailures += repermissionResult.failed
 
-  const backOnMarketResult = await sendBackOnMarketNotices(supabase, nowIso)
+  const backOnMarketResult = await sendBackOnMarketNotices(supabase, nowIso, pacer)
   const backOnMarketSent = backOnMarketResult.sent
   sendFailures += backOnMarketResult.failed
 
   const total = (alerts ?? []).length
+  const deferredSends = pacer.deferredSends
   console.log(
-    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} repermissionsSent=${repermissionsSent} backOnMarketSent=${backOnMarketSent} sendFailures=${sendFailures}`
+    `[alert-digest] processed=${total} sent=${sent} emailsSent=${emailsSent} skipped=${skipped} unparseable=${unparseable} notDue=${notDue} remindersSent=${remindersSent} widenSuggestionsSent=${widenSuggestionsSent} adminSummarySent=${adminSummarySent} repermissionsSent=${repermissionsSent} backOnMarketSent=${backOnMarketSent} sendFailures=${sendFailures} deferredSends=${deferredSends}`
   )
+  if (deferredSends > 0) {
+    console.warn(
+      `[alert-digest] ${deferredSends} send(s) deferred to the next run — approaching the 60s cron time budget. Each deferred alert/reminder stays due and is not marked sent.`
+    )
+  }
 
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
   // soft — a not-yet-migrated table (or any other insert error) never affects the real
-  // digest send above, which has already completed by this point. `send_failures` may
-  // independently be un-migrated live — retry once without it, same fail-soft pattern as
-  // every other column on this table.
+  // digest send above, which has already completed by this point. `send_failures`/
+  // `deferred_sends` may independently be un-migrated live — retry once without
+  // whichever column the error names, same fail-soft pattern as every other column
+  // on this table.
   const runLogRow: Record<string, number> = {
     processed: total,
     sent,
@@ -2283,10 +2321,17 @@ export async function GET(req: NextRequest) {
     widen_suggestions_sent: widenSuggestionsSent,
     duration_ms: Date.now() - runStartMs,
     send_failures: sendFailures,
+    deferred_sends: deferredSends,
   }
+  const runLogOptionalKeys = ['send_failures', 'deferred_sends']
   let { error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow)
-  if (runLogError?.message?.includes('send_failures')) {
-    delete runLogRow.send_failures
+  for (
+    let i = 0;
+    i < runLogOptionalKeys.length && runLogError && runLogOptionalKeys.some((k) => k in runLogRow && runLogError!.message?.includes(k));
+    i++
+  ) {
+    const dropKey = runLogOptionalKeys.find((k) => k in runLogRow && runLogError!.message?.includes(k))!
+    delete runLogRow[dropKey]
     ;({ error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow))
   }
   if (runLogError && !runLogError.message?.includes('alert_cron_runs')) {
@@ -2305,5 +2350,6 @@ export async function GET(req: NextRequest) {
     adminSummarySent,
     repermissionsSent,
     sendFailures,
+    deferredSends,
   })
 }

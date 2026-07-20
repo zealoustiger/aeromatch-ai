@@ -16,6 +16,11 @@ export interface AlertCronRun {
    *  wasn't the deliberate `no-key` dev/staging no-op), summed across every send loop.
    *  Null when `send_failures` isn't migrated live yet — never fabricated as 0. */
   sendFailures: number | null
+  /** Sends the run's `SendPacer` deferred to the next run because the route was
+   *  approaching its `maxDuration = 60` time budget — never a lost send, just a
+   *  not-yet-sent one (see `alertSendPacing.ts`). Null when `deferred_sends` isn't
+   *  migrated live yet — never fabricated as 0. */
+  deferredSends: number | null
 }
 
 type RunRow = {
@@ -31,6 +36,7 @@ type RunRow = {
   widen_suggestions_sent: number
   duration_ms: number
   send_failures?: number
+  deferred_sends?: number
 }
 
 function toRun(row: RunRow): AlertCronRun {
@@ -47,6 +53,7 @@ function toRun(row: RunRow): AlertCronRun {
     widenSuggestionsSent: row.widen_suggestions_sent,
     durationMs: row.duration_ms,
     sendFailures: row.send_failures ?? null,
+    deferredSends: row.deferred_sends ?? null,
   }
 }
 

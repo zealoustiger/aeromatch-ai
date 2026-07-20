@@ -3564,19 +3564,21 @@ is already there — only the re-permission block is missing); `buildAlertConfir
 the rest of `email.ts` contain no check-spam / add-to-contacts copy at all; grep
 `self-check`/`smoke`/`synthetic` clean across the cron + funnel/health libs._
 
-- **[P1][goal] Gentle inter-send pacing + a 60-second time-budget guard in the cron send
-  loops.** The explicitly flagged "next slice" of `alert-send-retry-backoff` (batch #10):
-  retry (recovery) shipped, pacing (prevention) didn't. The cron's send loops still fire
-  back-to-back against Resend's ~2 req/s limit, and the route's `maxDuration = 60` means a
-  grown list would one day hit the wall mid-loop and silently drop the tail *every day*.
-  Add a small shared pacer (~350–500ms between sends) plus an elapsed-time budget check:
-  when the run approaches the 60s deadline, stop sending cleanly, log an honest deferred
-  count in the run summary (`alert_cron_runs` if a column fits fail-soft, else
-  `console.warn`) — deferral is self-healing because un-stamped alerts stay due
-  (`last_digest_at` / `isDigestDue` elapsed-days). Unit-test the pacing/budget decision as
-  a pure function; keep the retry/`Retry-After` behavior exactly as-is. Improves: the core
-  promise — an alert that doesn't reliably send isn't an alert. No new capture point, no
-  schema change required.
+~~- **[P1][goal] Gentle inter-send pacing + a 60-second time-budget guard in the cron send
+  loops.**~~ ✅ SHIPPED via `alert-cron-send-pacing` (2026-07-20) New `SendPacer`
+  (`src/lib/alertSendPacing.ts`, pure `shouldDeferSend` + a class wrapping pacing/budget
+  around one send) is now shared by EVERY send loop in `alert-digest/route.ts` (stranded-
+  pending reminders, widen suggestions, single-alert + combined-digest, unavailable-watch,
+  dormant re-permission, back-on-market, Monday admin summary) — one instance constructed
+  from `runStartMs` so its elapsed clock spans the whole run, not just one loop. Paces
+  ~400ms between sends (never before the first) and defers new sends once the run is
+  within an 8s safety margin of the route's `maxDuration = 60`; a deferred send skips its
+  "sent" stamp entirely so the alert/reminder stays due and the next run picks it up —
+  self-healing, no lost or duplicate send. `withEmailRetry`/`planEmailRetry` untouched.
+  Added an additive `alert_cron_runs.deferred_sends` column (⚠️ human-apply, same
+  fail-soft retry-without-column precedent as `send_failures`) + surfaced it on
+  `AlertCronRun`/`alertCronHealth.ts` for future admin-panel use. 10 new unit tests for
+  `shouldDeferSend`/`SendPacer` (deterministic injected clock/sleep).
 - **[P1][goal] `frequency_changed_at` stamping — make cadence downshifts honestly
   measurable.** `alert-funnel-repermission-line` (batch #10) had to scope OUT the
   "downshifted cadence" breakdown because only the *current* `frequency` is stored — its
