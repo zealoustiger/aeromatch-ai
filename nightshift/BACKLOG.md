@@ -3839,7 +3839,17 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   guarded action reusing the page's existing `resolveOwnerEmail` trust boundary. No
   schema change (snapshot round-trip, not a tombstone column). Why: GOAL.md's
   management pillar — forgiving delete is table stakes for "effortless" management.
-- **[P1][goal] One-tap unsubscribe reason capture on the post-unsubscribe page.** The
+- ~~**[P1][goal] One-tap unsubscribe reason capture on the post-unsubscribe page.**~~
+  ❌ FILED IN ERROR — ALREADY BUILT (planner verification 2026-07-20, batch #14 pass):
+  this exists in the tree today — `UnsubscribeRecover.tsx:48` tracks
+  `alert_unsubscribe_reason` reason chips on the post-unsubscribe recovery box,
+  `actions.ts:2235` writes `alerts.unsubscribe_reason` (with the `found_aircraft`
+  fast-path at `actions.ts:2212`), and `getUnsubscribeReasonRollup`
+  (`alertScoreboard.ts:426`) renders the rollup on `/admin/alerts` (built on the
+  `alerts.unsubscribe_reason` column rather than the `feedback` table this item
+  proposed — same outcome). Do not build; struck so no cycle is wasted re-shipping it.
+  Original text below.
+  The
   unsubscribe flow lands on `/alerts/status`'s recovery box ("fewer emails instead")
   but captures zero signal about WHY people leave (no reason/survey code anywhere —
   grep clean). Add optional one-tap chips under the confirmation: "Too many emails /
@@ -3877,6 +3887,103 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   reusing the existing Resend send helper + `SendPacer`. Why: the "best listing alert
   email in aviation" bar requires seeing the email where subscribers do; admin-only, no
   capture point, no schema change.
+
+### Plan-pass batch #14 — 2026-07-20 (Fable)
+_Batch #13 still fully open except its unsubscribe-reason item, which this pass verified
+was ALREADY BUILT when filed and struck above (see the ❌ note) — cycles should work #13
+top-down and skip that one. Still parked: the two Vercel-cron-tier "instant sends" items
+(human call) and the blocked `[want]` items. Every item below verified un-built by direct
+code read this pass. Dead ends checked so they don't reappear: `List-Unsubscribe`/RFC-8058
+headers exist (`email.ts:65`), dark-mode email head + preheaders + per-email UTM + optional
+`ALERTS_REPLY_TO` all exist, email typo "did you mean gmail.com?" exists
+(`AlertSignup.tsx:756`), vacation-mode pause-all/resume-all + delete-all + per-alert share +
+GDPR data download all exist on `/alerts/manage`, criteria editing (`AlertEditForm` +
+`alertEditCriteria.ts`) + per-alert `target_price` exist, digest snooze-30-days links exist,
+stranded-pending confirm reminder exists (`alertConfirmReminder.ts`), subscribe already has
+an anti-abuse hourly confirm-send cap (`actions.ts:1049`), cross-alert digest sample dedupe
+exists (`alertDigestDedupe`), watch-closure → family-alert cross-sell exists
+(`buildListingUnavailableEmail.crossSell`), widen AND narrow nudges already render on
+manage, `/alerts/digest/view` is already a live per-alert preview, scoreboard already has
+`WeeklyTrendPoint` trend + per-source `confirmRate` + cadence mix + unsubscribe reasons +
+re-permission + not-relevant + instant-interest rollups, Monday admin funnel email exists,
+nav already swaps to "My alerts · N new" for recognized subscribers, homepage capture shows
+a real match count, spam-folder + drag-to-Primary hints exist in both the pending state and
+the confirm email. Genuinely open gaps below._
+
+- **[P1][goal] Seeker slice of the post-success subscriber count — complete the trilogy.**
+  Partnerships (`partnership-post-subscriber-count`) and aircraft
+  (`aircraft-post-subscriber-count`) shipped 2026-07-20; the third post flow has nothing:
+  `/partnerships/seeking/[id]?posted=1` (`justPosted`, `page.tsx:155`) shows no
+  "N subscribers with matching alerts will hear about your search" line, and
+  `alertSubscriberMatch.ts` explicitly returns `null` for seeker-only paths (its own
+  header comments, lines 56/216). Add `parseSeekerAlertSourcePath`/`matchesSeekerListing`
+  mirroring the digest cron's real seeker semantics — make/model via the shared
+  `matchesModelFilter` (`seekerModelFilter.ts`), state, and `icao` incl. the
+  `additional_airports` unmigrated fallback the cron uses (`alert-digest/route.ts:645`) —
+  plus `countMatchingSeekerSubscribers()` in `alertMatchCounts.ts`. Same honesty gate:
+  render nothing at 0 or on query error. Unit-test each filter both directions. Why: the
+  one post flow whose poster gets no alert-system payoff; no new capture point, no schema
+  change.
+- **[P1][goal] Owner-side seeker-alert capture on the owner's own listing page.** The cron
+  fully supports filtered seeker alerts (make/model/state/icao) and `/post` already
+  captures a bare seeker alert (`source="post_chooser"`), but an aircraft/partnership
+  OWNER viewing their own listing has no way to say "tell me when a pilot starts looking
+  for my aircraft" — no prefilled seeker capture exists on any owner-gated surface (the
+  only owner module is the trust-signal nudge, `AircraftListingOwnerNudge`). Render an
+  `AlertSignup` (`noun="seeker"`) beside that nudge, gated on the same `poster_id` check,
+  with `sourcePath` prefilled from the listing's real make (+state when present) —
+  matchable `/partnerships/seeking?make=…` shapes only — and a new `source` value (e.g.
+  `owner_listing_seeker`) so the scoreboard attributes it; emits the standard
+  `alert_subscribed`. Slice: aircraft listing pages first; partnerships if it fits. Why:
+  a brand-new capture point on a surface every seller revisits, and it closes the
+  demand→supply loop the post-success counts opened.
+- **[P1][goal] Pending-migrations action box on `/admin/alerts`.** At least seven features
+  currently degrade behind "isn't migrated live" caveats scattered across the page
+  (`alert_cron_runs`, `alerts.source`, `alerts.frequency`, `frequency_changed_at`,
+  `unsubscribe_reason`/`unsubscribed_at`, `email_engagement_events`,
+  `confirm_reminder_sent_at`, plus the `alerts_owner_select` RLS policy) — each visible
+  only as an inline footnote in its own section, so the human keeps not applying them.
+  Add one box at the top: probe each optional column/table at runtime (reuse the exact
+  OPTIONAL_COLS probes the data helpers already run — never a hardcoded guess), list only
+  the ones still missing, with a one-line "what it unlocks" and the exact copy-paste SQL
+  from `schema.sql`. Renders nothing when all are live. Why: every pending migration is a
+  built-but-dark alert feature; this converts scattered console.warns into a morning
+  checklist. Admin-only, read-only probes, no capture point, no schema change (it only
+  reports).
+- **[P1][goal] Deliverability DNS self-check — SPF/DKIM/DMARC in the daily cron.** Nothing
+  anywhere monitors the send domain's email-auth DNS (grep clean for SPF/DKIM/DMARC); a
+  silently broken or human-edited record would tank inbox placement of every digest while
+  all our in-app metrics stay green. Add a self-check step to the daily
+  `alert-digest` cron: resolve the domain's SPF TXT, the Resend DKIM selector, and the
+  `_dmarc` policy via DNS-over-HTTPS JSON (no new deps), with three honest states per
+  record — pass / fail / lookup-error (a resolver timeout is NOT a fail). Surface the
+  three verdicts in the existing cron-health box on `/admin/alerts` and fold a
+  transition-to-red into the existing `shouldSendCaptureSelfCheckAlert` admin email flow
+  (same quiet-through-persistent-failure cadence). Why: deliverability is the floor under
+  the "best listing alert email in aviation" pillar; admin-only, no capture point, no
+  schema change beyond the existing run-log JSON.
+- **[P2][goal] "No content sent yet" share tile on `/admin/alerts`.** The widen email
+  already finds never-matched alerts one subscriber at a time, but no aggregate exists:
+  the scoreboard has no read of what share of live alerts have never received a digest
+  with content (`digest_sends_count` 0/null — the column `dormantEligibility` already
+  reads — with `last_digest_at` null, age > 7d so brand-new signups don't skew it).
+  Add a small rollup + tile: "N of M live alerts (X%) have never gotten a listing",
+  raw counts alongside the %, honest `—` when the columns aren't migrated (same
+  three-state convention as every sibling metric). Why: the single best leading
+  indicator of "do our alerts feel dead?" on a cold-start marketplace — it tells the
+  human whether the next lever is inventory, not more capture points. No capture point,
+  no schema change.
+- **[P2][goal] Seeker location parity in the manage-page edit form.** The digest cron
+  matches seeker alerts on make/model/state/`icao` (`alert-digest/route.ts:216`), and the
+  seeking page's capture flows those filters into `source_path` — but
+  `alertEditCriteria.ts` only recognizes `make`/`model` for seekers
+  (`EDITABLE_FIELDS.seeker`, line 215), so a location-filtered seeker alert shows its
+  state/airport as locked "hidden criteria" on `/alerts/manage` and can't be edited
+  without delete-and-recreate. Extend `parseEditableAlertTarget` + `EDITABLE_FIELDS` +
+  `AlertEditForm` with the seeker `state`/`icao` fields, reusing the aircraft target's
+  existing state select + airport input patterns (and keep `buildAlertCriteriaUpdate`
+  round-trip tests green both directions). Why: GOAL.md's management pillar — edit
+  parity with what capture can create; no new capture point, no schema change.
 
 ---
 
