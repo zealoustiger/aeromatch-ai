@@ -12,6 +12,7 @@ import {
   HelpCircle,
   RotateCcw,
   Target,
+  Gauge,
 } from 'lucide-react'
 import {
   getAlertScoreboard,
@@ -21,6 +22,7 @@ import {
   getUnsubscribeReasonRollup,
   getRepermissionRollup,
   getDemandSupplyRollup,
+  getCadenceMixRollup,
 } from '@/lib/alertScoreboard'
 import { getLastCronRun, getRecentCronRuns } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
@@ -50,6 +52,7 @@ export default async function AlertScoreboardPage() {
     unsubscribeReasons,
     repermission,
     demandSupply,
+    cadenceMix,
   ] = await Promise.all([
     getAlertScoreboard(),
     getDigestVoteRollup(),
@@ -61,6 +64,7 @@ export default async function AlertScoreboardPage() {
     getUnsubscribeReasonRollup(),
     getRepermissionRollup(),
     getDemandSupplyRollup(),
+    getCadenceMixRollup(),
   ])
   const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
@@ -78,6 +82,7 @@ export default async function AlertScoreboardPage() {
   const upRate = voteTotal >= MIN_VOTES_FOR_RATE ? Math.round((votes.upTotal / voteTotal) * 100) : null
 
   const hasRepermissionSends = repermission.sentAtMigrated && repermission.sentAllTime > 0
+  const maxCadence = Math.max(1, cadenceMix.daily, cadenceMix.weekly, cadenceMix.monthly)
   const downgradedCadenceMessage = !repermission.frequencyChangedAtMigrated
     ? 'Cadence-downshift data not available yet — alerts.frequency_changed_at isn’t migrated live.'
     : `${repermission.downgradedCadenceCount} downshifted cadence since the re-permission email.`
@@ -638,6 +643,61 @@ export default async function AlertScoreboardPage() {
               <div className="text-xs text-slate-500">all time</div>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <Gauge className="h-5 w-5 text-sky-500" /> Cadence mix
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          How live subscribers are spread across the daily/weekly/monthly cadence ladder,
+          plus how many are currently paused/snoozed — real demand data beside the
+          instant-alerts interest tile above, for the fewer-emails-ladder and
+          snooze/vacation-mode features.
+          {!cadenceMix.frequencyMigrated && (
+            <>
+              {' '}The <code>alerts.frequency</code> column isn&apos;t migrated on the live
+              database yet, so every live row below defaults to weekly — the same fallback
+              the digest cron itself uses for an unset cadence, not a per-alert setting.
+            </>
+          )}
+        </p>
+
+        {cadenceMix.liveTotal === 0 ? (
+          <p className="text-sm text-slate-400">No live subscribers yet — not enough data.</p>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {[
+                { key: 'daily', label: 'Daily', count: cadenceMix.daily },
+                { key: 'weekly', label: 'Weekly', count: cadenceMix.weekly },
+                { key: 'monthly', label: 'Monthly', count: cadenceMix.monthly },
+              ].map((row) => (
+                <div key={row.key}>
+                  <div className="mb-1 flex items-baseline justify-between text-sm">
+                    <span className="font-medium text-slate-800">{row.label}</span>
+                    <span className="text-slate-500">
+                      {row.count} live{' '}
+                      <span className="text-slate-400">
+                        · {Math.round((row.count / cadenceMix.liveTotal) * 100)}%
+                      </span>
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-sky-500"
+                      style={{ width: `${(row.count / maxCadence) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-500">
+              <span className="font-medium text-slate-800">{cadenceMix.pausedCount}</span> alert
+              {cadenceMix.pausedCount === 1 ? '' : 's'} currently paused/snoozed.
+            </div>
+          </>
         )}
       </section>
 

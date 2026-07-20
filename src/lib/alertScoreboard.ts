@@ -5,6 +5,7 @@ import { summarizeUnsubscribeReasons, type UnsubscribeReasonRow } from './alertU
 import { CAPTURE_SELFCHECK_EMAIL } from './alertCaptureSelfCheck'
 import { familyForSourcePath } from './alertDemandFamily'
 import { SEO_MAKE_MODELS } from './seo'
+import { normalizeFrequency } from './alertFrequency'
 
 // The `alerts` table carries two live-subscriber vocabularies: newer opt-in
 // paths land on `confirmed` (+ `confirmed_at`), while older/direct rows use
@@ -344,6 +345,68 @@ export async function getInstantInterestRollup(
     if (!Number.isNaN(at) && at >= oneWeekAgo) thisWeek++
   }
   return { thisWeek, allTime: rows.length }
+}
+
+export interface CadenceMixRollup {
+  liveTotal: number
+  daily: number
+  weekly: number
+  monthly: number
+  pausedCount: number
+  frequencyMigrated: boolean
+}
+
+const CADENCE_OPTIONAL_COLS = ['frequency']
+
+// Rolls up how live subscribers are spread across the daily/weekly/monthly cadence
+// ladder, plus how many are currently paused/snoozed — no read of this exists in
+// alertScoreboard today, so fewer-emails-ladder and snooze/vacation-mode adoption is
+// unmeasurable mid-week (only visible, if at all, via a raw DB query). `status` is
+// base-schema (always present); `frequency` may independently be unmigrated live —
+// same OPTIONAL_COLS retry-and-drop pattern as getRepermissionRollup/
+// getUnsubscribeReasonRollup above. Buckets with normalizeFrequency, the exact
+// function the real alert-digest cron uses to resolve a row's cadence — so an
+// unmigrated column reads as "weekly" here for the same reason the cron would
+// actually treat it as weekly, not a guess.
+export async function getCadenceMixRollup(): Promise<CadenceMixRollup> {
+  const admin = createAdminClient()
+  let cols = ['status', ...CADENCE_OPTIONAL_COLS]
+  let { data, error } = await admin
+    .from('alerts')
+    .select(cols.join(', '))
+    .neq('email', CAPTURE_SELFCHECK_EMAIL)
+  for (
+    let i = 0;
+    i < CADENCE_OPTIONAL_COLS.length &&
+    error &&
+    CADENCE_OPTIONAL_COLS.some((c) => cols.includes(c) && error!.message?.includes(c));
+    i++
+  ) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data, error } = await admin.from('alerts').select(cols.join(', ')).neq('email', CAPTURE_SELFCHECK_EMAIL))
+  }
+
+  const frequencyMigrated = cols.includes('frequency')
+  const rows = (data ?? []) as unknown as { status: string | null; frequency?: string | null }[]
+
+  let liveTotal = 0
+  let daily = 0
+  let weekly = 0
+  let monthly = 0
+  let pausedCount = 0
+
+  for (const row of rows) {
+    const status = row.status || 'unknown'
+    if (status === 'paused') pausedCount++
+    if (!LIVE_STATUSES.has(status)) continue
+    liveTotal++
+    const frequency = normalizeFrequency(frequencyMigrated ? row.frequency : undefined)
+    if (frequency === 'daily') daily++
+    else if (frequency === 'monthly') monthly++
+    else weekly++
+  }
+
+  return { liveTotal, daily, weekly, monthly, pausedCount, frequencyMigrated }
 }
 
 export interface UnsubscribeReasonRollup {
