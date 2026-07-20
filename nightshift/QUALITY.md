@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-20T07:16:27Z — alert-confirm-deliverability-copy — score 4/5
+- Strengths: Hits every acceptance criterion exactly; new line matches surrounding `ch-muted`/`&rsquo;` conventions, margins re-tuned (20px→16px/8px) for sensible spacing, and both html+text plus position-aware tests added.
+- Weaknesses / risks: "Primary tab" copy is Gmail-centric (Outlook/Apple Mail have no such tab), mitigated by the universal "add us to your contacts" fallback; nothing material.
+- Follow-up: none
+
 ## 2026-07-20T06:14:54Z — digest-gmail-clip-guard — score 4/5
 - Strengths: Faithful, well-scoped spec execution — cores renamed to `*Core` and wrapped by pure trim-and-rebuild loops that are true no-ops under budget (byte-identical output preserved), trimming only sample cards so the honest "See all N matches" count/CTA stays truthful; combined builder spreads the cut by always trimming the heaviest section, both loops terminate via real guards (`samples.length===0` / `heaviestIdx===-1`); `trimmedSamples` cleanly omitted unless it fired; cron logs `console.warn` with identifying ids per convention; route's `'trimmedSamples' in digestEmail` correctly discriminates the price-drop vs digest union; 3 targeted tests (no-trim byte-identity, oversized single, combined fair-trim with lighter section untouched) + full 197-test suite green.
 - Weaknesses / risks: none material — trim loop rebuilds the entire HTML from scratch per removed card (O(n²) on huge sets), but only fires on the rare oversized fail-soft path where cost is negligible; single builder always trims the last card rather than by weight, which is fine for one section.
