@@ -3746,15 +3746,21 @@ test guarding it._
   pillar) *by showcasing alerts*; keep the existing post-success alert cross-sell
   untouched beside it. No new capture point (the cross-sell already emits), no schema
   change.
-- **[P2][goal] "Next digest expected ~<day>" line on `/alerts/manage` rows.**
-  `alerts-manage-last-sent-line` shipped the backward-looking half; the forward-looking
-  half is absent (grep "next digest" clean). Compute from frequency + `last_digest_at` +
-  the digest-day picker + snooze/pause state as a pure, unit-tested helper (no DB
-  dependency, `alertSendPacing.ts` testability pattern): "Next digest: ~tomorrow morning"
-  / "~Tuesday" / "resumes Aug 3 (snoozed)" — approximate copy ("~") because the cron hour
-  can drift; paused rows say paused, never a fake date. Sets honest expectations right
-  where subscribers manage cadence. Improves: alert-management surface. No new capture
-  point, no schema change.
+~~- **[P2][goal] "Next digest expected ~<day>" line on `/alerts/manage` rows.**~~
+  ✅ SHIPPED via `alert-manage-next-digest-line` (2026-07-20) New pure
+  `describeNextDigest(lastDigestAt, frequency, nowIso, digestDay)` in `alertFrequency.ts`
+  scans forward day-by-day (bounded to 40 days) reusing the existing `isDigestDue` — the
+  EXACT predicate the cron itself gates sends on — so it can never claim a date the cron
+  wouldn't actually send on. Formats as "~tomorrow morning" / "~<Weekday>" (within 6 days)
+  / "~<Mon D>" (further out). Renders on `/alerts/manage` directly below the existing
+  `describeLastDigest` line, same `status === 'confirmed'` gate, so pending/paused/bounced
+  rows never show a fake date (paused rows keep their existing "Paused until <date>" pill
+  only — no separate snoozed copy needed since that gate already excludes them). 8 new
+  unit tests (`alertFrequency.test.ts`, 33/33 total pass). No schema change, no new
+  capture point. Live-verified against a real throwaway `@example.com` confirmed alert
+  (seeded + deleted via service role): rendered "Last email Jul 15 · checks weekly ·
+  Next digest: ~Thursday" correctly on both desktop and 375px, zero overflow/console
+  errors.
 - **[P2][goal] Cadence-mix tile on `/admin/alerts`.** No frequency-distribution read
   exists anywhere in `alertScoreboard.ts` — the admin can't see how many live alerts are
   daily vs weekly vs monthly, nor how many are currently snoozed/paused, so
