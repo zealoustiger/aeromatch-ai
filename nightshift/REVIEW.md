@@ -1,3 +1,22 @@
+## 2026-07-21T11:45:53Z — Night Shift run: 7 cycles (PASS 5 / FAIL 1) — night budget cap ($120)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $125.8235 of $120 cap
+
+- ABORT — none — plan needed
+- PASS — alert-tt-range-edit — Min/Max total-time-hours fields added to aircraft alert Edit and Duplicate on /alerts/manage, so an under 4,000 hours alert no longer loses that cr
+- PASS — searches-orphan-alerts — `/searches` now shows a signed-in user's email alerts that have no matching saved search (with a one-tap Save as a search), unifying saved-searc
+- cycle produced no verdict (exit 124)
+- PASS — matches-owner-alert-capture — owner-side alert me about the next match capture boxes added under each listing's rail on the signed-in /matches page
+- PASS — alerts-landing-builder — Added a Build a custom alert from scratch flow to the `/alerts` landing page (type picker + criteria fields, live honest match count, then revea
+- PASS — alert-avionics-grade-q-edit — an aircraft alert's avionics, listing-quality grade, and keyword criteria are now real editable fields on `/alerts/manage`'s Edit/Duplicate
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 4.2 on 2 cores, sustained ~3 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container neared its memory cap: peak 3.2 GB of 3.2 GB (100%) — raise --memory in the env file before it OOM-kills a build
+- ⚠️ container CPU-throttled ~366s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+- 1 of 7 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-21T10:16:08Z — Night Shift run: 23 cycles (PASS 19 / FAIL 1) — backlog drained (planner cap 2)
 - Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
 - Night spend so far: $94.2077 of $120 cap
