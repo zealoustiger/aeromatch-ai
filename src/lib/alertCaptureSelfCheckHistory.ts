@@ -38,22 +38,36 @@ export function summarizeSelfCheckHistory(runs: SelfCheckHistoryRun[], limit = 7
 }
 
 /**
- * Decide whether TODAY's capture self-check failure warrants a dedicated admin
- * heads-up email, given the runs immediately preceding it (`priorRuns`, newest
- * first, NOT including today — a not-yet-inserted row). A passing self-check never
- * sends (Monday's funnel summary already covers recovery). Transition-only
- * otherwise: sends the moment a prior-ok/unmigrated run is followed by a failure,
- * then stays quiet through a persistent failure so it doesn't re-email daily —
- * except every 3rd consecutive red day, as a gentle reminder the outage is still
- * live.
+ * Decide whether TODAY's red result warrants a dedicated admin heads-up email,
+ * given the prior runs' ok/fail history (`priorOkHistory`, newest first, NOT
+ * including today). A passing result never sends. Transition-only otherwise: sends
+ * the moment a prior-ok/unmigrated (`null`) run is followed by a failure, then
+ * stays quiet through a persistent failure so it doesn't re-email daily — except
+ * every 3rd consecutive red day, as a gentle reminder the outage is still live.
+ * Generic so both the capture self-check and the deliverability DNS self-check
+ * (`deliverabilityDnsCheck.ts`) share one cadence instead of two copies of the
+ * same streak math.
  */
-export function shouldSendCaptureSelfCheckAlert(priorRuns: SelfCheckHistoryRun[], todayOk: boolean): boolean {
+export function shouldSendOnRedTransition(priorOkHistory: Array<boolean | null>, todayOk: boolean): boolean {
   if (todayOk) return false
   let priorStreak = 0
-  for (const run of priorRuns) {
-    if (run.captureSelfCheckOk !== false) break
+  for (const ok of priorOkHistory) {
+    if (ok !== false) break
     priorStreak++
   }
   if (priorStreak === 0) return true
   return (priorStreak + 1) % 3 === 0
+}
+
+/**
+ * Decide whether TODAY's capture self-check failure warrants a dedicated admin
+ * heads-up email, given the runs immediately preceding it (`priorRuns`, newest
+ * first, NOT including today — a not-yet-inserted row). See
+ * `shouldSendOnRedTransition` for the cadence this wraps.
+ */
+export function shouldSendCaptureSelfCheckAlert(priorRuns: SelfCheckHistoryRun[], todayOk: boolean): boolean {
+  return shouldSendOnRedTransition(
+    priorRuns.map((r) => r.captureSelfCheckOk),
+    todayOk
+  )
 }

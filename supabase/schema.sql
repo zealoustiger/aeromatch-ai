@@ -1132,3 +1132,19 @@ alter table alert_cron_runs add column if not exists self_check_step text;
 -- graceful-fallback pattern as every column above); the sweep itself is
 -- unaffected either way since it never depends on this column existing.
 alter table alert_cron_runs add column if not exists swept_test_alerts int;
+
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alert_cron_runs_deliverability_dns
+-- Daily SPF/DKIM/DMARC self-check on the alert send domain (src/lib/
+-- deliverabilityDnsCheck.ts) — nothing previously monitored this, so a silently
+-- broken or human-edited DNS record would tank inbox placement of every digest
+-- while every in-app send metric stayed green. Text, not boolean: each column
+-- holds one of three honest states — 'pass' | 'fail' | 'lookup-error' — never
+-- collapsed to a boolean, since a resolver timeout must never be confused with a
+-- genuine missing/invalid record. Nullable, no default: null means "not migrated
+-- yet," same honest-gap posture as every column above. Apply in the Supabase SQL
+-- editor. Until applied, the run-log insert retries without these three columns
+-- (same graceful-fallback pattern as every column above) and /admin/alerts shows
+-- the "not available yet" state instead of a fabricated verdict.
+alter table alert_cron_runs add column if not exists dns_spf_status text;
+alter table alert_cron_runs add column if not exists dns_dkim_status text;
+alter table alert_cron_runs add column if not exists dns_dmarc_status text;

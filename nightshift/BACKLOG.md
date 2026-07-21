@@ -3988,7 +3988,8 @@ the confirm email. Genuinely open gaps below._
   policy — confirmed unprobeable from application code (the admin client uses the
   service-role key, which bypasses RLS entirely, so it can never tell "policy applied"
   from "policy missing"); left out of the automated box rather than fake a signal.
-- **[P1][goal] Deliverability DNS self-check — SPF/DKIM/DMARC in the daily cron.** Nothing
+- ~~**[P1][goal] Deliverability DNS self-check — SPF/DKIM/DMARC in the daily cron.**~~ ✅
+  SHIPPED via `alert-deliverability-dns-check` (2026-07-20) Nothing
   anywhere monitors the send domain's email-auth DNS (grep clean for SPF/DKIM/DMARC); a
   silently broken or human-edited record would tank inbox placement of every digest while
   all our in-app metrics stay green. Add a self-check step to the daily

@@ -19,6 +19,14 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 /** Sender identity. Override with ALERTS_FROM_EMAIL once a domain is verified. */
 const FROM = process.env.ALERTS_FROM_EMAIL || 'ClubHanger <alerts@clubhanger.com>'
 
+/** Domain portion of the real sender identity (e.g. "clubhanger.com" out of
+ *  "ClubHanger <alerts@clubhanger.com>"), for the deliverability DNS self-check —
+ *  derived from the same `FROM` every real send uses, never a separate guess. */
+export function getAlertsSendDomain(): string {
+  const match = FROM.match(/@([^>\s]+)/)
+  return match ? match[1] : 'clubhanger.com'
+}
+
 /**
  * Optional monitored reply-to address for alert emails. Unset by default (every
  * send stays exactly as today); once a human sets `ALERTS_REPLY_TO`, `sendEmail`
@@ -1985,6 +1993,66 @@ ${detailText}
 Open ${opts.dashboardUrl}
 
 You'll get this again after 3 consecutive failed days if it isn't fixed — not on every run.`
+
+  return { subject, html, text }
+}
+
+/**
+ * Admin heads-up when the deliverability DNS self-check (`deliverabilityDnsCheck.ts`)
+ * finds a genuine failed record (SPF/DKIM/DMARC) on the send domain — a silently
+ * broken or human-edited DNS record would tank inbox placement of every digest
+ * while every in-app metric stays green. `failingChecks` names only the checks
+ * currently in a real `fail` state (a resolver `lookup-error` never appears here —
+ * it is not a failure). Same transition-gated cadence as the capture self-check.
+ */
+export function buildAdminDeliverabilityDnsFailureEmail(opts: {
+  domain: string
+  failingChecks: string[]
+  dashboardUrl: string
+}): { subject: string; html: string; text: string } {
+  const checksLabel = opts.failingChecks.join(' / ')
+  const subject = `⚠️ Deliverability DNS check FAILED (${checksLabel}) for ${opts.domain}`
+
+  const html = `<!doctype html>
+<html>
+  <head>${emailColorSchemeHead()}</head>
+  <body class="ch-body" style="margin:0;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+      <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
+      <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:28px 24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
+        <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 12px;">Deliverability DNS check failed</h1>
+        <p class="ch-text" style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 12px;">
+          Today's DNS check for <strong>${escapeHtml(opts.domain)}</strong> found a real, failing
+          record: <strong>${escapeHtml(checksLabel)}</strong>. Every alert digest sends from this
+          domain — a broken auth record here degrades inbox placement for every subscriber, even
+          though in-app send counts stay green.
+        </p>
+        <p style="margin:0 0 4px;">
+          <a href="${escapeAttr(opts.dashboardUrl)}"
+             style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
+            Open /admin/alerts
+          </a>
+        </p>
+        <p class="ch-muted" style="font-size:12px;line-height:1.6;color:#94a3b8;margin:20px 0 0;">
+          You'll get this again after 3 consecutive failed days if it isn't fixed — not on
+          every run. A resolver timeout never triggers this — only a genuine missing/invalid
+          record does.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`
+
+  const text = `ClubHanger — Deliverability DNS check failed
+
+Today's DNS check for ${opts.domain} found a real, failing record: ${checksLabel}.
+Every alert digest sends from this domain — a broken auth record here degrades inbox
+placement for every subscriber, even though in-app send counts stay green.
+
+Open ${opts.dashboardUrl}
+
+You'll get this again after 3 consecutive failed days if it isn't fixed — not on every run.
+A resolver timeout never triggers this — only a genuine missing/invalid record does.`
 
   return { subject, html, text }
 }
