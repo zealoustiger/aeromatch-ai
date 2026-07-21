@@ -561,6 +561,69 @@ export async function getRepermissionRollup(now: number = Date.now()): Promise<R
   }
 }
 
+export interface NeverSentRollup {
+  liveAgedTotal: number
+  neverSentCount: number
+  digestSendsCountMigrated: boolean
+}
+
+const NEVER_SENT_MIN_AGE_MS = 7 * 24 * 60 * 60 * 1000
+const NEVER_SENT_OPTIONAL_COLS = ['digest_sends_count']
+
+// Share of live subscribers old enough (>7d since confirm/signup, so brand-new
+// signups can't skew it) to have had a real chance at a digest who have STILL
+// never received one with content — the single best leading indicator of "do
+// our alerts feel dead?" on a cold-start marketplace (widen-suggestion asks the
+// same "never matched" question but at a 21-day/one-subscriber-at-a-time
+// grain; this is the aggregate share). `last_digest_at` (base schema, always
+// present) is the load-bearing signal — `markDigestSent` only ever stamps it
+// when a digest with real content actually sent. `digest_sends_count` is read
+// alongside as a redundant confirmation via the same optional-column
+// graceful-fallback pattern as every other alerts.* read in this file, but a
+// live database missing that still-pending migration produces the exact same
+// (correct) answer, just without the second check.
+export async function getNeverSentRollup(now: number = Date.now()): Promise<NeverSentRollup> {
+  const admin = createAdminClient()
+  let cols = ['status', 'created_at', 'confirmed_at', 'last_digest_at', ...NEVER_SENT_OPTIONAL_COLS]
+  let { data, error } = await admin.from('alerts').select(cols.join(', ')).neq('email', CAPTURE_SELFCHECK_EMAIL)
+  for (
+    let i = 0;
+    i < NEVER_SENT_OPTIONAL_COLS.length &&
+    error &&
+    NEVER_SENT_OPTIONAL_COLS.some((c) => cols.includes(c) && error!.message?.includes(c));
+    i++
+  ) {
+    cols = cols.filter((c) => !error!.message.includes(c))
+    ;({ data, error } = await admin.from('alerts').select(cols.join(', ')).neq('email', CAPTURE_SELFCHECK_EMAIL))
+  }
+
+  const digestSendsCountMigrated = cols.includes('digest_sends_count')
+  const cutoff = now - NEVER_SENT_MIN_AGE_MS
+  const rows = (data ?? []) as unknown as {
+    status: string | null
+    created_at: string
+    confirmed_at: string | null
+    last_digest_at: string | null
+    digest_sends_count?: number
+  }[]
+
+  let liveAgedTotal = 0
+  let neverSentCount = 0
+  for (const row of rows) {
+    const status = row.status || 'unknown'
+    if (!LIVE_STATUSES.has(status)) continue
+    const ageRef = row.confirmed_at ?? row.created_at
+    const ageMs = new Date(ageRef).getTime()
+    if (Number.isNaN(ageMs) || ageMs > cutoff) continue
+
+    liveAgedTotal++
+    const sendsAreZero = !digestSendsCountMigrated || !row.digest_sends_count
+    if (row.last_digest_at === null && sendsAreZero) neverSentCount++
+  }
+
+  return { liveAgedTotal, neverSentCount, digestSendsCountMigrated }
+}
+
 export interface DemandSupplyRow {
   key: string
   label: string

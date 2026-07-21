@@ -2,6 +2,53 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T070819Z — PASS — admin-alerts-never-sent-tile
+- Pages: /admin/alerts
+- What: The admin alert-scoreboard page now has a **"No content sent yet"** tile
+  showing what share of live alert subscribers (old enough to have had a real
+  chance — 7+ days since confirming) have STILL never received a digest with
+  an actual listing in it, e.g. "0 of 3 (0%) never gotten a listing." Before,
+  the only "never matched" signal was the one-subscriber-at-a-time widen-
+  suggestion email; there was no aggregate read of how widespread the problem
+  is.
+- Goal: alert-experience `[goal]` — the single best leading indicator of "do
+  our alerts feel dead?" on a cold-start marketplace: it tells the human
+  whether the next lever is more inventory, not more capture points. Admin-only
+  visibility tile, no capture point, no schema change.
+- Spec: nightshift/specs/20260721T070819Z-admin-alerts-never-sent-tile.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build`
+  clean (same route count). Full `node --experimental-strip-types --test
+  'src/**/*.test.ts'`: 736/736 pass, no regressions. New
+  `getNeverSentRollup()` (`src/lib/alertScoreboard.ts`) follows the exact
+  optional-column graceful-fallback convention already used by
+  `getCadenceMixRollup`/`getRepermissionRollup` in that file —
+  `digest_sends_count` is read as a redundant confirmation but `last_digest_at`
+  (base schema, always present) is the load-bearing signal, so the tile is
+  correct whether or not that still-pending migration has landed. Served the
+  PRODUCTION build (`npx next start -p 3000`); `qa-smoke.mjs` 2/2 pass on
+  `/admin/alerts` (HTTP 200, zero app-origin console errors, zero horizontal
+  overflow at 1280 + 375px) confirming the logged-out "Admin only" gate still
+  renders cleanly. Went further since the real feature lives behind that gate:
+  minted a real magic-link admin session (service-role `generateLink` +
+  `verifyOtp` for a genuine session, manually encoded into the exact
+  `@supabase/ssr` cookie format via that library's own chunker/base64url
+  utils — no mock) and drove the actual authenticated page; the tile rendered
+  "0 of 3 / 0% of eligible live alerts," which matches a direct read-only DB
+  query run the same way (3 live alerts, all >7d old, all with a non-null
+  `last_digest_at`; `digest_sends_count` confirmed still not migrated live —
+  `42703` — exercising the graceful-degrade path for real, not just in
+  theory). Full-page screenshots at both viewports confirm the new tile sits
+  cleanly at the end of the existing tile stack with no overlap/overflow.
+  Only console noise seen while signed in: the pre-existing, already-
+  documented `Nav.tsx` unread-message-badge `threads` 400 (unrelated file, not
+  touched by this diff). Server started/stopped cleanly, no stray
+  `next-server` process left running. Throwaway QA script deleted after use —
+  no test rows/users created (read-only feature, real admin session only).
+- Screenshots: nightshift/screenshots/admin-alerts-never-sent-tile/
+- Next: wiring this % into the Monday admin funnel email
+  (`alertFunnelWeekly.ts`) is a natural follow-up so the human sees it without
+  visiting the page.
+
 ## 20260721T070309Z — PASS — admin-email-preview-test-send
 - Pages: /admin/alerts/emails
 - What: The admin "email template gallery" (11 alert-email builders rendered as

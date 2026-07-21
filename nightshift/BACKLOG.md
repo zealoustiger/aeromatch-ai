@@ -4034,17 +4034,27 @@ the confirm email. Genuinely open gaps below._
   (same quiet-through-persistent-failure cadence). Why: deliverability is the floor under
   the "best listing alert email in aviation" pillar; admin-only, no capture point, no
   schema change beyond the existing run-log JSON.
-- **[P2][goal] "No content sent yet" share tile on `/admin/alerts`.** The widen email
-  already finds never-matched alerts one subscriber at a time, but no aggregate exists:
-  the scoreboard has no read of what share of live alerts have never received a digest
-  with content (`digest_sends_count` 0/null — the column `dormantEligibility` already
-  reads — with `last_digest_at` null, age > 7d so brand-new signups don't skew it).
-  Add a small rollup + tile: "N of M live alerts (X%) have never gotten a listing",
-  raw counts alongside the %, honest `—` when the columns aren't migrated (same
-  three-state convention as every sibling metric). Why: the single best leading
-  indicator of "do our alerts feel dead?" on a cold-start marketplace — it tells the
-  human whether the next lever is inventory, not more capture points. No capture point,
-  no schema change.
+~~- **[P2][goal] "No content sent yet" share tile on `/admin/alerts`.**~~ ✅ SHIPPED via
+  `admin-alerts-never-sent-tile` (2026-07-21) New `getNeverSentRollup()`
+  (`src/lib/alertScoreboard.ts`) counts live (`active`/`confirmed`) alerts old enough
+  (confirmed_at, falling back to created_at, >7d) to have had a real chance, and how
+  many of those still have `last_digest_at === null` (never received a digest with
+  content) — rendered as a new "No content sent yet" tile: "N of M ... never gotten a
+  listing" + an "X% of eligible live alerts" figure, an honest "not enough data" state
+  when M is 0. `digest_sends_count` is read as a redundant confirmation via the same
+  optional-column retry-and-drop pattern every other `alerts.*` rollup in this file
+  uses, but `last_digest_at` (base schema, always present, only ever stamped by
+  `markDigestSent` when real content sent) is the load-bearing signal, so the tile is
+  correct whether or not that still-pending migration has landed. No capture point, no
+  schema change, no auth change. Live-verified end-to-end against the real prod DB with
+  a real magic-link-authenticated admin session (service-role `generateLink` +
+  `verifyOtp` to mint a real session, manually chunked/encoded into the exact
+  `@supabase/ssr` cookie format via that library's own chunker/base64url utils, no
+  mock): page rendered "0 of 3 / 0% of eligible live alerts" for the real admin, which
+  matches a direct read-only DB query run the same way (3 live alerts, all >7d old, all
+  with a non-null `last_digest_at` — `digest_sends_count` confirmed still not migrated
+  live, `42703`, exercising the graceful-degrade path for real). Only console noise was
+  the pre-existing, already-documented `Nav.tsx` unread-badge 400s.
 ~~- **[P2][goal] Seeker location parity in the manage-page edit form.**~~ ✅ SHIPPED via
   `seeker-alert-location-edit` (2026-07-20) The digest cron matches seeker alerts on
   make/model/state/`icao`, but `alertEditCriteria.ts` only recognized make/model for
