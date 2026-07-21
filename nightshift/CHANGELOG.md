@@ -2,6 +2,37 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T062630Z — PASS — alert-social-proof-hub-pages
+- Pages: /aircraft/[make], /aircraft/for-sale/[state], /aircraft/[make]/[model]/[state],
+  /partnerships/make/[make], /partnerships/state/[state]
+- What: **Five more hub pages now show real "N buyers get alerts for this" social proof
+  on their alert-signup box**, once real subscriber counts clear the honesty floor. The
+  `AlertSignup` component has had this fully built (honesty-gated, floored at 3, never
+  fabricated) since an earlier cycle, but it was only wired on 2 of ~40 call sites
+  (`/aircraft/[make]/[model]` and a listing detail page) — every make/state/make-model-
+  state hub page rendered the alert box with no social proof at all even though it has a
+  perfectly good `context` to key off of. Wired the same existing pattern (one extra
+  `getAlertCounts([context])` read + `alertCount` prop) into the 5 pages above.
+- Goal: alert-experience `[goal]`, batch #13's "Join N others" item — frictionless-capture
+  pillar. No new mechanism, no new capture point, no schema change; pure wire-up of an
+  already-shipped, already-tested feature to more surfaces.
+- Spec: nightshift/specs/20260721T062630Z-alert-social-proof-hub-pages.md
+- Verdict: PASS. `npx tsc --noEmit` + `rm -rf .next && npx next build` both clean (376+
+  pages). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`: 736/736 pass,
+  no regressions. Served the PRODUCTION build (`npx next start -p 3711`);
+  `qa-smoke.mjs --slug alert-social-proof-hub-pages` 10/10 pass (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at 1280 + 375px) across all 5 pages. Visual
+  cycle — screenshots read and confirm each page renders correctly, alert box intact, no
+  layout regression. Live-verified the honesty gate against the real (shared) prod DB,
+  read-only, zero writes: **0 confirmed `alerts` rows exist today** (genuine cold start),
+  so the new social-proof line correctly renders nothing anywhere right now — proves this
+  isn't fabricating a count, it'll light up automatically once real alerts accumulate.
+- Screenshots: nightshift/screenshots/alert-social-proof-hub-pages/
+- Next: ~35 `AlertSignup` call sites still don't pass `alertCount` (guide pages, homepage,
+  /tools pages, mission/compare/seeking pages, /partnerships/[id], /airports/[icao],
+  /post, /saved, /about, /aircraft/browse, /aircraft/deals, /listing-quality, /not-found)
+  — a natural next slice, listed in full in BACKLOG.md's updated item.
+
 ## 20260721T060400Z — PASS — alert-deliverability-dns-check
 - Pages: /admin/alerts (new "Deliverability DNS" line in the cron-health panel's
   latest-run stats + a new SPF/DKIM/DMARC column in the "Last N runs" trend table —

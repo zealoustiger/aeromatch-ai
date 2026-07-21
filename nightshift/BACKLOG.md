@@ -3889,15 +3889,29 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   (samples come from the same query as `widenCount` — never pad). Why: showing the
   actual planes is the difference between "widen it?" being ignored and clicked; email
   quality is a named GOAL.md pillar.
-- **[P2][goal] Honest "Join N others" social proof on `AlertSignup`.** No capture surface
-  shows that other real people subscribe (grep clean). Compute N = live confirmed alerts
-  in the same criteria family (reuse `familyForSourcePath` from `alertDemandFamily.ts`,
-  already unit-tested) and render one quiet line — "Join N others getting alerts like
-  this" — ONLY when N ≥ 3; below the floor render nothing (cold-start honesty: never
-  "Join 0 others", never a fabricated floor). Sequence AFTER the QA-row sweep item above
-  ships, so N never counts leaked test rows. Existing `alert_subscribed`/impression
-  events unchanged (same capture point, richer copy). Why: GOAL.md's frictionless-capture
-  pillar — social proof is the classic conversion lever, and we can do it without lying.
+- **[P2][goal] Honest "Join N others" social proof on `AlertSignup`.** **Partial progress
+  via `alert-social-proof-hub-pages` (2026-07-21):** this item's premise ("no capture
+  surface shows this") turned out to already be half-wrong — `AlertSignup` itself has had
+  a fully built, honesty-gated `alertCount`/`showSocialProof` line ("N buyers get alerts
+  for {context}", floored at `MIN_ALERTS_TO_SHOW=3`, exact-`context` match via
+  `getAlertCounts()` in `lib/alertCounts.ts`) since an earlier cycle — it was just only
+  wired on 2 of ~40 `AlertSignup` call sites (`/aircraft/[make]/[model]`,
+  `/aircraft/listing/[id]`). This cycle wired the same existing pattern (no new mechanism)
+  into 5 more: `/aircraft/[make]`, `/aircraft/for-sale/[state]`,
+  `/aircraft/[make]/[model]/[state]`, `/partnerships/make/[make]`,
+  `/partnerships/state/[state]`. Live-verified against the real (shared) prod DB: 0
+  confirmed alerts exist today (genuine cold start), so the line correctly renders nothing
+  anywhere right now — no fabrication, will light up honestly once alerts accumulate.
+  **Still open — remaining un-wired `AlertSignup` call sites** (next slice(s)): the guide
+  pages, homepage, `/tools`, `/tools/cost-calculator`, `/aircraft/mission/[mission]`,
+  `/aircraft/compare` + `/aircraft/compare/[comparison]`, `/partnerships/seeking`,
+  `/partnerships/seeking/[id]`, `/partnerships/[id]`, `/airports/[icao]`, `/compare`,
+  `/post`, `/saved`, `/about`, `/aircraft/browse`, `/aircraft/deals`, `/listing-quality`,
+  `/not-found`. The original item's `familyForSourcePath`/`alertDemandFamily.ts`-based
+  grouping approach was NOT built — the shipped precedent uses simpler exact-`context`
+  matching, which this cycle followed for consistency; leaving that as a documented,
+  deliberate divergence rather than a gap. Not struck off — this is a wire-up-the-rest
+  multi-cycle item, most of the surface area is still unwired.
 - **[P2][goal] "Send to my inbox" test-send on `/admin/alerts/emails`.** The preview page
   renders every builder in-browser, but browser rendering can't prove what Gmail clipping,
   dark-mode inversion, or image proxying will do to a real send — and there's no send
