@@ -907,7 +907,7 @@ test('digest: standout subject falls back to "new match on ClubHanger" when the 
   assert.equal(subject, 'New: 1977 Cessna 182Q at $89,500 — new match on ClubHanger')
 })
 
-test('digest: standout naming falls back to the generic subject when there is more than one match', () => {
+test('digest: subject names the standout listing plus an honest "+ N more" when there is more than one new match', () => {
   const { subject } = buildAlertDigestEmail({
     ...DIGEST_BASE,
     newCount: 2,
@@ -925,7 +925,71 @@ test('digest: standout naming falls back to the generic subject when there is mo
       },
     ],
   })
-  assert.equal(subject, '2 new listings — Cessna 172 on ClubHanger')
+  assert.equal(subject, 'New: 1977 Cessna 182Q at $89,500 + 1 more — your Cessna 172 alert')
+})
+
+test('digest: multi-match "+ N more" is computed from the real newCount, not the capped sample count', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 5,
+    dropCount: 0,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+      {
+        title: '1981 Cessna 172RG',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1981,
+        ttaf: 2100,
+        location: 'Reno, NV',
+        price: 95_000,
+        url: 'https://clubhanger.com/aircraft/listing/abc',
+      },
+    ],
+  })
+  assert.equal(subject, 'New: 1977 Cessna 182Q at $89,500 + 4 more — your Cessna 172 alert')
+})
+
+test('digest: multi-match naming prefers a below-market deal sample over an earlier non-deal sample', () => {
+  const { subject } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 3,
+    dropCount: 0,
+    samples: [
+      {
+        title: '1977 Cessna 182Q',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1977,
+        ttaf: 3400,
+        location: 'Boise, ID',
+        price: 89_500,
+        url: 'https://clubhanger.com/aircraft/listing/xyz',
+      },
+      {
+        title: '1973 Cessna 210',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 1973,
+        ttaf: 5200,
+        location: 'Fresno, CA',
+        price: 79_000,
+        compLabel: '~15% below avg · $92k median · 6 comps',
+        compBelowAvg: true,
+        url: 'https://clubhanger.com/aircraft/listing/def',
+      },
+    ],
+  })
+  assert.equal(subject, 'New: 1973 Cessna 210 at $79,000 + 2 more — your Cessna 172 alert')
 })
 
 test('digest: standout naming falls back to the generic subject when the one match is a price drop, not new', () => {

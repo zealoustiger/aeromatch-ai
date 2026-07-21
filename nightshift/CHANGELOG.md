@@ -2,6 +2,54 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T083341Z — PASS — digest-multimatch-subject
+- Pages: (none — email subject-line logic only, no user-facing page changed; observable
+  via the dev-only `/api/dev/email-preview/alert-digest` preview route)
+- What: **A weekly alert digest with 2+ new matches now names the best one in the subject
+  line instead of a bare count** — e.g. "New: 1973 Cessna 210 at $79,000 + 2 more — your
+  Cessna 172 alert" instead of "3 new listings — Cessna 172 on ClubHanger". This is the
+  same "standout" hero-subject treatment a single-match digest already got; it previously
+  fell back to the generic count-only subject the moment a second match showed up.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 queue batch #15, P2) — the "best listing
+  alert email in aviation" pillar from GOAL.md: a named listing + real price in the inbox
+  preview is far more compelling than a bare count, and this closes the gap where that
+  only applied to the (less common) exactly-one-match case.
+  `buildAlertDigestEmailCore`'s standout-subject rule (`src/lib/email.ts` ~1479) now fires
+  for `opts.newCount >= 1` (was `=== 1`), picking `samples.find(s => s.compBelowAvg) ??
+  samples[0]` (prefer a genuine below-market deal, else the first rendered sample) and
+  appending an honest `+ N more` where `N = opts.newCount - 1` — computed from the real
+  `newCount`, never `samples.length` (which `MAX_DIGEST_SAMPLES` caps below the true
+  total, so a 5-match digest still says "+ 4 more" even though only 2-3 samples render).
+  Every existing honesty guard is unchanged: still gated on `dropCount === 0` (a mixed
+  new+drop or price-drop-only digest keeps the generic subject), never fires for
+  `isSample`/`isFirstSend` frames, and still requires a usable title + real price on the
+  chosen sample (no fabrication). `newCount === 1` renders byte-identical subjects to
+  before (no `+ 0 more` suffix). No schema change, no new capture point — this is a pure
+  subject-composition change inside an existing send path.
+- Spec: nightshift/specs/20260721T083341Z-digest-multimatch-subject.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (same
+  route count, no new routes). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  747/747 pass (+2 new cases — the "+ N more" count computed from a real `newCount` beyond
+  the capped sample array, and the `compBelowAvg`-preferred-over-first tie-break — plus the
+  pre-existing "falls back when there's more than one match" test updated in place to its
+  new, intended behavior). Served the PRODUCTION build (`npx next start -p 3904` — port
+  3000 was transiently held by another process despite an initial free-port probe, caught
+  via the `EADDRINUSE` startup error before treating a false failure as real, retried
+  cleanly on 3904); `qa-smoke.mjs` 2/2 pass on `/api/dev/email-preview/alert-digest` (HTTP
+  200, zero app-origin console errors, zero horizontal overflow at 1280 + 375px). Treated
+  as a non-visual cycle (pure string-composition change, no markup/CSS touched) — smoke
+  gate alone is the bar per RUNBOOK.md; screenshots saved for the audit trail but not read.
+  Server started/stopped cleanly, own pid only — the three pre-existing stray
+  `next-server` processes (ports 11669/19431/21356, flagged in the prior two cycles) were
+  left untouched, not mine to kill. No test rows/users created — this change has no DB
+  surface at all (pure function over caller-supplied data).
+- Screenshots: nightshift/screenshots/digest-multimatch-subject/
+- Next: BACKLOG's alert-experience queue (batch #15) has 1 open P2 item left (one-tap
+  "near my home field" refinement on signed-in partnership/seeker capture) — pull it next
+  cycle, then the queue needs another Opus/Fable plan-pass refill. The stray `next-server`
+  processes on ports 11669/19431/21356 (port 3000 also transiently busy this cycle) are
+  still worth a human kill if unintentional.
+
 ## 20260721T082513Z — PASS — digest-distance-line
 - Pages: (none — backend query logic + email template only, no user-facing page changed)
 - What: **A weekly alert-digest email for a partnership or "pilot seeking" alert scoped
