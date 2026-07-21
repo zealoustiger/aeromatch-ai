@@ -2,6 +2,59 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T091657Z — PASS — digest-feedback-honest-landing
+- Pages: /alerts/status
+- What: **The "Not relevant?" and digest 👎 landing pages no longer make a promise that
+  wasn't true.** Clicking "Not relevant?" on a single listing in an alert digest used to
+  land on a page claiming "We'll factor that into what shows up in your future alert
+  emails" — nothing actually reads that feedback to change future sends. That page (and
+  the whole-digest 👎 page) now instead show the alert's own real, count-verified
+  narrowing suggestions ("Only Cessna 172 — 26 listings," "Only in Florida — 40
+  listings," "or switch to monthly instead") and a direct "Tune this alert →" link
+  straight into that alert's own row on `/alerts/manage` — something the visitor can
+  actually do right now, instead of a vague promise.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 queue, Plan-pass batch #16) — the honesty
+  half of GOAL.md's guardrail ("never fabricate"). `src/app/alerts/status/page.tsx` adds
+  a token→alert lookup (same `.eq('unsubscribe_token', token)` pattern the
+  `/api/alerts/digest-feedback` route itself already uses, with the same graceful-degrade
+  `frequency`-column retry the `confirmed`/`unsubscribed` branches use) for the
+  `digest_listing_feedback` and `digest_feedback_down` states, feeding the alert's real
+  `source_path` into the already-shipped `getAlertMatchCount` + `getNarrowSuggestions` +
+  `NarrowAlertNudge` (the same machinery `/alerts/manage` uses) and building the same
+  `?edit=<id>#alert-<id>` deep link the digest cron's own per-listing links already use.
+  `digest_feedback_down`'s copy was already honest (no false claim) — only its render
+  logic gained the same suggestions/deep-link treatment. No schema change, no new
+  capture point, `/api/alerts/digest-feedback` route untouched.
+- Spec: nightshift/specs/20260721T091657Z-digest-feedback-honest-landing.md
+- Verdict: PASS — `rm -rf .next && npx next build` clean (same route count, no new
+  routes); `tsc --noEmit` shows one pre-existing, unrelated error in `AlertSignup.tsx`
+  (`bouncedHint` narrowing) confirmed present on staging's tip too via `git stash` +
+  re-run — not introduced by, or in scope of, this change; `next build`'s own type-check
+  (the real RUNBOOK gate) passes clean. Served the PRODUCTION build (`npx next start -p
+  3911`); `qa-smoke.mjs` 6/6 pass on `/alerts/status` at `digest_listing_feedback`,
+  `digest_feedback_down`, and (regression check) `confirmed` states, desktop 1280 +
+  mobile 375, zero console errors, zero horizontal overflow. Visual cycle — screenshots
+  confirmed correct both with no token (generic fallback copy + link, matching prior
+  behavior) and, going further than the smoke gate, against a **real throwaway
+  `qa-digest-feedback-honest-landing-<ts>@example.com` alert row** (service-role insert,
+  `source_path: '/aircraft?make=Cessna'`, deliberately broad to clear the 75-match narrow
+  threshold — 395 live matches): the narrowing suggestions rendered live ("Only Cessna
+  172 — 26 listings," "Only in Florida — 40 listings," "or switch to monthly instead")
+  and the "Tune this alert →" link correctly opened that exact alert row
+  (`alert-<id>` anchor + `?edit=<id>` present) on `/alerts/manage`. Test alert row deleted
+  immediately after (verified empty on re-query) — no data left in the shared DB.
+- Screenshots: nightshift/screenshots/digest-feedback-honest-landing/,
+  nightshift/screenshots/digest-feedback-honest-landing-live/
+- Next: Plan-pass batch #16 has 3 items left — "Honest 'N pilots watching' social proof
+  on listing watch surfaces" (P1), "Multi-airport criterion inline-editable in alert
+  Edit/Duplicate" (P1), plus two P2s (Year-range Edit fields, partnership radius
+  selector). Tier 2 (`[want]`) re-checked this cycle: every open `[P1]`/`[P2][want]` line
+  (save-search auth-wall reconciliation, collection-layout mosaic redesign, Trade-A-Plane
+  ingestion, Bay-Area coverage benchmark slices 3-5, Controller/AirMart/AeroTrader
+  cover-indirectly notes, owner-leads dataset) remains the same standing
+  blocked-on-human-decision/compliance-review/bot-evasion-guardrail set confirmed by
+  dozens of prior cycles — none newly buildable.
+
 ## 20260721T090430Z — PASS — partnership-alert-mode-toggle
 - Pages: /alerts/manage, /searches, /aircraft, /partnerships
 - What: Partnership email alerts can now be switched to "New listings only," "Price drops only," or "Both" — the same toggle that already existed for aircraft alerts, previously hidden for partnerships even though partnership price-drop detection was already live under the hood.
