@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T090430Z — PASS — partnership-alert-mode-toggle
+- Pages: /alerts/manage, /searches, /aircraft, /partnerships
+- What: Partnership email alerts can now be switched to "New listings only," "Price drops only," or "Both" — the same toggle that already existed for aircraft alerts, previously hidden for partnerships even though partnership price-drop detection was already live under the hood.
+- Goal: alert-experience — closes Plan-pass batch #16's top `[P1][goal]` gap: `new_listing_opt_out` was gated to `target.type === 'aircraft'` only in the digest cron (`alert-digest/route.ts`), and the `AlertModeToggle` component was hidden for partnership rows on `/alerts/manage` and `SavedSearchAlertButton` (renamed its gating prop `isAircraft` → `showModeToggle`). `price_drop_opt_in` and the partnership drop-count/sample queries were already generic — no new query, no schema change. Seeker alerts (no price field) intentionally still get no toggle.
+- Spec: nightshift/specs/20260721T090430Z-partnership-alert-mode-toggle.md
+- Verdict: PASS — clean `next build` + typecheck; qa-smoke exit 0 on all 4 pages (desktop 1280 + mobile 375, zero console errors, zero overflow); screenshots confirm no regression (toggle itself only renders for a confirmed alert row with a session/token, not present in an anonymous QA pass — verified correct by direct code read mirroring the pre-existing, already-proven aircraft branch of the same conditionals).
+- Screenshots: nightshift/screenshots/partnership-alert-mode-toggle/
+- Next: same "hidden aircraft-only toggle" audit for any other alert surfaces; the sibling batch #16 items (honest digest 👎 landing, "N pilots watching" social proof, multi-airport Edit/Duplicate, Year-range Edit fields, partnership radius selector) are still open.
+
 ## 20260721T084138Z — PASS — alert-home-airport-refine
 - Pages: /partnerships, /partnerships/seeking
 - What: **A signed-in pilot with a saved home airport can now one-tap narrow a

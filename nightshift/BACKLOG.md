@@ -4194,16 +4194,14 @@ in `FrequencyToggle`, nav shows a known-subscriber "My alerts" + new-match count
 capture exist, and partnerships browse has no buy-in price filter param to honor.
 Genuinely open gaps below._
 
-- **[P1][goal] Extend the New/Drops/Both alert-mode toggle to partnership search alerts.**
-  Why: partnership digests already include buy-in price drops
-  (`countRecentPartnershipPriceDrops`/`fetchPartnershipPriceDropSamples`), but the cron
-  honors `new_listing_opt_out`/`price_drop_opt_in` for `target.type === 'aircraft'` only
-  (alert-digest/route.ts:2117) and `AlertModeToggle` renders only on aircraft alerts — a
-  partnership subscriber can't say "drops only" or "new only." Honor both opt-outs for
-  partnership-type search alerts in the digest path (columns are already type-agnostic)
-  and render the toggle on partnership rows in `/alerts/manage` + `SavedSearchAlertButton`.
-  Improves the manage surface + digest honesty; no new capture point, so no new
-  `alert_subscribed` event.
+~~- **[P1][goal] Extend the New/Drops/Both alert-mode toggle to partnership search alerts.**~~
+  ✅ SHIPPED via `partnership-alert-mode-toggle` (2026-07-21) The cron's `newListingOptOut`
+  gate (`alert-digest/route.ts`) now honors `target.type === 'partnership'` alongside
+  `'aircraft'`; `AlertModeToggle` now renders on partnership rows in `/alerts/manage` and
+  `SavedSearchAlertButton` (its gating prop renamed `isAircraft` → `showModeToggle`, now
+  true for aircraft OR partnership, still false for seekers who have no price). No schema
+  change — `price_drop_opt_in`/`new_listing_opt_out` were already generic booleans; the
+  partnership drop-count/sample queries were already wired in, just not toggleable.
 - **[P1][goal] Make the digest 👎 landing honest and actionable.** Why: a digest "Not
   relevant?" / thumbs-down click just inserts a `feedback` row, then
   `/alerts/status?state=digest_listing_feedback` claims "We'll factor that into what
