@@ -24,7 +24,7 @@ import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClas
  */
 
 export type EditableAlertTarget =
-  | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; dealOnly: boolean }
+  | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; minYear: string; maxYear: string; dealOnly: boolean }
   | { type: 'partnership'; make: string; state: string; airports: string[] }
   | { type: 'seeker'; make: string; model: string; state: string; airports: string[] }
 
@@ -34,6 +34,8 @@ export interface AlertCriteriaFields {
   state?: string
   minPrice?: string
   maxPrice?: string
+  minYear?: string
+  maxYear?: string
   airports?: string[]
   dealOnly?: boolean
 }
@@ -70,6 +72,8 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
       state: g('state').toUpperCase(),
       minPrice: g('min_price'),
       maxPrice: g('max_price'),
+      minYear: g('min_year'),
+      maxYear: g('max_year'),
       dealOnly: g('deal') === 'good',
     }
   }
@@ -95,6 +99,13 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
 
 /** A positive-integer price string, or undefined for anything else (blank, 0, negative, junk). */
 function cleanPrice(v: string | undefined): string | undefined {
+  if (!v) return undefined
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) && n > 0 ? String(n) : undefined
+}
+
+/** A positive-integer year string, or undefined for anything else (blank, 0, negative, junk). */
+function cleanYear(v: string | undefined): string | undefined {
   if (!v) return undefined
   const n = parseInt(v, 10)
   return Number.isFinite(n) && n > 0 ? String(n) : undefined
@@ -142,6 +153,8 @@ export function buildAlertCriteriaUpdate(
     set('state', fields.state?.trim().toUpperCase())
     set('min_price', cleanPrice(fields.minPrice))
     set('max_price', cleanPrice(fields.maxPrice))
+    set('min_year', cleanYear(fields.minYear))
+    set('max_year', cleanYear(fields.maxYear))
     set('deal', fields.dealOnly ? 'good' : undefined)
   } else if (type === 'partnership') {
     set('make', fields.make?.trim())
@@ -177,13 +190,13 @@ export function computeWidenCandidate(target: EditableAlertTarget): WidenCandida
   if (target.type === 'aircraft') {
     if (target.model) {
       return {
-        fields: { make: target.make, model: '', state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly },
+        fields: { make: target.make, model: '', state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, dealOnly: target.dealOnly },
         description: target.make ? `Show all ${target.make} listings` : 'Show all makes and models',
       }
     }
     if (target.state) {
       return {
-        fields: { make: target.make, model: target.model, state: '', minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly },
+        fields: { make: target.make, model: target.model, state: '', minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, dealOnly: target.dealOnly },
         description: 'Search every state',
       }
     }
@@ -257,7 +270,7 @@ function describeContext(type: EditableAlertTarget['type'], params: URLSearchPar
 
 /** The form-exposed query-param keys per type — everything else on `source_path` is "hidden." */
 const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
-  aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'deal']),
+  aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'deal']),
   partnership: new Set(['make', 'state', 'airport', 'airports']),
   seeker: new Set(['make', 'model', 'state', 'airport', 'airports']),
 }
@@ -265,7 +278,7 @@ const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
 /** Rebuilds the `AlertCriteriaFields` the edit form would submit for an UNCHANGED target — used to round-trip its own exposed fields when only a hidden param is being removed. */
 export function targetToFields(target: EditableAlertTarget): AlertCriteriaFields {
   if (target.type === 'aircraft') {
-    return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly }
+    return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, dealOnly: target.dealOnly }
   }
   if (target.type === 'partnership') {
     return { make: target.make, state: target.state, airports: target.airports }

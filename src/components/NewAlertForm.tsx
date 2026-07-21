@@ -33,6 +33,8 @@ interface InitialValues {
   state?: string
   minPrice?: string
   maxPrice?: string
+  minYear?: string
+  maxYear?: string
   airports?: string[]
   /** Present on an aircraft `EditableAlertTarget` (via `targetToFields`) but
    *  unused here — this form has no "good deals only" field of its own. */
@@ -83,6 +85,8 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
   const [state, setState] = useState(initial?.state ?? '')
   const [minPrice, setMinPrice] = useState(initial?.minPrice ?? '')
   const [maxPrice, setMaxPrice] = useState(initial?.maxPrice ?? '')
+  const [minYear, setMinYear] = useState(initial?.minYear ?? '')
+  const [maxYear, setMaxYear] = useState(initial?.maxYear ?? '')
   const [airports, setAirports] = useState<string[]>(initial?.airports ?? [])
 
   function reset() {
@@ -92,6 +96,8 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
     setState(initial?.state ?? '')
     setMinPrice(initial?.minPrice ?? '')
     setMaxPrice(initial?.maxPrice ?? '')
+    setMinYear(initial?.minYear ?? '')
+    setMaxYear(initial?.maxYear ?? '')
     setAirports(initial?.airports ?? [])
     setError(null)
   }
@@ -108,7 +114,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
     startTransition(async () => {
       const fields =
         type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice }
+          ? { make, model, state, minPrice, maxPrice, minYear, maxYear }
           : type === 'partnership'
             ? { make, state, airports }
             : { make, model, state, airports }
@@ -235,6 +241,28 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
                     min={0}
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
+                    placeholder="Max"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Min year</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={minYear}
+                    onChange={(e) => setMinYear(e.target.value)}
+                    placeholder="Min"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Max year</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={maxYear}
+                    onChange={(e) => setMaxYear(e.target.value)}
                     placeholder="Max"
                     className={inputClass}
                   />

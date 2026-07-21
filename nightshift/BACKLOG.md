@@ -4236,7 +4236,16 @@ Genuinely open gaps below._
   two content-equal arrays would never compare equal. Both fixed (empty array = no
   constraint; order-independent/case-insensitive set comparison), covered by 4 new
   `alertOverlap.test.ts` cases. No schema change.
-- **[P2][goal] Expose Year range as editable fields in aircraft alert Edit/Duplicate.**
+~~- **[P2][goal] Expose Year range as editable fields in aircraft alert Edit/Duplicate.**~~
+  ✅ SHIPPED via `alert-year-range-edit` (2026-07-21) `EXPOSED_KEYS.aircraft` now includes
+  `min_year`/`max_year`; new Min/Max year inputs in `AlertEditForm` and `NewAlertForm`
+  (mirroring the existing price-range pair), threaded through `EditableAlertTarget`,
+  `buildAlertCriteriaUpdate`, `targetToFields`, and `computeWidenCandidate`'s aircraft
+  fields objects so a year bound round-trips losslessly through Edit, Duplicate, and the
+  widen nudge instead of being a removable-only hidden chip. No schema change. Verified
+  end-to-end against a real `@example.com` test alert (created + deleted this cycle):
+  Edit form prefilled 2010/2020 correctly, no leftover hidden chip, saved 2012/2023 and
+  confirmed the DB `source_path` updated. Original text (for reference):
   Why: `min_year`/`max_year` are fully match-honored browse filters
   (`describeAircraftFilters`, seo.ts:2263–2265) but `EXPOSED_KEYS.aircraft` is only
   make/model/state/min_price/max_price/deal (alertEditCriteria.ts:258) — a year bound is
