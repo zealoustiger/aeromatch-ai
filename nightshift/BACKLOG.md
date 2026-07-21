@@ -3889,37 +3889,34 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   (samples come from the same query as `widenCount` — never pad). Why: showing the
   actual planes is the difference between "widen it?" being ignored and clicked; email
   quality is a named GOAL.md pillar.
-- **[P2][goal] Honest "Join N others" social proof on `AlertSignup`.** **Partial progress
-  via `alert-social-proof-hub-pages` (2026-07-21):** this item's premise ("no capture
-  surface shows this") turned out to already be half-wrong — `AlertSignup` itself has had
-  a fully built, honesty-gated `alertCount`/`showSocialProof` line ("N buyers get alerts
-  for {context}", floored at `MIN_ALERTS_TO_SHOW=3`, exact-`context` match via
-  `getAlertCounts()` in `lib/alertCounts.ts`) since an earlier cycle — it was just only
-  wired on 2 of ~40 `AlertSignup` call sites (`/aircraft/[make]/[model]`,
-  `/aircraft/listing/[id]`). This cycle wired the same existing pattern (no new mechanism)
-  into 5 more: `/aircraft/[make]`, `/aircraft/for-sale/[state]`,
-  `/aircraft/[make]/[model]/[state]`, `/partnerships/make/[make]`,
-  `/partnerships/state/[state]`. Live-verified against the real (shared) prod DB: 0
-  confirmed alerts exist today (genuine cold start), so the line correctly renders nothing
-  anywhere right now — no fabrication, will light up honestly once alerts accumulate.
-  **More progress via `alert-social-proof-more-pages` (2026-07-21):** wired 4 more sites
-  with a clean single `context` — `/airports/[icao]`, `/partnerships/seeking` (guarded
-  for the no-active-filter/`undefined`-context case), `/aircraft/mission/[mission]`,
-  `/aircraft/deals`. Same exact-context pattern, no new mechanism; QA PASS on all 4
-  (desktop 1280 + 375px, 0 console errors/overflow), plus the seeking page's filtered
-  (`?make=cessna`) and unfiltered variants both verified clean.
-  **Still open — remaining un-wired `AlertSignup` call sites** (next slice(s)): the guide
-  pages, `/tools`, `/tools/cost-calculator`, `/aircraft/compare` + `/aircraft/compare/[comparison]`,
-  `/partnerships/seeking/[id]`, `/partnerships/[id]`, `/compare`, `/post`, `/saved`,
-  `/about`, `/not-found`. **Not applicable — no single `context` to key off of** (homepage
-  band, `/aircraft/browse`, `/listing-quality` all call `AlertSignup` with no `context`
-  prop): would need a different, non-exact-match social-proof mechanism, so these are a
-  separate design question, not a wire-up. The original item's
+~~- **[P2][goal] Honest "Join N others" social proof on `AlertSignup`.**~~ ✅ SHIPPED via
+  `alert-social-proof-hub-pages` + `alert-social-proof-more-pages` + `alert-social-proof-remaining-sites`
+  (2026-07-21) This item's premise ("no capture surface shows this") turned out to already
+  be half-wrong — `AlertSignup` itself has had a fully built, honesty-gated
+  `alertCount`/`showSocialProof` line ("N buyers get alerts for {context}", floored at
+  `MIN_ALERTS_TO_SHOW=3`, exact-`context` match via `getAlertCounts()` in
+  `lib/alertCounts.ts`) since an earlier cycle — it was just only wired on 2 of ~40
+  `AlertSignup` call sites (`/aircraft/[make]/[model]`, `/aircraft/listing/[id]`). Three
+  cycles wired the same existing pattern (no new mechanism) into every remaining call site
+  that has a clean single `context` string: `/aircraft/[make]`, `/aircraft/for-sale/[state]`,
+  `/aircraft/[make]/[model]/[state]`, `/partnerships/make/[make]`, `/partnerships/state/[state]`,
+  `/airports/[icao]`, `/partnerships/seeking` (guarded for the no-filter/`undefined`-context
+  case), `/aircraft/mission/[mission]`, `/aircraft/deals`, `/tools/cost-calculator` (make+model
+  branch only), `/aircraft/compare/[comparison]` (both boxes), `/compare` (dynamic ≤3-box
+  list), `/partnerships/[id]` (the family/filled-partnership box + the main detail-page box —
+  NOT the seeker-noun cross-sell box or the per-listing watch box, both deliberately unwired
+  to match the `/aircraft/listing/[id]` precedent), `/saved` (the `deriveSavedAlertContext`
+  box only). Live-verified against the real (shared) prod DB throughout: 0 confirmed alerts
+  exist today (genuine cold start), so the line correctly renders nothing anywhere right now
+  — no fabrication, will light up honestly once alerts accumulate. **Not applicable — no
+  single `context` to key off of, left permanently unwired:** guide pages, `/tools` hub,
+  `/aircraft/compare` index, `/partnerships/seeking/[id]`, `/post`, `/about`, `/not-found`,
+  the homepage band, `/aircraft/browse`, `/listing-quality` — all call `AlertSignup` with no
+  `context` prop or a compound multi-field context; would need a different, non-exact-match
+  social-proof mechanism, a separate design question. The original item's
   `familyForSourcePath`/`alertDemandFamily.ts`-based grouping approach was NOT built — the
-  shipped precedent uses simpler exact-`context` matching, which both cycles followed for
-  consistency; leaving that as a documented, deliberate divergence rather than a gap. Not
-  struck off — this is a wire-up-the-rest multi-cycle item, some surface area (multi-context
-  pages) is still unwired.
+  shipped precedent uses simpler exact-`context` matching throughout, a documented, deliberate
+  divergence. This item is now fully complete across every viable call site.
 - **[P2][goal] "Send to my inbox" test-send on `/admin/alerts/emails`.** The preview page
   renders every builder in-browser, but browser rendering can't prove what Gmail clipping,
   dark-mode inversion, or image proxying will do to a real send — and there's no send

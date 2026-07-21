@@ -2,6 +2,45 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T064652Z — PASS — alert-social-proof-remaining-sites
+- Pages: /tools/cost-calculator, /aircraft/compare/[comparison], /compare,
+  /partnerships/[id], /saved
+- What: **Five more `AlertSignup` boxes now show the real "N buyers get alerts for
+  this" social proof**, closing out the multi-cycle wire-up. The cost calculator's
+  make+model branch, both boxes on the aircraft comparison pages, every dynamic box
+  on the compare tray, the partnership detail page's two make/model-scoped boxes
+  (family cross-sell on the "filled" landing page + the main sidebar box — the
+  seeker-noun cross-sell and per-listing watch boxes stay unwired, matching the
+  `/aircraft/listing/[id]` precedent), and the Saved page's "you keep saving
+  Cessnas"-style box all now compute `alertCount` via the existing
+  `getAlertCounts()` and pass it through — no new mechanism, no schema change.
+- Goal: alert-experience `[goal]`, completing BACKLOG's "Join N others" social-proof
+  item — frictionless-capture pillar. This closes out every remaining call site that
+  has a clean single `context` string; the item is now marked fully shipped in
+  BACKLOG.md (the handful of multi-context/no-context pages — guides, `/tools` hub,
+  `/post`, `/about`, homepage, `/aircraft/browse`, `/listing-quality`,
+  `/partnerships/seeking/[id]` — stay deliberately unwired, a separate design
+  question).
+- Spec: nightshift/specs/20260721T064652Z-alert-social-proof-remaining-sites.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean
+  (same page count, no new/removed routes). Full
+  `node --experimental-strip-types --test 'src/**/*.test.ts'`: 736/736 pass, no
+  regressions. Served the PRODUCTION build (`npx next start -p 3712`);
+  `qa-smoke.mjs` 10/10 pass across the 5 pages (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at 1280 + 375px) — exercised
+  `/tools/cost-calculator?make=Cessna&model=172` (the context-branch, not the bare
+  fallback), a real comparison slug (`cessna-172-vs-cirrus-sr22`), the empty
+  `/compare` tray, a real partnership id, and the empty `/saved` state. Visual
+  cycle — screenshots read at both viewports and confirm all 5 pages render
+  correctly, alert boxes intact, no layout regression. Real (shared) prod DB still
+  has 0 confirmed `alerts` rows, so the social-proof line correctly renders nothing
+  anywhere right now — same honest cold-start state as every prior cycle in this
+  series, not a bug.
+- Screenshots: nightshift/screenshots/alert-social-proof-remaining-sites/
+- Next: BACKLOG's alert-experience `[goal]` queue moves to the next open item —
+  `/admin/alerts/emails`'s "Send to my inbox" test-send, or the "No content sent
+  yet" share tile on `/admin/alerts`.
+
 ## 20260721T063638Z — PASS — alert-social-proof-more-pages
 - Pages: /airports/[icao], /partnerships/seeking, /aircraft/mission/[mission],
   /aircraft/deals
