@@ -63,6 +63,7 @@ import AlertSignup from '@/components/AlertSignup'
 import RecentlyViewedTracker from '@/components/RecentlyViewedTracker'
 import { getAlertCounts } from '@/lib/alertCounts'
 import { getAlertMatchCount, countMatchingAircraftSubscribers } from '@/lib/alertMatchCounts'
+import { getWatcherCount } from '@/lib/alertWatcherCounts'
 import MonetizationIntent from '@/components/MonetizationIntent'
 import PosterAttribution from '@/components/PosterAttribution'
 import { getPublicProfile } from '@/lib/publicProfile'
@@ -610,6 +611,7 @@ export default async function AircraftListingDetailPage({
   // cron's parseSourcePath resolves this shape to a single-row watch.
   const watchContext = [p.year, p.make, p.model].filter(Boolean).join(' ') || undefined
   const watchSourcePath = `/aircraft/listing/${p.id}?watch=price`
+  const watcherCount = await getWatcherCount(watchSourcePath)
 
   // Fetch the current user's saved row for this listing so we can:
   // (a) pass the real initialSaved state (eliminates the heart-state flash), and
@@ -1249,6 +1251,7 @@ export default async function AircraftListingDetailPage({
               sourcePath={watchSourcePath}
               noun="aircraft"
               watchOnly
+              watcherCount={watcherCount}
               className="mt-4"
             />
 

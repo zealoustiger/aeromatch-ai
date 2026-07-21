@@ -34,6 +34,7 @@ import ListingOwnerNudge from '@/components/ListingOwnerNudge'
 import MatchCountNudge from '@/components/MatchCountNudge'
 import { countMatchingSeekersForPartnership, seekerBrowseHrefForPartnership } from '@/lib/matchingQuery'
 import { countMatchingPartnershipSubscribers } from '@/lib/alertMatchCounts'
+import { getWatcherCount } from '@/lib/alertWatcherCounts'
 import PhotoGallery from '@/components/PhotoGallery'
 import SimilarListings from '@/components/SimilarListings'
 import AircraftRailCard from '@/components/AircraftRailCard'
@@ -540,6 +541,7 @@ export default async function PartnershipDetailPage({
   // and ContactBar's mobile Watch button so all three refer to the exact same alert.
   const watchContext = [p.year, p.make, p.model].filter(Boolean).join(' ') || undefined
   const watchSourcePath = `/partnerships/${p.id}?watch=price`
+  const watcherCount = await getWatcherCount(watchSourcePath)
 
   return (
     <>
@@ -1046,6 +1048,7 @@ export default async function PartnershipDetailPage({
                 sourcePath={watchSourcePath}
                 noun="partnership"
                 watchOnly
+                watcherCount={watcherCount}
                 className="mt-4"
               />
             </div>

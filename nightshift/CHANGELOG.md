@@ -2,6 +2,48 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T092443Z — PASS — listing-watcher-count
+- Pages: /aircraft/listing/[id], /partnerships/[id]
+- What: **Both single-listing "alert me if the price drops" watch boxes now show a real
+  "N pilots are watching this listing" line when at least one other pilot has confirmed
+  a watch alert on that exact listing** — the only alert capture point on the site with
+  zero social proof (the family-search boxes already show "N buyers get alerts for
+  {make/model}"). Hidden entirely at 0 watchers, never inflated.
+- Goal: alert-experience `[goal]` (BACKLOG Plan-pass batch #16, top remaining `[P1]`) —
+  the "prove it converts" / social-proof pillar from GOAL.md. New
+  `src/lib/alertWatcherCounts.ts` (`getWatcherCount`) counts confirmed `alerts` rows whose
+  `source_path` exactly matches a listing's own `?watch=price` path (service-role read,
+  same fail-soft-to-0 convention as `saveCounts.ts`/`alertCounts.ts`) — deliberately an
+  exact source_path match rather than reusing the existing context-string-keyed
+  `getAlertCounts` (which counts by `context` text like "2024 Beechcraft Bonanza G36" and
+  could over-count across two distinct listings that happen to share the same
+  year/make/model). `AlertSignup.tsx` gained an optional `watcherCount` prop rendered only
+  when `watchOnly` is true and the count is >= 1, styled like the existing
+  `showSocialProof` line. Both listing-detail pages compute the count for their own
+  `watchSourcePath` and pass it into their existing watch-only `AlertSignup` call — no new
+  component, no schema change, no new capture point, no change to the family-alert box
+  above it or to `alert_subscribed` wiring.
+- Spec: nightshift/specs/20260721T092443Z-listing-watcher-count.md
+- Verdict: PASS — `rm -rf .next && npx next build` clean (same route count, no new
+  routes); `tsc --noEmit` shows the same one pre-existing, unrelated `bouncedHint`
+  narrowing error in `AlertSignup.tsx` flagged in the prior two cycles' changelog entries
+  (confirmed present on staging's tip before this change too) — `next build`'s own
+  type-check (the real RUNBOOK gate) passes clean. `node --experimental-strip-types --test
+  'src/**/*.test.ts'`: 747/747 pass (unchanged). Served the PRODUCTION build (`npx next
+  start -p 3920`); `qa-smoke.mjs` 4/4 pass on both pages, desktop 1280 + mobile 375, zero
+  console errors, zero horizontal overflow. Visual cycle — screenshots confirmed correct:
+  inserted one real throwaway confirmed watch-alert row (service-role insert, `source_path:
+  '/aircraft/listing/dad01288-ddb8-4aa6-b41f-b11b49a53dd7?watch=price'`) and the aircraft
+  listing page rendered "1 pilot is watching this listing." directly under the watch box's
+  subcopy at both viewports, no layout regression; the partnership listing page (0
+  watchers on its exact watch path) correctly rendered no line at all. Test alert row
+  deleted immediately after (re-queried empty for the test email prefix). Server started/
+  stopped cleanly, own PID only.
+- Screenshots: nightshift/screenshots/listing-watcher-count/
+- Next: BACKLOG's 🔔 batch #16 has one `[P1]` item left — "Multi-airport criterion
+  inline-editable in alert Edit/Duplicate" — plus two `[P2]`s (Year-range Edit fields,
+  partnership radius selector).
+
 ## 20260721T091657Z — PASS — digest-feedback-honest-landing
 - Pages: /alerts/status
 - What: **The "Not relevant?" and digest 👎 landing pages no longer make a promise that
