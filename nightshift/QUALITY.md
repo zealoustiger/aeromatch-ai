@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-21T08:50:45Z — alert-home-airport-refine — score 5/5
+- Strengths: Tightly-scoped, faithful mirror of the existing `withDealOnly` pattern — the `withAirport` helper, `showHomeAirportOption` gate, submit wiring, and `near_home_airport` track payload all match spec exactly; the profiles lookup replicates `Nav.tsx`'s `.eq('user_id',…).maybeSingle()` precedent and folds cleanly into the existing `getUser`/`onAuthStateChange` effect via a shared `applyUser`; the digest parser verifiably honors `airport=` (`g('airport')?.toUpperCase()` for partnerships, `g('airports') ?? g('airport')` for seekers), and the honesty-driven exclusion of SEO/path-segment routes is correct and well-documented.
+- Weaknesses / risks: none material — the value isn't `encodeURIComponent`'d (a sibling call site is), but ICAO codes are alphanumeric and the parser uppercases/trims, so it's a cosmetic inconsistency only; the two separate `airport=`/`airports=` substring guards are both genuinely needed (`'airports='` doesn't contain `'airport='`).
+- Follow-up: none
+
 ## 2026-07-21T08:10:27Z — seeker-alert-multiairport — score 4/5
 - Strengths: Faithful, complete end-to-end plumbing of a CSV `airports=` filter through all four modules exactly as spec'd — dedup via `Set`, radius-expand restricted to a single code (mirrors `seekersQuery.ts`), the `additional_airports`-missing graceful-degrade retry preserved as `.in(home_airport)`, a real per-loop `getAirportsWithinRadius` cache in `countMatchingSeekerSubscribers`, and genuinely careful lossless preservation of a 2+-airport criterion across unrelated edits (reads original count before mutation); tests mirror the existing single-icao cases and cover CSV-wins, radius carry-through, and multi-code ANY-match.
 - Weaknesses / risks: none material — the `airports`-parse block and radius-resolve logic are triplicated across route.ts / alertMatchCounts.ts / alertSubscriberMatch.ts (two `resolveSeekerIcaoList` copies plus a third inlined cached variant), though this follows the pre-existing per-module local-`AlertTarget` convention rather than introducing new drift.
