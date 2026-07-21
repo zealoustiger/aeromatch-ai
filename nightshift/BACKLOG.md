@@ -4108,20 +4108,27 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
   prefilled to the matchable `/partnerships/seeking?make=…` (+`state=…` when present)
   shape, `source="owner_partnership_seeker"`. Mirrors the aircraft-listing sibling exactly.
   No schema change.
-- **[P1][goal] Seeker "alert me for this search" must honor the multi-airport filter.**
-  `/partnerships/seeking`'s alertSourcePath deliberately drops the multi-select `airports`
-  filter (page.tsx:124–131 comment: the cron matcher "only understands one ICAO") — a
-  visitor filtered to 2–3 home airports silently subscribes to a strictly BROADER alert
-  than the search they're looking at. Honor a CSV `airports` list end-to-end, mirroring
-  the existing single-`airport` seeker path: the cron's `parseSourcePath`/`countNewSeekers`
-  (listing's `home_airport`/`additional_airports` vs. ANY of the alert's airports),
-  `alertMatchCounts`, `parseSeekerAlertSourcePath`/`matchesSeekerListing`
-  (`alertSubscriberMatch.ts`), and the manage-page edit form (`alertEditCriteria.ts` —
-  keep the Duplicate button lossless, the same trap `seeker-alert-location-edit` fixed for
-  state/airport). Then let the seeking page pass the full filter set through to
-  `alertSourcePath`. Improves an existing capture point's honesty (the alert = the search
-  on screen); `alert_subscribed` already fires there. Ship the whole chain in ONE cycle —
-  never capture a param the cron doesn't match yet. No schema change.
+~~- **[P1][goal] Seeker "alert me for this search" must honor the multi-airport filter.**~~
+  ✅ SHIPPED via `seeker-alert-multiairport` (2026-07-21) `/partnerships/seeking`'s
+  `alertSourcePath` now forwards the active multi-select `airports` CSV (falling back to
+  the legacy single `airport`, + `radius` only alongside exactly one code — several
+  centers can't share one radius, same restriction the filter UI itself enforces) instead
+  of silently dropping to a strictly broader "any airport" alert. Honored end-to-end: the
+  cron's `parseSourcePath`/`countNewSeekers`/`fetchNewSeekerSamples` (new
+  `resolveSeekerIcaoList`, `home_airport.in.(...)` OR `additional_airports.ov.{...}`),
+  `alertMatchCounts.ts`'s own duplicate parser/`countActiveSeekers`/`previewSeekers`/
+  `countMatchingSeekerSubscribers`, and `alertSubscriberMatch.ts`'s
+  `parseSeekerAlertSourcePath`/`matchesSeekerListing` (now takes a caller-resolved
+  `icaoList`, mirroring `matchesPartnershipListing`'s existing precedent). `alertEditCriteria.ts`
+  keeps a 2+-airport criterion from being silently dropped/widened on an unrelated
+  `/alerts/manage` edit (the exact trap `seeker-alert-location-edit` fixed for state/airport)
+  — preserved as a removable "near A, B" hidden-criteria chip; a single-code `airports=`
+  value stays fully editable via the existing Airport field, identical to legacy `airport=`.
+  **Not done, intentionally:** exposing multi-airport as an inline-editable chip field in
+  Edit/Duplicate — Duplicate still drops a 2+-airport hidden criterion, the same
+  pre-existing limitation every other unexposed criterion (e.g. an aircraft alert's
+  `min_year`) already has for every alert type; a genuinely new UI slice, not this one.
+  No schema change.
 - **[P1][goal] Recognized-subscriber homepage band — a "You have N alerts" third state.**
   The homepage capture band (page.tsx:263–278) has two states (recent-views banner /
   generic capture) but shows a known subscriber the same generic pitch: `AlertSignup`'s
