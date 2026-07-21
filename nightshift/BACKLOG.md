@@ -4098,17 +4098,16 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
 (`/alerts/status:74`), and single-new-match digests already get a hero-title subject
 (email.ts ~1456). Genuinely open gaps below._
 
-- **[P1][goal] Owner-side seeker-alert capture on the partnership listing page.** The
-  deferred sibling slice of `aircraft-owner-seeker-alert` (its changelog entry names this
-  "a natural next slice"): `/partnerships/[id]`'s `isOwner` block (page.tsx:932–944)
-  renders `ListingOwnerNudge` + `MatchCountNudge` ("N pilots seeking match what you're
-  offering") but no alert capture — the owner can see today's matches yet can't subscribe
-  to hear about the NEXT one. Add `AlertSignup` (`noun="seeker"`) gated on the same
-  `isOwner`/`p.make` check, `sourcePath` prefilled to the matchable
-  `/partnerships/seeking?make=…` (+`state=…` when present) shape
-  `parseSeekerAlertSourcePath` already understands, with a new
-  `source="owner_partnership_seeker"` for attribution. New capture point — emits the
-  standard `alert_subscribed`. No schema change.
+~~- **[P1][goal] Owner-side seeker-alert capture on the partnership listing page.**~~ ✅
+  SHIPPED via `partnership-owner-seeker-alert` (2026-07-21) The deferred sibling slice of
+  `aircraft-owner-seeker-alert` (its changelog entry names this "a natural next slice"):
+  `/partnerships/[id]`'s `isOwner` block renders `ListingOwnerNudge` + `MatchCountNudge`
+  ("N pilots seeking match what you're offering") but had no alert capture — the owner
+  could see today's matches but couldn't subscribe to hear about the NEXT one. Added
+  `AlertSignup` (`noun="seeker"`) gated on the same `isOwner`/`p.make` check, `sourcePath`
+  prefilled to the matchable `/partnerships/seeking?make=…` (+`state=…` when present)
+  shape, `source="owner_partnership_seeker"`. Mirrors the aircraft-listing sibling exactly.
+  No schema change.
 - **[P1][goal] Seeker "alert me for this search" must honor the multi-airport filter.**
   `/partnerships/seeking`'s alertSourcePath deliberately drops the multi-select `airports`
   filter (page.tsx:124–131 comment: the cron matcher "only understands one ICAO") — a
