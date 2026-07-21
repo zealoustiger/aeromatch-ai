@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-21T10:16:08Z — DRAIN SUMMARY
+- Cycles this run: 23 (PASS 19 / FAIL 1 / ABORT 3)
+- Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $94.2077 of $120 cap
+- Stopped because: backlog drained (planner cap 2)
+- Run: 20260721T060002Z
+
 ## 20260721T100418Z — PASS — alert-radius-edit
 - Pages: /alerts/manage
 - What: **Editing or duplicating a partnership/seeker alert that's scoped to a single
