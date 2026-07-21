@@ -91,6 +91,11 @@ export default async function AlertScoreboardPage() {
     unsubscribedAtMigrated: unsubscribeReasons.unsubscribedAtMigrated,
   })
 
+  const dnsLabel = (status: string | null) =>
+    status === null ? '—' : status === 'pass' ? 'PASS' : status === 'fail' ? 'FAIL' : 'lookup-error'
+  const dnsHasFailure =
+    lastRun?.dnsSpfStatus === 'fail' || lastRun?.dnsDkimStatus === 'fail' || lastRun?.dnsDmarcStatus === 'fail'
+
   const hasRepermissionSends = repermission.sentAtMigrated && repermission.sentAllTime > 0
   const maxCadence = Math.max(1, cadenceMix.daily, cadenceMix.weekly, cadenceMix.monthly)
   const downgradedCadenceMessage = !repermission.frequencyChangedAtMigrated
@@ -197,20 +202,34 @@ export default async function AlertScoreboardPage() {
               </div>
             </div>
 
+            {(lastRun.dnsSpfStatus !== null || lastRun.dnsDkimStatus !== null || lastRun.dnsDmarcStatus !== null) && (
+              <div
+                className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-sm ${
+                  dnsHasFailure ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-slate-100 bg-slate-50 text-slate-600'
+                }`}
+              >
+                <span className="font-medium">Deliverability DNS</span>
+                <span>SPF: {dnsLabel(lastRun.dnsSpfStatus)}</span>
+                <span>DKIM: {dnsLabel(lastRun.dnsDkimStatus)}</span>
+                <span>DMARC: {dnsLabel(lastRun.dnsDmarcStatus)}</span>
+              </div>
+            )}
+
             {recentRuns.length > 0 && (
               <div className="mt-2">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                   Last {recentRuns.length} runs
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[480px] text-left text-sm">
+                  <table className="w-full min-w-[620px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 text-xs text-slate-400">
                         <th className="pb-2 pr-3 font-medium">Date</th>
                         <th className="pb-2 pr-3 font-medium">Emails sent</th>
                         <th className="pb-2 pr-3 font-medium">Send failures</th>
                         <th className="pb-2 pr-3 font-medium">Deferred sends</th>
-                        <th className="pb-2 font-medium">Capture self-check</th>
+                        <th className="pb-2 pr-3 font-medium">Capture self-check</th>
+                        <th className="pb-2 font-medium">DNS (SPF/DKIM/DMARC)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -222,6 +241,8 @@ export default async function AlertScoreboardPage() {
                             : run.captureSelfCheckOk
                               ? 'PASS'
                               : `FAILED at ${run.captureSelfCheckStep ?? 'unknown step'}`
+                        const runDnsHasFailure =
+                          run.dnsSpfStatus === 'fail' || run.dnsDkimStatus === 'fail' || run.dnsDmarcStatus === 'fail'
                         return (
                           <tr key={run.id} className="border-b border-slate-50 last:border-0">
                             <td className="py-2 pr-3 text-slate-600">
@@ -243,6 +264,11 @@ export default async function AlertScoreboardPage() {
                               }
                             >
                               {selfCheckLabel}
+                            </td>
+                            <td className={runDnsHasFailure ? 'py-2 font-semibold text-rose-600' : 'py-2 text-slate-800'}>
+                              {run.dnsSpfStatus === null && run.dnsDkimStatus === null && run.dnsDmarcStatus === null
+                                ? '—'
+                                : `${dnsLabel(run.dnsSpfStatus)} / ${dnsLabel(run.dnsDkimStatus)} / ${dnsLabel(run.dnsDmarcStatus)}`}
                             </td>
                           </tr>
                         )

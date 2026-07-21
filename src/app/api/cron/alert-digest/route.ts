@@ -12,6 +12,8 @@ import {
   buildRepermissionEmail,
   buildAdminAlertFunnelEmail,
   buildAdminCaptureSelfCheckFailureEmail,
+  buildAdminDeliverabilityDnsFailureEmail,
+  getAlertsSendDomain,
   pickBestPriceDropSample,
   compLabel,
   type AlertDigestSample,
@@ -47,7 +49,8 @@ import { getDormantSubscribers } from '@/lib/dormantSubscribers'
 import { SendPacer } from '@/lib/alertSendPacing'
 import { runCaptureFunnelSelfCheck } from '@/lib/alertCaptureSelfCheck'
 import { getRecentCronRuns } from '@/lib/alertCronHealth'
-import { shouldSendCaptureSelfCheckAlert } from '@/lib/alertCaptureSelfCheckHistory'
+import { shouldSendCaptureSelfCheckAlert, shouldSendOnRedTransition } from '@/lib/alertCaptureSelfCheckHistory'
+import { runDeliverabilityDnsCheck, type DnsVerdict } from '@/lib/deliverabilityDnsCheck'
 import { isSweepableTestAlertEmail, sweepCutoffIso } from '@/lib/testAlertSweep'
 
 const MAX_DIGEST_SAMPLES = 3
@@ -1735,6 +1738,57 @@ async function sendCaptureSelfCheckFailureAlert(
   }
 }
 
+/** A prior run's overall DNS "ok" — null when none of the three columns are
+ *  migrated live yet (never fabricated), true when migrated and no check was a
+ *  genuine `fail` (a `lookup-error` alone doesn't count against the streak). */
+function dnsRunOk(run: { dnsSpfStatus: string | null; dnsDkimStatus: string | null; dnsDmarcStatus: string | null }): boolean | null {
+  const statuses = [run.dnsSpfStatus, run.dnsDkimStatus, run.dnsDmarcStatus]
+  if (statuses.every((s) => s === null)) return null
+  return !statuses.includes('fail')
+}
+
+/**
+ * Admin heads-up when TODAY's deliverability DNS self-check
+ * (`runDeliverabilityDnsCheck`, run just above) found a genuine failing record.
+ * Reuses `shouldSendOnRedTransition` — the exact cadence
+ * `sendCaptureSelfCheckFailureAlert` already uses — so DNS outages get the same
+ * "day-1 + every-3rd-red-day" treatment without a second copy of the streak math.
+ * Wrapped in try/catch so a failure here can never affect the digest sends that
+ * already completed.
+ */
+async function sendDeliverabilityDnsFailureAlert(
+  domain: string,
+  failingChecks: string[],
+  pacer: SendPacer
+): Promise<{ sent: number; failed: number }> {
+  const adminEmails = getAdminRecipientEmails()
+  if (adminEmails.length === 0 || failingChecks.length === 0) return { sent: 0, failed: 0 }
+
+  try {
+    const priorRuns = await getRecentCronRuns(7)
+    const priorOkHistory = priorRuns.map(dnsRunOk)
+    if (!shouldSendOnRedTransition(priorOkHistory, false)) return { sent: 0, failed: 0 }
+
+    const { subject, html, text } = buildAdminDeliverabilityDnsFailureEmail({
+      domain,
+      failingChecks,
+      dashboardUrl: `${SITE_URL}/admin/alerts`,
+    })
+    let sentCount = 0
+    let failed = 0
+    for (const to of adminEmails) {
+      const gate = await pacer.send(() => sendEmail({ to, subject, html, text, emailType: 'admin-alert-dns-failure' }))
+      if (!gate.attempted) continue
+      if (gate.value.sent || gate.value.reason === 'no-key') sentCount++
+      else failed++
+    }
+    return { sent: sentCount, failed }
+  } catch (err) {
+    console.error('[alert-digest] deliverability DNS admin alert error:', err)
+    return { sent: 0, failed: 0 }
+  }
+}
+
 export async function GET(req: NextRequest) {
   // Protect the route in production. Vercel passes the CRON_SECRET via the
   // Authorization header when cron.config is set. In development / staging
@@ -2440,6 +2494,37 @@ export async function GET(req: NextRequest) {
     sendFailures += selfCheckAlertResult.failed
   }
 
+  // Deliverability DNS self-check (see deliverabilityDnsCheck.ts) — SPF/DKIM/DMARC
+  // on the real send domain. Same "never affect the digest sends that already
+  // completed" isolation as the capture self-check above; a resolver hiccup
+  // (`lookup-error`) is never treated as a failure.
+  let dnsSpfStatus: DnsVerdict | 'unexpected-error' = 'lookup-error'
+  let dnsDkimStatus: DnsVerdict | 'unexpected-error' = 'lookup-error'
+  let dnsDmarcStatus: DnsVerdict | 'unexpected-error' = 'lookup-error'
+  const sendDomain = getAlertsSendDomain()
+  try {
+    const dnsResult = await runDeliverabilityDnsCheck(sendDomain)
+    dnsSpfStatus = dnsResult.spf
+    dnsDkimStatus = dnsResult.dkim
+    dnsDmarcStatus = dnsResult.dmarc
+  } catch (err) {
+    console.error('[alert-digest] deliverability DNS check threw:', err)
+  }
+  const failingDnsChecks = (
+    [
+      ['SPF', dnsSpfStatus],
+      ['DKIM', dnsDkimStatus],
+      ['DMARC', dnsDmarcStatus],
+    ] as const
+  )
+    .filter(([, status]) => status === 'fail')
+    .map(([label]) => label)
+  if (failingDnsChecks.length > 0) {
+    console.error(`[alert-digest] deliverability DNS check FAILED: ${failingDnsChecks.join(', ')} on ${sendDomain}`)
+    const dnsAlertResult = await sendDeliverabilityDnsFailureAlert(sendDomain, failingDnsChecks, pacer)
+    sendFailures += dnsAlertResult.failed
+  }
+
   // Health log for the /admin/alerts "Last run" panel (see alertCronHealth.ts). Fails
   // soft — a not-yet-migrated table (or any other insert error) never affects the real
   // digest send above, which has already completed by this point. `send_failures`/
@@ -2461,8 +2546,20 @@ export async function GET(req: NextRequest) {
     self_check_ok: captureSelfCheckOk,
     self_check_step: captureSelfCheckStep,
     swept_test_alerts: sweepResult.swept,
+    dns_spf_status: dnsSpfStatus,
+    dns_dkim_status: dnsDkimStatus,
+    dns_dmarc_status: dnsDmarcStatus,
   }
-  const runLogOptionalKeys = ['send_failures', 'deferred_sends', 'self_check_ok', 'self_check_step', 'swept_test_alerts']
+  const runLogOptionalKeys = [
+    'send_failures',
+    'deferred_sends',
+    'self_check_ok',
+    'self_check_step',
+    'swept_test_alerts',
+    'dns_spf_status',
+    'dns_dkim_status',
+    'dns_dmarc_status',
+  ]
   let { error: runLogError } = await supabase.from('alert_cron_runs').insert(runLogRow)
   for (
     let i = 0;

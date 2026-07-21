@@ -28,6 +28,12 @@ export interface AlertCronRun {
   /** Which step the probe failed at ('subscribe' | 'confirm' | 'cleanup'), or null on
    *  a pass or when unmigrated. */
   captureSelfCheckStep: string | null
+  /** Deliverability DNS self-check verdicts (see `deliverabilityDnsCheck.ts`) —
+   *  'pass' | 'fail' | 'lookup-error', or null when the column isn't migrated live
+   *  yet. Never fabricated. */
+  dnsSpfStatus: string | null
+  dnsDkimStatus: string | null
+  dnsDmarcStatus: string | null
 }
 
 type RunRow = {
@@ -46,6 +52,9 @@ type RunRow = {
   deferred_sends?: number
   self_check_ok?: boolean
   self_check_step?: string
+  dns_spf_status?: string
+  dns_dkim_status?: string
+  dns_dmarc_status?: string
 }
 
 function toRun(row: RunRow): AlertCronRun {
@@ -65,6 +74,9 @@ function toRun(row: RunRow): AlertCronRun {
     deferredSends: row.deferred_sends ?? null,
     captureSelfCheckOk: row.self_check_ok ?? null,
     captureSelfCheckStep: row.self_check_step ?? null,
+    dnsSpfStatus: row.dns_spf_status ?? null,
+    dnsDkimStatus: row.dns_dkim_status ?? null,
+    dnsDmarcStatus: row.dns_dmarc_status ?? null,
   }
 }
 
