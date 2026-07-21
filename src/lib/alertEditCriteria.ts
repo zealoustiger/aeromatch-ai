@@ -61,12 +61,22 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
     }
   }
   if (p === '/partnerships/seeking') {
+    // A single-code `airports=` value (the shape the browse page's own
+    // multi-select filter now writes even for one airport) is just as
+    // editable as the legacy `airport=` field; 2+ codes can't be shown in
+    // this one text field and stay a hidden, removable criterion instead —
+    // see `buildAlertCriteriaUpdate`'s seeker branch below for how it's kept
+    // from being silently dropped on an unrelated save.
+    const airportCodes = g('airports')
+      .split(',')
+      .map((c) => c.trim().toUpperCase())
+      .filter(Boolean)
     return {
       type: 'seeker',
       make: g('make'),
       model: g('model'),
       state: g('state').toUpperCase(),
-      airport: g('airport').toUpperCase(),
+      airport: airportCodes.length === 1 ? airportCodes[0] : g('airport').toUpperCase(),
     }
   }
   return { type: 'partnership', make: g('make'), state: g('state').toUpperCase(), airport: g('airport').toUpperCase() }
@@ -116,7 +126,29 @@ export function buildAlertCriteriaUpdate(
     set('make', fields.make?.trim())
     set('model', fields.model?.trim())
     set('state', fields.state?.trim().toUpperCase())
-    set('airport', fields.airport?.trim().toUpperCase())
+
+    // Original (pre-edit) multi-airport code count, read BEFORE any mutation
+    // below — distinguishes "the field is blank because I never had a
+    // 2+-airport criterion to show" from "the field is blank because that
+    // criterion exists but this single-airport text field can't display it."
+    const originalAirportCodes = (params.get('airports') ?? '').split(',').map((c) => c.trim()).filter(Boolean)
+    const newAirport = fields.airport?.trim().toUpperCase()
+    if (newAirport) {
+      // An entered/edited single airport always wins — write the legacy key
+      // (understood identically to `airports=` by every matcher) and clear
+      // any multi-airport criterion it replaces.
+      params.set('airport', newAirport)
+      params.delete('airports')
+    } else if (originalAirportCodes.length <= 1) {
+      // No hidden multi-airport criterion to protect — a blank field really
+      // does mean "clear the location."
+      params.delete('airport')
+      params.delete('airports')
+    }
+    // else: fields.airport is blank only because the original criterion was
+    // a 2+-airport `airports=` filter this field can't show — leave both
+    // keys untouched rather than silently dropping/widening it (the same
+    // trap `seeker-alert-location-edit` fixed for state/airport).
   }
 
   const qsOut = params.toString()
@@ -295,6 +327,13 @@ function labelForHiddenParam(key: string, value: string): string | null {
     // this edit form doesn't expose (only aircraft/seeker targets show a Model field).
     case 'model':
       return `model ${trimmed}`
+    // A 2+-airport seeker filter (see `parseEditableAlertTarget`'s seeker branch) —
+    // a single code is already shown via the exposed Airport field, so this only
+    // ever renders for the case the field genuinely can't display.
+    case 'airports': {
+      const codes = trimmed.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean)
+      return codes.length > 1 ? `near ${codes.join(', ')}` : null
+    }
     default:
       return `${key}: ${trimmed}`
   }

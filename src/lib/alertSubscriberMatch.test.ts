@@ -334,11 +334,27 @@ test('parseSeekerAlertSourcePath: bare /partnerships/seeking has no filter', () 
   assert.deepEqual(parseSeekerAlertSourcePath('/partnerships/seeking'), { kind: 'seeker', target: {} })
 })
 
-test('parseSeekerAlertSourcePath: query-string shape', () => {
+test('parseSeekerAlertSourcePath: query-string shape (legacy single airport)', () => {
   const parsed = parseSeekerAlertSourcePath('/partnerships/seeking?make=Cessna&model=172&state=ca&airport=khwd')
   assert.deepEqual(parsed, {
     kind: 'seeker',
-    target: { make: 'Cessna', model: '172', state: 'CA', icao: 'KHWD' },
+    target: { make: 'Cessna', model: '172', state: 'CA', icaos: ['KHWD'], radius: undefined },
+  })
+})
+
+test('parseSeekerAlertSourcePath: multi-airport `airports` CSV wins over legacy `airport`', () => {
+  const parsed = parseSeekerAlertSourcePath('/partnerships/seeking?airports=khwd,kpao,khwd&airport=ksql')
+  assert.deepEqual(parsed, {
+    kind: 'seeker',
+    target: { make: undefined, model: undefined, state: undefined, icaos: ['KHWD', 'KPAO'], radius: undefined },
+  })
+})
+
+test('parseSeekerAlertSourcePath: radius carries through', () => {
+  const parsed = parseSeekerAlertSourcePath('/partnerships/seeking?airports=khwd&radius=50')
+  assert.deepEqual(parsed, {
+    kind: 'seeker',
+    target: { make: undefined, model: undefined, state: undefined, icaos: ['KHWD'], radius: 50 },
   })
 })
 
@@ -382,17 +398,34 @@ test('matchesSeekerListing: state is exact', () => {
   assert.equal(matchesSeekerListing({ state: 'TX' }, SEEKER_LISTING), false)
 })
 
-test('matchesSeekerListing: icao matches home_airport OR additional_airports', () => {
-  assert.equal(matchesSeekerListing({ icao: 'KHWD' }, SEEKER_LISTING), true)
-  assert.equal(matchesSeekerListing({ icao: 'KOAK' }, SEEKER_LISTING), true)
-  assert.equal(matchesSeekerListing({ icao: 'KSQL' }, SEEKER_LISTING), false)
+test('matchesSeekerListing: icaos matches home_airport OR additional_airports', () => {
+  assert.equal(matchesSeekerListing({ icaos: ['KHWD'] }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ icaos: ['KOAK'] }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ icaos: ['KSQL'] }, SEEKER_LISTING), false)
 })
 
-test('matchesSeekerListing: icao with no home_airport/additional_airports never matches', () => {
+test('matchesSeekerListing: icaos with no home_airport/additional_airports never matches', () => {
   assert.equal(
-    matchesSeekerListing({ icao: 'KHWD' }, { ...SEEKER_LISTING, home_airport: null, additional_airports: null }),
+    matchesSeekerListing(
+      { icaos: ['KHWD'] },
+      { ...SEEKER_LISTING, home_airport: null, additional_airports: null }
+    ),
     false
   )
+})
+
+test('matchesSeekerListing: multi-airport icaos matches ANY code in the list', () => {
+  assert.equal(matchesSeekerListing({ icaos: ['KSQL', 'KHWD'] }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ icaos: ['KSQL', 'KOAK'] }, SEEKER_LISTING), true)
+  assert.equal(matchesSeekerListing({ icaos: ['KSQL', 'KPAO'] }, SEEKER_LISTING), false)
+})
+
+test('matchesSeekerListing: caller-resolved icaoList (radius expansion) overrides target.icaos', () => {
+  // Simulates a single-airport + radius alert whose radius expansion (resolved
+  // by the caller, same as matchesPartnershipListing's icaoList) pulled in a
+  // neighboring field the bare target.icaos code alone wouldn't have matched.
+  assert.equal(matchesSeekerListing({ icaos: ['KXXX'] }, SEEKER_LISTING, ['KHWD']), true)
+  assert.equal(matchesSeekerListing({ icaos: ['KXXX'] }, SEEKER_LISTING, ['KSQL']), false)
 })
 
 test('matchesSeekerListing: combined criteria all must hold', () => {

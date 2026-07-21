@@ -141,7 +141,20 @@ type AlertTarget =
        *  `countNew`/`countRecentPartnershipPriceDrops` path. */
       listingId?: string
     }
-  | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
+  | {
+      type: 'seeker'
+      make?: string
+      model?: string
+      state?: string
+      /** Multi-airport list (comma-joined ICAO codes in the source query
+       *  string), OR'd against `home_airport`/`additional_airports` — same
+       *  semantics `seekersQuery.ts`'s `resolveSeekerAirports` uses for the
+       *  browse page itself. A lone code + `radius` expands via
+       *  `resolveSeekerIcaoList` below (radius across several centers is
+       *  ambiguous, so it's ignored once there's more than one code). */
+      icaos?: string[]
+      radius?: number
+    }
   /** Bare `/` — the site-wide capture points (footer, homepage, /about,
    *  /saved fallback, not-found) that carry no family/location filter at
    *  all. "Any new listing" = aircraft ∪ partnerships (no seekers — these
@@ -217,12 +230,20 @@ function resolveTarget(p: string, qs: string | undefined): AlertTarget | null {
       }
     }
     if (p === '/partnerships/seeking') {
+      // Prefers the multi-select `airports` CSV; falls back to the legacy
+      // single `airport` — same precedence `seekersQuery.ts`'s
+      // `resolveSeekerAirports` uses for the browse page's own query.
+      const airportsRaw = g('airports') ?? g('airport')
+      const icaos = airportsRaw
+        ? [...new Set(airportsRaw.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean))]
+        : undefined
       return {
         type: 'seeker',
         make: g('make'),
         model: g('model'),
         state: g('state')?.toUpperCase(),
-        icao: g('airport')?.toUpperCase(),
+        icaos,
+        radius: numOrUndef(g('radius')),
       }
     }
     return {
@@ -365,6 +386,24 @@ async function resolveIcaoList(
   if (!target.icao) return undefined
   if (target.radius && target.radius > 0) return getAirportsWithinRadius(target.icao, target.radius)
   return [target.icao]
+}
+
+/**
+ * Resolve a seeker target's multi-airport filter to the ICAO list a query
+ * should match: a lone code + `radius` expands via the same haversine helper
+ * `resolveIcaoList` above uses (radius across several centers is ambiguous,
+ * so it's only applied for exactly one code — same restriction the browse
+ * page's own `resolveSeekerAirports`, `seekersQuery.ts`, enforces). `undefined`
+ * means no airport filter at all.
+ */
+async function resolveSeekerIcaoList(
+  target: Extract<AlertTarget, { type: 'seeker' }>
+): Promise<string[] | undefined> {
+  if (!target.icaos || target.icaos.length === 0) return undefined
+  if (target.icaos.length === 1 && target.radius && target.radius > 0) {
+    return getAirportsWithinRadius(target.icaos[0], target.radius)
+  }
+  return target.icaos
 }
 
 /** Resolve an aircraft alert's `icao` airport filter to that airport's STATE,
@@ -645,21 +684,26 @@ async function countNewSeekers(
   // make-filter semantics getSeekers() uses for the browse page.
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
   if (target.state) q = q.eq('state', target.state)
-  // Single ICAO, no radius — mirrors countNewPartnerships' icao handling below.
-  // Matches home_airport OR additional_airports, same OR semantics as
-  // seekersQuery.ts's getSeekers(). additional_airports may not be migrated live
-  // yet; retry without it (home_airport-only) on that specific column error,
-  // same graceful-degrade precedent used there.
-  if (target.icao) q = q.or(`home_airport.eq.${target.icao},additional_airports.ov.{${target.icao}}`)
+  // One or many ICAOs (radius-expanded when exactly one) — mirrors
+  // countNewPartnerships' icao handling below and seekersQuery.ts's own
+  // getSeekers() query. Matches home_airport OR additional_airports.
+  // additional_airports may not be migrated live yet; retry without it
+  // (home_airport-only) on that specific column error, same graceful-degrade
+  // precedent used there.
+  const icaoList = await resolveSeekerIcaoList(target)
+  if (icaoList && icaoList.length > 0) {
+    const list = icaoList.join(',')
+    q = q.or(`home_airport.in.(${list}),additional_airports.ov.{${list}}`)
+  }
 
   let { data, error } = await q
-  if (target.icao && error?.message?.includes('additional_airports')) {
+  if (icaoList && icaoList.length > 0 && error?.message?.includes('additional_airports')) {
     let retry = supabase
       .from('partnership_seekers')
       .select('id, preferred_models')
       .eq('status', 'active')
       .gte('created_at', since)
-      .eq('home_airport', target.icao)
+      .in('home_airport', icaoList)
     if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
     if (target.state) retry = retry.eq('state', target.state)
     ;({ data, error } = await retry)
@@ -1202,17 +1246,21 @@ async function fetchNewSeekerSamples(
 
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
   if (target.state) q = q.eq('state', target.state)
-  if (target.icao) q = q.or(`home_airport.eq.${target.icao},additional_airports.ov.{${target.icao}}`)
+  const icaoList = await resolveSeekerIcaoList(target)
+  if (icaoList && icaoList.length > 0) {
+    const list = icaoList.join(',')
+    q = q.or(`home_airport.in.(${list}),additional_airports.ov.{${list}}`)
+  }
 
   let { data, error } = await q
-  if (target.icao && error?.message?.includes('additional_airports')) {
+  if (icaoList && icaoList.length > 0 && error?.message?.includes('additional_airports')) {
     let retry = supabase
       .from('partnership_seekers')
       .select(SEEKER_SAMPLE_COLS)
       .eq('status', 'active')
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .eq('home_airport', target.icao)
+      .in('home_airport', icaoList)
     if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
     if (target.state) retry = retry.eq('state', target.state)
     ;({ data, error } = await retry)
