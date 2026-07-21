@@ -4314,7 +4314,7 @@ Genuinely open gaps below._
   `SaveAlertAsSearchButton.tsx`) for the 3 marketplace shapes `saveSearch` can save. Section
   now renders even at 0 saved searches (previously hidden behind the onboarding early-return).
   See CHANGELOG.
-- **[P1][goal] "Build your own alert" from scratch on the `/alerts` landing page.**
+~~- **[P1][goal] "Build your own alert" from scratch on the `/alerts` landing page.**
   Today `/alerts` offers popular chips + a generic capture box — a visitor wanting
   "Mooney M20J under $120k in TX" must first go run a browse search to reach a prefilled
   box. Reuse `NewAlertForm`'s type picker + criteria fields (make/model/state/price/
@@ -4322,7 +4322,18 @@ Genuinely open gaps below._
   via the existing subscribe path instead of `createManageAlert`'s token/session path.
   New capture point on `/alerts` — emit `alert_subscribed` with
   `source: 'alerts_landing_builder'`. Show the live match count before submit (existing
-  `alertMatchCounts` helpers) so the alert is honest about what it covers.
+  `alertMatchCounts` helpers) so the alert is honest about what it covers.~~ ✅ SHIPPED
+  via `alerts-landing-builder` (2026-07-21) New `AlertBuilder.tsx` — a collapsed "Build a
+  custom alert from scratch" toggle below the interest chips renders the type picker +
+  criteria fields, a debounced (350ms) live match-count line via the existing
+  `getAlertMatchCountForSourcePath`/`buildAlertCriteriaUpdate` helpers, then a "Continue"
+  step locks the computed context/sourcePath and reveals the existing `AlertSignup`
+  anonymous double-opt-in box (`source="alerts_landing_builder"`) — no new subscribe path,
+  no schema change. Verified end-to-end against the real prod DB with a throwaway
+  `@example.com` test email (Piper Cherokee criteria → real pending row inserted,
+  confirmation-pending UI rendered correctly); row deleted after (0 remain). This closes
+  the alert-experience `[P1][goal]` queue; 2 `[P2][goal]` items remain (avionics/grade/`q`
+  editable fields, accessibility pass).
 - ~~**[P1][goal] Owner-side alert capture on `/matches`.** The signed-in matches page shows
   an owner today's matching seekers/partnerships for each of their listings
   (matches/page.tsx) but has zero alert capture (grep clean) — the owner can see current
