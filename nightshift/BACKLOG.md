@@ -4271,6 +4271,73 @@ Genuinely open gaps below._
   deleted this cycle): Edit form prefilled "Within 50 mi", changing to 100 and saving
   updated the DB `source_path`, and Duplicate correctly prefilled 100 too.
 
+### Plan-pass batch #17 — 2026-07-21 (Fable)
+_Batch #16 fully drained (`alert-radius-edit` closed it 2026-07-21). Still parked: the two
+Vercel-cron-tier "instant sends" items (human call, ~line 1285/1589). Every item below
+verified un-built by direct code read this pass. Dead ends checked so they don't reappear:
+per-alert pause/resume/snooze/resend/sample-digest all exist (`AlertActions.tsx`),
+per-section digest Edit/Stop/Share/View-in-browser deep links exist (`email.ts`
+`editUrl`/`stopUrl`/`shareUrl`/`viewUrl`; cron builds `&edit=<id>#alert-<id>` at
+route.ts:2394), post-confirmation cross-sell exists (`/alerts/status` + `AlertCrossSell`),
+`/alerts` already has count-verified popular one-tap chips (`AlertsLanding`
+`POPULAR_CANDIDATES`), admin per-placement funnel exists ("Top placements",
+admin/alerts/page.tsx:437), and guides/compare/airports/[icao] pages all carry capture.
+Genuinely open gaps below._
+
+- **[P1][goal] Expose TT (total-time) range as editable fields in aircraft alert
+  Edit/Duplicate.** `min_tt`/`max_tt` are honored structured browse filters
+  (aircraft/page.tsx:108) but not in `EXPOSED_KEYS.aircraft` (alertEditCriteria.ts:292) —
+  a "Cessna 182 under 4,000 hours" alert shows TT only as a removable-only hidden chip and
+  Duplicate drops it. Add Min/Max TT inputs to `AlertEditForm`/`NewAlertForm`, threading
+  `EditableAlertTarget`/`buildAlertCriteriaUpdate`/`targetToFields`/`computeWidenCandidate`
+  exactly like the just-shipped `alert-year-range-edit` pair. Improves: alert management
+  (`/alerts/manage`). No new capture point, no schema change.
+- **[P1][goal] Surface the account-email's alerts that have NO matching saved search on
+  `/searches`.** GOAL.md: "signed-in users see saved-search ↔ alert unified" — but
+  searches/page.tsx renders only `saved_searches` rows (alert state attached by
+  source-path via `getAlertDetailsBySourcePath`); an alert set anonymously pre-signup, or
+  from any capture box without saving a search, is invisible when signed in. Add a "Your
+  email alerts" section listing the verified account email's remaining alerts (read-only
+  v1: criteria summary + status + a link into `/alerts/manage`), plus one-tap "save as a
+  search". Improves: alert management/unification. No new capture point, no schema change.
+- **[P1][goal] "Build your own alert" from scratch on the `/alerts` landing page.**
+  Today `/alerts` offers popular chips + a generic capture box — a visitor wanting
+  "Mooney M20J under $120k in TX" must first go run a browse search to reach a prefilled
+  box. Reuse `NewAlertForm`'s type picker + criteria fields (make/model/state/price/
+  airports chips already exist) in an anonymous mode that captures email + double-opt-in
+  via the existing subscribe path instead of `createManageAlert`'s token/session path.
+  New capture point on `/alerts` — emit `alert_subscribed` with
+  `source: 'alerts_landing_builder'`. Show the live match count before submit (existing
+  `alertMatchCounts` helpers) so the alert is honest about what it covers.
+- **[P1][goal] Owner-side alert capture on `/matches`.** The signed-in matches page shows
+  an owner today's matching seekers/partnerships for each of their listings
+  (matches/page.tsx) but has zero alert capture (grep clean) — the owner can see current
+  matches but can't subscribe to hear about the NEXT one from the exact page built around
+  matches. Per listing rail, add the owner-side `AlertSignup` (`noun="seeker"` for their
+  partnerships/aircraft via the shipped `owner_*_seeker` pattern; a partnership alert
+  prefilled from `partnershipBrowseHrefForSeeker` for their seeker post). New capture
+  point — emit `alert_subscribed` with `source: 'matches_page'`. No schema change.
+- **[P2][goal] Expose avionics as an editable multi-select in aircraft alert
+  Edit/Duplicate.** `avionics` is an honored structured browse filter
+  (`AVIONICS_FILTER_OPTIONS`/`parseAvionicsFilter`) but hidden-chip-only on the edit form.
+  Render the same option list as checkboxes/chips (UI precedent: `AirportChipsInput`) in
+  `AlertEditForm`/`NewAlertForm`'s aircraft branch so a "glass panel" criterion survives
+  Edit AND Duplicate. Improves: alert management. No new capture point, no schema change.
+- **[P2][goal] Expose grade + keyword (`q`) as editable fields in aircraft alert
+  Edit/Duplicate.** The last two hidden aircraft criteria after the slices above:
+  `grade`/`min_grade` (render the browse filter's own select options) and free-text `q`
+  (plain text input). Closes out "every honored aircraft browse filter is editable on the
+  alert" — after this, hidden chips remain only for genuinely unrecognized params.
+  Improves: alert management. No new capture point, no schema change.
+- **[P2][goal] Accessibility pass on the alert capture + manage flows.** One slice:
+  `AlertSignup`'s async submit/confirm/error states and `/alerts/manage` row actions
+  (pause/delete/save) announced via `aria-live` status regions (precedent:
+  `post-form-error-alert-role`), visible focus + focus moved to the confirmation message
+  on subscribe, and every input properly labelled — then a keyboard-only walkthrough of
+  subscribe → confirm → edit → pause at 375px. Friction removed for keyboard/SR users on
+  the goal's core flows; leading indicator per GOAL.md. No new capture point, no schema
+  change.
+
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
