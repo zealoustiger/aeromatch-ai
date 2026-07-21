@@ -121,20 +121,26 @@ export default async function SeekingPartnershipsPage({
   const activeFilterCount = ['airports', 'airport', 'state', 'make', 'model', 'rating', 'min_hours', 'share_type'].filter((k) => params[k]).length
 
   // Filter-aware email-alert source path — mirrors /aircraft's alertSourcePath
-  // pattern so a visitor filtered to a make/model/airport/state gets alerted on
-  // new seekers matching that criteria, not every new seeker listing
-  // (alert-digest route.ts parses make/model/state/airport off this query
-  // string). Uses the legacy single `airport` param, not the multi-select
-  // `airports`, since the cron matcher — like the existing partnership
-  // matcher — only understands one ICAO with no radius (mirrors
-  // /partnerships/page.tsx's identical alertSourcePath pattern).
+  // pattern so a visitor filtered to a make/model/airport(s)/state gets alerted
+  // on new seekers matching that criteria, not every new seeker listing
+  // (alert-digest route.ts parses make/model/state/airports off this query
+  // string). Prefers the multi-select `airports` CSV; falls back to the legacy
+  // single `airport`, same precedence `seekersQuery.ts`'s own
+  // `resolveSeekerAirports` uses. `radius` only carries over alongside exactly
+  // one active airport code — several centers can't share one radius, same
+  // restriction the filter UI itself enforces.
   const alertMake = params.make?.trim()
   const alertModel = params.model?.trim()
   const alertState = params.state?.trim().toUpperCase()
-  const alertAirport = params.airport?.trim().toUpperCase()
+  const alertAirportCodes = (params.airports ?? params.airport ?? '')
+    .split(',')
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean)
+  const alertAirports = alertAirportCodes.length ? alertAirportCodes.join(',') : undefined
+  const alertRadius = alertAirportCodes.length === 1 ? params.radius?.trim() : undefined
   const alertContext = [alertMake, alertModel].filter(Boolean).join(' ') || undefined
   const alertQuery = new URLSearchParams(
-    Object.entries({ make: alertMake, model: alertModel, state: alertState, airport: alertAirport }).filter(
+    Object.entries({ make: alertMake, model: alertModel, state: alertState, airports: alertAirports, radius: alertRadius }).filter(
       ([, v]) => Boolean(v)
     ) as [string, string][]
   ).toString()

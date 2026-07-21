@@ -459,7 +459,15 @@ export interface SeekerSubscriberTarget {
   make?: string
   model?: string
   state?: string
-  icao?: string
+  /** Multi-airport list (comma-joined ICAO codes on the source query string),
+   *  OR'd against `home_airport`/`additional_airports` — mirrors the digest
+   *  cron's own `icaos` field (`route.ts`). A lone code + `radius` expands via
+   *  the caller-resolved `icaoList` param `matchesSeekerListing` takes below
+   *  (radius across several centers is ambiguous, so it's ignored once
+   *  there's more than one code — same restriction the browse page's own
+   *  `seekersQuery.ts` enforces). */
+  icaos?: string[]
+  radius?: number
 }
 
 /**
@@ -479,7 +487,8 @@ export type ParsedSeekerAlert = { kind: 'seeker'; target: SeekerSubscriberTarget
  * partnership paths, the homepage "all" shape, or unrecognized paths all
  * return `null`). Recognizes the shapes `AlertSignup` actually generates for
  * seekers: bare `/partnerships/seeking` and
- * `/partnerships/seeking?make=&model=&state=&airport=`.
+ * `/partnerships/seeking?make=&model=&state=&airports=` (or the legacy
+ * single `airport=`).
  */
 export function parseSeekerAlertSourcePath(raw: string | null | undefined): ParsedSeekerAlert {
   const [pathOnly, qs] = (raw ?? '').split('?')
@@ -490,13 +499,20 @@ export function parseSeekerAlertSourcePath(raw: string | null | undefined): Pars
 
   const params = new URLSearchParams(qs)
   const g = (k: string) => params.get(k)?.trim() || undefined
+  const airportsRaw = g('airports') ?? g('airport')
+  const icaos = airportsRaw
+    ? [...new Set(airportsRaw.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean))]
+    : undefined
+  const radiusRaw = g('radius')
+  const radius = radiusRaw ? parseInt(radiusRaw, 10) : undefined
   return {
     kind: 'seeker',
     target: {
       make: g('make'),
       model: g('model'),
       state: g('state')?.toUpperCase(),
-      icao: g('airport')?.toUpperCase(),
+      icaos,
+      radius: radius !== undefined && Number.isFinite(radius) ? radius : undefined,
     },
   }
 }
@@ -533,11 +549,20 @@ function matchesSeekerModelFilter(preferredModels: string | null, wantedModel: s
  * Does this one seeker listing satisfy an alert's target filters right now?
  * Mirrors the digest cron's `countNewSeekers` (`route.ts`) query semantics:
  * make = case-insensitive array membership (`.overlaps`), model = free-text
- * token match (same semantics as `matchesModelFilter`), state = exact, icao =
- * `home_airport` OR `additional_airports` array membership (no radius — the
- * cron's own seeker target has none either).
+ * token match (same semantics as `matchesModelFilter`), state = exact,
+ * icaos = `home_airport` OR `additional_airports` membership in the resolved
+ * ICAO list.
+ *
+ * `icaoList` is the caller-resolved radius expansion (or `target.icaos` when
+ * there's no radius / more than one code) — resolving it requires a DB
+ * round-trip (`getAirportsWithinRadius`), so it's injected rather than looked
+ * up here, same `icaoList` precedent as `matchesPartnershipListing` above.
  */
-export function matchesSeekerListing(target: SeekerSubscriberTarget, listing: SeekerListingFields): boolean {
+export function matchesSeekerListing(
+  target: SeekerSubscriberTarget,
+  listing: SeekerListingFields,
+  icaoList?: string[]
+): boolean {
   if (target.make) {
     const wanted = target.make.toLowerCase()
     if (!(listing.preferred_makes ?? []).some((m) => m.toLowerCase() === wanted)) return false
@@ -547,9 +572,10 @@ export function matchesSeekerListing(target: SeekerSubscriberTarget, listing: Se
 
   if (target.state && listing.state !== target.state) return false
 
-  if (target.icao) {
-    const matchesHome = listing.home_airport === target.icao
-    const matchesAdditional = (listing.additional_airports ?? []).includes(target.icao)
+  if (target.icaos && target.icaos.length > 0) {
+    const list = icaoList ?? target.icaos
+    const matchesHome = listing.home_airport ? list.includes(listing.home_airport) : false
+    const matchesAdditional = (listing.additional_airports ?? []).some((a) => list.includes(a))
     if (!matchesHome && !matchesAdditional) return false
   }
 

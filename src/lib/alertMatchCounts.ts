@@ -90,7 +90,17 @@ type AlertTarget =
       icao?: string
       radius?: number
     }
-  | { type: 'seeker'; make?: string; model?: string; state?: string; icao?: string }
+  | {
+      type: 'seeker'
+      make?: string
+      model?: string
+      state?: string
+      /** Multi-airport list (comma-joined ICAO codes), OR'd against
+       *  `home_airport`/`additional_airports` — mirrors the digest cron's own
+       *  `icaos` field (`route.ts`). */
+      icaos?: string[]
+      radius?: number
+    }
   /** Bare `/` — mirrors the cron parser's `'all'` target (see its header
    *  comment): aircraft ∪ partnerships, no seekers. */
   | { type: 'all' }
@@ -131,12 +141,17 @@ function parseSourcePath(raw: string | null): AlertTarget | null {
       }
     }
     if (p === '/partnerships/seeking') {
+      const airportsRaw = g('airports') ?? g('airport')
+      const icaos = airportsRaw
+        ? [...new Set(airportsRaw.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean))]
+        : undefined
       return {
         type: 'seeker',
         make: g('make'),
         model: g('model'),
         state: g('state')?.toUpperCase(),
-        icao: g('airport')?.toUpperCase(),
+        icaos,
+        radius: numOrUndef(g('radius')),
       }
     }
     return {
@@ -311,6 +326,23 @@ async function resolveIcaoList(
   return [target.icao]
 }
 
+/**
+ * Resolve a seeker target's multi-airport filter to the ICAO list a query
+ * should match — the seeker counterpart of `resolveIcaoList` above. A lone
+ * code + `radius` expands via the same haversine helper; radius is ignored
+ * once there's more than one code (ambiguous across several centers, same
+ * restriction `seekersQuery.ts`'s own `resolveSeekerAirports` enforces).
+ */
+async function resolveSeekerIcaoList(
+  target: Extract<AlertTarget, { type: 'seeker' }>
+): Promise<string[] | undefined> {
+  if (!target.icaos || target.icaos.length === 0) return undefined
+  if (target.icaos.length === 1 && target.radius && target.radius > 0) {
+    return getAirportsWithinRadius(target.icaos[0], target.radius)
+  }
+  return target.icaos
+}
+
 async function countActivePartnerships(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'partnership' }>,
@@ -342,19 +374,24 @@ async function countActiveSeekers(
   if (since) q = q.gte('created_at', since)
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
   if (target.state) q = q.eq('state', target.state)
-  // Single ICAO, no radius — matches home_airport OR additional_airports, same OR
-  // semantics as the digest cron's countNewSeekers / seekersQuery.ts's getSeekers().
-  // additional_airports may not be migrated live yet; retry home_airport-only on
-  // that specific column error, same graceful-degrade precedent used elsewhere.
-  if (target.icao) q = q.or(`home_airport.eq.${target.icao},additional_airports.ov.{${target.icao}}`)
+  // One or many ICAOs (radius-expanded when exactly one) — matches
+  // home_airport OR additional_airports, same OR semantics as the digest
+  // cron's countNewSeekers / seekersQuery.ts's getSeekers(). additional_airports
+  // may not be migrated live yet; retry home_airport-only on that specific
+  // column error, same graceful-degrade precedent used elsewhere.
+  const icaoList = await resolveSeekerIcaoList(target)
+  if (icaoList && icaoList.length > 0) {
+    const list = icaoList.join(',')
+    q = q.or(`home_airport.in.(${list}),additional_airports.ov.{${list}}`)
+  }
 
   let { data, error } = await q
-  if (target.icao && error?.message?.includes('additional_airports')) {
+  if (icaoList && icaoList.length > 0 && error?.message?.includes('additional_airports')) {
     let retry = supabase
       .from('partnership_seekers')
       .select('id, preferred_models')
       .eq('status', 'active')
-      .eq('home_airport', target.icao)
+      .in('home_airport', icaoList)
     if (since) retry = retry.gte('created_at', since)
     if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
     if (target.state) retry = retry.eq('state', target.state)
@@ -766,16 +803,20 @@ async function previewSeekers(
 
   if (target.make) q = q.overlaps('preferred_makes', [target.make])
   if (target.state) q = q.eq('state', target.state)
-  if (target.icao) q = q.or(`home_airport.eq.${target.icao},additional_airports.ov.{${target.icao}}`)
+  const icaoList = await resolveSeekerIcaoList(target)
+  if (icaoList && icaoList.length > 0) {
+    const list = icaoList.join(',')
+    q = q.or(`home_airport.in.(${list}),additional_airports.ov.{${list}}`)
+  }
 
   let { data, error } = await q
-  if (target.icao && error?.message?.includes('additional_airports')) {
+  if (icaoList && icaoList.length > 0 && error?.message?.includes('additional_airports')) {
     let retry = supabase
       .from('partnership_seekers')
       .select(SEEKER_PREVIEW_COLS)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .eq('home_airport', target.icao)
+      .in('home_airport', icaoList)
     if (target.make) retry = retry.overlaps('preferred_makes', [target.make])
     if (target.state) retry = retry.eq('state', target.state)
     ;({ data, error } = await retry)
@@ -1098,12 +1139,29 @@ export async function countMatchingSeekerSubscribers(listing: SeekerListingField
       .neq('email', CAPTURE_SELFCHECK_EMAIL)
     if (error) throw new Error(error.message)
 
+    const icaoListCache = new Map<string, string[]>()
     let count = 0
     for (const row of data ?? []) {
       if (!LIVE_STATUSES.has(row.status)) continue
       const parsed = parseSeekerAlertSourcePath(row.source_path)
       if (!parsed) continue
-      if (matchesSeekerListing(parsed.target, listing)) count++
+      const { target } = parsed
+      let icaoList: string[] | undefined
+      if (target.icaos && target.icaos.length > 0) {
+        if (target.icaos.length === 1 && target.radius && target.radius > 0) {
+          const cacheKey = `${target.icaos[0]}:${target.radius}`
+          const cached = icaoListCache.get(cacheKey)
+          if (cached) {
+            icaoList = cached
+          } else {
+            icaoList = await getAirportsWithinRadius(target.icaos[0], target.radius)
+            icaoListCache.set(cacheKey, icaoList)
+          }
+        } else {
+          icaoList = target.icaos
+        }
+      }
+      if (matchesSeekerListing(target, listing, icaoList)) count++
     }
     return count
   } catch (err) {
