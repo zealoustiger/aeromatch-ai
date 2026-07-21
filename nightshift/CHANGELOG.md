@@ -2,6 +2,57 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T095013Z — PASS — alert-year-range-edit
+- Pages: /alerts/manage
+- What: **Editing or duplicating an aircraft alert that has a year range (e.g. "2010 or
+  newer") now shows Min/Max year as real editable fields**, right next to the price
+  range. Before this, a year bound was a removable-only "hidden criterion" chip on the
+  Edit form, and clicking "Duplicate" silently dropped it from the new alert.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 Plan-pass batch #16, the last of the two
+  remaining P2 items) — a management-surface honesty fix, same family as the prior
+  multi-airport-edit cycle: an alert's Edit view must show what it actually matches on.
+  `EXPOSED_KEYS.aircraft` now includes `min_year`/`max_year`; `EditableAlertTarget`'s
+  aircraft variant carries `minYear`/`maxYear` (parsed in `parseEditableAlertTarget`,
+  written by `buildAlertCriteriaUpdate` via a new `cleanYear` validator mirroring
+  `cleanPrice`). New Min/Max year inputs in `AlertEditForm` and `NewAlertForm`, mirroring
+  the existing price-range pair exactly. `targetToFields` and `computeWidenCandidate`'s
+  aircraft fields objects now carry `minYear`/`maxYear` too, so Duplicate and the
+  dead-alert widen nudge never silently drop a year bound they didn't intend to touch.
+  Tier 1 (`[bug]`): none open — prior cycle (`alert-multiairport-edit`) PASSed, no known
+  bug/broken page/console error found. Tier 2 (`[want]`): re-confirmed empty of
+  actionable work — every open `[P1]/[P2][want]` item (save-search auth-wall
+  reconciliation, collection-layout mosaic redesign, Trade-A-Plane ingestion, Bay-Area
+  coverage benchmark, owner-leads list, dynamic-location seed personas) remains flagged
+  for a human product call/mock, blocked on an honest data source, or has no live effect
+  today — none newly actionable, consistent with many prior cycles' re-verification.
+  Dropped to tier 3, picked this over the sibling radius-exposure item (same batch,
+  equal P2) as the cleaner, more self-contained slice.
+- Spec: nightshift/specs/20260721T095013Z-alert-year-range-edit.md
+- Verdict: PASS — `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean exit
+  0, same route count/shape. Full `node --experimental-strip-types --test
+  'src/**/*.test.ts'`: 750/750 pass (`alertOverlap.test.ts`'s local `aircraft()` helper
+  updated to carry `minYear`/`maxYear` for shape parity, no new cases needed since
+  `definedEntries`/`valuesEqual` already operate generically over `Object.entries`).
+  `alertEditCriteria.ts` is untestable via the node test runner (path-alias imports,
+  same precedent as prior cycles) — verified with a standalone 15-case `tsx` script
+  instead (parse min_year/max_year, no-longer-hidden, write/clear/reject-junk on
+  build, targetToFields round-trip, widen-candidate preservation, unrelated hidden
+  params like min_tt still hidden) — all 15 passed. Served the PRODUCTION build
+  (`npx next start`); `qa-smoke.mjs` 2/2 pass on `/alerts/manage`, desktop 1280 +
+  mobile 375, zero console errors, zero horizontal overflow. Visual cycle — screenshots
+  confirmed correct, plus went further with a live Playwright drive against a real
+  throwaway `@example.com` test alert (`min_year=2010&max_year=2020` on its
+  `source_path`): Edit form opened with Min year/Max year correctly prefilled 2010/2020,
+  no leftover hidden-criterion chip, edited to 2012/2023, saved, and the DB row's
+  `source_path` confirmed updated to `min_year=2012&max_year=2023` — test alert deleted
+  immediately after (verified 0 rows remain for the test email pattern).
+- Screenshots: nightshift/screenshots/alert-year-range-edit/
+- Next: the sibling P2 item — expose the radius selector in partnership/seeker alert
+  Edit (currently match-honored by the cron but not editable) — is the last open item
+  in plan-pass batch #16; after that, the queue needs another Opus/Fable plan-pass
+  refill, or drop to the remaining hidden aircraft criteria (`min_tt`/`max_tt`, `grade`,
+  `avionics`, `q`) as further sibling slices.
+
 ## 20260721T093553Z — PASS — alert-multiairport-edit
 - Pages: /alerts/manage
 - What: **A saved alert that watches 2+ home airports at once (e.g. "KHWD, KPAO") can
