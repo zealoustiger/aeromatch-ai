@@ -14,6 +14,7 @@ import {
   Target,
   Gauge,
   Wrench,
+  MailX,
 } from 'lucide-react'
 import {
   getAlertScoreboard,
@@ -24,6 +25,7 @@ import {
   getRepermissionRollup,
   getDemandSupplyRollup,
   getCadenceMixRollup,
+  getNeverSentRollup,
 } from '@/lib/alertScoreboard'
 import { getLastCronRun, getRecentCronRuns } from '@/lib/alertCronHealth'
 import { getEmailEngagementRollup } from '@/lib/emailEngagement'
@@ -55,6 +57,7 @@ export default async function AlertScoreboardPage() {
     repermission,
     demandSupply,
     cadenceMix,
+    neverSent,
   ] = await Promise.all([
     getAlertScoreboard(),
     getDigestVoteRollup(),
@@ -67,6 +70,7 @@ export default async function AlertScoreboardPage() {
     getRepermissionRollup(),
     getDemandSupplyRollup(),
     getCadenceMixRollup(),
+    getNeverSentRollup(),
   ])
   const maxEngagement = Math.max(1, ...engagement.map((e) => e.opened + e.clicked))
   const hoursSinceLastRun = lastRun ? (Date.now() - new Date(lastRun.createdAt).getTime()) / (1000 * 60 * 60) : null
@@ -789,6 +793,43 @@ export default async function AlertScoreboardPage() {
                 </span>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <MailX className="h-5 w-5 text-rose-500" /> No content sent yet
+        </h2>
+        <p className="mb-6 text-sm text-slate-500">
+          Share of live subscribers old enough (7+ days since confirming) to have had a
+          real chance who have still never received a digest with a real listing in it —
+          the leading indicator of whether the next lever is more inventory, not more
+          alert capture points.
+          {!neverSent.digestSendsCountMigrated && (
+            <> (<code>alerts.digest_sends_count</code> isn&apos;t migrated live yet, so this reads off{' '}
+            <code>last_digest_at</code> alone — still an honest count.)</>
+          )}
+        </p>
+
+        {neverSent.liveAgedTotal === 0 ? (
+          <p className="text-sm text-slate-400">
+            No live alerts are old enough yet to say — not enough data.
+          </p>
+        ) : (
+          <div className="flex items-end gap-6">
+            <div>
+              <div className="text-2xl font-bold text-slate-900">
+                {neverSent.neverSentCount} of {neverSent.liveAgedTotal}
+              </div>
+              <div className="text-xs text-slate-500">never gotten a listing</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-rose-600">
+                {Math.round((neverSent.neverSentCount / neverSent.liveAgedTotal) * 100)}%
+              </div>
+              <div className="text-xs text-slate-500">of eligible live alerts</div>
+            </div>
           </div>
         )}
       </section>
