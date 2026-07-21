@@ -1,3 +1,38 @@
+## 2026-07-21T10:16:08Z — Night Shift run: 23 cycles (PASS 19 / FAIL 1) — backlog drained (planner cap 2)
+- Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
+- Night spend so far: $94.2077 of $120 cap
+
+- cycle produced no verdict (exit 124)
+- PASS — alert-deliverability-dns-check — daily SPF/DKIM/DMARC DNS self-check in the alert-digest cron, with transition-gated admin alerting and /admin/alerts surfacing
+- PASS — alert-social-proof-hub-pages — wired the existing honest N buyers get alerts social-proof line into 5 more hub pages (aircraft make/state/make-model-state, partnerships 
+- PASS — alert-social-proof-more-pages — wired the existing honesty-gated alert social-proof line into 4 more pages (/airports/[icao], /partnerships/seeking, /aircraft/mission/[m
+- PASS — alert-social-proof-remaining-sites — Wired the honest N buyers get alerts social-proof count into the last 5 AlertSignup boxes with a clean context (cost calculator, air
+- PASS — admin-email-preview-test-send — Added a Send to my inbox test-send button to every template on `/admin/alerts/emails`, so an admin can verify exactly what a real inbox d
+- PASS — admin-alerts-never-sent-tile — added a No content sent yet tile to `/admin/alerts` showing what share of live alert subscribers have never gotten a real digest, verified
+- PASS — widen-suggestion-email-cards — the hasn't matched anything yet, widen it? alert email now shows real matching listing cards (photo/title/price) instead of just a bare co
+- ABORT — none — plan needed`
+- PASS — partnership-owner-seeker-alert — added an owner-only get alerts for new seekers capture box on partnership listing pages, mirroring the aircraft-listing sibling shipped 
+- PASS — seeker-alert-multiairport — seeker alert me for this search on /partnerships/seeking now honors the full multi-airport filter (instead of silently dropping to any-airpor
+- PASS
+- PASS — digest-distance-line — Partnership/pilot-seeking alert-digest emails now show ~35 nm from KHWD next to a matching listing's location when the subscriber's alert is scope
+- PASS — digest-multimatch-subject — Weekly alert digests with 2+ new matches now name the best listing in the email subject line (e.g. New: 1973 Cessna 210 at $79,000 + 2 more �
+- PASS — alert-home-airport-refine — signed-in pilots on `/partnerships` or `/partnerships/seeking` with a saved home airport can now one-tap narrow their alert to just their own
+- ABORT — none — plan needed`
+- PASS — partnership-alert-mode-toggle — extended the aircraft-only New/Drops/Both alert-mode toggle to partnership search alerts (digest cron gate, `/alerts/manage`, `SavedSearc
+- PASS — digest-feedback-honest-landing — fixed the digest 👎 landing page's false we'll factor that into future emails claim, replacing it with real count-verified narrowing s
+- PASS — listing-watcher-count — added an honest N pilots are watching this listing social-proof line to the single-listing watch-alert boxes on `/aircraft/listing/[id]` and `/pa
+- PASS — alert-multiairport-edit — Multi-airport alert criteria (2+ home airports) are now editable as add/remove chips on `/alerts/manage` and survive Duplicate for both seeker 
+- PASS — alert-year-range-edit — Aircraft alert Edit/Duplicate on /alerts/manage now shows Min/Max year as real editable fields (was a removable-only hidden chip that Duplicate s
+- PASS — alert-radius-edit — partnership/seeker alert Edit/Duplicate now has a working Within N mi radius selector (previously a hidden, removable-only chip), plus a bonus fix to
+- ABORT — none — plan needed
+
+### VPS headroom
+- ⚠️ host CPU saturated: load peaked at 4.2 on 2 cores, sustained ~4 min — parallel drains are contending; consider more cores or lower --cpus per container
+- ⚠️ container neared its memory cap: peak 3.2 GB of 3.2 GB (100%) — raise --memory in the env file before it OOM-kills a build
+- ⚠️ container CPU-throttled ~852s total against its --cpus quota — cycles run slower than they should; consider raising --cpus or expect longer cycles
+- 1 of 23 cycle(s) hit the hard timeout (exit 124) — likely related to the resource pressure above
+
+
 ## 2026-07-20T13:00:22Z — Night Shift run: 11 cycles (PASS 7 / FAIL 2) — night budget cap ($120)
 - Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
 - Night spend so far: $125.3617 of $120 cap
