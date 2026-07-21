@@ -6,8 +6,23 @@ import DeleteSearchButton from '@/components/DeleteSearchButton'
 import RenameSavedSearch from '@/components/RenameSavedSearch'
 import QuickStartSearchForm from '@/components/QuickStartSearchForm'
 import SavedSearchAlertButton from '@/components/SavedSearchAlertButton'
+import SaveAlertAsSearchButton from '@/components/SaveAlertAsSearchButton'
 import { getAlertDetailsBySourcePath, type SavedSearchAlertDetail } from '@/lib/savedSearchAlerts'
+import { fetchAlertsForEmail } from '@/lib/alertsForOwner'
 import type { SavedSearch } from '@/lib/types'
+
+// The 3 marketplace base paths `saveSearch` actually knows how to save
+// (mirrors actions.ts's own SAVED_SEARCH_PATHS) — an orphan alert outside
+// these (a single-listing watch, or a path-segment SEO route like
+// /partnerships/near/[icao]) gets no "Save as a search" button, since
+// saveSearch would silently fall back to the wrong marketplace for it.
+const SAVABLE_ALERT_PATHS = ['/aircraft', '/partnerships', '/partnerships/seeking']
+
+function alertMarketplaceLabel(path: string): string {
+  if (path.startsWith('/aircraft')) return 'Planes for Sale'
+  if (path.startsWith('/partnerships/seeking')) return 'Pilot Seekers'
+  return 'Partnerships'
+}
 
 // Which marketplace a saved search belongs to. Defaults to partnerships for older rows.
 function marketplaceLabel(path: string): string {
@@ -116,6 +131,15 @@ export default async function SearchesPage() {
     ? await getAlertDetailsBySourcePath(user.email)
     : new Map<string, SavedSearchAlertDetail>()
 
+  // "Signed-in users see saved-search ↔ alert unified" (GOAL.md) — an alert set
+  // anonymously pre-signup, or from any capture box that doesn't also save a
+  // search (most of them), is otherwise invisible on this page even though it's
+  // tied to the same account email. Diff the account's alerts against the
+  // saved-searches' own source paths to find the ones with no saved-search twin.
+  const alerts = user.email ? await fetchAlertsForEmail(user.email) : []
+  const savedSearchPaths = new Set((searches ?? []).map((s) => `${s.path || '/partnerships'}?${s.search_params}`))
+  const orphanAlerts = alerts.filter((a) => a.source_path && !savedSearchPaths.has(a.source_path))
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -134,6 +158,59 @@ export default async function SearchesPage() {
           Manage email notification settings
         </Link>
       </div>
+
+      {orphanAlerts.length > 0 && (
+        <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+            <Bell className="h-4 w-4 text-sky-600" />
+            Your email alerts
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Alerts tied to <strong>{user.email}</strong>{' '}
+            that aren&apos;t saved as a search yet.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {orphanAlerts.map((a) => (
+              <li
+                key={a.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-medium text-slate-800">{a.context || 'New listings'}</p>
+                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                      {alertMarketplaceLabel(a.source_path || '')}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        a.status === 'paused'
+                          ? 'bg-slate-100 text-slate-600'
+                          : a.confirmed_at
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {a.status === 'paused' ? 'Paused' : a.confirmed_at ? 'Active' : 'Pending confirmation'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {SAVABLE_ALERT_PATHS.includes((a.source_path || '').split('?')[0]) && (
+                    <SaveAlertAsSearchButton sourcePath={a.source_path!} context={a.context} />
+                  )}
+                  <Link
+                    href={`/alerts/manage#alert-${a.id}`}
+                    className="flex items-center justify-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Manage
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {!searches?.length ? (
         <div className="space-y-6">
