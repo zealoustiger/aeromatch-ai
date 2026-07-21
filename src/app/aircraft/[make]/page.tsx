@@ -9,6 +9,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { getInventoryMakes, resolveMake, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, type SeoMakeModel } from '@/lib/seo'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
@@ -94,6 +95,7 @@ export default async function MakeForSalePage({ params }: Props) {
   if (total === 0) notFound()
 
   const path = `/aircraft/${entry.makeSlug}`
+  const alertCounts = await getAlertCounts([entry.make])
 
   // Other makes for the cross-link rail — every one is inventory-backed, so no
   // link can 404. Exclude the current make; cap at 14.
@@ -256,7 +258,7 @@ export default async function MakeForSalePage({ params }: Props) {
       )}
 
       {/* Email-alerts capture — inline, no account required. */}
-      <AlertSignup context={entry.make} sourcePath={path} source="make_page" matchCount={total} />
+      <AlertSignup context={entry.make} sourcePath={path} source="make_page" matchCount={total} alertCount={alertCounts.get(entry.make)} />
 
       {/* All listings for the make */}
       <h2 className="mb-4 text-lg font-semibold text-slate-900">

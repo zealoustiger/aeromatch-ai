@@ -6,6 +6,7 @@ import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countMakeModelState, fetchAircraftPage } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
 import {
@@ -97,6 +98,8 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
 
   const label = `${entry.make} ${entry.model}`
   const path = `/aircraft/${entry.makeSlug}/${entry.modelSlug}/${stateSlug(st.name)}`
+  const alertContext = `${label} in ${st.name}`
+  const alertCounts = await getAlertCounts([alertContext])
 
   // Sibling intersection pages — OTHER states with real inventory of THIS family,
   // so the rail can never link to a sub-threshold 404. Drawn from the same shared
@@ -197,7 +200,7 @@ export default async function MakeModelStateForSalePage({ params }: Props) {
       </div>
 
       {/* Email-alerts capture — inline, no account required. */}
-      <AlertSignup context={`${label} in ${st.name}`} sourcePath={path} source="make_model_state_page" />
+      <AlertSignup context={alertContext} sourcePath={path} source="make_model_state_page" alertCount={alertCounts.get(alertContext)} />
 
       {/* Listings */}
       <Suspense fallback={<ListSkeleton />}>

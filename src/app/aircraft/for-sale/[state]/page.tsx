@@ -6,6 +6,7 @@ import { Plane, MapPin, ArrowRight } from 'lucide-react'
 import AircraftSaleList, { countForSaleState, fetchAircraftPage, topMakeModelsForState } from '@/components/AircraftSaleList'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import ModelFaq from '@/components/ModelFaq'
@@ -73,6 +74,7 @@ export default async function StateAircraftForSalePage({ params }: Props) {
 
   const otherStates = STATE_CODES.filter((c) => c !== entry.code).slice(0, 14)
   const path = `/aircraft/for-sale/${stateSlug(entry.name)}`
+  const alertCounts = await getAlertCounts([entry.name])
 
   // FAMILY→FAMILY rail (slice 2): the most-listed make+model families in THIS
   // state that have a real /aircraft/[make]/[model] page. Each is resolved
@@ -159,7 +161,7 @@ export default async function StateAircraftForSalePage({ params }: Props) {
       )}
 
       {/* Email-alerts capture (slice 1) — inline, no account required. */}
-      <AlertSignup context={entry.name} sourcePath={path} source="state_page" matchCount={n} />
+      <AlertSignup context={entry.name} sourcePath={path} source="state_page" matchCount={n} alertCount={alertCounts.get(entry.name)} />
 
       {/* Listings */}
       <Suspense fallback={<ListSkeleton />}>
