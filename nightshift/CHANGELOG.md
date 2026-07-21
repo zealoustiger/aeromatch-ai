@@ -2,6 +2,41 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T060400Z — PASS — alert-deliverability-dns-check
+- Pages: /admin/alerts (new "Deliverability DNS" line in the cron-health panel's
+  latest-run stats + a new SPF/DKIM/DMARC column in the "Last N runs" trend table —
+  shows `—` until the additive columns are migrated live). Real change is server-side
+  in the `alert-digest` cron.
+- What: Nothing anywhere monitored the send domain's email-auth DNS — a silently
+  broken or human-edited SPF/DKIM/DMARC record would tank inbox placement of every
+  digest while every in-app send metric stayed green. The daily `alert-digest` cron
+  now resolves the send domain's SPF TXT, the Resend DKIM selector, and the `_dmarc`
+  policy via Cloudflare DNS-over-HTTPS (no new deps), with three honest states per
+  record — pass / fail / lookup-error (a resolver timeout is never a fail, never a
+  fabricated verdict). A genuine `fail` triggers a transition-gated admin heads-up
+  email that reuses the exact capture-self-check cadence (day-1 + every-3rd-red-day)
+  via a new shared `shouldSendOnRedTransition` helper — no second copy of the streak
+  math. The whole check is isolated in try/catch so it can never affect the digest
+  sends that already completed.
+- Goal: alert-experience `[goal]`, batch #14's top P1 — deliverability is the floor
+  under GOAL.md's "best listing alert email in aviation" pillar. Admin-only, no new
+  capture point, no send-path change.
+- Spec: nightshift/specs/20260721T060400Z-alert-deliverability-dns-check.md
+- Migration (⚠️ HUMAN ACTION): three additive `alert_cron_runs` text columns
+  (`dns_spf_status`/`dns_dkim_status`/`dns_dmarc_status`) — apply in the Supabase SQL
+  editor. Until applied, the run-log insert retries without them (same graceful
+  fallback as every prior optional column) and /admin/alerts shows `—`.
+- Verdict: PASS. `next build` + `tsc --noEmit` clean; 11 new unit tests on the pure
+  verdict-derivation functions (no network); `alertCaptureSelfCheckHistory.test.ts`
+  still green (14/14 — the extract-to-`shouldSendOnRedTransition` refactor left the
+  existing wrapper's behavior unchanged). QA smoke exit 0 on /admin/alerts at 1280 +
+  375 (HTTP 200, no console errors, no horizontal overflow); screenshots render
+  cleanly (page is auth-gated, DNS panel only shows authenticated + post-migration).
+  No prod rows created. Note: this cycle resumed an earlier interrupted run whose work
+  was left uncommitted in the working tree — reviewed the full diff for coherence,
+  ran all gates fresh, then committed + landed it.
+- Screenshots: nightshift/screenshots/alert-deliverability-dns-check/
+
 ## 2026-07-20T13:00:22Z — DRAIN SUMMARY
 - Cycles this run: 11 (PASS 7 / FAIL 2 / ABORT 2)
 - Models: cycles on sonnet; 1 escalated to opus; 2 quality-judged on opus
