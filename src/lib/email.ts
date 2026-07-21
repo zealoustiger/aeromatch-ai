@@ -1476,17 +1476,22 @@ function buildAlertDigestEmailCore(opts: {
   }
   const countLabelText = countLabel
   const subjectBase = thing ? `${countLabel} — ${thing} on ClubHanger` : `${countLabel} on ClubHanger`
-  // Name the standout listing in the subject when there's exactly one genuine
-  // new match (no price drops, no sample/first-send framing) and a usable
-  // sample — never fabricate a title/price that isn't in the data, so every
-  // other case falls back to the generic count-only subject above.
+  // Name the standout listing in the subject when there's at least one
+  // genuine new match (no price drops, no sample/first-send framing) and a
+  // usable sample — never fabricate a title/price that isn't in the data, so
+  // every other case falls back to the generic count-only subject above.
+  // When more than one listing is new, prefer a below-market deal sample
+  // (else the first) and name the honest remainder via `+ N more`, computed
+  // from the real `newCount` — not `samples.length`, which is capped below
+  // the true count.
   const standout =
-    !isSample && !isFirstSend && opts.newCount === 1 && opts.dropCount === 0 && samples.length === 1
-      ? samples[0]
+    !isSample && !isFirstSend && opts.newCount >= 1 && opts.dropCount === 0 && samples.length >= 1
+      ? (samples.find((s) => s.compBelowAvg) ?? samples[0])
       : null
+  const standoutMore = standout ? opts.newCount - 1 : 0
   const subject =
     standout && standout.title && standout.price != null
-      ? `New: ${standout.title} at ${formatUsd(standout.price)}${thing ? ` — your ${thing} alert` : ' — new match on ClubHanger'}`
+      ? `New: ${standout.title} at ${formatUsd(standout.price)}${standoutMore > 0 ? ` + ${standoutMore} more` : ''}${thing ? ` — your ${thing} alert` : ' — new match on ClubHanger'}`
       : isSample
         ? `Sample: ${subjectBase}`
         : subjectBase
