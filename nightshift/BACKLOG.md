@@ -4300,14 +4300,20 @@ Genuinely open gaps below._
   "150–3,500 hours", Duplicate correctly carried 150/3500 into the new-alert form. Zero
   console errors, zero overflow at 375px. Test row deleted after (0 rows remain). No
   schema change, no new capture point.
-- **[P1][goal] Surface the account-email's alerts that have NO matching saved search on
+~~- **[P1][goal] Surface the account-email's alerts that have NO matching saved search on
   `/searches`.** GOAL.md: "signed-in users see saved-search ↔ alert unified" — but
   searches/page.tsx renders only `saved_searches` rows (alert state attached by
   source-path via `getAlertDetailsBySourcePath`); an alert set anonymously pre-signup, or
   from any capture box without saving a search, is invisible when signed in. Add a "Your
   email alerts" section listing the verified account email's remaining alerts (read-only
   v1: criteria summary + status + a link into `/alerts/manage`), plus one-tap "save as a
-  search". Improves: alert management/unification. No new capture point, no schema change.
+  search". Improves: alert management/unification. No new capture point, no schema change.~~
+  ✅ SHIPPED via `searches-orphan-alerts` (2026-07-21) — new "Your email alerts" card on
+  `/searches` (context, marketplace + status badges, Manage link) diffing `fetchAlertsForEmail`
+  against the saved searches' own source paths, plus a "Save as a search" button (new
+  `SaveAlertAsSearchButton.tsx`) for the 3 marketplace shapes `saveSearch` can save. Section
+  now renders even at 0 saved searches (previously hidden behind the onboarding early-return).
+  See CHANGELOG.
 - **[P1][goal] "Build your own alert" from scratch on the `/alerts` landing page.**
   Today `/alerts` offers popular chips + a generic capture box — a visitor wanting
   "Mooney M20J under $120k in TX" must first go run a browse search to reach a prefilled
