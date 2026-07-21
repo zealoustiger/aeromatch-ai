@@ -243,7 +243,7 @@ export default async function SearchesPage() {
                 <SavedSearchAlertButton
                   searchId={s.id}
                   alert={alertDetails.get(`${s.path || '/partnerships'}?${s.search_params}`) ?? null}
-                  isAircraft={s.path === '/aircraft'}
+                  showModeToggle={s.path === '/aircraft' || (s.path || '/partnerships') === '/partnerships'}
                 />
                 <Link
                   href={`${s.path || '/partnerships'}?${s.search_params}`}

@@ -25,13 +25,14 @@ const COLOR: Record<AlertMode, string> = {
 }
 
 /**
- * Persistent per-alert switch (not hidden behind "Edit") for aircraft-type
- * alerts only — price-drop/new-listing matching only exists for aircraft
- * alerts (see alert-digest's countRecentAircraftPriceDrops and the
- * new_listing_opt_out gate), so this never renders for partnership/seeker
- * rows (see /alerts/manage's page.tsx). Cycles through the 3 honest,
- * always-valid combinations on click — never lands on the unreachable
- * "neither" state a pair of independent checkboxes could produce.
+ * Persistent per-alert switch (not hidden behind "Edit") for aircraft and
+ * partnership alerts — price-drop/new-listing matching only exists for those
+ * two types (see alert-digest's countRecentAircraftPriceDrops/
+ * countRecentPartnershipPriceDrops and the new_listing_opt_out gate), so this
+ * never renders for seeker rows (no price — see /alerts/manage's page.tsx).
+ * Cycles through the 3 honest, always-valid combinations on click — never
+ * lands on the unreachable "neither" state a pair of independent checkboxes
+ * could produce.
  */
 export default function AlertModeToggle({
   id,

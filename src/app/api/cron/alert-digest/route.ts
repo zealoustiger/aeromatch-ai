@@ -2110,19 +2110,20 @@ export async function GET(req: NextRequest) {
       continue
     }
 
-    // Drops-only mode ("Drops only" on /alerts/manage's mode toggle) is
-    // aircraft-only, same scope as price_drop_opt_in below — mutes new-listing
-    // matching entirely rather than just adding drops on top of it. Skips the
-    // countNew query too, not just the send, when opted out.
-    const newListingOptOut = target.type === 'aircraft' && (alert.new_listing_opt_out ?? false)
+    // Drops-only mode ("Drops only" on /alerts/manage's mode toggle) applies to
+    // aircraft and partnership alerts, same scope as price_drop_opt_in below —
+    // mutes new-listing matching entirely rather than just adding drops on top
+    // of it. Skips the countNew query too, not just the send, when opted out.
+    const newListingOptOut =
+      (target.type === 'aircraft' || target.type === 'partnership') && (alert.new_listing_opt_out ?? false)
     const newCount = newListingOptOut ? 0 : await countNew(supabase, target, since)
     // Price-drop matching applies to aircraft-for-sale and partnership alerts
     // (a partnership's "price" is its buy-in share, tracked on the separate
     // previous_buy_in_price/buy_in_price_changed_at column pair) — seekers have
     // no price at all. `price_drop_opt_in` defaults to true (both at the DB
     // level and here, when the column isn't in the row because the migration
-    // hasn't landed yet); there's no partnership-specific opt-out UI today, so
-    // partnership alerts get drop detection on by default, same as aircraft.
+    // hasn't landed yet); the mode toggle (now live for partnerships too, see
+    // newListingOptOut above) lets a subscriber flip it to drops-only.
     const priceDropOptIn = alert.price_drop_opt_in ?? true
     const dropCount = !priceDropOptIn
       ? 0
