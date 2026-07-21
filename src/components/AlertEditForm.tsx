@@ -100,6 +100,8 @@ export default function AlertEditForm({
   const [maxPrice, setMaxPrice] = useState('')
   const [minYear, setMinYear] = useState('')
   const [maxYear, setMaxYear] = useState('')
+  const [minTt, setMinTt] = useState('')
+  const [maxTt, setMaxTt] = useState('')
   const [airports, setAirports] = useState<string[]>([])
   const [radius, setRadius] = useState('')
   const [dealOnly, setDealOnly] = useState(false)
@@ -134,7 +136,7 @@ export default function AlertEditForm({
     const handle = setTimeout(() => {
       const fields =
         target.type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, dealOnly }
+          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airports, radius }
             : { make, model, state, airports, radius }
@@ -147,7 +149,7 @@ export default function AlertEditForm({
       cancelled = true
       clearTimeout(handle)
     }
-  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, minYear, maxYear, airports, radius, dealOnly])
+  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, airports, radius, dealOnly])
 
   function openEdit() {
     if (!target) return
@@ -161,6 +163,8 @@ export default function AlertEditForm({
     setMaxPrice('maxPrice' in target ? target.maxPrice : '')
     setMinYear('minYear' in target ? target.minYear : '')
     setMaxYear('maxYear' in target ? target.maxYear : '')
+    setMinTt('minTt' in target ? target.minTt : '')
+    setMaxTt('maxTt' in target ? target.maxTt : '')
     setAirports('airports' in target ? target.airports : [])
     setRadius('radius' in target ? target.radius : '')
     setDealOnly('dealOnly' in target ? target.dealOnly : false)
@@ -200,7 +204,7 @@ export default function AlertEditForm({
     startTransition(async () => {
       const fields =
         target.type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, dealOnly }
+          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airports, radius }
             : { make, model, state, airports, radius }
@@ -431,6 +435,28 @@ export default function AlertEditForm({
                     min={0}
                     value={maxYear}
                     onChange={(e) => setMaxYear(e.target.value)}
+                    placeholder="Max"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Min hours (TT)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={minTt}
+                    onChange={(e) => setMinTt(e.target.value)}
+                    placeholder="Min"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Max hours (TT)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={maxTt}
+                    onChange={(e) => setMaxTt(e.target.value)}
                     placeholder="Max"
                     className={inputClass}
                   />

@@ -2,6 +2,15 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T102353Z — PASS — alert-tt-range-edit
+- Pages: /alerts/manage
+- What: **An aircraft alert filtered by total-time hours (e.g. "Cessna 182 under 4,000 hours") now shows that hours range as real, editable Min/Max fields when you go to edit it — and Duplicate now copies it over too.** Before this, the hours filter only showed up as a small removable tag, and making a copy of the alert silently dropped it.
+- Goal: alert experience (management) — closes the last TT gap flagged in `alertEditCriteria.ts`'s own `EXPOSED_KEYS.aircraft` set, mirroring the `alert-year-range-edit` cycle earlier tonight. New "Min hours (TT)" / "Max hours (TT)" fields sit next to Min/Max year in both `AlertEditForm` and `NewAlertForm`; `min_tt`/`max_tt` now thread through `EditableAlertTarget`, `buildAlertCriteriaUpdate` (new `cleanTt` helper), `targetToFields`, and `computeWidenCandidate`. No schema change, no new capture point — the digest cron's separate `parseSourcePath` is untouched by design (see the file's own header note).
+- Spec: nightshift/specs/20260721T102353Z-alert-tt-range-edit.md
+- Verdict: PASS. `next build` + `tsc --noEmit` clean; `node --test src/lib/alertOverlap.test.ts` 25/25 pass. `qa-smoke.mjs` on `/alerts/manage` (desktop 1280 + mobile 375): HTTP 200, 0 console errors, 0 overflow. Additionally live-verified end-to-end against the real DB with a throwaway `@example.com` confirmed alert (`source_path` carrying `min_tt=100&max_tt=4000`): Edit form pre-filled 100/4000 correctly; edited to 150/3500 via real Playwright clicks, Save persisted the new `source_path` and updated `context` to "150–3,500 hours"; Duplicate correctly carried 150/3500 into the new-alert form. Test row deleted after (verified 0 rows remain).
+- Screenshots: nightshift/screenshots/alert-tt-range-edit/
+- Next: batch #17's remaining open items — `/searches` unified alert visibility, "build your own alert" on `/alerts`, owner-side capture on `/matches`, avionics/grade/`q` edit-form exposure, and the accessibility pass.
+
 ## 2026-07-21T10:16:08Z — DRAIN SUMMARY
 - Cycles this run: 23 (PASS 19 / FAIL 1 / ABORT 3)
 - Models: cycles on sonnet; 1 escalated to opus; 4 quality-judged on opus
