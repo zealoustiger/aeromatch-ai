@@ -2,6 +2,38 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T063638Z — PASS — alert-social-proof-more-pages
+- Pages: /airports/[icao], /partnerships/seeking, /aircraft/mission/[mission],
+  /aircraft/deals
+- What: **Four more pages now show the real "N buyers get alerts for this" social
+  proof** on their alert-signup box, continuing last cycle's wire-up. Each of these
+  pages has a clean single `context` string for its `AlertSignup` (airport ICAO,
+  make+model search on the seeking page, the mission label, or the static "good
+  deal" context on the deals page) — the honesty-gated `alertCount` mechanism
+  itself already existed and needed no changes.
+- Goal: alert-experience `[goal]`, continuing the `alert-social-proof-*` multi-cycle
+  wire-up (BACKLOG's "Join N others" item) — frictionless-capture pillar. No new
+  mechanism, no new capture point, no schema change.
+- Spec: nightshift/specs/20260721T063638Z-alert-social-proof-more-pages.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean
+  (376+ pages). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  736/736 pass, no regressions. Served the PRODUCTION build
+  (`npx next start -p 3000`); `qa-smoke.mjs` 8/8 pass across the 4 pages (HTTP 200,
+  zero app-origin console errors, zero horizontal overflow at 1280 + 375px), plus a
+  separate 2/2 pass on `/partnerships/seeking?make=cessna` to exercise the
+  defined-`alertContext` branch (the bare page exercises the `undefined`-context
+  guard). Visual cycle — screenshots read and confirm all 4 pages render correctly,
+  alert boxes intact, no layout regression. Real (shared) prod DB still has 0
+  confirmed `alerts` rows, so the social-proof line correctly renders nothing
+  anywhere right now — same honest cold-start state as last cycle, not a bug.
+- Screenshots: nightshift/screenshots/alert-social-proof-more-pages/,
+  nightshift/screenshots/alert-social-proof-more-pages-filtered/
+- Next: remaining un-wired single-context `AlertSignup` sites — guide pages,
+  `/tools`, `/tools/cost-calculator`, `/aircraft/compare` + `/aircraft/compare/[comparison]`,
+  `/partnerships/seeking/[id]`, `/partnerships/[id]`, `/compare`, `/post`, `/saved`,
+  `/about`, `/not-found`. Homepage/`/aircraft/browse`/`/listing-quality` have no
+  `context` prop at all — a separate design question, not a wire-up.
+
 ## 20260721T062630Z — PASS — alert-social-proof-hub-pages
 - Pages: /aircraft/[make], /aircraft/for-sale/[state], /aircraft/[make]/[model]/[state],
   /partnerships/make/[make], /partnerships/state/[state]

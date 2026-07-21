@@ -3902,16 +3902,24 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   `/partnerships/state/[state]`. Live-verified against the real (shared) prod DB: 0
   confirmed alerts exist today (genuine cold start), so the line correctly renders nothing
   anywhere right now — no fabrication, will light up honestly once alerts accumulate.
+  **More progress via `alert-social-proof-more-pages` (2026-07-21):** wired 4 more sites
+  with a clean single `context` — `/airports/[icao]`, `/partnerships/seeking` (guarded
+  for the no-active-filter/`undefined`-context case), `/aircraft/mission/[mission]`,
+  `/aircraft/deals`. Same exact-context pattern, no new mechanism; QA PASS on all 4
+  (desktop 1280 + 375px, 0 console errors/overflow), plus the seeking page's filtered
+  (`?make=cessna`) and unfiltered variants both verified clean.
   **Still open — remaining un-wired `AlertSignup` call sites** (next slice(s)): the guide
-  pages, homepage, `/tools`, `/tools/cost-calculator`, `/aircraft/mission/[mission]`,
-  `/aircraft/compare` + `/aircraft/compare/[comparison]`, `/partnerships/seeking`,
-  `/partnerships/seeking/[id]`, `/partnerships/[id]`, `/airports/[icao]`, `/compare`,
-  `/post`, `/saved`, `/about`, `/aircraft/browse`, `/aircraft/deals`, `/listing-quality`,
-  `/not-found`. The original item's `familyForSourcePath`/`alertDemandFamily.ts`-based
-  grouping approach was NOT built — the shipped precedent uses simpler exact-`context`
-  matching, which this cycle followed for consistency; leaving that as a documented,
-  deliberate divergence rather than a gap. Not struck off — this is a wire-up-the-rest
-  multi-cycle item, most of the surface area is still unwired.
+  pages, `/tools`, `/tools/cost-calculator`, `/aircraft/compare` + `/aircraft/compare/[comparison]`,
+  `/partnerships/seeking/[id]`, `/partnerships/[id]`, `/compare`, `/post`, `/saved`,
+  `/about`, `/not-found`. **Not applicable — no single `context` to key off of** (homepage
+  band, `/aircraft/browse`, `/listing-quality` all call `AlertSignup` with no `context`
+  prop): would need a different, non-exact-match social-proof mechanism, so these are a
+  separate design question, not a wire-up. The original item's
+  `familyForSourcePath`/`alertDemandFamily.ts`-based grouping approach was NOT built — the
+  shipped precedent uses simpler exact-`context` matching, which both cycles followed for
+  consistency; leaving that as a documented, deliberate divergence rather than a gap. Not
+  struck off — this is a wire-up-the-rest multi-cycle item, some surface area (multi-context
+  pages) is still unwired.
 - **[P2][goal] "Send to my inbox" test-send on `/admin/alerts/emails`.** The preview page
   renders every builder in-browser, but browser rendering can't prove what Gmail clipping,
   dark-mode inversion, or image proxying will do to a real send — and there's no send
