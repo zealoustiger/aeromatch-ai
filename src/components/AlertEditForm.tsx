@@ -14,7 +14,8 @@ import {
 import { normalizeFrequency } from '@/lib/alertFrequency'
 import type { AircraftFacets } from '@/lib/aircraft-facets'
 import { groupModelVariants } from '@/lib/modelGroups'
-import { toggleCsvItem } from '@/lib/csvList'
+import { toggleCsvItem, parseCsvList } from '@/lib/csvList'
+import { AVIONICS_FILTER_OPTIONS } from '@/lib/avionicsClassify'
 import AlertActions from '@/components/AlertActions'
 import NewAlertForm from '@/components/NewAlertForm'
 import AirportChipsInput from '@/components/AirportChipsInput'
@@ -28,6 +29,10 @@ function nounFor(type: EditableAlertTarget['type']): 'listing' | 'pilot' {
 // enough that duplicating locally (rather than a shared extraction) matches the
 // existing convention for this constant across the codebase.
 const RADIUS = [25, 50, 100, 150, 200]
+
+// Same 3 options as the browse filter UI (`AircraftSaleFilters`) — small enough
+// that duplicating locally matches the existing convention for this constant.
+const GRADES = ['A', 'B', 'C'] as const
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
@@ -104,6 +109,9 @@ export default function AlertEditForm({
   const [maxTt, setMaxTt] = useState('')
   const [airports, setAirports] = useState<string[]>([])
   const [radius, setRadius] = useState('')
+  const [avionics, setAvionics] = useState('')
+  const [grade, setGrade] = useState('')
+  const [q, setQ] = useState('')
   const [dealOnly, setDealOnly] = useState(false)
   const [hiddenCriteria, setHiddenCriteria] = useState<HiddenCriterion[]>([])
   const [liveCount, setLiveCount] = useState<number | null>(null)
@@ -124,6 +132,8 @@ export default function AlertEditForm({
     () => new Set(model.split(',').map((m) => m.trim()).filter(Boolean)),
     [model]
   )
+  const selectedAvionicsSet = useMemo(() => new Set(parseCsvList(avionics)), [avionics])
+  const selectedGradeSet = useMemo(() => new Set(parseCsvList(grade)), [grade])
 
   // Debounced live "N listings match right now" preview as the form's own fields
   // change — reuses the same real counting logic as the static per-row count
@@ -136,7 +146,7 @@ export default function AlertEditForm({
     const handle = setTimeout(() => {
       const fields =
         target.type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, dealOnly }
+          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, avionics, grade, q, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airports, radius }
             : { make, model, state, airports, radius }
@@ -149,7 +159,7 @@ export default function AlertEditForm({
       cancelled = true
       clearTimeout(handle)
     }
-  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, airports, radius, dealOnly])
+  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, airports, radius, avionics, grade, q, dealOnly])
 
   function openEdit() {
     if (!target) return
@@ -167,6 +177,9 @@ export default function AlertEditForm({
     setMaxTt('maxTt' in target ? target.maxTt : '')
     setAirports('airports' in target ? target.airports : [])
     setRadius('radius' in target ? target.radius : '')
+    setAvionics('avionics' in target ? target.avionics : '')
+    setGrade('grade' in target ? target.grade : '')
+    setQ('q' in target ? target.q : '')
     setDealOnly('dealOnly' in target ? target.dealOnly : false)
     setHiddenCriteria(getHiddenCriteria(target.type, sourcePath))
     setLiveCount(null)
@@ -204,7 +217,7 @@ export default function AlertEditForm({
     startTransition(async () => {
       const fields =
         target.type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, dealOnly }
+          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, avionics, grade, q, dealOnly }
           : target.type === 'partnership'
             ? { make, state, airports, radius }
             : { make, model, state, airports, radius }
@@ -461,9 +474,71 @@ export default function AlertEditForm({
                     className={inputClass}
                   />
                 </div>
+                <div className="col-span-2">
+                  <label className={labelClass}>Keyword</label>
+                  <input
+                    type="text"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="e.g. glass panel, low time"
+                    className={inputClass}
+                  />
+                </div>
               </>
             ) : null}
           </div>
+
+          {target.type === 'aircraft' ? (
+            <div className="mt-3">
+              <label className={labelClass}>
+                Avionics
+                {selectedAvionicsSet.size > 0 && (
+                  <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                    · {selectedAvionicsSet.size} selected
+                  </span>
+                )}
+              </label>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {AVIONICS_FILTER_OPTIONS.map((opt) => (
+                  <label key={opt.key} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedAvionicsSet.has(opt.key)}
+                      onChange={() => setAvionics((v) => toggleCsvItem(v, opt.key))}
+                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {target.type === 'aircraft' ? (
+            <div className="mt-3">
+              <label className={labelClass}>
+                Listing quality
+                {selectedGradeSet.size > 0 && (
+                  <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                    · {selectedGradeSet.size} selected
+                  </span>
+                )}
+              </label>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {GRADES.map((g) => (
+                  <label key={g} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedGradeSet.has(g)}
+                      onChange={() => setGrade((v) => toggleCsvItem(v, g))}
+                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                    />
+                    Grade {g}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {target.type === 'aircraft' ? (
             <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
