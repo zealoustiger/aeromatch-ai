@@ -4323,14 +4323,14 @@ Genuinely open gaps below._
   New capture point on `/alerts` — emit `alert_subscribed` with
   `source: 'alerts_landing_builder'`. Show the live match count before submit (existing
   `alertMatchCounts` helpers) so the alert is honest about what it covers.
-- **[P1][goal] Owner-side alert capture on `/matches`.** The signed-in matches page shows
+- ~~**[P1][goal] Owner-side alert capture on `/matches`.** The signed-in matches page shows
   an owner today's matching seekers/partnerships for each of their listings
   (matches/page.tsx) but has zero alert capture (grep clean) — the owner can see current
   matches but can't subscribe to hear about the NEXT one from the exact page built around
   matches. Per listing rail, add the owner-side `AlertSignup` (`noun="seeker"` for their
   partnerships/aircraft via the shipped `owner_*_seeker` pattern; a partnership alert
   prefilled from `partnershipBrowseHrefForSeeker` for their seeker post). New capture
-  point — emit `alert_subscribed` with `source: 'matches_page'`. No schema change.
+  point — emit `alert_subscribed` with `source: 'matches_page'`. No schema change.~~ ✅ SHIPPED via `matches-owner-alert-capture` (2026-07-21)
 - **[P2][goal] Expose avionics as an editable multi-select in aircraft alert
   Edit/Duplicate.** `avionics` is an honored structured browse filter
   (`AVIONICS_FILTER_OPTIONS`/`parseAvionicsFilter`) but hidden-chip-only on the edit form.
