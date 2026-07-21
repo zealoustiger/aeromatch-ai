@@ -5,6 +5,7 @@ import { SITE_URL } from '@/lib/seo'
 import CostCalculator from '@/components/CostCalculator'
 import AlertSignup from '@/components/AlertSignup'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { getAlertCounts } from '@/lib/alertCounts'
 
 export const metadata: Metadata = {
   title: 'Aircraft Partnership Cost Calculator — True Cost of Co-Ownership',
@@ -32,6 +33,7 @@ export default async function CostCalculatorPage({
     ? `/aircraft?${new URLSearchParams({ make: make!, model: model! }).toString()}`
     : '/partnerships'
   const matchResult = await getAlertMatchCount(alertSourcePath)
+  const alertCounts = aircraftLabel ? await getAlertCounts([aircraftLabel]) : new Map<string, number>()
 
   return (
     <div className="ch-surface min-h-screen">
@@ -89,6 +91,7 @@ export default async function CostCalculatorPage({
           className="mt-10"
           source="cost_calculator"
           matchCount={matchResult?.count}
+          alertCount={alertCounts.get(aircraftLabel)}
         />
       ) : (
         <AlertSignup

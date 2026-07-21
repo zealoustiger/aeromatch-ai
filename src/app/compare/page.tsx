@@ -7,6 +7,7 @@ import { getAircraftForSaleByIds } from '@/lib/aircraftForSale'
 import { formatPrice, formatShareType, aircraftLabel } from '@/lib/utils'
 import { resolveMakeModelFamily } from '@/lib/seo'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 
 // Cap at 3 listings. Defined locally (not imported from the 'use client'
 // CompareProvider) so the value is reliably present in this server component.
@@ -152,7 +153,15 @@ function partnershipAlertBoxes(listings: Partnership[]): AlertBox[] {
   return [...seen.values()]
 }
 
-function CompareAlertSection({ boxes, noun }: { boxes: AlertBox[]; noun: 'aircraft' | 'partnership' }) {
+function CompareAlertSection({
+  boxes,
+  noun,
+  alertCounts,
+}: {
+  boxes: AlertBox[]
+  noun: 'aircraft' | 'partnership'
+  alertCounts: Map<string, number>
+}) {
   if (boxes.length === 0) return null
   return (
     <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -169,6 +178,7 @@ function CompareAlertSection({ boxes, noun }: { boxes: AlertBox[]; noun: 'aircra
             noun={noun}
             source="compare_tray"
             className=""
+            alertCount={box.context ? alertCounts.get(box.context) : undefined}
           />
         ))}
       </div>
@@ -247,6 +257,8 @@ export default async function ComparePage({
   if (type === 'aircraft') {
     const listings = ids.length > 0 ? await getAircraftForSaleByIds(ids) : []
     if (listings.length < 2) return <EmptyPrompt count={listings.length} type="aircraft" />
+    const boxes = aircraftAlertBoxes(listings)
+    const alertCounts = await getAlertCounts(boxes.map((b) => b.context).filter((c): c is string => Boolean(c)))
 
     return (
       <CompareLayout
@@ -274,7 +286,7 @@ export default async function ComparePage({
           label: row.label,
           cells: listings.map((p) => ({ key: p.id, node: row.render(p) })),
         }))}
-        alertSection={<CompareAlertSection boxes={aircraftAlertBoxes(listings)} noun="aircraft" />}
+        alertSection={<CompareAlertSection boxes={boxes} noun="aircraft" alertCounts={alertCounts} />}
       />
     )
   }
@@ -282,6 +294,8 @@ export default async function ComparePage({
   // Partnerships (default)
   const listings = ids.length > 0 ? await getPartnershipsByIds(ids) : []
   if (listings.length < 2) return <EmptyPrompt count={listings.length} type="partnership" />
+  const boxes = partnershipAlertBoxes(listings)
+  const alertCounts = await getAlertCounts(boxes.map((b) => b.context).filter((c): c is string => Boolean(c)))
 
   return (
     <CompareLayout
@@ -308,7 +322,7 @@ export default async function ComparePage({
         label: row.label,
         cells: listings.map((p) => ({ key: p.id, node: row.render(p) })),
       }))}
-      alertSection={<CompareAlertSection boxes={partnershipAlertBoxes(listings)} noun="partnership" />}
+      alertSection={<CompareAlertSection boxes={boxes} noun="partnership" alertCounts={alertCounts} />}
     />
   )
 }
