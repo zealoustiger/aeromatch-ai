@@ -4180,6 +4180,73 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
   produced a real `alerts` row with `source_path: "/partnerships?airport=KHWD"`. Test
   user/rows deleted after. No schema change.
 
+### Plan-pass batch #16 — 2026-07-21 (Fable)
+_Batch #15 fully drained (`alert-home-airport-refine` closed it 2026-07-21). Every item
+below verified un-built by direct code read this pass. Dead ends checked so they don't
+reappear: email-typo "did you mean gmail.com?" exists (`suggestEmailFix` in
+`AlertSignup.tsx:173`), vacation-mode pause-all exists (`VacationModeControl.tsx`),
+manage rows already show last/next digest + digest-day + bounce recovery
+(manage/page.tsx:478–480), confirm email already carries a live match preview + an
+add-to-contacts deliverability nudge (email.ts:292/349), digest cards have photos,
+`target_price` has full UI (`TargetPriceEdit`), monthly cadence + weekly digest-day are
+in `FrequencyToggle`, nav shows a known-subscriber "My alerts" + new-match count,
+`?posted=1` seller capture is live on all three detail pages, 404 + cost-calculator
+capture exist, and partnerships browse has no buy-in price filter param to honor.
+Genuinely open gaps below._
+
+- **[P1][goal] Extend the New/Drops/Both alert-mode toggle to partnership search alerts.**
+  Why: partnership digests already include buy-in price drops
+  (`countRecentPartnershipPriceDrops`/`fetchPartnershipPriceDropSamples`), but the cron
+  honors `new_listing_opt_out`/`price_drop_opt_in` for `target.type === 'aircraft'` only
+  (alert-digest/route.ts:2117) and `AlertModeToggle` renders only on aircraft alerts — a
+  partnership subscriber can't say "drops only" or "new only." Honor both opt-outs for
+  partnership-type search alerts in the digest path (columns are already type-agnostic)
+  and render the toggle on partnership rows in `/alerts/manage` + `SavedSearchAlertButton`.
+  Improves the manage surface + digest honesty; no new capture point, so no new
+  `alert_subscribed` event.
+- **[P1][goal] Make the digest 👎 landing honest and actionable.** Why: a digest "Not
+  relevant?" / thumbs-down click just inserts a `feedback` row, then
+  `/alerts/status?state=digest_listing_feedback` claims "We'll factor that into what
+  shows up in your future alert emails" (status/page.tsx:116) — which is currently false
+  (nothing changes future sends; violates GOAL.md's honesty bar). Fix the copy to what's
+  true, and make it true-ish: offer token-scoped, count-verified narrowing suggestions on
+  that landing state (reuse `getNarrowSuggestions` + the existing edit-criteria actions)
+  plus links to Edit / mode / frequency for this alert. Covers both the per-listing vote
+  and the whole-digest 👎 state. Improves the feedback→management loop; no new capture
+  point.
+- **[P1][goal] Honest "N pilots watching" social proof on listing watch surfaces.** Why:
+  no watcher-count exists anywhere (grep: no "watching this"/watcher count helper). Show
+  a real count of OTHER confirmed `?watch=price` alerts on this listing next to the watch
+  panel on `/aircraft/listing/[id]` and `/partnerships/[id]` ("2 pilots are watching this
+  listing") — aggregate count only (no PII), hidden at 0, never fabricated; count via a
+  service-role helper alongside the existing `getAlertMatchCount` pattern. Improves
+  conversion of the existing watch capture points (they already emit `alert_subscribed`
+  with per-placement sources — this cycle should show the placements' conversion moving).
+- **[P1][goal] Multi-airport criterion inline-editable in alert Edit/Duplicate.** Why: the
+  explicitly deferred follow-up from `seeker-alert-multiairport` (2026-07-21): a
+  2+-airport `airports=` criterion is a removable-only hidden chip in Edit and
+  **Duplicate silently drops it** (alertEditCriteria.ts:64–70 keeps single-code only).
+  Replace the one-text-field airport input with an add/remove ICAO chip field for seeker
+  (and partnership, which shares the `airport` key) alerts so 2+ codes round-trip through
+  Edit and survive Duplicate; keep `radius` pairing rules (only with exactly one code)
+  intact. Duplicate's insert is an existing capture path — keep its `alert_subscribed`
+  emission intact.
+- **[P2][goal] Expose Year range as editable fields in aircraft alert Edit/Duplicate.**
+  Why: `min_year`/`max_year` are fully match-honored browse filters
+  (`describeAircraftFilters`, seo.ts:2263–2265) but `EXPOSED_KEYS.aircraft` is only
+  make/model/state/min_price/max_price/deal (alertEditCriteria.ts:258) — a year bound is
+  a removable-only hidden chip and Duplicate drops it. Add Min/Max year inputs to
+  `AlertEditForm`'s aircraft branch, mirroring the existing price-range pair. Note the
+  remaining hidden aircraft criteria (`min_tt`/`max_tt`, `grade`, `avionics`, `q`) as
+  later sibling slices — don't do them all in one cycle.
+- **[P2][goal] Expose the radius selector in partnership/seeker alert Edit.** Why:
+  `radius` (valid only alongside exactly one airport code) is match-honored by the cron
+  but not in `EXPOSED_KEYS` for either type (alertEditCriteria.ts:259–260) — an alert set
+  from a radius-filtered browse can have its radius removed but never adjusted in
+  `/alerts/manage`. Add a radius select (same options as the browse filter UI) that
+  renders only when the airport field holds exactly one code, preserving the existing
+  one-code pairing rule end-to-end. Management-surface improvement; no new capture point.
+
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
