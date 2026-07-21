@@ -9,9 +9,10 @@ import { getCrossSellSuggestion } from '@/lib/alertCrossSell'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { normalizeFrequency, type AlertFrequency } from '@/lib/alertFrequency'
 import { formatResumeDate } from '@/lib/alertSnooze'
-import { getAlertMatchCount } from '@/lib/alertMatchCounts'
+import { getAlertMatchCount, getNarrowSuggestions } from '@/lib/alertMatchCounts'
 import { isListingWatchPath } from '@/lib/alertWatchStatus'
 import { parseAlertTokens } from '@/lib/alertTokenList'
+import NarrowAlertNudge from '@/components/NarrowAlertNudge'
 
 // Landing page for the double-opt-in confirm / unsubscribe routes. Utility page,
 // NOT an SEO surface — keep it out of the index and the sitemap.
@@ -113,7 +114,7 @@ const STATES = {
     tint: 'text-amber-600',
     ring: 'bg-amber-50',
     title: 'Thanks — noted!',
-    body: "We'll factor that into what shows up in your future alert emails.",
+    body: "Noted — that alone won't change what's in future emails, but you can tune exactly what you get below.",
   },
 } as const
 
@@ -276,6 +277,47 @@ export default async function AlertStatusPage({
     if (!error && data) snoozeResumeDate = formatResumeDate(data.paused_until)
   }
 
+  // Honest digest-👎 landing (GOAL.md: never fabricate a "we'll act on this"
+  // claim) — resolve the one real alert this vote's token belongs to (same
+  // `.eq('unsubscribe_token', token)` lookup the digest-feedback route itself
+  // already does) so this page can offer real, count-verified narrowing
+  // suggestions and a direct deep link into that alert's own Edit/mode/
+  // frequency controls, instead of a generic "Manage your alerts" link.
+  let feedbackAlertId: string | null = null
+  let feedbackSuggestions: Awaited<ReturnType<typeof getNarrowSuggestions>> = []
+  let feedbackFrequency: AlertFrequency = 'weekly'
+  if ((key === 'digest_listing_feedback' || key === 'digest_feedback_down') && token) {
+    const admin = createAdminClient()
+    let cols = ['id', 'source_path', 'frequency']
+    let { data, error } = (await admin
+      .from('alerts')
+      .select(cols.join(', '))
+      .eq('unsubscribe_token', token)
+      .maybeSingle()) as unknown as {
+      data: { id: string; source_path: string | null; frequency?: string } | null
+      error: { message: string } | null
+    }
+    // `frequency` may not be migrated live yet — same graceful-degrade retry
+    // precedent as the `confirmed`/`unsubscribed` branches above.
+    if (error?.message?.includes('frequency')) {
+      cols = cols.filter((c) => c !== 'frequency')
+      ;({ data, error } = (await admin
+        .from('alerts')
+        .select(cols.join(', '))
+        .eq('unsubscribe_token', token)
+        .maybeSingle()) as unknown as {
+        data: { id: string; source_path: string | null } | null
+        error: { message: string } | null
+      })
+    }
+    if (!error && data) {
+      feedbackAlertId = data.id
+      feedbackFrequency = normalizeFrequency((data as { frequency?: string }).frequency)
+      const match = await getAlertMatchCount(data.source_path)
+      if (match) feedbackSuggestions = await getNarrowSuggestions(data.source_path, match.count)
+    }
+  }
+
   return (
     <div className="ch-surface min-h-screen">
       <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -405,9 +447,22 @@ export default async function AlertStatusPage({
               </Link>
             </p>
           )}
+          {(key === 'digest_feedback_down' || key === 'digest_listing_feedback') && feedbackAlertId && (
+            <div className="mt-2 flex justify-center">
+              <NarrowAlertNudge
+                id={feedbackAlertId}
+                token={token}
+                suggestions={feedbackSuggestions}
+                frequency={feedbackFrequency}
+              />
+            </div>
+          )}
           {key === 'digest_feedback_down' && token && (
             <p className="mt-4 text-sm text-slate-500">
-              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
+              <Link
+                href={feedbackAlertId ? `/alerts/manage?token=${token}&edit=${feedbackAlertId}#alert-${feedbackAlertId}` : `/alerts/manage?token=${token}`}
+                className="font-medium text-sky-600 hover:text-sky-700"
+              >
                 Get fewer emails, pause, or fine-tune your alerts &rarr;
               </Link>
             </p>
@@ -421,8 +476,11 @@ export default async function AlertStatusPage({
           )}
           {key === 'digest_listing_feedback' && token && (
             <p className="mt-4 text-sm text-slate-500">
-              <Link href={`/alerts/manage?token=${token}`} className="font-medium text-sky-600 hover:text-sky-700">
-                Manage your alerts
+              <Link
+                href={feedbackAlertId ? `/alerts/manage?token=${token}&edit=${feedbackAlertId}#alert-${feedbackAlertId}` : `/alerts/manage?token=${token}`}
+                className="font-medium text-sky-600 hover:text-sky-700"
+              >
+                Tune this alert &rarr;
               </Link>
             </p>
           )}

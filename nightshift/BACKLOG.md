@@ -4202,16 +4202,15 @@ Genuinely open gaps below._
   true for aircraft OR partnership, still false for seekers who have no price). No schema
   change — `price_drop_opt_in`/`new_listing_opt_out` were already generic booleans; the
   partnership drop-count/sample queries were already wired in, just not toggleable.
-- **[P1][goal] Make the digest 👎 landing honest and actionable.** Why: a digest "Not
-  relevant?" / thumbs-down click just inserts a `feedback` row, then
-  `/alerts/status?state=digest_listing_feedback` claims "We'll factor that into what
-  shows up in your future alert emails" (status/page.tsx:116) — which is currently false
-  (nothing changes future sends; violates GOAL.md's honesty bar). Fix the copy to what's
-  true, and make it true-ish: offer token-scoped, count-verified narrowing suggestions on
-  that landing state (reuse `getNarrowSuggestions` + the existing edit-criteria actions)
-  plus links to Edit / mode / frequency for this alert. Covers both the per-listing vote
-  and the whole-digest 👎 state. Improves the feedback→management loop; no new capture
-  point.
+~~- **[P1][goal] Make the digest 👎 landing honest and actionable.**~~ ✅ SHIPPED via
+  `digest-feedback-honest-landing` (2026-07-21) `digest_listing_feedback`'s false "We'll
+  factor that into what shows up in your future alert emails" claim is replaced with
+  honest copy; both `digest_listing_feedback` and `digest_feedback_down` now resolve the
+  vote's token to its real alert row and render the existing `NarrowAlertNudge`
+  (count-verified narrowing suggestions, reusing `getNarrowSuggestions`) plus a
+  `?edit=<id>#alert-<id>` deep link straight into that alert's Edit/mode/frequency
+  controls on `/alerts/manage`, in place of the old generic "Manage your alerts" link. No
+  new capture point, no schema change, `/api/alerts/digest-feedback` untouched.
 - **[P1][goal] Honest "N pilots watching" social proof on listing watch surfaces.** Why:
   no watcher-count exists anywhere (grep: no "watching this"/watcher count helper). Show
   a real count of OTHER confirmed `?watch=price` alerts on this listing next to the watch
