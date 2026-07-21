@@ -4342,18 +4342,20 @@ Genuinely open gaps below._
   partnerships/aircraft via the shipped `owner_*_seeker` pattern; a partnership alert
   prefilled from `partnershipBrowseHrefForSeeker` for their seeker post). New capture
   point — emit `alert_subscribed` with `source: 'matches_page'`. No schema change.~~ ✅ SHIPPED via `matches-owner-alert-capture` (2026-07-21)
-- **[P2][goal] Expose avionics as an editable multi-select in aircraft alert
-  Edit/Duplicate.** `avionics` is an honored structured browse filter
-  (`AVIONICS_FILTER_OPTIONS`/`parseAvionicsFilter`) but hidden-chip-only on the edit form.
-  Render the same option list as checkboxes/chips (UI precedent: `AirportChipsInput`) in
-  `AlertEditForm`/`NewAlertForm`'s aircraft branch so a "glass panel" criterion survives
-  Edit AND Duplicate. Improves: alert management. No new capture point, no schema change.
-- **[P2][goal] Expose grade + keyword (`q`) as editable fields in aircraft alert
-  Edit/Duplicate.** The last two hidden aircraft criteria after the slices above:
-  `grade`/`min_grade` (render the browse filter's own select options) and free-text `q`
-  (plain text input). Closes out "every honored aircraft browse filter is editable on the
-  alert" — after this, hidden chips remain only for genuinely unrecognized params.
-  Improves: alert management. No new capture point, no schema change.
+~~- **[P2][goal] Expose avionics as an editable multi-select in aircraft alert
+  Edit/Duplicate.**~~ ✅ SHIPPED via `alert-avionics-grade-q-edit` (2026-07-21) `avionics` is an
+  honored structured browse filter (`AVIONICS_FILTER_OPTIONS`/`parseAvionicsFilter`) but was
+  hidden-chip-only on the edit form. Now rendered as the same checkbox list in
+  `AlertEditForm`/`NewAlertForm`'s aircraft branch so a "glass panel" criterion survives Edit
+  AND Duplicate. No new capture point, no schema change.
+~~- **[P2][goal] Expose grade + keyword (`q`) as editable fields in aircraft alert
+  Edit/Duplicate.**~~ ✅ SHIPPED via `alert-avionics-grade-q-edit` (2026-07-21) The last two
+  hidden aircraft criteria: `grade`/`min_grade` (now an A/B/C checkbox group, with the legacy
+  single `min_grade` floor honestly resolved into the modern `grade` set on pre-fill, then
+  rewritten to `grade=` and the legacy key dropped on save) and free-text `q` (plain text
+  input). Closes out "every honored aircraft browse filter is editable on the alert" — hidden
+  chips now remain only for genuinely unrecognized params. No new capture point, no schema
+  change.
 - **[P2][goal] Accessibility pass on the alert capture + manage flows.** One slice:
   `AlertSignup`'s async submit/confirm/error states and `/alerts/manage` row actions
   (pause/delete/save) announced via `aria-live` status regions (precedent:
