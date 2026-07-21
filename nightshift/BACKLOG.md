@@ -3917,7 +3917,21 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   `familyForSourcePath`/`alertDemandFamily.ts`-based grouping approach was NOT built — the
   shipped precedent uses simpler exact-`context` matching throughout, a documented, deliberate
   divergence. This item is now fully complete across every viable call site.
-- **[P2][goal] "Send to my inbox" test-send on `/admin/alerts/emails`.** The preview page
+~~- **[P2][goal] "Send to my inbox" test-send on `/admin/alerts/emails`.**~~ ✅ SHIPPED via
+  `admin-email-preview-test-send` (2026-07-21) Every one of the 11 templates on
+  `/admin/alerts/emails` now has a "Send to my inbox" button (new
+  `AdminEmailPreviewCard.tsx` client component + `emails/actions.ts` server action).
+  Recipient is hard-locked server-side to `assertAdmin()`'s own returned email — never a
+  client-supplied address — then reuses the existing `sendEmail()` helper unchanged
+  (`SendPacer` intentionally not used; that's a batch-loop pacing tool for many
+  sequential cron sends, overkill for one manual click). No schema change, no new
+  capture point, `admin-auth.ts`/`ADMIN_EMAILS` untouched. Live-verified end-to-end with
+  a real magic-link-minted admin session (service-role `generateLink` + `@supabase/ssr`'s
+  own `verifyOtp`/cookie-writing path, injected via Playwright): all 11 buttons render,
+  clicking one sent a real email (subject prefixed `[Preview]`) to the actual admin's own
+  inbox and the button flipped to "Sent!" in place — the real, intended usage, not a
+  test row to clean up. Original text below.
+- **[P2][goal] (orig) "Send to my inbox" test-send on `/admin/alerts/emails`.** The preview page
   renders every builder in-browser, but browser rendering can't prove what Gmail clipping,
   dark-mode inversion, or image proxying will do to a real send — and there's no send
   affordance anywhere on the page (grep clean). Add a per-preview "Send this to my inbox"
