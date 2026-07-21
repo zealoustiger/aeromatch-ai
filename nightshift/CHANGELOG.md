@@ -2,6 +2,70 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T075701Z — PASS — seeker-alert-multiairport
+- Pages: /partnerships/seeking
+- What: **A "pilot seeking a partnership" alert now honors the SAME multi-airport filter
+  you actually searched with, instead of silently widening to "any airport."** The
+  seeking page's filter has long supported picking 2-3 home airports at once
+  (`airports=KHWD,KPAO`), but the "Get alerts" box below it deliberately dropped that
+  filter down to just one legacy airport code (or none) before subscribing — so a
+  visitor who filtered to their 3 nearby fields would get emailed about matches
+  everywhere, not just near them. The alert now carries the real filter through.
+- Goal: alert-experience `[goal]` (plan-pass batch #15, P1) — a smart/honest-content
+  slice: the alert must equal the search on screen (GOAL.md's honesty gate), not a
+  strictly broader one. `alertSourcePath` on `/partnerships/seeking` now forwards the
+  active `airports` CSV (falling back to the legacy single `airport`, +`radius` only
+  alongside exactly one code) instead of only the legacy single param. Honored end-to-
+  end: the digest cron's `parseSourcePath`/`countNewSeekers`/`fetchNewSeekerSamples`
+  (new `resolveSeekerIcaoList`, `home_airport.in.(...)` OR `additional_airports.ov.{...}`
+  — mirrors `seekersQuery.ts`'s own browse-page query), `alertMatchCounts.ts`'s
+  duplicate parser + `countActiveSeekers`/`previewSeekers`/
+  `countMatchingSeekerSubscribers`, and `alertSubscriberMatch.ts`'s
+  `parseSeekerAlertSourcePath`/`matchesSeekerListing` (now takes a caller-resolved
+  `icaoList`, same injected-resolution precedent `matchesPartnershipListing` already
+  set). `alertEditCriteria.ts` protects a 2+-airport criterion from being silently
+  dropped/widened by an unrelated `/alerts/manage` field edit — the exact trap
+  `seeker-alert-location-edit` (2026-07-20) fixed for state/airport — surfacing it
+  instead as a removable "near A, B" hidden-criteria chip; a single-code `airports=`
+  value stays fully editable via the existing Airport field, identical to legacy
+  `airport=`. **Not done, intentionally:** exposing multi-airport as an inline-editable
+  chip field in Edit/Duplicate — Duplicate still drops a 2+-airport hidden criterion on
+  duplicate, the same pre-existing limitation every other unexposed criterion (e.g. an
+  aircraft alert's `min_year`) already has for every alert type; a genuinely new UI
+  slice, not this one. No schema change.
+- Spec: nightshift/specs/20260721T075701Z-seeker-alert-multiairport.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (same
+  route count). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  743/743 pass (+4 new cases covering multi-airport parsing, radius carry-through for a
+  lone code, ANY-of-N-codes matching, and the caller-resolved-`icaoList`-overrides-
+  `target.icaos` injection). `alertEditCriteria.ts` is untestable via the node test
+  runner (same precedent as `seeker-alert-location-edit`); verified with a standalone
+  10-case script instead — including the exact "trap" scenario (editing Make on a
+  2+-airport alert must not drop/widen the airport criterion) and its 9 siblings
+  (legacy/modern-single/modern-multi parse, hidden-criteria suppression vs. display,
+  intentional collapse-to-single, legacy clear, explicit hidden-chip removal, aircraft
+  branch untouched) — all 10 passed. Served the PRODUCTION build (`npx next start -p
+  3801` — port 3000 was held by a stray process, left untouched); `qa-smoke.mjs` 2/2
+  pass on `/partnerships/seeking` (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at 1280 + 375px). Non-visual cycle (matching/query logic only, no
+  markup change) — screenshots saved for the audit trail but not read. Went further:
+  drove the live production build with real filtered URLs against the real (read-only,
+  no rows created) prod DB — `?airports=KGLS,KHWD` (two real active seekers, one per
+  airport) correctly rendered "2 seekers match right now" (`matchCount: 2`), proving the
+  multi-airport OR query is genuinely additive, not accidentally narrower; the
+  `additional_airports` column errored as not-yet-migrated in this env (`42703`),
+  exercising the graceful-degrade retry path for real; `?airport=KHWD` (legacy) and
+  `?airports=KHWD` (modern single) both independently rendered identical `matchCount: 1`,
+  confirming parity. No test rows/users created — every verification was a read-only
+  query against real data, no signup/listing round-tripped.
+- Screenshots: nightshift/screenshots/seeker-alert-multiairport/
+- Next: BACKLOG's alert-experience queue (batch #15) has 4 open P1/P2 items left
+  (recognized-subscriber homepage band, distance line on digest cards, multi-match hero
+  subject, near-home-field one-tap refinement) — pull the next highest-value one next
+  cycle. Exposing multi-airport as an editable chip field in `/alerts/manage`'s
+  Edit/Duplicate form (this cycle's explicit "not done" gap) is a natural follow-up if
+  it turns out to matter in practice.
+
 ## 20260721T073846Z — PASS — partnership-owner-seeker-alert
 - Pages: /partnerships/[id]
 - What: **A partnership listing's owner can now ask to be told when a pilot starts
