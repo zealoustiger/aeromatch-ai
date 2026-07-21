@@ -943,6 +943,23 @@ export default async function PartnershipDetailPage({
               />
             )}
 
+            {/* Owner-facing demand-side capture — MatchCountNudge above tells the
+                owner who's looking TODAY; this tells them when the NEXT pilot
+                starts seeking a match. Same `parseSeekerAlertSourcePath`-matchable
+                shape the digest cron already understands (mirrors the aircraft-
+                listing sibling in /aircraft/listing/[id]/page.tsx). */}
+            {isOwner && p.make && (
+              <AlertSignup
+                context={p.make}
+                sourcePath={`/partnerships/seeking?${new URLSearchParams({
+                  make: p.make,
+                  ...(p.state ? { state: p.state } : {}),
+                }).toString()}`}
+                noun="seeker"
+                source="owner_partnership_seeker"
+              />
+            )}
+
             {/* Trust / completeness — slice 1 of the listing trust layer */}
             <TrustBadge p={p} variant="checklist" />
 
