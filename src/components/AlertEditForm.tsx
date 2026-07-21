@@ -24,6 +24,11 @@ function nounFor(type: EditableAlertTarget['type']): 'listing' | 'pilot' {
   return type === 'seeker' ? 'pilot' : 'listing'
 }
 
+// Same 5 options as the browse filter UI (`SeekerFilters`/`HeroSearch`) — small
+// enough that duplicating locally (rather than a shared extraction) matches the
+// existing convention for this constant across the codebase.
+const RADIUS = [25, 50, 100, 150, 200]
+
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
   'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
@@ -96,6 +101,7 @@ export default function AlertEditForm({
   const [minYear, setMinYear] = useState('')
   const [maxYear, setMaxYear] = useState('')
   const [airports, setAirports] = useState<string[]>([])
+  const [radius, setRadius] = useState('')
   const [dealOnly, setDealOnly] = useState(false)
   const [hiddenCriteria, setHiddenCriteria] = useState<HiddenCriterion[]>([])
   const [liveCount, setLiveCount] = useState<number | null>(null)
@@ -130,8 +136,8 @@ export default function AlertEditForm({
         target.type === 'aircraft'
           ? { make, model, state, minPrice, maxPrice, minYear, maxYear, dealOnly }
           : target.type === 'partnership'
-            ? { make, state, airports }
-            : { make, model, state, airports }
+            ? { make, state, airports, radius }
+            : { make, model, state, airports, radius }
       const { sourcePath: candidatePath } = buildAlertCriteriaUpdate(target.type, sourcePath, fields)
       getAlertMatchCountForSourcePath(candidatePath).then((count) => {
         if (!cancelled) setLiveCount(count)
@@ -141,7 +147,7 @@ export default function AlertEditForm({
       cancelled = true
       clearTimeout(handle)
     }
-  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, minYear, maxYear, airports, dealOnly])
+  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, minYear, maxYear, airports, radius, dealOnly])
 
   function openEdit() {
     if (!target) return
@@ -156,6 +162,7 @@ export default function AlertEditForm({
     setMinYear('minYear' in target ? target.minYear : '')
     setMaxYear('maxYear' in target ? target.maxYear : '')
     setAirports('airports' in target ? target.airports : [])
+    setRadius('radius' in target ? target.radius : '')
     setDealOnly('dealOnly' in target ? target.dealOnly : false)
     setHiddenCriteria(getHiddenCriteria(target.type, sourcePath))
     setLiveCount(null)
@@ -195,8 +202,8 @@ export default function AlertEditForm({
         target.type === 'aircraft'
           ? { make, model, state, minPrice, maxPrice, minYear, maxYear, dealOnly }
           : target.type === 'partnership'
-            ? { make, state, airports }
-            : { make, model, state, airports }
+            ? { make, state, airports, radius }
+            : { make, model, state, airports, radius }
       const result = await updateAlertCriteria(id, fields, token)
       if (result.error) {
         setError(result.error)
@@ -365,6 +372,20 @@ export default function AlertEditForm({
                   )}
                 </label>
                 <AirportChipsInput codes={airports} onChange={setAirports} inputClassName={inputClass} />
+                {airports.length === 1 && (
+                  <select
+                    value={radius}
+                    onChange={(e) => setRadius(e.target.value)}
+                    className={`${inputClass} mt-2`}
+                  >
+                    <option value="">Exact airport</option>
+                    {RADIUS.map((r) => (
+                      <option key={r} value={r}>
+                        Within {r} mi
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             ) : null}
 

@@ -25,8 +25,8 @@ import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClas
 
 export type EditableAlertTarget =
   | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; minYear: string; maxYear: string; dealOnly: boolean }
-  | { type: 'partnership'; make: string; state: string; airports: string[] }
-  | { type: 'seeker'; make: string; model: string; state: string; airports: string[] }
+  | { type: 'partnership'; make: string; state: string; airports: string[]; radius: string }
+  | { type: 'seeker'; make: string; model: string; state: string; airports: string[]; radius: string }
 
 export interface AlertCriteriaFields {
   make?: string
@@ -37,6 +37,7 @@ export interface AlertCriteriaFields {
   minYear?: string
   maxYear?: string
   airports?: string[]
+  radius?: string
   dealOnly?: boolean
 }
 
@@ -87,13 +88,19 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
       model: g('model'),
       state: g('state').toUpperCase(),
       airports,
+      // Only meaningful paired with exactly one airport (mirrors
+      // `SeekerFilters`/`PartnershipFilters`' own rule) — ignore a stray value
+      // left over from a legacy link that doesn't honor that invariant.
+      radius: airports.length === 1 ? g('radius') : '',
     }
   }
+  const airports = parseAirportCodes(g('airports') || g('airport'))
   return {
     type: 'partnership',
     make: g('make'),
     state: g('state').toUpperCase(),
-    airports: parseAirportCodes(g('airports') || g('airport')),
+    airports,
+    radius: airports.length === 1 ? g('radius') : '',
   }
 }
 
@@ -106,6 +113,13 @@ function cleanPrice(v: string | undefined): string | undefined {
 
 /** A positive-integer year string, or undefined for anything else (blank, 0, negative, junk). */
 function cleanYear(v: string | undefined): string | undefined {
+  if (!v) return undefined
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) && n > 0 ? String(n) : undefined
+}
+
+/** A positive-integer radius (miles) string, or undefined for anything else (blank, 0, negative, junk). */
+function cleanRadius(v: string | undefined): string | undefined {
   if (!v) return undefined
   const n = parseInt(v, 10)
   return Number.isFinite(n) && n > 0 ? String(n) : undefined
@@ -139,12 +153,12 @@ export function buildAlertCriteriaUpdate(
   // (only meaningful paired with exactly one airport, mirrors
   // `SeekerFilters`/`PartnershipFilters`' own `setAirports`) whenever the
   // count isn't exactly 1.
-  const setAirports = (codes: string[] | undefined) => {
+  const setAirports = (codes: string[] | undefined, radius: string | undefined) => {
     const clean = [...new Set((codes ?? []).map((c) => c.trim().toUpperCase()).filter(Boolean))]
     params.delete('airport')
     if (clean.length) params.set('airports', clean.join(','))
     else params.delete('airports')
-    if (clean.length !== 1) params.delete('radius')
+    set('radius', clean.length === 1 ? cleanRadius(radius) : undefined)
   }
 
   if (type === 'aircraft') {
@@ -159,12 +173,12 @@ export function buildAlertCriteriaUpdate(
   } else if (type === 'partnership') {
     set('make', fields.make?.trim())
     set('state', fields.state?.trim().toUpperCase())
-    setAirports(fields.airports)
+    setAirports(fields.airports, fields.radius)
   } else {
     set('make', fields.make?.trim())
     set('model', fields.model?.trim())
     set('state', fields.state?.trim().toUpperCase())
-    setAirports(fields.airports)
+    setAirports(fields.airports, fields.radius)
   }
 
   const qsOut = params.toString()
@@ -212,7 +226,7 @@ export function computeWidenCandidate(target: EditableAlertTarget): WidenCandida
     }
     if (target.state) {
       return {
-        fields: { make: target.make, state: '', airports: target.airports },
+        fields: { make: target.make, state: '', airports: target.airports, radius: target.radius },
         description: 'Search every state',
       }
     }
@@ -220,8 +234,13 @@ export function computeWidenCandidate(target: EditableAlertTarget): WidenCandida
   }
   // seeker
   if (target.model) {
+    // Drop only the model — state/airports/radius carry through unchanged,
+    // mirroring the aircraft branch above. (Bug fix: this used to omit them
+    // entirely, so `buildAlertCriteriaUpdate` silently cleared state/airports
+    // too — a far broader widen than the "Show all {make} pilots" description
+    // ever claimed.)
     return {
-      fields: { make: target.make, model: '' },
+      fields: { make: target.make, model: '', state: target.state, airports: target.airports, radius: target.radius },
       description: target.make ? `Show all ${target.make} pilots` : 'Show all pilots seeking a share',
     }
   }
@@ -271,8 +290,8 @@ function describeContext(type: EditableAlertTarget['type'], params: URLSearchPar
 /** The form-exposed query-param keys per type — everything else on `source_path` is "hidden." */
 const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
   aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'deal']),
-  partnership: new Set(['make', 'state', 'airport', 'airports']),
-  seeker: new Set(['make', 'model', 'state', 'airport', 'airports']),
+  partnership: new Set(['make', 'state', 'airport', 'airports', 'radius']),
+  seeker: new Set(['make', 'model', 'state', 'airport', 'airports', 'radius']),
 }
 
 /** Rebuilds the `AlertCriteriaFields` the edit form would submit for an UNCHANGED target — used to round-trip its own exposed fields when only a hidden param is being removed. */
@@ -281,9 +300,9 @@ export function targetToFields(target: EditableAlertTarget): AlertCriteriaFields
     return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, dealOnly: target.dealOnly }
   }
   if (target.type === 'partnership') {
-    return { make: target.make, state: target.state, airports: target.airports }
+    return { make: target.make, state: target.state, airports: target.airports, radius: target.radius }
   }
-  return { make: target.make, model: target.model, state: target.state, airports: target.airports }
+  return { make: target.make, model: target.model, state: target.state, airports: target.airports, radius: target.radius }
 }
 
 export interface HiddenCriterion {

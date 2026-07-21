@@ -2,6 +2,61 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T100418Z — PASS — alert-radius-edit
+- Pages: /alerts/manage
+- What: **Editing or duplicating a partnership/seeker alert that's scoped to a single
+  home airport with a radius (e.g. "within 50 mi of KHWD") now shows the radius as a
+  real editable dropdown**, right below the airport field. Before this, radius was a
+  removable-only "hidden criterion" chip — you could drop it but never adjust it from
+  25 to 100 miles without deleting and recreating the alert.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 Plan-pass batch #16, the sibling item
+  left open by the prior `alert-year-range-edit` cycle) — closes out the batch #16
+  queue. `EXPOSED_KEYS.partnership`/`.seeker` now include `radius`; `EditableAlertTarget`
+  carries it for both types; new radius `<select>` (same 5 options as the browse filter
+  UI) in `AlertEditForm`/`NewAlertForm`, rendered only when exactly 1 airport chip is
+  selected (mirrors `SeekerFilters`' own invariant). New `cleanRadius` validator;
+  `buildAlertCriteriaUpdate`'s `setAirports` now also writes/drops `radius` in the same
+  step it writes/drops `airports`. Tier 1 (`[bug]`): none open. Tier 2 (`[want]`):
+  re-confirmed empty of actionable work — every open `[P1]/[P2][want]` item remains
+  flagged for a human product call/mock, blocked on an honest data source, or has no
+  live effect today. Dropped to tier 3, picked the one remaining item in the current
+  alert-experience batch.
+  **Bonus bug fix found this cycle:** `computeWidenCandidate`'s seeker model-drop step
+  returned `fields: { make, model: '' }` only — omitting `state`/`airports` entirely —
+  so `buildAlertCriteriaUpdate` silently cleared those too. A seeker alert with
+  make+model+state (or +airport) set, once dead, got a "Show all {make} pilots" widen
+  suggestion that was actually nationwide/no-airport, far broader than described (an
+  honesty-gate issue per GOAL.md — the suggestion must match what it claims). Fixed to
+  carry `state`/`airports`/`radius` through unchanged, mirroring the aircraft branch's
+  identical model-drop step, which already preserved every other field. No schema
+  change.
+- Spec: nightshift/specs/20260721T100418Z-alert-radius-edit.md
+- Verdict: PASS — `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean exit
+  0, same route count/shape. Full `node --experimental-strip-types --test
+  'src/**/*.test.ts'`: 750/750 pass (`alertOverlap.test.ts`'s local `partnership()`
+  helper updated to carry `radius` for shape parity). `alertEditCriteria.ts` is
+  untestable via the node test runner (path-alias imports, same precedent as prior
+  cycles) — verified with a standalone 15-case `tsx` script instead (parse/build/
+  round-trip radius for 0/1/2 airports, junk-radius rejection, no-longer-hidden, both
+  widen-candidate branches including the seeker bug-fix case) — all 15 passed. Served
+  the PRODUCTION build (`next build` + `next start`) and ran
+  `qa-smoke.mjs --slug alert-radius-edit /alerts/manage`: HTTP 200, zero console errors,
+  zero overflow at both viewports — after first killing 8 stale `next-server` processes
+  left running from earlier cycles that had squatted port 3000 with a stale build
+  (masked as chunk-404 console errors on the first smoke run; not a regression in this
+  change, just orphaned servers from cycles that didn't stop theirs — cleaned up as
+  part of this cycle's QA). Screenshots confirmed visually: a real `@example.com` test
+  alert (`qa-alert-radius-edit-20260721@example.com`, single row, created + fully
+  deleted this cycle) showed the radius select prefilled "Within 50 mi" on Edit;
+  changing to 100 and saving updated the DB `source_path` to `radius=100`; Duplicate
+  correctly prefilled 100 too. Desktop 1280 + mobile 375 both clean, no overflow.
+- Screenshots: nightshift/screenshots/alert-radius-edit/
+- Next: batch #16 is now fully drained — next cycle should pull a fresh Fable/Opus
+  plan-pass batch (#17) if tier 1/2 stay empty. Separately, worth flagging to the human:
+  8 orphaned `next-server` processes were found squatting port 3000 from prior cycles
+  that skipped "stop the server when done" — future cycles should double-check `ps aux
+  | grep next-server` is clean before *and* after their own QA run.
+
 ## 20260721T095013Z — PASS — alert-year-range-edit
 - Pages: /alerts/manage
 - What: **Editing or duplicating an aircraft alert that has a year range (e.g. "2010 or
