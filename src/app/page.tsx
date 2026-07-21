@@ -9,6 +9,7 @@ import DealsRail from '@/components/DealsRail'
 import AlertSignup from '@/components/AlertSignup'
 import RecentlyViewedAlertBanner from '@/components/RecentlyViewedAlertBanner'
 import HomepageAlertRecap from '@/components/HomepageAlertRecap'
+import KnownSubscriberBand from '@/components/KnownSubscriberBand'
 import { STATE_NAMES, STATE_CODES, stateSlug, SEO_MAKES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { countForSaleState } from '@/components/AircraftSaleList'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
@@ -255,26 +256,32 @@ export default async function HomePage() {
       <DealsRail />
 
       {/* ── NOT READY TO BROWSE? — homepage alert capture ──
-          Personalized "you've been looking at X" banner when this device has a
+          Highest-priority: a known subscriber (this device has subscribed before)
+          sees "You're covered" instead of being re-pitched. Otherwise, a
+          personalized "you've been looking at X" banner when this device has a
           live-matching recent-views history; falls back to the generic capture
-          otherwise — the two never stack. */}
+          otherwise — the three states never stack. */}
       <section className="border-t border-slate-100 bg-white py-16">
         <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
-          <RecentlyViewedAlertBanner
+          <KnownSubscriberBand
             fallback={
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Not ready to browse yet?</h2>
-                <p className="mt-2 text-lg text-slate-500">
-                  Tell us what you&apos;re looking for and we&apos;ll email you the moment it&apos;s listed.
-                </p>
-                <AlertSignup
-                  sourcePath="/"
-                  className="mt-8 text-left"
-                  source="homepage_band"
-                  noun="listing"
-                  matchCount={alertMatchResult?.count}
-                />
-              </div>
+              <RecentlyViewedAlertBanner
+                fallback={
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Not ready to browse yet?</h2>
+                    <p className="mt-2 text-lg text-slate-500">
+                      Tell us what you&apos;re looking for and we&apos;ll email you the moment it&apos;s listed.
+                    </p>
+                    <AlertSignup
+                      sourcePath="/"
+                      className="mt-8 text-left"
+                      source="homepage_band"
+                      noun="listing"
+                      matchCount={alertMatchResult?.count}
+                    />
+                  </div>
+                }
+              />
             }
           />
         </div>

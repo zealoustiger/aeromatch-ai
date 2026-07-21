@@ -4129,19 +4129,18 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
   pre-existing limitation every other unexposed criterion (e.g. an aircraft alert's
   `min_year`) already has for every alert type; a genuinely new UI slice, not this one.
   No schema change.
-- **[P1][goal] Recognized-subscriber homepage band — a "You have N alerts" third state.**
-  The homepage capture band (page.tsx:263–278) has two states (recent-views banner /
-  generic capture) but shows a known subscriber the same generic pitch: `AlertSignup`'s
-  already-subscribed detection is exact-`sourcePath`-keyed (`"/"`), so someone who
-  subscribed from a make page still sees plain capture — only the nav swap acknowledges
-  them. Add a third, highest-priority band state driven by the existing device-local
-  record (`getLocalSourcePaths()` in `alertLocalSubscriptions.ts`, the same trust level
-  the nav swap already uses): "You're covered — N active alerts on this device · Manage
-  alerts / add another", linking `/alerts/manage`. Honest: claims only what the
-  device-local record knows; renders the existing capture band untouched when the record
-  is empty. Adds an alert-management entry point on the highest-traffic page; no new
-  capture point itself (the add-another path lands on surfaces that already emit
-  `alert_subscribed`). No schema change.
+~~- **[P1][goal] Recognized-subscriber homepage band — a "You have N alerts" third state.**~~
+  ✅ SHIPPED via `homepage-subscriber-band` (2026-07-21) The homepage capture band
+  (page.tsx:263–278) had two states (recent-views banner / generic capture) but showed a
+  known subscriber the same generic pitch. Added a third, highest-priority band state —
+  new `KnownSubscriberBand.tsx` — driven by the existing device-local record
+  (`isAlertSubscriber()` + `getLocalSourcePaths()`, the same trust level the nav swap
+  already uses): "You're covered — N active alerts on this device" with "Manage alerts"
+  (`/alerts/manage`) and "Add another alert" (`/alerts`) links. Honest: claims only what
+  the device-local record knows (no server round-trip); renders the existing capture band
+  (`RecentlyViewedAlertBanner` → generic `AlertSignup` fallback chain) untouched when the
+  record is empty — verified both states render correctly via a seeded-localStorage
+  Playwright check. No new capture point, no schema change.
 - **[P2][goal] Distance line on digest cards for airport-scoped alerts.** A subscriber
   with a `/partnerships?airport=KHWD&radius=50` (or seeker `airport=`) alert gets digest
   cards whose specs line shows only city/state (`AlertDigestSample` has no distance field,
