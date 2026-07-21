@@ -2,6 +2,52 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T081235Z — PASS — homepage-subscriber-band
+- Pages: /
+- What: **The homepage no longer re-pitches "want alerts?" to a visitor who already has
+  some set up on this device.** Below the deals rail, the capture band now checks first
+  whether this browser has subscribed to an alert before; if so it shows "You're covered
+  — N active alerts on this device" with one-click "Manage alerts" / "Add another alert"
+  buttons, instead of the same generic "Not ready to browse yet?" email box everyone
+  else sees. First-time visitors, and anyone without a local alert record, see the page
+  exactly as before.
+- Goal: alert-experience `[goal]` (plan-pass batch #15, P1) — a frictionless-management
+  slice: GOAL.md calls for a place to see/manage alerts "everywhere it makes sense," and
+  the homepage capture band was the one high-traffic surface that still treated a known
+  subscriber like a stranger (only the Nav "My alerts" swap acknowledged them). New
+  `src/components/KnownSubscriberBand.tsx` reads the same device-local record the Nav
+  pill already trusts (`isAlertSubscriber()` + `getLocalSourcePaths()` — no server round-
+  trip, no new event), rendering "You're covered" only when the count is ≥1 and its
+  `fallback` prop (the existing `RecentlyViewedAlertBanner` → generic `AlertSignup` chain)
+  untouched otherwise. `src/app/page.tsx`'s capture section now wraps that existing chain
+  in `<KnownSubscriberBand fallback={...}>` — three states total, never stacked. No new
+  capture point, no new analytics event (the two links land on `/alerts/manage` and
+  `/alerts`, both existing pages with their own instrumentation), no schema/DB change.
+- Spec: nightshift/specs/20260721T081235Z-homepage-subscriber-band.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (same
+  route count, no new routes). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  743/743 pass (no test file touched by this change — presentational only). Served the
+  PRODUCTION build (`npx next start -p 3900` — ports 3000 and 3801 were both held by
+  stray leftover `next-server` processes from earlier cycles, left untouched); `qa-smoke.mjs`
+  2/2 pass on `/` (HTTP 200, zero app-origin console errors, zero horizontal overflow at
+  1280 + 375px). Visual cycle (new component/markup) — read both screenshots: the default
+  (no local record) render is byte-identical to the pre-existing "Not ready to browse
+  yet?" band, confirming zero behavior change for the common case. Went further: wrote a
+  throwaway Playwright script (deleted after use, not committed) that seeded
+  `ch_alert_subscriber`/`ch_alert_local_subscriptions` in `localStorage` before reload to
+  exercise the new state directly — confirmed "You're covered — 2 active alerts on this
+  device" renders correctly at both viewports with zero console errors, on-brand styling
+  (sky checkmark icon, cream/white card, rounded pill buttons), no overflow, and the Nav's
+  existing "My alerts" pill correctly agrees with the same seeded state. No test
+  rows/users created — this is a pure localStorage/client-state check, no DB touched.
+- Screenshots: nightshift/screenshots/homepage-subscriber-band/
+- Next: BACKLOG's alert-experience queue (batch #15) has 3 open P2 items left (distance
+  line on digest cards for airport-scoped alerts, multi-match hero subject line, one-tap
+  "near my home field" refinement on signed-in capture) — pull the next highest-value one
+  next cycle. The two stray `next-server` processes squatting on ports 3000/3801 (seen
+  again this cycle, first flagged in `seeker-alert-multiairport`) are worth a human kill
+  if they're not intentional — they're forcing every cycle onto a fallback port.
+
 ## 20260721T075701Z — PASS — seeker-alert-multiairport
 - Pages: /partnerships/seeking
 - What: **A "pilot seeking a partnership" alert now honors the SAME multi-airport filter
