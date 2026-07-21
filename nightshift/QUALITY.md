@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-21T07:04:13Z — admin-email-preview-test-send — score 4/5
+- Strengths: Clean, tightly-scoped change that fully meets the spec — recipient is server-enforced to the caller's own `assertAdmin()` email (never client-supplied, no injection surface), `sendEmail` result correctly discriminated so the no-key no-op surfaces an honest "couldn't send" state rather than a false "Sent!", extracted `AdminEmailPreviewCard` preserves the original preview markup verbatim and matches surrounding Tailwind/useTransition conventions with a good security-rationale comment.
+- Weaknesses / risks: Minor — the status region has no `aria-live`, so screen readers won't announce sent/error; and the generic "Couldn't send — try again" is misleading for the permanent no-key case (retrying can't help), though the spec explicitly accepted a plain couldn't-send state.
+- Follow-up: Add `role="status"`/`aria-live="polite"` to the send status area and (optionally) differentiate the no-key vs transient-error copy so a permanent no-op doesn't read as "try again."
+
 ## 2026-07-20T11:59:13Z — alert-delete-undo — score 3/5
 - Strengths: Genuinely thoughtful edge-case handling — the deliberate no-revalidate-on-delete + client-side row hide (AlertRowVisibility) correctly avoids the token-anchor visit revalidating itself into the sign-in wall and unmounting its own toast; verbatim id-preserving re-insert, 23505 duplicate handling, clean a11y (role=status/aria-live, disabled "Restoring…"), toast anchored left to dodge the FeedbackWidget, all densely and accurately documented; matches the file's run-style transition + graceful-fallback conventions.
 - Weaknesses / risks: restoreAlert's primary auth path `token != null && alert.unsubscribe_token === token` compares two fully client-supplied values against each other (both the snapshot and token come from the caller) — an attacker calling the server action directly can set them equal and have the admin/service-role client insert an arbitrary alert row (any email/status), an auth bypass the original deleteAlert (which resolves ownership via a real DB token lookup) did not have.
