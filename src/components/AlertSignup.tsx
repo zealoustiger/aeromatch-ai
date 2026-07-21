@@ -79,6 +79,12 @@ interface Props {
     count: number
     noun: 'listing' | 'pilot'
   }
+  /** Real count of OTHER confirmed watchers on this exact `watchOnly` listing
+   *  (see `lib/alertWatcherCounts.ts`'s `getWatcherCount`) — honesty-gated
+   *  social proof distinct from `alertCount` (which counts subscribers to a
+   *  whole make/model family, not one listing). Ignored when `watchOnly` is
+   *  false. Omit rather than pass 0/fabricate when the caller has no count. */
+  watcherCount?: number
 }
 
 /** Layers `deal=good` onto a source_path's existing query string when the
@@ -114,6 +120,7 @@ export default function AlertSignup({
   source,
   watchOnly = false,
   widenSuggestion,
+  watcherCount,
 }: Props) {
   // Whether the visitor tapped the widen-suggestion link — swaps this box's
   // active context/sourcePath/matchCount to the wider search in place, rather
@@ -132,6 +139,10 @@ export default function AlertSignup({
   // General (no-context) alert copy for the /alerts landing; specific copy elsewhere.
   const hasCtx = !!(activeContext && activeContext.trim())
   const showSocialProof = hasCtx && typeof alertCount === 'number' && alertCount >= MIN_ALERTS_TO_SHOW
+  // "N pilots are watching this listing" — only for the single-listing watch
+  // box (a family social-proof line already exists above via showSocialProof,
+  // scoped to the whole make/model, not this one item).
+  const showWatcherCount = watchOnly && typeof watcherCount === 'number' && watcherCount >= 1
   // "Price" only means something for aircraft — a partnership watch is on the
   // buy-in share instead (see PartnershipDealSignals/PartnershipCard's own
   // previous_buy_in_price-based copy), so the watch-only wording branches on
@@ -710,6 +721,13 @@ export default function AlertSignup({
               <p className="mt-1 text-sm text-slate-600">
                 {subcopy}
               </p>
+              {showWatcherCount && (
+                <p className="mt-1 text-xs font-medium text-sky-700">
+                  {watcherCount === 1
+                    ? '1 pilot is watching this listing.'
+                    : `${watcherCount} pilots are watching this listing.`}
+                </p>
+              )}
               {hasMatchCount && (
                 <p className="mt-1 text-xs font-medium text-emerald-700">
                   {activeMatchCount! > 0
