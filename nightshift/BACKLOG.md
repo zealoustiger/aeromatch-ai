@@ -4164,16 +4164,21 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
   an honest `+ N more`, computed from the real `newCount` — never `samples.length`, which is
   capped below the true total by `MAX_DIGEST_SAMPLES`. `newCount === 1` renders
   byte-identical subjects to before (no `+ 0 more`). No capture point, no schema change.
-- **[P2][goal] One-tap "near my home field" refinement on signed-in partnership/seeker
-  capture.** `profiles.home_airport` exists (set via `ProfileAirportsForm`) but no
-  `AlertSignup` call site uses it (grep clean) — a signed-in pilot subscribing to a
-  location-less partnership/seeker alert gets the whole country even though we already
-  know their field. On location-less partnership/seeker `AlertSignup` boxes, for signed-in
-  users with a `home_airport`, offer an optional (unchecked — never silently narrow) chip
-  "Only near {KHWD}" that appends `airport={KHWD}` — a shape the cron already matches — to
-  the `sourcePath`/`context` before subscribe. Frictionless-capture pillar (prefill from
-  what we know, still one field); the existing `alert_subscribed` fires with the refined
-  source_path. No new event, no schema change.
+~~- **[P2][goal] One-tap "near my home field" refinement on signed-in partnership/seeker
+  capture.**~~ ✅ SHIPPED via `alert-home-airport-refine` (2026-07-21) `AlertSignup.tsx` now
+  fetches the signed-in visitor's `profiles.home_airport` (same client-side pattern
+  `Nav.tsx` uses for `avatar_config`) and, on a location-less partnership/seeker box,
+  offers an unchecked "Only alert me near {ICAO} (my home airport)" checkbox. New
+  `withAirport()` helper layers `airport=<ICAO>` onto the source_path — the exact shape
+  `alert-digest`'s `parseSourcePath` already reads for partnership/seeker targets — only
+  when the bare path is exactly `/partnerships` or `/partnerships/seeking` (the two shapes
+  that actually honor a query string for these types; every path-segment SEO route and
+  `?watch=price` box is excluded, since a checked box there would silently do nothing).
+  `alert_subscribed` now carries `near_home_airport: true` when checked. Live-verified
+  end-to-end against the real prod DB with a throwaway `@example.com` test account +
+  minted session: checkbox rendered unchecked by default, checking it and subscribing
+  produced a real `alerts` row with `source_path: "/partnerships?airport=KHWD"`. Test
+  user/rows deleted after. No schema change.
 
 ---
 

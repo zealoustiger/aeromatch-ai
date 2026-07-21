@@ -90,6 +90,15 @@ function withDealOnly(sourcePath: string, dealOnly: boolean): string {
   return sourcePath.includes('?') ? `${sourcePath}&deal=good` : `${sourcePath}?deal=good`
 }
 
+/** Layers `airport=<ICAO>` onto a source_path — the signed-in "only near my
+ *  home field" refinement. Mirrors `withDealOnly`'s query-string-append
+ *  pattern so the cron's `parseSourcePath` needs no new storage, just this
+ *  param on the shapes it already reads one from. */
+function withAirport(sourcePath: string, icao: string | null, enabled: boolean): string {
+  if (!enabled || !icao) return sourcePath
+  return sourcePath.includes('?') ? `${sourcePath}&airport=${icao}` : `${sourcePath}?airport=${icao}`
+}
+
 /**
  * Inline, low-friction email capture for new-listing alerts. NOT a modal/popup,
  * no fake urgency — a single email field + button that drops the email + context
@@ -210,6 +219,29 @@ export default function AlertSignup({
   // subscribe as already-confirmed (no double-opt-in round trip). Read-only
   // client-side session check, same pattern as Nav.tsx.
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null)
+  // A signed-in visitor's saved home field (see `ProfileAirportsForm`) — lets a
+  // location-less partnership/seeker box offer a one-tap "only near my home
+  // airport" refinement instead of always alerting on the whole country.
+  // Read-only client-side profile lookup, same pattern as Nav.tsx's avatar fetch.
+  const [homeAirport, setHomeAirport] = useState<string | null>(null)
+  const [nearHomeAirport, setNearHomeAirport] = useState(false)
+  // "Only near my home field" — only meaningful for a location-less
+  // partnership/seeker search, and only actually honored end-to-end on the two
+  // bare query-string shapes (`/partnerships`, `/partnerships/seeking`) the
+  // digest cron's parseSourcePath reads a query string for on these types;
+  // every path-segment SEO route (near/[icao], make/[make], state/[state]) and
+  // single-listing watch box ignores query params entirely for partnership/
+  // seeker targets, so a checked box there would silently do nothing — never
+  // offer it there (GOAL.md's honesty bar).
+  const bareActivePath = activeSourcePath.split('?')[0]
+  const showHomeAirportOption =
+    !watchOnly &&
+    (noun === 'partnership' || noun === 'seeker') &&
+    !!signedInEmail &&
+    !!homeAirport &&
+    (bareActivePath === '/partnerships' || bareActivePath === '/partnerships/seeking') &&
+    !activeSourcePath.includes('airport=') &&
+    !activeSourcePath.includes('airports=')
   // Distinguishes the confirmed-immediately signed-in path (no "check your
   // inbox" copy — there's nothing pending) from the normal double-opt-in one.
   const [confirmedImmediately, setConfirmedImmediately] = useState(false)
@@ -289,9 +321,22 @@ export default function AlertSignup({
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setSignedInEmail(data.user?.email ?? null))
+    const applyUser = (userId: string | undefined, email: string | undefined) => {
+      setSignedInEmail(email ?? null)
+      if (!userId) {
+        setHomeAirport(null)
+        return
+      }
+      supabase
+        .from('profiles')
+        .select('home_airport')
+        .eq('user_id', userId)
+        .maybeSingle()
+        .then(({ data }) => setHomeAirport(data?.home_airport ?? null))
+    }
+    supabase.auth.getUser().then(({ data }) => applyUser(data.user?.id, data.user?.email))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setSignedInEmail(session?.user?.email ?? null)
+      applyUser(session?.user?.id, session?.user?.email)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -435,7 +480,11 @@ export default function AlertSignup({
     if (pending || !signedInEmail) return
     setErrorMsg('')
     setPending(true)
-    const effectiveSourcePath = withDealOnly(activeSourcePath, showDealOnlyOption && dealOnly)
+    const effectiveSourcePath = withAirport(
+      withDealOnly(activeSourcePath, showDealOnlyOption && dealOnly),
+      homeAirport,
+      showHomeAirportOption && nearHomeAirport
+    )
     const result = await subscribeSignedInAlert(
       activeContext ?? '',
       effectiveSourcePath,
@@ -459,6 +508,7 @@ export default function AlertSignup({
       match_count: hasMatchCount ? activeMatchCount : undefined,
       signed_in: true,
       deal_only: showDealOnlyOption && dealOnly ? true : undefined,
+      near_home_airport: showHomeAirportOption && nearHomeAirport ? true : undefined,
       widened: widened ? true : undefined,
       has_target_price: watchOnly && parsedTargetPrice != null ? true : undefined,
     })
@@ -793,6 +843,17 @@ export default function AlertSignup({
                 className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
               />
               Only email me good deals (ClubHanger Deal Check)
+            </label>
+          )}
+          {showHomeAirportOption && (
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={nearHomeAirport}
+                onChange={(e) => setNearHomeAirport(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+              />
+              Only alert me near {homeAirport} (my home airport)
             </label>
           )}
           <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">

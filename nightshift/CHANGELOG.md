@@ -2,6 +2,74 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T084138Z — PASS — alert-home-airport-refine
+- Pages: /partnerships, /partnerships/seeking
+- What: **A signed-in pilot with a saved home airport can now one-tap narrow a
+  "get new-listing alerts" box on `/partnerships` or `/partnerships/seeking` to
+  just their own field** — an unchecked "Only alert me near {ICAO} (my home
+  airport)" checkbox appears right in the existing alert-capture box, instead
+  of always subscribing to the whole country even though we already know
+  where they fly from.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 queue) — the "frictionless
+  capture" pillar from GOAL.md: prefill from what we already know (the
+  profile's `home_airport`), still one optional field, never a silent
+  narrowing (unchecked by default). `AlertSignup.tsx` now does a client-side
+  `profiles.home_airport` lookup (same pattern `Nav.tsx` already uses for
+  `avatar_config`) alongside its existing signed-in-email check, and a new
+  `withAirport()` helper (mirrors the existing `withDealOnly()`) layers
+  `airport=<ICAO>` onto the source_path before subscribe — the exact query
+  param `alert-digest`'s `parseSourcePath` already reads for partnership/seeker
+  targets. The checkbox is scoped to render **only** when the bare path is
+  exactly `/partnerships` or `/partnerships/seeking` (the two shapes whose
+  query string the cron actually parses for these types) — every path-segment
+  SEO route (`/partnerships/near/[icao]`, `/partnerships/make/[make]`,
+  `/partnerships/state/[state]`) and single-listing `?watch=price` box is
+  excluded, since a checked box there would silently do nothing (would violate
+  GOAL.md's honesty bar). `alert_subscribed` now carries `near_home_airport:
+  true` only when checked. No schema change (`profiles.home_airport` and the
+  query-string encoding both already existed); no new capture point or event.
+- Spec: nightshift/specs/20260721T084138Z-alert-home-airport-refine.md
+- Verdict: PASS. `rm -rf .next && npx next build` clean (same route count, no
+  new routes); a pre-existing, unrelated `tsc --noEmit` narrowing error in this
+  same file (`resendAlertConfirmationByEmail`'s return type in
+  `handleResend`) was confirmed present on staging's tip *before* this cycle's
+  changes too (`git stash` + re-run reproduced it identically) — `next build`'s
+  own type-check (the actual RUNBOOK gate) passes clean regardless, so this is
+  a pre-existing quirk, not something this cycle introduced or is in scope to
+  fix. Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  747/747 pass (unchanged — this slice added no new pure-function module).
+  Served the PRODUCTION build (`npx next start -p 3906`); `qa-smoke.mjs` 4/4
+  pass on `/partnerships` + `/partnerships/seeking` (HTTP 200, zero app-origin
+  console errors, zero horizontal overflow at 1280 + 375px). Visual cycle —
+  screenshots confirm the anonymous rendering is byte-identical to before (the
+  checkbox only ever renders signed-in with a saved home airport, so the
+  smoke test's anonymous pass can't exercise it) — no layout regression at
+  either viewport. **Went further than the smoke gate:** live-verified the new
+  checkbox end-to-end against the real prod DB — minted a real session (service-
+  role `generateLink` + `verifyOtp`, not a mock) for a throwaway
+  `qa-alert-home-airport-<ts>@example.com` account with `profiles.home_airport
+  = 'KHWD'`, injected the `@supabase/ssr` session cookie via Playwright, loaded
+  `/partnerships` signed in: the checkbox rendered ("Only alert me near KHWD
+  (my home airport)"), defaulted **unchecked**, and checking it + clicking the
+  signed-in "Alert me" button produced a real `alerts` row with
+  `source_path: "/partnerships?airport=KHWD"`, `status: "confirmed"` — proving
+  the honesty gate (default off) and the end-to-end narrowing both work. The
+  only console error seen during the signed-in pass was the pre-existing,
+  already-documented `Nav.tsx` unread-badge `threads` 400 (confirmed by
+  request URL — unrelated to this change, `Nav.tsx` untouched). Test alert row
+  + profile row + auth user deleted immediately after; re-confirmed zero rows
+  remain for the test email prefix. Server started/stopped cleanly, own PID
+  only.
+- Screenshots: nightshift/screenshots/alert-home-airport-refine/
+- Next: the same refinement could extend to the path-segment SEO partnership
+  routes (`/partnerships/near/[icao]`, `/partnerships/make/[make]`,
+  `/partnerships/state/[state]`) if `alert-digest`'s `resolveTarget` is taught
+  to read a query string on those branches too (currently query params are
+  silently ignored there for partnership/seeker targets) — a natural next
+  slice, deliberately left out of this one to avoid a checkbox that lies.
+  BACKLOG's 🔔 alert-experience queue is now empty of un-shipped items again —
+  needs another Opus/Fable plan-pass refill next cycle.
+
 ## 20260721T083341Z — PASS — digest-multimatch-subject
 - Pages: (none — email subject-line logic only, no user-facing page changed; observable
   via the dev-only `/api/dev/email-preview/alert-digest` preview route)
