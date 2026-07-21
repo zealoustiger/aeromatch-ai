@@ -4082,6 +4082,90 @@ the confirm email. Genuinely open gaps below._
   count preview updated, and Duplicate carried the edited location into the new-alert
   form. Zero console errors, zero horizontal overflow at 1280 + 375px.
 
+### Plan-pass batch #15 — 2026-07-21 (Fable)
+_Batch #14 fully drained (`widen-suggestion-email-cards` closed it 2026-07-21). Still
+parked: the two Vercel-cron-tier "instant sends" items (human call, ~line 1285/1589) and
+the blocked `[want]` items. Every item below verified un-built by direct code read this
+pass. Dead ends checked so they don't reappear: post-contact alert cross-sell exists
+(`ContactButtons.tsx` carries `alertContext`/`alertSourcePath`/`alertCount`),
+recently-viewed capture exists (`RecentlyViewedAlertBanner` + `recentlyViewedAlertContext`),
+capture-time widen exists (`AlertSignup.widenSuggestion`), broader-overlap hint at
+subscribe exists (`alertOverlap.ts`, actions.ts:993), digest cards already carry honest
+market-context/deal pills (`AlertDigestSample.compLabel`/`compBelowAvg`) plus watch +
+not-relevant links, a `marketPulse` digest section exists, footer capture exists
+(`FooterAlertCapture`), email open/click rollup exists (`emailEngagement.ts` +
+/admin/alerts "Email engagement"), snoozed alerts already auto-resume with honest dates
+(`/alerts/status:74`), and single-new-match digests already get a hero-title subject
+(email.ts ~1456). Genuinely open gaps below._
+
+- **[P1][goal] Owner-side seeker-alert capture on the partnership listing page.** The
+  deferred sibling slice of `aircraft-owner-seeker-alert` (its changelog entry names this
+  "a natural next slice"): `/partnerships/[id]`'s `isOwner` block (page.tsx:932–944)
+  renders `ListingOwnerNudge` + `MatchCountNudge` ("N pilots seeking match what you're
+  offering") but no alert capture — the owner can see today's matches yet can't subscribe
+  to hear about the NEXT one. Add `AlertSignup` (`noun="seeker"`) gated on the same
+  `isOwner`/`p.make` check, `sourcePath` prefilled to the matchable
+  `/partnerships/seeking?make=…` (+`state=…` when present) shape
+  `parseSeekerAlertSourcePath` already understands, with a new
+  `source="owner_partnership_seeker"` for attribution. New capture point — emits the
+  standard `alert_subscribed`. No schema change.
+- **[P1][goal] Seeker "alert me for this search" must honor the multi-airport filter.**
+  `/partnerships/seeking`'s alertSourcePath deliberately drops the multi-select `airports`
+  filter (page.tsx:124–131 comment: the cron matcher "only understands one ICAO") — a
+  visitor filtered to 2–3 home airports silently subscribes to a strictly BROADER alert
+  than the search they're looking at. Honor a CSV `airports` list end-to-end, mirroring
+  the existing single-`airport` seeker path: the cron's `parseSourcePath`/`countNewSeekers`
+  (listing's `home_airport`/`additional_airports` vs. ANY of the alert's airports),
+  `alertMatchCounts`, `parseSeekerAlertSourcePath`/`matchesSeekerListing`
+  (`alertSubscriberMatch.ts`), and the manage-page edit form (`alertEditCriteria.ts` —
+  keep the Duplicate button lossless, the same trap `seeker-alert-location-edit` fixed for
+  state/airport). Then let the seeking page pass the full filter set through to
+  `alertSourcePath`. Improves an existing capture point's honesty (the alert = the search
+  on screen); `alert_subscribed` already fires there. Ship the whole chain in ONE cycle —
+  never capture a param the cron doesn't match yet. No schema change.
+- **[P1][goal] Recognized-subscriber homepage band — a "You have N alerts" third state.**
+  The homepage capture band (page.tsx:263–278) has two states (recent-views banner /
+  generic capture) but shows a known subscriber the same generic pitch: `AlertSignup`'s
+  already-subscribed detection is exact-`sourcePath`-keyed (`"/"`), so someone who
+  subscribed from a make page still sees plain capture — only the nav swap acknowledges
+  them. Add a third, highest-priority band state driven by the existing device-local
+  record (`getLocalSourcePaths()` in `alertLocalSubscriptions.ts`, the same trust level
+  the nav swap already uses): "You're covered — N active alerts on this device · Manage
+  alerts / add another", linking `/alerts/manage`. Honest: claims only what the
+  device-local record knows; renders the existing capture band untouched when the record
+  is empty. Adds an alert-management entry point on the highest-traffic page; no new
+  capture point itself (the add-another path lands on surfaces that already emit
+  `alert_subscribed`). No schema change.
+- **[P2][goal] Distance line on digest cards for airport-scoped alerts.** A subscriber
+  with a `/partnerships?airport=KHWD&radius=50` (or seeker `airport=`) alert gets digest
+  cards whose specs line shows only city/state (`AlertDigestSample` has no distance field,
+  email.ts:1170) — the one fact they filtered on ("how far from MY field?") is missing.
+  Add optional `distanceNm`/`fromIcao` to `AlertDigestSample`, computed in the cron's
+  sample fetchers from the same seeded-airports haversine data
+  `getAirportsWithinRadius` already uses; render "~35 nm from KHWD" in `specsLine`.
+  Honesty: only when both endpoints' coords genuinely resolve — omit the line entirely
+  otherwise, never estimate. Smart-honest-content pillar (best-email bar); no new capture
+  point, no schema change.
+- **[P2][goal] Multi-match hero subject line for digests.** email.ts's standout-subject
+  rule (~1456) fires only when `newCount === 1` — a 3-new-listing digest falls back to the
+  generic "3 new listings — Cessna 172 on ClubHanger". Extend it: pick the best sample
+  among those the email already renders (prefer a `compBelowAvg` deal, else the first) and
+  subject "New: 1973 Cessna 210 at $189,000 + 2 more — your Cessna 172 alert". Keep every
+  existing guard: real title/price only, `+ N more` computed from the real `newCount`,
+  never on sample/first-send/price-drop-only frames. Unit-test beside the existing subject
+  tests; opens measurable via the existing engagement rollup. Best-email pillar; no
+  capture point, no schema change.
+- **[P2][goal] One-tap "near my home field" refinement on signed-in partnership/seeker
+  capture.** `profiles.home_airport` exists (set via `ProfileAirportsForm`) but no
+  `AlertSignup` call site uses it (grep clean) — a signed-in pilot subscribing to a
+  location-less partnership/seeker alert gets the whole country even though we already
+  know their field. On location-less partnership/seeker `AlertSignup` boxes, for signed-in
+  users with a `home_airport`, offer an optional (unchecked — never silently narrow) chip
+  "Only near {KHWD}" that appends `airport={KHWD}` — a shape the cron already matches — to
+  the `sourcePath`/`context` before subscribe. Frictionless-capture pillar (prefill from
+  what we know, still one field); the existing `alert_subscribed` fires with the refined
+  source_path. No new event, no schema change.
+
 ---
 
 ## ACTIVATION pillars (2026-06-26) — SECONDARY (pull only after the alert experience is great)
