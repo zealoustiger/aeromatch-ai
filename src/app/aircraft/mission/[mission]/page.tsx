@@ -7,6 +7,7 @@ import AircraftSaleList, { fetchAircraftPage } from '@/components/AircraftSaleLi
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ForSaleGuideLinks from '@/components/ForSaleGuideLinks'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import ModelFaq from '@/components/ModelFaq'
 import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
@@ -91,6 +92,10 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
   const otherMissions = MISSIONS.filter((x) => x.slug !== m.slug)
   const makeLinks = SEO_MAKES.slice(0, 6)
 
+  // Honest "N buyers get alerts for this" social proof (see lib/alertCounts.ts).
+  const alertContext = `${m.label} aircraft for sale`
+  const alertCounts = await getAlertCounts([alertContext])
+
   return (
     <CompareProvider>
       {itemListJsonLd && (
@@ -151,9 +156,10 @@ export default async function AircraftMissionPage({ params, searchParams }: Prop
 
           {/* Filter-aware email-alerts capture. */}
           <AlertSignup
-            context={`${m.label} aircraft for sale`}
+            context={alertContext}
             sourcePath={alertSourcePath}
             source="mission_page"
+            alertCount={alertCounts.get(alertContext)}
           />
 
           {/* Evergreen FAQ — visible accordion + matching FAQPage JSON-LD above. */}

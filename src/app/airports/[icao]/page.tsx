@@ -22,6 +22,7 @@ import { getPartnershipCompVerdicts, getSeekerBudgetCheckVerdicts } from '@/lib/
 import { getFacilityRatingSummaries, getUserFacilityRatings } from '@/lib/facilityRatings'
 import FacilityRatingWidget from '@/components/FacilityRatingWidget'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import {
   getNearbyPartnerships,
   getIndexableAirportHubs,
@@ -193,6 +194,10 @@ export default async function AirportPage({
     getUserFacilityRatings(airport.icao, facilityNames),
   ])
 
+  // Honest "N buyers get alerts for this" social proof (see lib/alertCounts.ts) —
+  // same exact-context pattern already wired on the make/state/airport-adjacent hubs.
+  const alertCounts = await getAlertCounts([airport.icao])
+
   // Schema.org: an Airport Place node (real codes/coords/region only) + an
   // ItemList of the partnerships shown on the page (in render order: at-airport
   // first, then nearby), each linking to its real /partnerships/[id]. Real data
@@ -274,6 +279,7 @@ export default async function AirportPage({
         sourcePath={`/partnerships?airport=${airport.icao}&radius=50`}
         noun="partnership"
         source="airport_page"
+        alertCount={alertCounts.get(airport.icao)}
       />
 
       {facilities && (facilities.fbos.length > 0 || facilities.flyingClubs.length > 0) && (
