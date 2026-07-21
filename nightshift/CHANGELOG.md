@@ -2,6 +2,48 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T070309Z — PASS — admin-email-preview-test-send
+- Pages: /admin/alerts/emails
+- What: The admin "email template gallery" (11 alert-email builders rendered as
+  read-only iframe previews) explicitly said "no email is sent from this page" —
+  there was no way to see what Gmail clipping, dark-mode inversion, or image
+  proxying actually do to a template short of reading raw HTML. Each preview now
+  has a **"Send to my inbox"** button that sends that exact template to the
+  signed-in admin's own address and flips to "Sent!" in place.
+- Goal: alert-experience `[goal]`, closing BACKLOG's P2 "Send to my inbox"
+  item — the "best listing alert email in aviation" bar (GOAL.md) requires
+  seeing templates the way subscribers actually will, not just an iframe.
+  Admin-only tooling, no capture point, no schema change.
+- Spec: nightshift/specs/20260721T065659Z-admin-email-preview-test-send.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean
+  (same route count). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  736/736 pass, no regressions (includes existing `email.test.ts` coverage of the
+  reused `sendEmail` helper, untouched by this change). New action
+  (`src/app/admin/alerts/emails/actions.ts`) is a thin `assertAdmin()`-gated wrapper
+  matching the existing `admin/alerts/actions.ts` convention — recipient is always
+  the caller's own resolved admin email, never client-supplied. Served the
+  PRODUCTION build (`npx next start -p 3000`); `qa-smoke.mjs` 2/2 pass on
+  `/admin/alerts/emails` (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at 1280 + 375px) — confirms the logged-out "Admin only"
+  gate still renders cleanly. Went further than the smoke gate since the real
+  feature lives behind that gate: minted a **real magic-link admin session**
+  (service-role `generateLink` + `@supabase/ssr`'s own `verifyOtp`/cookie-writing
+  path, not a mock, cookies injected via Playwright) and drove the actual
+  authenticated page — all 11 "Send to my inbox" buttons render correctly, a
+  real click sent a real `[Preview]`-prefixed email to the admin's own inbox and
+  the button swapped to "Sent!" with no reload, full-page screenshot confirms
+  every section renders cleanly with no layout regression. This is the feature's
+  real intended usage (not a throwaway test row) — nothing to clean up. Only
+  console noise seen while signed in: the pre-existing, already-documented
+  `Nav.tsx` unread-message-badge `threads` 400 (unrelated file, not touched by
+  this diff). Server started/stopped cleanly, no stray `next-server` process left
+  running.
+- Screenshots: nightshift/screenshots/admin-email-preview-test-send/ (logged-out
+  gate at both viewports + a signed-in full-page render + a post-send state)
+- Next: BACKLOG's alert-experience `[goal]` queue moves to the other named-P2
+  item — the "No content sent yet" share tile on `/admin/alerts` (a rollup of
+  what share of live alerts have never received a digest with content).
+
 ## 20260721T064652Z — PASS — alert-social-proof-remaining-sites
 - Pages: /tools/cost-calculator, /aircraft/compare/[comparison], /compare,
   /partnerships/[id], /saved

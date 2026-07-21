@@ -16,6 +16,7 @@ import {
 import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
+import AdminEmailPreviewCard from '@/components/AdminEmailPreviewCard'
 
 export const metadata = { title: 'Email template gallery', robots: { index: false } }
 export const dynamic = 'force-dynamic'
@@ -228,8 +229,9 @@ export default async function EmailTemplateGalleryPage() {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Email template gallery</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Every alert email builder in <code>email.ts</code>, rendered read-only against
-            honest sample data — no email is sent from this page.
+            Every alert email builder in <code>email.ts</code>, rendered against honest
+            sample data. Use &quot;Send to my inbox&quot; on any template to see exactly
+            what it looks like in a real inbox.
           </p>
         </div>
         <Link href="/admin/alerts" className="flex items-center gap-1.5 text-sm text-sky-700 hover:underline">
@@ -238,28 +240,7 @@ export default async function EmailTemplateGalleryPage() {
       </div>
 
       {entries.map((entry) => (
-        <section key={entry.name} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-3 border-b border-slate-100 pb-3">
-            <h3 className="font-mono text-sm font-semibold text-slate-900">{entry.name}</h3>
-            <p className="mt-1 text-sm text-slate-500">{entry.purpose}</p>
-            <p className="mt-1 text-xs text-slate-400">{entry.dataNote}</p>
-          </div>
-          <p className="mb-2 text-sm">
-            <span className="font-medium text-slate-700">Subject:</span>{' '}
-            <span className="text-slate-600">{entry.built.subject}</span>
-          </p>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <iframe
-              title={`${entry.name} HTML preview`}
-              srcDoc={entry.built.html}
-              sandbox=""
-              className="h-[420px] w-full rounded-lg border border-slate-200"
-            />
-            <pre className="h-[420px] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-              {entry.built.text}
-            </pre>
-          </div>
-        </section>
+        <AdminEmailPreviewCard key={entry.name} entry={entry} />
       ))}
     </div>
   )
