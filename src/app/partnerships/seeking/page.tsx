@@ -14,6 +14,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ModelFaq from '@/components/ModelFaq'
 import SaveSearchButton from '@/components/SaveSearchButton'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { SEO_MAKES, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getLatestPartnerships } from '@/lib/partnerships'
@@ -143,6 +144,10 @@ export default async function SeekingPartnershipsPage({
   // sourcePath so an active make/model/state/airport filter narrows the count
   // honestly instead of showing the sitewide `seekerCount` above.
   const matchResult = await getAlertMatchCount(alertSourcePath)
+  // Honest "N buyers get alerts for this" social proof (see lib/alertCounts.ts).
+  // alertContext is undefined with no active make/model filter — getAlertCounts
+  // already filters out falsy contexts, so pass an empty array in that case.
+  const alertCounts = await getAlertCounts(alertContext ? [alertContext] : [])
 
   return (
     <>
@@ -254,7 +259,7 @@ export default async function SeekingPartnershipsPage({
 
         {/* Email-alerts capture — inline, no account required. Backed by the same
             double-opt-in `alerts` pipeline the aircraft/partnership browse pages use. */}
-        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" source="seeking_page" matchCount={matchResult?.count} />
+        <AlertSignup context={alertContext} sourcePath={alertSourcePath} noun="seeker" source="seeking_page" matchCount={matchResult?.count} alertCount={alertContext ? alertCounts.get(alertContext) : undefined} />
 
         {/* Cross-links so crawlers (and pilots) reach the partnership hub families. */}
         <div className="mt-8 ch-panel p-6">

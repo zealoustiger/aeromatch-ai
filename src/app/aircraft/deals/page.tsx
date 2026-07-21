@@ -5,6 +5,7 @@ import { TrendingDown, Plane, Info } from 'lucide-react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AircraftSaleCard from '@/components/AircraftSaleCard'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { fetchUnderMarketDeals, DEAL_MIN_PCT } from '@/components/AircraftSaleList'
 import { SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
@@ -36,6 +37,8 @@ export const metadata: Metadata = {
 
 export default async function AircraftDealsPage() {
   const deals = await fetchUnderMarketDeals(48)
+  // Honest "N buyers get alerts for this" social proof (see lib/alertCounts.ts).
+  const alertCounts = await getAlertCounts(['good deal'])
 
   return (
     <>
@@ -113,6 +116,7 @@ export default async function AircraftDealsPage() {
           sourcePath="/aircraft?deal=good"
           source="deals_page"
           matchCount={deals.length}
+          alertCount={alertCounts.get('good deal')}
         />
       </div>
     </div>
