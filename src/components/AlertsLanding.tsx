@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Bell, Search, TrendingDown, MailCheck } from 'lucide-react'
 import AlertSignup from '@/components/AlertSignup'
+import AlertBuilder from '@/components/AlertBuilder'
 import { formatPrice } from '@/lib/utils'
 import type { AlertDigestSample } from '@/lib/email'
 import { BASE_INTERESTS, type BaseInterest } from '@/lib/alertsLandingInterests'
@@ -130,6 +131,9 @@ export default function AlertsLanding({ popularChips = [], samplesByPath = {} }:
 
       {/* Email capture — remounts per selection so its submit state resets */}
       <AlertSignup key={active.sourcePath} context={active.context} sourcePath={active.sourcePath} noun={active.noun} source={active.source} />
+
+      {/* Want something more specific than the chips above? Build it from scratch. */}
+      <AlertBuilder />
 
       {/* Trust row */}
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
