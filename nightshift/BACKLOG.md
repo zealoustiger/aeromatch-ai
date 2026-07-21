@@ -4155,15 +4155,15 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
   seeker search, an alert with no airport filter, or a row whose `home_airport` doesn't
   resolve a real coordinate never shows a distance line — no estimated numbers. Aircraft
   alerts unaffected (no ICAO radius helper exists for them). No schema change.
-- **[P2][goal] Multi-match hero subject line for digests.** email.ts's standout-subject
-  rule (~1456) fires only when `newCount === 1` — a 3-new-listing digest falls back to the
-  generic "3 new listings — Cessna 172 on ClubHanger". Extend it: pick the best sample
-  among those the email already renders (prefer a `compBelowAvg` deal, else the first) and
-  subject "New: 1973 Cessna 210 at $189,000 + 2 more — your Cessna 172 alert". Keep every
-  existing guard: real title/price only, `+ N more` computed from the real `newCount`,
-  never on sample/first-send/price-drop-only frames. Unit-test beside the existing subject
-  tests; opens measurable via the existing engagement rollup. Best-email pillar; no
-  capture point, no schema change.
+~~- **[P2][goal] Multi-match hero subject line for digests.**~~ ✅ SHIPPED via
+  `digest-multimatch-subject` (2026-07-21) `buildAlertDigestEmailCore`'s standout-subject
+  rule (email.ts ~1483) fired only when `newCount === 1` — a 3-new-listing digest fell back
+  to the generic "3 new listings — Cessna 172 on ClubHanger". Now fires for `newCount >= 1`
+  (still gated on `dropCount === 0`, no sample/first-send framing): picks the best sample
+  among those the email already renders (a `compBelowAvg` deal, else the first) and appends
+  an honest `+ N more`, computed from the real `newCount` — never `samples.length`, which is
+  capped below the true total by `MAX_DIGEST_SAMPLES`. `newCount === 1` renders
+  byte-identical subjects to before (no `+ 0 more`). No capture point, no schema change.
 - **[P2][goal] One-tap "near my home field" refinement on signed-in partnership/seeker
   capture.** `profiles.home_airport` exists (set via `ProfileAirportsForm`) but no
   `AlertSignup` call site uses it (grep clean) — a signed-in pilot subscribing to a
