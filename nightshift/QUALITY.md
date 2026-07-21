@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-21T10:32:58Z — alert-tt-range-edit — score 5/5
+- Strengths: Clean, complete thread-through mirroring the `alert-year-range-edit` precedent — new `cleanTt` helper, all 8 touch-points (target/parse/build/EXPOSED_KEYS/targetToFields/widen/both forms/test helper), reuses existing `describeAircraftFilters` TT phrasing, and correctly fixes a now-stale "hidden param" comment that had used `max_tt` as its example.
+- Weaknesses / risks: none material — no min>max cross-validation, but that matches the existing year-range fields exactly, so it's consistent, not a regression.
+- Follow-up: none
+
 ## 2026-07-21T08:50:45Z — alert-home-airport-refine — score 5/5
 - Strengths: Tightly-scoped, faithful mirror of the existing `withDealOnly` pattern — the `withAirport` helper, `showHomeAirportOption` gate, submit wiring, and `near_home_airport` track payload all match spec exactly; the profiles lookup replicates `Nav.tsx`'s `.eq('user_id',…).maybeSingle()` precedent and folds cleanly into the existing `getUser`/`onAuthStateChange` effect via a shared `applyUser`; the digest parser verifiably honors `airport=` (`g('airport')?.toUpperCase()` for partnerships, `g('airports') ?? g('airport')` for seekers), and the honesty-driven exclusion of SEO/path-segment routes is correct and well-documented.
 - Weaknesses / risks: none material — the value isn't `encodeURIComponent`'d (a sibling call site is), but ICAO codes are alphanumeric and the parser uppercases/trims, so it's a cosmetic inconsistency only; the two separate `airport=`/`airports=` substring guards are both genuinely needed (`'airports='` doesn't contain `'airport='`).
