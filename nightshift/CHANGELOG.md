@@ -2,6 +2,49 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T072039Z — PASS — widen-suggestion-email-cards
+- Pages: /admin/alerts/emails (the send path itself lives in the alert-digest cron,
+  no user-facing page)
+- What: The "your alert hasn't matched anything yet — widen it?" email used to just
+  state a bare count ("14 listings would match"). It now shows up to 3 real matching
+  listing cards (photo, title, price, link) right in the email, the same card style
+  the weekly digest already uses — much more convincing than a number alone.
+- Goal: alert-experience `[goal]`, closing BACKLOG's last open `[P2][goal]` item in
+  the alert-experience queue ("Real listing cards in the widen-suggestion email") —
+  email quality is a named GOAL.md pillar ("the best listing alert email in
+  aviation"). No new capture point, no schema change.
+- Spec: nightshift/specs/20260721T072039Z-widen-suggestion-email-cards.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean
+  (same route count). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  739/739 pass (+3 new), no regressions. `buildWidenSuggestionEmail` (`email.ts`) takes
+  an optional `samples?: AlertDigestSample[]`, rendered via the existing
+  `sampleCardHtml` partial in both HTML and text; the cron's
+  `sendWidenSuggestionEmails` swaps its count-only `getAlertMatchCount(widenedPath)`
+  call for `getAlertDigestPreview(widenedPath, 3)` — the exact same query, now also
+  returning samples, so a card can never claim a listing beyond what `widenCount`
+  already verified (no padding). Served the PRODUCTION build (`npx next start -p
+  3714` — port 3000 was held by an unrelated stray process from an earlier cycle,
+  left untouched); `qa-smoke.mjs` 2/2 pass on `/admin/alerts/emails` (HTTP 200, zero
+  app-origin console errors, zero horizontal overflow at 1280 + 375px) confirming the
+  logged-out "Admin only" gate renders cleanly. Went further since the real feature
+  lives behind that gate: minted a real magic-link admin session (service-role
+  `generateLink` + `verifyOtp` for a genuine session, cookies encoded via
+  `@supabase/ssr`'s own `stringToBase64URL`/`createChunks` utils, injected via
+  Playwright — no mock) and drove the actual authenticated `/admin/alerts/emails`
+  page: the `buildWidenSuggestionEmail` preview card rendered 3 real live matches
+  (e.g. "1973 Cessna 210 — $189,000" with photo) in both the HTML iframe and the text
+  pane, full-page + section screenshots confirm no layout regression. Only console
+  noise seen while signed in: the pre-existing, already-documented `Nav.tsx`
+  unread-message-badge `threads` 400 (unrelated file, not touched by this diff).
+  Throwaway QA script deleted after use; no test rows/users created (read-only
+  feature, real admin session only). Server started/stopped cleanly (own pid only —
+  the pre-existing stray `next-server` from an earlier cycle was left running,
+  untouched, since it wasn't mine to kill).
+- Screenshots: nightshift/screenshots/widen-suggestion-email-cards/
+- Next: BACKLOG's alert-experience `[P1]`/`[P2]` queue (batches through #14) is now
+  fully drained again — next cycle needs another Opus/Fable plan-pass refill per
+  GOAL.md, unless a `[bug]` or a newly-unblocked `[want]` shows up first.
+
 ## 20260721T070819Z — PASS — admin-alerts-never-sent-tile
 - Pages: /admin/alerts
 - What: The admin alert-scoreboard page now has a **"No content sent yet"** tile
