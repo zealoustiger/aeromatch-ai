@@ -20,15 +20,15 @@ interface Props {
   searchId: string
   /** The confirmed alert already linked to this search, if any. */
   alert: AlertDetail | null
-  /** Gates the price-drop toggle — that matching only exists for aircraft alerts. */
-  isAircraft: boolean
+  /** Gates the price-drop toggle — that matching only exists for aircraft and partnership alerts (not seekers, who have no price). */
+  showModeToggle: boolean
 }
 
 /** One-click "turn this saved search into a real email alert" (see /searches), plus,
  *  once subscribed, the same inline frequency/price-drop/turn-off controls
  *  `/alerts/manage` offers — so a subscriber doesn't have to leave this page to
  *  see or change them. */
-export default function SavedSearchAlertButton({ searchId, alert: initialAlert, isAircraft }: Props) {
+export default function SavedSearchAlertButton({ searchId, alert: initialAlert, showModeToggle }: Props) {
   const [alert, setAlert] = useState(initialAlert)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
@@ -80,7 +80,7 @@ export default function SavedSearchAlertButton({ searchId, alert: initialAlert, 
           <CheckCircle2 className="h-3.5 w-3.5" />
           Alerts on
         </span>
-        {isAircraft ? (
+        {showModeToggle ? (
           <AlertModeToggle id={alert.id} priceDropOptIn={alert.priceDropOptIn} newListingOptOut={alert.newListingOptOut} />
         ) : null}
         <FrequencyToggle id={alert.id} frequency={alert.frequency} digestDay={alert.digestDay} />

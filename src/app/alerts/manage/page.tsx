@@ -379,10 +379,11 @@ export default async function AlertsManagePage({
                                 ? 'Active'
                                 : 'Pending confirmation'}
                         </span>
-                        {/* Price-drop matching only exists for aircraft-for-sale
-                            alerts (see alert-digest's countRecentAircraftPriceDrops) —
-                            partnerships/seekers get no toggle. */}
-                        {target?.type === 'aircraft' ? (
+                        {/* Price-drop matching exists for aircraft-for-sale and
+                            partnership alerts (see alert-digest's
+                            countRecentAircraftPriceDrops/countRecentPartnershipPriceDrops)
+                            — seekers have no price, so they get no toggle. */}
+                        {target?.type === 'aircraft' || target?.type === 'partnership' ? (
                           <AlertModeToggle
                             id={a.id}
                             priceDropOptIn={a.price_drop_opt_in ?? true}
