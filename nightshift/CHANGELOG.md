@@ -2,6 +2,66 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T093553Z — PASS — alert-multiairport-edit
+- Pages: /alerts/manage
+- What: **A saved alert that watches 2+ home airports at once (e.g. "KHWD, KPAO") can
+  now be edited — add or remove airports — right on `/alerts/manage`, and that full list
+  now survives "Duplicate."** Before this, a multi-airport seeker alert showed a blank,
+  removable-only "hidden criterion" chip (you could drop the whole thing but not adjust
+  it), and a multi-airport **partnership** alert wasn't recognized as editable at all.
+  Duplicating either type silently collapsed it to zero/one airport. Both now show the
+  real list as removable chips with a text field to add more, exactly like the search
+  filters that created the alert in the first place.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 Plan-pass batch #16, the last open P1) —
+  a management-surface honesty fix: an alert's Edit view must show what it actually
+  matches on. `EditableAlertTarget`'s `partnership`/`seeker` variants now carry
+  `airports: string[]` (was a single `airport` string). New `AirportChipsInput`
+  component (add/remove ICAO chips, Enter/comma/blur to commit) replaces the old
+  single-text-field input in both `AlertEditForm` (Edit) and `NewAlertForm` (New alert +
+  Duplicate, which reuses it via `initial`). `buildAlertCriteriaUpdate` always writes the
+  normalized `airports=` key (drops the legacy `airport=`) and drops `radius` whenever
+  the edited count isn't exactly 1 — mirrors `SeekerFilters`/`PartnershipFilters`' own
+  rule that radius only pairs with a single airport. **Bonus finding + fix:** partnership
+  alerts had ZERO multi-airport parsing before this cycle (only seeker had the
+  `seeker-alert-multiairport` special-case) — `parseEditableAlertTarget`'s partnership
+  branch only ever read the legacy single `airport=` param, so a partnership alert
+  captured with 2+ airports silently matched on none of them in the edit form's live
+  preview. Now both types fully round-trip. **Also fixed, required by this change:**
+  `alertOverlap.ts`'s `definedEntries`/`valuesEqual` generically treated any non-string
+  field as "defined" via `!= null` and compared by `===` reference — an `airports: []`
+  (no constraint) would have wrongly counted as a real criterion, and two
+  content-identical arrays would never have compared equal, breaking the "is this alert
+  redundant" overlap nudge for every multi-airport alert. Both fixed (empty array = no
+  constraint; order-independent, case-insensitive set comparison), covered by 2 new
+  `alertOverlap.test.ts` cases plus 2 more for baseline coverage. No schema change, no
+  new capture point.
+- Spec: nightshift/specs/20260721T093553Z-alert-multiairport-edit.md
+- Verdict: PASS — `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean exit
+  0, same route count/shape. Full `node --experimental-strip-types --test
+  'src/**/*.test.ts'`: 750/750 pass (+3 new `alertOverlap.test.ts` cases: order-
+  independent/case-insensitive array match, differing-set non-match, empty-array-is-
+  unconstrained). `alertEditCriteria.ts` is untestable via the node test runner (path-
+  alias imports, same precedent as prior cycles) — verified with a standalone 13-case
+  `tsx` script instead (legacy `airport=` and modern `airports=` parsing for both types,
+  multi-airport write/clear, unrelated-field-edit preservation, radius
+  preserved-at-1/dropped-at-0-or-2+, hidden-criteria no longer double-counts airports,
+  widen-candidate, context phrasing, and a from-scratch Duplicate-shaped build) — all 13
+  passed. Served the PRODUCTION build (`npx next start -p 3922`); `qa-smoke.mjs` 2/2
+  pass on `/alerts/manage`, desktop 1280 + mobile 375, zero console errors, zero
+  horizontal overflow. Visual cycle — screenshots confirmed correct, plus went further
+  with live Playwright drives against two real throwaway `@example.com` alerts (one
+  seeker, one partnership; service-role inserted, `airports=KHWD,KPAO`): both rendered
+  "2 selected" with KHWD/KPAO chips, removing KPAO + adding KAPC then Save persisted
+  correctly (row context updated to "… near KHWD, KAPC" on reload — verified for BOTH
+  alert types, confirming the partnership bug-fix is real), Duplicate prefilled both
+  original chips (KHWD + KAPC) into the new-alert form, zero console errors across every
+  interaction, mobile 375px full-page screenshot shows no overflow/clipping. Both test
+  rows deleted immediately after (re-queried empty).
+- Screenshots: nightshift/screenshots/alert-multiairport-edit/
+- Next: BACKLOG's 🔔 batch #16 is now fully drained (two P2s remain: Year-range Edit
+  fields, partnership/seeker radius selector as an editable field) — next cycle should
+  check for a plan-pass refill if those P2s also clear, or pull whichever is higher-value.
+
 ## 20260721T092443Z — PASS — listing-watcher-count
 - Pages: /aircraft/listing/[id], /partnerships/[id]
 - What: **Both single-listing "alert me if the price drops" watch boxes now show a real

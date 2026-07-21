@@ -17,6 +17,7 @@ import { groupModelVariants } from '@/lib/modelGroups'
 import { toggleCsvItem } from '@/lib/csvList'
 import AlertActions from '@/components/AlertActions'
 import NewAlertForm from '@/components/NewAlertForm'
+import AirportChipsInput from '@/components/AirportChipsInput'
 
 /** Mirrors `getAlertMatchCount`'s noun choice (`alertMatchCounts.ts`) — aircraft/partnership alerts count listings, seeker alerts count pilots. */
 function nounFor(type: EditableAlertTarget['type']): 'listing' | 'pilot' {
@@ -92,7 +93,7 @@ export default function AlertEditForm({
   const [state, setState] = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
-  const [airport, setAirport] = useState('')
+  const [airports, setAirports] = useState<string[]>([])
   const [dealOnly, setDealOnly] = useState(false)
   const [hiddenCriteria, setHiddenCriteria] = useState<HiddenCriterion[]>([])
   const [liveCount, setLiveCount] = useState<number | null>(null)
@@ -127,8 +128,8 @@ export default function AlertEditForm({
         target.type === 'aircraft'
           ? { make, model, state, minPrice, maxPrice, dealOnly }
           : target.type === 'partnership'
-            ? { make, state, airport }
-            : { make, model, state, airport }
+            ? { make, state, airports }
+            : { make, model, state, airports }
       const { sourcePath: candidatePath } = buildAlertCriteriaUpdate(target.type, sourcePath, fields)
       getAlertMatchCountForSourcePath(candidatePath).then((count) => {
         if (!cancelled) setLiveCount(count)
@@ -138,7 +139,7 @@ export default function AlertEditForm({
       cancelled = true
       clearTimeout(handle)
     }
-  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, airport, dealOnly])
+  }, [open, target, sourcePath, make, model, state, minPrice, maxPrice, airports, dealOnly])
 
   function openEdit() {
     if (!target) return
@@ -150,7 +151,7 @@ export default function AlertEditForm({
     setState('state' in target ? target.state : '')
     setMinPrice('minPrice' in target ? target.minPrice : '')
     setMaxPrice('maxPrice' in target ? target.maxPrice : '')
-    setAirport('airport' in target ? target.airport : '')
+    setAirports('airports' in target ? target.airports : [])
     setDealOnly('dealOnly' in target ? target.dealOnly : false)
     setHiddenCriteria(getHiddenCriteria(target.type, sourcePath))
     setLiveCount(null)
@@ -190,8 +191,8 @@ export default function AlertEditForm({
         target.type === 'aircraft'
           ? { make, model, state, minPrice, maxPrice, dealOnly }
           : target.type === 'partnership'
-            ? { make, state, airport }
-            : { make, model, state, airport }
+            ? { make, state, airports }
+            : { make, model, state, airports }
       const result = await updateAlertCriteria(id, fields, token)
       if (result.error) {
         setError(result.error)
@@ -350,15 +351,16 @@ export default function AlertEditForm({
             </div>
 
             {target.type === 'partnership' || target.type === 'seeker' ? (
-              <div>
-                <label className={labelClass}>Home airport</label>
-                <input
-                  type="text"
-                  value={airport}
-                  onChange={(e) => setAirport(e.target.value.toUpperCase())}
-                  placeholder="e.g. KHWD"
-                  className={inputClass}
-                />
+              <div className="col-span-2">
+                <label className={labelClass}>
+                  Home airport{airports.length > 0 ? 's' : ''}
+                  {airports.length > 0 && (
+                    <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                      · {airports.length} selected
+                    </span>
+                  )}
+                </label>
+                <AirportChipsInput codes={airports} onChange={setAirports} inputClassName={inputClass} />
               </div>
             ) : null}
 

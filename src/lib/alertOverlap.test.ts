@@ -17,8 +17,8 @@ function aircraft(over: Partial<{ make: string; model: string; state: string; mi
   }
 }
 
-function partnership(over: Partial<{ make: string; state: string; airport: string }> = {}) {
-  return { type: 'partnership' as const, make: over.make ?? '', state: over.state ?? '', airport: over.airport ?? '' }
+function partnership(over: Partial<{ make: string; state: string; airports: string[] }> = {}) {
+  return { type: 'partnership' as const, make: over.make ?? '', state: over.state ?? '', airports: over.airports ?? [] }
 }
 
 function candidate(over: Partial<OverlapCandidate> & Pick<OverlapCandidate, 'id' | 'target'>): OverlapCandidate {
@@ -125,7 +125,34 @@ test('empty target is never itself flagged as narrower (nothing is broader than 
 
 test('partnership airport narrows a make+state alert', () => {
   const broad = candidate({ id: 'a', target: partnership({ make: 'Cessna', state: 'CA' }), context: 'Cessna in CA' })
-  const narrow = candidate({ id: 'b', target: partnership({ make: 'Cessna', state: 'CA', airport: 'KHWD' }) })
+  const narrow = candidate({ id: 'b', target: partnership({ make: 'Cessna', state: 'CA', airports: ['KHWD'] }) })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).get('b')?.broaderId, 'a')
+})
+
+test('same multi-airport SET in a different order still counts as matching (state narrows it)', () => {
+  const broad = candidate({
+    id: 'a',
+    target: partnership({ make: 'Cessna', airports: ['KHWD', 'KPAO'] }),
+    context: 'Cessna near KHWD, KPAO',
+  })
+  const narrow = candidate({
+    id: 'b',
+    // Same two codes, reversed order + lowercase — must still compare equal
+    // (order-independent, case-insensitive), or this false-negatives the overlap.
+    target: partnership({ make: 'Cessna', state: 'CA', airports: ['kpao', 'KHWD'] }),
+  })
+  assert.equal(detectOverlappingAlerts([broad, narrow]).get('b')?.broaderId, 'a')
+})
+
+test('different airport SETS on both sides: not an overlap even with one code in common', () => {
+  const a = candidate({ id: 'a', target: partnership({ make: 'Cessna', airports: ['KHWD'] }) })
+  const b = candidate({ id: 'b', target: partnership({ make: 'Cessna', airports: ['KHWD', 'KPAO'] }) })
+  assert.equal(detectOverlappingAlerts([a, b]).size, 0)
+})
+
+test('an empty airports array is "no constraint" — a make-only alert can still be the broader side', () => {
+  const broad = candidate({ id: 'a', target: partnership({ make: 'Cessna', airports: [] }), context: 'Cessna' })
+  const narrow = candidate({ id: 'b', target: partnership({ make: 'Cessna', airports: ['KHWD', 'KPAO'] }) })
   assert.equal(detectOverlappingAlerts([broad, narrow]).get('b')?.broaderId, 'a')
 })
 

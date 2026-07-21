@@ -41,15 +41,25 @@ export interface AlertOverlap {
 
 function valuesEqual(a: unknown, b: unknown): boolean {
   if (typeof a === 'string' && typeof b === 'string') return a.trim().toLowerCase() === b.trim().toLowerCase()
+  // `airports: string[]` (partnership/seeker) — order-independent, case-insensitive
+  // set equality, same normalization `valuesEqual`'s string branch already applies.
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false
+    const norm = (arr: unknown[]) => [...arr].map((v) => String(v).trim().toUpperCase()).sort()
+    const [na, nb] = [norm(a), norm(b)]
+    return na.every((v, i) => v === nb[i])
+  }
   return a === b
 }
 
 /** Every field on `target` that actually constrains the match — blank
- *  strings and `dealOnly: false` mean "no constraint," same as unset. */
+ *  strings, an empty `airports` array, and `dealOnly: false` mean "no
+ *  constraint," same as unset. */
 function definedEntries(target: EditableAlertTarget): [string, unknown][] {
   return Object.entries(target).filter(([key, value]) => {
     if (key === 'type') return false
     if (key === 'dealOnly') return value === true
+    if (Array.isArray(value)) return value.length > 0
     return typeof value === 'string' ? value.trim() !== '' : value !== undefined && value !== null
   })
 }
