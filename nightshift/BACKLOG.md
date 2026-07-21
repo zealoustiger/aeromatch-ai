@@ -4211,14 +4211,15 @@ Genuinely open gaps below._
   `?edit=<id>#alert-<id>` deep link straight into that alert's Edit/mode/frequency
   controls on `/alerts/manage`, in place of the old generic "Manage your alerts" link. No
   new capture point, no schema change, `/api/alerts/digest-feedback` untouched.
-- **[P1][goal] Honest "N pilots watching" social proof on listing watch surfaces.** Why:
-  no watcher-count exists anywhere (grep: no "watching this"/watcher count helper). Show
-  a real count of OTHER confirmed `?watch=price` alerts on this listing next to the watch
-  panel on `/aircraft/listing/[id]` and `/partnerships/[id]` ("2 pilots are watching this
-  listing") — aggregate count only (no PII), hidden at 0, never fabricated; count via a
-  service-role helper alongside the existing `getAlertMatchCount` pattern. Improves
-  conversion of the existing watch capture points (they already emit `alert_subscribed`
-  with per-placement sources — this cycle should show the placements' conversion moving).
+~~- **[P1][goal] Honest "N pilots watching" social proof on listing watch surfaces.**~~ ✅
+  SHIPPED via `listing-watcher-count` (2026-07-21) New `src/lib/alertWatcherCounts.ts`
+  (`getWatcherCount`) counts confirmed `alerts` rows whose `source_path` exactly matches
+  a listing's own `?watch=price` path (service-role read, fails soft to 0). `AlertSignup`
+  gained a `watcherCount` prop, rendered only when `watchOnly` and count >= 1 ("1 pilot is
+  watching this listing." / "N pilots are watching this listing."), styled like the
+  existing `showSocialProof` line. Wired into both single-listing watch boxes
+  (`/aircraft/listing/[id]`, `/partnerships/[id]`). No schema change, no new capture
+  point — verified live against a real throwaway confirmed watch-alert row (deleted after).
 - **[P1][goal] Multi-airport criterion inline-editable in alert Edit/Duplicate.** Why: the
   explicitly deferred follow-up from `seeker-alert-multiairport` (2026-07-21): a
   2+-airport `airports=` criterion is a removable-only hidden chip in Edit and
