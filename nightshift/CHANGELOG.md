@@ -2,6 +2,47 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T073846Z — PASS — partnership-owner-seeker-alert
+- Pages: /partnerships/[id]
+- What: **A partnership listing's owner can now ask to be told when a pilot starts
+  looking for a partnership like theirs, right from their own listing page.**
+  Previously the owner-only block on that page showed today's matching-seeker count
+  (`MatchCountNudge`) but had no way to hear about the NEXT one short of manually
+  subscribing on `/partnerships/seeking`. A new alert box now renders directly below
+  that nudge (owner-only, only when the listing has a `make`), prefilled to the
+  listing's own make (+ state when present) as a matchable
+  `/partnerships/seeking?make=…` alert the digest cron already understands.
+- Goal: alert-experience `[goal]` (plan-pass batch #15, P1) — the deferred sibling
+  slice of `aircraft-owner-seeker-alert` (2026-07-20), which named this exact gap as
+  its "natural next slice": aircraft-listing owners already had this demand-side
+  capture, partnership-listing owners didn't. New capture point
+  (`source="owner_partnership_seeker"`), reuses the existing `AlertSignup` component
+  and `subscribeToAlerts` action as-is — no new component, no schema change.
+- Spec: nightshift/specs/20260721T073846Z-partnership-owner-seeker-alert.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean
+  (same route count). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  739/739 pass, no regressions. Served the PRODUCTION build (`npx next start -p 3717`
+  — ports 3000/3715/3716 were held by stray processes from earlier cycles/this cycle's
+  own visual-verification steps, left/cleaned up appropriately); `qa-smoke.mjs` 2/2
+  pass on `/partnerships/[id]` (HTTP 200, zero app-origin console errors, zero
+  horizontal overflow at 1280 + 375px) against the real anonymous-visitor view (no
+  owner session in the smoke harness, matching how the aircraft sibling cycle QA'd the
+  analogous page). Went further to visually verify the new box itself, since this is a
+  visual cycle: temporarily forced `isOwner` true locally, rebuilt, and screenshotted
+  both desktop + mobile — the new "Get alerts for new {make} listings" box renders
+  cleanly in the sidebar between the (self-suppressed, count=0) `MatchCountNudge` and
+  the trust badge, styled consistently with the other alert boxes, no overlap or
+  layout regression. Reverted the override before the real gate run that actually
+  shipped (diff is exactly the intended 17-line addition, confirmed via `git diff`
+  before commit). No test rows/users created (no signup/post round-tripped — owner
+  gating verified via a local code override instead).
+- Screenshots: nightshift/screenshots/partnership-owner-seeker-alert/ (anonymous-
+  visitor view — the real gate run against the shipped diff)
+- Next: BACKLOG's alert-experience queue (batch #15) still has 5 open items (multi-
+  airport seeker filter honoring, recognized-subscriber homepage band, distance line
+  on digest cards, multi-match hero subject, near-home-field one-tap refinement) —
+  pull the next highest-value P1 next cycle.
+
 ## 20260721T072039Z — PASS — widen-suggestion-email-cards
 - Pages: /admin/alerts/emails (the send path itself lives in the alert-digest cron,
   no user-facing page)
