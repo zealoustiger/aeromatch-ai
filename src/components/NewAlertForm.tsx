@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, CheckCircle2, X } from 'lucide-react'
 import { createManageAlert } from '@/app/actions'
@@ -8,11 +8,17 @@ import { track } from '@/lib/analytics'
 import type { EditableAlertTarget } from '@/lib/alertEditCriteria'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import AirportChipsInput from '@/components/AirportChipsInput'
+import { toggleCsvItem, parseCsvList } from '@/lib/csvList'
+import { AVIONICS_FILTER_OPTIONS } from '@/lib/avionicsClassify'
 
 // Same 5 options as the browse filter UI (`SeekerFilters`/`HeroSearch`) — small
 // enough that duplicating locally (rather than a shared extraction) matches the
 // existing convention for this constant across the codebase.
 const RADIUS = [25, 50, 100, 150, 200]
+
+// Same 3 options as the browse filter UI (`AircraftSaleFilters`) — small enough
+// that duplicating locally matches the existing convention for this constant.
+const GRADES = ['A', 'B', 'C'] as const
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
@@ -44,6 +50,9 @@ interface InitialValues {
   maxTt?: string
   airports?: string[]
   radius?: string
+  avionics?: string
+  grade?: string
+  q?: string
   /** Present on an aircraft `EditableAlertTarget` (via `targetToFields`) but
    *  unused here — this form has no "good deals only" field of its own. */
   dealOnly?: boolean
@@ -99,6 +108,11 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
   const [maxTt, setMaxTt] = useState(initial?.maxTt ?? '')
   const [airports, setAirports] = useState<string[]>(initial?.airports ?? [])
   const [radius, setRadius] = useState(initial?.radius ?? '')
+  const [avionics, setAvionics] = useState(initial?.avionics ?? '')
+  const [grade, setGrade] = useState(initial?.grade ?? '')
+  const [q, setQ] = useState(initial?.q ?? '')
+  const selectedAvionicsSet = useMemo(() => new Set(parseCsvList(avionics)), [avionics])
+  const selectedGradeSet = useMemo(() => new Set(parseCsvList(grade)), [grade])
 
   function reset() {
     setType(initial?.type ?? 'aircraft')
@@ -113,6 +127,9 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
     setMaxTt(initial?.maxTt ?? '')
     setAirports(initial?.airports ?? [])
     setRadius(initial?.radius ?? '')
+    setAvionics(initial?.avionics ?? '')
+    setGrade(initial?.grade ?? '')
+    setQ(initial?.q ?? '')
     setError(null)
   }
 
@@ -128,7 +145,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
     startTransition(async () => {
       const fields =
         type === 'aircraft'
-          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt }
+          ? { make, model, state, minPrice, maxPrice, minYear, maxYear, minTt, maxTt, avionics, grade, q }
           : type === 'partnership'
             ? { make, state, airports, radius }
             : { make, model, state, airports, radius }
@@ -317,9 +334,71 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
                     className={inputClass}
                   />
                 </div>
+                <div className="col-span-2">
+                  <label className={labelClass}>Keyword</label>
+                  <input
+                    type="text"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="e.g. glass panel, low time"
+                    className={inputClass}
+                  />
+                </div>
               </>
             ) : null}
           </div>
+
+          {type === 'aircraft' ? (
+            <div className="mt-3">
+              <label className={labelClass}>
+                Avionics
+                {selectedAvionicsSet.size > 0 && (
+                  <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                    · {selectedAvionicsSet.size} selected
+                  </span>
+                )}
+              </label>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {AVIONICS_FILTER_OPTIONS.map((opt) => (
+                  <label key={opt.key} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedAvionicsSet.has(opt.key)}
+                      onChange={() => setAvionics((v) => toggleCsvItem(v, opt.key))}
+                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {type === 'aircraft' ? (
+            <div className="mt-3">
+              <label className={labelClass}>
+                Listing quality
+                {selectedGradeSet.size > 0 && (
+                  <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                    · {selectedGradeSet.size} selected
+                  </span>
+                )}
+              </label>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {GRADES.map((g) => (
+                  <label key={g} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedGradeSet.has(g)}
+                      onChange={() => setGrade((v) => toggleCsvItem(v, g))}
+                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                    />
+                    Grade {g}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {error ? (
             <p className="mt-2 text-xs text-red-600" role="alert">

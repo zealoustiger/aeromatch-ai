@@ -1,5 +1,6 @@
 import { STATE_NAMES, describeAircraftFilters } from '@/lib/seo'
 import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClassify'
+import { parseGradeFilter } from '@/lib/listingQuality'
 
 /**
  * Editable-criteria support for `/alerts/manage`'s inline Edit form.
@@ -24,7 +25,7 @@ import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClas
  */
 
 export type EditableAlertTarget =
-  | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; minYear: string; maxYear: string; minTt: string; maxTt: string; dealOnly: boolean }
+  | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; minYear: string; maxYear: string; minTt: string; maxTt: string; avionics: string; grade: string; q: string; dealOnly: boolean }
   | { type: 'partnership'; make: string; state: string; airports: string[]; radius: string }
   | { type: 'seeker'; make: string; model: string; state: string; airports: string[]; radius: string }
 
@@ -40,6 +41,9 @@ export interface AlertCriteriaFields {
   maxTt?: string
   airports?: string[]
   radius?: string
+  avionics?: string
+  grade?: string
+  q?: string
   dealOnly?: boolean
 }
 
@@ -79,6 +83,12 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
       maxYear: g('max_year'),
       minTt: g('min_tt'),
       maxTt: g('max_tt'),
+      avionics: g('avionics'),
+      // Prefer the modern multi-select `grade`; fall back to (and thus
+      // honestly surface) a legacy single `min_grade` floor so an older
+      // alert's real criterion is visible and editable here too.
+      grade: parseGradeFilter(g('grade'), g('min_grade')).join(','),
+      q: g('q'),
       dealOnly: g('deal') === 'good',
     }
   }
@@ -136,6 +146,21 @@ function cleanRadius(v: string | undefined): string | undefined {
   return Number.isFinite(n) && n > 0 ? String(n) : undefined
 }
 
+/** A deduped, comma-joined list of recognized `AVIONICS_FILTER_OPTIONS` keys, or undefined if none survive. */
+function cleanAvionics(v: string | undefined): string | undefined {
+  if (!v) return undefined
+  const valid: Set<string> = new Set(AVIONICS_FILTER_OPTIONS.map((o) => o.key))
+  const cats = [...new Set(v.split(',').map((c) => c.trim()).filter((c) => valid.has(c)))]
+  return cats.length ? cats.join(',') : undefined
+}
+
+/** A deduped, comma-joined list of A/B/C grade letters, or undefined if none survive. */
+function cleanGrade(v: string | undefined): string | undefined {
+  if (!v) return undefined
+  const grades = [...new Set(v.split(',').map((g) => g.trim().toUpperCase()).filter((g) => ['A', 'B', 'C'].includes(g)))]
+  return grades.length ? grades.join(',') : undefined
+}
+
 /**
  * Rebuild `source_path` + `context` from edited fields, layered onto the alert's
  * EXISTING query string so any param the edit form doesn't expose (e.g. an
@@ -182,6 +207,10 @@ export function buildAlertCriteriaUpdate(
     set('max_year', cleanYear(fields.maxYear))
     set('min_tt', cleanTt(fields.minTt))
     set('max_tt', cleanTt(fields.maxTt))
+    set('avionics', cleanAvionics(fields.avionics))
+    set('grade', cleanGrade(fields.grade))
+    params.delete('min_grade') // superseded by `grade` once this form has touched it
+    set('q', fields.q?.trim())
     set('deal', fields.dealOnly ? 'good' : undefined)
   } else if (type === 'partnership') {
     set('make', fields.make?.trim())
@@ -217,13 +246,13 @@ export function computeWidenCandidate(target: EditableAlertTarget): WidenCandida
   if (target.type === 'aircraft') {
     if (target.model) {
       return {
-        fields: { make: target.make, model: '', state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, minTt: target.minTt, maxTt: target.maxTt, dealOnly: target.dealOnly },
+        fields: { make: target.make, model: '', state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, minTt: target.minTt, maxTt: target.maxTt, avionics: target.avionics, grade: target.grade, q: target.q, dealOnly: target.dealOnly },
         description: target.make ? `Show all ${target.make} listings` : 'Show all makes and models',
       }
     }
     if (target.state) {
       return {
-        fields: { make: target.make, model: target.model, state: '', minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, minTt: target.minTt, maxTt: target.maxTt, dealOnly: target.dealOnly },
+        fields: { make: target.make, model: target.model, state: '', minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, minTt: target.minTt, maxTt: target.maxTt, avionics: target.avionics, grade: target.grade, q: target.q, dealOnly: target.dealOnly },
         description: 'Search every state',
       }
     }
@@ -302,7 +331,7 @@ function describeContext(type: EditableAlertTarget['type'], params: URLSearchPar
 
 /** The form-exposed query-param keys per type — everything else on `source_path` is "hidden." */
 const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
-  aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt', 'deal']),
+  aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'min_year', 'max_year', 'min_tt', 'max_tt', 'avionics', 'grade', 'min_grade', 'q', 'deal']),
   partnership: new Set(['make', 'state', 'airport', 'airports', 'radius']),
   seeker: new Set(['make', 'model', 'state', 'airport', 'airports', 'radius']),
 }
@@ -310,7 +339,7 @@ const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
 /** Rebuilds the `AlertCriteriaFields` the edit form would submit for an UNCHANGED target — used to round-trip its own exposed fields when only a hidden param is being removed. */
 export function targetToFields(target: EditableAlertTarget): AlertCriteriaFields {
   if (target.type === 'aircraft') {
-    return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, minTt: target.minTt, maxTt: target.maxTt, dealOnly: target.dealOnly }
+    return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, minYear: target.minYear, maxYear: target.maxYear, minTt: target.minTt, maxTt: target.maxTt, avionics: target.avionics, grade: target.grade, q: target.q, dealOnly: target.dealOnly }
   }
   if (target.type === 'partnership') {
     return { make: target.make, state: target.state, airports: target.airports, radius: target.radius }
