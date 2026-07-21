@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-21T07:50:13Z — partnership-owner-seeker-alert — score 5/5
+- Strengths: Faithful, tightly-scoped mirror of the shipped aircraft-listing sibling — correct `isOwner && p.make` gating placed right after `MatchCountNudge`, safe `URLSearchParams` construction that omits `state` when absent, and the `/partnerships/seeking?make=&state=` shape is verifiably parsed by `parseSeekerAlertSourcePath`; reuses `AlertSignup`/`subscribeToAlerts` with no new component or schema, and the intent comment cleanly distinguishes today's matches (MatchCountNudge) from the next-seeker alert.
+- Weaknesses / risks: none material — `matchCount` social-proof prop is unused here, matching the sibling and outside spec scope.
+- Follow-up: none
+
 ## 2026-07-21T07:04:13Z — admin-email-preview-test-send — score 4/5
 - Strengths: Clean, tightly-scoped change that fully meets the spec — recipient is server-enforced to the caller's own `assertAdmin()` email (never client-supplied, no injection surface), `sendEmail` result correctly discriminated so the no-key no-op surfaces an honest "couldn't send" state rather than a false "Sent!", extracted `AdminEmailPreviewCard` preserves the original preview markup verbatim and matches surrounding Tailwind/useTransition conventions with a good security-rationale comment.
 - Weaknesses / risks: Minor — the status region has no `aria-live`, so screen readers won't announce sent/error; and the generic "Couldn't send — try again" is misleading for the permanent no-key case (retrying can't help), though the spec explicitly accepted a plain couldn't-send state.
