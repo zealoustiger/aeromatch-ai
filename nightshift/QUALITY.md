@@ -3,6 +3,11 @@
 Newest first. The drain spot-checks ~25% of PASSed cycles on the strong model
 (Opus) to grade code quality the automated gate can't see. Scores 1-5.
 
+## 2026-07-21T08:10:27Z — seeker-alert-multiairport — score 4/5
+- Strengths: Faithful, complete end-to-end plumbing of a CSV `airports=` filter through all four modules exactly as spec'd — dedup via `Set`, radius-expand restricted to a single code (mirrors `seekersQuery.ts`), the `additional_airports`-missing graceful-degrade retry preserved as `.in(home_airport)`, a real per-loop `getAirportsWithinRadius` cache in `countMatchingSeekerSubscribers`, and genuinely careful lossless preservation of a 2+-airport criterion across unrelated edits (reads original count before mutation); tests mirror the existing single-icao cases and cover CSV-wins, radius carry-through, and multi-code ANY-match.
+- Weaknesses / risks: none material — the `airports`-parse block and radius-resolve logic are triplicated across route.ts / alertMatchCounts.ts / alertSubscriberMatch.ts (two `resolveSeekerIcaoList` copies plus a third inlined cached variant), though this follows the pre-existing per-module local-`AlertTarget` convention rather than introducing new drift.
+- Follow-up: Consider a shared seeker-airport parse+resolve util to collapse the three near-identical `icaos`/radius blocks, so future filter changes don't have to be edited in four places.
+
 ## 2026-07-21T07:50:13Z — partnership-owner-seeker-alert — score 5/5
 - Strengths: Faithful, tightly-scoped mirror of the shipped aircraft-listing sibling — correct `isOwner && p.make` gating placed right after `MatchCountNudge`, safe `URLSearchParams` construction that omits `state` when absent, and the `/partnerships/seeking?make=&state=` shape is verifiably parsed by `parseSeekerAlertSourcePath`; reuses `AlertSignup`/`subscribeToAlerts` with no new component or schema, and the intent comment cleanly distinguishes today's matches (MatchCountNudge) from the next-seeker alert.
 - Weaknesses / risks: none material — `matchCount` social-proof prop is unused here, matching the sibling and outside spec scope.
