@@ -154,7 +154,9 @@ export default async function EmailTemplateGalleryPage() {
     {
       name: 'buildWidenSuggestionEmail',
       purpose: 'One-time nudge when a confirmed alert has never matched anything.',
-      dataNote: PLACEHOLDER_NOTE,
+      dataNote: aircraftPreview
+        ? `Widen count/description are illustrative; sample cards are ${aircraftPreview.count} live currently-matching aircraft.`
+        : PLACEHOLDER_NOTE,
       built: buildWidenSuggestionEmail({
         context: 'Cessna 172 in Wyoming',
         widenDescription: 'Show all Cessna 172 listings nationwide',
@@ -162,6 +164,7 @@ export default async function EmailTemplateGalleryPage() {
         widenNoun: 'listing',
         manageUrl,
         unsubscribeUrl,
+        samples: aircraftPreview?.samples ?? [],
       }),
     },
     {

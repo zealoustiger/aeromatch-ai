@@ -3880,15 +3880,22 @@ closure + auto-pause + back-on-market resume all exist (`alert-digest/route.ts:1
   the digest-vote section: raw counts only (no percentages at n<10, same flooring
   convention). Why: the never-spam pillar needs a learning loop; "found my aircraft"
   is also the marketplace's first success-story signal.
-- **[P2][goal] Real listing cards in the widen-suggestion email.** `buildWidenSuggestionEmail`
-  (`email.ts:845`) tells a never-matched subscriber "17 listings match the wider search"
-  but shows none of them — the digest builders' proven sample-card renderer
-  (`AlertDigestSample`) sits unused one file over. Fetch 2–3 real samples from the
-  widened `source_path` (reuse the digest cron's sample fetchers) and render them in the
-  email with the existing card partial, count line unchanged; keep the builder honest
-  (samples come from the same query as `widenCount` — never pad). Why: showing the
-  actual planes is the difference between "widen it?" being ignored and clicked; email
-  quality is a named GOAL.md pillar.
+~~- **[P2][goal] Real listing cards in the widen-suggestion email.**~~ ✅ SHIPPED via
+  `widen-suggestion-email-cards` (2026-07-21) `buildWidenSuggestionEmail` now takes an
+  optional `samples?: AlertDigestSample[]` and renders up to 3 real listing cards (photo/
+  title/price/link, `utm_campaign=widen`) with the same `sampleCardHtml` partial the
+  digest/confirm emails already use, in both HTML and text. The cron's
+  `sendWidenSuggestionEmails` swaps its count-only `getAlertMatchCount(widenedPath)` call
+  for `getAlertDigestPreview(widenedPath, 3)` — the exact same underlying query, now also
+  returning samples, so a card can never show a listing beyond what `widenCount` already
+  claims (no padding). `/admin/alerts/emails`'s preview gallery entry now passes real
+  `aircraftPreview.samples` too. Live-verified with a real magic-link-minted admin session
+  (service-role `generateLink` + `verifyOtp`, cookies encoded via `@supabase/ssr`'s own
+  `stringToBase64URL`/`createChunks` utils, injected via Playwright — no mock): the
+  authenticated preview rendered 3 real live cards (e.g. "1973 Cessna 210 — $189,000")
+  with photo/price/link in both the HTML iframe and the text pane. Omitting/empty
+  `samples` renders byte-identical to before (verified by new unit test). 3 new unit
+  tests (739/739 repo-wide, up from 736).
 ~~- **[P2][goal] Honest "Join N others" social proof on `AlertSignup`.**~~ ✅ SHIPPED via
   `alert-social-proof-hub-pages` + `alert-social-proof-more-pages` + `alert-social-proof-remaining-sites`
   (2026-07-21) This item's premise ("no capture surface shows this") turned out to already
