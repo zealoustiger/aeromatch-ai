@@ -4141,16 +4141,20 @@ not-relevant links, a `marketPulse` digest section exists, footer capture exists
   (`RecentlyViewedAlertBanner` → generic `AlertSignup` fallback chain) untouched when the
   record is empty — verified both states render correctly via a seeded-localStorage
   Playwright check. No new capture point, no schema change.
-- **[P2][goal] Distance line on digest cards for airport-scoped alerts.** A subscriber
-  with a `/partnerships?airport=KHWD&radius=50` (or seeker `airport=`) alert gets digest
-  cards whose specs line shows only city/state (`AlertDigestSample` has no distance field,
-  email.ts:1170) — the one fact they filtered on ("how far from MY field?") is missing.
-  Add optional `distanceNm`/`fromIcao` to `AlertDigestSample`, computed in the cron's
-  sample fetchers from the same seeded-airports haversine data
-  `getAirportsWithinRadius` already uses; render "~35 nm from KHWD" in `specsLine`.
-  Honesty: only when both endpoints' coords genuinely resolve — omit the line entirely
-  otherwise, never estimate. Smart-honest-content pillar (best-email bar); no new capture
-  point, no schema change.
+~~- **[P2][goal] Distance line on digest cards for airport-scoped alerts.**~~ ✅ SHIPPED
+  via `digest-distance-line` (2026-07-21) A subscriber with a `/partnerships?airport=KHWD`
+  (or seeker `airports=KHWD`) alert now gets digest cards with "~35 nm from KHWD" in the
+  specs line instead of just city/state. New optional `distanceNm`/`fromIcao` on
+  `AlertDigestSample` (`email.ts`), rendered via a shared `distanceSegment()` formatter in
+  both the HTML `specsLine()` and the plain-text specs builder. Computed in the cron's
+  `fetchNewPartnershipSamples`/`fetchPartnershipPriceDropSamples`/`fetchNewSeekerSamples`
+  via a new `resolveRowDistances` helper (batched `resolveAirportCoords` + the newly
+  exported `haversineNm` from `airports.ts`) from `target.icao` (partnership) or
+  `target.icaos[0]` (seeker, only when exactly one code — same ambiguity restriction
+  `resolveSeekerIcaoList` already enforces on radius). Honesty-gated: a multi-airport
+  seeker search, an alert with no airport filter, or a row whose `home_airport` doesn't
+  resolve a real coordinate never shows a distance line — no estimated numbers. Aircraft
+  alerts unaffected (no ICAO radius helper exists for them). No schema change.
 - **[P2][goal] Multi-match hero subject line for digests.** email.ts's standout-subject
   rule (~1456) fires only when `newCount === 1` — a 3-new-listing digest falls back to the
   generic "3 new listings — Cessna 172 on ClubHanger". Extend it: pick the best sample
