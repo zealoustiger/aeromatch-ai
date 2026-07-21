@@ -4253,13 +4253,23 @@ Genuinely open gaps below._
   `AlertEditForm`'s aircraft branch, mirroring the existing price-range pair. Note the
   remaining hidden aircraft criteria (`min_tt`/`max_tt`, `grade`, `avionics`, `q`) as
   later sibling slices — don't do them all in one cycle.
-- **[P2][goal] Expose the radius selector in partnership/seeker alert Edit.** Why:
-  `radius` (valid only alongside exactly one airport code) is match-honored by the cron
-  but not in `EXPOSED_KEYS` for either type (alertEditCriteria.ts:259–260) — an alert set
-  from a radius-filtered browse can have its radius removed but never adjusted in
-  `/alerts/manage`. Add a radius select (same options as the browse filter UI) that
-  renders only when the airport field holds exactly one code, preserving the existing
-  one-code pairing rule end-to-end. Management-surface improvement; no new capture point.
+~~- **[P2][goal] Expose the radius selector in partnership/seeker alert Edit.**~~ ✅
+  SHIPPED via `alert-radius-edit` (2026-07-21) `radius` (valid only alongside exactly one
+  airport code) is now a first-class field: `EditableAlertTarget`'s partnership/seeker
+  variants carry it, `EXPOSED_KEYS` for both types now include it (so it's no longer a
+  removable-only hidden chip), and a new radius `<select>` (same 5 options as the browse
+  filter UI) renders in both `AlertEditForm` and `NewAlertForm` whenever exactly one
+  airport chip is selected — mirroring `SeekerFilters`' own rule. New `cleanRadius`
+  validator; `buildAlertCriteriaUpdate` drops `radius` whenever the airport count isn't
+  exactly 1 (unchanged invariant). This closes out the alert-experience batch #16 queue.
+  **Bonus bug fix found this cycle:** `computeWidenCandidate`'s seeker model-drop step
+  omitted `state`/`airports` from its returned fields entirely, so widening silently
+  cleared them too — a "Show all {make} pilots" suggestion was actually far broader than
+  described (an honesty-gate issue per GOAL.md). Fixed to carry state/airports/radius
+  through unchanged, mirroring the aircraft branch's identical model-drop step. No
+  schema change. Verified end-to-end against a real `@example.com` test alert (created +
+  deleted this cycle): Edit form prefilled "Within 50 mi", changing to 100 and saving
+  updated the DB `source_path`, and Duplicate correctly prefilled 100 too.
 
 ---
 

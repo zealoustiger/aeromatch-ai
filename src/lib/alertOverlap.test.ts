@@ -19,8 +19,14 @@ function aircraft(over: Partial<{ make: string; model: string; state: string; mi
   }
 }
 
-function partnership(over: Partial<{ make: string; state: string; airports: string[] }> = {}) {
-  return { type: 'partnership' as const, make: over.make ?? '', state: over.state ?? '', airports: over.airports ?? [] }
+function partnership(over: Partial<{ make: string; state: string; airports: string[]; radius: string }> = {}) {
+  return {
+    type: 'partnership' as const,
+    make: over.make ?? '',
+    state: over.state ?? '',
+    airports: over.airports ?? [],
+    radius: over.radius ?? '',
+  }
 }
 
 function candidate(over: Partial<OverlapCandidate> & Pick<OverlapCandidate, 'id' | 'target'>): OverlapCandidate {

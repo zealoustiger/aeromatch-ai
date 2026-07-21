@@ -9,6 +9,11 @@ import type { EditableAlertTarget } from '@/lib/alertEditCriteria'
 import type { AlertFrequency } from '@/lib/alertFrequency'
 import AirportChipsInput from '@/components/AirportChipsInput'
 
+// Same 5 options as the browse filter UI (`SeekerFilters`/`HeroSearch`) — small
+// enough that duplicating locally (rather than a shared extraction) matches the
+// existing convention for this constant across the codebase.
+const RADIUS = [25, 50, 100, 150, 200]
+
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
   'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
@@ -36,6 +41,7 @@ interface InitialValues {
   minYear?: string
   maxYear?: string
   airports?: string[]
+  radius?: string
   /** Present on an aircraft `EditableAlertTarget` (via `targetToFields`) but
    *  unused here — this form has no "good deals only" field of its own. */
   dealOnly?: boolean
@@ -88,6 +94,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
   const [minYear, setMinYear] = useState(initial?.minYear ?? '')
   const [maxYear, setMaxYear] = useState(initial?.maxYear ?? '')
   const [airports, setAirports] = useState<string[]>(initial?.airports ?? [])
+  const [radius, setRadius] = useState(initial?.radius ?? '')
 
   function reset() {
     setType(initial?.type ?? 'aircraft')
@@ -99,6 +106,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
     setMinYear(initial?.minYear ?? '')
     setMaxYear(initial?.maxYear ?? '')
     setAirports(initial?.airports ?? [])
+    setRadius(initial?.radius ?? '')
     setError(null)
   }
 
@@ -116,8 +124,8 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
         type === 'aircraft'
           ? { make, model, state, minPrice, maxPrice, minYear, maxYear }
           : type === 'partnership'
-            ? { make, state, airports }
-            : { make, model, state, airports }
+            ? { make, state, airports, radius }
+            : { make, model, state, airports, radius }
       const result = await createManageAlert(type, fields, token, {
         frequency: initial?.frequency,
         priceDropOptIn: initial?.priceDropOptIn,
@@ -218,6 +226,20 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
                   )}
                 </label>
                 <AirportChipsInput codes={airports} onChange={setAirports} inputClassName={inputClass} />
+                {airports.length === 1 && (
+                  <select
+                    value={radius}
+                    onChange={(e) => setRadius(e.target.value)}
+                    className={`${inputClass} mt-2`}
+                  >
+                    <option value="">Exact airport</option>
+                    {RADIUS.map((r) => (
+                      <option key={r} value={r}>
+                        Within {r} mi
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             ) : null}
 
