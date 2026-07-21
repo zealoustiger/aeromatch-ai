@@ -26,6 +26,7 @@ import RecentlyViewedTracker from '@/components/RecentlyViewedTracker'
 import ReportListing from '@/components/ReportListing'
 import MonetizationIntent from '@/components/MonetizationIntent'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import SaveListingButton from '@/components/SaveListingButton'
 import SavedListingNote from '@/components/SavedListingNote'
 import TrustBadge from '@/components/TrustBadge'
@@ -184,6 +185,8 @@ async function FilledPartnershipPage({ p }: { p: Partnership }) {
     : p.make
       ? `/partnerships?${new URLSearchParams({ make: p.make }).toString()}`
       : '/partnerships'
+  const filledAlertContext = family ? `${family.make} ${family.model}` : p.make ?? undefined
+  const filledAlertCounts = filledAlertContext ? await getAlertCounts([filledAlertContext]) : new Map<string, number>()
 
   return (
     <div className="ch-surface min-h-screen">
@@ -228,11 +231,12 @@ async function FilledPartnershipPage({ p }: { p: Partnership }) {
               /partnerships alert otherwise (honesty gate — never a listing-id-scoped
               alert that can't match anything). */}
           <AlertSignup
-            context={family ? `${family.make} ${family.model}` : p.make ?? undefined}
+            context={filledAlertContext}
             source="filled_partnership"
             sourcePath={familySourcePath}
             noun="partnership"
             className="mt-6"
+            alertCount={filledAlertContext ? filledAlertCounts.get(filledAlertContext) : undefined}
           />
         </div>
 
@@ -272,6 +276,8 @@ export default async function PartnershipDetailPage({
     ? decodeURIComponent(hdrs.get('x-vercel-ip-country-region')!)
     : null
   const seekerCount = await getSeekerCount()
+  const detailAlertContext = p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined
+  const detailAlertCounts = detailAlertContext ? await getAlertCounts([detailAlertContext]) : new Map<string, number>()
 
   const isOwner = await isListingOwner(p.poster_id)
   const buyInPriceDrop = buyInDrop(p)
@@ -997,7 +1003,7 @@ export default async function PartnershipDetailPage({
                 listing page's alert CTA, so a visitor who isn't ready to
                 message the poster still has an on-site next step. */}
             <AlertSignup
-              context={p.make ? [p.make, p.model].filter(Boolean).join(' ') : undefined}
+              context={detailAlertContext}
               source="partnership_detail"
               sourcePath={
                 p.make
@@ -1005,6 +1011,7 @@ export default async function PartnershipDetailPage({
                   : '/partnerships'
               }
               noun="partnership"
+              alertCount={detailAlertContext ? detailAlertCounts.get(detailAlertContext) : undefined}
             />
 
             {/* "Watch this partnership" — the partnership counterpart of the

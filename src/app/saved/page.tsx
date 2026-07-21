@@ -19,6 +19,7 @@ import {
 import { getAircraftCompVerdicts, type AircraftCompVerdict } from '@/lib/aircraftComps'
 import { getSaveCounts } from '@/lib/saveCounts'
 import { deriveSavedAlertContext } from '@/lib/savedAlertContext'
+import { getAlertCounts } from '@/lib/alertCounts'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 import type { Partnership, AircraftForSale, PartnershipSeeker } from '@/lib/types'
 
@@ -148,6 +149,7 @@ export default async function SavedPage() {
   // honest to ("you keep saving Cessnas"), otherwise fall back to the generic
   // "get new-listing alerts" box (still a real capture point on this page).
   const savedAlertCtx = deriveSavedAlertContext(partnerships, aircraft)
+  const savedAlertCounts = savedAlertCtx ? await getAlertCounts([savedAlertCtx.context]) : new Map<string, number>()
 
   // Real combined aircraft+partnership count for the bare-`/` fallback alert boxes
   // below (used only when there's no listing-derived savedAlertCtx) — never
@@ -298,6 +300,7 @@ export default async function SavedPage() {
               sourcePath={savedAlertCtx.sourcePath}
               noun={savedAlertCtx.noun}
               source="saved_page"
+              alertCount={savedAlertCounts.get(savedAlertCtx.context)}
             />
           ) : (
             <AlertSignup

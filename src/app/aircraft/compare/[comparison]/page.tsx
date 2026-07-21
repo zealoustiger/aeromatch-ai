@@ -6,6 +6,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import AlertSignup from '@/components/AlertSignup'
 import ModelFaq from '@/components/ModelFaq'
 import { countMakeModel } from '@/components/AircraftSaleList'
+import { getAlertCounts } from '@/lib/alertCounts'
 import { buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import {
@@ -76,6 +77,7 @@ export default async function ComparisonPage({ params }: Props) {
   ])
   const aPath = `/aircraft/${a.makeSlug}/${a.modelSlug}`
   const bPath = `/aircraft/${b.makeSlug}/${b.modelSlug}`
+  const alertCounts = await getAlertCounts([aLabel, bLabel])
 
   // Union of spec-row labels, A's order first, then any B-only labels appended.
   const aSpecs = a.specTable ?? []
@@ -225,6 +227,7 @@ export default async function ComparisonPage({ params }: Props) {
               matchCount={aCount}
               source="compare_page"
               className=""
+              alertCount={alertCounts.get(aLabel)}
             />
             <AlertSignup
               context={bLabel}
@@ -232,6 +235,7 @@ export default async function ComparisonPage({ params }: Props) {
               matchCount={bCount}
               source="compare_page"
               className=""
+              alertCount={alertCounts.get(bLabel)}
             />
           </div>
         </section>
