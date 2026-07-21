@@ -1456,7 +1456,7 @@ async function sendWidenSuggestionEmails(
     if (!currentMatch || currentMatch.count > 0) continue // no longer dead — don't suggest
 
     const { sourcePath: widenedPath } = buildAlertCriteriaUpdate(target.type, row.source_path, candidate.fields)
-    const widenedMatch = await getAlertMatchCount(widenedPath)
+    const widenedMatch = await getAlertDigestPreview(widenedPath, 3)
     if (!widenedMatch || widenedMatch.count <= 0) continue // no real fix available — stay silent, never guess
 
     const manageUrl = `${SITE_URL}/alerts/manage?token=${row.unsubscribe_token}`
@@ -1468,6 +1468,7 @@ async function sendWidenSuggestionEmails(
       widenNoun: widenedMatch.noun,
       manageUrl,
       unsubscribeUrl,
+      samples: widenedMatch.samples,
     })
 
     const gate = await pacer.send(() =>

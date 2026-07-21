@@ -858,11 +858,22 @@ export function buildWidenSuggestionEmail(opts: {
   widenNoun: 'listing' | 'pilot'
   manageUrl: string
   unsubscribeUrl: string
+  /** Up to a few real matches from the widened search — same
+   *  `getAlertDigestPreview(widenedPath)` query the caller already ran to
+   *  verify `widenCount`, so a card here can never be padding beyond what
+   *  that count already claims. Omit/empty renders the count-only copy. */
+  samples?: AlertDigestSample[]
 }): { subject: string; html: string; text: string } {
   const label = opts.context?.trim() || 'Your alert'
   const subject = `${label} hasn't matched anything yet — widen it?`
   const manageUrl = withUtm(opts.manageUrl, 'widen')
   const countLabel = `${opts.widenCount} ${opts.widenNoun}${opts.widenCount === 1 ? '' : 's'}`
+  const samples = (opts.samples ?? []).map((s) => ({ ...s, url: withUtm(s.url, 'widen') }))
+
+  const samplesHtml =
+    samples.length > 0
+      ? `<div style="margin:0 0 22px;">${samples.map((s) => sampleCardHtml(s)).join('')}</div>`
+      : ''
 
   const html = `<!doctype html>
 <html>
@@ -876,6 +887,7 @@ export function buildWidenSuggestionEmail(opts: {
         <p class="ch-text" style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#475569;">
           It&rsquo;s been a few weeks with nothing to show &mdash; want to widen it? <strong>${escapeHtml(opts.widenDescription)}</strong> would match <strong>${countLabel}</strong> right now.
         </p>
+        ${samplesHtml}
         <p style="margin:0;">
           <a href="${escapeAttr(manageUrl)}"
              style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;">
@@ -891,11 +903,21 @@ export function buildWidenSuggestionEmail(opts: {
   </body>
 </html>`
 
+  const samplesText =
+    samples.length > 0
+      ? `${samples
+          .map((s) => {
+            const price = s.price != null ? formatUsd(s.price) : ''
+            return `- ${s.title}${price ? ` — ${price}` : ''}\n  ${s.url}`
+          })
+          .join('\n')}\n\n`
+      : ''
+
   const text = `${label} hasn't matched anything yet
 
 It's been a few weeks with nothing to show — want to widen it? ${opts.widenDescription} would match ${countLabel} right now.
 
-Widen this alert: ${manageUrl}
+${samplesText}Widen this alert: ${manageUrl}
 
 Unsubscribe: ${opts.unsubscribeUrl}`
 

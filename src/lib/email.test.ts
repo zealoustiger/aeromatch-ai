@@ -1746,6 +1746,32 @@ test('buildWidenSuggestionEmail: context and widen description are HTML-escaped'
   assert.match(html, /&lt;script&gt;/)
 })
 
+test('buildWidenSuggestionEmail: with samples, renders real listing cards in both html and text', () => {
+  const { html, text } = buildWidenSuggestionEmail({
+    ...WIDEN_BASE,
+    samples: [sample({ title: '2015 Cessna 152', price: 45_000, url: 'https://clubhanger.com/aircraft/listing/abc' })],
+  })
+  assert.match(html, /2015 Cessna 152/)
+  assert.match(text, /2015 Cessna 152/)
+  assert.match(text, /\$45,000/)
+  assert.match(text, /aircraft\/listing\/abc/)
+})
+
+test('buildWidenSuggestionEmail: without samples, renders no card section (count-only copy unchanged)', () => {
+  const { html, text } = buildWidenSuggestionEmail(WIDEN_BASE)
+  assert.doesNotMatch(html, /border-bottom:1px solid #ece6dc;">\s*<a href/)
+  assert.match(text, /42 listings right now\./)
+})
+
+test('buildWidenSuggestionEmail: sample links carry the widen UTM tag', () => {
+  const { html, text } = buildWidenSuggestionEmail({
+    ...WIDEN_BASE,
+    samples: [sample({ url: 'https://clubhanger.com/aircraft/listing/abc' })],
+  })
+  assert.match(html, /aircraft\/listing\/abc\?utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=widen/)
+  assert.match(text, /aircraft\/listing\/abc\?utm_source=alert_email&utm_medium=email&utm_campaign=widen/)
+})
+
 // ─── buildRepermissionEmail (one-time dormant-address re-permission) ───────
 
 const REPERMISSION_BASE = {
