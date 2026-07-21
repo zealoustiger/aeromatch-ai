@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { detectOverlappingAlerts, findBroaderOverlapContext, type OverlapCandidate } from './alertOverlap.ts'
 
-function aircraft(over: Partial<{ make: string; model: string; state: string; minPrice: string; maxPrice: string; minYear: string; maxYear: string; dealOnly: boolean }> = {}) {
+function aircraft(over: Partial<{ make: string; model: string; state: string; minPrice: string; maxPrice: string; minYear: string; maxYear: string; minTt: string; maxTt: string; dealOnly: boolean }> = {}) {
   return {
     type: 'aircraft' as const,
     make: over.make ?? '',
@@ -15,6 +15,8 @@ function aircraft(over: Partial<{ make: string; model: string; state: string; mi
     maxPrice: over.maxPrice ?? '',
     minYear: over.minYear ?? '',
     maxYear: over.maxYear ?? '',
+    minTt: over.minTt ?? '',
+    maxTt: over.maxTt ?? '',
     dealOnly: over.dealOnly ?? false,
   }
 }

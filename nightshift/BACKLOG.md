@@ -4284,14 +4284,22 @@ route.ts:2394), post-confirmation cross-sell exists (`/alerts/status` + `AlertCr
 admin/alerts/page.tsx:437), and guides/compare/airports/[icao] pages all carry capture.
 Genuinely open gaps below._
 
-- **[P1][goal] Expose TT (total-time) range as editable fields in aircraft alert
-  Edit/Duplicate.** `min_tt`/`max_tt` are honored structured browse filters
-  (aircraft/page.tsx:108) but not in `EXPOSED_KEYS.aircraft` (alertEditCriteria.ts:292) —
-  a "Cessna 182 under 4,000 hours" alert shows TT only as a removable-only hidden chip and
-  Duplicate drops it. Add Min/Max TT inputs to `AlertEditForm`/`NewAlertForm`, threading
-  `EditableAlertTarget`/`buildAlertCriteriaUpdate`/`targetToFields`/`computeWidenCandidate`
-  exactly like the just-shipped `alert-year-range-edit` pair. Improves: alert management
-  (`/alerts/manage`). No new capture point, no schema change.
+~~- **[P1][goal] Expose TT (total-time) range as editable fields in aircraft alert
+  Edit/Duplicate.**~~ ✅ SHIPPED via `alert-tt-range-edit` (2026-07-21) `min_tt`/`max_tt`
+  were honored structured browse filters (aircraft/page.tsx:108) but not in
+  `EXPOSED_KEYS.aircraft` — a "Cessna 182 under 4,000 hours" alert showed TT only as a
+  removable-only hidden chip and Duplicate silently dropped it. Added Min/Max hours (TT)
+  inputs to `AlertEditForm`/`NewAlertForm` alongside the existing Min/Max year pair,
+  threading `minTt`/`maxTt` through `EditableAlertTarget`, `buildAlertCriteriaUpdate`
+  (new `cleanTt` helper mirrors `cleanYear`), `targetToFields`, and
+  `computeWidenCandidate`'s aircraft branch (carried through, not cleared) — same shape
+  as the just-shipped `alert-year-range-edit` pair. Live-verified end-to-end against the
+  real DB (throwaway `@example.com` confirmed alert with `min_tt=100&max_tt=4000` in its
+  `source_path`, real Playwright clicks not `.click()`): Edit form pre-filled 100/4000,
+  editing to 150/3500 and saving persisted the new `source_path` and updated `context` to
+  "150–3,500 hours", Duplicate correctly carried 150/3500 into the new-alert form. Zero
+  console errors, zero overflow at 375px. Test row deleted after (0 rows remain). No
+  schema change, no new capture point.
 - **[P1][goal] Surface the account-email's alerts that have NO matching saved search on
   `/searches`.** GOAL.md: "signed-in users see saved-search ↔ alert unified" — but
   searches/page.tsx renders only `saved_searches` rows (alert state attached by
