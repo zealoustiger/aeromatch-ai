@@ -8,6 +8,7 @@ import type { Partnership, PartnershipSeeker } from '@/lib/types'
 import PartnershipRailCard from '@/components/PartnershipRailCard'
 import SeekerRailCard from '@/components/SeekerRailCard'
 import RailScroller from '@/components/RailScroller'
+import AlertSignup from '@/components/AlertSignup'
 import {
   getMatchingSeekersForPartnership,
   getMatchingPartnershipsForSeeker,
@@ -125,6 +126,21 @@ export default async function MatchesPage() {
                 </li>
               ))}
             </RailScroller>
+            {/* Owner-side demand-side capture — the rail above shows TODAY's
+                matching seekers; this lets the owner hear about the NEXT one.
+                Mirrors the owner_partnership_seeker pattern already shipped on
+                /partnerships/[id] (same matchable /partnerships/seeking?make=
+                &state= shape the digest cron already reads). */}
+            <AlertSignup
+              context={listing.make}
+              sourcePath={`/partnerships/seeking?${new URLSearchParams({
+                make: listing.make,
+                ...(listing.state ? { state: listing.state } : {}),
+              }).toString()}`}
+              noun="seeker"
+              source="matches_page"
+              className="mt-4"
+            />
           </section>
         ))}
 
@@ -148,6 +164,18 @@ export default async function MatchesPage() {
                 </li>
               ))}
             </RailScroller>
+            {/* Owner-side demand-side capture — the rail above shows TODAY's
+                matching partnerships; this lets the owner hear about the NEXT
+                one. Reuses the same partnershipBrowseHrefForSeeker shape
+                already used for this section's own "Browse all" link, so the
+                alert matches exactly what the owner just saw. */}
+            <AlertSignup
+              context={listing.preferred_makes?.length === 1 ? listing.preferred_makes[0] : undefined}
+              sourcePath={partnershipBrowseHrefForSeeker(listing)}
+              noun="partnership"
+              source="matches_page"
+              className="mt-4"
+            />
           </section>
         ))}
       </div>
