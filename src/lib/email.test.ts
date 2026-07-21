@@ -269,6 +269,54 @@ test('digest: sample cards render photo, specs, and price; "See all" CTA when mo
   assert.match(html, />\s*See all Cessna 172 matches\s*</) // 5 total, 1 shown → more remain
 })
 
+test('digest: a sample with distanceNm + fromIcao renders "~N nm from ICAO" in both HTML and text specs lines', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: 'Cessna 172 partnership',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: null,
+        shareType: '1/4 Share',
+        location: 'Hayward, CA',
+        price: 25_000,
+        distanceNm: 34.7,
+        fromIcao: 'KHWD',
+        url: 'https://clubhanger.com/partnerships/abc',
+      },
+    ],
+  })
+  assert.match(html, /Hayward, CA &middot; ~35 nm from KHWD/)
+  assert.match(text, /Hayward, CA · ~35 nm from KHWD/)
+})
+
+test('digest: without distanceNm/fromIcao, no distance segment renders (honesty gate — never estimated)', () => {
+  const { html, text } = buildAlertDigestEmail({
+    ...DIGEST_BASE,
+    newCount: 1,
+    dropCount: 0,
+    samples: [
+      {
+        title: 'Cessna 172 partnership',
+        photoUrl: null,
+        isPlaceholder: false,
+        year: 2015,
+        ttaf: null,
+        shareType: '1/4 Share',
+        location: 'Hayward, CA',
+        price: 25_000,
+        url: 'https://clubhanger.com/partnerships/abc',
+      },
+    ],
+  })
+  assert.doesNotMatch(html, /nm from/)
+  assert.doesNotMatch(text, /nm from/)
+})
+
 test('compLabel: below-median comp renders "~N% below avg · median · comps"', () => {
   assert.equal(compLabel({ kind: 'below', pct: 12, count: 8, median: 52_000 }), '~12% below avg · $52k median · 8 comps')
 })

@@ -32,6 +32,8 @@ export async function GET() {
         price: 219_000,
         compLabel: '~9% below avg · $240k median · 6 comps',
         compBelowAvg: true,
+        distanceNm: 34.7,
+        fromIcao: 'KHWD',
         url: 'https://clubhanger.com/aircraft/listing/preview-1',
         id: 'preview-1',
         type: 'aircraft',

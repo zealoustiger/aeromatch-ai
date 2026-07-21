@@ -36,7 +36,7 @@ import { hasRecentPriceDrop, isMeaningfulPriceDrop } from '@/lib/priceDrops'
 import { intervalDaysFor, isDigestDue, normalizeFrequency, shouldOfferDailyUpgrade } from '@/lib/alertFrequency'
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import { formatShareType } from '@/lib/utils'
-import { getAirportsWithinRadius } from '@/lib/airports'
+import { getAirportsWithinRadius, resolveAirportCoords, haversineNm } from '@/lib/airports'
 import { filterToGoodDeals, compVsMarket, buildFamilyPriceMap } from '@/lib/aircraftComps'
 import { rankSamplesByDealQuality } from '@/lib/dealRanking'
 import { parseGradeFilter, gradeQueryPlan, type Grade } from '@/lib/listingQuality'
@@ -404,6 +404,48 @@ async function resolveSeekerIcaoList(
     return getAirportsWithinRadius(target.icaos[0], target.radius)
   }
   return target.icaos
+}
+
+/**
+ * Batch-resolve straight-line distance (nm) from `fromIcao` to each of
+ * `homeAirports`, for the digest's honest "~N nm from KHWD" specs-line
+ * segment (`AlertDigestSample.distanceNm`/`fromIcao`). A code that doesn't
+ * resolve a real coordinate in the `airports` table — including `fromIcao`
+ * itself — is simply absent from the result; callers must omit the distance
+ * rather than estimate it. Only called for a target that resolved to exactly
+ * one unambiguous searched airport (see call sites below).
+ */
+async function resolveRowDistances(
+  fromIcao: string,
+  homeAirports: (string | null)[]
+): Promise<Record<string, number>> {
+  const codes = Array.from(
+    new Set([fromIcao, ...homeAirports.filter((c): c is string => !!c)].map((c) => c.toUpperCase()))
+  )
+  const coords = await resolveAirportCoords(codes)
+  const from = coords[fromIcao.toUpperCase()]
+  if (!from) return {}
+  const out: Record<string, number> = {}
+  for (const code of homeAirports) {
+    if (!code) continue
+    const c = coords[code.toUpperCase()]
+    if (c) out[code.toUpperCase()] = haversineNm(from.lat, from.lng, c.lat, c.lng)
+  }
+  return out
+}
+
+/** Shapes a `resolveRowDistances` lookup into the `{nm, fromIcao}` pair
+ *  `toPartnershipDigestSample`/`toSeekerDigestSample` expect, or `undefined`
+ *  when there's no unambiguous `fromIcao`, no `homeAirport` on the row, or
+ *  the row's airport simply didn't resolve a coordinate. */
+function distanceFor(
+  fromIcao: string | undefined,
+  homeAirport: string | null,
+  distances: Record<string, number>
+): { nm: number; fromIcao: string } | undefined {
+  if (!fromIcao || !homeAirport) return undefined
+  const nm = distances[homeAirport.toUpperCase()]
+  return nm != null ? { nm, fromIcao } : undefined
 }
 
 /** Resolve an aircraft alert's `icao` airport filter to that airport's STATE,
@@ -1024,7 +1066,11 @@ type PartnershipSampleRow = {
   state: string | null
 }
 
-function toPartnershipDigestSample(row: PartnershipSampleRow, previousPrice?: number | null): AlertDigestSample {
+function toPartnershipDigestSample(
+  row: PartnershipSampleRow,
+  previousPrice?: number | null,
+  distance?: { nm: number; fromIcao: string }
+): AlertDigestSample {
   const realPhoto = pickRealPhoto(row.images)
   return {
     title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Partnership',
@@ -1036,6 +1082,8 @@ function toPartnershipDigestSample(row: PartnershipSampleRow, previousPrice?: nu
     location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
     price: row.buy_in_price,
     previousPrice,
+    distanceNm: distance?.nm,
+    fromIcao: distance?.fromIcao,
     url: `${SITE_URL}/partnerships/${row.id}`,
     id: row.id,
     type: 'partnership',
@@ -1070,7 +1118,9 @@ async function fetchNewPartnershipSamples(
     console.error('[alert-digest] new-partnership sample error:', error.message)
     return []
   }
-  return (data ?? []).map((row) => toPartnershipDigestSample(row as PartnershipSampleRow))
+  const rows = (data ?? []) as PartnershipSampleRow[]
+  const distances = target.icao ? await resolveRowDistances(target.icao, rows.map((r) => r.home_airport)) : {}
+  return rows.map((row) => toPartnershipDigestSample(row, undefined, distanceFor(target.icao, row.home_airport, distances)))
 }
 
 /** Up to `limit` real partnerships matching `target` whose most recent
@@ -1110,13 +1160,16 @@ async function fetchPartnershipPriceDropSamples(
     console.error('[alert-digest] partnership price-drop sample error:', error.message)
     return []
   }
-  return (data ?? [])
+  const dropped = (data ?? [])
     .filter((r) => {
       const drop = { previous_price: r.previous_buy_in_price, asking_price: r.buy_in_price, price_changed_at: r.buy_in_price_changed_at }
       return hasRecentPriceDrop(drop, since) && isMeaningfulPriceDrop(drop)
     })
     .slice(0, limit)
-    .map((row) => toPartnershipDigestSample(row, row.previous_buy_in_price))
+  const distances = target.icao ? await resolveRowDistances(target.icao, dropped.map((r) => r.home_airport)) : {}
+  return dropped.map((row) =>
+    toPartnershipDigestSample(row, row.previous_buy_in_price, distanceFor(target.icao, row.home_airport, distances))
+  )
 }
 
 /**
@@ -1201,7 +1254,10 @@ type SeekerSampleRow = {
   state: string | null
 }
 
-function toSeekerDigestSample(row: SeekerSampleRow): AlertDigestSample {
+function toSeekerDigestSample(
+  row: SeekerSampleRow,
+  distance?: { nm: number; fromIcao: string }
+): AlertDigestSample {
   const lookingFor =
     [row.preferred_makes?.length ? row.preferred_makes.join(', ') : null, row.preferred_models || null]
       .filter(Boolean)
@@ -1215,6 +1271,8 @@ function toSeekerDigestSample(row: SeekerSampleRow): AlertDigestSample {
     lookingFor,
     location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
     price: null,
+    distanceNm: distance?.nm,
+    fromIcao: distance?.fromIcao,
     url: `${SITE_URL}/partnerships/seeking/${row.id}`,
     id: row.id,
     type: 'seeker',
@@ -1276,7 +1334,13 @@ async function fetchNewSeekerSamples(
     const wanted = target.model.split(',').map((m) => m.trim()).filter(Boolean)
     rows = rows.filter((r) => matchesModelFilter(r.preferred_models, wanted))
   }
-  return rows.slice(0, limit).map(toSeekerDigestSample)
+  const sliced = rows.slice(0, limit)
+  // Only one unambiguous searched airport gets a distance line — a
+  // multi-airport search has no single "from" field to measure against
+  // (same restriction `resolveSeekerIcaoList` already enforces on radius).
+  const fromIcao = target.icaos && target.icaos.length === 1 ? target.icaos[0] : undefined
+  const distances = fromIcao ? await resolveRowDistances(fromIcao, sliced.map((r) => r.home_airport)) : {}
+  return sliced.map((row) => toSeekerDigestSample(row, distanceFor(fromIcao, row.home_airport, distances)))
 }
 
 // ─── Stranded-pending confirm reminder ─────────────────────────────────────────

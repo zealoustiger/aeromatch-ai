@@ -2,6 +2,65 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260721T082513Z — PASS — digest-distance-line
+- Pages: (none — backend query logic + email template only, no user-facing page changed)
+- What: **A weekly alert-digest email for a partnership or "pilot seeking" alert scoped
+  to a single airport now tells you how far each matching listing actually is** — e.g.
+  "2015 · 1,240 TTAF · Austin, TX · ~35 nm from KHWD" — instead of just naming the city.
+  Distance is the one fact a subscriber filtered on when they picked an airport + radius,
+  and the digest previously dropped it.
+- Goal: alert-experience `[goal]` (BACKLOG's 🔔 queue, P2) — a smart/honest-content
+  slice: GOAL.md's honesty bar says "only fire on genuine matches," and this closes the
+  gap where the digest showed a filtered result without the filter's own reference point.
+  New optional `distanceNm`/`fromIcao` fields on `AlertDigestSample` (`src/lib/email.ts`),
+  rendered via a shared `distanceSegment()` formatter in both the HTML `specsLine()` and
+  the plain-text specs builder. Computed server-side in the cron's
+  `fetchNewPartnershipSamples`/`fetchPartnershipPriceDropSamples`/`fetchNewSeekerSamples`
+  (`src/app/api/cron/alert-digest/route.ts`) via a new `resolveRowDistances` helper —
+  batched `resolveAirportCoords` + a newly-exported `haversineNm` (was module-private in
+  `src/lib/airports.ts`) — computed from `target.icao` (partnership; always the one field
+  the user filtered on, regardless of radius) or `target.icaos[0]` (seeker, only when
+  exactly one code — the same ambiguity restriction `resolveSeekerIcaoList` already
+  enforces on radius: several centers can't share one "from"). **Honesty gate:** a
+  multi-airport seeker search, an alert with no airport filter at all, or a row whose
+  `home_airport` doesn't resolve a real coordinate in the seeded `airports` table never
+  shows a distance line — no estimated/guessed numbers, matching this file's existing
+  `compLabel` precedent. Aircraft alerts are unaffected — there's no lat/lng radius helper
+  for aircraft today (same gap `resolveAircraftAirportState`'s own doc already names). No
+  schema/migration change.
+- Spec: nightshift/specs/20260721T082513Z-digest-distance-line.md
+- Verdict: PASS. `npx tsc --noEmit` clean; `rm -rf .next && npx next build` clean (same
+  route count, no new routes). Full `node --experimental-strip-types --test 'src/**/*.test.ts'`:
+  745/745 pass (+2 new cases in `email.test.ts` — positive "~35 nm from KHWD" render in
+  both HTML and text, and the negative honesty-gate case with no distance field showing no
+  "nm from" text at all). Served the PRODUCTION build (`npx next start -p 3902`); ran
+  `qa-smoke.mjs` explicitly against `--base http://localhost:3902` this time (an earlier
+  `--port` flag attempt was silently ignored by the script and hit a stray leftover
+  `next-server` process squatting on port 3000 from an earlier cycle instead — caught it
+  via a direct `curl` diff before treating the false 500s as real, then re-ran correctly)
+  — 6/6 pass on `/partnerships`, `/partnerships/seeking`, and the dev-only
+  `/api/dev/email-preview/alert-digest` preview route (HTTP 200, zero app-origin console
+  errors, zero horizontal overflow at 1280 + 375px). Treated as a visual cycle since the
+  new segment renders inside an existing email template — read both preview screenshots:
+  the distance line reads cleanly inline in the specs row at both viewports, no overlap,
+  on-brand type/spacing, and the second sample (no `distanceNm` set) renders identically to
+  before, confirming the honesty-gate default-off case. Also live-verified the underlying
+  haversine math against real prod data (read-only, no mutation, no email sent — same
+  precedent as `aircraft-price-drop-alerts`/`seeker-alert-multiairport` for not hitting the
+  live cron route directly since `RESEND_API_KEY` is set in this environment): resolved
+  real `KLVK`→`KOAK` airport coordinates from the live `airports` table and computed
+  19.1 nm, matching the real-world great-circle distance between those two fields. My own
+  leftover `next start -p 3902` process was killed after use; the three pre-existing stray
+  `next-server` processes (ports from earlier cycles, first flagged in
+  `seeker-alert-multiairport`/`homepage-subscriber-band`) were left untouched.
+- Screenshots: nightshift/screenshots/digest-distance-line/
+- Next: BACKLOG's alert-experience queue (batch #15) has 2 open P2 items left (multi-match
+  hero subject line for digests, one-tap "near my home field" refinement on signed-in
+  partnership/seeker capture) — pull the next highest-value one next cycle. The stray
+  `next-server` processes on ports 3000/11669/19431/21356 are worth a human kill if
+  they're not intentional — every recent cycle has had to work around them with a
+  fallback port.
+
 ## 20260721T081235Z — PASS — homepage-subscriber-band
 - Pages: /
 - What: **The homepage no longer re-pitches "want alerts?" to a visitor who already has

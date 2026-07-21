@@ -1220,6 +1220,20 @@ export type AlertDigestSample = {
    *  means no link renders for this card (no `unsubscribe_token` yet, or the
    *  subscriber already watches it). */
   watchUrl?: string
+  /** Straight-line distance, in nautical miles, from the alert's own
+   *  searched airport (`fromIcao`) to this listing's `home_airport` — set
+   *  only when the subscriber's alert targets exactly one unambiguous
+   *  airport and both endpoints resolve real coordinates (never estimated;
+   *  a multi-airport or radius-across-several-fields search omits this
+   *  entirely, same honesty floor as `compLabel`). Renders "~N nm from
+   *  {fromIcao}" in the specs line. Partnership/seeker samples only —
+   *  aircraft alerts have no ICAO airport filter to measure from. */
+  distanceNm?: number | null
+  /** The alert's own searched airport code, paired with `distanceNm` — the
+   *  specs line always names it ("from KHWD") so the distance reads as
+   *  relative to what the subscriber actually searched, not some unstated
+   *  reference point. */
+  fromIcao?: string | null
 }
 
 /**
@@ -1243,6 +1257,14 @@ export function pickBestPriceDropSample(samples: AlertDigestSample[]): AlertDige
   return best
 }
 
+/** "~35 nm from KHWD" — `null` whenever `distanceNm`/`fromIcao` aren't both
+ *  set (honesty gate lives upstream in the cron's sample fetchers; this just
+ *  formats what it's given). */
+function distanceSegment(s: AlertDigestSample): string | null {
+  if (s.distanceNm == null || !s.fromIcao) return null
+  return `~${Math.round(s.distanceNm)} nm from ${s.fromIcao}`
+}
+
 function specsLine(s: AlertDigestSample): string {
   const parts: string[] = []
   if (s.year) parts.push(String(s.year))
@@ -1250,6 +1272,8 @@ function specsLine(s: AlertDigestSample): string {
   else if (s.shareType) parts.push(s.shareType)
   else if (s.ttaf) parts.push(`${s.ttaf.toLocaleString()} TTAF`)
   if (s.location) parts.push(s.location)
+  const distance = distanceSegment(s)
+  if (distance) parts.push(distance)
   return parts.join(' &middot; ')
 }
 
@@ -1576,6 +1600,7 @@ function buildAlertDigestEmailCore(opts: {
         s.year,
         s.lookingFor ?? s.shareType ?? (s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null),
         s.location,
+        distanceSegment(s),
       ]
         .filter(Boolean)
         .join(' · ')
