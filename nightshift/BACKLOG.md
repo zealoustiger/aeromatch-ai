@@ -4220,15 +4220,22 @@ Genuinely open gaps below._
   existing `showSocialProof` line. Wired into both single-listing watch boxes
   (`/aircraft/listing/[id]`, `/partnerships/[id]`). No schema change, no new capture
   point — verified live against a real throwaway confirmed watch-alert row (deleted after).
-- **[P1][goal] Multi-airport criterion inline-editable in alert Edit/Duplicate.** Why: the
-  explicitly deferred follow-up from `seeker-alert-multiairport` (2026-07-21): a
-  2+-airport `airports=` criterion is a removable-only hidden chip in Edit and
-  **Duplicate silently drops it** (alertEditCriteria.ts:64–70 keeps single-code only).
-  Replace the one-text-field airport input with an add/remove ICAO chip field for seeker
-  (and partnership, which shares the `airport` key) alerts so 2+ codes round-trip through
-  Edit and survive Duplicate; keep `radius` pairing rules (only with exactly one code)
-  intact. Duplicate's insert is an existing capture path — keep its `alert_subscribed`
-  emission intact.
+~~- **[P1][goal] Multi-airport criterion inline-editable in alert Edit/Duplicate.**~~ ✅
+  SHIPPED via `alert-multiairport-edit` (2026-07-21) `EditableAlertTarget`'s
+  partnership/seeker variants now carry `airports: string[]` (was a single `airport`
+  string); new `AirportChipsInput` (add/remove ICAO chips, Enter/comma/blur to commit,
+  shared by `AlertEditForm` and `NewAlertForm`) replaces the old one-text-field input in
+  both Edit and Duplicate. `buildAlertCriteriaUpdate` always normalizes into the modern
+  `airports=` key (drops legacy `airport=`) and drops `radius` whenever the edited count
+  isn't exactly 1 (mirrors `SeekerFilters`/`PartnershipFilters`' own rule). **Bonus:
+  partnership alerts previously had ZERO multi-airport parsing at all** (only seeker had
+  the seeker-alert-multiairport special-case) — now both types fully round-trip. Fixed a
+  real bug this change would have introduced: `alertOverlap.ts`'s `definedEntries`/
+  `valuesEqual` treated any non-string field as "defined" via `!= null` and compared by
+  reference — an empty `airports: []` would have wrongly counted as a constraint, and
+  two content-equal arrays would never compare equal. Both fixed (empty array = no
+  constraint; order-independent/case-insensitive set comparison), covered by 4 new
+  `alertOverlap.test.ts` cases. No schema change.
 - **[P2][goal] Expose Year range as editable fields in aircraft alert Edit/Duplicate.**
   Why: `min_year`/`max_year` are fully match-honored browse filters
   (`describeAircraftFilters`, seo.ts:2263–2265) but `EXPOSED_KEYS.aircraft` is only

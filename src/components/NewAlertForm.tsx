@@ -7,6 +7,7 @@ import { createManageAlert } from '@/app/actions'
 import { track } from '@/lib/analytics'
 import type { EditableAlertTarget } from '@/lib/alertEditCriteria'
 import type { AlertFrequency } from '@/lib/alertFrequency'
+import AirportChipsInput from '@/components/AirportChipsInput'
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
@@ -32,7 +33,7 @@ interface InitialValues {
   state?: string
   minPrice?: string
   maxPrice?: string
-  airport?: string
+  airports?: string[]
   /** Present on an aircraft `EditableAlertTarget` (via `targetToFields`) but
    *  unused here — this form has no "good deals only" field of its own. */
   dealOnly?: boolean
@@ -82,7 +83,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
   const [state, setState] = useState(initial?.state ?? '')
   const [minPrice, setMinPrice] = useState(initial?.minPrice ?? '')
   const [maxPrice, setMaxPrice] = useState(initial?.maxPrice ?? '')
-  const [airport, setAirport] = useState(initial?.airport ?? '')
+  const [airports, setAirports] = useState<string[]>(initial?.airports ?? [])
 
   function reset() {
     setType(initial?.type ?? 'aircraft')
@@ -91,7 +92,7 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
     setState(initial?.state ?? '')
     setMinPrice(initial?.minPrice ?? '')
     setMaxPrice(initial?.maxPrice ?? '')
-    setAirport(initial?.airport ?? '')
+    setAirports(initial?.airports ?? [])
     setError(null)
   }
 
@@ -109,8 +110,8 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
         type === 'aircraft'
           ? { make, model, state, minPrice, maxPrice }
           : type === 'partnership'
-            ? { make, state, airport }
-            : { make, model, state, airport }
+            ? { make, state, airports }
+            : { make, model, state, airports }
       const result = await createManageAlert(type, fields, token, {
         frequency: initial?.frequency,
         priceDropOptIn: initial?.priceDropOptIn,
@@ -201,15 +202,16 @@ export default function NewAlertForm({ token, initial, source, autoOpen, onClose
             </div>
 
             {type === 'partnership' || type === 'seeker' ? (
-              <div>
-                <label className={labelClass}>Home airport</label>
-                <input
-                  type="text"
-                  value={airport}
-                  onChange={(e) => setAirport(e.target.value.toUpperCase())}
-                  placeholder="e.g. KHWD"
-                  className={inputClass}
-                />
+              <div className="col-span-2">
+                <label className={labelClass}>
+                  Home airport{airports.length > 0 ? 's' : ''}
+                  {airports.length > 0 && (
+                    <span className="ml-1 font-normal normal-case tracking-normal text-sky-600">
+                      · {airports.length} selected
+                    </span>
+                  )}
+                </label>
+                <AirportChipsInput codes={airports} onChange={setAirports} inputClassName={inputClass} />
               </div>
             ) : null}
 

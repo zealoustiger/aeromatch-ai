@@ -25,8 +25,8 @@ import { AVIONICS_FILTER_OPTIONS, parseAvionicsFilter } from '@/lib/avionicsClas
 
 export type EditableAlertTarget =
   | { type: 'aircraft'; make: string; model: string; state: string; minPrice: string; maxPrice: string; dealOnly: boolean }
-  | { type: 'partnership'; make: string; state: string; airport: string }
-  | { type: 'seeker'; make: string; model: string; state: string; airport: string }
+  | { type: 'partnership'; make: string; state: string; airports: string[] }
+  | { type: 'seeker'; make: string; model: string; state: string; airports: string[] }
 
 export interface AlertCriteriaFields {
   make?: string
@@ -34,11 +34,24 @@ export interface AlertCriteriaFields {
   state?: string
   minPrice?: string
   maxPrice?: string
-  airport?: string
+  airports?: string[]
   dealOnly?: boolean
 }
 
 const EDITABLE_PATHS = new Set(['/aircraft', '/partnerships', '/partnerships/seeking'])
+
+// Normalize free text / a comma-joined query value into a deduped list of
+// ICAO/FAA airport codes. Mirrors `SeekerFilters.tsx`/`PartnershipFilters.tsx`'s
+// identical local helper (small enough, and specific enough to each caller's
+// input shape, that a shared extraction isn't worth it yet).
+function parseAirportCodes(raw: string): string[] {
+  const out: string[] = []
+  for (const token of raw.split(/[\s,]+/)) {
+    const code = token.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (code.length >= 2 && code.length <= 4 && !out.includes(code)) out.push(code)
+  }
+  return out
+}
 
 /** Parse a `source_path` into pre-fillable form fields, or null when not editable. */
 export function parseEditableAlertTarget(raw: string | null): EditableAlertTarget | null {
@@ -61,25 +74,23 @@ export function parseEditableAlertTarget(raw: string | null): EditableAlertTarge
     }
   }
   if (p === '/partnerships/seeking') {
-    // A single-code `airports=` value (the shape the browse page's own
-    // multi-select filter now writes even for one airport) is just as
-    // editable as the legacy `airport=` field; 2+ codes can't be shown in
-    // this one text field and stay a hidden, removable criterion instead —
-    // see `buildAlertCriteriaUpdate`'s seeker branch below for how it's kept
-    // from being silently dropped on an unrelated save.
-    const airportCodes = g('airports')
-      .split(',')
-      .map((c) => c.trim().toUpperCase())
-      .filter(Boolean)
+    // `airports=` (the modern multi-select shape, 1+ codes) wins; falls back to
+    // the legacy single `airport=` field for old links/saved searches.
+    const airports = parseAirportCodes(g('airports') || g('airport'))
     return {
       type: 'seeker',
       make: g('make'),
       model: g('model'),
       state: g('state').toUpperCase(),
-      airport: airportCodes.length === 1 ? airportCodes[0] : g('airport').toUpperCase(),
+      airports,
     }
   }
-  return { type: 'partnership', make: g('make'), state: g('state').toUpperCase(), airport: g('airport').toUpperCase() }
+  return {
+    type: 'partnership',
+    make: g('make'),
+    state: g('state').toUpperCase(),
+    airports: parseAirportCodes(g('airports') || g('airport')),
+  }
 }
 
 /** A positive-integer price string, or undefined for anything else (blank, 0, negative, junk). */
@@ -111,6 +122,20 @@ export function buildAlertCriteriaUpdate(
     else params.delete(key)
   }
 
+  // Writes the (deduped, uppercased) airport list into the modern `airports=`
+  // key — same normalization the browse-page multi-select filters apply, even
+  // for a single code — and drops the legacy `airport=` key plus `radius`
+  // (only meaningful paired with exactly one airport, mirrors
+  // `SeekerFilters`/`PartnershipFilters`' own `setAirports`) whenever the
+  // count isn't exactly 1.
+  const setAirports = (codes: string[] | undefined) => {
+    const clean = [...new Set((codes ?? []).map((c) => c.trim().toUpperCase()).filter(Boolean))]
+    params.delete('airport')
+    if (clean.length) params.set('airports', clean.join(','))
+    else params.delete('airports')
+    if (clean.length !== 1) params.delete('radius')
+  }
+
   if (type === 'aircraft') {
     set('make', fields.make?.trim())
     set('model', fields.model?.trim())
@@ -121,34 +146,12 @@ export function buildAlertCriteriaUpdate(
   } else if (type === 'partnership') {
     set('make', fields.make?.trim())
     set('state', fields.state?.trim().toUpperCase())
-    set('airport', fields.airport?.trim().toUpperCase())
+    setAirports(fields.airports)
   } else {
     set('make', fields.make?.trim())
     set('model', fields.model?.trim())
     set('state', fields.state?.trim().toUpperCase())
-
-    // Original (pre-edit) multi-airport code count, read BEFORE any mutation
-    // below — distinguishes "the field is blank because I never had a
-    // 2+-airport criterion to show" from "the field is blank because that
-    // criterion exists but this single-airport text field can't display it."
-    const originalAirportCodes = (params.get('airports') ?? '').split(',').map((c) => c.trim()).filter(Boolean)
-    const newAirport = fields.airport?.trim().toUpperCase()
-    if (newAirport) {
-      // An entered/edited single airport always wins — write the legacy key
-      // (understood identically to `airports=` by every matcher) and clear
-      // any multi-airport criterion it replaces.
-      params.set('airport', newAirport)
-      params.delete('airports')
-    } else if (originalAirportCodes.length <= 1) {
-      // No hidden multi-airport criterion to protect — a blank field really
-      // does mean "clear the location."
-      params.delete('airport')
-      params.delete('airports')
-    }
-    // else: fields.airport is blank only because the original criterion was
-    // a 2+-airport `airports=` filter this field can't show — leave both
-    // keys untouched rather than silently dropping/widening it (the same
-    // trap `seeker-alert-location-edit` fixed for state/airport).
+    setAirports(fields.airports)
   }
 
   const qsOut = params.toString()
@@ -187,16 +190,16 @@ export function computeWidenCandidate(target: EditableAlertTarget): WidenCandida
     return null
   }
   if (target.type === 'partnership') {
-    if (target.airport) {
+    if (target.airports.length) {
       const stateName = target.state ? STATE_NAMES[target.state] : undefined
       return {
-        fields: { make: target.make, state: target.state, airport: '' },
+        fields: { make: target.make, state: target.state, airports: [] },
         description: stateName ? `Search all of ${stateName}` : 'Search every location',
       }
     }
     if (target.state) {
       return {
-        fields: { make: target.make, state: '', airport: target.airport },
+        fields: { make: target.make, state: '', airports: target.airports },
         description: 'Search every state',
       }
     }
@@ -236,27 +239,27 @@ function describeContext(type: EditableAlertTarget['type'], params: URLSearchPar
   }
   if (type === 'partnership') {
     const make = params.get('make')?.trim() || undefined
-    const airport = params.get('airport')?.trim().toUpperCase() || undefined
+    const airports = parseAirportCodes(params.get('airports') || params.get('airport') || '')
     const stateCode = params.get('state')?.trim().toUpperCase()
     const stateName = stateCode ? STATE_NAMES[stateCode] : undefined
-    const locationClause = airport ? `near ${airport}` : stateName ? `in ${stateName}` : undefined
+    const locationClause = airports.length ? `near ${airports.join(', ')}` : stateName ? `in ${stateName}` : undefined
     return [make, locationClause].filter(Boolean).join(' ') || null
   }
   // seeker
   const make = params.get('make')?.trim() || undefined
   const model = params.get('model')?.trim() || undefined
-  const airport = params.get('airport')?.trim().toUpperCase() || undefined
+  const airports = parseAirportCodes(params.get('airports') || params.get('airport') || '')
   const stateCode = params.get('state')?.trim().toUpperCase()
   const stateName = stateCode ? STATE_NAMES[stateCode] : undefined
-  const locationClause = airport ? `near ${airport}` : stateName ? `in ${stateName}` : undefined
+  const locationClause = airports.length ? `near ${airports.join(', ')}` : stateName ? `in ${stateName}` : undefined
   return [make, model, locationClause].filter(Boolean).join(' ') || null
 }
 
 /** The form-exposed query-param keys per type — everything else on `source_path` is "hidden." */
 const EXPOSED_KEYS: Record<EditableAlertTarget['type'], Set<string>> = {
   aircraft: new Set(['make', 'model', 'state', 'min_price', 'max_price', 'deal']),
-  partnership: new Set(['make', 'state', 'airport']),
-  seeker: new Set(['make', 'model', 'state', 'airport']),
+  partnership: new Set(['make', 'state', 'airport', 'airports']),
+  seeker: new Set(['make', 'model', 'state', 'airport', 'airports']),
 }
 
 /** Rebuilds the `AlertCriteriaFields` the edit form would submit for an UNCHANGED target — used to round-trip its own exposed fields when only a hidden param is being removed. */
@@ -265,9 +268,9 @@ export function targetToFields(target: EditableAlertTarget): AlertCriteriaFields
     return { make: target.make, model: target.model, state: target.state, minPrice: target.minPrice, maxPrice: target.maxPrice, dealOnly: target.dealOnly }
   }
   if (target.type === 'partnership') {
-    return { make: target.make, state: target.state, airport: target.airport }
+    return { make: target.make, state: target.state, airports: target.airports }
   }
-  return { make: target.make, model: target.model, state: target.state, airport: target.airport }
+  return { make: target.make, model: target.model, state: target.state, airports: target.airports }
 }
 
 export interface HiddenCriterion {
@@ -327,13 +330,6 @@ function labelForHiddenParam(key: string, value: string): string | null {
     // this edit form doesn't expose (only aircraft/seeker targets show a Model field).
     case 'model':
       return `model ${trimmed}`
-    // A 2+-airport seeker filter (see `parseEditableAlertTarget`'s seeker branch) —
-    // a single code is already shown via the exposed Airport field, so this only
-    // ever renders for the case the field genuinely can't display.
-    case 'airports': {
-      const codes = trimmed.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean)
-      return codes.length > 1 ? `near ${codes.join(', ')}` : null
-    }
     default:
       return `${key}: ${trimmed}`
   }
