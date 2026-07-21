@@ -9,6 +9,7 @@ import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { SEO_MAKES, getMakeBySlug, getPartnershipMakeFaqs, getPartnershipMakeOverview, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
@@ -75,6 +76,7 @@ export default async function MakePartnershipsPage({ params }: Props) {
   // this page can never disagree with it. `listings` above isn't reused here since
   // it isn't guaranteed to be the exact unpaginated total.
   const matchCount = await countPartnershipsByMake(entry.filter)
+  const alertCounts = await getAlertCounts([entry.name])
   const itemListJsonLd = buildPartnershipItemListJsonLd(listings, {
     name: `${entry.name} aircraft partnerships`,
     url: `${SITE_URL}/partnerships/make/${entry.slug}`,
@@ -193,6 +195,7 @@ export default async function MakePartnershipsPage({ params }: Props) {
         noun="partnership"
         source="partnership_make_page"
         matchCount={matchCount}
+        alertCount={alertCounts.get(entry.name)}
       />
 
       {/* Co-ownership FAQ (curated makes only) */}

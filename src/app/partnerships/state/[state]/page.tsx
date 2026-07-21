@@ -8,6 +8,7 @@ import ModelFaq from '@/components/ModelFaq'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import PartnershipResourceLinks from '@/components/PartnershipResourceLinks'
 import AlertSignup from '@/components/AlertSignup'
+import { getAlertCounts } from '@/lib/alertCounts'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { STATE_NAMES, STATE_CODES, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, getPartnershipStateFaqs, getPartnershipStateOverview } from '@/lib/seo'
 import { getPartnershipListings, countPartnershipsByState } from '@/lib/partnershipsQuery'
@@ -73,6 +74,7 @@ export default async function StatePartnershipsPage({ params }: Props) {
   // this page can never disagree with it. `listings` above isn't reused here since
   // it isn't guaranteed to be the exact unpaginated total.
   const matchCount = await countPartnershipsByState(code)
+  const alertCounts = await getAlertCounts([name])
 
   // Curated states only (priority ca/tx/fl + a few distinctive GA states); others
   // render no FAQ — never templated boilerplate across all 50 states (GOAL.md).
@@ -158,6 +160,7 @@ export default async function StatePartnershipsPage({ params }: Props) {
         noun="partnership"
         source="partnership_state_page"
         matchCount={matchCount}
+        alertCount={alertCounts.get(name)}
       />
 
       {/* Co-ownership FAQ (curated states only) */}
