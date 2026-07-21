@@ -2,6 +2,13 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 2026-07-21T11:45:53Z — DRAIN SUMMARY
+- Cycles this run: 7 (PASS 5 / FAIL 1 / ABORT 1)
+- Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
+- Night spend so far: $125.8235 of $120 cap
+- Stopped because: night budget cap ($120)
+- Run: 20260721T101611Z
+
 ## 20260721T114154Z — PASS — alert-avionics-grade-q-edit
 - Pages: /alerts/manage
 - What: **Editing or duplicating an aircraft alert now shows its avionics (glass panel, ADS-B, autopilot, WAAS, GPS), listing-quality grade (A/B/C), and free-text keyword criteria as real, editable checkboxes/fields** — instead of only removable "hidden criterion" chips (or, for a legacy grade filter, nothing at all). A "Cessna 172 with glass panel, grade A, matching 'low time'" alert used to only let you delete those criteria; now you can change them too, and Duplicate carries them over.
