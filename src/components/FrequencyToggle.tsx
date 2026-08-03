@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Clock } from 'lucide-react'
+import { Clock, Zap } from 'lucide-react'
 import { updateAlertFrequency, updateAlertDigestDay } from '@/app/actions'
 import { normalizeDigestDay, type AlertFrequency } from '@/lib/alertFrequency'
 
@@ -16,18 +16,21 @@ const DAY_OPTIONS = [
 ]
 
 const CYCLE: Record<AlertFrequency, AlertFrequency> = {
+  instant: 'daily',
   daily: 'weekly',
   weekly: 'monthly',
-  monthly: 'daily',
+  monthly: 'instant',
 }
 
 const LABEL: Record<AlertFrequency, string> = {
+  instant: 'Instant',
   daily: 'Daily',
   weekly: 'Weekly',
   monthly: 'Monthly',
 }
 
 const CLASSES: Record<AlertFrequency, string> = {
+  instant: 'bg-amber-50 text-amber-700 hover:bg-amber-100',
   daily: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
   weekly: 'bg-slate-50 text-slate-500 hover:bg-slate-100',
   monthly: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100',
@@ -104,12 +107,17 @@ export default function FrequencyToggle({
         type="button"
         onClick={toggle}
         disabled={isPending}
-        title={`Switch to a ${CYCLE[frequency]} digest`}
+        title={`Switch to ${LABEL[CYCLE[frequency]]}`}
         className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${CLASSES[frequency]}`}
       >
-        <Clock className="h-3.5 w-3.5" />
+        {frequency === 'instant' ? <Zap className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
         {LABEL[frequency]}
       </button>
+      {frequency === 'instant' ? (
+        // Honest cadence copy — never claim real-time. The instant cron sweeps
+        // roughly every 15 minutes (vercel.json: /api/cron/alert-instant).
+        <span className="shrink-0 text-xs text-slate-400">checked about every 15 min</span>
+      ) : null}
       {frequency === 'weekly' ? (
         <label className="inline-flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
           <span className="sr-only">Digest day</span>

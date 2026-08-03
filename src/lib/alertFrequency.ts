@@ -13,9 +13,16 @@
  * so this is testable without the clock — mirrors `priceDrops.ts`.
  */
 
-export type AlertFrequency = 'daily' | 'weekly' | 'monthly'
+export type AlertFrequency = 'instant' | 'daily' | 'weekly' | 'monthly'
 
+// `instant` is NOT gated by an elapsed-days interval — it's the fastest rung,
+// owned by the near-real-time `/api/cron/alert-instant` route (checks ~every 15
+// min). Its interval of 0 makes `isDigestDue` return true on every run once
+// there's a `last_digest_at` watermark, which is exactly what that route wants;
+// the daily digest cron never calls `isDigestDue` for an instant alert (it
+// skips them outright, so they can't double-send).
 const INTERVAL_DAYS: Record<AlertFrequency, number> = {
+  instant: 0,
   daily: 1,
   weekly: 7,
   monthly: 28,
@@ -23,7 +30,13 @@ const INTERVAL_DAYS: Record<AlertFrequency, number> = {
 
 /** Normalizes any stored/fallback value (including an un-migrated `undefined`) to a valid frequency. */
 export function normalizeFrequency(value: string | null | undefined): AlertFrequency {
-  return value === 'daily' ? 'daily' : value === 'monthly' ? 'monthly' : 'weekly'
+  return value === 'daily'
+    ? 'daily'
+    : value === 'monthly'
+      ? 'monthly'
+      : value === 'instant'
+        ? 'instant'
+        : 'weekly'
 }
 
 const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']
@@ -54,7 +67,13 @@ export function intervalDaysFor(frequency: AlertFrequency): number {
  * cadences.
  */
 export function nextLighterFrequency(frequency: AlertFrequency): AlertFrequency {
-  return frequency === 'daily' ? 'weekly' : frequency === 'weekly' ? 'monthly' : 'monthly'
+  return frequency === 'instant'
+    ? 'daily'
+    : frequency === 'daily'
+      ? 'weekly'
+      : frequency === 'weekly'
+        ? 'monthly'
+        : 'monthly'
 }
 
 /** A weekly digest is "busy" enough to honestly suggest daily cadence at this
@@ -117,7 +136,13 @@ export function describeLastDigest(
   digestDay?: number | null
 ): string {
   const dayName = frequency === 'weekly' ? digestDayName(normalizeDigestDay(digestDay)) : null
-  const cadence = dayName ? `checks weekly, ${dayName}` : `checks ${frequency}`
+  // Honest instant framing — it's a ~15-min sweep, not a daily/weekly "check".
+  const cadence =
+    frequency === 'instant'
+      ? 'checked about every 15 min'
+      : dayName
+        ? `checks weekly, ${dayName}`
+        : `checks ${frequency}`
   if (!lastDigestAt) return `Nothing sent yet — ${cadence}`
 
   const sentDate = new Date(lastDigestAt)
@@ -150,6 +175,11 @@ export function describeNextDigest(
 ): string {
   const now = new Date(nowIso)
   if (Number.isNaN(now.getTime())) return `Next digest: ~${frequency}`
+
+  // Instant isn't a day-scan cadence — the ~15-min sweep would resolve to a
+  // misleading "tomorrow morning" below (its interval is 0, so isDigestDue is
+  // always true). Name the real window instead.
+  if (frequency === 'instant') return 'Next check: ~within 15 min'
 
   for (let days = 1; days <= 40; days++) {
     const candidate = new Date(now)

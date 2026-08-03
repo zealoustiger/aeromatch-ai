@@ -19,7 +19,8 @@ const NOW = Date.UTC(2026, 6, 11) // fixed "now" so the math is deterministic
 const nowIso = new Date(NOW).toISOString()
 const daysAgo = (d: number) => new Date(NOW - d * DAY_MS).toISOString()
 
-test('normalizeFrequency: "daily"/"monthly" pass through, anything else falls back to weekly', () => {
+test('normalizeFrequency: "instant"/"daily"/"monthly" pass through, anything else falls back to weekly', () => {
+  assert.equal(normalizeFrequency('instant'), 'instant')
   assert.equal(normalizeFrequency('daily'), 'daily')
   assert.equal(normalizeFrequency('weekly'), 'weekly')
   assert.equal(normalizeFrequency('monthly'), 'monthly')
@@ -28,16 +29,34 @@ test('normalizeFrequency: "daily"/"monthly" pass through, anything else falls ba
   assert.equal(normalizeFrequency('bogus'), 'weekly')
 })
 
-test('nextLighterFrequency: daily→weekly, weekly→monthly, monthly stays monthly (no lighter rung)', () => {
+test('nextLighterFrequency: instant→daily, daily→weekly, weekly→monthly, monthly stays monthly (no lighter rung)', () => {
+  assert.equal(nextLighterFrequency('instant'), 'daily')
   assert.equal(nextLighterFrequency('daily'), 'weekly')
   assert.equal(nextLighterFrequency('weekly'), 'monthly')
   assert.equal(nextLighterFrequency('monthly'), 'monthly')
 })
 
-test('intervalDaysFor: daily=1, weekly=7, monthly=28', () => {
+test('intervalDaysFor: instant=0, daily=1, weekly=7, monthly=28', () => {
+  assert.equal(intervalDaysFor('instant'), 0)
   assert.equal(intervalDaysFor('daily'), 1)
   assert.equal(intervalDaysFor('weekly'), 7)
   assert.equal(intervalDaysFor('monthly'), 28)
+})
+
+test('isDigestDue: instant is always due once a watermark exists (0-day interval); null → due', () => {
+  assert.equal(isDigestDue(null, 'instant', nowIso), true)
+  assert.equal(isDigestDue(daysAgo(0), 'instant', nowIso), true)
+  // Even a stamp a few minutes old is "due" for instant — the ~15-min cron owns
+  // the real gating (it only sends when there's a genuine new match).
+  const fiveMinAgo = new Date(NOW - 5 * 60 * 1000).toISOString()
+  assert.equal(isDigestDue(fiveMinAgo, 'instant', nowIso), true)
+})
+
+test('describeLastDigest / describeNextDigest: instant gets honest ~15-min copy, not a day-scan', () => {
+  assert.equal(describeLastDigest(null, 'instant'), 'Nothing sent yet — checked about every 15 min')
+  assert.equal(describeLastDigest(daysAgo(2), 'instant'), 'Last email Jul 9 · checked about every 15 min')
+  assert.equal(describeNextDigest(daysAgo(2), 'instant', nowIso), 'Next check: ~within 15 min')
+  assert.equal(describeNextDigest(null, 'instant', nowIso), 'Next check: ~within 15 min')
 })
 
 test('never sent before (null last_digest_at) → always due, regardless of frequency', () => {
