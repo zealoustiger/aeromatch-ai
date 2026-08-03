@@ -53,7 +53,7 @@ import { shouldSendCaptureSelfCheckAlert, shouldSendOnRedTransition } from '@/li
 import { runDeliverabilityDnsCheck, type DnsVerdict } from '@/lib/deliverabilityDnsCheck'
 import { isSweepableTestAlertEmail, sweepCutoffIso } from '@/lib/testAlertSweep'
 
-const MAX_DIGEST_SAMPLES = 3
+export const MAX_DIGEST_SAMPLES = 3
 const TEST_ALERT_SWEEP_MAX_ROWS = 500
 
 export const dynamic = 'force-dynamic'
@@ -67,7 +67,7 @@ const MIN_DIGEST_INTERVAL_DAYS = intervalDaysFor('daily')
 
 // ─── Source-path parsing ─────────────────────────────────────────────────────
 
-type AlertTarget =
+export type AlertTarget =
   | {
       type: 'aircraft'
       make?: string
@@ -172,7 +172,7 @@ const numOrUndef = (v: string | undefined): number | undefined => {
  * filter struct that can drive a count query. Returns null for paths we can't
  * meaningfully match (mission presets, unknown families).
  */
-function parseSourcePath(raw: string | null): AlertTarget | null {
+export function parseSourcePath(raw: string | null): AlertTarget | null {
   const [pathOnly, qs] = (raw ?? '').split('?')
   const p = pathOnly.toLowerCase().replace(/\/$/, '') || '/'
   const target = resolveTarget(p, qs)
@@ -455,7 +455,7 @@ function distanceFor(
  *  produces the target, so every aircraft filter site below sees the resolved
  *  `airportState` already set. No-ops when the code isn't in our `airports`
  *  table, matching the browse page's own graceful fallback. */
-async function resolveAircraftAirportState(
+export async function resolveAircraftAirportState(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'aircraft' }>
 ): Promise<void> {
@@ -762,7 +762,7 @@ async function countNewSeekers(
   return rows.filter((r) => matchesModelFilter(r.preferred_models as string | null, wanted)).length
 }
 
-async function countNew(
+export async function countNew(
   supabase: ReturnType<typeof createAdminClient>,
   target: AlertTarget,
   since: string
@@ -835,7 +835,7 @@ function toDigestSample(
  * (partnership/seeker samples never get this link). Cheap no-op (no query) for
  * any group with no aircraft samples, which is most partnership/seeker sends.
  */
-async function attachWatchLinks(
+export async function attachWatchLinks(
   supabase: ReturnType<typeof createAdminClient>,
   email: string,
   unsubToken: string | null,
@@ -897,7 +897,7 @@ async function fetchAircraftFamilyPriceMap(
 /** Lazy, request-scoped memoization so a cron run whose due alerts never
  *  touch `fetchNewAircraftSamples` (e.g. all partnership/seeker alerts, or
  *  an aircraft alert with zero new matches) never pays for this fetch. */
-function familyPriceMapGetter(supabase: ReturnType<typeof createAdminClient>): () => Promise<Map<string, number[]>> {
+export function familyPriceMapGetter(supabase: ReturnType<typeof createAdminClient>): () => Promise<Map<string, number[]>> {
   let cached: Promise<Map<string, number[]>> | null = null
   return () => {
     if (!cached) cached = fetchAircraftFamilyPriceMap(supabase)
@@ -911,7 +911,7 @@ function familyPriceMapGetter(supabase: ReturnType<typeof createAdminClient>): (
  *  to each sample (see `toDigestSample`) — omitted entirely (no fetch, no
  *  line) by callers that don't want the comp context, e.g. price-drop
  *  samples, which already show a before/after price. */
-async function fetchNewAircraftSamples(
+export async function fetchNewAircraftSamples(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'aircraft' }>,
   since: string,
@@ -1093,7 +1093,7 @@ function toPartnershipDigestSample(
 /** Up to `limit` real, newly-listed partnerships matching `target` since
  *  `since`, for the digest email's preview cards. Mirrors
  *  `countNewPartnerships`'s filters. */
-async function fetchNewPartnershipSamples(
+export async function fetchNewPartnershipSamples(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'partnership' }>,
   since: string,
@@ -1289,7 +1289,7 @@ const SEEKER_SAMPLE_COLS = 'id, title, preferred_makes, preferred_models, home_a
  *  selects the columns a preview card needs instead of a head-only count. No
  *  DB-side limit before the JS model filter, same as `countNewSeekers` — cold
  *  start volumes make this cheap; sliced to `limit` after filtering. */
-async function fetchNewSeekerSamples(
+export async function fetchNewSeekerSamples(
   supabase: ReturnType<typeof createAdminClient>,
   target: Extract<AlertTarget, { type: 'seeker' }>,
   since: string,
@@ -1482,7 +1482,7 @@ async function sendStrandedPendingReminders(
  * pre-existing `last_digest_at` stamp is never blocked by the new column
  * (same graceful-fallback precedent as every other `alerts.*` column).
  */
-async function markDigestSent(
+export async function markDigestSent(
   supabase: ReturnType<typeof createAdminClient>,
   rows: { id: string; digest_sends_count?: number }[],
   nowIso: string
@@ -2062,6 +2062,15 @@ export async function GET(req: NextRequest) {
 
   for (const alert of alerts ?? []) {
     const frequency = normalizeFrequency(alert.frequency)
+    // `instant` alerts are owned entirely by the /api/cron/alert-instant route
+    // (near-real-time new-listing sends, ~every 15 min). The daily cron must
+    // never also process them, or the same listings double-send — this is the
+    // never-spam guardrail. Skip before the due-check so an instant alert can
+    // never fall through to a daily/weekly digest send.
+    if (frequency === 'instant') {
+      notDue++
+      continue
+    }
     if (!isDigestDue(alert.last_digest_at, frequency, nowIso, alert.digest_day)) {
       notDue++
       continue

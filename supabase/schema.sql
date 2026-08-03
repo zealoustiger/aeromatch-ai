@@ -1029,6 +1029,31 @@ alter table alert_cron_runs add column if not exists send_failures int not null 
 alter table alerts drop constraint if exists alerts_frequency_check;
 alter table alerts add constraint alerts_frequency_check check (frequency in ('daily', 'weekly', 'monthly'));
 
+-- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_frequency_instant
+-- Widens the `frequency` CHECK constraint (above) to ALSO allow `'instant'` — a
+-- real near-real-time cadence backed by the new `/api/cron/alert-instant` route
+-- (vercel.json: `*/15 * * * *`), which sends new-listing matches within ~15 min
+-- instead of once a day. Additive in effect (only widens the accepted value set,
+-- no data touched); the column and its default ('weekly') are unchanged. Apply
+-- in the Supabase SQL editor.
+--
+-- ⚠️  This hits the SHARED prod/staging DB — the Night Shift loop must NOT apply
+-- it. Until a human applies it, every write path that sets `frequency: 'instant'`
+-- (the /alerts/manage FrequencyToggle's new "Instant" option, and the
+-- unsubscribe-recovery/nudge paths if they ever target it) fails the CHECK and
+-- retries dropping the `frequency` key — same graceful-fallback the `'monthly'`
+-- migration above documents (the error message names the constraint
+-- `alerts_frequency_check`, which contains "frequency", so the existing
+-- drop-and-retry logic in `updateAlertFrequency` / `/api/alerts/frequency`
+-- already covers it with no app-code change). The row still saves, just keeps
+-- whatever cadence it already had — so selecting "Instant" is an inert no-op,
+-- never an error, and the instant cron simply finds zero `frequency='instant'`
+-- rows and early-outs at 200. Vercel PLAN NOTE: a `*/15` cron needs a Pro-tier
+-- Vercel plan (Hobby restricts crons to once-daily); confirm/upgrade the plan
+-- before relying on the 15-min cadence — see the backlog item's deployment note.
+alter table alerts drop constraint if exists alerts_frequency_check;
+alter table alerts add constraint alerts_frequency_check check (frequency in ('instant', 'daily', 'weekly', 'monthly'));
+
 -- ⚠️  HUMAN ACTION REQUIRED — migration: alerts_digest_sends_count
 -- Counts real digest sends per alert (incremented by the cron alongside its existing
 -- `last_digest_at` stamp) — the missing "have we actually mailed this address enough
