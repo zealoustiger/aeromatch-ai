@@ -166,6 +166,13 @@ export default function AlertSignup({
       : `new listings appear. No spam — just relevant listings.`
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  // Focus target for the post-subscribe confirmation. When a subscribe completes,
+  // the form/button the user was on unmounts and native focus falls back to
+  // <body> — a keyboard/screen-reader user loses their place. Moving focus to the
+  // confirmation heading takes them straight to the success message (complements
+  // the already-present role="status" aria-live announcement). Only ever fired by
+  // the submitted transition below, never by the already-subscribed on-mount states.
+  const confirmHeadingRef = useRef<HTMLHeadingElement>(null)
   const [errorMsg, setErrorMsg] = useState('')
   // Set from the subscribe result when this exact alert is a strict subset of
   // one the subscriber already has confirmed (see lib/alertOverlap.ts's
@@ -395,6 +402,14 @@ export default function AlertSignup({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Move keyboard/SR focus to the confirmation heading the moment a subscribe
+  // completes (submitted flips true only via the three subscribe handlers). The
+  // already-subscribed on-mount states (existingAlert/locallySubscribed) never
+  // set `submitted`, so this can't steal focus on page load.
+  useEffect(() => {
+    if (submitted) confirmHeadingRef.current?.focus()
+  }, [submitted])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (pending) return
@@ -543,8 +558,11 @@ export default function AlertSignup({
     }
     // Refresh the bounced heads-up with the resend's own read — a resend can
     // be the first time this exact address's bounce status is known (e.g. the
-    // original send's bounce webhook lands between submit and resend).
-    setBouncedHint(!!result.bouncedHint)
+    // original send's bounce webhook lands between submit and resend). Read via
+    // `'bouncedHint' in result` so the success branch narrows cleanly off the
+    // `{ error } | { ok, bouncedHint }` union (the truthy `result.error` guard
+    // above can't exclude an empty-string error at the type level).
+    setBouncedHint('bouncedHint' in result && !!result.bouncedHint)
     setResendState('sent')
   }
 
@@ -586,7 +604,13 @@ export default function AlertSignup({
         <div role="status" aria-live="polite" className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
-            <h2 className="text-base font-semibold text-slate-900">You&rsquo;re set — alerts are on.</h2>
+            <h2
+              ref={confirmHeadingRef}
+              tabIndex={-1}
+              className="rounded text-base font-semibold text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2"
+            >
+              You&rsquo;re set — alerts are on.
+            </h2>
             <p className="mt-1 text-sm text-slate-600">
               We&rsquo;ll email {signedInEmail} the moment {doneCopy}
             </p>
@@ -611,7 +635,13 @@ export default function AlertSignup({
         <div role="status" aria-live="polite" className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sky-600" />
           <div>
-            <h2 className="text-base font-semibold text-slate-900">Almost there — check your inbox.</h2>
+            <h2
+              ref={confirmHeadingRef}
+              tabIndex={-1}
+              className="rounded text-base font-semibold text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2"
+            >
+              Almost there — check your inbox.
+            </h2>
             <p className="mt-1 text-sm text-slate-600">
               We just emailed you a confirmation link. Click it to start getting alerts when
               {' '}{doneCopy}
