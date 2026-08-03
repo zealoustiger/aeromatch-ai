@@ -33,7 +33,15 @@ export interface PopularChip {
   sourcePath: string
   noun: 'aircraft' | 'partnership' | 'seeker'
   count: number
+  /** Distinct confirmed subscribers on this exact alert — set by the server ONLY
+   *  when it honestly clears `MIN_CHIP_WATCHERS_TO_SHOW` (see page.tsx). Absent
+   *  otherwise, so the chip shows no social-proof line rather than a weak/fake one. */
+  watchers?: number
 }
+
+/** A rendered interest chip — a curated `PopularChip` (may carry a `watchers`
+ *  count) or a broad catch-all `BaseInterest` (never does). */
+type LandingInterest = Interest & { watchers?: number }
 
 interface Props {
   /** Server-verified popular alert chips (see `page.tsx`) — honesty-gated, may be
@@ -47,7 +55,7 @@ interface Props {
 }
 
 export default function AlertsLanding({ popularChips = [], samplesByPath = {} }: Props) {
-  const interests: Interest[] = [
+  const interests: LandingInterest[] = [
     BASE_INTERESTS[0],
     ...popularChips.map((c) => ({
       label: c.label,
@@ -55,6 +63,7 @@ export default function AlertsLanding({ popularChips = [], samplesByPath = {} }:
       sourcePath: c.sourcePath,
       noun: c.noun,
       source: 'alerts_landing_popular',
+      watchers: c.watchers,
     })),
     ...BASE_INTERESTS.slice(1),
   ]
@@ -95,6 +104,11 @@ export default function AlertsLanding({ popularChips = [], samplesByPath = {} }:
               }
             >
               {it.label}
+              {it.watchers ? (
+                <span className={'ml-1.5 font-normal ' + (i === sel ? 'text-sky-100' : 'text-slate-400')}>
+                  · {it.watchers} watching
+                </span>
+              ) : null}
             </button>
           ))}
         </div>

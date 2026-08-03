@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { SITE_URL, SITE_NAME } from '@/lib/seo'
 import AlertsLanding, { type PopularChip } from '@/components/AlertsLanding'
 import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
+import { getChipWatcherCounts, MIN_CHIP_WATCHERS_TO_SHOW } from '@/lib/alertChipWatcherCounts'
 import type { AlertDigestSample } from '@/lib/email'
 import { BASE_INTEREST_PATHS } from '@/lib/alertsLandingInterests'
 
@@ -72,9 +73,21 @@ async function getPopularChips(): Promise<{ chips: PopularChip[]; samplesByPath:
 
 export default async function AlertsPage() {
   const { chips: popularChips, samplesByPath } = await getPopularChips()
+
+  // Honesty-gated social proof: attach a real distinct-subscriber count to a
+  // curated chip only when it clears MIN_CHIP_WATCHERS_TO_SHOW. Counts are read
+  // service-side (the `alerts` table holds PII, no public SELECT); only the
+  // integer ever reaches the client — never who subscribed. Fails soft to no
+  // count (empty map), so a DB hiccup just drops the line, never breaks the page.
+  const watcherCounts = await getChipWatcherCounts(popularChips.map((c) => c.sourcePath))
+  const chipsWithWatchers: PopularChip[] = popularChips.map((c) => {
+    const n = watcherCounts.get(c.sourcePath) ?? 0
+    return n >= MIN_CHIP_WATCHERS_TO_SHOW ? { ...c, watchers: n } : c
+  })
+
   return (
     <div className="ch-surface min-h-screen">
-      <AlertsLanding popularChips={popularChips} samplesByPath={samplesByPath} />
+      <AlertsLanding popularChips={chipsWithWatchers} samplesByPath={samplesByPath} />
     </div>
   )
 }
