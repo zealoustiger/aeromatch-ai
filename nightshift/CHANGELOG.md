@@ -2,6 +2,17 @@
 
 Newest first. One entry per cycle. The loop appends here; you read it over coffee.
 
+## 20260803T074336Z — ABORT — none — plan needed
+- Pages: (none — no build this cycle)
+- What: Orient found no buildable item in any tier of the strict cascade, so this cycle did not branch or build. It is a signal to the drain to run a **plan pass** (Opus/Fable via `PLAN_TASK.md`) to refill the alert-experience `[goal]` queue.
+- Cascade audit (all tiers empty):
+  - `[bug]`: none open. The "real aircraft photos missing" item is data-population, not code. Orient (BACKLOG + CHANGELOG + scoreboard) surfaced no new console error / 375px overflow / broken flow.
+  - `[want]`: the one `[P1][want]` (Save-this-search magic-link auth-wall reconcile, BACKLOG:135) is explicitly a bigger product call needing a human decision; its one buildable sub-item already shipped (`auth-savesearch-concrete-copy`). Nothing buildable.
+  - `[goal]` (alert lane): **genuinely exhausted** — every `[P1]/[P2][goal]` item across BACKLOG lines 126–4391 (curated section + all 17 Fable planner batches) is struck ✅ SHIPPED. Confirmed by direct grep, not just the changelog note. The two cycles just shipped this run (`alert-instant-cron`, `alert-capture-focus-confirmation`) were the last open slices.
+  - `[goal]` (secondary pillars, now permitted per BACKLOG:4394 since the alert queue is exhausted): Pillar 1's only open item ("Collapse post flow to one smart screen", BACKLOG:4412) is annotated "already effectively true today" and asks the human to either run a "measure clicks-to-publish" pass or mark it done — a human decision, not a clean additive slice. Pillars 2 & 3 have only a `[HUMAN-BLOCKED]` item. Nothing buildable without inventing scope.
+- Why ABORT not build: per RUNBOOK step 2, an all-tiers-empty execution cycle must NOT invent goal tasks inline — ideation routes to the dedicated plan pass on the smart model. No `[bug]` to override.
+- Next (for the plan pass): mine the "not done, intentionally" follow-ups flagged in recent shipped alert items for the next tagged `[P1][goal]` batch — e.g. extend the new `alert-instant` cron to price-drop matches (currently new-listings only); offer the Instant cadence at capture time in `AlertSignup` (manage-toggle only today, and gated on the pending `alerts.frequency` migration being applied); make `alertMatchCounts.ts` honor airport/state for seeker/partnership alerts so the "N match right now" line on `/alerts/manage` is honest for those; add a token-scoped "Manage alerts" link to the confirm email; add the "nearby state" cross-sell suggestion type on `/alerts/status`. Also two pending human actions carried from this run: apply the additive `alerts.frequency` ('instant') migration + confirm Vercel Pro-tier for the `*/15` cron.
+
 ## 20260803T072958Z — PASS — alert-capture-focus-confirmation
 - Pages: /alerts, /aircraft (the shared `AlertSignup` capture box, present on most listing/browse/make/model/state pages)
 - What: **Setting an alert now takes keyboard and screen-reader users straight to the "Almost there — check your inbox" confirmation instead of silently dropping them at the top of the page.** When you subscribe, the email field/button you were on disappears; before this, browser focus fell back to `<body>`, so a keyboard/SR user lost their place and had to hunt for the result. Now focus moves to the confirmation heading itself (which is also already announced aloud via the existing `role="status"` live region). Purely an accessibility polish — no copy, no new field, nothing changes for mouse users.
