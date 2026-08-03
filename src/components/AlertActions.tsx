@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { Pause, Play, Trash2, Send, Mail, Moon } from 'lucide-react'
 import { pauseAlert, resumeAlert, snoozeAlert, deleteAlert, resendAlertConfirmation, sendSampleDigest } from '@/app/actions'
 import { useAlertUndo } from './AlertUndoProvider'
@@ -11,7 +11,24 @@ export default function AlertActions({ id, status, token }: { id: string; status
   const [resent, setResent] = useState(false)
   const [sampleSent, setSampleSent] = useState(false)
   const [announcement, setAnnouncement] = useState<string | null>(null)
+  // Bumped on every SUCCESSFUL non-delete action; a matching effect then moves
+  // keyboard/SR focus to this row's status region. Delete deliberately never
+  // bumps it — its row unmounts, so the Undo toast (AlertUndoProvider) takes
+  // focus instead. A counter (not the announcement string) so repeating the
+  // same action still re-triggers the focus move.
+  const [focusTick, setFocusTick] = useState(0)
+  const statusRef = useRef<HTMLSpanElement>(null)
   const { notifyDeleted } = useAlertUndo()
+
+  // Pause/Resume/Snooze swap out the very button that was clicked (e.g. Pause →
+  // Resume), so after the server refresh the acted-on control has unmounted and
+  // focus falls back to <body> — a keyboard/SR user loses their place in the
+  // list. Move focus to the row's already-announced role="status" region (same
+  // role="status" + tabindex="-1" pattern as the alert-capture-focus cycle) so
+  // focus stays in-context and the result is read aloud.
+  useEffect(() => {
+    if (focusTick > 0) statusRef.current?.focus()
+  }, [focusTick])
 
   function handleSendSample() {
     setError(null)
@@ -23,6 +40,7 @@ export default function AlertActions({ id, status, token }: { id: string; status
       else {
         setSampleSent(true)
         setAnnouncement('Sample digest sent.')
+        setFocusTick((n) => n + 1)
       }
     })
   }
@@ -36,7 +54,10 @@ export default function AlertActions({ id, status, token }: { id: string; status
     startTransition(async () => {
       const result = await action(id, token)
       if (result.error) setError(result.error)
-      else setAnnouncement(successMessage)
+      else {
+        setAnnouncement(successMessage)
+        setFocusTick((n) => n + 1)
+      }
     })
   }
 
@@ -65,13 +86,14 @@ export default function AlertActions({ id, status, token }: { id: string; status
       else {
         setResent(true)
         setAnnouncement('Confirmation email resent.')
+        setFocusTick((n) => n + 1)
       }
     })
   }
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-      <span className="sr-only" role="status" aria-live="polite">
+      <span ref={statusRef} tabIndex={-1} className="sr-only" role="status" aria-live="polite">
         {announcement}
       </span>
       {status === 'pending' ? (
