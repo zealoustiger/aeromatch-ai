@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { RotateCcw, X } from 'lucide-react'
 import { restoreAlert } from '@/app/actions'
 import { track } from '@/lib/analytics'
@@ -45,6 +45,17 @@ export default function AlertUndoProvider({ children }: { children: React.ReactN
   const [restoring, setRestoring] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const toastRef = useRef<HTMLDivElement>(null)
+
+  // A deleted row unmounts (AlertRowVisibility), so the acted-on control and its
+  // own role="status" announcement vanish — without this, keyboard/SR focus
+  // falls back to <body>. Move focus to this toast (already role="status") the
+  // moment it appears so the deletion is announced in-context and its Undo
+  // control is one Tab away. Keyed on the deleted alert's id so a second delete
+  // (a new toast) re-moves focus.
+  useEffect(() => {
+    if (pending) toastRef.current?.focus()
+  }, [pending?.alert.id])
 
   const dismissToast = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -83,6 +94,8 @@ export default function AlertUndoProvider({ children }: { children: React.ReactN
       {children}
       {pending ? (
         <div
+          ref={toastRef}
+          tabIndex={-1}
           role="status"
           aria-live="polite"
           // Anchored left (not right) at every breakpoint — the site's
