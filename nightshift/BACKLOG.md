@@ -1282,7 +1282,11 @@ no duplicate of shipped work above)._
   distinct boxes; two different-family partnerships → 2 boxes with the query-string shape.
   **Not done, intentionally:** `matchCount`/live-match-count line and `alertCount`
   social-proof line on these boxes (optional props, skipped to keep this slice small).
-- **[P1][goal] Real "instant" alerts — ingest-triggered new-listing sends.**
+- ~~**[P1][goal] Real "instant" alerts — ingest-triggered new-listing sends.**~~ ✅ SUPERSEDED
+  + SHIPPED via `alert-instant-cron` (2026-08-03) — the ingest-hook approach was a dead end
+  (ingest writes to `listing_drafts` staging, not `aircraft_for_sale`, and has timeout risk),
+  so instant was built as the standalone `/api/cron/alert-instant` cron route instead (the
+  re-scoped sibling item below). This original ingest-hook framing is closed together with it.
   `alertFrequency.ts` documents that "instant" isn't a real option today (single daily
   cron; only `daily`/`weekly`), yet GOAL.md names "digest vs instant" a core pillar.
   After the ingest handler finishes inserting new aircraft listings (do NOT touch the
@@ -1586,8 +1590,19 @@ instant pillar re-scoped to a buildable shape, and management/email polish._
   qa-smoke + screenshot pass at both viewports, then reverted it to `active` immediately
   (verified via a final read). An active listing's page and a genuinely-nonexistent id
   were both confirmed unchanged. No schema change.
-- **[P1][goal] Near-instant new-listing alerts — the buildable re-scope of the open
-  "instant" item above.** The flagged re-scope questions are now answered by code read:
+- ~~**[P1][goal] Near-instant new-listing alerts — the buildable re-scope of the open
+  "instant" item above.**~~ ✅ SHIPPED via `alert-instant-cron` (2026-08-03) — built the new
+  `/api/cron/alert-instant` route (15-min `vercel.json` cron), added a real `'instant'`
+  `AlertFrequency` + Instant option in `FrequencyToggle` (honest "checked about every 15 min"
+  copy), reusing the daily digest's parse/count/sample helpers (exported in place) +
+  `buildAlertDigestEmail`, stamping `last_digest_at` so the daily cron (which now skips
+  `frequency='instant'`) never double-sends. New-listings only this slice (drops stay on the
+  daily cadence — noted as follow-up). Additive `alerts_frequency_instant` CHECK-widening
+  migration added to `schema.sql` and FLAGGED HUMAN-APPLY (not applied); all write paths + the
+  cron fail-soft when unmigrated (verified live: the shared DB has no `frequency` column at all,
+  cron returns `migrated:false` 200, toggle→Instant is a no-op with zero console errors).
+  ⚠️ Vercel plan tier (`*/15` needs Pro, Hobby is once-daily) still needs a human confirm before
+  the cadence is real — see CHANGELOG. The flagged re-scope questions are now answered by code read:
   there is NO in-app publish hook for aircraft (`aircraft_for_sale` rows are written
   directly by the external scraper; `publishDraft` in `admin/review/actions.ts` inserts
   partnerships only), so ingest-hooking is a dead end. Build "instant" as a new
