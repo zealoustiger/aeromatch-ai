@@ -4371,14 +4371,21 @@ Genuinely open gaps below._
   input). Closes out "every honored aircraft browse filter is editable on the alert" — hidden
   chips now remain only for genuinely unrecognized params. No new capture point, no schema
   change.
-- **[P2][goal] Accessibility pass on the alert capture + manage flows.** One slice:
+~~- **[P2][goal] Accessibility pass on the alert capture + manage flows.** One slice:
   `AlertSignup`'s async submit/confirm/error states and `/alerts/manage` row actions
   (pause/delete/save) announced via `aria-live` status regions (precedent:
   `post-form-error-alert-role`), visible focus + focus moved to the confirmation message
   on subscribe, and every input properly labelled — then a keyboard-only walkthrough of
   subscribe → confirm → edit → pause at 375px. Friction removed for keyboard/SR users on
   the goal's core flows; leading indicator per GOAL.md. No new capture point, no schema
-  change.
+  change.~~ ✅ SHIPPED via `alert-capture-focus-confirmation` (2026-08-03) aria-live was
+  already shipped across the capture + manage components in prior cycles (`alert-capture-aria-live`,
+  `alert-manage-actions-aria-live`, `alert-manage-forms-aria-live`), and every input was already
+  labelled. This closed the still-open half — **focus management**: on subscribe, focus now moves
+  to the `AlertSignup` confirmation heading (`tabIndex=-1`, inside the existing `role="status"`
+  region) so keyboard/SR users land on the success message instead of `<body>`. Verified via
+  `document.activeElement` on a real production-build subscribe. Follow-up (not this slice): the same
+  focus-on-result move for `/alerts/manage` row actions, and a periodic keyboard-only 375px walkthrough.
 
 ---
 
