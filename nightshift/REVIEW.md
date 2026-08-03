@@ -1,3 +1,20 @@
+# 🛠️ Manual drain — 2026-08-03 16:43 SGT — 5 cycles (4 PASS / 1 ABORT)
+
+Review below, then drop notes in the **feedback box at the bottom of this page** —
+Claude reads them and turns them into backlog items.
+
+All four builds this run advanced the **best-alert-experience** goal (the `[bug]` and `[want]` tiers were empty/blocked, so the cascade sat in the alert `[goal]` lane). Cycle 3 hit an empty queue and ABORTed "plan needed", which triggered an **Opus plan pass** that refilled 6 fresh alert-experience tasks — two of which then shipped in cycles 4 & 5.
+
+**By page**
+- **`/alerts/manage` + new `/api/cron/alert-instant` — a real "Instant" alert cadence.** ⭐ *the thing to react to.* The frequency toggle now has an amber **Instant** option ("checked about every 15 min"); a new 15-min cron emails instant subscribers new-listing matches near-real-time, reusing the daily digest's matching/email builders (stamps `last_digest_at` so nothing double-sends). · [open ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/alerts/manage) · screenshots: `alert-instant-cron/` · ⚠️ **needs you:** apply the additive `alerts.frequency`→`'instant'` DB migration + confirm the Vercel plan supports a `*/15` cron (Hobby caps crons at once-daily). Until then Instant is an honest, error-free no-op.
+- **`/alerts/manage` — focus lands on the row after pause/resume/snooze/delete.** Keyboard/screen-reader users now stay on the alert they just acted on (via the row's live status) instead of being dropped to the top of the page. · [open ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/alerts/manage) · screenshots: `alert-manage-focus-row-actions/`
+- **`/alerts` + `/aircraft` (shared AlertSignup box) — focus lands on the confirmation on subscribe.** After you set an alert, keyboard/SR focus moves to the "check your inbox" confirmation instead of falling back to `<body>`. Also fixed a pre-existing build/typecheck failure in that file. · [open ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/alerts) · screenshots: `alert-capture-focus-confirmation/`
+- **`/alerts` — honest "· N watching" on the curated popular-alert chips.** Each curated chip shows a quiet count of distinct confirmed subscribers, hidden below a real-crowd threshold of 3, never fabricated — a gentle nudge to set the alert. · [open ↗](https://aeromatch-git-staging-zealoustiger-7853s-projects.vercel.app/alerts) · screenshots: `alerts-chip-watcher-social-proof/`
+
+**Lanes:** 4 design/UX (all alert-experience) · 0 indexing (SEO parked) · 0 bug. Plus 1 ABORT → Opus plan pass (+6 backlog tasks). (Conversion impact of alert surfaces lags; judge by leading indicators, not tonight's counts.)
+
+---
+
 ## 2026-07-21T11:45:53Z — Night Shift run: 7 cycles (PASS 5 / FAIL 1) — night budget cap ($120)
 - Models: cycles on sonnet; 1 escalated to opus; 1 quality-judged on opus
 - Night spend so far: $125.8235 of $120 cap
