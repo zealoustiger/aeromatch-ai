@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/alert-instant",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 16 * * *"
     }
   ]
 }
