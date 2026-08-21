@@ -8,6 +8,7 @@
 // Reads POSTHOG_API_KEY, POSTHOG_PROJECT_ID, NEXT_PUBLIC_POSTHOG_HOST from
 // process.env, falling back to parsing .env.local in the repo root.
 
+import { PV } from './posthog-bot-filter.mjs'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -81,16 +82,16 @@ try {
   const [[last7, prior7]] = await q(`
     SELECT countIf(timestamp > now() - toIntervalDay(7)) AS last7,
            countIf(timestamp <= now() - toIntervalDay(7) AND timestamp > now() - toIntervalDay(14)) AS prior7
-    FROM events WHERE event = '$pageview'`)
+    FROM events WHERE ${PV}`)
 
   const top = await q(`
     SELECT properties.$pathname AS path, count() AS views, count(DISTINCT person_id) AS visitors
-    FROM events WHERE event = '$pageview' AND timestamp > now() - toIntervalDay(7)
+    FROM events WHERE ${PV} AND timestamp > now() - toIntervalDay(7)
     GROUP BY path ORDER BY views DESC LIMIT 20`)
 
   const [[totalViews, distinctPaths]] = await q(`
     SELECT count() AS total, count(DISTINCT properties.$pathname) AS paths
-    FROM events WHERE event = '$pageview'`)
+    FROM events WHERE ${PV}`)
 
   console.log('On-site (PostHog, secondary — includes you/team/direct, not just search):')
   console.log(`  Pageviews last 7d: ${last7}  (prior 7d: ${prior7}, ${pct(last7, prior7)})`)

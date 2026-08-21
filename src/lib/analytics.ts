@@ -39,6 +39,42 @@ function getUtm(): { source: string | null; content: string | null } {
   return { source: null, content: null }
 }
 
+/**
+ * True when this page is very likely driven by automation rather than a person:
+ * `navigator.webdriver` is set by Playwright/Puppeteer/Selenium/Lightpanda (and
+ * our own headless QA) unless deliberately stealth-patched, and the named UAs
+ * are headless browsers that never belong to a human. Used to keep such
+ * sessions out of PostHog; the visitor radar still hears about them (flagged)
+ * so admin bot stats stay complete.
+ */
+export function isLikelyHeadless(): boolean {
+  try {
+    return navigator.webdriver === true || /Lightpanda|HeadlessChrome/i.test(navigator.userAgent)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Cheap client-side bot signals sent with every radar beacon. The server can't
+ * see `navigator.webdriver` or the window geometry from headers, but together
+ * they fingerprint headless scrapers well: the 2026-08-20 residential-proxy
+ * sweep was 1920×1080 screen / 1280×720 viewport on every one of ~270 hits.
+ */
+function hints(): { webdriver: boolean; sw: number; sh: number; vw: number; vh: number } | null {
+  try {
+    return {
+      webdriver: navigator.webdriver === true,
+      sw: screen.width,
+      sh: screen.height,
+      vw: window.innerWidth,
+      vh: window.innerHeight,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Fire-and-forget ping to the visitor radar (threaded Slack alerts). */
 export function notifyVisitor(event: string, props?: Record<string, unknown>) {
   if (typeof window === 'undefined') return
@@ -52,6 +88,7 @@ export function notifyVisitor(event: string, props?: Record<string, unknown>) {
         path: location.pathname,
         referrer: document.referrer || null,
         utm: getUtm(),
+        hints: hints(),
         props,
       }),
       keepalive: true,
