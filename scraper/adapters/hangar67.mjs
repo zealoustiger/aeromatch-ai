@@ -68,7 +68,19 @@ function toRow(d) {
 
 export async function fetchListings({ pages, maxListings = 2000, log = console.log } = {}) {
   // `pages` (used by other adapters) doesn't apply; we read the full sitemap.
-  const xml = await fetchHtml(`${BASE}/sitemap-aircraft-active.xml`)
+  // The sitemap is the run's single point of failure — nothing else can be
+  // fetched without it — so it gets the Unlocker fallback too. It is normally
+  // edge-cached and readable, but a 403 (datacentre IP) or 429 (we've been
+  // throttled) here would otherwise abort the whole adapter.
+  const SITEMAP = `${BASE}/sitemap-aircraft-active.xml`
+  let xml
+  try {
+    xml = await fetchHtml(SITEMAP)
+  } catch (e) {
+    if (!hasUnlocker()) throw e
+    log(`  sitemap direct fetch failed (HTTP ${e?.status ?? '?'}) — retrying via Web Unlocker`)
+    xml = await unlockerFetch(SITEMAP, { retries: 2, minBytes: 200 })
+  }
   const urls = parseSitemapLocs(xml)
   const ids = urls
     .map((u) => (u.match(/\/(\d+)\/?$/) || [])[1])
