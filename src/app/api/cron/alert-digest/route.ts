@@ -18,6 +18,7 @@ import {
   compLabel,
   type AlertDigestSample,
   type AlertDigestSection,
+  isTerminalSendOutcome,
 } from '@/lib/email'
 import { getAlertFunnelWeeklySnapshot } from '@/lib/alertFunnelWeekly'
 import {
@@ -1458,7 +1459,7 @@ async function sendStrandedPendingReminders(
       sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'alert-confirm' })
     )
     if (!gate.attempted) continue
-    if (gate.value.sent || gate.value.reason === 'no-key') {
+    if (isTerminalSendOutcome(gate.value)) {
       await supabase
         .from('alerts')
         .update({ confirm_reminder_sent_at: new Date().toISOString() })
@@ -1587,7 +1588,7 @@ async function sendWidenSuggestionEmails(
       sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'widen-suggestion' })
     )
     if (!gate.attempted) continue
-    if (gate.value.sent || gate.value.reason === 'no-key') {
+    if (isTerminalSendOutcome(gate.value)) {
       await supabase
         .from('alerts')
         .update({ widen_suggested_at: new Date().toISOString() })
@@ -1650,7 +1651,7 @@ async function sendDormantSubscriberRepermissionEmails(
       sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'repermission' })
     )
     if (!gate.attempted) continue
-    if (gate.value.sent || gate.value.reason === 'no-key') {
+    if (isTerminalSendOutcome(gate.value)) {
       let { error } = await supabase.from('alerts').update({ repermission_sent_at: nowIso }).eq('id', row.id)
       if (error) console.error('[alert-digest] repermission_sent_at stamp error:', error.message)
       sentCount++
@@ -1750,7 +1751,7 @@ async function sendBackOnMarketNotices(
       sendEmail({ to: row.email, subject, html, text, unsubscribeUrl, emailType: 'listing-back-on-market' })
     )
     if (!gate.attempted) continue
-    if (gate.value.sent || gate.value.reason === 'no-key') {
+    if (isTerminalSendOutcome(gate.value)) {
       const { error } = await supabase
         .from('alerts')
         .update({ status: 'confirmed', unavailable_notified_at: null, last_digest_at: nowIso })
@@ -1795,7 +1796,7 @@ async function sendMondayAdminFunnelSummary(nowIso: string, pacer: SendPacer): P
     for (const to of adminEmails) {
       const gate = await pacer.send(() => sendEmail({ to, subject, html, text, emailType: 'admin-alert-funnel-weekly' }))
       if (!gate.attempted) continue
-      if (gate.value.sent || gate.value.reason === 'no-key') sentCount++
+      if (isTerminalSendOutcome(gate.value)) sentCount++
       else failed++
     }
     return { sent: sentCount, failed }
@@ -1841,7 +1842,7 @@ async function sendCaptureSelfCheckFailureAlert(
     for (const to of adminEmails) {
       const gate = await pacer.send(() => sendEmail({ to, subject, html, text, emailType: 'admin-alert-selfcheck-failure' }))
       if (!gate.attempted) continue
-      if (gate.value.sent || gate.value.reason === 'no-key') sentCount++
+      if (isTerminalSendOutcome(gate.value)) sentCount++
       else failed++
     }
     return { sent: sentCount, failed }
@@ -1892,7 +1893,7 @@ async function sendDeliverabilityDnsFailureAlert(
     for (const to of adminEmails) {
       const gate = await pacer.send(() => sendEmail({ to, subject, html, text, emailType: 'admin-alert-dns-failure' }))
       if (!gate.attempted) continue
-      if (gate.value.sent || gate.value.reason === 'no-key') sentCount++
+      if (isTerminalSendOutcome(gate.value)) sentCount++
       else failed++
     }
     return { sent: sentCount, failed }
@@ -2365,7 +2366,7 @@ export async function GET(req: NextRequest) {
         })
       )
 
-      if (gate.attempted && (gate.value.sent || gate.value.reason === 'no-key')) {
+      if (gate.attempted && (isTerminalSendOutcome(gate.value))) {
         // Update last_digest_at (+ digest_sends_count) so we don't re-send for the same window.
         await markDigestSent(supabase, [{ id: alert.id, digest_sends_count: alert.digest_sends_count }], new Date().toISOString())
         sent++
@@ -2476,7 +2477,7 @@ export async function GET(req: NextRequest) {
     const gate = await pacer.send(() => sendEmail({ to: email, subject, html, text, unsubscribeUrl, emailType: 'combined-digest' }))
 
     if (!gate.attempted) continue
-    if (gate.value.sent || gate.value.reason === 'no-key') {
+    if (isTerminalSendOutcome(gate.value)) {
       const nowStamp = new Date().toISOString()
       await markDigestSent(
         supabase,
@@ -2529,7 +2530,7 @@ export async function GET(req: NextRequest) {
     )
 
     if (!gate.attempted) continue
-    if (gate.value.sent || gate.value.reason === 'no-key') {
+    if (isTerminalSendOutcome(gate.value)) {
       const nowStamp = new Date().toISOString()
       // `unavailable_notified_at` is what lets sendBackOnMarketNotices (below)
       // tell this auto-pause apart from a user-initiated one — never dropped

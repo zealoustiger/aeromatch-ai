@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SITE_URL } from '@/lib/seo'
 import { getAlertDigestPreview, getEmptyStateWidenSuggestion } from '@/lib/alertMatchCounts'
-import { buildAlertDigestEmail, buildAlertZeroMatchWelcomeEmail, sendEmail } from '@/lib/email'
+import { buildAlertDigestEmail, buildAlertZeroMatchWelcomeEmail, sendEmail, isTerminalSendOutcome } from '@/lib/email'
 import { normalizeFrequency } from '@/lib/alertFrequency'
 
 export const dynamic = 'force-dynamic'
@@ -79,7 +79,7 @@ async function sendInstantFirstDigest(
     })
     const result = await sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'alert-digest' })
 
-    if (result.sent || result.reason === 'no-key') {
+    if (isTerminalSendOutcome(result)) {
       await supabase.from('alerts').update({ last_digest_at: new Date().toISOString() }).eq('id', alert.id)
     }
   } catch (err) {

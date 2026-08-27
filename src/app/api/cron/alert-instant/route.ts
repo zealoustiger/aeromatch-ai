@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { sendEmail, buildAlertDigestEmail, type AlertDigestSample } from '@/lib/email'
+import { sendEmail, buildAlertDigestEmail, isTerminalSendOutcome, type AlertDigestSample } from '@/lib/email'
 import { SITE_URL } from '@/lib/seo'
 import { SendPacer } from '@/lib/alertSendPacing'
 import {
@@ -244,7 +244,7 @@ export async function GET(req: NextRequest) {
       sendEmail({ to: alert.email, subject, html, text, unsubscribeUrl, emailType: 'alert-digest' })
     )
 
-    if (gate.attempted && (gate.value.sent || gate.value.reason === 'no-key')) {
+    if (gate.attempted && (isTerminalSendOutcome(gate.value))) {
       // Stamp last_digest_at (+ digest_sends_count) so neither this route nor
       // the daily cron re-sends the same window.
       await markDigestSent(

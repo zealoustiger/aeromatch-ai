@@ -37,6 +37,17 @@ const supa = createClient(
 const log = (...a) => console.log(...a)
 const now = () => new Date().toISOString()
 
+// ── TEMPORARY ALERT PAUSE ────────────────────────────────────────────────────
+// Mirrors the gate in src/lib/email.ts. This script posts to Resend directly
+// rather than importing that server module, so the list has to live in both
+// places — keep them in step. Empty EMAIL_ALLOWLIST lifts the pause.
+// There is no exemption list here: this script only ever sends alert digests
+// (the double-opt-in confirmations all go through the app).
+const EMAIL_ALLOWLIST = (process.env.EMAIL_ALLOWLIST ?? 'zealoustiger@gmail.com')
+  .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+const isEmailAllowed = (to) =>
+  EMAIL_ALLOWLIST.length === 0 || EMAIL_ALLOWLIST.includes(String(to).trim().toLowerCase())
+
 // 1) Sync saved_searches → confirmed alerts (idempotent, by email + source_path).
 async function syncSavedSearches() {
   const { data: saved, error } = await supa.from('saved_searches').select('id,path,search_params,user_id')
@@ -128,6 +139,13 @@ async function sendDigest(alert, items, label) {
     `\n\nUnsubscribe: ${unsub}`
   // --dry-run: pretend success WITHOUT advancing the cursor (handled by caller via DRY).
   if (DRY) { log(`  [dry] would email ${alert.email}: ${subject}`); return true }
+  // Alert pause: hold the send but DO advance the cursor (return true). Leaving
+  // it parked would make every held day still count as "new" once the pause
+  // lifts, turning the resume into one huge back-catalog blast per subscriber.
+  if (!isEmailAllowed(alert.email)) {
+    log(`  ⏸ alert pause — held digest for ${alert.email} (cursor advanced)`)
+    return true
+  }
   // No Resend key: we genuinely cannot send. Return false so the caller does NOT
   // advance last_digest_at — otherwise a missing/expired key silently eats every
   // match in the window (the cursor moves past listings that were never emailed).
