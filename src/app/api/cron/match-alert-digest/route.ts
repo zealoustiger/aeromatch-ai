@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { sendEmail, buildMatchAlertEmail } from '@/lib/email'
+import { sendEmail, buildMatchAlertEmail, isTerminalSendOutcome } from '@/lib/email'
 import { SITE_URL } from '@/lib/seo'
 import { aircraftLabel } from '@/lib/utils'
 import {
@@ -55,7 +55,7 @@ async function processPartnerships(
       matchesUrl: `${SITE_URL}${seekerBrowseHrefForPartnership(row)}`,
     })
     const result = await sendEmail({ to: row.contact_email, subject, html, text, emailType: 'match-alert' })
-    if (result.sent || result.reason === 'no-key') {
+    if (isTerminalSendOutcome(result)) {
       await supabase
         .from('partnerships')
         .update({ match_alert_last_sent_at: new Date().toISOString() })
@@ -105,7 +105,7 @@ async function processSeekers(
       matchesUrl: `${SITE_URL}${partnershipBrowseHrefForSeeker(row)}`,
     })
     const result = await sendEmail({ to: row.contact_email, subject, html, text, emailType: 'match-alert' })
-    if (result.sent || result.reason === 'no-key') {
+    if (isTerminalSendOutcome(result)) {
       await supabase
         .from('partnership_seekers')
         .update({ match_alert_last_sent_at: new Date().toISOString() })

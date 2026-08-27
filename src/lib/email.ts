@@ -58,7 +58,48 @@ export type SendEmailInput = {
 
 export type SendEmailResult =
   | { sent: true; id: string | null }
-  | { sent: false; reason: 'no-key' | 'error'; detail?: string }
+  | { sent: false; reason: 'no-key' | 'error' | 'suppressed'; detail?: string }
+
+// ── TEMPORARY ALERT PAUSE ────────────────────────────────────────────────────
+// Alert email is paused for everyone except the addresses below while the alert
+// templates and delivery logic are reworked. This gate sits in `sendEmail`, the
+// single chokepoint every app send goes through, so no route or cron can slip
+// past it. `scraper/send-alerts.mjs` carries the same list (it talks to Resend
+// directly rather than importing this server module).
+//
+// TO RESUME: set EMAIL_ALLOWLIST to an empty string (or delete the default
+// below). An empty list means "no gate" — everybody gets mail again.
+const EMAIL_ALLOWLIST = (process.env.EMAIL_ALLOWLIST ?? 'zealoustiger@gmail.com')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean)
+
+// Double-opt-in confirmations still go out to everyone: a signup that shows
+// "check your email" and then delivers nothing is a dead end, and these carry no
+// alert content. Subscribers keep accumulating as confirmed; they simply receive
+// no alert mail until the pause lifts.
+const ALLOWLIST_EXEMPT_TYPES = new Set(['alert-confirm', 'email-change-confirm'])
+
+/**
+ * True when a send outcome is final — it either went out, or was deliberately
+ * not sent (no provider configured, or held by the alert pause above). Callers
+ * advance their last-sent watermark on this, never on a real error.
+ *
+ * Suppressed MUST count: if a paused send left the watermark untouched, every
+ * held day would still be "new" when the pause lifts and each subscriber would
+ * get one enormous back-catalog blast — the exact thing the baseline-first rule
+ * exists to prevent.
+ */
+export function isTerminalSendOutcome(r: SendEmailResult): boolean {
+  return r.sent || r.reason === 'no-key' || r.reason === 'suppressed'
+}
+
+/** Whether this send is permitted under the temporary alert pause. */
+export function isEmailAllowed(to: string, emailType?: string): boolean {
+  if (EMAIL_ALLOWLIST.length === 0) return true // gate lifted
+  if (emailType && ALLOWLIST_EXEMPT_TYPES.has(emailType)) return true
+  return EMAIL_ALLOWLIST.includes(to.trim().toLowerCase())
+}
 
 /**
  * RFC 8058 one-click unsubscribe headers, keyed off a per-recipient unsubscribe
@@ -193,6 +234,14 @@ export async function withEmailRetry<T>(
  * server action / route handler can fire-and-forget without risking a 500.
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  // Alert pause — checked BEFORE the key so it holds in every environment.
+  if (!isEmailAllowed(input.to, input.emailType)) {
+    console.log(
+      `[email:suppressed] alert pause — held "${input.subject}" (${input.emailType ?? 'untagged'}) to ${input.to}`
+    )
+    return { sent: false, reason: 'suppressed' }
+  }
+
   const key = process.env.RESEND_API_KEY
   if (!key) {
     // No provider configured yet — log and no-op so callers stay simple/safe.
