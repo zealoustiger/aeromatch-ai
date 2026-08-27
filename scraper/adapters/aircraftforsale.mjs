@@ -19,6 +19,7 @@ import {
   titleCase,
   stateCodeFromName,
 } from '../lib/ingest-core.mjs'
+import { unlockerFetch, hasUnlocker } from '../lib/unlocker.mjs'
 
 const APEX = 'https://aircraftforsale.com'
 const SITEMAP = `${APEX}/uploads/sitemap/sitemap_item_detail.xml`
@@ -94,7 +95,18 @@ function parseDetail(html, id) {
 }
 
 export async function fetchListings({ maxListings = 1600, log = console.log } = {}) {
-  const xml = await fetchHtml(SITEMAP)
+  // AircraftForSale's WAF refuses datacentre IPs — the VPS gets HTTP 405 on the
+  // sitemap while a residential IP is served normally. Same shape as hangar67:
+  // fall the sitemap back to the residential Web Unlocker, then probe one detail
+  // page to decide whether the whole run needs to go through it.
+  let xml
+  try {
+    xml = await fetchHtml(SITEMAP)
+  } catch (e) {
+    if (!hasUnlocker()) throw e
+    log(`  sitemap direct fetch failed (HTTP ${e?.status ?? '?'}) — retrying via Web Unlocker`)
+    xml = await unlockerFetch(SITEMAP, { retries: 2, minBytes: 200 })
+  }
   const idOf = (u) => {
     const m = u.match(/for-sale-(\d+)\/?$/)
     return m ? parseInt(m[1], 10) : 0
@@ -106,12 +118,30 @@ export async function fetchListings({ maxListings = 1600, log = console.log } = 
   all.sort((a, b) => idOf(b) - idOf(a))
   const urls = all.slice(0, maxListings)
   log(`  ${all.length} listings in sitemap, taking newest ${urls.length}`)
+  if (urls.length === 0) throw new Error('sitemap returned no listing urls — source layout changed or blocked')
+
+  // Probe one detail page. Any failure means this host can't read them directly,
+  // so route the run through the Unlocker rather than collecting 1600 nulls.
+  let useUnlocker = false
+  try {
+    await fetchHtml(urls[0], { retries: 0 })
+  } catch (e) {
+    if (!hasUnlocker()) {
+      throw new Error(`aircraftforsale detail pages unreachable (HTTP ${e?.status ?? '?'}) and BRIGHTDATA_API_TOKEN is not set`)
+    }
+    useUnlocker = true
+    log(`  ⚠ direct detail fetch unavailable (HTTP ${e?.status ?? '?'}) — routing this run through the Web Unlocker`)
+  }
+  const getPage = (url) =>
+    useUnlocker
+      ? unlockerFetch(url, { retries: 1, minBytes: 1000 }).catch(() => null)
+      : fetchHtml(url).catch(() => null)
 
   let done = 0
-  const rows = await mapPool(urls, 6, async (url) => {
+  const rows = await mapPool(urls, useUnlocker ? 10 : 6, async (url) => {
     const meta = parseUrl(url)
     if (!meta) return null
-    const html = await fetchHtml(url).catch(() => null)
+    const html = await getPage(url)
     if (++done % 200 === 0) log(`  fetched ${done}/${urls.length}`)
     if (!html) return null
     const { asking_price, ttaf, year } = parseDetail(html, meta.id)
