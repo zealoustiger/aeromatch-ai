@@ -2,3 +2,8 @@
 node_modules
 .next
 *.log
+
+# Night Shift QA screenshots — 4GB of PNGs the drain commits for review. The
+# build never reads them, but Vercel was shipping every one to the builder,
+# which is what stalled production deploys at the clone/upload step.
+nightshift/screenshots
