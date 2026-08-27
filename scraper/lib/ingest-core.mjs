@@ -250,8 +250,17 @@ export function adminClient() {
 /**
  * Upsert a source's rows, track price history, and mark vanished listings sold.
  * Returns stats. Pass dryRun to skip all writes.
+ *
+ * `collapseFloor` guards sold-detection against a BROKEN SCRAPE. Sold-detection
+ * infers "gone from the source" from "absent in our scrape", which is only valid
+ * when the scrape itself worked. A blocked adapter returns few or zero rows, and
+ * without this guard that silently reads as the whole catalogue selling at once —
+ * exactly what wiped hangar67 (1511 rows) and aircraftforsale (630) on 2026-07-05.
+ * When a run brings back less than `collapseFloor` of what we already hold active,
+ * we upsert whatever we did get but SKIP sold-detection entirely, leaving the
+ * existing inventory alone until a healthy run can adjudicate it.
  */
-export async function runIngest({ source, rows, dryRun = false, graceDays = 7 }) {
+export async function runIngest({ source, rows, dryRun = false, graceDays = 7, collapseFloor = 0.5, fetchFailed = false }) {
   const nowIso = new Date().toISOString()
   // Sold-detection grace window: a listing is only marked sold once it hasn't
   // been seen for `graceDays`. This tolerates partial runs and sources (e.g.
@@ -268,7 +277,7 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
   }
   const fresh = [...byId.values()]
 
-  const stats = { source, scraped: fresh.length, priceDrops: 0, priceRises: 0, changed: 0, markedSold: 0 }
+  const stats = { source, scraped: fresh.length, priceDrops: 0, priceRises: 0, changed: 0, markedSold: 0, soldSkipped: null }
   if (dryRun) return stats
 
   const supabase = adminClient()
@@ -276,12 +285,25 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
   // Pull existing rows for this source to diff prices, preserve first_seen_at, and
   // protect already-harvested photos (see the images-preservation note in the
   // upsert map below).
-  const { data: existingRows, error: exErr } = await supabase
-    .from('aircraft_for_sale')
-    .select('source_id, asking_price, content_hash, previous_price, price_changed_at, first_seen_at, images')
-    .eq('source', source)
-  if (exErr) throw new Error(`fetch existing failed: ${exErr.message}`)
-  const existing = new Map((existingRows ?? []).map((e) => [e.source_id, e]))
+  // PAGINATED: PostgREST caps an unbounded select at 1000 rows. Sources long
+  // since past that (barnstormers holds 5000+) were silently getting a truncated
+  // `existing` map, so every row beyond the cap looked brand new: first_seen_at
+  // reset daily, price history dropped, and — worst — harvested photos clobbered,
+  // because the preservation branch below only runs when `prev` is found.
+  const existingRows = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data, error: exErr } = await supabase
+      .from('aircraft_for_sale')
+      .select('source_id, asking_price, content_hash, previous_price, price_changed_at, first_seen_at, images, image_is_placeholder, status')
+      .eq('source', source)
+      .order('source_id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (exErr) throw new Error(`fetch existing failed: ${exErr.message}`)
+    existingRows.push(...(data ?? []))
+    if (!data || data.length < PAGE) break
+  }
+  const existing = new Map(existingRows.map((e) => [e.source_id, e]))
 
   const upserts = fresh.map((r) => {
     const prev = existing.get(r.source_id)
@@ -293,6 +315,16 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
       first_seen_at: prev?.first_seen_at ?? nowIso,
       previous_price: prev?.previous_price ?? null,
       price_changed_at: prev?.price_changed_at ?? null,
+      // ALWAYS an explicit array. supabase-js upserts a batch as one payload and
+      // back-fills any key a row is missing with null, so a single row carrying
+      // photos would force `images: null` onto every row whose adapter doesn't set
+      // it — and `images` is NOT NULL. Normalising here keeps the batch uniform
+      // regardless of which adapters supply photos.
+      images: Array.isArray(r.images) ? r.images : [],
+      // Same NOT-NULL/batch-uniformity reason as `images` above. Carry the stored
+      // flag forward rather than defaulting to false, so a run that brings no
+      // photos doesn't silently re-label existing placeholder art as real.
+      image_is_placeholder: prev?.image_is_placeholder ?? false,
     }
     if (prev) {
       if (r.content_hash !== prev.content_hash) stats.changed++
@@ -341,6 +373,20 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
     // Non-fatal — the marketplace still works without coords; we just sort by
     // newest until the next backfill.
     console.warn(`coord backfill skipped: ${e.message ?? e}`)
+  }
+
+  // ── Collapse guard ──────────────────────────────────────────────────────────
+  // Compare this run's haul against the active inventory we already hold. A
+  // healthy run re-sees most of it; a blocked one re-sees almost none. Treat the
+  // latter as "the scraper is broken", NOT "the listings sold".
+  const activeBefore = existingRows.filter((e) => e.status === 'active').length
+  const coverage = activeBefore > 0 ? fresh.length / activeBefore : 1
+  if (fetchFailed || (activeBefore > 0 && coverage < collapseFloor)) {
+    stats.soldSkipped = fetchFailed
+      ? 'adapter fetch failed — sold-detection skipped'
+      : `scrape collapsed (${fresh.length}/${activeBefore} = ${Math.round(coverage * 100)}% of active inventory, floor ${Math.round(collapseFloor * 100)}%) — sold-detection skipped`
+    console.warn(`  ⚠ ${source}: ${stats.soldSkipped}`)
+    return stats
   }
 
   // Sold-detection: anything from this source not touched this run is gone.

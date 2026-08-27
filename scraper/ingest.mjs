@@ -47,15 +47,22 @@ async function main() {
 
   console.log(`=== Planes-for-Sale ingestion (${dryRun ? 'DRY RUN' : 'live'}, pages=${pages}) ===\n`)
   const summary = []
+  const failures = []
   for (const adapter of adapters) {
     console.log(`▸ ${adapter.label}`)
     let rows = []
+    // A thrown adapter means we learned NOTHING about this source's inventory.
+    // Flag it so sold-detection is skipped outright rather than reading the empty
+    // result as "every listing sold" (see the collapse guard in ingest-core).
+    let fetchFailed = false
     try {
       rows = await adapter.fetchListings({ pages, log: console.log })
     } catch (e) {
+      fetchFailed = true
+      failures.push(`${adapter.source}: ${e.message}`)
       console.log(`  fetch error: ${e.message}`)
     }
-    const stats = await runIngest({ source: adapter.source, rows, dryRun })
+    const stats = await runIngest({ source: adapter.source, rows, dryRun, fetchFailed })
     summary.push(stats)
     console.log(
       `  → ${stats.scraped} scraped` +
@@ -68,7 +75,10 @@ async function main() {
 
   console.log('=== Summary ===')
   for (const s of summary) {
-    console.log(`  ${s.source.padEnd(18)} ${s.scraped} listings`)
+    console.log(
+      `  ${s.source.padEnd(18)} ${String(s.scraped).padStart(5)} listings` +
+        (s.soldSkipped ? `   ⚠ ${s.soldSkipped}` : '')
+    )
   }
 
   // Post-ingest: extract structured specs (TTAF/SMOH/engine/avionics/…) from the
@@ -80,6 +90,15 @@ async function main() {
     await runExtractSpecs({ source: only, dryRun, log: console.log })
   } catch (e) {
     console.log(`  spec-extract error (non-fatal): ${e.message}`)
+  }
+
+  // Exit non-zero when any adapter failed outright. Previously a fully blocked
+  // source still exited 0, so the systemd job reported success while bringing in
+  // nothing — the outage stayed invisible until inventory had already decayed.
+  if (failures.length) {
+    console.error(`\n${failures.length} adapter(s) FAILED:`)
+    for (const f of failures) console.error(`  ✗ ${f}`)
+    process.exitCode = 1
   }
 
   console.log(`\nDone${dryRun ? ' (dry run)' : ''}.`)

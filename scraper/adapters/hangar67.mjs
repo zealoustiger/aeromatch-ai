@@ -23,6 +23,7 @@ import {
   stateCodeFromName,
   titleCase,
 } from '../lib/ingest-core.mjs'
+import { unlockerFetch, hasUnlocker } from '../lib/unlocker.mjs'
 
 const BASE = 'https://www.hangar67.com'
 
@@ -74,6 +75,30 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     .filter(Boolean)
     .slice(0, maxListings)
   log(`  ${ids.length} active listings in sitemap`)
+  if (ids.length === 0) throw new Error('sitemap returned no listing ids — source layout changed or blocked')
+
+  // ── Blocked-source probe ────────────────────────────────────────────────────
+  // Hangar67 now fronts its JSON feed with Cloudflare, which answers a plain
+  // datacentre fetch with a hard 403 (the sitemap stays readable because it is
+  // edge-cached). A 403 is a verdict on the IP, not a transient hiccup — retrying
+  // it is pure latency, and previously burned ~20 minutes per run returning zero
+  // rows. Probe once up front; if we're blocked, route the whole run through the
+  // residential Web Unlocker instead of retrying our way into the timeout.
+  // HANGAR67_FORCE_UNLOCKER=1 skips the probe — for testing the unlocked path from
+  // an IP that isn't blocked, or pinning it on a host we know Cloudflare refuses.
+  let useUnlocker = process.env.HANGAR67_FORCE_UNLOCKER === '1' && hasUnlocker()
+  try {
+    if (useUnlocker) throw Object.assign(new Error('forced'), { status: 403 })
+    await fetchJson(`${BASE}/feed/aircraft/${ids[0]}`, { retries: 0 })
+  } catch (e) {
+    if (e?.status === 403 || e?.status === 401) {
+      if (!hasUnlocker()) {
+        throw new Error(`hangar67 feed is blocked (HTTP ${e.status}) and BRIGHTDATA_API_TOKEN is not set`)
+      }
+      useUnlocker = true
+      log('  ⚠ direct feed blocked (403) — routing this run through the Web Unlocker')
+    }
+  }
 
   // Hangar67 rate-limits aggressively (HTTP 429) on bursts. The throttle is
   // IP-WIDE, so when it trips, per-request retries don't help — every worker
@@ -96,6 +121,16 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
   }
 
   const fetchFeed = async (id) => {
+    // Blocked run: the Unlocker terminates Cloudflare for us, so the shared
+    // throttle gate and 429 dance don't apply — it has its own retry/rotation.
+    if (useUnlocker) {
+      try {
+        const body = await unlockerFetch(`${BASE}/feed/aircraft/${id}`, { retries: 2, minBytes: 50 })
+        return JSON.parse(body)
+      } catch {
+        return null
+      }
+    }
     for (let attempt = 0; attempt < 5; attempt++) {
       await waitForGate()
       try {
@@ -106,6 +141,8 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
           tripThrottle(Math.min(e.retryAfter ?? 2000 * 2 ** attempt, 30000))
           continue
         }
+        // A 403/401 is the edge refusing this IP outright — never retryable.
+        if (e?.status === 403 || e?.status === 401) return null
         // Transient (network/timeout/5xx): short local backoff, a couple tries.
         if (attempt < 2) { await sleep(500 * 2 ** attempt + Math.floor(Math.random() * 300)); continue }
         return null
@@ -143,13 +180,27 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
 
   let done = 0
   let ok = 0
-  const rows = await mapPool(ids, 2, async (id) => {
-    await sleep(80 + (id.charCodeAt(id.length - 1) % 10) * 20)
+  // Direct: concurrency 2 + jitter to stay under Hangar67's burst threshold.
+  // Unlocked: requests leave from Bright Data's residential pool, not us, so our
+  // own rate limit is moot and the run is latency-bound (~3s/req) — go wider or
+  // 1400+ listings won't finish inside the job's timeout.
+  const concurrency = useUnlocker ? 10 : 2
+  const rows = await mapPool(ids, concurrency, async (id) => {
+    if (!useUnlocker) await sleep(80 + (id.charCodeAt(id.length - 1) % 10) * 20)
     const d = await fetchFeed(id).catch(() => null)
     if (d && !d.error) ok++
     if (++done % 250 === 0) log(`  fetched ${done}/${ids.length} (${ok} ok)`)
     const row = toRow(d)
     if (!row) return null
+    // On an unlocked run, leave photos to the dedicated residential harvester
+    // (nightshift-harvest): fetching them inline would double the metered
+    // Unlocker requests for images that job already collects. The empty set is
+    // safe — ingest-core preserves previously harvested photos rather than
+    // clobbering them with [].
+    if (useUnlocker) {
+      row.images = []
+      return row
+    }
     const photos = await fetchPhotos(row.source_url)
     row.images = photos.length > 0 ? photos : []
     return row
