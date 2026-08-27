@@ -90,26 +90,25 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
   if (ids.length === 0) throw new Error('sitemap returned no listing ids — source layout changed or blocked')
 
   // ── Blocked-source probe ────────────────────────────────────────────────────
-  // Hangar67 now fronts its JSON feed with Cloudflare, which answers a plain
-  // datacentre fetch with a hard 403 (the sitemap stays readable because it is
-  // edge-cached). A 403 is a verdict on the IP, not a transient hiccup — retrying
-  // it is pure latency, and previously burned ~20 minutes per run returning zero
-  // rows. Probe once up front; if we're blocked, route the whole run through the
-  // residential Web Unlocker instead of retrying our way into the timeout.
+  // Hangar67 fronts its JSON feed with Cloudflare, which refuses datacentre IPs.
+  // The refusal is NOT a single status code: a residential IP that has been
+  // throttled sees 403/429, while the VPS sees 520 (Cloudflare origin error).
+  // So don't enumerate codes — probe one known-good listing, and treat ANY
+  // failure as "this host can't read the feed directly". Retrying a block is
+  // pure latency; it previously burned ~20 min per run for zero rows and starved
+  // the adapters queued behind it.
   // HANGAR67_FORCE_UNLOCKER=1 skips the probe — for testing the unlocked path from
   // an IP that isn't blocked, or pinning it on a host we know Cloudflare refuses.
   let useUnlocker = process.env.HANGAR67_FORCE_UNLOCKER === '1' && hasUnlocker()
   try {
-    if (useUnlocker) throw Object.assign(new Error('forced'), { status: 403 })
+    if (useUnlocker) throw Object.assign(new Error('forced'), { status: 0 })
     await fetchJson(`${BASE}/feed/aircraft/${ids[0]}`, { retries: 0 })
   } catch (e) {
-    if (e?.status === 403 || e?.status === 401) {
-      if (!hasUnlocker()) {
-        throw new Error(`hangar67 feed is blocked (HTTP ${e.status}) and BRIGHTDATA_API_TOKEN is not set`)
-      }
-      useUnlocker = true
-      log('  ⚠ direct feed blocked (403) — routing this run through the Web Unlocker')
+    if (!hasUnlocker()) {
+      throw new Error(`hangar67 feed unreachable (HTTP ${e?.status ?? '?'}) and BRIGHTDATA_API_TOKEN is not set`)
     }
+    useUnlocker = true
+    log(`  ⚠ direct feed unavailable (HTTP ${e?.status ?? '?'}) — routing this run through the Web Unlocker`)
   }
 
   // Hangar67 rate-limits aggressively (HTTP 429) on bursts. The throttle is
