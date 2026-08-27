@@ -19,9 +19,9 @@ import {
   fetchJson,
   mapPool,
   sleep,
-  parseSitemapLocs,
   stateCodeFromName,
   titleCase,
+  inRefreshSlice,
 } from '../lib/ingest-core.mjs'
 import { unlockerFetch, hasUnlocker } from '../lib/unlocker.mjs'
 
@@ -66,7 +66,16 @@ function toRow(d) {
   }
 }
 
-export async function fetchListings({ pages, maxListings = 2000, log = console.log } = {}) {
+export async function fetchListings({
+  pages,
+  maxListings = 2000,
+  log = console.log,
+  known = new Map(),
+  full = false,
+  // 1-in-30 per day: everything gets re-read at least monthly regardless of what
+  // lastmod claims, so a source that edits without bumping it self-corrects.
+  refreshDivisor = 30,
+} = {}) {
   // `pages` (used by other adapters) doesn't apply; we read the full sitemap.
   // The sitemap is the run's single point of failure — nothing else can be
   // fetched without it — so it gets the Unlocker fallback too. It is normally
@@ -81,13 +90,52 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     log(`  sitemap direct fetch failed (HTTP ${e?.status ?? '?'}) — retrying via Web Unlocker`)
     xml = await unlockerFetch(SITEMAP, { retries: 2, minBytes: 200 })
   }
-  const urls = parseSitemapLocs(xml)
-  const ids = urls
-    .map((u) => (u.match(/\/(\d+)\/?$/) || [])[1])
-    .filter(Boolean)
-    .slice(0, maxListings)
+  // Parse <url> blocks so each id keeps its <lastmod> — the whole cost model
+  // below depends on it.
+  const entries = []
+  for (const m of xml.matchAll(/<url>([\s\S]*?)<\/url>/g)) {
+    const block = m[1]
+    const loc = (block.match(/<loc>([^<]+)<\/loc>/) || [])[1]
+    const id = loc && (loc.match(/\/(\d+)\/?$/) || [])[1]
+    if (!id) continue
+    entries.push({ id, lastmod: ((block.match(/<lastmod>([^<]+)<\/lastmod>/) || [])[1] || '').trim() || null })
+  }
+  const all = entries.slice(0, maxListings)
+  const ids = all.map((e) => e.id)
   log(`  ${ids.length} active listings in sitemap`)
   if (ids.length === 0) throw new Error('sitemap returned no listing ids — source layout changed or blocked')
+
+  // ── Cost gate ───────────────────────────────────────────────────────────────
+  // Every feed read is a metered Web Unlocker request, and re-reading all 1465
+  // daily bought us almost nothing: the sitemap's own lastmod shows only ~1-16
+  // listings change on a given day. So fetch a listing only when it is new, when
+  // its lastmod moved, or when the slow rotation brings it up — and report the
+  // rest as `touchIds`, which the ingest core treats as "seen at the source"
+  // (bumping last_seen_at, and counting toward the collapse guard) without
+  // spending a request. `--full` forces the old fetch-everything behaviour.
+  const fetchAll = full || known.size === 0
+  const toFetch = []
+  const touchIds = []
+  const refreshOnly = new Set()
+  let nNew = 0, nChanged = 0, nRotated = 0
+  for (const e of all) {
+    const prev = known.get(e.id)
+    if (fetchAll) { toFetch.push(e); continue }
+    if (!prev) { toFetch.push(e); nNew++; continue }
+    if (!e.lastmod || !prev.source_lastmod || e.lastmod !== prev.source_lastmod) {
+      toFetch.push(e); nChanged++; continue
+    }
+    if (inRefreshSlice(e.id, refreshDivisor)) {
+      toFetch.push(e); refreshOnly.add(e.id); nRotated++; continue
+    }
+    touchIds.push(e.id)
+  }
+  if (!fetchAll) {
+    log(
+      `  gate: ${toFetch.length} to fetch (${nNew} new, ${nChanged} lastmod-changed, ` +
+        `${nRotated} rotation 1/${refreshDivisor}), ${touchIds.length} unchanged → touch only`
+    )
+  }
 
   // ── Blocked-source probe ────────────────────────────────────────────────────
   // Hangar67 fronts its JSON feed with Cloudflare, which refuses datacentre IPs.
@@ -100,6 +148,12 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
   // HANGAR67_FORCE_UNLOCKER=1 skips the probe — for testing the unlocked path from
   // an IP that isn't blocked, or pinning it on a host we know Cloudflare refuses.
   let useUnlocker = process.env.HANGAR67_FORCE_UNLOCKER === '1' && hasUnlocker()
+  // Nothing to fetch means nothing to probe — don't spend a billed request just
+  // to confirm a block we won't act on.
+  if (toFetch.length === 0) {
+    log('  gate cleared every listing — 0 feed requests this run')
+    return { rows: [], touchIds }
+  }
   try {
     if (useUnlocker) throw Object.assign(new Error('forced'), { status: 0 })
     await fetchJson(`${BASE}/feed/aircraft/${ids[0]}`, { retries: 0 })
@@ -136,7 +190,10 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     // throttle gate and 429 dance don't apply — it has its own retry/rotation.
     if (useUnlocker) {
       try {
-        const body = await unlockerFetch(`${BASE}/feed/aircraft/${id}`, { retries: 2, minBytes: 50 })
+        // retries:0 — each retry is a BILLED request, and a single missed
+        // listing costs nothing: the gate re-queues it tomorrow because its
+        // stored lastmod still won't match.
+        const body = await unlockerFetch(`${BASE}/feed/aircraft/${id}`, { retries: 0, minBytes: 50 })
         return JSON.parse(body)
       } catch {
         return null
@@ -196,13 +253,17 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
   // own rate limit is moot and the run is latency-bound (~3s/req) — go wider or
   // 1400+ listings won't finish inside the job's timeout.
   const concurrency = useUnlocker ? 10 : 2
-  const rows = await mapPool(ids, concurrency, async (id) => {
+  const rows = await mapPool(toFetch, concurrency, async (e) => {
+    const id = e.id
     if (!useUnlocker) await sleep(80 + (id.charCodeAt(id.length - 1) % 10) * 20)
     const d = await fetchFeed(id).catch(() => null)
     if (d && !d.error) ok++
-    if (++done % 250 === 0) log(`  fetched ${done}/${ids.length} (${ok} ok)`)
+    if (++done % 250 === 0) log(`  fetched ${done}/${toFetch.length} (${ok} ok)`)
     const row = toRow(d)
     if (!row) return null
+    // Store the lastmod we acted on, so tomorrow's gate can compare against it.
+    row.source_lastmod = e.lastmod
+    if (refreshOnly.has(id)) row._refreshOnly = true
     // On an unlocked run, leave photos to the dedicated residential harvester
     // (nightshift-harvest): fetching them inline would double the metered
     // Unlocker requests for images that job already collects. The empty set is
@@ -216,9 +277,12 @@ export async function fetchListings({ pages, maxListings = 2000, log = console.l
     row.images = photos.length > 0 ? photos : []
     return row
   })
-  const rate = ids.length ? Math.round((ok / ids.length) * 100) : 0
-  log(`  ${ok}/${ids.length} feeds OK (${rate}%${throttleHits ? `, ${throttleHits} throttle pauses` : ''})`)
+  const rate = toFetch.length ? Math.round((ok / toFetch.length) * 100) : 100
+  log(`  ${ok}/${toFetch.length} feeds OK (${rate}%${throttleHits ? `, ${throttleHits} throttle pauses` : ''})`)
   if (rate < 80) log(`  ⚠ low success rate — source likely throttling; next daily run will fill gaps (7-day sold grace protects active listings)`)
 
-  return rows.filter(Boolean)
+  // A listing whose feed we failed to read must NOT be reported as touched —
+  // that would refresh last_seen_at on data we never actually saw. Only ids the
+  // gate deliberately skipped are safe to touch.
+  return { rows: rows.filter(Boolean), touchIds }
 }
