@@ -64,8 +64,10 @@ export type SendEmailResult =
 // Alert email is paused for everyone except the addresses below while the alert
 // templates and delivery logic are reworked. This gate sits in `sendEmail`, the
 // single chokepoint every app send goes through, so no route or cron can slip
-// past it. `scraper/send-alerts.mjs` carries the same list (it talks to Resend
-// directly rather than importing this server module).
+// past it — and since `scraper/send-alerts.mjs`'s send step was retired
+// (2026-08-27; it is now the send-free `scraper/sync-saved-searches.mjs`),
+// this really is the only gate there is. Nothing outside the app posts to
+// Resend any more, so this list no longer needs a duplicate anywhere.
 //
 // TO RESUME: set EMAIL_ALLOWLIST to an empty string (or delete the default
 // below). An empty list means "no gate" — everybody gets mail again.

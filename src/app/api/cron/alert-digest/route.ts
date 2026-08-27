@@ -60,6 +60,16 @@ const TEST_ALERT_SWEEP_MAX_ROWS = 500
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+// SOLE OWNER of alert digest email. Until 2026-08-27 `scraper/send-alerts.mjs`
+// (run nightly on the VPS by nightshift/bin/run-scrape.sh) sent its own digests
+// off these same `alerts` rows and stamped this same `last_digest_at` cursor, so
+// the two senders raced: whichever ran first each day advanced the cursor and the
+// other silently sent nothing for that window. That script's send step is gone
+// (it is now the send-free `scraper/sync-saved-searches.mjs`). This route and
+// `/api/cron/alert-instant` — which split the work cleanly by `frequency`, see
+// the `instant` skip in the loop below — are the only writers of
+// `last_digest_at`. Do not add a third.
+
 const PARTS_PRICE_FLOOR = 50_000
 // Broadest possible send interval a subscriber can pick (see alertFrequency.ts) —
 // used only as a coarse SQL pre-filter; the actual per-alert due-check (which

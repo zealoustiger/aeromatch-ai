@@ -79,3 +79,5 @@ saved search has zero visibility into that subscription anywhere on the site.
 - Reconciling `/account`'s mislabeled "Email alerts" (saved-searches) section copy —
   flagged as a follow-up, not fixed this cycle to keep the diff small.
 - Any change to `send-alerts.mjs`/digest cron behavior.
+
+> **[CORRECTION 2026-08-27]** `scraper/send-alerts.mjs` was NOT unscheduled/dead code — `nightshift/bin/run-scrape.sh` ran it nightly on the VPS (systemd `nightshift-scrape.timer`), making it a second live sender racing `/api/cron/alert-digest` over the same `alerts` rows and the same `last_digest_at` cursor. Resolved by `scraper-send-alerts-retire` (2026-08-27): its send step is removed, the file is now `scraper/sync-saved-searches.mjs` (saved-search → alert sync only), and the Vercel cron is the sole owner of alert email. The scope decision below still stands; only its stated premise was wrong.

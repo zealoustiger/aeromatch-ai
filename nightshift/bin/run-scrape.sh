@@ -2,8 +2,9 @@
 # Night Shift DAILY SCRAPE entrypoint (VPS / Docker).
 # Refreshes the planes-for-sale inventory every morning so new listings land
 # daily and the 7-day sold-detection window actually ticks. Runs the ingestion
-# orchestrator (all default adapters), then the alert match-and-send (a no-op
-# until RESEND_API_KEY is set). Token-free: no `claude` turn, so it is never
+# orchestrator (all default adapters), then the saved-search → alert sync.
+# Sends no email of its own: alert digests belong to the Vercel cron
+# `/api/cron/alert-digest`. Token-free: no `claude` turn, so it is never
 # blocked by the subscription rate limit.
 # Fired by a 06:40 PT systemd timer — after the drain's stop, before the 07:15
 # digest, so the morning report can include the fresh inventory.
@@ -22,7 +23,7 @@ git fetch --quiet origin 2>/dev/null || true
 git checkout staging --quiet 2>/dev/null || true
 git pull --quiet --ff-only 2>/dev/null || true
 
-# Creds for the scraper + alerts (Supabase service role, Resend, site URL).
+# Creds for the scraper + alert sync (Supabase service role, site URL).
 set -a; [ -f "$APP/.env.local" ] && . "$APP/.env.local"; set +a
 
 STATE="${NS_STATE_DIR:-/home/night/state}"
@@ -49,10 +50,13 @@ echo "=== daily scrape: partnerships ==="
 node scraper/ingest-partnerships.mjs --max-pages=3 >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
 tail -20 "$STATE/scrape.out" 2>/dev/null
 
-# 4) Match-and-send alert digests for any NEW listings (skips sends if no
-#    RESEND_API_KEY — baseline-first, so it never blasts the back-catalog).
-echo "=== daily scrape: alerts ==="
-node scraper/send-alerts.mjs >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
+# 4) Mirror logged-in users' saved searches into confirmed alert rows. This
+#    step does NOT send email: `/api/cron/alert-digest` (Vercel cron) is the
+#    single owner of alert digests. This script used to send its own digests
+#    off the same rows and the same `last_digest_at` cursor, so the two senders
+#    raced and whichever ran first each day silenced the other.
+echo "=== daily scrape: saved-search sync ==="
+node scraper/sync-saved-searches.mjs >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
 tail -8 "$STATE/scrape.out" 2>/dev/null
 
 echo "scrape exit $ingest_rc"
