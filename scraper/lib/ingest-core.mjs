@@ -109,6 +109,25 @@ export async function fetchJson(url, opts) {
   return JSON.parse(text)
 }
 
+/**
+ * Read EVERY row a query matches, in 1000-row pages.
+ *
+ * PostgREST enforces a server-side max-rows of 1000: an unbounded select returns
+ * 1000, and so does `.limit(50000)` — the cap wins silently, with no error and no
+ * truncation flag. Any call that needs the full set (dedup keys, existing-row
+ * maps, health counts) must page. `build(from, to)` should return a fresh query
+ * with `.range(from, to)` applied.
+ */
+export async function selectAll(build, { page = 1000 } = {}) {
+  const out = []
+  for (let from = 0; ; from += page) {
+    const { data, error } = await build(from, from + page - 1)
+    if (error) throw new Error(error.message)
+    out.push(...(data ?? []))
+    if (!data || data.length < page) return out
+  }
+}
+
 // Run an async fn over items with bounded concurrency; preserves order.
 export async function mapPool(items, concurrency, fn) {
   const results = new Array(items.length)

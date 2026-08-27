@@ -34,13 +34,22 @@ ingest_rc=$?
 cat "$STATE/scrape.out" 2>/dev/null
 [ "$ingest_rc" -ne 0 ] && { echo "ingest stderr:"; tail -20 "$STATE/scrape.err" 2>/dev/null; }
 
-# 2) Partnership scrape — Barnstormers + Controller (+ TAP if non-empty). All
+# 2) Controller aircraft — its own ingester (not an ingest.mjs adapter): needs the
+#    Web Unlocker and dedups against every registration we already hold, so it only
+#    adds aircraft no other source carries. Rows land status='admin', same as the
+#    partnership scrapers, until the extraction is trusted for public display.
+#    Page depth is kept modest so it can't crowd out the rest of the run.
+echo "=== daily scrape: controller aircraft ==="
+node scraper/ingest-controller.mjs --max-pages=25 >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
+tail -12 "$STATE/scrape.out" 2>/dev/null
+
+# 3) Partnership scrape — Barnstormers + Controller (+ TAP if non-empty). All
 #    rows land status='admin' so nothing leaks publicly until extraction is trusted.
 echo "=== daily scrape: partnerships ==="
 node scraper/ingest-partnerships.mjs --max-pages=3 >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
 tail -20 "$STATE/scrape.out" 2>/dev/null
 
-# 3) Match-and-send alert digests for any NEW listings (skips sends if no
+# 4) Match-and-send alert digests for any NEW listings (skips sends if no
 #    RESEND_API_KEY — baseline-first, so it never blasts the back-catalog).
 echo "=== daily scrape: alerts ==="
 node scraper/send-alerts.mjs >> "$STATE/scrape.out" 2>> "$STATE/scrape.err" || true
