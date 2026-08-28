@@ -1227,6 +1227,22 @@ export type AlertDigestSample = {
   isPlaceholder: boolean
   year: number | null
   ttaf: number | null
+  /** Engine time since major overhaul, hours — aircraft samples only.
+   *  Self-suppressing like every other spec: null renders nothing. */
+  smoh?: number | null
+  /** Engine make + designation as listed, e.g. "Lycoming IO-360". */
+  engineType?: string | null
+  /** Only an explicit `false` renders "No damage reported" — a missing flag is
+   *  never spun into a clean record (same honesty floor as the on-site cards
+   *  and `src/lib/damageHistory.ts`). */
+  damageHistory?: boolean | null
+  /** Tail number, e.g. "N1234A". */
+  registration?: string | null
+  /** Honest stand-in shown only when there is no numeric `price` — the
+   *  listing's own free-text price, or "Contact for price" / "Contact for
+   *  buy-in". Left unset by samples with no price concept at all (seekers),
+   *  which then render no price line, as before. */
+  priceText?: string | null
   /** Formatted share label (e.g. "1/4 Share") — partnership samples only.
    *  Rendered in place of `ttaf` (aircraft-only) in the specs line. */
   shareType?: string | null
@@ -1316,16 +1332,46 @@ function distanceSegment(s: AlertDigestSample): string | null {
   return `~${Math.round(s.distanceNm)} nm from ${s.fromIcao}`
 }
 
-function specsLine(s: AlertDigestSample): string {
+/**
+ * The spec segments for one sample, in render order. Shared by the HTML card
+ * ({@link specsLine}) and both text parts so the two can never drift — they
+ * had already drifted once, the text part never having gained the aircraft
+ * specs the card shows. Every segment is self-suppressing: a sparse listing
+ * yields a sparse line, never a card claiming specs we don't hold.
+ */
+function sampleSpecsParts(s: AlertDigestSample): string[] {
   const parts: string[] = []
   if (s.year) parts.push(String(s.year))
   if (s.lookingFor) parts.push(s.lookingFor)
   else if (s.shareType) parts.push(s.shareType)
   else if (s.ttaf) parts.push(`${s.ttaf.toLocaleString()} TTAF`)
+  if (s.smoh != null) parts.push(`${s.smoh.toLocaleString()} SMOH`)
+  if (s.engineType) parts.push(s.engineType)
+  // Only an explicit `false` is a claim we can make; null stays silent.
+  if (s.damageHistory === false) parts.push('No damage reported')
+  else if (s.damageHistory === true) parts.push('Damage reported')
+  if (s.registration) parts.push(s.registration)
   if (s.location) parts.push(s.location)
   const distance = distanceSegment(s)
   if (distance) parts.push(distance)
-  return parts.join(' &middot; ')
+  return parts
+}
+
+/** Plain-text price for a sample, same fallback ladder as the card's
+ *  `priceHtml`: a genuine drop reads "now (was then)", otherwise the single
+ *  price we hold, otherwise the caller's own `priceText` stand-in. Empty when
+ *  the sample has no price concept at all (seekers), which the callers then
+ *  omit from the line entirely. */
+function samplePriceText(s: AlertDigestSample): string {
+  if (s.previousPrice != null && s.price != null && s.previousPrice !== s.price) {
+    return `${formatUsd(s.price)} (was ${formatUsd(s.previousPrice)})`
+  }
+  if (s.price != null) return formatUsd(s.price)
+  return s.priceText ?? ''
+}
+
+function specsLine(s: AlertDigestSample): string {
+  return sampleSpecsParts(s).map(escapeHtml).join(' &middot; ')
 }
 
 /** Builds the one-click "Not relevant?" link for a single digest sample —
@@ -1341,19 +1387,30 @@ function notRelevantLink(baseUrl: string | undefined, s: AlertDigestSample): str
 }
 
 function sampleCardHtml(s: AlertDigestSample, notRelevantUrl?: string): string {
-  const photo = s.photoUrl
-    ? `<img src="${escapeAttr(s.photoUrl)}" alt="${escapeAttr(s.title)}" width="88" height="66" style="width:88px;height:66px;object-fit:cover;border-radius:8px;flex-shrink:0;display:block;" />`
+  // The photo is its own anchor to the same listing (see the table note on the
+  // return below) — 120x90 rather than the old 88x66, which was too small to
+  // judge an airframe from an inbox.
+  const photoCell = s.photoUrl
+    ? `<td width="120" valign="top" style="width:120px;padding-right:14px;">
+          <a href="${escapeAttr(s.url)}" style="text-decoration:none;"><img src="${escapeAttr(s.photoUrl)}" alt="${escapeAttr(s.title)}" width="120" height="90" style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;border:0;background:#f1f5f9;" /></a>
+          ${s.isPlaceholder ? `<p class="ch-muted" style="margin:4px 0 0;font-size:10px;line-height:1.3;color:#a89f8e;">Not actual plane photo</p>` : ''}
+        </td>`
     : ''
   const specs = specsLine(s)
   const priceHtml =
     s.previousPrice != null && s.price != null && s.previousPrice !== s.price
-      ? `<span style="color:#94a3b8;text-decoration:line-through;font-size:12px;margin-right:6px;">${formatUsd(s.previousPrice)}</span><span style="color:#0f172a;font-weight:700;font-size:15px;">${formatUsd(s.price)}</span>`
+      ? `<span style="color:#94a3b8;text-decoration:line-through;font-size:12px;margin-right:6px;">${formatUsd(s.previousPrice)}</span><span class="ch-heading" style="color:#0f172a;font-weight:700;font-size:15px;">${formatUsd(s.price)}</span>`
       : s.price != null
-        ? `<span style="color:#0f172a;font-weight:700;font-size:15px;">${formatUsd(s.price)}</span>`
-        : ''
-  const placeholderNote = s.isPlaceholder
-    ? `<p style="margin:2px 0 0;font-size:10px;color:#a89f8e;">Not actual plane photo</p>`
-    : ''
+        ? `<span class="ch-heading" style="color:#0f172a;font-weight:700;font-size:15px;">${formatUsd(s.price)}</span>`
+        : // A listing with no numeric price used to render no price line at all,
+          // which read as a rendering bug. `priceText` is the caller's own honest
+          // stand-in ("Contact for price", "Contact for buy-in"); samples that
+          // genuinely have no price concept — seekers, who are pilots looking for
+          // a partnership, not something for sale — leave it unset and still
+          // render nothing.
+          s.priceText
+          ? `<span class="ch-muted" style="color:#475569;font-weight:600;font-size:14px;">${escapeHtml(s.priceText)}</span>`
+          : ''
   const alsoMatchesNote = s.alsoMatchesLabel
     ? `<p style="margin:2px 0 0;font-size:10px;color:#0369a1;">${escapeHtml(s.alsoMatchesLabel)}</p>`
     : ''
@@ -1378,18 +1435,25 @@ function sampleCardHtml(s: AlertDigestSample, notRelevantUrl?: string): string {
     ? `<p style="margin:4px 0 0;"><a href="${escapeAttr(s.watchUrl)}" style="font-size:11px;font-weight:600;color:#0284c7;text-decoration:none;">Watch this listing &rarr;</a></p>`
     : ''
 
+  // Table-based, not flexbox: Outlook on Windows renders through Word, which
+  // ignores `display:flex` entirely — the old flex card collapsed there,
+  // stacking a full-width photo above the copy. A `role="presentation"` table
+  // is the one layout every client agrees on. Consequence: the card can no
+  // longer be one big <a>, since a table inside an anchor is unreliable too, so
+  // the photo and the title each link to the listing separately.
   return `<div style="padding:12px 0;border-bottom:1px solid #ece6dc;">
-        <a href="${escapeAttr(s.url)}" style="display:flex;gap:12px;text-decoration:none;color:inherit;">
-          ${photo}
-          <div style="min-width:0;">
-            <p style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;">${escapeHtml(s.title)}</p>
-            ${specs ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;">${specs}</p>` : ''}
-            ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
-            ${compLabelHtml}
-            ${placeholderNote}
-            ${alsoMatchesNote}
-          </div>
-        </a>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;">
+          <tr>
+            ${photoCell}
+            <td valign="top" style="vertical-align:top;">
+              <p class="ch-heading" style="margin:0 0 3px;font-weight:700;font-size:14px;color:#0f172a;"><a class="ch-heading" href="${escapeAttr(s.url)}" style="color:#0f172a;text-decoration:none;">${escapeHtml(s.title)}</a></p>
+              ${specs ? `<p class="ch-muted" style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#64748b;">${specs}</p>` : ''}
+              ${priceHtml ? `<p style="margin:0;">${priceHtml}</p>` : ''}
+              ${compLabelHtml}
+              ${alsoMatchesNote}
+            </td>
+          </tr>
+        </table>
         ${watchHtml}
         ${notRelevantHtml}
       </div>`
@@ -1646,20 +1710,8 @@ function buildAlertDigestEmailCore(opts: {
 
   const sampleLines = samples
     .map((s) => {
-      const price =
-        s.previousPrice != null && s.price != null && s.previousPrice !== s.price
-          ? `${formatUsd(s.price)} (was ${formatUsd(s.previousPrice)})`
-          : s.price != null
-            ? formatUsd(s.price)
-            : ''
-      const specs = [
-        s.year,
-        s.lookingFor ?? s.shareType ?? (s.ttaf ? `${s.ttaf.toLocaleString()} TTAF` : null),
-        s.location,
-        distanceSegment(s),
-      ]
-        .filter(Boolean)
-        .join(' · ')
+      const price = samplePriceText(s)
+      const specs = sampleSpecsParts(s).join(' · ')
       const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, s)
       return `- ${s.title}${specs ? ` (${specs})` : ''}${price ? ` — ${price}` : ''}${s.compLabel ? ` [${s.compLabel}]` : ''}\n  ${s.url}${s.watchUrl ? `\n  Watch this listing: ${s.watchUrl}` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
     })
@@ -1878,12 +1930,7 @@ function buildCombinedAlertDigestEmailCore(opts: {
 
     const sampleLines = samples
       .map((sm) => {
-        const price =
-          sm.previousPrice != null && sm.price != null && sm.previousPrice !== sm.price
-            ? `${formatUsd(sm.price)} (was ${formatUsd(sm.previousPrice)})`
-            : sm.price != null
-              ? formatUsd(sm.price)
-              : ''
+        const price = samplePriceText(sm)
         const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, sm)
         return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${sm.watchUrl ? `\n  Watch this listing: ${sm.watchUrl}` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
       })

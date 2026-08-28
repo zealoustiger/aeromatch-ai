@@ -791,6 +791,13 @@ export async function countNew(
 
 // ─── Digest email sample listings (aircraft only) ─────────────────────────────
 
+/** Columns every aircraft preview card reads. One constant, not a literal per
+ *  query, so a card can't silently lose a spec to one fetcher being missed.
+ *  `smoh` is also what `filterToGoodDeals` needs, which is why the deal-only
+ *  and ordinary selects no longer differ. */
+const AIRCRAFT_CARD_COLS =
+  'id, make, model, year, asking_price, images, location, ttaf, smoh, engine_type, damage_history, registration, price_text'
+
 type AircraftSampleRow = {
   id: string
   make: string | null
@@ -802,6 +809,10 @@ type AircraftSampleRow = {
   location: string | null
   ttaf: number | null
   smoh?: number | null
+  engine_type?: string | null
+  damage_history?: boolean | null
+  registration?: string | null
+  price_text?: string | null
 }
 
 function toDigestSample(
@@ -823,8 +834,16 @@ function toDigestSample(
     isPlaceholder: !realPhoto,
     year: row.year,
     ttaf: row.ttaf,
+    smoh: row.smoh ?? null,
+    engineType: row.engine_type ?? null,
+    damageHistory: row.damage_history ?? null,
+    registration: row.registration ?? null,
     location: row.location,
     price: row.asking_price,
+    // Only ever reached by callers with no `asking_price` floor (the confirm-
+    // time preview, the admin gallery); the digest's own fetchers floor on
+    // price, so this is a safety net rather than the common path.
+    priceText: row.asking_price == null ? (row.price_text ?? 'Contact for price') : null,
     previousPrice,
     compLabel: comp ? compLabel(comp) : undefined,
     compBelowAvg: comp?.kind === 'below',
@@ -936,7 +955,7 @@ export async function fetchNewAircraftSamples(
   // its own DB-column-less filter.
   let q: any = supabase
     .from('aircraft_for_sale')
-    .select(target.dealOnly ? 'id, make, model, year, asking_price, images, location, ttaf, smoh' : 'id, make, model, year, asking_price, images, location, ttaf')
+    .select(AIRCRAFT_CARD_COLS)
     .eq('status', 'active')
     .gte('asking_price', PARTS_PRICE_FLOOR)
     .gte('first_seen_at', since)
@@ -984,7 +1003,7 @@ async function fetchAircraftPriceDropSamples(
 ): Promise<AlertDigestSample[]> {
   let q: any = supabase
     .from('aircraft_for_sale')
-    .select('id, make, model, year, asking_price, previous_price, images, location, ttaf, smoh, price_changed_at')
+    .select(`${AIRCRAFT_CARD_COLS}, previous_price, price_changed_at`)
     .eq('status', 'active')
     .gte('asking_price', PARTS_PRICE_FLOOR)
     .gte('price_changed_at', since)
@@ -1039,7 +1058,7 @@ async function resolveListingWatch(
 ): Promise<ListingWatchResult> {
   const { data, error } = await supabase
     .from('aircraft_for_sale')
-    .select('id, make, model, year, asking_price, previous_price, price_changed_at, images, location, ttaf, status')
+    .select(`${AIRCRAFT_CARD_COLS}, previous_price, price_changed_at, status`)
     .eq('id', listingId)
     .maybeSingle()
 
@@ -1075,6 +1094,7 @@ type PartnershipSampleRow = {
   home_airport: string | null
   city: string | null
   state: string | null
+  registration?: string | null
 }
 
 function toPartnershipDigestSample(
@@ -1090,8 +1110,13 @@ function toPartnershipDigestSample(
     year: row.year,
     ttaf: null,
     shareType: row.share_type ? formatShareType(row.share_type) : null,
+    registration: row.registration ?? null,
     location: row.city && row.state ? `${row.city}, ${row.state}` : row.home_airport,
     price: row.buy_in_price,
+    // A partnership with no buy-in on file is still something you can buy into,
+    // so it gets an honest stand-in rather than a blank price line. Named for a
+    // buy-in share, not an asking price.
+    priceText: row.buy_in_price == null ? 'Contact for buy-in' : null,
     previousPrice,
     distanceNm: distance?.nm,
     fromIcao: distance?.fromIcao,
@@ -1112,7 +1137,7 @@ export async function fetchNewPartnershipSamples(
 ): Promise<AlertDigestSample[]> {
   let q = supabase
     .from('partnerships')
-    .select('id, make, model, year, buy_in_price, share_type, images, home_airport, city, state')
+    .select('id, make, model, year, buy_in_price, share_type, images, home_airport, city, state, registration')
     .eq('status', 'active')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
@@ -1147,7 +1172,7 @@ async function fetchPartnershipPriceDropSamples(
 ): Promise<AlertDigestSample[]> {
   let q: any = supabase
     .from('partnerships')
-    .select('id, make, model, year, buy_in_price, previous_buy_in_price, share_type, images, home_airport, city, state, buy_in_price_changed_at')
+    .select('id, make, model, year, buy_in_price, previous_buy_in_price, share_type, images, home_airport, city, state, registration, buy_in_price_changed_at')
     .eq('status', 'active')
     .gte('buy_in_price_changed_at', since)
     .not('previous_buy_in_price', 'is', null)
@@ -1208,8 +1233,8 @@ async function resolvePartnershipWatch(
   targetPrice?: number | null
 ): Promise<ListingWatchResult> {
   const fullCols =
-    'id, make, model, year, buy_in_price, previous_buy_in_price, buy_in_price_changed_at, share_type, images, home_airport, city, state, status'
-  const baseCols = 'id, make, model, year, buy_in_price, share_type, images, home_airport, city, state, status'
+    'id, make, model, year, buy_in_price, previous_buy_in_price, buy_in_price_changed_at, share_type, images, home_airport, city, state, registration, status'
+  const baseCols = 'id, make, model, year, buy_in_price, share_type, images, home_airport, city, state, registration, status'
 
   type Row = PartnershipSampleRow & {
     status: string | null
