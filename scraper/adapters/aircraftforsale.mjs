@@ -18,7 +18,9 @@ import {
   parseSitemapLocs,
   titleCase,
   stateCodeFromName,
+  inRefreshSlice,
 } from '../lib/ingest-core.mjs'
+import { unlockerFetch, hasUnlocker } from '../lib/unlocker.mjs'
 
 const APEX = 'https://aircraftforsale.com'
 const SITEMAP = `${APEX}/uploads/sitemap/sitemap_item_detail.xml`
@@ -93,8 +95,28 @@ function parseDetail(html, id) {
   return { asking_price, ttaf, year }
 }
 
-export async function fetchListings({ maxListings = 1600, log = console.log } = {}) {
-  const xml = await fetchHtml(SITEMAP)
+export async function fetchListings({
+  maxListings = 1600,
+  log = console.log,
+  known = new Map(),
+  full = false,
+  // 1-in-14 per day. Unlike hangar67 there is no usable per-listing signal (see
+  // the gate below), so the rotation IS the price-change detector — it needs to
+  // be quicker than hangar67's monthly cycle.
+  refreshDivisor = 14,
+} = {}) {
+  // AircraftForSale's WAF refuses datacentre IPs — the VPS gets HTTP 405 on the
+  // sitemap while a residential IP is served normally. Same shape as hangar67:
+  // fall the sitemap back to the residential Web Unlocker, then probe one detail
+  // page to decide whether the whole run needs to go through it.
+  let xml
+  try {
+    xml = await fetchHtml(SITEMAP)
+  } catch (e) {
+    if (!hasUnlocker()) throw e
+    log(`  sitemap direct fetch failed (HTTP ${e?.status ?? '?'}) — retrying via Web Unlocker`)
+    xml = await unlockerFetch(SITEMAP, { retries: 2, minBytes: 200 })
+  }
   const idOf = (u) => {
     const m = u.match(/for-sale-(\d+)\/?$/)
     return m ? parseInt(m[1], 10) : 0
@@ -106,13 +128,67 @@ export async function fetchListings({ maxListings = 1600, log = console.log } = 
   all.sort((a, b) => idOf(b) - idOf(a))
   const urls = all.slice(0, maxListings)
   log(`  ${all.length} listings in sitemap, taking newest ${urls.length}`)
+  if (urls.length === 0) throw new Error('sitemap returned no listing urls — source layout changed or blocked')
+
+  // ── Cost gate ───────────────────────────────────────────────────────────────
+  // Every detail page is a metered Web Unlocker request on the VPS. Unlike
+  // hangar67, this sitemap's lastmod is worthless — it stamps EVERY listing with
+  // the current date on each regeneration — so there is no per-listing change
+  // signal to gate on. What saves us instead: the listing URL already encodes
+  // make, model, category, location and id, so a known listing costs nothing to
+  // re-affirm. Only `asking_price`, `ttaf` and `year` need the page.
+  // So: fetch new listings always, and re-read known ones on a rotation.
+  // Note these rows are NOT tagged `_refreshOnly`: that marker measures how often
+  // an authoritative lastmod LIED, and this source publishes none. Here the
+  // rotation is the price-change detector itself, so its catches are the job
+  // working, not a gate failure — tagging them would report a false alarm daily.
+  const gated = []
+  const touchIds = []
+  let nNew = 0, nRotated = 0
+  for (const url of urls) {
+    const meta = parseUrl(url)
+    if (!meta) continue
+    if (full || !known.has(meta.id)) { gated.push({ url, meta }); if (!full) nNew++; continue }
+    if (inRefreshSlice(meta.id, refreshDivisor)) {
+      gated.push({ url, meta }); nRotated++; continue
+    }
+    touchIds.push(meta.id)
+  }
+  if (!full && known.size > 0) {
+    log(
+      `  gate: ${gated.length} to fetch (${nNew} new, ${nRotated} rotation 1/${refreshDivisor}), ` +
+        `${touchIds.length} known → touch only`
+    )
+  }
+
+  // Probe one detail page. Any failure means this host can't read them directly,
+  // so route the run through the Unlocker rather than collecting 1600 nulls.
+  let useUnlocker = false
+  // Nothing to fetch means nothing to probe — don't spend a billed request.
+  if (gated.length === 0) {
+    log('  gate cleared every listing — 0 detail requests this run')
+    return { rows: [], touchIds }
+  }
+  try {
+    await fetchHtml(urls[0], { retries: 0 })
+  } catch (e) {
+    if (!hasUnlocker()) {
+      throw new Error(`aircraftforsale detail pages unreachable (HTTP ${e?.status ?? '?'}) and BRIGHTDATA_API_TOKEN is not set`)
+    }
+    useUnlocker = true
+    log(`  ⚠ direct detail fetch unavailable (HTTP ${e?.status ?? '?'}) — routing this run through the Web Unlocker`)
+  }
+  const getPage = (url) =>
+    useUnlocker
+      // retries:0 — each retry is a BILLED request and a single missed listing
+      // is harmless: a new one is retried tomorrow, a rotated one comes round again.
+      ? unlockerFetch(url, { retries: 0, minBytes: 1000 }).catch(() => null)
+      : fetchHtml(url).catch(() => null)
 
   let done = 0
-  const rows = await mapPool(urls, 6, async (url) => {
-    const meta = parseUrl(url)
-    if (!meta) return null
-    const html = await fetchHtml(url).catch(() => null)
-    if (++done % 200 === 0) log(`  fetched ${done}/${urls.length}`)
+  const rows = await mapPool(gated, useUnlocker ? 10 : 6, async ({ url, meta }) => {
+    const html = await getPage(url)
+    if (++done % 200 === 0) log(`  fetched ${done}/${gated.length}`)
     if (!html) return null
     const { asking_price, ttaf, year } = parseDetail(html, meta.id)
     const title = [year, meta.make, meta.model].filter(Boolean).join(' ') || 'Aircraft'
@@ -132,5 +208,7 @@ export async function fetchListings({ maxListings = 1600, log = console.log } = 
     }
   })
 
-  return rows.filter(Boolean)
+  // Only ids the gate deliberately skipped are safe to touch — a page we failed
+  // to read must not have its last_seen_at refreshed on unseen data.
+  return { rows: rows.filter(Boolean), touchIds }
 }

@@ -51,6 +51,26 @@ export async function GET() {
         id: 'preview-2',
         type: 'aircraft',
       },
+      // Exercises the full spec line (SMOH / engine / damage / tail number)
+      // and the no-numeric-price fallback, so this preview covers the sparse
+      // and the fully-populated card, not just the happy middle.
+      {
+        title: '1974 Cessna 172M Skyhawk',
+        photoUrl: getPlaceholderPhoto('cessna'),
+        isPlaceholder: true,
+        year: 1974,
+        ttaf: 5820,
+        smoh: 410,
+        engineType: 'Lycoming O-320-E2D',
+        damageHistory: false,
+        registration: 'N1234A',
+        location: 'Fox Lake, IL',
+        price: null,
+        priceText: 'Contact for price',
+        url: 'https://clubhanger.com/aircraft/listing/preview-3',
+        id: 'preview-3',
+        type: 'aircraft',
+      },
     ],
   })
 

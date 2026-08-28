@@ -9,11 +9,17 @@
  *   node scraper/ingest.mjs                      # all sources, default depth
  *   node scraper/ingest.mjs --source=barnstormers
  *   node scraper/ingest.mjs --pages=3 --dry-run
+ *   node scraper/ingest.mjs --full          # ignore the cost gates, re-read everything
+ *
+ * COST: hangar67 and aircraftforsale are fetched through the metered Bright Data
+ * Web Unlocker on the VPS. Both gate on what actually changed (~110 requests/day
+ * combined, down from ~2094). `--full` bypasses that and costs a full catalogue —
+ * use it after a parser change, not routinely.
  *
  * Env (from .env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 
-import { loadEnvLocal, runIngest } from './lib/ingest-core.mjs'
+import { loadEnvLocal, runIngest, loadKnown } from './lib/ingest-core.mjs'
 import { runExtractSpecs } from './lib/extract-specs.mjs'
 import * as barnstormers from './adapters/barnstormers.mjs'
 import * as hangar67 from './adapters/hangar67.mjs'
@@ -38,6 +44,10 @@ async function main() {
   const pages = pagesArg ? parseInt(pagesArg.split('=')[1], 10) : 6
   const sourceArg = args.find((a) => a.startsWith('--source='))
   const only = sourceArg ? sourceArg.split('=')[1] : null
+  // Adapters that can, fetch only what changed (see each adapter's cost gate).
+  // `--full` forces a complete re-read — correct after a schema change or when
+  // seeding a source, but it costs a full catalogue of metered requests.
+  const full = args.includes('--full')
 
   const adapters = only ? ALL_ADAPTERS.filter((a) => a.source === only) : DEFAULT_ADAPTERS
   if (adapters.length === 0) {
@@ -47,28 +57,47 @@ async function main() {
 
   console.log(`=== Planes-for-Sale ingestion (${dryRun ? 'DRY RUN' : 'live'}, pages=${pages}) ===\n`)
   const summary = []
+  const failures = []
   for (const adapter of adapters) {
     console.log(`▸ ${adapter.label}`)
     let rows = []
+    // A thrown adapter means we learned NOTHING about this source's inventory.
+    // Flag it so sold-detection is skipped outright rather than reading the empty
+    // result as "every listing sold" (see the collapse guard in ingest-core).
+    let fetchFailed = false
+    let touchIds = []
     try {
-      rows = await adapter.fetchListings({ pages, log: console.log })
+      // What we already hold, so the adapter can skip re-fetching unchanged
+      // listings. Cheap (one paged read) next to the metered requests it saves.
+      const known = dryRun ? new Map() : await loadKnown(adapter.source)
+      const out = await adapter.fetchListings({ pages, log: console.log, known, full })
+      // Adapters either return a plain array (no cost gate) or { rows, touchIds }.
+      if (Array.isArray(out)) rows = out
+      else { rows = out?.rows ?? []; touchIds = out?.touchIds ?? [] }
     } catch (e) {
+      fetchFailed = true
+      failures.push(`${adapter.source}: ${e.message}`)
       console.log(`  fetch error: ${e.message}`)
     }
-    const stats = await runIngest({ source: adapter.source, rows, dryRun })
+    const stats = await runIngest({ source: adapter.source, rows, dryRun, fetchFailed, touchIds })
     summary.push(stats)
     console.log(
       `  → ${stats.scraped} scraped` +
         (dryRun
           ? ' (dry run, no writes)'
-          : `, ${stats.changed} changed, ${stats.priceDrops} price drops, ${stats.priceRises} price rises, ${stats.markedSold} marked sold`) +
+          : `, ${stats.touched} touched, ${stats.changed} changed, ${stats.priceDrops} price drops, ${stats.priceRises} price rises, ${stats.markedSold} marked sold` +
+            (stats.gateMisses ? `, ⚠ ${stats.gateMisses} GATE MISSES (changed without a lastmod bump)` : '')) +
         '\n'
     )
   }
 
   console.log('=== Summary ===')
   for (const s of summary) {
-    console.log(`  ${s.source.padEnd(18)} ${s.scraped} listings`)
+    console.log(
+      `  ${s.source.padEnd(18)} ${String(s.scraped).padStart(5)} fetched  ${String(s.touched).padStart(5)} touched` +
+        (s.gateMisses ? `  ⚠ ${s.gateMisses} gate misses` : '') +
+        (s.soldSkipped ? `   ⚠ ${s.soldSkipped}` : '')
+    )
   }
 
   // Post-ingest: extract structured specs (TTAF/SMOH/engine/avionics/…) from the
@@ -80,6 +109,15 @@ async function main() {
     await runExtractSpecs({ source: only, dryRun, log: console.log })
   } catch (e) {
     console.log(`  spec-extract error (non-fatal): ${e.message}`)
+  }
+
+  // Exit non-zero when any adapter failed outright. Previously a fully blocked
+  // source still exited 0, so the systemd job reported success while bringing in
+  // nothing — the outage stayed invisible until inventory had already decayed.
+  if (failures.length) {
+    console.error(`\n${failures.length} adapter(s) FAILED:`)
+    for (const f of failures) console.error(`  ✗ ${f}`)
+    process.exitCode = 1
   }
 
   console.log(`\nDone${dryRun ? ' (dry run)' : ''}.`)

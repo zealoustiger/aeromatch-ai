@@ -19,6 +19,22 @@ export const activeStatus = (source: string) => (ADMIN_SOURCES.includes(source) 
 
 const day = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : null)
 
+/** Read every matching row in 1000-row pages. PostgREST enforces a server-side
+ *  max-rows of 1000 and `.limit(50000)` does NOT lift it — it silently returns
+ *  1000, so a busy source's recent rows were being dropped from these counts and
+ *  the health table under-reported exactly when volume was highest. */
+async function selectAllRows<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const out: T[] = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data } = await build(from, from + PAGE - 1)
+    out.push(...(data ?? []))
+    if (!data || data.length < PAGE) return out
+  }
+}
+
 export type SourceHealth = {
   source: string
   perDay: Record<string, number> // YYYY-MM-DD → new listings first-seen that day
@@ -38,11 +54,15 @@ export type ScraperHealth = {
  *  fresh inventory. A column of zeros = that scraper didn't run (or found nothing). */
 export async function getScraperHealth(admin: SupabaseClient, daysBack = 10): Promise<ScraperHealth> {
   const cutoff = new Date(Date.now() - (daysBack + 2) * 864e5).toISOString()
-  const { data } = await admin
-    .from('aircraft_for_sale')
-    .select('source, first_seen_at, created_at')
-    .gte('first_seen_at', cutoff)
-    .limit(50000)
+  const data = await selectAllRows<{ source: string; first_seen_at: string; created_at: string }>(
+    (from, to) =>
+      admin
+        .from('aircraft_for_sale')
+        .select('source, first_seen_at, created_at')
+        .gte('first_seen_at', cutoff)
+        .order('id', { ascending: true })
+        .range(from, to),
+  )
 
   const days: string[] = []
   for (let i = 0; i < daysBack; i++) days.push(new Date(Date.now() - i * 864e5).toISOString().slice(0, 10))
@@ -262,12 +282,16 @@ export async function getPartnershipScraperHealth(
   daysBack = 10,
 ): Promise<ScraperHealth> {
   const cutoff = new Date(Date.now() - (daysBack + 2) * 864e5).toISOString()
-  const { data } = await admin
-    .from('partnerships')
-    .select('source, first_seen_at, created_at')
-    .not('source', 'is', null)
-    .gte('first_seen_at', cutoff)
-    .limit(50000)
+  const data = await selectAllRows<{ source: string; first_seen_at: string; created_at: string }>(
+    (from, to) =>
+      admin
+        .from('partnerships')
+        .select('source, first_seen_at, created_at')
+        .not('source', 'is', null)
+        .gte('first_seen_at', cutoff)
+        .order('id', { ascending: true })
+        .range(from, to),
+  )
 
   const days: string[] = []
   for (let i = 0; i < daysBack; i++) days.push(new Date(Date.now() - i * 864e5).toISOString().slice(0, 10))

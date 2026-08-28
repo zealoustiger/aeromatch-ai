@@ -6,6 +6,7 @@
 // Usage: node nightshift/bin/metrics-digest.mjs
 // Reads keys from process.env, falling back to .env.local.
 
+import { PV } from './posthog-bot-filter.mjs'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -68,7 +69,7 @@ let pv24 = null, pvPrior = null
 const pvRes = await ph(`
   SELECT countIf(timestamp > now() - toIntervalHour(24)) AS a,
          countIf(timestamp <= now() - toIntervalHour(24) AND timestamp > now() - toIntervalHour(48)) AS b
-  FROM events WHERE event = '$pageview'`)
+  FROM events WHERE ${PV}`)
 if (pvRes?.[0]) { pv24 = pvRes[0][0]; pvPrior = pvRes[0][1] }
 
 // ── Signups: exact 24h windows via the SECURITY DEFINER counter ──

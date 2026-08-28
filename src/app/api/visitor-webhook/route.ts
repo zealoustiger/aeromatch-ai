@@ -9,7 +9,7 @@ const HOME_CITY = (process.env.VISITOR_HOME_CITY || 'Oakland').toLowerCase()
 
 // Crawlers mostly don't run our client JS, so this is a backstop, not the main filter.
 const BOT_RE =
-  /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|slackbot|whatsapp|telegram|headless|lighthouse|preview|monitor|ahrefs|semrush|dataprovider|python-requests|curl|wget|axios|node-fetch/i
+  /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|slackbot|whatsapp|telegram|headless|lightpanda|lighthouse|preview|monitor|ahrefs|semrush|dataprovider|python-requests|curl|wget|axios|node-fetch/i
 
 // Known link-preview / "unfurl" bots — fetched once whenever someone pastes a
 // ClubHanger URL into that app (Facebook, Slack, iMessage, etc.) so the share
@@ -64,6 +64,76 @@ async function slack(method: string, body: Record<string, unknown>) {
     body: JSON.stringify(body),
   })
   return res.json()
+}
+
+// ── Bot-wave collapsing ──────────────────────────────────────────────────────
+// A scraper sweeping the site through a residential proxy pool (2026-08-20:
+// ~430 sessions in 2h, one hit per IP, ten canned UAs) used to open a Slack
+// thread PER SESSION and bury the evening's real visitors. Now, once the channel
+// is in a wave (≥ WAVE_THRESHOLD new sessions in WAVE_WINDOW_MS; baseline is
+// ~1/hour) or a session trips the UA-burst detector, bot sessions are folded
+// into one "🌊 Bot wave" root message per UTC hour whose text is updated in
+// place with the running count. The collector lives in visitor_threads as a
+// synthetic `wave:<hour>` row (is_bot=true, so the admin "real visitors" view
+// never sees it) — no new table needed.
+const WAVE_WINDOW_MS = 10 * 60_000
+const WAVE_THRESHOLD = 12
+const WAVE_UPDATE_EVERY = 10
+
+function waveText(n: number, path: string, loc: string, reason: string): string {
+  return (
+    `🌊 *Bot wave* — ${n} scripted session${n === 1 ? '' : 's'} this hour, collapsed here ` +
+    `(each is still logged for admin bot stats)\nlatest: ${reason} · ${loc} · \`${path}\``
+  )
+}
+
+async function collapseIntoWave(
+  admin: ReturnType<typeof createAdminClient>,
+  s: { path: string; loc: string; reason: string; ip: string | null; city: string | null; region: string | null; country: string | null }
+) {
+  const waveId = `wave:${new Date().toISOString().slice(0, 13)}` // hourly UTC bucket
+  const { data: wave } = await admin
+    .from('visitor_threads')
+    .select('slack_thread_ts, event_count')
+    .eq('session_id', waveId)
+    .maybeSingle()
+  if (!wave) {
+    const root = await slack('chat.postMessage', {
+      channel: CHANNEL,
+      text: waveText(1, s.path, s.loc, s.reason),
+      unfurl_links: false,
+    })
+    // A concurrent first hit can race this insert; the unique session_id makes
+    // the loser throw, the caller's catch swallows it, and the next hit finds
+    // the winner's row. One duplicate root message at worst.
+    await admin.from('visitor_threads').insert({
+      session_id: waveId,
+      slack_thread_ts: root.ok ? root.ts : null,
+      city: s.city,
+      region: s.region,
+      country: s.country,
+      ip: s.ip,
+      user_agent: 'bot-wave collector',
+      is_bot: true,
+      ip_org: null,
+      first_path: s.path,
+    })
+    return
+  }
+  const n = (wave.event_count ?? 1) + 1
+  await admin
+    .from('visitor_threads')
+    .update({ last_seen: new Date().toISOString(), event_count: n })
+    .eq('session_id', waveId)
+  // Edit the root in place (not a reply per hit): the first few so it visibly
+  // comes alive, then every WAVE_UPDATE_EVERY-th so Slack sees ~1 call/10 hits.
+  if (wave.slack_thread_ts && (n <= 3 || n % WAVE_UPDATE_EVERY === 0)) {
+    await slack('chat.update', {
+      channel: CHANNEL,
+      ts: wave.slack_thread_ts,
+      text: waveText(n, s.path, s.loc, s.reason),
+    })
+  }
 }
 
 const EMOJI: Record<string, string> = {
@@ -140,6 +210,7 @@ export async function POST(request: NextRequest) {
     path?: string
     referrer?: string | null
     utm?: { source?: string | null; content?: string | null } | null
+    hints?: { webdriver?: boolean; sw?: number; sh?: number; vw?: number; vh?: number } | null
     props?: Record<string, unknown>
   }
   try {
@@ -151,6 +222,7 @@ export async function POST(request: NextRequest) {
   const event = body.event || '$pageview'
   const path = body.path || '/'
   const props = body.props || {}
+  const hints = body.hints || null
   // Campaign tag (from ?utm_source/&utm_content on the landing URL). Sanitized to a
   // short slug so a crafted link can't inject formatting into the Slack message.
   const clean = (s: unknown, n: number) =>
@@ -262,45 +334,94 @@ export async function POST(request: NextRequest) {
         if (burstCount >= 2) burstBot = true
       }
 
-      const isBot = uaBot || cloudBot || burstBot
+      // Wave mode: the channel is being swept. Baseline is ~1 new session an
+      // hour, so WAVE_THRESHOLD new sessions inside WAVE_WINDOW_MS is a scripted
+      // sweep, not a lucky evening. In a wave the per-(path, UA) burst threshold
+      // drops to the FIRST repeat, and the headless window-geometry fingerprint
+      // counts as a bot signal on its own. Outside a wave neither applies, so a
+      // real burst of humans (a Reddit post) still gets individual 🟢 threads —
+      // they arrive with referrers, varied UAs and varied window sizes.
+      const { count: recentSessions } = await admin
+        .from('visitor_threads')
+        .select('session_id', { count: 'exact', head: true })
+        .gte('created_at', new Date(Date.now() - WAVE_WINDOW_MS).toISOString())
+      const wave = (recentSessions ?? 0) >= WAVE_THRESHOLD
+      if (wave && burstCount >= 1) burstBot = true
+      // Client-reported automation signals (see hints() in lib/analytics.ts).
+      const webdriverBot = hints?.webdriver === true
+      const headlessFp =
+        !!hints &&
+        hints.sw === 1920 &&
+        hints.sh === 1080 &&
+        hints.vw === 1280 &&
+        hints.vh === 720 &&
+        !rawReferrer
+      const fingerprintBot = wave && headlessFp
+
+      const isBot = uaBot || cloudBot || burstBot || webdriverBot || fingerprintBot
       const provider = org ? org.replace(/,?\s*(LLC|Inc\.?|Ltd\.?|GmbH|S\.?A\.?S?\.?|B\.?V\.?).*$/i, '').trim() : null
       const botReason = cloudBot
         ? provider || 'datacenter'
         : uaBot
           ? 'bot user-agent'
-          : burstBot
-            ? `UA burst (${burstCount + 1} hits on this URL)`
-            : null
+          : webdriverBot
+            ? 'automation (navigator.webdriver)'
+            : burstBot
+              ? `UA burst (${burstCount + 1} hits on this URL)`
+              : fingerprintBot
+                ? 'headless fingerprint during wave'
+                : null
 
-      const via = referrerHost ? ` · via ${referrerHost}` : ''
-      const headline = isBot
-        ? `🤖 *Bot* — ${botReason} · ${loc} · ${device}`
-        : `🟢 *New visitor* — ${loc} · ${device}${via}${campaign}`
-      const root = await slack('chat.postMessage', {
-        channel: CHANNEL,
-        text: `${headline}\n${isBot ? 'hit' : 'landed on'} \`${path}\``,
-        unfurl_links: false,
-      })
-      if (!root.ok) return NextResponse.json({ ok: false, error: root.error })
-      await admin.from('visitor_threads').insert({
-        session_id: sessionId,
-        slack_thread_ts: root.ts,
-        city,
-        region,
-        country,
-        ip,
-        user_agent: ua,
-        is_bot: isBot,
-        ip_org: org,
-        first_path: path,
-      })
-      // Also post the first action as a reply so the thread reads consistently.
-      await slack('chat.postMessage', {
-        channel: CHANNEL,
-        thread_ts: root.ts,
-        text: describe(event, path, props),
-        unfurl_links: false,
-      })
+      if (isBot && (wave || burstBot)) {
+        // Scripted sweep: fold into the hourly "🌊 Bot wave" message instead of
+        // opening a thread per session, and log the session thread-less (like
+        // preview bots) so admin bot stats still count it. Lone bots outside a
+        // wave (a datacenter crawler, one headless visit) keep their own thread
+        // below — those are rare and worth a human glancing at.
+        await collapseIntoWave(admin, { path, loc, reason: botReason ?? 'bot', ip, city, region, country })
+        await admin.from('visitor_threads').insert({
+          session_id: sessionId,
+          slack_thread_ts: null,
+          city,
+          region,
+          country,
+          ip,
+          user_agent: ua,
+          is_bot: true,
+          ip_org: org,
+          first_path: path,
+        })
+      } else {
+        const via = referrerHost ? ` · via ${referrerHost}` : ''
+        const headline = isBot
+          ? `🤖 *Bot* — ${botReason} · ${loc} · ${device}`
+          : `🟢 *New visitor* — ${loc} · ${device}${via}${campaign}`
+        const root = await slack('chat.postMessage', {
+          channel: CHANNEL,
+          text: `${headline}\n${isBot ? 'hit' : 'landed on'} \`${path}\``,
+          unfurl_links: false,
+        })
+        if (!root.ok) return NextResponse.json({ ok: false, error: root.error })
+        await admin.from('visitor_threads').insert({
+          session_id: sessionId,
+          slack_thread_ts: root.ts,
+          city,
+          region,
+          country,
+          ip,
+          user_agent: ua,
+          is_bot: isBot,
+          ip_org: org,
+          first_path: path,
+        })
+        // Also post the first action as a reply so the thread reads consistently.
+        await slack('chat.postMessage', {
+          channel: CHANNEL,
+          thread_ts: root.ts,
+          text: describe(event, path, props),
+          unfurl_links: false,
+        })
+      }
     } else {
       // existing.slack_thread_ts is null for a preview-bot session (no thread was
       // ever posted) — skip the Slack reply in that case, just bump the counters.

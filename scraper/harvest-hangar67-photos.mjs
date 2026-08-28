@@ -24,7 +24,7 @@
  */
 import os from 'node:os'
 import { createClient } from '@supabase/supabase-js'
-import { loadEnvLocal } from './lib/ingest-core.mjs'
+import { loadEnvLocal, selectAll } from './lib/ingest-core.mjs'
 
 loadEnvLocal()
 
@@ -124,20 +124,47 @@ function choosePhotos(sid, og, srcs) {
   return [...new Set(out)]
 }
 
+// Give up after this many failed attempts — some listings simply have no photos
+// at the source and would otherwise be re-fetched, at cost, forever.
+const MAX_ATTEMPTS = 5
+// Exponential backoff between attempts: 1d, 2d, 4d, 8d, 16d.
+const backoffMs = (attempts) => Math.min(2 ** attempts, 16) * 86_400_000
+
 async function loadHidden() {
-  let q = supa
-    .from('aircraft_for_sale')
-    .select('id, source_id, source_url, quality_score')
-    .eq('source', 'hangar67')
-    .eq('status', 'active')
-    .eq('images', '[]')
-    .not('source_url', 'is', null)
-  if (GRADE === 'A') q = q.gte('quality_score', 78)
-  else if (GRADE === 'B') q = q.gte('quality_score', 50).lt('quality_score', 78)
-  else if (GRADE === 'C') q = q.lt('quality_score', 50)
-  const { data, error } = await q.order('quality_score', { ascending: false }).limit(LIMIT)
-  if (error) throw new Error(error.message)
-  return data ?? []
+  // PAGINATED: PostgREST caps a select at 1000 rows and `.limit(100000)` does
+  // not lift it, so a backlog over 1000 was being silently truncated.
+  const rows = await selectAll((from, to) => {
+    let q = supa
+      .from('aircraft_for_sale')
+      .select('id, source_id, source_url, quality_score, images_attempts, images_fetched_at')
+      .eq('source', 'hangar67')
+      .eq('status', 'active')
+      .eq('images', '[]')
+      .not('source_url', 'is', null)
+    if (GRADE === 'A') q = q.gte('quality_score', 78)
+    else if (GRADE === 'B') q = q.gte('quality_score', 50).lt('quality_score', 78)
+    else if (GRADE === 'C') q = q.lt('quality_score', 50)
+    return q.order('quality_score', { ascending: false }).range(from, to)
+  })
+
+  // Every one of these is a metered request, so don't spend one on a listing we
+  // already tried today, or on one that has failed enough times to call settled.
+  const now = Date.now()
+  const eligible = []
+  let exhausted = 0
+  let backedOff = 0
+  for (const r of rows) {
+    const attempts = r.images_attempts ?? 0
+    if (attempts >= MAX_ATTEMPTS) { exhausted++; continue }
+    const last = r.images_fetched_at ? Date.parse(r.images_fetched_at) : 0
+    if (last && now - last < backoffMs(attempts)) { backedOff++; continue }
+    eligible.push(r)
+  }
+  log(
+    `  backlog ${rows.length}: ${eligible.length} eligible, ${backedOff} in backoff, ` +
+      `${exhausted} exhausted (>=${MAX_ATTEMPTS} attempts — no photos at source)`
+  )
+  return eligible.slice(0, LIMIT)
 }
 
 const BLOCKED_RE = /just a moment|unknown error|attention required|520|520:/i
@@ -238,6 +265,17 @@ async function pickServable(photos) {
   return (await okImage(thumbs[0])) ? thumbs : []
 }
 
+// Stamp an attempt so the backoff in loadHidden() can see it.
+async function markAttempt(row) {
+  await supa
+    .from('aircraft_for_sale')
+    .update({
+      images_fetched_at: new Date().toISOString(),
+      images_attempts: (row.images_attempts ?? 0) + 1,
+    })
+    .eq('id', row.id)
+}
+
 async function worker(id, queue, browser, stats) {
   // Browser only in local-browser mode; Web Unlocker mode needs no browser.
   let ctx = USE_UNLOCKER ? null : await makeContext(browser)
@@ -255,11 +293,20 @@ async function worker(id, queue, browser, stats) {
         if (!DRY) {
           await supa
             .from('aircraft_for_sale')
-            .update({ images: servable, image_is_placeholder: false })
+            .update({
+              images: servable,
+              image_is_placeholder: false,
+              images_fetched_at: new Date().toISOString(),
+              images_attempts: 0,
+            })
             .eq('id', row.id)
         }
       } else {
         stats.noPhotos++
+        // Record the miss. Without this the row stays at images='[]' and gets
+        // re-fetched every single day forever — the single largest recurring
+        // waste in the harvest job.
+        if (!DRY) await markAttempt(row)
       }
       stats.done++
       if (stats.done % 10 === 0 || servable.length === 0) {
@@ -267,6 +314,7 @@ async function worker(id, queue, browser, stats) {
       }
     } catch (e) {
       stats.errors++
+      if (!DRY) await markAttempt(row).catch(() => {})
       log(`[w${id}] ERROR ${row.source_id}: ${String(e.message).slice(0, 100)}`)
       // A crashed/closed context kills every remaining listing in this worker —
       // rebuild it so an unattended run survives a chromium hiccup (browser mode).

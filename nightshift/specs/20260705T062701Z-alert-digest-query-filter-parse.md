@@ -29,6 +29,10 @@ and now-primary conversion path, not a cosmetic gap.
 its own correct query-param parser for this shape — but it is not the system wired to
 `vercel.json`'s cron, so it doesn't help in production/staging.)
 
+> **[CORRECTION 2026-08-27]** `scraper/send-alerts.mjs` was NOT unscheduled/dead code — `nightshift/bin/run-scrape.sh` ran it nightly on the VPS (systemd `nightshift-scrape.timer`), making it a second live sender racing `/api/cron/alert-digest` over the same `alerts` rows and the same `last_digest_at` cursor. Resolved by `scraper-send-alerts-retire` (2026-08-27): its send step is removed, the file is now `scraper/sync-saved-searches.mjs` (saved-search → alert sync only), and the Vercel cron is the sole owner of alert email. The scope decision below still stands; only its stated premise was wrong.
+> It was also not "correct" for SEO paths: `path.startsWith('/aircraft')` matched
+> `/aircraft/cessna/172` and then applied zero filters, i.e. an unfiltered firehose.
+
 ## Scope
 - `src/app/api/cron/alert-digest/route.ts` only:
   - Extend `AlertTarget` with optional `model`, `minPrice`, `maxPrice`, `minYear`,

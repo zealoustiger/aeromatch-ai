@@ -109,6 +109,63 @@ export async function fetchJson(url, opts) {
   return JSON.parse(text)
 }
 
+/**
+ * Read EVERY row a query matches, in 1000-row pages.
+ *
+ * PostgREST enforces a server-side max-rows of 1000: an unbounded select returns
+ * 1000, and so does `.limit(50000)` — the cap wins silently, with no error and no
+ * truncation flag. Any call that needs the full set (dedup keys, existing-row
+ * maps, health counts) must page. `build(from, to)` should return a fresh query
+ * with `.range(from, to)` applied.
+ */
+export async function selectAll(build, { page = 1000 } = {}) {
+  const out = []
+  for (let from = 0; ; from += page) {
+    const { data, error } = await build(from, from + page - 1)
+    if (error) throw new Error(error.message)
+    out.push(...(data ?? []))
+    if (!data || data.length < page) return out
+  }
+}
+
+/**
+ * What we already hold for a source, keyed by source_id — handed to adapters so
+ * they can decide what actually needs re-fetching. Keeps DB access in the core:
+ * adapters receive data, they never query.
+ */
+export async function loadKnown(source) {
+  const supabase = adminClient()
+  const rows = await selectAll((from, to) =>
+    supabase
+      .from('aircraft_for_sale')
+      .select('source_id, source_lastmod, status')
+      .eq('source', source)
+      .order('source_id', { ascending: true })
+      .range(from, to)
+  )
+  return new Map(rows.map((r) => [r.source_id, r]))
+}
+
+/**
+ * Deterministic daily rotation: true for roughly 1-in-`divisor` ids on any given
+ * day, and every id comes up exactly once per `divisor` days.
+ *
+ * This is the safety net under the lastmod gate. A source that edits a listing
+ * without bumping its sitemap lastmod would otherwise go stale forever; the
+ * rotation re-reads everything on a slow cycle so drift self-corrects, at a
+ * fraction of the cost of re-reading the whole catalogue daily.
+ */
+export function inRefreshSlice(id, divisor, nowMs = Date.now()) {
+  if (!divisor || divisor <= 1) return true
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  const dayIndex = Math.floor(nowMs / 86_400_000)
+  return (h >>> 0) % divisor === dayIndex % divisor
+}
+
 // Run an async fn over items with bounded concurrency; preserves order.
 export async function mapPool(items, concurrency, fn) {
   const results = new Array(items.length)
@@ -250,8 +307,30 @@ export function adminClient() {
 /**
  * Upsert a source's rows, track price history, and mark vanished listings sold.
  * Returns stats. Pass dryRun to skip all writes.
+ *
+ * `collapseFloor` guards sold-detection against a BROKEN SCRAPE. Sold-detection
+ * infers "gone from the source" from "absent in our scrape", which is only valid
+ * when the scrape itself worked. A blocked adapter returns few or zero rows, and
+ * without this guard that silently reads as the whole catalogue selling at once —
+ * exactly what wiped hangar67 (1511 rows) and aircraftforsale (630) on 2026-07-05.
+ * When a run brings back less than `collapseFloor` of what we already hold active,
+ * we upsert whatever we did get but SKIP sold-detection entirely, leaving the
+ * existing inventory alone until a healthy run can adjudicate it.
  */
-export async function runIngest({ source, rows, dryRun = false, graceDays = 7 }) {
+export async function runIngest({
+  source,
+  rows,
+  dryRun = false,
+  graceDays = 7,
+  collapseFloor = 0.5,
+  fetchFailed = false,
+  // source_ids the adapter CONFIRMED are still listed but deliberately did not
+  // re-fetch (unchanged per the source's own sitemap lastmod). They get their
+  // last_seen_at bumped and nothing else — and they count as "seen" for the
+  // collapse guard, without which a cost-optimised run that fetches 10 of 1465
+  // listings would look like a 99% collapse and skip sold-detection every day.
+  touchIds = [],
+}) {
   const nowIso = new Date().toISOString()
   // Sold-detection grace window: a listing is only marked sold once it hasn't
   // been seen for `graceDays`. This tolerates partial runs and sources (e.g.
@@ -260,15 +339,36 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
   // scrape depth on a given day.
   const soldCutoff = new Date(Date.parse(nowIso) - graceDays * 86_400_000).toISOString()
 
-  // De-dup within this batch (last write wins).
+  // De-dup within this batch (last write wins). `_refreshOnly` is an internal
+  // marker from the rotation slice, never a column — strip it before hashing or
+  // upserting, but remember which ids carried it so we can measure gate misses.
   const byId = new Map()
+  const refreshOnly = new Set()
   for (const r of rows) {
     if (!r.source_id || !r.title) continue
-    byId.set(r.source_id, { ...r, source, content_hash: contentHash(r) })
+    const { _refreshOnly, ...clean } = r
+    if (_refreshOnly) refreshOnly.add(r.source_id)
+    byId.set(r.source_id, { ...clean, source, content_hash: contentHash(clean) })
   }
   const fresh = [...byId.values()]
+  // Only touch ids we did NOT also fetch this run.
+  const touch = [...new Set(touchIds)].filter((id) => !byId.has(id))
 
-  const stats = { source, scraped: fresh.length, priceDrops: 0, priceRises: 0, changed: 0, markedSold: 0 }
+  const stats = {
+    source,
+    scraped: fresh.length,
+    touched: touch.length,
+    priceDrops: 0,
+    priceRises: 0,
+    changed: 0,
+    markedSold: 0,
+    soldSkipped: null,
+    // Rows the rotation re-read that the lastmod gate said were unchanged, but
+    // which HAD in fact changed. This is the audit on the gate's core
+    // assumption: sustained zeros mean the rotation can be slowed down further;
+    // anything else means the source edits listings without bumping lastmod.
+    gateMisses: 0,
+  }
   if (dryRun) return stats
 
   const supabase = adminClient()
@@ -276,12 +376,25 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
   // Pull existing rows for this source to diff prices, preserve first_seen_at, and
   // protect already-harvested photos (see the images-preservation note in the
   // upsert map below).
-  const { data: existingRows, error: exErr } = await supabase
-    .from('aircraft_for_sale')
-    .select('source_id, asking_price, content_hash, previous_price, price_changed_at, first_seen_at, images')
-    .eq('source', source)
-  if (exErr) throw new Error(`fetch existing failed: ${exErr.message}`)
-  const existing = new Map((existingRows ?? []).map((e) => [e.source_id, e]))
+  // PAGINATED: PostgREST caps an unbounded select at 1000 rows. Sources long
+  // since past that (barnstormers holds 5000+) were silently getting a truncated
+  // `existing` map, so every row beyond the cap looked brand new: first_seen_at
+  // reset daily, price history dropped, and — worst — harvested photos clobbered,
+  // because the preservation branch below only runs when `prev` is found.
+  const existingRows = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data, error: exErr } = await supabase
+      .from('aircraft_for_sale')
+      .select('source_id, asking_price, content_hash, previous_price, price_changed_at, first_seen_at, images, image_is_placeholder, status')
+      .eq('source', source)
+      .order('source_id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (exErr) throw new Error(`fetch existing failed: ${exErr.message}`)
+    existingRows.push(...(data ?? []))
+    if (!data || data.length < PAGE) break
+  }
+  const existing = new Map(existingRows.map((e) => [e.source_id, e]))
 
   const upserts = fresh.map((r) => {
     const prev = existing.get(r.source_id)
@@ -293,9 +406,24 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
       first_seen_at: prev?.first_seen_at ?? nowIso,
       previous_price: prev?.previous_price ?? null,
       price_changed_at: prev?.price_changed_at ?? null,
+      // ALWAYS an explicit array. supabase-js upserts a batch as one payload and
+      // back-fills any key a row is missing with null, so a single row carrying
+      // photos would force `images: null` onto every row whose adapter doesn't set
+      // it — and `images` is NOT NULL. Normalising here keeps the batch uniform
+      // regardless of which adapters supply photos.
+      images: Array.isArray(r.images) ? r.images : [],
+      // Same NOT-NULL/batch-uniformity reason as `images` above. Carry the stored
+      // flag forward rather than defaulting to false, so a run that brings no
+      // photos doesn't silently re-label existing placeholder art as real.
+      image_is_placeholder: prev?.image_is_placeholder ?? false,
     }
     if (prev) {
-      if (r.content_hash !== prev.content_hash) stats.changed++
+      if (r.content_hash !== prev.content_hash) {
+        stats.changed++
+        // Changed, but the gate had cleared it as unchanged — only the rotation
+        // caught it. Count it: this is what tells us whether lastmod is trustworthy.
+        if (refreshOnly.has(r.source_id)) stats.gateMisses++
+      }
       const a = r.asking_price
       const b = prev.asking_price
       if (a != null && b != null && a !== b) {
@@ -341,6 +469,36 @@ export async function runIngest({ source, rows, dryRun = false, graceDays = 7 })
     // Non-fatal — the marketplace still works without coords; we just sort by
     // newest until the next backfill.
     console.warn(`coord backfill skipped: ${e.message ?? e}`)
+  }
+
+  // Bump last_seen_at for listings confirmed present at the source but not
+  // re-fetched. Without this they'd age past the sold cutoff and get marked sold
+  // purely for being cheap to skip.
+  for (let i = 0; i < touch.length; i += 500) {
+    const slice = touch.slice(i, i + 500)
+    const { error } = await supabase
+      .from('aircraft_for_sale')
+      .update({ last_seen_at: nowIso, status: 'active', removed_at: null })
+      .eq('source', source)
+      .in('source_id', slice)
+    if (error) throw new Error(`touch failed: ${error.message}`)
+  }
+
+  // ── Collapse guard ──────────────────────────────────────────────────────────
+  // Compare this run's haul against the active inventory we already hold. A
+  // healthy run re-sees most of it; a blocked one re-sees almost none. Treat the
+  // latter as "the scraper is broken", NOT "the listings sold".
+  // "Seen" = fetched + touched: a listing present in the sitemap was observed at
+  // the source just as surely as one whose feed we read.
+  const activeBefore = existingRows.filter((e) => e.status === 'active').length
+  const seen = fresh.length + touch.length
+  const coverage = activeBefore > 0 ? seen / activeBefore : 1
+  if (fetchFailed || (activeBefore > 0 && coverage < collapseFloor)) {
+    stats.soldSkipped = fetchFailed
+      ? 'adapter fetch failed — sold-detection skipped'
+      : `scrape collapsed (${seen}/${activeBefore} = ${Math.round(coverage * 100)}% of active inventory, floor ${Math.round(collapseFloor * 100)}%) — sold-detection skipped`
+    console.warn(`  ⚠ ${source}: ${stats.soldSkipped}`)
+    return stats
   }
 
   // Sold-detection: anything from this source not touched this run is gone.

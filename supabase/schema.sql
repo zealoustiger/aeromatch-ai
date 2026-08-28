@@ -132,6 +132,18 @@ create table if not exists aircraft_for_sale (
   price_changed_at timestamptz,
   removed_at       timestamptz,                -- set when a listing vanishes from its source
 
+  -- Cost control for metered (Bright Data) fetches.
+  -- source_lastmod: the <lastmod> the source's sitemap reported when we last read
+  -- this listing. Hangar67 publishes a real per-listing lastmod and only ~1-16 of
+  -- its 1465 listings move on a given day, so the daily run fetches only the
+  -- feeds whose lastmod changed and touches the rest (see scraper/adapters).
+  source_lastmod    text,
+  -- images_attempts / images_fetched_at: photo-harvest attempt count and last
+  -- ATTEMPT time (not last success). Drive exponential backoff and a give-up
+  -- threshold, so a listing with no photos at its source stops being re-fetched
+  -- daily forever.
+  images_attempts   smallint not null default 0,
+
   -- Quality score 0-100 (auto-maintained). Grade cutoffs (A>=78,B>=50,C<50) live
   -- in src/lib/listingQuality.ts; keep scoreRow() in sync with this expression.
   quality_score smallint generated always as (

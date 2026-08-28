@@ -15,7 +15,7 @@
  * Usage: node scraper/ingest-controller.mjs [--max-pages=400] [--concurrency=5] [--dry-run]
  */
 import { createClient } from '@supabase/supabase-js'
-import { loadEnvLocal } from './lib/ingest-core.mjs'
+import { loadEnvLocal, selectAll } from './lib/ingest-core.mjs'
 import { unlockerFetch, hasUnlocker } from './lib/unlocker.mjs'
 
 loadEnvLocal()
@@ -99,11 +99,18 @@ async function main() {
   if (!hasUnlocker()) { console.error('BRIGHTDATA_API_TOKEN not set — Controller needs the Web Unlocker.'); process.exit(1) }
   log(`Controller Bay-Area ingest ${DRY ? '(DRY RUN)' : ''} — pages ${START_PAGE}..${MAX_PAGES}`)
 
-  const { data: reg } = await supa.from('aircraft_for_sale').select('registration').not('registration', 'is', null).limit(50000)
-  const known = new Set((reg || []).map((r) => normReg(r.registration)).filter((x) => x.length >= 4))
-  const { data: existing } = await supa.from('aircraft_for_sale').select('source_id, first_seen_at').eq('source', 'controller')
-  const firstSeen = new Map((existing || []).map((r) => [r.source_id, r.first_seen_at]))
-  const stored = new Set((existing || []).map((r) => r.source_id))
+  // PAGINATED: PostgREST caps every select at 1000 rows and `.limit(50000)` does
+  // NOT lift it — the dedup set was silently seeing 1000 of ~7900 registrations,
+  // so aircraft already carried by another source looked new and got re-added.
+  const reg = await selectAll((from, to) =>
+    supa.from('aircraft_for_sale').select('registration').not('registration', 'is', null)
+      .order('id', { ascending: true }).range(from, to))
+  const known = new Set(reg.map((r) => normReg(r.registration)).filter((x) => x.length >= 4))
+  const existing = await selectAll((from, to) =>
+    supa.from('aircraft_for_sale').select('source_id, first_seen_at').eq('source', 'controller')
+      .order('source_id', { ascending: true }).range(from, to))
+  const firstSeen = new Map(existing.map((r) => [r.source_id, r.first_seen_at]))
+  const stored = new Set(existing.map((r) => r.source_id))
   log(`Dedup against ${known.size} registrations; ${stored.size} Controller rows already stored`)
 
   const nowIso = new Date().toISOString()

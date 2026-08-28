@@ -20,4 +20,6 @@ Let a signed-in pilot pause (and resume) or permanently delete an alert subscrip
 ## Out of scope
 - Changing the `alerts_owner_select` RLS policy (still pending human application — this slice deliberately avoids depending on it for reads or writes).
 - The legacy, unwired `scraper/send-alerts.mjs` script (not on any cron; the live cron is `/api/cron/alert-digest`).
+
+> **[CORRECTION 2026-08-27]** `scraper/send-alerts.mjs` was NOT unscheduled/dead code — `nightshift/bin/run-scrape.sh` ran it nightly on the VPS (systemd `nightshift-scrape.timer`), making it a second live sender racing `/api/cron/alert-digest` over the same `alerts` rows and the same `last_digest_at` cursor. Resolved by `scraper-send-alerts-retire` (2026-08-27): its send step is removed, the file is now `scraper/sync-saved-searches.mjs` (saved-search → alert sync only), and the Vercel cron is the sole owner of alert email. The scope decision below still stands; only its stated premise was wrong.
 - Bulk/admin alert management.

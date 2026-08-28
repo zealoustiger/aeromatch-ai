@@ -15,9 +15,12 @@ import { BASE_INTERESTS, type BaseInterest } from '@/lib/alertsLandingInterests'
  * Most visitors are buyers, not sellers, so we ask for the thing they actually want:
  * an email when the right aircraft (or a partnership) is listed.
  *
- * Each interest chip carries a `sourcePath` that `scraper/send-alerts.mjs`'s
- * parseSearch() can actually match (paths under /aircraft or /partnerships with
- * query-param filters) — so every alert set here genuinely fires. The `context` is
+ * Each interest chip carries a `sourcePath` that the digest cron's
+ * `parseSourcePath()` (src/app/api/cron/alert-digest/route.ts) can actually
+ * match (paths under /aircraft or /partnerships with query-param filters) — so
+ * every alert set here genuinely fires. That cron is the sole owner of alert
+ * email; the nightly `scraper/sync-saved-searches.mjs` only mirrors saved
+ * searches into `alerts` rows and sends nothing. The `context` is
  * the human label used in the confirmation copy. Selecting a chip remounts the
  * AlertSignup (keyed on sourcePath) so its state resets cleanly.
  */

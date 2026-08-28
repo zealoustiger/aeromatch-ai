@@ -17,6 +17,9 @@ import { getAlertDigestPreview } from '@/lib/alertMatchCounts'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import AdminEmailPreviewCard from '@/components/AdminEmailPreviewCard'
+import AdminAlertDigestReplay from '@/components/AdminAlertDigestReplay'
+import { listReplayableAlerts } from '@/lib/alertDigestReplay'
+import { adminReplayAlertDigest } from './actions'
 
 export const metadata = { title: 'Email template gallery', robots: { index: false } }
 export const dynamic = 'force-dynamic'
@@ -51,11 +54,20 @@ async function getSamplePriceDropListing() {
 }
 
 export default async function EmailTemplateGalleryPage() {
-  const [aircraftPreview, partnershipPreview, priceDropListing] = await Promise.all([
-    getAlertDigestPreview('/aircraft', 3),
-    getAlertDigestPreview('/partnerships', 2),
-    getSamplePriceDropListing(),
-  ])
+  const [aircraftPreview, partnershipPreview, priceDropListing, replayableAlerts, initialReplay] =
+    await Promise.all([
+      getAlertDigestPreview('/aircraft', 3),
+      getAlertDigestPreview('/partnerships', 2),
+      getSamplePriceDropListing(),
+      listReplayableAlerts(),
+      // Render the most recently-digested alert straight away, so the page is
+      // useful without a click. `send: false` — this only builds the email.
+      // Caught, not awaited bare: the action re-asserts admin, and `children`
+      // is evaluated even when the admin layout decides to render its
+      // "Admin only" fallback instead — a bare throw here would turn that
+      // friendly gate into a 500 for signed-out visitors.
+      adminReplayAlertDigest({ send: false }).catch(() => null),
+    ])
 
   const manageUrl = `${SITE_URL}/alerts/manage?token=preview`
   const unsubscribeUrl = `${SITE_URL}/api/alerts/unsubscribe?token=preview`
@@ -241,6 +253,11 @@ export default async function EmailTemplateGalleryPage() {
           <ArrowLeft className="h-4 w-4" /> Back to Alert Scoreboard
         </Link>
       </div>
+
+      <AdminAlertDigestReplay
+        alerts={replayableAlerts}
+        initial={initialReplay?.ok ? initialReplay : null}
+      />
 
       {entries.map((entry) => (
         <AdminEmailPreviewCard key={entry.name} entry={entry} />

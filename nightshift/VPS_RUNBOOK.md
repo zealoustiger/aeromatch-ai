@@ -109,7 +109,7 @@ ENTRYPOINT ["/app/nightshift/bin/run-drain.sh"]
 Build it:
 
 ```bash
-docker build -f Dockerfile.nightshift -t clubhanger-nightshift:latest .
+docker build -f Dockerfile.nightshift -t forge-nightshift:latest .
 ```
 
 ---
@@ -150,7 +150,7 @@ persisting into the mounted creds volume:
 ```bash
 docker run --rm -it \
   -v /opt/nightshift/claude:/home/night/.claude \
-  --entrypoint claude clubhanger-nightshift:latest
+  --entrypoint claude forge-nightshift:latest
 #   -> follow the OAuth/login flow (do the browser step from your laptop, paste back).
 #   Credentials persist in /opt/nightshift/claude and auto-refresh while valid.
 ```
@@ -202,7 +202,7 @@ ExecStart=/usr/bin/docker run --rm \
   -v /opt/nightshift/repo:/app \
   -v /opt/nightshift/claude:/home/night/.claude \
   -v /opt/nightshift/state:/home/night/state \
-  clubhanger-nightshift:latest
+  forge-nightshift:latest
 ```
 
 `/etc/systemd/system/nightshift-drain.timer`:

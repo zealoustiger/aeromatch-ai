@@ -8,6 +8,7 @@
 // Reads POSTHOG_API_KEY, POSTHOG_PROJECT_ID, NEXT_PUBLIC_POSTHOG_HOST from env,
 // falling back to .env.local in the repo root.
 
+import { PV } from './posthog-bot-filter.mjs'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -55,7 +56,7 @@ async function q(hogql, fallback = []) {
   return fallback
 }
 
-const PV = "event = '$pageview'"
+// Bot-fingerprint-excluded pageview predicate (see posthog-bot-filter.mjs).
 
 try {
   const [allTime] = await q(`SELECT count(DISTINCT person_id) AS v, count() AS pv FROM events WHERE ${PV}`, [[0, 0]])
