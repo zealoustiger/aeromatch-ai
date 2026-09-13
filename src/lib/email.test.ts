@@ -227,18 +227,7 @@ test('digest: with no samples, the email still renders cleanly (CTA-only)', () =
   assert.match(html, />\s*View Cessna 172 listings\s*</)
 })
 
-test('digest: marketPulse renders as an honest one-liner in both HTML and text', () => {
-  const { html, text } = buildAlertDigestEmail({
-    ...DIGEST_BASE,
-    newCount: 2,
-    dropCount: 0,
-    marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
-  })
-  assert.match(html, /14 Cessna 172s listed right now, median asking \$89k\./)
-  assert.match(text, /14 Cessna 172s listed right now, median asking \$89k\./)
-})
-
-test('digest: without marketPulse, no market-context line renders (honesty gate — never a guess)', () => {
+test('digest: never renders a market-context banner (retired 2026-09-13 — read as a busy blue header nobody opened the email for)', () => {
   const { html } = buildAlertDigestEmail({ ...DIGEST_BASE, newCount: 2, dropCount: 0 })
   assert.doesNotMatch(html, /listed right now, median asking/)
 })
@@ -1226,8 +1215,10 @@ test('combined: an oversized section is trimmed fairly (heaviest section first),
   // Both sections' honest totals still name the real count, and the lighter
   // Cirrus section (5 samples) never lost a card to the heavier Cessna one.
   assert.match(html, /Cirrus SR22/)
-  const cirrusCards = html.match(/listing\/b-\d+/g) ?? []
-  assert.equal(cirrusCards.length, 5)
+  // Count distinct cards, not anchors — a card links its listing from both
+  // the photo and the title (see sampleCardHtml's table-layout note).
+  const cirrusCards = new Set(html.match(/listing\/b-\d+/g) ?? [])
+  assert.equal(cirrusCards.size, 5)
 })
 
 // ─── buildCombinedAlertDigestEmail ─────────────────────────────────────────
@@ -1244,7 +1235,7 @@ test('combined: subject states an honest total across all sections, never a sing
   assert.equal(subject, '2 new listings + 1 price drop across your 2 alerts on ClubHanger')
 })
 
-test('combined: each section keeps its own context, count line, and CTA — never merged into one', () => {
+test('combined: one flat list under one honest total — no per-alert headings, count lines, banners, or link rows', () => {
   const { html, text } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
@@ -1253,18 +1244,25 @@ test('combined: each section keeps its own context, count line, and CTA — neve
       { context: 'Cirrus SR22', newCount: 0, dropCount: 1, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus&model=SR22' },
     ],
   })
-  assert.match(html, />Cessna 172</)
-  assert.match(html, />2 new listings</)
-  assert.match(html, />Cirrus SR22</)
-  assert.match(html, />1 price drop</)
-  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
-  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cirrus&amp;model=SR22&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"/)
-  assert.match(text, /Cessna 172 — 2 new listings/)
-  assert.match(text, /Cirrus SR22 — 1 price drop/)
+  // One overall total up top…
+  assert.match(html, />2 new listings \+ 1 price drop across your 2 alerts</)
+  // …and none of the retired per-section chrome.
+  assert.doesNotMatch(html, /<h2/)
+  assert.doesNotMatch(html, />2 new listings</)
+  assert.doesNotMatch(html, />1 price drop</)
+  assert.doesNotMatch(html, /Edit this alert|Stop just this alert|Share this alert|View in browser/)
+  assert.doesNotMatch(html, /listed right now, median asking/)
+  // With no cards to show, the single muted "see all" line names each alert once.
+  assert.match(
+    html,
+    /See all 3 matches: <a href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;model=172&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"[^>]*>Cessna 172<\/a> &middot; <a href="https:\/\/clubhanger\.com\/aircraft\?make=Cirrus&amp;model=SR22&amp;utm_source=alert_email&amp;utm_medium=email&amp;utm_campaign=combined"[^>]*>Cirrus SR22<\/a>/
+  )
+  assert.match(text, /See all 3 matches:\n  Cessna 172: https:\/\/clubhanger\.com\/aircraft\?make=Cessna&model=172&utm_source=alert_email&utm_medium=email&utm_campaign=combined\n  Cirrus SR22: /)
+  assert.doesNotMatch(text, /Cessna 172 — 2 new listings/)
 })
 
-test('combined: dropNoun customizes a partnership section\'s own drop label independent of other sections (the overall total across mixed noun types stays generic)', () => {
-  const { text } = buildCombinedAlertDigestEmail({
+test('combined: dropNoun flows into the overall total when every dropping alert shares it; mixed nouns stay generic', () => {
+  const onlyPartnership = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
     sections: [
@@ -1272,11 +1270,20 @@ test('combined: dropNoun customizes a partnership section\'s own drop label inde
       { context: null, newCount: 0, dropCount: 1, dropNoun: 'buy-in drop', listingsUrl: 'https://clubhanger.com/partnerships' },
     ],
   })
-  assert.match(text, /Your alert — 1 buy-in drop/)
+  assert.equal(onlyPartnership.subject, '1 new listing + 1 buy-in drop across your 2 alerts on ClubHanger')
+  const mixed = buildCombinedAlertDigestEmail({
+    manageUrl: 'https://clubhanger.com/alerts/manage',
+    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
+    sections: [
+      { context: 'Cessna 172', newCount: 0, dropCount: 1, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: null, newCount: 0, dropCount: 1, dropNoun: 'buy-in drop', listingsUrl: 'https://clubhanger.com/partnerships' },
+    ],
+  })
+  assert.equal(mixed.subject, '2 price drops across your 2 alerts on ClubHanger')
 })
 
-test('combined: a section with no context falls back to "Your alert" instead of a blank heading', () => {
-  const { html } = buildCombinedAlertDigestEmail({
+test('combined: an alert with no context is named "Your alert" in the see-all line instead of a blank link', () => {
+  const { html, text } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
     sections: [
@@ -1284,10 +1291,21 @@ test('combined: a section with no context falls back to "Your alert" instead of 
       { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
     ],
   })
-  assert.match(html, />Your alert</)
+  assert.match(html, />Your alert<\/a>/)
+  assert.match(text, /\n  Your alert: https:\/\/clubhanger\.com\/aircraft\?/)
 })
 
-test('combined: sample cards render within their own section', () => {
+test('combined: sample cards from every alert render in one flat list, deduped by listing, with no "also matches" note', () => {
+  const shared = {
+    title: '2015 Cessna 172S Skyhawk',
+    photoUrl: null,
+    isPlaceholder: false,
+    year: 2015,
+    ttaf: 1240,
+    location: 'Austin, TX',
+    price: 219_000,
+    url: 'https://clubhanger.com/aircraft/listing/preview-1',
+  }
   const { html } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
@@ -1297,45 +1315,28 @@ test('combined: sample cards render within their own section', () => {
         newCount: 1,
         dropCount: 0,
         listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
+        samples: [{ ...shared, alsoMatchesLabel: 'Also matches your Texas aircraft alert' }],
+      },
+      {
+        context: 'Texas aircraft',
+        newCount: 2,
+        dropCount: 0,
+        listingsUrl: 'https://clubhanger.com/aircraft?state=TX',
         samples: [
-          {
-            title: '2015 Cessna 172S Skyhawk',
-            photoUrl: null,
-            isPlaceholder: false,
-            year: 2015,
-            ttaf: 1240,
-            location: 'Austin, TX',
-            price: 219_000,
-            url: 'https://clubhanger.com/aircraft/listing/preview-1',
-          },
+          shared, // same listing matched both alerts — must render once
+          { ...shared, title: '2009 Cirrus SR22', price: 285_000, url: 'https://clubhanger.com/aircraft/listing/preview-2' },
         ],
       },
-      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
     ],
   })
   assert.match(html, /2015 Cessna 172S Skyhawk/)
   assert.match(html, /\$219,000/)
-})
-
-test('combined: marketPulse renders per-section, independently — a section without one gets no line', () => {
-  const { html, text } = buildCombinedAlertDigestEmail({
-    manageUrl: 'https://clubhanger.com/alerts/manage',
-    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
-    sections: [
-      {
-        context: 'Cessna 172',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
-        marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
-      },
-      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
-    ],
-  })
-  assert.match(html, /14 Cessna 172s listed right now, median asking \$89k\./)
-  assert.match(text, /14 Cessna 172s listed right now, median asking \$89k\./)
-  // Only one occurrence — the second (Cirrus) section has no marketPulse.
-  assert.equal((html.match(/listed right now, median asking/g) ?? []).length, 1)
+  assert.match(html, /2009 Cirrus SR22/)
+  assert.equal((html.match(/aircraft\/listing\/preview-1\?/g) ?? []).length, 1, 'shared listing rendered exactly once')
+  assert.doesNotMatch(html, /<h2/)
+  assert.doesNotMatch(html, /Also matches your/)
+  // 3 real matches, 2 cards shown → the see-all line says so.
+  assert.match(html, /\+1 more match not shown — see all:/)
 })
 
 test('combined: footer carries the shared Manage/Unsubscribe links (already multi-token-scoped by the caller)', () => {
@@ -1406,120 +1407,20 @@ test('combined: without a snoozeUrl, no "Snooze 30 days" link renders', () => {
   assert.doesNotMatch(text, /Snooze 30 days/)
 })
 
-test('combined: a section with its own stopUrl renders a per-section "Stop just this alert" link distinct from the shared footer unsubscribe', () => {
+test('combined: no per-alert stop/edit/share/view-in-browser links — those live on /alerts/manage behind the shared footer', () => {
   const { html, text } = buildCombinedAlertDigestEmail({
     manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
     sections: [
-      {
-        context: 'Cessna 172',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
-        stopUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a',
-      },
-      {
-        context: 'Cirrus SR22',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus',
-        stopUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=b',
-      },
+      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
+      { context: 'Cirrus SR22', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus' },
     ],
   })
-  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a"[^>]*>Stop just this alert</)
-  assert.match(html, /href="https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=b"[^>]*>Stop just this alert</)
-  // Each section's stop link carries its OWN single token, never the
-  // combined comma-joined one from the shared footer link.
+  for (const body of [html, text]) {
+    assert.doesNotMatch(body, /Stop just this alert|Edit this alert|Share this alert|View in browser/)
+  }
+  // The shared footer still carries the multi-token unsubscribe exactly once.
   assert.equal((html.match(/token=a,b/g) ?? []).length, 1)
-  assert.match(text, /Stop just this alert: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=a/)
-  assert.match(text, /Stop just this alert: https:\/\/clubhanger\.com\/api\/alerts\/unsubscribe\?token=b/)
-})
-
-test('combined: a section with no stopUrl renders no per-section stop link (fails soft, no dead link)', () => {
-  const { html, text } = buildCombinedAlertDigestEmail({
-    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
-    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
-    sections: [
-      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
-    ],
-  })
-  assert.doesNotMatch(html, /Stop just this alert/)
-  assert.doesNotMatch(text, /Stop just this alert/)
-})
-
-test('combined: a section with its own shareUrl renders a per-section "Share this alert" link', () => {
-  const { html, text } = buildCombinedAlertDigestEmail({
-    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
-    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
-    sections: [
-      {
-        context: 'Cessna 172',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
-        shareUrl: 'https://clubhanger.com/aircraft?make=Cessna&share=alert',
-      },
-      {
-        context: 'Cirrus SR22',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus',
-      },
-    ],
-  })
-  assert.match(html, /href="https:\/\/clubhanger\.com\/aircraft\?make=Cessna&amp;share=alert"[^>]*>Share this alert</)
-  assert.equal((html.match(/Share this alert/g) ?? []).length, 1)
-  assert.match(text, /Share this alert: https:\/\/clubhanger\.com\/aircraft\?make=Cessna&share=alert/)
-})
-
-test('combined: a section with no shareUrl renders no per-section share link', () => {
-  const { html, text } = buildCombinedAlertDigestEmail({
-    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
-    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
-    sections: [
-      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
-    ],
-  })
-  assert.doesNotMatch(html, /Share this alert/)
-  assert.doesNotMatch(text, /Share this alert/)
-})
-
-test('combined: a section with its own viewUrl renders a per-section "View in browser" link', () => {
-  const { html, text } = buildCombinedAlertDigestEmail({
-    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
-    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
-    sections: [
-      {
-        context: 'Cessna 172',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna',
-        viewUrl: 'https://clubhanger.com/alerts/digest/view?token=a',
-      },
-      {
-        context: 'Cirrus SR22',
-        newCount: 1,
-        dropCount: 0,
-        listingsUrl: 'https://clubhanger.com/aircraft?make=Cirrus',
-      },
-    ],
-  })
-  assert.match(html, /href="https:\/\/clubhanger\.com\/alerts\/digest\/view\?token=a"[^>]*>View in browser</)
-  assert.equal((html.match(/View in browser/g) ?? []).length, 1)
-  assert.match(text, /View in browser: https:\/\/clubhanger\.com\/alerts\/digest\/view\?token=a/)
-})
-
-test('combined: a section with no viewUrl renders no per-section view-in-browser link', () => {
-  const { html, text } = buildCombinedAlertDigestEmail({
-    manageUrl: 'https://clubhanger.com/alerts/manage?token=a',
-    unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=a,b',
-    sections: [
-      { context: 'Cessna 172', newCount: 1, dropCount: 0, listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna' },
-    ],
-  })
-  assert.doesNotMatch(html, /View in browser/)
-  assert.doesNotMatch(text, /View in browser/)
 })
 
 test('combined: with both digest-feedback urls, one shared "Was this digest useful?" row renders (not per-section)', () => {

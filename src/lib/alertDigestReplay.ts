@@ -1,11 +1,8 @@
 import { createAdminClient } from './supabase-admin'
 import { SITE_URL } from './seo'
 import { buildAlertDigestEmail, type AlertDigestSample } from './email'
-import {
-  getMarketPulseLine,
-  getAircraftMakePulseLine,
-  getPartnershipMarketPulseLine,
-} from './alertMatchCounts'
+import { rehostSamplePhotos } from './emailPhotoCache'
+import { getPlaceholderPhoto } from './aircraftPhotos'
 import {
   parseSourcePath,
   countNew,
@@ -185,23 +182,14 @@ export async function buildDigestReplay(alertId?: string): Promise<DigestReplay 
       ? `Real send window — ${result.count} new since ${alert.last_digest_at ?? 'this alert was created'}. This is exactly what ${alert.email} gets next.`
       : `Nothing new since the last digest, so this shows every current match for the same search. Layout is identical to a real send; the listings are not new, and the email says so.`
 
-  const marketPulse =
-    target.type === 'aircraft' && target.make && target.marketPulseModel
-      ? await getMarketPulseLine(
-          supabase,
-          target.make,
-          target.marketPulseModel,
-          target.modelPattern ?? target.model ?? target.marketPulseModel,
-          target.notModelPattern
-        )
-      : target.type === 'aircraft' && target.make
-        ? await getAircraftMakePulseLine(supabase, target.make)
-        : target.type === 'partnership' && target.make
-          ? await getPartnershipMarketPulseLine(supabase, target.make)
-          : null
-
   const token = alert.unsubscribe_token
-  const samples = await attachWatchLinks(supabase, alert.email, token, result.samples)
+  // Same rehost pass the real send makes, so the preview's photos load in
+  // the admin's inbox for exactly the same reason the subscriber's will.
+  const samples = await rehostSamplePhotos(
+    supabase,
+    await attachWatchLinks(supabase, alert.email, token, result.samples),
+    getPlaceholderPhoto
+  )
 
   const built = buildAlertDigestEmail({
     context: alert.context ?? null,
@@ -214,7 +202,6 @@ export async function buildDigestReplay(alertId?: string): Promise<DigestReplay 
     unsubscribeUrl: token
       ? `${SITE_URL}/api/alerts/unsubscribe?token=${token}`
       : `${SITE_URL}/alerts/manage`,
-    marketPulse: marketPulse ?? undefined,
     // Only the fallback window gets the sample banner + "current matches"
     // framing. The real window is rendered exactly as it will ship, so an
     // admin previewing it sees the subscriber's actual email, not a variant.

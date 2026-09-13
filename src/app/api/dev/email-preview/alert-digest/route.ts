@@ -17,7 +17,6 @@ export async function GET() {
     listingsUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172',
     manageUrl: 'https://clubhanger.com/alerts/manage',
     unsubscribeUrl: 'https://clubhanger.com/api/alerts/unsubscribe?token=preview',
-    marketPulse: '14 Cessna 172s listed right now, median asking $89k.',
     digestFeedbackBaseUrl: 'https://clubhanger.com/api/alerts/digest-feedback?token=preview',
     shareUrl: 'https://clubhanger.com/aircraft?make=Cessna&model=172&share=alert',
     viewUrl: 'https://clubhanger.com/alerts/digest/view?token=preview',

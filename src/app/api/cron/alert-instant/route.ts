@@ -3,11 +3,8 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { sendEmail, buildAlertDigestEmail, isTerminalSendOutcome, type AlertDigestSample } from '@/lib/email'
 import { SITE_URL } from '@/lib/seo'
 import { SendPacer } from '@/lib/alertSendPacing'
-import {
-  getMarketPulseLine,
-  getAircraftMakePulseLine,
-  getPartnershipMarketPulseLine,
-} from '@/lib/alertMatchCounts'
+import { rehostSamplePhotos } from '@/lib/emailPhotoCache'
+import { getPlaceholderPhoto } from '@/lib/aircraftPhotos'
 import {
   parseSourcePath,
   resolveAircraftAirportState,
@@ -197,24 +194,11 @@ export async function GET(req: NextRequest) {
                 return [...aircraftSamples, ...partnershipSamples]
               })()
 
-    // Same honest market-pulse line the daily digest attaches (never a
-    // fabricated number — see getMarketPulseLine's honesty floors).
-    const marketPulse =
-      target.type === 'aircraft' && target.make && target.marketPulseModel
-        ? await getMarketPulseLine(
-            supabase,
-            target.make,
-            target.marketPulseModel,
-            target.modelPattern ?? target.model ?? target.marketPulseModel,
-            target.notModelPattern
-          )
-        : target.type === 'aircraft' && target.make
-          ? await getAircraftMakePulseLine(supabase, target.make)
-          : target.type === 'partnership' && target.make
-            ? await getPartnershipMarketPulseLine(supabase, target.make)
-            : null
-
-    const samplesWithWatch = await attachWatchLinks(supabase, alert.email, alert.unsubscribe_token ?? null, samples)
+    const samplesWithWatch = await rehostSamplePhotos(
+      supabase,
+      await attachWatchLinks(supabase, alert.email, alert.unsubscribe_token ?? null, samples),
+      getPlaceholderPhoto
+    )
 
     const unsubToken = alert.unsubscribe_token ?? ''
     const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
@@ -235,7 +219,6 @@ export async function GET(req: NextRequest) {
       unsubscribeUrl,
       frequencyUrl,
       frequencyTarget: 'weekly',
-      marketPulse: marketPulse ?? undefined,
       // Honest cadence framing — this is a ~15-min sweep, not a weekly roundup.
       periodLabel: 'just now',
     })
