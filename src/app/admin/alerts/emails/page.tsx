@@ -212,7 +212,6 @@ export default async function EmailTemplateGalleryPage() {
             dropCount: 0,
             listingsUrl: `${SITE_URL}/aircraft?make=Cessna&model=172`,
             samples: aircraftPreview?.samples ?? [],
-            stopUrl: `${SITE_URL}/api/alerts/unsubscribe?token=preview-1`,
           },
           {
             context: 'Partnerships',
@@ -220,7 +219,6 @@ export default async function EmailTemplateGalleryPage() {
             dropCount: 0,
             listingsUrl: `${SITE_URL}/partnerships`,
             samples: partnershipPreview?.samples ?? [],
-            stopUrl: `${SITE_URL}/api/alerts/unsubscribe?token=preview-2`,
           },
         ],
       }),

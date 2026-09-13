@@ -21,13 +21,7 @@ import {
   isTerminalSendOutcome,
 } from '@/lib/email'
 import { getAlertFunnelWeeklySnapshot } from '@/lib/alertFunnelWeekly'
-import {
-  getAlertDigestPreview,
-  getMarketPulseLine,
-  getAircraftMakePulseLine,
-  getPartnershipMarketPulseLine,
-  getAlertMatchCount,
-} from '@/lib/alertMatchCounts'
+import { getAlertDigestPreview, getAlertMatchCount } from '@/lib/alertMatchCounts'
 import { parseEditableAlertTarget, computeWidenCandidate, buildAlertCriteriaUpdate } from '@/lib/alertEditCriteria'
 import { reminderWindow } from '@/lib/alertConfirmReminder'
 import { getStateBySlug, getMakeBySlug, getMakeModel, SEO_MAKE_MODELS } from '@/lib/seo'
@@ -36,6 +30,7 @@ import { matchesModelFilter } from '@/lib/seekerModelFilter'
 import { hasRecentPriceDrop, isMeaningfulPriceDrop } from '@/lib/priceDrops'
 import { intervalDaysFor, isDigestDue, normalizeFrequency, shouldOfferDailyUpgrade } from '@/lib/alertFrequency'
 import { pickRealPhoto, getPlaceholderPhoto } from '@/lib/aircraftPhotos'
+import { rehostSamplePhotos } from '@/lib/emailPhotoCache'
 import { formatShareType } from '@/lib/utils'
 import { getAirportsWithinRadius, resolveAirportCoords, haversineNm } from '@/lib/airports'
 import { filterToGoodDeals, compVsMarket, buildFamilyPriceMap } from '@/lib/aircraftComps'
@@ -832,6 +827,7 @@ function toDigestSample(
     title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Aircraft',
     photoUrl: realPhoto ?? getPlaceholderPhoto(row.make ?? ''),
     isPlaceholder: !realPhoto,
+    make: row.make,
     year: row.year,
     ttaf: row.ttaf,
     smoh: row.smoh ?? null,
@@ -1107,6 +1103,7 @@ function toPartnershipDigestSample(
     title: [row.year, row.make, row.model].filter(Boolean).join(' ') || 'Partnership',
     photoUrl: realPhoto ?? getPlaceholderPhoto(row.make ?? ''),
     isPlaceholder: !realPhoto,
+    make: row.make,
     year: row.year,
     ttaf: null,
     shareType: row.share_type ? formatShareType(row.share_type) : null,
@@ -2083,12 +2080,6 @@ export async function GET(req: NextRequest) {
     newCount: number
     dropCount: number
     samples: AlertDigestSample[]
-    /** Honest "N {Make} {Model}s listed right now, median asking $X" line —
-     *  aircraft alerts with a clean make+model target only; `null` otherwise
-     *  or when the family is too sparse to trust a median (see
-     *  `getMarketPulseLine`). Never set for the listing-watch push()es below
-     *  (rich single-listing templates, not the aggregate digest). */
-    marketPulse: string | null
   }
   const prepared: Prepared[] = []
   // Listing-watch alerts whose target has left `status: 'active'` — handled
@@ -2137,7 +2128,7 @@ export async function GET(req: NextRequest) {
       // A genuine drop on the watched row — same shape (newCount 0, dropCount
       // 1, one sample) the grouped single-alert send loop below already knows
       // how to route to buildPriceDropEmail; no further special-casing needed.
-      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!], marketPulse: null })
+      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
       continue
     }
 
@@ -2151,7 +2142,7 @@ export async function GET(req: NextRequest) {
         skipped++
         continue
       }
-      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!], marketPulse: null })
+      prepared.push({ alert, frequency, target, newCount: 0, dropCount: 1, samples: [watch.sample!] })
       continue
     }
 
@@ -2221,34 +2212,20 @@ export async function GET(req: NextRequest) {
               ? await fetchNewSeekerSamples(supabase, target, since)
               : []
 
-    // Market-pulse line — aircraft alerts with a clean, curated make+model
-    // target get the make+model line; aircraft alerts with a make but no
-    // clean single model (make-only browse alerts, multi-model selections —
-    // see `marketPulseModel`'s doc) fall back to the make-level line instead
-    // of getting none at all; partnership alerts with a make get their own
-    // make-level line (see `getPartnershipMarketPulseLine`'s doc for why
-    // partnerships are make-level only). Computed only for alerts that will
-    // actually send (past the newCount===0 && dropCount===0 skip above), so a
-    // skipped alert never pays for the extra query.
-    const marketPulse =
-      target.type === 'aircraft' && target.make && target.marketPulseModel
-        ? await getMarketPulseLine(
-            supabase,
-            target.make,
-            target.marketPulseModel,
-            target.modelPattern ?? target.model ?? target.marketPulseModel,
-            target.notModelPattern
-          )
-        : target.type === 'aircraft' && target.make
-          ? await getAircraftMakePulseLine(supabase, target.make)
-          : target.type === 'partnership' && target.make
-            ? await getPartnershipMarketPulseLine(supabase, target.make)
-            : null
-
     const samplesWithWatch = await attachWatchLinks(supabase, alert.email, alert.unsubscribe_token ?? null, samples)
 
-    prepared.push({ alert, frequency, target, newCount, dropCount, samples: samplesWithWatch, marketPulse })
+    prepared.push({ alert, frequency, target, newCount, dropCount, samples: samplesWithWatch })
   }
+
+  // Rehost every sample photo onto our own storage before any send — see
+  // emailPhotoCache.ts for why (source hosts like Hangar67 403 the proxies
+  // email clients fetch images through, so the site shows a photo the inbox
+  // can't). Runs after the loop so the listing-watch pushes above are
+  // covered too, not just the grouped new/drop fetches. Sequential across
+  // alerts; the helper parallelises (bounded) within each alert's ≤3 samples
+  // and memoises by source URL, so a listing matching several alerts is
+  // fetched once per pass.
+  for (const p of prepared) p.samples = await rehostSamplePhotos(supabase, p.samples, getPlaceholderPhoto)
 
   // Group by email (lowercased — the same normalization every other alert
   // surface uses for this column) so two alerts signed up with different
@@ -2268,7 +2245,7 @@ export async function GET(req: NextRequest) {
     if (group.length === 1) {
       // Exactly one due, matching alert for this email — same single-alert
       // build/send path as before this cycle, byte-for-byte.
-      const { alert, frequency, target, newCount, dropCount, samples, marketPulse } = group[0]
+      const { alert, frequency, target, newCount, dropCount, samples } = group[0]
 
       const unsubToken = alert.unsubscribe_token ?? ''
       const listingsUrl = `${SITE_URL}${alert.source_path ?? '/aircraft'}`
@@ -2356,7 +2333,6 @@ export async function GET(req: NextRequest) {
             periodLabel: frequency === 'daily' ? 'yesterday' : frequency === 'monthly' ? 'this month' : 'this week',
             dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
             shareType: target.type === 'partnership' ? bestDrop.shareType : undefined,
-            marketPulse: marketPulse ?? undefined,
           })
         : buildAlertDigestEmail({
             context: alert.context ?? null,
@@ -2372,7 +2348,6 @@ export async function GET(req: NextRequest) {
             snoozeUrl,
             upgradeUrl,
             crossSell: crossSellOpt,
-            marketPulse: marketPulse ?? undefined,
             digestFeedbackUpUrl,
             digestFeedbackDownUrl,
             digestFeedbackBaseUrl,
@@ -2411,39 +2386,21 @@ export async function GET(req: NextRequest) {
     }
 
     // 2+ due, matching alerts for this email in the same pass — one combined
-    // email, one section per alert, rather than one email per alert.
-    // Each section's `samples` is fetched independently per-alert, so a
-    // listing matching more than one of this subscriber's alerts (e.g.
-    // "Cessna 182" + "all of TX") would otherwise render its card once per
-    // matching section — dedupe so it shows once, attributed to its
-    // first-matching section, with an honest "also matches" note. Never
-    // touches newCount/dropCount — those stay the truthful per-alert totals.
+    // email (a single flat list of cards, see buildCombinedAlertDigestEmail)
+    // rather than one email per alert. Each alert's `samples` is fetched
+    // independently, so a listing matching more than one of this
+    // subscriber's alerts (e.g. "Cessna 182" + "all of TX") would otherwise
+    // render its card twice — dedupe so it shows once. Never touches
+    // newCount/dropCount — those stay the truthful per-alert totals that feed
+    // the email's overall count.
     const sections: AlertDigestSection[] = dedupeDigestSectionSamples(
-      group.map(({ alert, target, newCount, dropCount, samples, marketPulse }) => ({
+      group.map(({ alert, target, newCount, dropCount, samples }) => ({
         context: alert.context ?? null,
         newCount,
         dropCount,
         dropNoun: target.type === 'partnership' ? 'buy-in drop' : undefined,
         listingsUrl: `${SITE_URL}${alert.source_path ?? '/aircraft'}`,
         samples,
-        marketPulse: marketPulse ?? undefined,
-        // This alert's OWN token, not the combined comma-joined one — lets a
-        // subscriber stop just this section instead of every alert in the
-        // email (GOAL.md: "offer fewer instead of none"). Omitted for a
-        // not-yet-migrated row with no token yet (fails soft, no dead link).
-        stopUrl: alert.unsubscribe_token ? `${SITE_URL}/api/alerts/unsubscribe?token=${alert.unsubscribe_token}` : undefined,
-        // Deep-links to this exact row on /alerts/manage with its edit form
-        // pre-opened — same token this section's stopUrl already carries, so
-        // no new ownership proof is needed.
-        editUrl: alert.unsubscribe_token
-          ? `${SITE_URL}/alerts/manage?token=${alert.unsubscribe_token}&edit=${alert.id}#alert-${alert.id}`
-          : undefined,
-        // Plain (non-tokenized) per-section share link — same precedent as
-        // the single-alert send path above.
-        shareUrl: alert.source_path ? `${SITE_URL}${withShareParam(alert.source_path)}` : undefined,
-        // Same per-section token-scoped "view in browser" link as the
-        // single-alert send path above.
-        viewUrl: alert.unsubscribe_token ? `${SITE_URL}/alerts/digest/view?token=${alert.unsubscribe_token}` : undefined,
       }))
     )
 

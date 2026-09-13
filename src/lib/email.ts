@@ -1225,6 +1225,10 @@ export type AlertDigestSample = {
    *  photo — renders an honest "Not actual plane photo" caption, same
    *  convention as every listing card site-wide. */
   isPlaceholder: boolean
+  /** Manufacturer as listed (e.g. "Cirrus") — lets `emailPhotoCache` pick the
+   *  right per-make placeholder if it has to fall back after a failed rehost.
+   *  Presentation never reads it; the title already carries the make. */
+  make?: string | null
   year: number | null
   ttaf: number | null
   /** Engine time since major overhaul, hours — aircraft samples only.
@@ -1533,12 +1537,6 @@ function buildAlertDigestEmailCore(opts: {
    *  `/api/alerts/digest-cross-sell`) so it works straight from the email
    *  client. Omitted whenever no honest suggestion applies. */
   crossSell?: { label: string; acceptUrl: string }
-  /** Honest one-line market-context sentence for the alert's family — "14
-   *  Cessna 172s listed right now, median asking $89k" (see
-   *  `getMarketPulseLine`). Omitted whenever the caller couldn't compute a
-   *  trustworthy one (make-only/uncurated/multi-model alerts, or a family
-   *  too sparse to trust a median) — never a fabricated number. */
-  marketPulse?: string
   /** Token-scoped one-click "was this useful" links (see the digest-feedback
    *  route) — rendered as a small 👍/👎 footer row above Manage/Unsubscribe,
    *  only when BOTH are present (they're always built as a pair). Omitted
@@ -1633,9 +1631,6 @@ function buildAlertDigestEmailCore(opts: {
         </a>
       </div>`
     : ''
-  const marketPulseHtml = opts.marketPulse
-    ? `<p style="margin:0 0 16px;font-size:12px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;">${escapeHtml(opts.marketPulse)}</p>`
-    : ''
   const upgradeNudgeHtml = opts.upgradeUrl
     ? `<p style="margin:16px 4px 0;font-size:12px;line-height:1.6;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;">Busy week for this search — <a href="${escapeAttr(opts.upgradeUrl)}" style="color:#b45309;font-weight:600;">switch to daily digests</a>.</p>`
     : ''
@@ -1684,7 +1679,6 @@ function buildAlertDigestEmailCore(opts: {
         <p class="ch-muted" style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
           ${bodyCopy}
         </p>
-        ${marketPulseHtml}
         ${samplesHtml}
         <p style="margin:0;">
           <a href="${escapeAttr(listingsUrl)}"
@@ -1725,13 +1719,12 @@ function buildAlertDigestEmailCore(opts: {
   const sampleBannerText = isSample ? `SAMPLE EMAIL — ${opts.sampleNote}\n\n` : ''
 
   const crossSellText = opts.crossSell ? `\n${opts.crossSell.label}\n${opts.crossSell.acceptUrl}\n` : ''
-  const marketPulseText = opts.marketPulse ? `\n${opts.marketPulse}\n` : ''
   const upgradeNudgeText = opts.upgradeUrl
     ? `\nBusy week for this search — switch to daily digests: ${opts.upgradeUrl}\n`
     : ''
 
   const text = `${viewUrlText}${sampleBannerText}${bodyCopyText}
-${marketPulseText}${sampleLines ? `\n${sampleLines}\n` : ''}
+${sampleLines ? `\n${sampleLines}\n` : ''}
 ${ctaLabel}: ${listingsUrl}
 ${crossSellText}${upgradeNudgeText}${digestFeedbackText}${shareText}${replyToFooterText}
 Manage alerts: ${manageUrl}
@@ -1783,44 +1776,28 @@ export type AlertDigestSection = {
   newCount: number
   dropCount: number
   dropNoun?: string
+  /** This alert's own search — the target of its entry in the single muted
+   *  "see all" line that renders only when the cards don't cover every
+   *  match. Per-section edit/stop/share/view-in-browser links were retired
+   *  (2026-09-13): they made a five-link row under every section, the
+   *  busiest thing in the email, and all of it lives one click away on
+   *  `/alerts/manage` via the shared footer. */
   listingsUrl: string
   samples?: AlertDigestSample[]
-  /** Same honest market-context line `buildAlertDigestEmail` takes — see its doc. */
-  marketPulse?: string
-  /** This section's OWN alert's single-token unsubscribe link (not the
-   *  combined, comma-joined `opts.unsubscribeUrl`) — renders a "Stop just
-   *  this alert" link so a subscriber with several due alerts in one email
-   *  can drop just one instead of all-or-nothing (GOAL.md: "offer fewer
-   *  instead of none"). Omitted whenever the row has no `unsubscribe_token`
-   *  yet, same graceful-degrade precedent as `frequencyUrl` above. */
-  stopUrl?: string
-  /** This section's own alert deep-linked into the token-scoped
-   *  `/alerts/manage` view with its edit form pre-opened — lets a subscriber
-   *  whose criteria are slightly wrong (too narrow, wrong state, stale price
-   *  cap) fix them in one click instead of stopping the whole alert
-   *  (GOAL.md: "offer fewer instead of none," applied to relevance). Omitted
-   *  under the same no-token graceful-degrade as `stopUrl`. */
-  editUrl?: string
-  /** This section's own alert's plain (non-tokenized) share link — see
-   *  `buildAlertDigestEmail`'s `shareUrl` doc. Renders as a "Share this
-   *  alert" link scoped to this section only, distinct from any other
-   *  section's link. Omitted when the alert has no source_path to share. */
-  shareUrl?: string
-  /** This section's own alert's `/alerts/digest/view` link — see
-   *  `buildAlertDigestEmail`'s `viewUrl` doc. Renders as a "View in browser"
-   *  link scoped to this section only. Omitted under the same no-token
-   *  graceful-degrade as `stopUrl`/`editUrl`. */
-  viewUrl?: string
 }
 
 /**
  * Build ONE email covering 2+ due alerts for the same subscriber — used when
  * a cron pass finds more than one alert due at once, so a subscriber with
  * e.g. 3 due alerts gets a single inbox item instead of 3 separate ones
- * (GOAL.md: "never spam"). Each section keeps its own honest criteria-echo
- * line, sample cards, and new/drop counts — never summed together across
- * alerts, same honesty convention as `buildAlertDigestEmail`. The overall
- * subject states a real total across every included alert. The
+ * (GOAL.md: "never spam"). Renders ONE flat list of sample cards across
+ * every included alert (deduped by listing) under a single honest overall
+ * total — no per-alert headings, count lines or link rows (they made the
+ * email the busiest thing in the inbox and none of it was why anyone opened
+ * it; one per-alert "see all" line survives, only when the cards don't
+ * cover every match). Each section's `newCount`/`dropCount` still flows in
+ * untouched — it feeds the truthful overall total and the trim wrapper. The
+ * overall subject states a real total across every included alert. The
  * manage/unsubscribe links are shared once at the footer; the caller is
  * responsible for scoping `unsubscribeUrl` to cover every alert included in
  * `sections` (see the alert-digest cron's multi-token unsubscribe). For
@@ -1878,67 +1855,70 @@ function buildCombinedAlertDigestEmailCore(opts: {
     : ''
   const replyToFooterText = replyToConfigured ? '\nQuestion about a listing? Just reply to this email.\n' : ''
 
+  // Name the drop noun precisely when every dropping alert agrees on it (a
+  // partnerships-only send says "buy-in drop"); a mix of aircraft and
+  // partnership drops falls back to the generic noun rather than mislabel
+  // either — the per-section labels this used to hedge with are gone.
+  const dropNouns = new Set(sections.filter((s) => s.dropCount > 0).map((s) => s.dropNoun ?? 'price drop'))
+  const overallDropNoun = dropNouns.size === 1 ? [...dropNouns][0] : 'price drop'
   const overallParts: string[] = []
   if (totalNew > 0) overallParts.push(totalNew === 1 ? '1 new listing' : `${totalNew} new listings`)
-  if (totalDrop > 0) overallParts.push(totalDrop === 1 ? '1 price drop' : `${totalDrop} price drops`)
+  if (totalDrop > 0) overallParts.push(totalDrop === 1 ? `1 ${overallDropNoun}` : `${totalDrop} ${overallDropNoun}s`)
   const overallLabel = overallParts.join(' + ')
   const subject = `${overallLabel} across your ${sections.length} alerts on ClubHanger`
 
-  const sectionParts = sections.map((s, i) => {
-    const thing = (s.context || '').trim()
-    const heading = thing || 'Your alert'
-    const forThing = thing ? ` ${thing}` : ''
-    const dropNoun = s.dropNoun ?? 'price drop'
-    const countParts: string[] = []
-    if (s.newCount > 0) countParts.push(s.newCount === 1 ? '1 new listing' : `${s.newCount} new listings`)
-    if (s.dropCount > 0) countParts.push(s.dropCount === 1 ? `1 ${dropNoun}` : `${s.dropCount} ${dropNoun}s`)
-    const countLabel = countParts.join(' + ')
-    const listingsUrl = withUtm(s.listingsUrl, 'combined')
-    const samples = (s.samples ?? []).map((sm) => ({ ...sm, url: withUtm(sm.url, 'combined') }))
-    const remaining = s.newCount + s.dropCount - samples.length
-    const ctaLabel = samples.length > 0 && remaining > 0 ? `See all${forThing} matches` : `View${forThing} listings`
-    const samplesHtml = samples.length
-      ? `<div style="margin:0 0 14px;">${samples.map((sm) => sampleCardHtml(sm, notRelevantLink(opts.digestFeedbackBaseUrl, sm))).join('')}</div>`
+  // One flat list of cards across every alert — the digest is "what's new
+  // for you", not a per-alert report card (a subscriber with two overlapping
+  // alerts otherwise reads the same headings, count lines and link rows
+  // twice). A listing matching two alerts renders once (`url` dedupe — the
+  // cron's `dedupeDigestSectionSamples` already does this; repeated here so
+  // a hand-built preview can't regress it), and the cross-section "also
+  // matches" note is dropped since there are no headings left to point at.
+  const seenUrls = new Set<string>()
+  const cards: AlertDigestSample[] = []
+  for (const s of sections) {
+    for (const sm of s.samples ?? []) {
+      if (seenUrls.has(sm.url)) continue
+      seenUrls.add(sm.url)
+      cards.push({ ...sm, url: withUtm(sm.url, 'combined'), alsoMatchesLabel: undefined })
+    }
+  }
+  const totalMatches = totalNew + totalDrop
+  const remaining = Math.max(0, totalMatches - cards.length)
+  const cardsHtml = cards.length
+    ? `<div style="margin:0 0 14px;">${cards.map((sm) => sampleCardHtml(sm, notRelevantLink(opts.digestFeedbackBaseUrl, sm))).join('')}</div>`
+    : ''
+  // The only per-alert affordance that survives: one muted "see all" line
+  // naming each alert, shown only when there's something the cards don't
+  // cover. Everything else a subscriber might do (edit, stop one, share,
+  // view in browser) is one click away on /alerts/manage via the footer —
+  // the old five-link row under every section was the busiest thing in the
+  // email and none of it was the reason anyone opened it.
+  const alertName = (s: AlertDigestSection) => (s.context || '').trim() || 'Your alert'
+  const seeAllLead = cards.length
+    ? `+${remaining} more ${remaining === 1 ? 'match' : 'matches'} not shown — see all:`
+    : `See all ${totalMatches} ${totalMatches === 1 ? 'match' : 'matches'}:`
+  const seeAllHtml =
+    remaining > 0
+      ? `<p class="ch-muted" style="margin:0;font-size:12px;line-height:1.6;color:#a89f8e;">${escapeHtml(seeAllLead)} ${sections
+          .map(
+            (s) =>
+              `<a href="${escapeAttr(withUtm(s.listingsUrl, 'combined'))}" style="color:#a89f8e;text-decoration:underline;">${escapeHtml(alertName(s))}</a>`
+          )
+          .join(' &middot; ')}</p>`
       : ''
-    const marketPulseHtml = s.marketPulse
-      ? `<p style="margin:0 0 12px;font-size:11px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:6px 10px;">${escapeHtml(s.marketPulse)}</p>`
-      : ''
-    const isLast = i === sections.length - 1
 
-    const editLinkHtml = s.editUrl
-      ? `<a href="${escapeAttr(s.editUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Edit this alert</a>`
+  const cardLines = cards
+    .map((sm) => {
+      const price = samplePriceText(sm)
+      const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, sm)
+      return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.watchUrl ? `\n  Watch this listing: ${sm.watchUrl}` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
+    })
+    .join('\n')
+  const seeAllText =
+    remaining > 0
+      ? `${seeAllLead}\n${sections.map((s) => `  ${alertName(s)}: ${withUtm(s.listingsUrl, 'combined')}`).join('\n')}`
       : ''
-    const stopLinkHtml = s.stopUrl
-      ? `<a href="${escapeAttr(s.stopUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Stop just this alert</a>`
-      : ''
-    const shareLinkHtml = s.shareUrl
-      ? `<a href="${escapeAttr(s.shareUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">Share this alert</a>`
-      : ''
-    const viewLinkHtml = s.viewUrl
-      ? `<a href="${escapeAttr(s.viewUrl)}" style="color:#a89f8e;font-weight:400;font-size:12px;text-decoration:underline;margin-left:10px;">View in browser</a>`
-      : ''
-
-    const html = `<div style="margin:0 0 ${isLast ? '0' : '22px'};${isLast ? '' : 'padding-bottom:20px;border-bottom:1px solid #ece6dc;'}">
-        <h2 class="ch-heading" style="font-size:15px;font-weight:700;margin:0 0 4px;">${escapeHtml(heading)}</h2>
-        <p class="ch-muted" style="font-size:13px;color:#64748b;margin:0 0 12px;">${escapeHtml(countLabel)}</p>
-        ${marketPulseHtml}
-        ${samplesHtml}
-        <p style="margin:0;">
-          <a href="${escapeAttr(listingsUrl)}" style="color:#0284c7;font-weight:600;font-size:13px;text-decoration:none;">${escapeHtml(ctaLabel)} &rarr;</a>${editLinkHtml}${stopLinkHtml}${shareLinkHtml}${viewLinkHtml}
-        </p>
-      </div>`
-
-    const sampleLines = samples
-      .map((sm) => {
-        const price = samplePriceText(sm)
-        const notRelevantUrl = notRelevantLink(opts.digestFeedbackBaseUrl, sm)
-        return `- ${sm.title}${price ? ` — ${price}` : ''}${sm.compLabel ? ` [${sm.compLabel}]` : ''}\n  ${sm.url}${sm.alsoMatchesLabel ? `\n  (${sm.alsoMatchesLabel})` : ''}${sm.watchUrl ? `\n  Watch this listing: ${sm.watchUrl}` : ''}${notRelevantUrl ? `\n  Not relevant? ${notRelevantUrl}` : ''}`
-      })
-      .join('\n')
-    const text = `${heading} — ${countLabel}\n${s.marketPulse ? `${s.marketPulse}\n` : ''}${sampleLines ? `${sampleLines}\n` : ''}${ctaLabel}: ${listingsUrl}${s.editUrl ? `\nEdit this alert: ${s.editUrl}` : ''}${s.stopUrl ? `\nStop just this alert: ${s.stopUrl}` : ''}${s.shareUrl ? `\nShare this alert: ${s.shareUrl}` : ''}${s.viewUrl ? `\nView in browser: ${s.viewUrl}` : ''}`
-
-    return { html, text }
-  })
 
   const preheaderText = `${overallLabel} across your ${sections.length} alerts on ClubHanger.`
 
@@ -1951,7 +1931,7 @@ function buildCombinedAlertDigestEmailCore(opts: {
       <p class="ch-brand" style="margin:0 0 20px;font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#0284c7;">ClubHanger</p>
       <div class="ch-card" style="background:#ffffff;border:1px solid #ece6dc;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(31,24,12,0.04),0 4px 12px rgba(31,24,12,0.06);">
         <h1 class="ch-heading" style="font-size:20px;font-weight:700;margin:0 0 16px;">${escapeHtml(overallLabel)} across your ${sections.length} alerts</h1>
-        ${sectionParts.map((s) => s.html).join('')}
+        ${cardsHtml}${seeAllHtml}
       </div>
       ${
         opts.crossSell
@@ -1980,7 +1960,7 @@ function buildCombinedAlertDigestEmailCore(opts: {
 
   const text = `${overallLabel} across your ${sections.length} alerts on ClubHanger.
 
-${sectionParts.map((s) => s.text).join('\n\n')}
+${cardLines ? `${cardLines}\n` : ''}${seeAllText}
 ${crossSellText}${digestFeedbackText}${replyToFooterText}
 Manage alerts: ${manageUrl}
 Unsubscribe from these: ${opts.unsubscribeUrl}${opts.frequencyUrl ? `\nGet fewer emails: ${opts.frequencyUrl}` : ''}${opts.snoozeUrl ? `\nSnooze 30 days: ${opts.snoozeUrl}` : ''}`
