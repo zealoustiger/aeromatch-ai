@@ -275,6 +275,13 @@ export async function POST(request: NextRequest) {
   // (e.g. a link shared widely on Facebook) costs one cheap regex test, not a
   // wasted `visitor_threads` lookup.
   const isPreviewBot = PREVIEW_BOT_RE.test(ua)
+  // Self-declared crawler (BOT_RE: "spider", "crawl", "bot", …). Decided from
+  // the UA alone, up front, so a crawler that executes JS and fires this beacon
+  // (Baiduspider-render did, 200-300 sessions/day in Oct 2026) never pays for
+  // the ipinfo.io lookup, the burst/wave count queries, or a per-session Slack
+  // thread. It still folds into the hourly "🌊 Bot wave" line (see below) so a
+  // crawl like that stays visible to a human — it just costs one DB write.
+  const isDeclaredCrawler = !isPreviewBot && BOT_RE.test(ua)
 
   const admin = createAdminClient()
   const { data: existing } = await admin
@@ -284,7 +291,21 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   try {
-    if (!existing && isPreviewBot) {
+    if (!existing && isDeclaredCrawler) {
+      await collapseIntoWave(admin, { path, loc, reason: 'bot user-agent', ip, city, region, country })
+      await admin.from('visitor_threads').insert({
+        session_id: sessionId,
+        slack_thread_ts: null,
+        city,
+        region,
+        country,
+        ip,
+        user_agent: ua,
+        is_bot: true,
+        ip_org: null,
+        first_path: path,
+      })
+    } else if (!existing && isPreviewBot) {
       // Known unfurl bot on its very first hit: skip the ipinfo.io lookup, the
       // burst-detection query, and BOTH Slack posts entirely — just log it so
       // it still counts in admin bot stats. (A preview bot essentially never
@@ -425,7 +446,7 @@ export async function POST(request: NextRequest) {
     } else {
       // existing.slack_thread_ts is null for a preview-bot session (no thread was
       // ever posted) — skip the Slack reply in that case, just bump the counters.
-      if (existing.slack_thread_ts && !isPreviewBot) {
+      if (existing.slack_thread_ts && !isPreviewBot && !isDeclaredCrawler) {
         await slack('chat.postMessage', {
           channel: CHANNEL,
           thread_ts: existing.slack_thread_ts,

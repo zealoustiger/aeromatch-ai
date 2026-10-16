@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Heart, Bell, CheckCircle2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { toggleSavedListing, subscribeSignedInAlert, getExistingAlertForSourcePath } from '@/app/actions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { markAlertSubscriber } from '@/lib/alertSubscriberFlag'
+import { getSavedKeys, markSaved, resetSavedKeys, savedKey } from '@/lib/savedIdsClient'
 import {
   isLocallySaved,
   addLocalSave,
@@ -47,8 +48,13 @@ export default function SaveListingButton({
   watchSourcePath,
 }: Props) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
+  // Where the sign-in prompt sends people back to. Captured from
+  // `window.location` at click time instead of the search-params hook: that
+  // hook forces the whole client subtree to bail out of prerendering, and this
+  // heart sits inside every listing card on the now-cached (ISR) hub pages.
+  // The prompt only renders after a click, so there is no SSR/hydration gap.
+  const [authNext, setAuthNext] = useState(pathname)
   const [saved, setSaved] = useState(initialSaved)
   const [promptOpen, setPromptOpen] = useState(false)
   const [deviceCount, setDeviceCount] = useState(0)
@@ -63,12 +69,29 @@ export default function SaveListingButton({
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    let cancelled = false
+    supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return
+      setUser(data.user)
+      // Cached (ISR) pages render every heart unsaved — the server had no
+      // cookies. Fill in the viewer's real saved state from the shared,
+      // once-per-page client cache (see lib/savedIdsClient). A page that
+      // already passed a true `initialSaved` (dynamic routes) needs nothing.
+      if (data.user && !initialSaved) {
+        getSavedKeys(supabase, data.user.id).then((keys) => {
+          if (!cancelled && keys.has(savedKey(listingId, listingType))) setSaved(true)
+        })
+      }
+    })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
+      if (!session?.user) resetSavedKeys()
     })
-    return () => subscription.unsubscribe()
-  }, [])
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [initialSaved, listingId, listingType])
 
   // Reflect this device's soft-saves for logged-out visitors, and keep every
   // mounted heart in sync when any of them changes the local store.
@@ -97,11 +120,6 @@ export default function SaveListingButton({
     })
   }, [crossSell, watchContext, watchSourcePath])
 
-  const authNext = (() => {
-    const qs = searchParams.toString()
-    return qs ? `${pathname}?${qs}` : pathname
-  })()
-
   function handleClick(e: React.MouseEvent) {
     // Cards wrap the listing in a Link; never navigate when hearting.
     e.preventDefault()
@@ -115,6 +133,7 @@ export default function SaveListingButton({
       }
       // First save of this listing → push an account, but allow device fallback.
       setDeviceCount(localSaveCount())
+      setAuthNext(window.location.pathname + window.location.search)
       setPromptOpen(true)
       return
     }
@@ -127,6 +146,7 @@ export default function SaveListingButton({
         setSaved(previous) // revert on failure
       } else {
         setSaved(result.saved)
+        markSaved(user.id, savedKey(listingId, listingType), result.saved)
         // Fresh save (not an unsave) on a listing with a real watch target →
         // check whether they're already watching before offering (no redundant
         // ask). Fire-and-forget; never blocks the save itself.

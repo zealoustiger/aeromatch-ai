@@ -8,7 +8,7 @@ import AlertSignup from '@/components/AlertSignup'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, STATE_NAMES } from '@/lib/seo'
 import { buildPartnershipItemListJsonLd } from '@/lib/partnershipJsonLd'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { getPartnershipCompVerdicts } from '@/lib/partnershipComps'
 import {
   getNearbyPartnerships,
@@ -71,7 +71,7 @@ export default async function NearAirportPartnershipsPage({ params }: Props) {
   // Buy-in comp verdict chips ("~X% below/above market") — same proprietary
   // signal `/partnerships` already shows via PartnershipList; this page renders
   // PartnershipCard directly so it needs its own (batched, fail-soft) fetch.
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const compVerdicts = await getPartnershipCompVerdicts(supabase, results.map((r) => r.p))
 
   // ItemList JSON-LD from the SAME ordered result set the page renders, so the

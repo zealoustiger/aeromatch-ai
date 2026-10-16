@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, Plane, ArrowRight, Search, Users, Building2, Phone } from 'lucide-react'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership, Airport } from '@/lib/types'
 import {
@@ -34,7 +34,7 @@ import {
 export const revalidate = 3600 // refresh hourly
 
 async function getAirport(icao: string): Promise<Airport | null> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const { data } = await supabase
     .from('airports')
     .select('*')
@@ -44,7 +44,7 @@ async function getAirport(icao: string): Promise<Airport | null> {
 }
 
 async function getListings(icaos: string[]): Promise<Partnership[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const { data } = await supabase
     .from('partnerships')
     .select('*')
@@ -63,7 +63,7 @@ type AirportPilot = { user_id: string; avatar_config: AviatorConfig | null }
  *  may not be migrated live yet; graceful fallback to base-airport-only match,
  *  same pattern as `additional_airports` in seekersQuery.ts. */
 async function getPilotsBasedAt(icao: string): Promise<AirportPilot[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const code = icao.toUpperCase()
   const { data, error } = await supabase
     .from('profiles')
@@ -147,7 +147,7 @@ export default async function AirportPage({
   // Honest "vs. market" comp/budget verdicts — same batch helpers every sibling
   // browse surface (/partnerships/near/[icao], /saved) already uses, so this hub
   // doesn't silently drop the proprietary comp signal its cards support.
-  const supabaseForVerdicts = await createServerSupabaseClient()
+  const supabaseForVerdicts = await createPublicSupabaseClient()
   const [compVerdicts, seekerBudgetVerdicts] = await Promise.all([
     getPartnershipCompVerdicts(supabaseForVerdicts, allListings),
     getSeekerBudgetCheckVerdicts(supabaseForVerdicts, seekersHere),

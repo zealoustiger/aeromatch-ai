@@ -1,5 +1,5 @@
 import { Users } from 'lucide-react'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { PartnershipSeeker } from '@/lib/types'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import SeekerRailCard from './SeekerRailCard'
@@ -47,7 +47,7 @@ export default async function SimilarSeekers({ current }: { current: Partnership
     candidates = MOCK_SEEKERS
   } else {
     try {
-      const supabase = await createServerSupabaseClient()
+      const supabase = await createPublicSupabaseClient()
       const orParts: string[] = [`home_airport.eq.${current.home_airport}`]
       if (current.state) orParts.push(`state.eq.${current.state}`)
       for (const make of current.preferred_makes ?? []) {

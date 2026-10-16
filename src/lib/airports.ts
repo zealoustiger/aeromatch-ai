@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from './supabase-server'
+import { createPublicSupabaseClient } from './supabase-public'
 
 export function haversineNm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3440.065 // Earth radius in nautical miles
@@ -20,7 +20,7 @@ export async function getAirportsWithinRadius(
   homeIcao: string,
   radiusMiles: number
 ): Promise<string[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
 
   const { data: home } = await supabase
     .from('airports')
@@ -53,7 +53,7 @@ export async function resolveAirportCoords(
   const unique = Array.from(new Set(icaos.map((c) => c.trim().toUpperCase()))).filter(Boolean)
   if (unique.length === 0) return {}
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const { data } = await supabase.from('airports').select('icao, lat, lng').in('icao', unique)
 
   const out: Record<string, { lat: number; lng: number }> = {}
@@ -88,7 +88,7 @@ export async function resolveLocationCoords(
   const states = Array.from(new Set(pairs.map((p) => p.state.trim().toUpperCase()))).filter(Boolean)
   if (states.length === 0) return {}
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const { data } = await supabase
     .from('airports')
     .select('city, state, lat, lng, type')

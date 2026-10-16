@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
 import { partnershipBuyInComp, partnershipDealVerdict } from '@/lib/partnershipComps'
@@ -45,7 +45,7 @@ export default async function SimilarListings({ current }: { current: Partnershi
     candidates = MOCK_PARTNERSHIPS
   } else {
     try {
-      const supabase = await createServerSupabaseClient()
+      const supabase = await createPublicSupabaseClient()
       const orParts = [`make.eq.${current.make}`]
       if (current.state) orParts.push(`state.eq.${current.state}`)
       orParts.push(`home_airport.eq.${current.home_airport}`)
@@ -78,7 +78,7 @@ export default async function SimilarListings({ current }: { current: Partnershi
 
   if (uniqueMakes.length > 0 && hasSupabase()) {
     try {
-      const supabase = await createServerSupabaseClient()
+      const supabase = await createPublicSupabaseClient()
 
       type BaseCompRow = { id: string; buy_in_price: number; total_shares: number | null }
       const baseResults = await Promise.all(

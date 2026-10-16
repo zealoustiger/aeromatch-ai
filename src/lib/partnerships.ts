@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
@@ -18,7 +18,7 @@ export async function getLatestPartnerships(limit: number, photoOnly = false): P
   if (!hasSupabase) return MOCK_PARTNERSHIPS.slice(0, limit)
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let query = supabase
       .from('partnerships')
       .select('*')
@@ -51,7 +51,7 @@ export async function getPartnershipById(id: string): Promise<Partnership | null
   }
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data } = await supabase.from('partnerships').select('*').eq('id', id).single()
     return data
   } catch {

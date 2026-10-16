@@ -15,6 +15,13 @@ import { getInventoryMakes, resolveMake, SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, 
 import { getPlaceholderPhoto, pickRealPhoto } from '@/lib/aircraftPhotos'
 import { buildAircraftItemListJsonLd, buildAircraftAggregateOfferJsonLd, buildFaqPageJsonLd } from '@/lib/aircraftJsonLd'
 
+// ISR: cache the rendered page for an hour (same cadence as the other public
+// hub pages — /partnerships/browse, /partnerships/near, /airports). Public
+// listing data now comes through the cookie-free client (lib/supabase-public),
+// so nothing here needs a per-request render; without this the page would
+// otherwise freeze at build time.
+export const revalidate = 3600
+
 type Props = { params: Promise<{ make: string }> }
 
 // Prebuild every make that has inventory-backed model families. Any valid make

@@ -14,6 +14,13 @@ import { STATE_NAMES, STATE_CODES, stateSlug, SEO_MAKES, SITE_URL, SITE_NAME, DE
 import { countForSaleState } from '@/components/AircraftSaleList'
 import { getAlertMatchCount } from '@/lib/alertMatchCounts'
 
+// ISR: cache the rendered page for an hour (same cadence as the other public
+// hub pages — /partnerships/browse, /partnerships/near, /airports). Public
+// listing data now comes through the cookie-free client (lib/supabase-public),
+// so nothing here needs a per-request render; without this the page would
+// otherwise freeze at build time.
+export const revalidate = 3600
+
 const faqItems = [
   {
     q: 'What is aircraft co-ownership?',

@@ -18,6 +18,13 @@ import { CompareProvider } from '@/components/CompareProvider'
 import CompareTray from '@/components/CompareTray'
 import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 
+// ISR: cache the rendered page for an hour (same cadence as the other public
+// hub pages — /partnerships/browse, /partnerships/near, /airports). Public
+// listing data now comes through the cookie-free client (lib/supabase-public),
+// so nothing here needs a per-request render; without this the page would
+// otherwise freeze at build time.
+export const revalidate = 3600
+
 type Props = { params: Promise<{ make: string; model: string }> }
 
 // Prebuild every inventory-backed combo (curated + dynamically discovered). Any

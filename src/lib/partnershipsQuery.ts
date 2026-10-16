@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { Partnership } from '@/lib/types'
 import { MOCK_PARTNERSHIPS } from '@/lib/mockData'
@@ -104,7 +104,7 @@ export async function getPartnershipListings(
   }
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let query = supabase
       .from('partnerships')
       .select('*')
@@ -157,7 +157,7 @@ export async function countPartnershipsByMake(filter: string): Promise<number> {
     ).length
   }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { count, error } = await supabase
       .from('partnerships')
       .select('*', { count: 'exact', head: true })
@@ -181,7 +181,7 @@ export async function countPartnershipsByState(code: string): Promise<number> {
     return MOCK_PARTNERSHIPS.filter((p) => p.state === code).length
   }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { count, error } = await supabase
       .from('partnerships')
       .select('*', { count: 'exact', head: true })
@@ -219,7 +219,7 @@ export async function countActivePartnerships(
     }).length
   }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let query = supabase
       .from('partnerships')
       .select('*', { count: 'exact', head: true })
@@ -286,7 +286,7 @@ export async function getPartnershipCrossSell(
   }
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
 
     // Model-level attempt: require both make AND model to match
     if (mo) {
@@ -359,7 +359,7 @@ export async function getPartnershipMakes(): Promise<string[]> {
     return rank(MOCK_PARTNERSHIPS.map((p) => ({ make: p.make })))
   }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data, error } = await supabase
       .from('partnerships')
       .select('make')
@@ -420,7 +420,7 @@ export async function getPartnershipFacets(): Promise<PartnershipFacets> {
     return build(MOCK_PARTNERSHIPS.map((p) => ({ make: p.make, model: p.model ?? null })))
   }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data, error } = await supabase
       .from('partnerships')
       .select('make, model')

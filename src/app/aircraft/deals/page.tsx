@@ -10,6 +10,13 @@ import MobileStickyAlertBar from '@/components/MobileStickyAlertBar'
 import { fetchUnderMarketDeals, DEAL_MIN_PCT } from '@/components/AircraftSaleList'
 import { SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
+// ISR: cache the rendered page for an hour (same cadence as the other public
+// hub pages — /partnerships/browse, /partnerships/near, /airports). Public
+// listing data now comes through the cookie-free client (lib/supabase-public),
+// so nothing here needs a per-request render; without this the page would
+// otherwise freeze at build time.
+export const revalidate = 3600
+
 const dealsTitle = 'Aircraft Priced Below Market — Great Deals on Planes for Sale'
 const dealsDescription =
   'Active aircraft listings asking below the median price of comparable same make and model listings on ClubHanger — ranked by the biggest discount. A price-only market comparison.'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
@@ -30,7 +30,6 @@ export default function FacilityRatingWidget({
   initialUserRating,
 }: Props) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [average, setAverage] = useState(initialAverage)
   const [count, setCount] = useState(initialCount)
@@ -47,11 +46,10 @@ export default function FacilityRatingWidget({
     return () => subscription.unsubscribe()
   }, [])
 
-  const authNext = (() => {
-    const qs = searchParams.toString()
-    const path = qs ? `${pathname}?${qs}` : pathname
-    return `/auth?next=${encodeURIComponent(path)}`
-  })()
+  // Sign-in return target is the bare pathname: the airport page carries no
+  // query state worth round-tripping, and the search-params hook here would
+  // force a prerender bailout for a render-time <Link>.
+  const authNext = `/auth?next=${encodeURIComponent(pathname)}`
 
   function handleRate(value: number) {
     if (!user || isPending) return

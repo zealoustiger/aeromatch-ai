@@ -1,4 +1,5 @@
-import { createServerSupabaseClient } from './supabase-server'
+import { createPublicSupabaseClient } from './supabase-public'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Partnership, Airport } from './types'
 
 /**
@@ -37,7 +38,7 @@ function haversineNm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 
 /** Fetch every airport (paginated past Supabase's 1000-row cap) as an ICAO map. */
 async function loadAirportCoordMap(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: SupabaseClient
 ): Promise<Map<string, Airport>> {
   const map = new Map<string, Airport>()
   let from = 0
@@ -73,7 +74,7 @@ export interface NearbyResult {
  * array means "known airport, no nearby inventory" (→ caller 404s on threshold).
  */
 export async function getNearbyPartnerships(icao: string): Promise<NearbyResult | null> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const code = icao.toUpperCase()
 
   const { data: airport } = await supabase
@@ -134,7 +135,7 @@ export interface NearAirportHub {
  * read from this, so they can never drift. Sorted by ICAO ascending.
  */
 async function computeNearAirportHubs(): Promise<NearAirportHub[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
 
   const { data: parts } = await supabase
     .from('partnerships')
@@ -228,7 +229,7 @@ export async function getNearAirportHubs(): Promise<NearAirportHub[]> {
  * table, so the page resolves 200). Sorted ascending.
  */
 export async function getIndexableAirportIcaos(): Promise<string[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
 
   const { data: parts } = await supabase
     .from('partnerships')
@@ -275,7 +276,7 @@ export async function getIndexableAirportHubs(): Promise<IndexableAirportHub[]> 
   const icaos = await getIndexableAirportIcaos()
   if (icaos.length === 0) return []
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const { data } = await supabase
     .from('airports')
     .select('icao, name, city, state')
@@ -296,7 +297,7 @@ export async function getIndexableAirportHubs(): Promise<IndexableAirportHub[]> 
  * index-worthy? True iff >= 1 active partnership is based at it.
  */
 export async function isAirportIndexable(icao: string): Promise<boolean> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const { count } = await supabase
     .from('partnerships')
     .select('id', { count: 'exact', head: true })
@@ -330,7 +331,7 @@ export async function countNearbyPartnerships(
   icao: string,
   excludeId: string,
 ): Promise<NearbyCount | null> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   const code = icao.toUpperCase()
 
   // 1. Resolve the airport coordinates (single row).

@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { getAirportsWithinRadius } from '@/lib/airports'
 import { MOCK_SEEKERS } from '@/lib/mockData'
 import type { PartnershipSeeker } from '@/lib/types'
@@ -94,7 +94,7 @@ export async function getSeekers(f: SeekerFilters): Promise<PartnershipSeeker[]>
     return sortByTrust(r)
   }
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = await createPublicSupabaseClient()
   let query = supabase
     .from('partnership_seekers')
     .select('*')
@@ -169,7 +169,7 @@ export async function getSeekerMakes(): Promise<string[]> {
   }
   if (!hasSupabase()) return rank(MOCK_SEEKERS.map((s) => s.preferred_makes))
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data } = await supabase
       .from('partnership_seekers')
       .select('preferred_makes')
@@ -206,7 +206,7 @@ export async function getSeekerModels(makes: string[] = []): Promise<string[]> {
     return rank(pool.map((s) => s.preferred_models))
   }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let query = supabase
       .from('partnership_seekers')
       .select('preferred_models')
@@ -223,7 +223,7 @@ export async function getSeekerModels(makes: string[] = []): Promise<string[]> {
 export async function getSeekerCount(): Promise<number> {
   if (!hasSupabase()) return MOCK_SEEKERS.length
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { count } = await supabase
       .from('partnership_seekers')
       .select('id', { count: 'exact', head: true })
@@ -258,7 +258,7 @@ export async function getSeekerCrossSell(
     pool = MOCK_SEEKERS
   } else {
     try {
-      const supabase = await createServerSupabaseClient()
+      const supabase = await createPublicSupabaseClient()
       const { data } = await supabase
         .from('partnership_seekers')
         .select('*')
@@ -286,7 +286,7 @@ export async function getSeekerCrossSell(
 export async function getSeekerById(id: string): Promise<PartnershipSeeker | null> {
   if (!hasSupabase()) return MOCK_SEEKERS.find((s) => s.id === id) ?? null
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data } = await supabase
       .from('partnership_seekers')
       .select('*')

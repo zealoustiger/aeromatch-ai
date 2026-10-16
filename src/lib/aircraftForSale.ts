@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { AircraftForSale } from '@/lib/types'
 import { resolveMakeModelFamily } from '@/lib/seo'
@@ -18,7 +18,7 @@ export async function getAircraftForSaleById(id: string): Promise<AircraftForSal
   if (!hasSupabase) return null
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data } = await supabase
       .from('aircraft_for_sale')
       .select('*')
@@ -82,7 +82,7 @@ export async function getForSaleListingSitemapRows(): Promise<
 
   type Row = { id: string; last_seen_at: string | null; created_at: string | null; price_changed_at: string | null }
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const PAGE = 1000
     const rows: Row[] = []
     for (let from = 0; ; from += PAGE) {
@@ -157,7 +157,7 @@ export async function getSimilarAircraftForSale(
   if (!make) return []
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let simQuery = supabase
       .from('aircraft_for_sale')
       .select('*')
@@ -209,7 +209,7 @@ export async function getFamilyAskingPrices(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
       .select('asking_price')
@@ -251,7 +251,7 @@ export async function getFamilyComps(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
       .select('asking_price, year, ttaf, smoh, first_seen_at')
@@ -295,7 +295,7 @@ export async function getFamilyCompsForBatch(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
       .select('id, asking_price, year, ttaf, smoh')
@@ -348,7 +348,7 @@ export async function getForSaleCrossSell(
   const mo = model?.trim() || ''
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
 
     if (mo) {
       const { data: modelData, error: modelError } = await supabase

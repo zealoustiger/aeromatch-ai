@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 
 export interface AircraftFacets {
   /** Makes that have active listings, most-listed first. */
@@ -21,7 +21,7 @@ export async function getAircraftFacets(): Promise<AircraftFacets> {
   if (!hasSupabase) return EMPTY
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data, error } = await supabase
       .from('aircraft_for_sale')
       .select('make, model')

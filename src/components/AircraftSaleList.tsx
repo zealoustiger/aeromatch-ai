@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { AircraftForSale } from '@/lib/types'
 import { floorScore, parseGradeFilter, gradeQueryPlan } from '@/lib/listingQuality'
 import { resolveMakeModelFamily, type SeoMakeModel } from '@/lib/seo'
@@ -136,7 +137,7 @@ export async function countMakeModel(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return 0
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let query = supabase
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
@@ -170,7 +171,7 @@ export async function countMakeModelState(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return 0
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let query = supabase
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
@@ -198,7 +199,7 @@ export async function countForSaleState(code: string): Promise<number> {
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return 0
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { count, error } = await supabase
       .from('aircraft_for_sale')
       .select('*', { count: 'exact', head: true })
@@ -227,7 +228,7 @@ export async function countForSale(make?: string, opts?: { airport?: string }): 
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return 0
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     let airportState: string | null = null
     const airport = opts?.airport?.trim()
     if (airport) {
@@ -273,7 +274,7 @@ export async function topStatesForMakeModel(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
       .select('state')
@@ -319,7 +320,7 @@ export async function topMakeModelsForState(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return []
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const { data, error } = await supabase
       .from('aircraft_for_sale')
       .select('make, model')
@@ -364,7 +365,7 @@ export async function priceStatsForMakeModel(
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return null
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const base = supabase
       .from('aircraft_for_sale')
       .select('asking_price')
@@ -434,7 +435,7 @@ export async function fetchAircraftPage(
   }
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
 
     // Resolve the distance-sort center: prefer the filter's airport coords,
     // then visitor's IP geo. If sort=distance is requested but neither is
@@ -648,7 +649,7 @@ async function fetchFamilyPriceMap(): Promise<Map<string, number[]>> {
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return new Map()
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const data = await fetchAllRows((from, to) =>
       supabase
         .from('aircraft_for_sale')
@@ -675,7 +676,7 @@ async function fetchFamilyCompMap(): Promise<Map<string, FamilyCompEntry[]>> {
   const hasSupabase = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
   if (!hasSupabase) return new Map()
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const data = await fetchAllRows((from, to) =>
       supabase
         .from('aircraft_for_sale')
@@ -743,7 +744,7 @@ export async function fetchUnderMarketDeals(limit = 48, photoOnly = false): Prom
     const familyPriceMap = await fetchFamilyPriceMap()
     if (familyPriceMap.size === 0) return []
 
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
     const floor = floorScore()
     const data = await fetchAllRows((from, to) => {
       let query = supabase

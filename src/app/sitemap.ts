@@ -1,11 +1,16 @@
 import type { MetadataRoute } from 'next'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createPublicSupabaseClient } from '@/lib/supabase-public'
 import { getForSaleListingSitemapRows } from '@/lib/aircraftForSale'
 import { STATE_CODES, STATE_NAMES, SEO_MAKES, getInventoryMakeModels, getInventoryMakeModelStates, SITE_URL, stateSlug } from '@/lib/seo'
 import { countMakeModel, countForSaleState } from '@/components/AircraftSaleList'
 import { getNearAirportSitemapIcaos, getIndexableAirportIcaos } from '@/lib/nearbyPartnerships'
 import { MISSIONS } from '@/lib/missions'
 import { COMPARISONS } from '@/lib/aircraftComparisons'
+
+// Cached for an hour. The sitemap walks every listing table on each build;
+// generating it per crawler request was pure function CPU on the Hobby plan.
+// Hourly matches the inventory refresh cadence and the other ISR pages.
+export const revalidate = 3600
 
 // Largest valid Date from a set of ISO/date strings, ignoring null/undefined/unparseable
 // values. Used to derive an honest, data-derived `lastmod` for the aggregation pages
@@ -37,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let forSaleStatePages: MetadataRoute.Sitemap = []
 
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createPublicSupabaseClient()
 
     const { data: listings } = await supabase
       .from('partnerships')
